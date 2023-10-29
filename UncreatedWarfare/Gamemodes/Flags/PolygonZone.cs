@@ -117,6 +117,50 @@ public sealed class PolygonZone : Zone
         CalculateParticleSpawnPoints(out ParticleSpawnPoints, _points, Spacing, _lines);
         return ParticleSpawnPoints;
     }
+
+
+    /// <inheritdoc/>
+    
+    // Stolen from
+    // https://javedali-iitkgp.medium.com/get-closest-point-on-a-polygon-23b68e26a33
+    public override Vector2 GetClosestPointOnBorder(Vector2 location)
+    {
+        if (_points.Length <= 1)
+            return Center;
+
+        float minSqrDist = Single.NaN;
+        Vector2 closestPoint = default;
+        for (int i = 0; i < _points.Length; ++i)
+        {
+            Vector2 pt1 = _points[i];
+            Vector2 pt2 = _points[i != _points.Length - 1 ? i + 1 : 0];
+
+            Vector2 a = location - pt1;
+            Vector2 b = pt2 - pt1;
+
+            float dot = Vector2.Dot(a, b);
+            float sqrMagnitude = b.sqrMagnitude;
+
+            float alpha = dot / sqrMagnitude;
+            Vector2 point;
+            if (alpha < 0)
+                point = pt1;
+            else if (alpha > 1)
+                point = pt2;
+            else
+                point = new Vector2(pt1.x + alpha * b.x, pt1.y + alpha * b.y);
+
+            float sqrDist = (location - point).sqrMagnitude;
+            if (float.IsNaN(minSqrDist) || sqrDist < minSqrDist)
+            {
+                minSqrDist = sqrDist;
+                closestPoint = point;
+            }
+        }
+
+        return closestPoint;
+    }
+
     /// <inheritdoc/>
     public override bool IsInside(Vector2 location)
     {

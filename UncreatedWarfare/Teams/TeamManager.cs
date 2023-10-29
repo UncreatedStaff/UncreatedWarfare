@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -23,6 +24,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using UnityEngine;
+using Vector3 = UnityEngine.Vector3;
 
 namespace Uncreated.Warfare.Teams;
 
@@ -1311,17 +1313,49 @@ public static class TeamManager
     }
     private static void InvokeOnLeftMain(UCPlayer player, ulong team)
     {
-        player.SendChat(T.LeftMain, GetFaction(team));
-        ActionLog.Add(ActionLogType.LeftMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) + 
-                                                   ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
+        if (Data.Gamemode is not TeamGamemode { State: State.Staging } tg || tg.CanLeaveMainInStaging(team) || player.OnDuty())
+        {
+            player.SendChat(T.LeftMain, GetFaction(team));
+            ActionLog.Add(ActionLogType.LeftMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) +
+                                                  ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
+        }
         OnPlayerLeftMainBase?.Invoke(player, team);
     }
     private static void InvokeOnEnterMain(UCPlayer player, ulong team)
     {
-        player.SendChat(T.EnteredMain, GetFaction(team));
-        ActionLog.Add(ActionLogType.EnterMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) + 
-                                                    ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
+        if (Data.Gamemode is not TeamGamemode { State: State.Staging } tg || tg.CanLeaveMainInStaging(team) || player.OnDuty())
+        {
+            player.SendChat(T.EnteredMain, GetFaction(team));
+            ActionLog.Add(ActionLogType.EnterMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) +
+                                                   ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
+        }
         OnPlayerEnteredMainBase?.Invoke(player, team);
+    }
+    public static float GetAMCDamageMultiplier(ulong team, Vector3 position)
+    {
+        if (team is not 1ul and not 2ul)
+            return 1f;
+
+        Zone? amc = TeamManager.TryGetTeamZone(team, true);
+        if (amc == null)
+            return 1f;
+
+        Zone? main = TeamManager.TryGetTeamZone(team, false);
+        if (main == null)
+            return 1f;
+
+        if (!amc.IsInside(position))
+            return 1f;
+        if (main.IsInside(position))
+            return 0f;
+
+        Vector3 mainPt = main.GetClosestPointOnBorder(position);
+        Vector3 amcPt = amc.GetClosestPointOnBorder(position);
+
+        float mainDist = (mainPt - position).sqrMagnitude;
+        float amcDist = (amcPt - position).sqrMagnitude;
+
+        return mainDist / (mainDist + amcDist);
     }
     internal static void OnConfigReload()
     {

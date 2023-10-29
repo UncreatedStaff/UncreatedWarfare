@@ -164,6 +164,27 @@ public abstract class Zone : IDeployable, IListItem
         return new Vector2((x - GridLocation.ImageSize.X / 2f) * GridLocation.DistanceScale.x, -z * GridLocation.DistanceScale.y);
     }
 
+    /// <summary>
+    /// Get the closest point to <param name="location"/> inside or on this zone's border.
+    /// </summary>
+    public abstract Vector2 GetClosestPointOnBorder(Vector2 location);
+
+    /// <summary>
+    /// Get the closest point to <param name="location"/> inside or on this zone's border.
+    /// </summary>
+    public virtual Vector3 GetClosestPointOnBorder(Vector3 location)
+    {
+        Vector2 closestPt = GetClosestPointOnBorder(new Vector2(location.x, location.z));
+
+        float y = location.y;
+        if (!float.IsNaN(MinHeight) && y < MinHeight)
+            y = MinHeight;
+        else if (!float.IsNaN(MaxHeight) && y > MaxHeight)
+            y = MaxHeight;
+
+        return new Vector3(closestPt.x, y, closestPt.y);
+    }
+
     Vector3 IDeployable.SpawnPosition => Spawn3D + new Vector3(0, 1.5f, 0);
     
     /// <summary>

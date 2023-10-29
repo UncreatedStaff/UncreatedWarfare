@@ -53,14 +53,16 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     public DamagePlayerParameters GetParameters(ulong player) => _injuredPlayers.TryGetValue(player, out DownedPlayerData data) ? data.Parameters : default;
     public bool CanPlayerInjure(in DamagePlayerParameters parameters)
     {
+        int unclampedDamage = Mathf.FloorToInt(parameters.damage * parameters.times);
+        byte actualDamage = (byte)Math.Min(byte.MaxValue, unclampedDamage);
         return parameters.player != null &&
-               parameters.player.movement.getVehicle() == null && parameters.cause != EDeathCause.VEHICLE &&
-               SafezoneManager.checkPointValid(parameters.player.transform.position) && 
+               parameters.player.movement.getVehicle() == null &&
+               parameters.cause != EDeathCause.VEHICLE &&
               !parameters.player.life.isDead &&
-               parameters.damage > parameters.player.life.health &&
+               actualDamage > parameters.player.life.health &&
                parameters.cause != EDeathCause.LANDMINE &&
                parameters.cause < DeathTracker.MainCampDeathCauseOffset && // main campers can't get downed, makes death messages easier
-               parameters.damage < 300;
+               unclampedDamage < 300;
     }
     public override void Load()
     {

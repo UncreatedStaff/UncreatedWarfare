@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Uncreated.Framework;
 using Uncreated.Warfare.Locations;
 using UnityEngine;
 
@@ -79,6 +80,15 @@ public sealed class CircleZone : Zone
         float sqrDistance = (difX * difX) + (difY * difY);
         return sqrDistance <= _radius * _radius;
     }
+
+    /// <inheritdoc/>
+    public override Vector2 GetClosestPointOnBorder(Vector2 location)
+    {
+        Vector2 relative = location - Center;
+
+        return relative * (Radius / relative.magnitude) + Center;
+    }
+
     /// <inheritdoc/>
     public override string ToString() => $"{base.ToString()} Radius: {_radius}";
 

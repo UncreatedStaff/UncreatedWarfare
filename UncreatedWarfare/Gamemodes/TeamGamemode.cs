@@ -3,8 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
+using SDG.Framework.Landscapes;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
@@ -28,6 +31,62 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
 
     }
+    [UsedImplicitly]
+    private void FixedUpdate()
+    {
+        if (State != State.Staging)
+            return;
+
+        TeamManager.EvaluateBases();
+    }
+    public override void Subscribe()
+    {
+        TeamManager.OnPlayerLeftMainBase += OnLeftMainBase;
+        base.Subscribe();
+    }
+    public override Task UnloadAsync(CancellationToken token)
+    {
+        TeamManager.OnPlayerLeftMainBase -= OnLeftMainBase;
+        return base.UnloadAsync(token);
+    }
+    public virtual bool CanLeaveMainInStaging(ulong team) => team == 1ul && !_shouldHaveBlockerT1 || team == 2ul && !_shouldHaveBlockerT2;
+    private void OnLeftMainBase(UCPlayer player, ulong team)
+    {
+        if (player.OnDuty())
+            return;
+
+        if (State != State.Staging || CanLeaveMainInStaging(team))
+            return;
+        
+        Zone? main = TeamManager.GetMain(team);
+        if (main == null)
+            return;
+
+        L.LogDebug($"{player} left main while in staging phase.");
+
+        InteractableVehicle? veh = player.CurrentVehicle;
+        if (veh != null)
+        {
+            player.Player.movement.forceRemoveFromVehicle();
+            if (veh.gameObject.TryGetComponent(out Rigidbody rb))
+            {
+                rb.AddForce(-rb.velocity * 4 + Vector3.one);
+            }
+        }
+
+        Vector3 pos = main.GetClosestPointOnBorder(player.Position);
+        Vector3 pos2 = 2 * (pos - player.Position) + player.Position;
+        if (!main.IsInside(pos2))
+            pos2 = pos;
+        Landscape.getWorldHeight(pos2, out float height);
+        height += 0.01f;
+
+        if (pos2.y < height)
+            pos2.y = height;
+
+        player.Player.teleportToLocationUnsafe(pos2, player.Yaw);
+        TeamManager.EvaluateBases();
+    }
     protected override Task PreInit(CancellationToken token)
     {
         token.CombineIfNeeded(UnloadToken);
@@ -50,11 +109,11 @@ public abstract class TeamGamemode : Gamemode, ITeams
         ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
-            L.Log("Joining players into menu...");
+            L.LogDebug("Joining players into menu...");
             TeamSelector.JoinTeamBehavior behaviour;
             if (TeamSelector.ShuffleTeamsNextGame)
             {
-                L.Log("Teams are to be SHUFFLED.");
+                L.LogDebug("Teams are to be SHUFFLED.");
                 behaviour = TeamSelector.JoinTeamBehavior.Shuffle;
             }
             else
@@ -91,8 +150,15 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     protected override void EventLoopAction()
     {
-        if (EveryXSeconds(Config.GeneralMainCheckSeconds))
+        if (State != State.Staging && EveryXSeconds(Config.GeneralMainCheckSeconds))
             TeamManager.EvaluateBases();
+
+        // AMC damage multiplier test
+        //if (EverySecond)
+        //{
+        //    foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+        //        player.SendString($"AMC Damage Mult: {player.GetAMCDamageMultiplier().ToString("F4", player.Locale.CultureInfo)}.");
+        //}
 
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
@@ -101,32 +167,6 @@ public abstract class TeamGamemode : Gamemode, ITeams
             {
                 player.Player.life.serverModifyHealth(100);
                 player.Player.life.simulatedModifyOxygen(100);
-            }
-        }
-
-        // todo improve this a little
-        if (State == State.Staging && (_shouldHaveBlockerT1 || _shouldHaveBlockerT2))
-        {
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-            {
-                UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                ulong team = pl.GetTeam();
-                if (pl.OnDuty() || team is not 1 and not 2) continue;
-
-                if (team == 1 && _shouldHaveBlockerT1 || team == 2 && _shouldHaveBlockerT2)
-                {
-                    if (!TeamManager.IsInMain(pl))
-                    {
-                        InteractableVehicle? veh = pl.CurrentVehicle;
-                        if (veh != null)
-                        {
-                            pl.Player.movement.forceRemoveFromVehicle();
-                            if (veh.gameObject.TryGetComponent(out Rigidbody rb))
-                                rb.velocity = Vector3.zero;
-                        }
-                        TeamManager.TeleportToMain(pl, team);
-                    }
-                }
             }
         }
     }

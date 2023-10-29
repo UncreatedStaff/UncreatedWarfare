@@ -1654,6 +1654,7 @@ public class DebugCommand : AsyncCommand
 
     private void zonespeedtest(CommandInteraction ctx)
     {
+        ctx.AssertRanByConsole();
         ZoneList zl = Data.Singletons.GetSingleton<ZoneList>()!;
         zl.WriteWait();
         try
@@ -1675,6 +1676,7 @@ public class DebugCommand : AsyncCommand
     }
     private async Task getpfp(CommandInteraction ctx)
     {
+        ctx.AssertRanByConsole();
         if (!ctx.TryGet(0, out ulong steam64, out _, true))
         {
             ctx.AssertRanByPlayer();
@@ -1730,37 +1732,96 @@ public class DebugCommand : AsyncCommand
 
     private async Task migratebans(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateBans(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratebe(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateBattlEyeKicks(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratekicks(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateKicks(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratemutes(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateMutes(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratetks(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateTeamkills(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratewarns(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateWarnings(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
 
     private void geticons(CommandInteraction ctx)
     {
+        ctx.AssertRanByConsole();
         ctx.ReplyString(string.Join(string.Empty, ItemIconProvider.Defaults.Select(x => x.Character).Where(x => x.HasValue).Select(x => x!.Value.ToString())));
+    }
+
+
+    private void nearpos(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.STAFF);
+
+        ZoneList? zl = Data.Singletons.GetSingleton<ZoneList>();
+        if (zl == null)
+            throw ctx.SendGamemodeError();
+
+        Zone? targetZone = null;
+        if (ctx.TryGetRange(0, out string str))
+        {
+            SqlItem<Zone>? proxy = zl.SearchZone(str);
+
+            zl.WriteWait();
+            try
+            {
+                if (proxy is { Item: { } zone })
+                {
+                    targetZone = zone;
+                }
+            }
+            finally
+            {
+                zl.WriteRelease();
+            }
+        }
+
+        zl.WriteWait();
+        try
+        {
+            if (targetZone == null)
+            {
+                Vector2 pos = new Vector2(ctx.Caller.Position.x, ctx.Caller.Position.z);
+                SqlItem<Zone>? closest = zl.Items.OrderBy(x => Util.SqrDistance2D(x.Item!.Center, pos)).FirstOrDefault();
+                targetZone = closest?.Item;
+
+                if (targetZone == null)
+                    throw ctx.ReplyString("No closest zone.");
+            }
+
+            Vector3 closestPosition = targetZone.GetClosestPointOnBorder(ctx.Caller.Position);
+            F.TriggerEffectReliable(Assets.find<EffectAsset>(new Guid("effb5901fc934c4eaaf0e80ba4c642e3")), ctx.Caller.Connection, closestPosition);
+            ctx.ReplyString($"Found nearest point to <b>{targetZone.Name}</b> at: {closestPosition.ToString("F2", ctx.CultureInfo)}.");
+        }
+        finally
+        {
+            zl.WriteRelease();
+        }
     }
 }

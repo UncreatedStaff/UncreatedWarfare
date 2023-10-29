@@ -355,10 +355,8 @@ public static class OffenseManager
         joining.MuteReason = reason;
         joining.MuteType = type;
     }
-    public static bool IsValidSteam64Id(CSteamID id)
-    {
-        return id.m_SteamID / 100000000000000ul == 765;
-    }
+
+    public static bool IsValidSteam64Id(CSteamID id) => id.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
     private static string GetSavePath(int index) => Path.Combine(Data.Paths.PendingOffenses, index switch
     {
         0 => "bans",

@@ -861,6 +861,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         #endregion
 
         #region General Gamemode Config
+        GeneralMainCheckSeconds = 0.25f;
         GeneralAMCKillTime = 10f;
         GeneralLeaderboardDelay = 8f;
         GeneralLeaderboardTime = 30f;

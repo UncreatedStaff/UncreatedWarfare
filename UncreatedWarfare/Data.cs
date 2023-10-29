@@ -263,6 +263,7 @@ public static class Data
             L.Log("Using local as remote MySql database.", ConsoleColor.Magenta);
 
         L.Log("Verifying global tables...", ConsoleColor.Magenta);
+        await AdminSql.RefreshInformationSchemaAsync(token).ConfigureAwait(false);
         await AdminSql.VerifyTables(WarfareSQL.WarfareSchemas, token).ConfigureAwait(false);
         L.Log(" -- Done.", ConsoleColor.DarkMagenta);
     }

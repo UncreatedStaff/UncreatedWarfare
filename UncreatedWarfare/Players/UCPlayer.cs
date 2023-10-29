@@ -22,6 +22,7 @@ using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Moderation;
@@ -829,6 +830,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             return amount;
         }
     }
+
+    public float GetAMCDamageMultiplier() => TeamManager.GetAMCDamageMultiplier(this.GetTeam(), Position);
     /// <remarks>Thread Safe</remarks>
     public void Apply()
     {
