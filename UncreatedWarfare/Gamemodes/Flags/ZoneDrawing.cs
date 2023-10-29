@@ -33,6 +33,7 @@ public static class ZoneDrawing
         bool drawIn = !ctx.MatchFlag("noFill", "noArea");
         bool drawAdjacencies = !ctx.MatchFlag("noAdj");
         bool chart = ctx.MatchFlag("chart");
+        bool amcDamageWeights = ctx.MatchFlag("dmgMult");
         string msg = "Generating overlay with options: ";
         if (includeUnloadedZones)
             msg += "allZones";
@@ -63,6 +64,11 @@ public static class ZoneDrawing
             msg += ", chart";
         else
             msg += ", gps";
+
+        if (amcDamageWeights)
+            msg += ", dmgMult";
+        else
+            msg += ", noDmgMult";
         msg += ".";
         ctx.ReplyString(msg);
 
@@ -274,6 +280,27 @@ public static class ZoneDrawing
 
             yield return null;
         }
+
+        if (amcDamageWeights)
+        {
+            for (int x = 0; x < img.width; x++)
+            {
+                for (int y = 0; y < img.width; y++)
+                {
+                    if (x % 2 == 0 && y % 2 == 0)
+                        continue;
+
+                    Vector3 coords = GridLocation.MapCoordsToWorldCoords(new Vector2(x, y));
+
+                    float amc = Mathf.Min(TeamManager.GetAMCDamageMultiplier(1ul, coords), TeamManager.GetAMCDamageMultiplier(2ul, coords));
+                    Color color = Color.Lerp(Color.red, Color.green, amc) with { a = 0.5f };
+                    img.SetPixelClamp(x, y, color);
+                }
+
+                if (x % 16 == 0)
+                    yield return null;
+            }
+        }
         img.Apply();
         if (fileName != null && !fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
             fileName += ".png";
@@ -401,7 +428,7 @@ public static class ZoneDrawing
             if (color.a < 1f)
             {
                 Color old = texture.GetPixel(x, y);
-                color = old * ((1f - color.a) * old.a) + color * color.a;
+                color = (old * ((1f - color.a) * old.a) + color * color.a) with { a = 1f };
             }
             texture.SetPixel(x, y, color);
         }
