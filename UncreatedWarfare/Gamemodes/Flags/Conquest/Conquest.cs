@@ -23,7 +23,6 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
-using XPReward = Uncreated.Warfare.Quests.XPReward;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 public sealed partial class Conquest :

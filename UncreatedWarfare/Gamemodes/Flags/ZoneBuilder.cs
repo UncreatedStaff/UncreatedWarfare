@@ -72,8 +72,10 @@ public class ZoneBuilder
     /// <summary>Upper limit of the Y of the zone.</summary>
     /// <remarks>Set to <see cref="float.NaN"/> to not have an upper limit.</remarks>
     public float MaxHeight = float.NaN;
-    /// <summary>How the zone will be used (flag, lobby, main base, amc, etc)</summary>
+    /// <summary>How the zone will be used (flag, lobby, main base, amc, etc).</summary>
     public ZoneUseCase UseCase;
+    /// <summary>Flags or attributes of the zone.</summary>
+    public ZoneFlags Flags;
     /// <summary>Declare flags that are adjacent to each other for custom flag pathing.</summary>
     public AdjacentFlagData[]? Adjacencies;
     /// <summary>Declare grid objects to be used as electrical components.</summary>
@@ -125,6 +127,7 @@ public class ZoneBuilder
         Adjacencies = model.Adjacencies;
         GridObjects = model.GridObjects;
         UseCase = model.UseCase;
+        Flags = model.Flags;
         UseMapCoordinates = model.UseMapCoordinates;
         MinHeight = model.MinimumHeight;
         MaxHeight = model.MaximumHeight;
@@ -241,6 +244,13 @@ public class ZoneBuilder
         UseCase = useCase;
         return this;
     }
+    /// <summary>Sets how the zone will be used (flag, lobby, main base, amc, etc).</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ZoneBuilder WithFlags(ZoneFlags flags)
+    {
+        Flags = flags;
+        return this;
+    }
 
     /// <summary>Sets the zone type to <see cref="CircleZone"/> and sets the radius to <paramref name="radius"/>.</summary>
     public ZoneBuilder WithRadius(float radius)
@@ -308,6 +318,7 @@ public class ZoneBuilder
             SpawnZ = SpawnZ,
             ZoneData = ZoneData,
             UseCase = UseCase,
+            Flags = Flags,
             Id = Id,
             Adjacencies = Adjacencies ?? Array.Empty<AdjacentFlagData>(),
             GridObjects = GridObjects ?? Array.Empty<GridObject>(),

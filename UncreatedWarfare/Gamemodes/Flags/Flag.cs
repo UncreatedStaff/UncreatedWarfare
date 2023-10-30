@@ -7,6 +7,8 @@ using System.Globalization;
 using SDG.Framework.Utilities;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
@@ -15,7 +17,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
 public delegate void DiscoveryDelegate(ulong team);
-public class Flag : IDisposable, IObjective
+public class Flag : IDisposable, IObjective, IZone
 {
     public delegate void EvaluatePointsDelegate(Flag flag, bool overrideInactiveCheck = false);
     public delegate bool IsContestedDelegate(Flag flag, out ulong winner);
@@ -153,6 +155,22 @@ public class Flag : IDisposable, IObjective
         protected set => Discovered2 = value;
     }
     public ulong LastOwner => _lastOwner;
+    Vector3 IDeployable.SpawnPosition
+    {
+        get
+        {
+            Zone? zone = ZoneData.Item;
+            return zone is IDeployable deployable ? deployable.SpawnPosition : Position;
+        }
+    }
+    float IDeployable.Yaw
+    {
+        get
+        {
+            Zone? zone = ZoneData.Item;
+            return zone is IDeployable deployable ? deployable.Yaw : 0f;
+        }
+    }
     public void ResetFlag()
     {
 #if DEBUG
@@ -238,7 +256,10 @@ public class Flag : IDisposable, IObjective
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Stopwatch sw = Stopwatch.StartNew();
-        UCPlayer[] prevPlayers = PlayersOnFlag.Count == 0 ? Array.Empty<UCPlayer>() : PlayersOnFlag.ToArray();
+        List<UCPlayer> prevPlayers = ListPool<UCPlayer>.claim();
+        if (prevPlayers.Capacity < PlayersOnFlag.Count)
+            prevPlayers.Capacity = PlayersOnFlag.Count;
+        prevPlayers.AddRange(PlayersOnFlag);
         RecalcCappers();
         PlayerChange change = PlayerChange.Claim();
         List<UCPlayer> newPlayers = change.NewPlayers;
@@ -250,13 +271,13 @@ public class Flag : IDisposable, IObjective
         for (int i = 0; i < PlayersOnFlag.Count; i++)
         {
             UCPlayer player = PlayersOnFlag[i];
-            for (int j = 0; j < prevPlayers.Length; j++)
+            for (int j = 0; j < prevPlayers.Count; j++)
                 if (player.Steam64 == prevPlayers[j].Steam64)
                     goto done;
             newPlayers.Add(player);
             done:;
         }
-        for (int i = 0; i < prevPlayers.Length; i++)
+        for (int i = 0; i < prevPlayers.Count; i++)
         {
             UCPlayer player = prevPlayers[i];
             for (int j = 0; j < PlayersOnFlag.Count; j++)
@@ -663,4 +684,54 @@ public class Flag : IDisposable, IObjective
         return Name;
     }
     public override string ToString() => Name;
+    public bool IsInside(Vector2 location)
+    {
+        Zone? zone = ZoneData.Item;
+        return zone != null && zone.IsInside(location);
+    }
+    public bool IsInside(Vector3 location)
+    {
+        Zone? zone = ZoneData.Item;
+        return zone != null && zone.IsInside(location);
+    }
+    public Vector2 GetClosestPointOnBorder(Vector2 location)
+    {
+        Zone? zone = ZoneData.Item;
+        return zone != null ? zone.GetClosestPointOnBorder(location) : Position2D;
+    }
+    public Vector3 GetClosestPointOnBorder(Vector3 location)
+    {
+        Zone? zone = ZoneData.Item;
+        return zone != null ? zone.GetClosestPointOnBorder(location) : Position;
+    }
+    float IDeployable.GetDelay()
+    {
+        Zone? zone = ZoneData.Item;
+        return zone is IDeployable deployable ? deployable.GetDelay() : 0f;
+    }
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
+    {
+        Zone? zone = ZoneData.Item;
+        return zone is IDeployable deployable && deployable.CheckDeployable(player, ctx);
+    }
+    bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
+    {
+        Zone? zone = ZoneData.Item;
+        return zone is IDeployable deployable && deployable.CheckDeployableTick(player, chat);
+    }
+    void IDeployable.OnDeploy(UCPlayer player, bool chat)
+    {
+        Zone? zone = ZoneData.Item;
+        (zone as IDeployable)?.OnDeploy(player, chat);
+    }
+    Vector2[] IZone.GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center)
+    {
+        Zone? zone = ZoneData.Item;
+        if (zone != null)
+            return zone.GetParticleSpawnPoints(out corners, out center);
+
+        corners = Array.Empty<Vector2>();
+        center = Position2D;
+        return corners;
+    }
 }

@@ -59,6 +59,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     public override bool UseTeamSelector => true;
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
+    public override bool ConsumeFlagUseCaseZones => false;
     public Flag Objective => FlagRotation[_objIndex];
     Flag? IFlagObjectiveGamemode.Objective => _objIndex < 0 || _objIndex >= FlagRotation.Count ? null : FlagRotation[_objIndex];
     public int ObjectiveIndex => _objIndex;

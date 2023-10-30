@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -491,12 +492,10 @@ public static class Localization
         return finalformat + T.VBSStateReady.Translate(language, culture);
     }
 
-    public static string TranslateEnum<TEnum>(TEnum value) => TranslateEnum(value, GetDefaultLanguage());
-    public static string TranslateEnum<TEnum>(TEnum value, LanguageInfo? language)
+    public static string TranslateEnum<TEnum>(TEnum value) where TEnum : unmanaged, Enum => TranslateEnum(value, GetDefaultLanguage());
+    public static unsafe string TranslateEnum<TEnum>(TEnum value, LanguageInfo? language) where TEnum : unmanaged, Enum
     {
         language ??= GetDefaultLanguage();
-        if (value == null)
-            throw new ArgumentNullException(nameof(value));
         if (UCWarfare.IsLoaded && EnumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
         {
             if (!t.TryGetValue(language.LanguageCode, out Dictionary<string, string>? v) &&
@@ -505,7 +504,78 @@ public static class Localization
                 v = t.Values.FirstOrDefault();
             string strRep = value.ToString();
             if (v == null || !v.TryGetValue(strRep, out string v2))
-                return strRep.ToProperCase();
+            {
+                if (v == null || !Attribute.IsDefined(typeof(TEnum), typeof(FlagsAttribute)))
+                    return strRep.ToProperCase();
+                
+                string rtn = string.Empty;
+                int bits = sizeof(TEnum) * 8;
+                for (int i = 0; i < bits; ++i)
+                {
+                    if (rtn.Length != 0)
+                        rtn += " | ";
+                    strRep = ((TEnum)(object)(1ul << i)).ToString();
+                    rtn += v.TryGetValue(strRep, out v2) ? v2 : strRep.ToProperCase();
+                }
+                
+                return rtn.Length == 0 ? default(TEnum).ToString().ToProperCase() : rtn;
+            }
+            return v2;
+        }
+
+        return EnumToStringDynamic(value);
+    }
+    public static unsafe string TranslateEnum(object value, LanguageInfo? language)
+    {
+        language ??= GetDefaultLanguage();
+        if (value == null)
+            throw new ArgumentNullException(nameof(value));
+        Type type = value.GetType();
+        if (UCWarfare.IsLoaded && EnumTranslations.TryGetValue(type, out Dictionary<string, Dictionary<string, string>> t))
+        {
+            if (!t.TryGetValue(language.LanguageCode, out Dictionary<string, string>? v) &&
+                (language.IsDefault ||
+                 !t.TryGetValue(L.Default, out v)))
+                v = t.Values.FirstOrDefault();
+            string strRep = value.ToString();
+            if (v == null || !v.TryGetValue(strRep, out string v2))
+            {
+                if (v == null || !Attribute.IsDefined(type, typeof(FlagsAttribute)))
+                    return strRep.ToProperCase();
+                
+                // flags
+                string rtn = string.Empty;
+                Type underlyingType = Enum.GetUnderlyingType(type);
+                int bits = Marshal.SizeOf(underlyingType) * 8;
+                if (underlyingType == typeof(ulong))
+                {
+                    ulong value2 = Convert.ToUInt64(value);
+                    for (int i = 0; i < bits; ++i)
+                    {
+                        if ((value2 & (1UL << i)) == 0)
+                            continue;
+                        if (rtn.Length != 0)
+                            rtn += " | ";
+                        strRep = Enum.ToObject(type, 1UL << i).ToString();
+                        rtn += v.TryGetValue(strRep, out v2) ? v2 : strRep.ToProperCase();
+                    }
+                }
+                else
+                {
+                    long value2 = Convert.ToInt64(value);
+                    for (int i = 0; i < bits; ++i)
+                    {
+                        if ((value2 & (1L << i)) == 0)
+                            continue;
+                        if (rtn.Length != 0)
+                            rtn += " | ";
+                        strRep = Enum.ToObject(type, 1L << i).ToString();
+                        rtn += v.TryGetValue(strRep, out v2) ? v2 : strRep.ToProperCase();
+                    }
+                }
+
+                return rtn.Length == 0 ? type.getDefaultValue().ToString().ToProperCase() : rtn;
+            }
             return v2;
         }
 

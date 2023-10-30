@@ -372,6 +372,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         UCPlayerLocale.OnLocaleUpdated += EventFunctions.OnLocaleUpdated;
         ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
         BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
+        StructureManager.onDeployStructureRequested += EventFunctions.OnStructureTryPlaced;
+        ItemManager.onTakeItemRequested += EventFunctions.OnPickedUpItemRequested;
+        PlayerEquipment.OnPunch_Global += EventFunctions.OnPunch;
         UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
@@ -419,6 +422,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
         UCPlayerLocale.OnLocaleUpdated -= EventFunctions.OnLocaleUpdated;
         BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
+        StructureManager.onDeployStructureRequested -= EventFunctions.OnStructureTryPlaced;
+        ItemManager.onTakeItemRequested -= EventFunctions.OnPickedUpItemRequested;
+        PlayerEquipment.OnPunch_Global -= EventFunctions.OnPunch;
         UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;

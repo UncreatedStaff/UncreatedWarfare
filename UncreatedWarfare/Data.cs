@@ -143,7 +143,7 @@ public static class Data
     internal static ClientStaticMethod<uint, byte, byte>? SendSwapVehicleSeats;
     internal static ClientStaticMethod<uint, byte, CSteamID>? SendEnterVehicle;
     internal static ClientInstanceMethod? SendInventory;
-    internal static ClientInstanceMethod? SendScreenshotDestination;
+    // internal static ClientInstanceMethod? SendScreenshotDestination;
     internal static SingletonManager Singletons;
     internal static InstanceSetter<PlayerStance, EPlayerStance> SetPrivateStance;
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
@@ -325,7 +325,7 @@ public static class Data
         SendWearGlasses = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
         SendSwapVehicleSeats = Util.GetRPC<ClientStaticMethod<uint, byte, byte>, VehicleManager>("SendSwapVehicleSeats");
         SendEnterVehicle = Util.GetRPC<ClientStaticMethod<uint, byte, CSteamID>, VehicleManager>("SendEnterVehicle");
-        SendScreenshotDestination = Util.GetRPC<ClientInstanceMethod, Player>("SendScreenshotDestination");
+        // SendScreenshotDestination = Util.GetRPC<ClientInstanceMethod, Player>("SendScreenshotDestination");
         UseFastKits = true;
         if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null || SendInventory is null)
         {

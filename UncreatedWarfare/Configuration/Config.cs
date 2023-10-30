@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Uncreated.Networking;
 using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Configuration;
@@ -15,6 +16,8 @@ public class SystemConfig : Config<SystemConfigData>
             Warfare.Data.DatabaseManager.DebugLogging = Data.Debug;
         if (Warfare.Data.RemoteSQL != null)
             Warfare.Data.RemoteSQL.DebugLogging = Data.Debug;
+
+        Logging.SemaphoreLogging = Data.SemaphoreDebug;
     }
 }
 
@@ -30,6 +33,8 @@ public class SystemConfigData : JSONConfigData
     public MySqlData? RemoteSQL;
     [JsonPropertyName("debugMode")]
     public bool Debug;
+    [JsonPropertyName("semaphoreDebugLogging")]
+    public bool SemaphoreDebug;
     [JsonPropertyName("region")]
     public string Region;
     [JsonPropertyName("regionKey")]

@@ -11,11 +11,16 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
-/// <summary>
-/// Do not depend on object equality for your plugins. Zone objects will be cycled every time the file is re-read.
-/// The equality operators and function will compare names with <see cref="StringComparison.OrdinalIgnoreCase"/>. This is the most reliable way to compare <see cref="Zone"/>s.
-/// </summary>
-public abstract class Zone : IDeployable, IListItem
+public interface IZone : IDeployable
+{
+    bool IsInside(Vector2 location);
+    bool IsInside(Vector3 location);
+    Vector2 GetClosestPointOnBorder(Vector2 location);
+    Vector3 GetClosestPointOnBorder(Vector3 location);
+    Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center);
+}
+
+public abstract class Zone : IListItem, IZone
 {
     public PrimaryKey PrimaryKey { get; set; }
 
@@ -33,6 +38,7 @@ public abstract class Zone : IDeployable, IListItem
         SpawnZ = Spawn.y,
         UseMapCoordinates = false,
         UseCase = Data.UseCase,
+        Flags = Data.Flags,
         GridObjects = Data.GridObjects
     };
     internal readonly bool UseMapCoordinates;
@@ -93,7 +99,7 @@ public abstract class Zone : IDeployable, IListItem
         }
     }
     protected bool SucessfullyParsed = false;
-    internal readonly ZoneModel Data;
+    public readonly ZoneModel Data;
     protected Vector2[]? ParticleSpawnPoints;
     /// <summary>
     /// Display name for the zone.

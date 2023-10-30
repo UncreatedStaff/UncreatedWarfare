@@ -336,7 +336,7 @@ internal partial class ModerationUI
             if (hasSecondaryDuration)
             {
                 primaryName = Localization.TranslateEnum(editingExisting
-                    ? ModerationReflection.GetType(data.PrimaryEditingEntry!.GetType())
+                    ? ModerationReflection.GetType(data.PrimaryEditingEntry!.GetType()) ?? ModerationEntryType.None
                     : data.PendingPresetValue!.PrimaryModerationType, player.Locale.LanguageInfo) + " ";
             }
             else primaryName = string.Empty;

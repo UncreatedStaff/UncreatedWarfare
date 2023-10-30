@@ -215,6 +215,10 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsInVehicle => CurrentVehicle != null;
     public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
     public bool HasKit => ActiveKit?.Item is not null;
+    public bool JumpOnPunch { get; set; }
+    public Zone? SafezoneZone { get; internal set; }
+    public Zone? NoDropZone { get; internal set; }
+    public Zone? NoPickZone { get; internal set; }
     public Class KitClass => ActiveKit?.Item is { } kit ? kit.Class : Class.None;
     public Branch Branch => ActiveKit?.Item is { } kit ? kit.Branch : Branch.Default;
     bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other != null && ((object?)other == this || other.Steam64 == Steam64); 
@@ -831,7 +835,27 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
     }
 
-    public float GetAMCDamageMultiplier() => TeamManager.GetAMCDamageMultiplier(this.GetTeam(), Position);
+    public float GetAMCDamageMultiplier()
+    {
+        Vector3 pos;
+        InteractableVehicle? vehicle = Player.movement.getVehicle();
+        if (vehicle != null)
+        {
+            if (vehicle.TryGetComponent(out VehicleComponent veh) && veh.SafezoneZone is not null)
+                return 0f;
+            pos = vehicle.transform.position;
+        }
+        else
+        {
+            if (SafezoneZone is not null)
+                return 0;
+
+            pos = Position;
+        }
+
+        return TeamManager.GetAMCDamageMultiplier(this.GetTeam(), pos);
+    }
+
     /// <remarks>Thread Safe</remarks>
     public void Apply()
     {

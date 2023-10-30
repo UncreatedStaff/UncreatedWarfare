@@ -503,17 +503,9 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (OnFlagDict.TryGetValue(player.Steam64, out int id))
-        {
-            for (int i = 0; i < FlagRotation.Count; i++)
-            {
-                if (FlagRotation[i].ID == id)
-                {
-                    FlagRotation[i].RecalcCappers();
-                    break;
-                }
-            }
-        }
+        if (OnFlagDict.TryGetValue(player.Steam64, out int index))
+            FlagRotation[index].RecalcCappers();
+
         base.PlayerLeave(player);
     }
 }

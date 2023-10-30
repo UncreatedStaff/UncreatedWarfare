@@ -54,44 +54,44 @@ public static class RallyManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (IsRally(barricade.asset))
-        {
-            UCPlayer? player = UCPlayer.FromID(owner);
-            if (player == null) return;
-            if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
-            {
-                if (player.Squad.Members.Count > 1 || player.OnDuty())
-                {
-                    int nearbyEnemiesCount = 0;
-                    float sqrdst = SquadManager.Config.RallyDespawnDistance *
-                                   SquadManager.Config.RallyDespawnDistance;
-                    if (player.IsTeam1)
-                        nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == 2 && (p.Position - player.Position).sqrMagnitude < sqrdst);
-                    else if (player.IsTeam2)
-                        nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == 1 && (p.Position - player.Position).sqrMagnitude < sqrdst);
+        if (!IsRally(barricade.asset))
+            return;
 
-                    if (nearbyEnemiesCount > 0)
-                    {
-                        player.SendChat(T.RallyEnemiesNearby);
-                        shouldAllow = false;
-                    }
-                    else if (!F.CanStandAtLocation(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
-                    {
-                        player.SendChat(T.RallyObstructedPlace);
-                        shouldAllow = false;
-                    }
-                }
-                else
+        UCPlayer? player = UCPlayer.FromID(owner);
+        if (player == null) return;
+        if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
+        {
+            if (player.Squad.Members.Count > 1 || player.OnDuty())
+            {
+                int nearbyEnemiesCount = 0;
+                float sqrdst = SquadManager.Config.RallyDespawnDistance *
+                               SquadManager.Config.RallyDespawnDistance;
+                if (player.IsTeam1)
+                    nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == 2 && (p.Position - player.Position).sqrMagnitude < sqrdst);
+                else if (player.IsTeam2)
+                    nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == 1 && (p.Position - player.Position).sqrMagnitude < sqrdst);
+
+                if (nearbyEnemiesCount > 0)
                 {
-                    player.SendChat(T.RallyNoSquadmates);
+                    player.SendChat(T.RallyEnemiesNearby);
+                    shouldAllow = false;
+                }
+                else if (!F.CanStandAtLocation(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
+                {
+                    player.SendChat(T.RallyObstructedPlace);
                     shouldAllow = false;
                 }
             }
             else
             {
-                player.SendChat(T.RallyNotSquadleader);
+                player.SendChat(T.RallyNoSquadmates);
                 shouldAllow = false;
             }
+        }
+        else
+        {
+            player.SendChat(T.RallyNotSquadleader);
+            shouldAllow = false;
         }
     }
 

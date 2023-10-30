@@ -152,13 +152,14 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         if (State != State.Staging && EveryXSeconds(Config.GeneralMainCheckSeconds))
             TeamManager.EvaluateBases();
-
+#if DEBUG
         // AMC damage multiplier test
-        //if (EverySecond)
-        //{
-        //    foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-        //        player.SendString($"AMC Damage Mult: {player.GetAMCDamageMultiplier().ToString("F4", player.Locale.CultureInfo)}.");
-        //}
+        if (EverySecond)
+        {
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                player.SendString($"AMC Damage Mult: {player.GetAMCDamageMultiplier().ToString("F4", player.Locale.CultureInfo)}.");
+        }
+#endif
 
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
@@ -169,6 +170,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
                 player.Player.life.simulatedModifyOxygen(100);
             }
         }
+        base.EventLoopAction();
     }
     protected override Task OnReady(CancellationToken token)
     {
@@ -250,7 +252,6 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         base.OnPlayerDeath(e);
         _mainCampers.Remove(e.Player.Steam64);
-        EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
     protected override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token)
     {

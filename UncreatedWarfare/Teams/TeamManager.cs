@@ -1335,11 +1335,11 @@ public static class TeamManager
         if (team is not 1ul and not 2ul)
             return 1f;
 
-        Zone? amc = TeamManager.TryGetTeamZone(team, true);
+        Zone? amc = TryGetTeamZone(team, true);
         if (amc == null)
             return 1f;
 
-        Zone? main = TeamManager.TryGetTeamZone(team, false);
+        Zone? main = TryGetTeamZone(team, false);
         if (main == null)
             return 1f;
 
@@ -1350,6 +1350,43 @@ public static class TeamManager
 
         Vector3 mainPt = main.GetClosestPointOnBorder(position);
         Vector3 amcPt = amc.GetClosestPointOnBorder(position);
+
+        double exponent = Gamemode.Config.GeneralAMCDamageMultiplierPower / 2d;
+
+        if (exponent == 0d)
+            exponent = 1d;
+
+        float mainDist = (mainPt - position).sqrMagnitude;
+        float amcDist = (amcPt - position).sqrMagnitude;
+
+        if (exponent - 1d is > 0.0001 or < -0.0001)
+        {
+            mainDist = (float)Math.Pow(mainDist, exponent);
+            amcDist = (float)Math.Pow(amcDist, exponent);
+        }
+
+        return mainDist / (mainDist + amcDist);
+    }
+    public static float GetAMCDamageMultiplier(ulong team, Vector2 position)
+    {
+        if (team is not 1ul and not 2ul)
+            return 1f;
+
+        Zone? amc = TryGetTeamZone(team, true);
+        if (amc == null)
+            return 1f;
+
+        Zone? main = TryGetTeamZone(team, false);
+        if (main == null)
+            return 1f;
+
+        if (!amc.IsInside(position))
+            return 1f;
+        if (main.IsInside(position))
+            return 0f;
+
+        Vector2 mainPt = main.GetClosestPointOnBorder(position);
+        Vector2 amcPt = amc.GetClosestPointOnBorder(position);
 
         double exponent = Gamemode.Config.GeneralAMCDamageMultiplierPower / 2d;
 

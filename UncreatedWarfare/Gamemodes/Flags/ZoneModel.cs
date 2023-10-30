@@ -1,31 +1,31 @@
 ﻿using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using SDG.Unturned;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Maps;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
-internal struct ZoneModel : IListItem
+public struct ZoneModel : IListItem
 {
-    internal int Id = -1;
-    internal int Map;
-    internal string Name = null!;
-    internal string? ShortName;
-    internal float SpawnX = float.NaN;
-    internal float SpawnZ = float.NaN;
-    internal bool UseMapCoordinates;
-    internal float MinimumHeight = float.NaN;
-    internal float MaximumHeight = float.NaN;
-    internal ZoneType ZoneType = ZoneType.Invalid;
-    internal ZoneUseCase UseCase = ZoneUseCase.Other;
-    internal AdjacentFlagData[] Adjacencies;
-    internal GridObject[] GridObjects;
-    internal ModelData ZoneData = new ModelData();
+    public int Id = -1;
+    public int Map;
+    public string Name = null!;
+    public string? ShortName;
+    public float SpawnX = float.NaN;
+    public float SpawnZ = float.NaN;
+    public bool UseMapCoordinates;
+    public float MinimumHeight = float.NaN;
+    public float MaximumHeight = float.NaN;
+    public ZoneType ZoneType = ZoneType.Invalid;
+    public ZoneUseCase UseCase = ZoneUseCase.Other;
+    public ZoneFlags Flags = ZoneFlags.None;
+    public AdjacentFlagData[] Adjacencies;
+    public GridObject[] GridObjects;
+    public ModelData ZoneData = new ModelData();
     PrimaryKey IListItem.PrimaryKey { get => Id; set => Id = value; }
-    internal struct ModelData
+    public struct ModelData
     {
         internal Vector2[] Points = null!;
         internal float SizeX = float.NaN;
@@ -35,7 +35,7 @@ internal struct ZoneModel : IListItem
         internal float Z = float.NaN;
         public ModelData() { }
     }
-    internal bool IsValid = false;
+    public bool IsValid = false;
     internal static readonly PropertyData[] ValidProperties = new PropertyData[]
     {
         new PropertyData("size-x", ZoneType.Rectangle, (PropertyData.ModData<float>)    ((ref ModelData d, float v)     => d.SizeX  = v)),
@@ -69,7 +69,7 @@ internal struct ZoneModel : IListItem
         Map = -1;
     }
 
-    internal Zone GetZone()
+    public Zone GetZone()
     {
         if (IsValid)
         {
@@ -92,7 +92,7 @@ internal struct ZoneModel : IListItem
     /// Validates all data in this model.
     /// </summary>
     /// <exception cref="ZoneReadException">If data is invalid.</exception>
-    internal void ValidateRead()
+    public void ValidateRead()
     {
         if (string.IsNullOrEmpty(Name))
             throw new ZoneReadException("Zones are required to define: name (string, max. 128 char), and optionally short-name (string, max. 64 char).") { Data = this };
@@ -138,7 +138,7 @@ internal struct ZoneModel : IListItem
             throw new ZoneReadException("Zone JSON data should have at least one valid data property: " + string.Join(", ", ValidProperties.Select(x => x.Name))) { Data = this };
         }
         if (UseCase is < ZoneUseCase.Other or > ZoneUseCase.Lobby)
-            throw new ZoneReadException("Use case is out of range, must be: OTHER (0), FLAG (1), T1_MAIN (2), T2_MAIN (3), T1_AMC (4), T2_AMC (5), LOBBY (6).");
+            throw new ZoneReadException("Use case is out of range, must be: Other (0), Flag (1), Team1Main (2), Team2Main (3), Team1MainCampZone (4), Team2MainCampZone (5), Lobby (6).");
         if (Map < 0 || Map >= MapScheduler.MapCount)
             throw new ZoneReadException("Map index is out of range, must be between 0 and " + (MapScheduler.MapCount - 1).ToString(Warfare.Data.AdminLocale)) { Data = this };
         if (!IsBadFloat(MinimumHeight) && !IsBadFloat(MaximumHeight) && MaximumHeight <= MinimumHeight)
@@ -182,6 +182,30 @@ internal struct ZoneModel : IListItem
         }
         IsValid = true;
     }
+}
+
+[Flags]
+[Translatable(IsPrioritizedTranslation = false)]
+public enum ZoneFlags : ulong
+{
+    None = 0,
+    Safezone = 1,
+    [Translatable("No Building")]
+    NoBuilding = 1 << 1,
+    [Translatable("No FOB Building")]
+    NoFOBBuilding = 1 << 2,
+    [Translatable("No Building Radios")]
+    NoRadios = 1 << 3,
+    [Translatable("No Building Bunkers")]
+    NoBunkers = 1 << 4,
+    [Translatable("No Building Rallies")]
+    NoRallies = 1 << 5,
+    [Translatable("No Traps")]
+    NoTraps = 1 << 6,
+    [Translatable("No Dropping Items")]
+    NoDropItems = 1 << 7,
+    [Translatable("No Picking Up Items")]
+    NoPickItems = 1 << 8
 }
 
 [Translatable]

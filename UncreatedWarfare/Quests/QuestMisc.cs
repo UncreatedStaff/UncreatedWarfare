@@ -519,7 +519,7 @@ public static class QuestJsonEx
         value = new DynamicStringValue(isKitselector, null!);
         return false;
     }
-    public static unsafe bool TryReadEnumValue<TEnum>(this ref Utf8JsonReader reader, out DynamicEnumValue<TEnum> value) where TEnum : struct, Enum
+    public static unsafe bool TryReadEnumValue<TEnum>(this ref Utf8JsonReader reader, out DynamicEnumValue<TEnum> value) where TEnum : unmanaged, Enum
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -2582,7 +2582,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid>, IEquatab
 /// <summary>Datatype storing either a constant enum value or a set of enum values.
 /// <para>Formatted like <see cref="DynamicStringValue"/>.</para></summary>
 /// <typeparam name="TEnum">Any enumeration.</typeparam>
-public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatable<DynamicEnumValue<TEnum>> where TEnum : struct, Enum
+public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatable<DynamicEnumValue<TEnum>> where TEnum : unmanaged, Enum
 {
     private readonly TEnum _constant;
     private readonly EnumSet<TEnum> _set;
