@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using SDG.Unturned;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
@@ -42,7 +44,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (HasCooldown(player, type, out Cooldown existing, data))
-            existing.timeAdded = Time.realtimeSinceStartup;
+            existing.TimeAdded = Time.realtimeSinceStartup;
         else
             Singleton.Cooldowns.Add(new Cooldown(player, type, seconds, data));
     }
@@ -53,8 +55,8 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Singleton.Cooldowns.RemoveAll(c => c.player == null || c.SecondsLeft <= 0f);
-        cooldown = Singleton.Cooldowns.Find(c => c.type == type && c.player.Steam64 == player.Steam64 && StatesEqual(data, c.data));
+        Singleton.Cooldowns.RemoveAll(c => c.Player == null || c.SecondsLeft <= 0f);
+        cooldown = Singleton.Cooldowns.Find(c => c.CooldownType == type && c.Player.Steam64 == player.Steam64 && StatesEqual(data, c.Parameters));
         return cooldown != null;
     }
     private static bool StatesEqual(object[] state1, object[] state2)
@@ -89,47 +91,79 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Singleton.Cooldowns.RemoveAll(c => c.player == null || c.Timeleft.TotalSeconds <= 0);
-        cooldown = Singleton.Cooldowns.Find(c => c.type == type && c.player.CSteamID == player.CSteamID);
+        Singleton.Cooldowns.RemoveAll(c => c.Player == null || c.Timeleft.TotalSeconds <= 0);
+        cooldown = Singleton.Cooldowns.Find(c => c.CooldownType == type && c.Player.CSteamID == player.CSteamID);
         return cooldown != null;
     }
     public static void RemoveCooldown(UCPlayer player, CooldownType type)
     {
         if (!Singleton.IsLoaded()) return;
-        Singleton.Cooldowns.RemoveAll(c => c.player == null || c.player.CSteamID == player.CSteamID && c.type == type);
+        Singleton.Cooldowns.RemoveAll(c => c.Player == null || c.Player.CSteamID == player.CSteamID && c.CooldownType == type);
     }
     public static void RemoveCooldown(UCPlayer player)
     {
         if (!Singleton.IsLoaded()) return;
-        Singleton.Cooldowns.RemoveAll(c => c.player.CSteamID == player.CSteamID);
+        Singleton.Cooldowns.RemoveAll(c => c.Player.CSteamID == player.CSteamID);
     }
     public static void RemoveCooldown(CooldownType type)
     {
         if (!Singleton.IsLoaded()) return;
-        Singleton.Cooldowns.RemoveAll(x => x.player == null || x.type == type);
+        Singleton.Cooldowns.RemoveAll(x => x.Player == null || x.CooldownType == type);
     }
 
     public static void OnGameStarting()
     {
-        Singleton.Cooldowns.RemoveAll(x => x.type is not CooldownType.Report);
+        Singleton.Cooldowns.RemoveAll(x => x.CooldownType is not CooldownType.Report);
+    }
+
+    /// <returns>
+    /// The deploy cooldown based on current player count.
+    /// </returns>
+    /// <remarks>Equation: <c>CooldownMin + (CooldownMax - CooldownMin) * (1 - Pow(1 - (PlayerCount - PlayersMin) * (1 / (PlayersMax - PlayersMin)), Alpha)</c>.</remarks>
+    public static float GetFOBDeployCooldown() => GetFOBDeployCooldown(Provider.clients.Count(x => x.GetTeam() is 1 or 2));
+
+    /// <returns>
+    /// The deploy cooldown based on current player count.
+    /// </returns>
+    /// <remarks>Equation: <c>CooldownMin + (CooldownMax - CooldownMin) * (1 - Pow(1 - (PlayerCount - PlayersMin) * (1 / (PlayersMax - PlayersMin)), Alpha)</c>.</remarks>
+    public static float GetFOBDeployCooldown(int players)
+    {
+        players = Mathf.Clamp(players, Config.DeployFOBPlayersMin, Config.DeployFOBPlayersMax);
+
+        float a = Config.DeployFOBCooldownAlpha;
+        if (a == 0f)
+            a = 2f;
+
+        // (LaTeX)
+        // base function: f\left(x\right)=\left(1-\left(1-t\right)^{a}\right)
+        // scaled: \left(C_{2}-C_{1}\right)f\left(\left(x-P_{1}\right)\frac{1}{\left(P_{2}-P_{1}\right)}\right)+C_{1}
+
+        return Config.DeployFOBCooldownMin +
+               (Config.DeployFOBCooldownMax - Config.DeployFOBCooldownMin) *
+               (1f - Mathf.Pow(1 -
+                   /* t = */ (players - Config.DeployFOBPlayersMin) * (1f / (Config.DeployFOBPlayersMax - Config.DeployFOBPlayersMin))
+                   , a)
+               );
     }
 }
 public class CooldownConfig : JSONConfigData
 {
-    public bool EnableCombatLogger;
-    public RotatableConfig<float> CombatCooldown;
-    public RotatableConfig<float> DeployMainCooldown;
-    public RotatableConfig<float> DeployFOBCooldown;
+    public RotatableConfig<float> DeployFOBCooldownMin;
+    public RotatableConfig<float> DeployFOBCooldownMax;
+    public RotatableConfig<int> DeployFOBPlayersMin;
+    public RotatableConfig<int> DeployFOBPlayersMax;
+    public RotatableConfig<float> DeployFOBCooldownAlpha;
     public RotatableConfig<float> RequestKitCooldown;
     public RotatableConfig<float> RequestVehicleCooldown;
     public RotatableConfig<float> ReviveXPCooldown;
     public RotatableConfig<float> GlobalTraitCooldown;
     public override void SetDefaults()
     {
-        EnableCombatLogger = true;
-        CombatCooldown = 120;
-        DeployMainCooldown = 3;
-        DeployFOBCooldown = 30;
+        DeployFOBCooldownMin = 60;
+        DeployFOBCooldownMax = 90;
+        DeployFOBPlayersMin = 24;
+        DeployFOBPlayersMax = 60;
+        DeployFOBCooldownAlpha = 2f;
         RequestKitCooldown = 120;
         RequestVehicleCooldown = 240;
         ReviveXPCooldown = 150f;
@@ -138,25 +172,25 @@ public class CooldownConfig : JSONConfigData
 }
 public class Cooldown : ITranslationArgument
 {
-    public UCPlayer player;
-    public CooldownType type;
-    public double timeAdded;
-    public float seconds;
-    public object[] data;
-    public TimeSpan Timeleft => TimeSpan.FromSeconds(Math.Max(0d, seconds - (Time.realtimeSinceStartupAsDouble - timeAdded)));
-    public float SecondsLeft => Mathf.Max(0f, seconds - (Time.realtimeSinceStartup - (float)timeAdded));
+    public UCPlayer Player { get; }
+    public CooldownType CooldownType { get; }
+    public double TimeAdded { get; set; }
+    public float Duration { get; set; }
+    public object[] Parameters { get; }
+    public TimeSpan Timeleft => TimeSpan.FromSeconds(Math.Max(0d, Duration - (Time.realtimeSinceStartupAsDouble - TimeAdded)));
+    public float SecondsLeft => Mathf.Max(0f, Duration - (Time.realtimeSinceStartup - (float)TimeAdded));
 
-    public Cooldown(UCPlayer player, CooldownType type, float seconds, params object[] data)
+    public Cooldown(UCPlayer player, CooldownType cooldownType, float duration, params object[] parameters)
     {
-        this.player = player;
-        this.type = type;
-        timeAdded = Time.realtimeSinceStartupAsDouble;
-        this.seconds = seconds;
-        this.data = data;
+        Player = player;
+        CooldownType = cooldownType;
+        TimeAdded = Time.realtimeSinceStartupAsDouble;
+        Duration = duration;
+        Parameters = parameters;
     }
     public override string ToString()
     {
-        double sec = seconds - (Time.realtimeSinceStartupAsDouble - timeAdded);
+        double sec = Duration - (Time.realtimeSinceStartupAsDouble - TimeAdded);
 
         if (sec <= 1d) return "1s";
 
@@ -180,7 +214,7 @@ public class Cooldown : ITranslationArgument
         return line;
     }
 
-    [FormatDisplay("Type (" + nameof(CooldownType) + ")")]
+    [FormatDisplay("Type (" + nameof(Warfare.CooldownType) + ")")]
     /// <summary>Translated <see cref="ECooldownType"/>.</summary>
     public const string FormatName = "n";
     [FormatDisplay("Long Time (3 hours and 4 minutes)")]
@@ -195,7 +229,7 @@ public class Cooldown : ITranslationArgument
         if (!string.IsNullOrEmpty(format))
         {
             if (format!.Equals(FormatName, StringComparison.Ordinal))
-                return Localization.TranslateEnum(type, language);
+                return Localization.TranslateEnum(CooldownType, language);
             if (format.Equals(FormatTimeLong, StringComparison.Ordinal))
                 return Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language, culture);
             if (format.Equals(FormatTimeShort, StringComparison.Ordinal))
@@ -206,6 +240,7 @@ public class Cooldown : ITranslationArgument
         return ToString();
     }
 }
+
 [Translatable("Cooldown Type", IsPrioritizedTranslation = false)]
 public enum CooldownType
 {

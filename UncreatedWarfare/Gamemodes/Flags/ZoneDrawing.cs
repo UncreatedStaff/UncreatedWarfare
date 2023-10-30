@@ -308,7 +308,7 @@ public static class ZoneDrawing
         yield return null;
         F.SavePhotoToDisk(fileName, img);
         yield return null;
-        img.Resize(img.width / 8, img.height / 8);
+        img.Reinitialize(img.width / 8, img.height / 8);
         if (!ctx.IsConsole && Data.SendScreenshotDestination != null)
         {
             byte[] jpeg = img.EncodeToJPG(75);

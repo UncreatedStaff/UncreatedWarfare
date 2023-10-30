@@ -122,13 +122,14 @@ internal class GuidedMissileComponent : MonoBehaviour
 
             if (id.ValidReference(out EffectAsset effect))  // send the effect to all clients here
             {
-                EffectManager.triggerEffect(new TriggerEffectParameters(effect)
+                TriggerEffectParameters parameters = new TriggerEffectParameters(effect)
                 {
                     relevantDistance = 1200f,
                     position = _projectile.transform.position,
-                    direction = _projectile.transform.forward,
                     reliable = false
-                });
+                };
+                parameters.SetDirection(_projectile.transform.forward);
+                EffectManager.triggerEffect(parameters);
             }
             count++;
         }

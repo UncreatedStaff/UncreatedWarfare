@@ -237,7 +237,7 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
                 new object[]
                 {
                     preferences.Steam64,
-                    preferences.Language.IsValid ? preferences.Language.Key : DBNull.Value,
+                    preferences.Language.IsValid && preferences.Language.Key != 0 ? preferences.Language.Key : DBNull.Value,
                     (object?)preferences.CultureCode ?? DBNull.Value,
                     preferences.UseCultureForCommandInput,
                     preferences.LastUpdated.UtcDateTime
@@ -266,6 +266,10 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
                         reader.IsDBNull(1) ? null : reader.GetString(1),
                         reader.GetBoolean(2),
                         new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc)));
+
+                    if (preferences.Language.Key == 0)
+                        preferences.Language = PrimaryKey.NotAssigned;
+
                 }, token).ConfigureAwait(false);
 
             return preferences ?? new PlayerLanguagePreferences(steam64);

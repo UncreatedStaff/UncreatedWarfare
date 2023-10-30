@@ -37,19 +37,21 @@ public class RapidDeployment : Buff
     public static float GetDeployTime(UCPlayer player)
     {
         TraitData? d = DATA ??= TraitManager.GetData(typeof(RapidDeployment));
+        float cooldown = CooldownManager.GetFOBDeployCooldown();
         if (d != null)
         {
             if (TraitManager.IsAffected(d, player, out Trait trait) && trait is RapidDeployment dep)
             {
                 if (player.Steam64 == dep.TargetPlayer.Steam64)
-                    return CooldownManager.Config.DeployFOBCooldown * dep._multiplier;
-                else if (dep.TargetPlayer.IsSquadLeader())
-                    return CooldownManager.Config.DeployFOBCooldown * dep._multiplier * dep.Data.SquadLeaderDistributedMultiplier;
-                else
-                    return CooldownManager.Config.DeployFOBCooldown * dep._multiplier * dep.Data.SquadDistributedMultiplier;
+                    return cooldown * dep._multiplier;
+
+                if (dep.TargetPlayer.IsSquadLeader())
+                    return cooldown * dep._multiplier * dep.Data.SquadLeaderDistributedMultiplier;
+                
+                return cooldown * dep._multiplier * dep.Data.SquadDistributedMultiplier;
             }
         }
 
-        return CooldownManager.Config.DeployFOBCooldown;
+        return cooldown;
     }
 }

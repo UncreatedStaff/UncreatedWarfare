@@ -172,13 +172,14 @@ public class HeatSeekingMissileComponent : MonoBehaviour
             }
             if (id.ValidReference(out EffectAsset effect))
             {
-                EffectManager.triggerEffect(new TriggerEffectParameters(effect)
+                TriggerEffectParameters parameters = new TriggerEffectParameters(effect)
                 {
                     relevantDistance = 1200f,
                     position = _projectile.transform.position,
-                    direction = _projectile.transform.forward,
                     reliable = false
-                });
+                };
+                parameters.SetDirection(_projectile.transform.forward);
+                EffectManager.triggerEffect(parameters);
             }
         }
     }

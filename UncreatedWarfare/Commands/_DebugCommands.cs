@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,7 +6,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -26,17 +24,19 @@ using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Debug = System.Diagnostics.Debug;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
+#if DEBUG
+using HarmonyLib;
+using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Squads.Commander;
+using Uncreated.Warfare.Teams;
+#endif
 
 // ReSharper disable UnusedMember.Local
 // ReSharper disable InconsistentNaming
@@ -1019,9 +1019,9 @@ public class DebugCommand : AsyncCommand
         ctx.AssertRanByPlayer();
         L.Log("Cooldowns for " + ctx.Caller.Name.PlayerName + ":");
         using IDisposable d = L.IndentLog(1);
-        foreach (Cooldown cooldown in CooldownManager.Singleton.Cooldowns.Where(x => x.player.Steam64 == ctx.Caller.Steam64))
+        foreach (Cooldown cooldown in CooldownManager.Singleton.Cooldowns.Where(x => x.Player.Steam64 == ctx.Caller.Steam64))
         {
-            L.Log($"{cooldown.type}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.data is null || cooldown.data.Length == 0 ? "NO DATA" : string.Join(";", cooldown.data))}");
+            L.Log($"{cooldown.CooldownType}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.Parameters is null || cooldown.Parameters.Length == 0 ? "NO DATA" : string.Join(";", cooldown.Parameters))}");
         }
     }
 #if DEBUG
@@ -1772,8 +1772,24 @@ public class DebugCommand : AsyncCommand
         ctx.AssertRanByConsole();
         ctx.ReplyString(string.Join(string.Empty, ItemIconProvider.Defaults.Select(x => x.Character).Where(x => x.HasValue).Select(x => x!.Value.ToString())));
     }
+    private void fobcooldown(CommandInteraction ctx)
+    {
+        if (ctx.TryGet(0, out int playerCount))
+        {
+            ctx.ReplyString($"Cooldown: {Util.ToTimeString(TimeSpan.FromSeconds(CooldownManager.GetFOBDeployCooldown(playerCount)))} for {playerCount} player(s).");
+        }
+        else
+        {
+            playerCount = Provider.clients.Count(x => x.GetTeam() is 1 or 2);
+            ctx.ReplyString($"Current cooldown: {Util.ToTimeString(TimeSpan.FromSeconds(CooldownManager.GetFOBDeployCooldown(playerCount)))} for {playerCount} player(s)..");
+        }
+    }
+    private void amcdamage(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
 
-
+        ctx.ReplyString($"Your multiplier is currently {ctx.Caller.GetAMCDamageMultiplier().ToString("F4", ctx.CultureInfo)}.");
+    }
     private void nearpos(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();

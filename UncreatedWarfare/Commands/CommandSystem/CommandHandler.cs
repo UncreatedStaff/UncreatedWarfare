@@ -612,9 +612,9 @@ public sealed class CommandInteraction : BaseCommandInteraction
         {
             if (Command is ICompoundingCooldownCommand compounding)
             {
-                cooldown.seconds *= compounding.CompoundMultiplier;
-                if (compounding.MaxCooldown > 0 && cooldown.seconds > compounding.MaxCooldown)
-                    cooldown.seconds = compounding.MaxCooldown;
+                cooldown.Duration *= compounding.CompoundMultiplier;
+                if (compounding.MaxCooldown > 0 && cooldown.Duration > compounding.MaxCooldown)
+                    cooldown.Duration = compounding.MaxCooldown;
             }
 
             Caller.SendChat(T.CommandCooldown, cooldown, Command.CommandName);
@@ -642,9 +642,9 @@ public sealed class CommandInteraction : BaseCommandInteraction
         {
             if (Command is ICompoundingCooldownCommand compounding)
             {
-                PortionCooldown!.seconds *= compounding.CompoundMultiplier;
-                if (compounding.MaxCooldown > 0 && PortionCooldown.seconds > compounding.MaxCooldown)
-                    PortionCooldown.seconds = compounding.MaxCooldown;
+                PortionCooldown!.Duration *= compounding.CompoundMultiplier;
+                if (compounding.MaxCooldown > 0 && PortionCooldown.Duration > compounding.MaxCooldown)
+                    PortionCooldown.Duration = compounding.MaxCooldown;
             }
 
             throw Reply(T.CommandCooldown, PortionCooldown!, Command!.CommandName);
@@ -663,11 +663,11 @@ public sealed class CommandInteraction : BaseCommandInteraction
         {
             if (Command is ICompoundingCooldownCommand compounding)
             {
-                PortionCooldown!.seconds *= compounding.CompoundMultiplier;
-                if (compounding.MaxCooldown > 0 && PortionCooldown.seconds > compounding.MaxCooldown)
-                    PortionCooldown.seconds = compounding.MaxCooldown;
+                PortionCooldown!.Duration *= compounding.CompoundMultiplier;
+                if (compounding.MaxCooldown > 0 && PortionCooldown.Duration > compounding.MaxCooldown)
+                    PortionCooldown.Duration = compounding.MaxCooldown;
             }
-            else PortionCooldown!.seconds = PortionCommandCooldownTime!.Value;
+            else PortionCooldown!.Duration = PortionCommandCooldownTime!.Value;
         }
     }
     internal void ExecuteCommandSync()

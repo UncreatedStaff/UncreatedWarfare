@@ -217,8 +217,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 {
                     if (CooldownManager.Config.ReviveXPCooldown <= 0 || (uctarget != null &&
                       !(CooldownManager.HasCooldown(ucmedic, CooldownType.Revive, out Cooldown cooldown) &&
-                        cooldown.data.Length > 0 &&
-                        cooldown.data[0] is ulong id &&
+                        cooldown.Parameters.Length > 0 &&
+                        cooldown.Parameters[0] is ulong id &&
                         id == uctarget.Steam64)))
                     {
                         Points.AwardXP(ucmedic, XPReward.Revive);
