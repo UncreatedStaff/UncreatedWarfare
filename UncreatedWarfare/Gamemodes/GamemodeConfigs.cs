@@ -524,6 +524,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(611)]
     [JsonPropertyName("general_main_check_seconds")]
     public RotatableConfig<float> GeneralMainCheckSeconds { get; set; }
+
+    [Sync(612)]
+    [JsonPropertyName("general_amc_dmg_power")]
+    public RotatableConfig<double> GeneralAMCDamageMultiplierPower { get; set; }
     #endregion
 
     #region Advance and Secure (1001 to 1100)
@@ -861,6 +865,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         #endregion
 
         #region General Gamemode Config
+        GeneralAMCDamageMultiplierPower = 2f;
         GeneralMainCheckSeconds = 0.25f;
         GeneralAMCKillTime = 10f;
         GeneralLeaderboardDelay = 8f;

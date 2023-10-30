@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using MySqlConnector;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -7,14 +8,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using MySqlConnector;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
@@ -1352,8 +1351,19 @@ public static class TeamManager
         Vector3 mainPt = main.GetClosestPointOnBorder(position);
         Vector3 amcPt = amc.GetClosestPointOnBorder(position);
 
+        double exponent = Gamemode.Config.GeneralAMCDamageMultiplierPower / 2d;
+
+        if (exponent == 0d)
+            exponent = 1d;
+
         float mainDist = (mainPt - position).sqrMagnitude;
         float amcDist = (amcPt - position).sqrMagnitude;
+
+        if (exponent - 1d is > 0.0001 or < -0.0001)
+        {
+            mainDist = (float)Math.Pow(mainDist, exponent);
+            amcDist = (float)Math.Pow(amcDist, exponent);
+        }
 
         return mainDist / (mainDist + amcDist);
     }
