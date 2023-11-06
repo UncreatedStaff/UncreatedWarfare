@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using SDG.Framework.Landscapes;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
@@ -1259,6 +1260,36 @@ public static class TeamManager
             _ => false
         };
     }
+    public static void RubberbandPlayer(UCPlayer player, ulong team)
+    {
+        Zone? main = GetMain(team);
+        if (main == null)
+            return;
+
+        L.LogDebug($"{player} left main while in staging phase.");
+        InteractableVehicle? veh = player.CurrentVehicle;
+        if (veh != null)
+        {
+            player.Player.movement.forceRemoveFromVehicle();
+            if (veh.gameObject.TryGetComponent(out Rigidbody rb))
+            {
+                rb.AddForce(-rb.velocity * 4 + Vector3.one);
+            }
+        }
+
+        Vector3 pos = main.GetClosestPointOnBorder(player.Position);
+        Vector3 pos2 = 2 * (pos - player.Position) + player.Position;
+        if (!main.IsInside(pos2))
+            pos2 = pos;
+        Landscape.getWorldHeight(pos2, out float height);
+        height += 0.01f;
+
+        if (pos2.y < height)
+            pos2.y = height;
+
+        player.Player.teleportToLocationUnsafe(pos2, player.Yaw);
+    }
+    public static bool InMainCached(UCPlayer player) => PlayerBaseStatus != null && PlayerBaseStatus.TryGetValue(player.Steam64, out byte team) && team != 0;
     public static void EvaluateBases()
     {
 #if DEBUG

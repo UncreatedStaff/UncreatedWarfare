@@ -1385,27 +1385,22 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
         if (active != null)
         {
-            for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
+            for (byte page = 0; page < PlayerInventory.PAGES - 2; page++)
             {
-                if (page == PlayerInventory.AREA)
-                    continue;
-
-                for (byte index = 0; index < life.player.inventory.getItemCount(page); index++)
+                for (int index = life.player.inventory.getItemCount(page) - 1; index >= 0; --index)
                 {
-                    ItemJar jar = life.player.inventory.getItem(page, index);
+                    ItemJar jar = life.player.inventory.getItem(page, (byte)index);
 
                     if (Assets.find(EAssetType.ITEM, jar.item.id) is not ItemAsset asset) continue;
                     float percentage = (float)jar.item.amount / asset.amount;
 
                     bool notInKit = !active.ContainsItem(asset.GUID, player == null ? 0 : player.GetTeam()) && Whitelister.IsWhitelisted(asset.GUID, out _);
-                    if (notInKit || (percentage < 0.3 && asset.type != EItemType.GUN))
+                    if (notInKit || (percentage < 0.3f && asset.type != EItemType.GUN))
                     {
                         if (notInKit)
-                        {
                             ItemManager.dropItem(jar.item, life.player.transform.position, false, true, true);
-                        }
 
-                        life.player.inventory.removeItem(page, index);
+                        life.player.inventory.removeItem(page, (byte)index);
                         index--;
                     }
                 }

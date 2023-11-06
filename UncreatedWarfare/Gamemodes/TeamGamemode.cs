@@ -57,34 +57,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
 
         if (State != State.Staging || CanLeaveMainInStaging(team))
             return;
-        
-        Zone? main = TeamManager.GetMain(team);
-        if (main == null)
-            return;
 
-        L.LogDebug($"{player} left main while in staging phase.");
-
-        InteractableVehicle? veh = player.CurrentVehicle;
-        if (veh != null)
-        {
-            player.Player.movement.forceRemoveFromVehicle();
-            if (veh.gameObject.TryGetComponent(out Rigidbody rb))
-            {
-                rb.AddForce(-rb.velocity * 4 + Vector3.one);
-            }
-        }
-
-        Vector3 pos = main.GetClosestPointOnBorder(player.Position);
-        Vector3 pos2 = 2 * (pos - player.Position) + player.Position;
-        if (!main.IsInside(pos2))
-            pos2 = pos;
-        Landscape.getWorldHeight(pos2, out float height);
-        height += 0.01f;
-
-        if (pos2.y < height)
-            pos2.y = height;
-
-        player.Player.teleportToLocationUnsafe(pos2, player.Yaw);
+        TeamManager.RubberbandPlayer(player, team);
         TeamManager.EvaluateBases();
     }
     protected override Task PreInit(CancellationToken token)
@@ -150,8 +124,24 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     protected override void EventLoopAction()
     {
-        if (State != State.Staging && EveryXSeconds(Config.GeneralMainCheckSeconds))
-            TeamManager.EvaluateBases();
+        if (EveryXSeconds(Config.GeneralMainCheckSeconds))
+        {
+            if (State == State.Staging)
+            {
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                {
+                    UCPlayer player = PlayerManager.OnlinePlayers[i];
+                    ulong team = player.GetTeam();
+                    if (CanLeaveMainInStaging(team) || TeamManager.InMainCached(player) || player.OnDuty())
+                        continue;
+
+                    TeamManager.RubberbandPlayer(player, team);
+                }
+            }
+            else
+                TeamManager.EvaluateBases();
+        }
+
 #if DEBUG
         // AMC damage multiplier test
         if (EverySecond)
