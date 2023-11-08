@@ -7,5 +7,5 @@ namespace Uncreated.Warfare.Core.Gameplay;
 [ServiceImplementation(Lifetime = ServiceLifetime.Transient)]
 public class GameplayService : IGameplayService
 {
-    IGameplayHost? Gameplay { get; }
+    public IGameplayHost? Host { get; }
 }

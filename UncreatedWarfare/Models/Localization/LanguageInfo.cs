@@ -14,12 +14,12 @@ public class LanguageInfo
 
     [Required]
     [Column(TypeName = "char(5)")]
-    public string Code { get; set; }
+    public string Code { get; set; } = null!;
 
     [Required]
     [MaxLength(64)]
-    public string DisplayName { get; set; }
-    
+    public string DisplayName { get; set; } = null!;
+
     [MaxLength(64)]
     public string? NativeName { get; set; }
     
@@ -36,7 +36,7 @@ public class LanguageInfo
     [MaxLength(32)]
     public string? SteamLanguageName { get; set; }
 
-    public IList<LanguageAlias> Aliases { get; set; }
-    public IList<LanguageContributor> Contributors { get; set; }
-    public IList<LanguageCulture> SupportedCultures { get; set; }
+    public IList<LanguageAlias> Aliases { get; set; } = null!;
+    public IList<LanguageContributor> Contributors { get; set; } = null!;
+    public IList<LanguageCulture> SupportedCultures { get; set; } = null!;
 }

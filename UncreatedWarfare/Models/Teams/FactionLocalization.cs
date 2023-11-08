@@ -1,14 +1,29 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Models.Teams;
 
 [Table("faction_translations")]
 public class FactionLocalization
 {
-    public int Language { get; set; }
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column("pk")]
+    public int Id { get; set; }
 
     [Required]
-    [MaxLength(16)]
-    public string CultureCode { get; set; }
+    public Faction Faction { get; set; } = null!;
+
+    [Required]
+    public LanguageInfo Language { get; set; } = null!;
+
+    [MaxLength(32)]
+    public string? Name { get; set; } = null!;
+
+    [MaxLength(24)]
+    public string? ShortName { get; set; } = null!;
+
+    [MaxLength(8)]
+    public string? Abbreviation { get; set; } = null!;
 }

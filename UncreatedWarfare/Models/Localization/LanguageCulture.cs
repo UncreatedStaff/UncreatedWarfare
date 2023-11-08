@@ -6,9 +6,15 @@ namespace Uncreated.Warfare.Models.Localization;
 [Table("lang_cultures")]
 public class LanguageCulture
 {
-    public int Language { get; set; }
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column("pk")]
+    public int Id { get; set; }
+
+    [Column("Langauge")]
+    public LanguageInfo Language { get; set; } = null!;
 
     [MaxLength(16)]
     [Required]
-    public string CultureCode { get; set; }
+    public string CultureCode { get; set; } = null!;
 }

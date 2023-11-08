@@ -1,12 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <TargetFrameworks>net461</TargetFrameworks>
     <PackageTags>openmod openmod-plugin unturned</PackageTags>
     <RootNamespace>Uncreated.Warfare</RootNamespace>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <GenerateNugetPackage>true</GenerateNugetPackage>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GenerateNugetPackage>false</GenerateNugetPackage>
     <Product>UncreatedWarfare</Product>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
@@ -16,21 +15,36 @@
     <PackageVersion>$(Version)</PackageVersion>
     <LangVersion>preview</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DanielWillett.ReflectionTools" Version="[1.0.3,)" />
-    <PackageReference Include="OpenMod.EntityFrameworkCore.MySql" Version="[3.6.2,)" />
-    <PackageReference Include="OpenMod.Unturned" Version="[3.6.2,)" />
-    <PackageReference Include="Legacy2CPSWorkaround" Version="[1.0.0,)">
-      <PrivateAssets>All</PrivateAssets>
-    </PackageReference>
-    <!--
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="[1.0.0,3)">
+    <Compile Remove="Migrations\20231108214356_Initial.cs" />
+    <Compile Remove="Migrations\20231108214356_Initial.Designer.cs" />
+    <Compile Remove="Migrations\20231108220048_2.cs" />
+    <Compile Remove="Migrations\20231108220048_2.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.32">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    -->
+    <PackageReference Include="OpenMod.EntityFrameworkCore.MySql" Version="3.7.3" />
+    <PackageReference Include="OpenMod.Unturned" Version="3.7.3" />
+    <PackageReference Include="OpenMod.Unturned.Redist" Version="3.23.12.3" />
+    <PackageReference Include="Legacy2CPSWorkaround" Version="1.0.0">
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DanielWillett.ReflectionTools" Version="1.0.3" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,6 +54,7 @@
 
   <ItemGroup>
     <Folder Include="API\Gameplay\Hosts\" />
+    <Folder Include="Automation\" />
     <Folder Include="Models\Configuration\" />
   </ItemGroup>
 

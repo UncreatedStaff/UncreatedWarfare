@@ -1,22 +1,24 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using SDG.Unturned;
 using Uncreated.Warfare.API.Items;
+using Uncreated.Warfare.Models.Assets;
 
 namespace Uncreated.Warfare.Models.Teams;
 
 [Table("faction_assets")]
 public class FactionAsset
 {
-    [Column("Faction")]
-    public int FactionKey { get; set; }
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column("pk")]
+    public int Id { get; set; }
 
-    [ForeignKey(nameof(Faction))]
-    public Faction Faction { get; set; }
+    [Required]
+    public Faction Faction { get; set; } = null!;
 
     public ItemRedirect Redirect { get; set; }
     
-    public AssetReference<ItemAsset> Asset { get; set; }
+    public UnturnedAssetReference Asset { get; set; }
 
     [MaxLength(32)]
     public string? VariantKey { get; set; }

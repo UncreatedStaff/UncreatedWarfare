@@ -14,8 +14,8 @@ public class Faction
 
     [Required]
     [MaxLength(16)]
-    public string Id { get; set; }
-    
+    public string Id { get; set; } = null!;
+
     [MaxLength(32)]
     public string? Name { get; set; }
 
@@ -40,4 +40,5 @@ public class Faction
     public string? Emoji { get; set; }
 
     public IList<FactionAsset>? Assets { get; set; }
+    public IList<FactionLocalization>? Translations { get; set; }
 }

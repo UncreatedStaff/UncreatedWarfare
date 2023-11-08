@@ -6,9 +6,15 @@ namespace Uncreated.Warfare.Models.Localization;
 [Table("lang_aliases")]
 public class LanguageAlias
 {
-    public int Language { get; set; }
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column("pk")]
+    public int Id { get; set; }
+
+    [Column("Langauge")]
+    public LanguageInfo Language { get; set; } = null!;
 
     [MaxLength(64)]
     [Required]
-    public string Alias { get; set; }
+    public string Alias { get; set; } = null!;
 }
