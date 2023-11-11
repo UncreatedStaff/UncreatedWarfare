@@ -13,6 +13,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
@@ -3348,7 +3349,7 @@ internal static class T
         }
 
         language ??= Localization.GetDefaultLanguage();
-        if (list.TryGetValue(language.LanguageCode, out local) || (!language.IsDefault && list.TryGetValue(L.Default, out local)))
+        if (list.TryGetValue(language.Code, out local) || (!language.IsDefault && list.TryGetValue(L.Default, out local)))
             return true;
         return (local = list.Values.FirstOrDefault()!) != null;
     }

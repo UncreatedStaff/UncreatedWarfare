@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+﻿using MySql.Data.MySqlClient;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -100,8 +100,8 @@ partial class KitManager
             new Schema.Column(COLUMN_FACTION, SqlTypes.INCREMENT_KEY)
             {
                 ForeignKey = true,
-                ForeignKeyColumn = FactionInfo.COLUMN_PK,
-                ForeignKeyTable = FactionInfo.TABLE_MAIN,
+                ForeignKeyColumn = "pk",
+                ForeignKeyTable = "factions",
                 Nullable = true,
                 ForeignKeyDeleteBehavior = ConstraintBehavior.NoAction
             },
@@ -152,7 +152,7 @@ partial class KitManager
         }, false, typeof(IKitItem)),
         UnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK),
         Skillset.GetDefaultSchema(TABLE_SKILLSETS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK),
-        F.GetForeignKeyListSchema(TABLE_FACTION_FILTER, COLUMN_EXT_PK, COLUMN_FILTER_FACTION, TABLE_MAIN, COLUMN_PK, FactionInfo.TABLE_MAIN, FactionInfo.COLUMN_PK),
+        F.GetForeignKeyListSchema(TABLE_FACTION_FILTER, COLUMN_EXT_PK, COLUMN_FILTER_FACTION, TABLE_MAIN, COLUMN_PK, "factions", "pk"),
         F.GetForeignKeyListSchema(TABLE_MAP_FILTER, COLUMN_EXT_PK, COLUMN_FILTER_MAP, TABLE_MAIN, COLUMN_PK, null, null),
         F.GetTranslationListSchema(TABLE_SIGN_TEXT, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, KitEx.SignTextMaxCharLimit),
         new Schema(TABLE_ACCESS, new Schema.Column[]
@@ -1920,27 +1920,27 @@ partial class KitManager
 
     private class OldKit
     {
-        public PrimaryKey PrimaryKey = PrimaryKey.NotAssigned;
-        public string? Name;
-        public Class Class;
-        public Branch Branch;
-        public ulong Team;
-        public List<UnlockRequirement>? UnlockRequirements;
-        public List<Skillset>? Skillsets;
-        public ushort CreditCost;
-        public ushort UnlockLevel;
-        public bool IsPremium;
-        public float PremiumCost;
-        public bool IsLoadout;
-        public float TeamLimit;
-        public float Cooldown;
-        public bool Disabled;
-        public SquadLevel SquadLevel;
-        public List<PageItem>? Items;
-        public List<ClothingItem>? Clothes;
-        public List<AccessRow>? Access;
-        public TranslationList? SignText;
-        public string Weapons;
+        public PrimaryKey PrimaryKey { get; set; } = PrimaryKey.NotAssigned;
+        public string? Name { get; set; }
+        public Class Class { get; set; }
+        public Branch Branch { get; set; }
+        public ulong Team { get; set; }
+        public List<UnlockRequirement>? UnlockRequirements { get; set; }
+        public List<Skillset>? Skillsets { get; set; }
+        public ushort CreditCost { get; set; }
+        public ushort UnlockLevel { get; set; }
+        public bool IsPremium { get; set; }
+        public float PremiumCost { get; set; }
+        public bool IsLoadout { get; set; }
+        public float TeamLimit { get; set; }
+        public float Cooldown { get; set; }
+        public bool Disabled { get; set; }
+        public SquadLevel SquadLevel { get; set; }
+        public List<PageItem>? Items { get; set; }
+        public List<ClothingItem>? Clothes { get; set; }
+        public List<AccessRow>? Access { get; set; }
+        public TranslationList? SignText { get; set; }
+        public string Weapons { get; set; }
     }
 
     private readonly struct AccessRow

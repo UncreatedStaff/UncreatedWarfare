@@ -21,6 +21,7 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -498,7 +499,7 @@ public static class Localization
         language ??= GetDefaultLanguage();
         if (UCWarfare.IsLoaded && EnumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
         {
-            if (!t.TryGetValue(language.LanguageCode, out Dictionary<string, string>? v) &&
+            if (!t.TryGetValue(language.Code, out Dictionary<string, string>? v) &&
                 (language.IsDefault ||
                  !t.TryGetValue(L.Default, out v)))
                 v = t.Values.FirstOrDefault();
@@ -533,7 +534,7 @@ public static class Localization
         Type type = value.GetType();
         if (UCWarfare.IsLoaded && EnumTranslations.TryGetValue(type, out Dictionary<string, Dictionary<string, string>> t))
         {
-            if (!t.TryGetValue(language.LanguageCode, out Dictionary<string, string>? v) &&
+            if (!t.TryGetValue(language.Code, out Dictionary<string, string>? v) &&
                 (language.IsDefault ||
                  !t.TryGetValue(L.Default, out v)))
                 v = t.Values.FirstOrDefault();
@@ -611,7 +612,7 @@ public static class Localization
         language ??= GetDefaultLanguage();
         if (UCWarfare.IsLoaded && EnumTranslations.TryGetValue(type, out Dictionary<string, Dictionary<string, string>> t))
         {
-            if (!t.TryGetValue(language.LanguageCode, out Dictionary<string, string>? v) &&
+            if (!t.TryGetValue(language.Code, out Dictionary<string, string>? v) &&
                 (language.IsDefault ||
                  !t.TryGetValue(L.Default, out v)))
                 v = t.Values.FirstOrDefault();
@@ -838,7 +839,7 @@ public static class Localization
         F.CheckDir(folder, out _);
         foreach (KeyValuePair<Type, Dictionary<string, Dictionary<string, string>>> enumData in EnumTranslations)
         {
-            if ((!enumData.Value.TryGetValue(language.LanguageCode, out Dictionary<string, string> values) && (language.IsDefault || !enumData.Value.TryGetValue(L.Default, out values))) || values == null)
+            if ((!enumData.Value.TryGetValue(language.Code, out Dictionary<string, string> values) && (language.IsDefault || !enumData.Value.TryGetValue(L.Default, out values))) || values == null)
                 continue;
             string? mainDesc = null;
             if (EnumTranslationAttributes.TryGetValue(enumData.Key, out Dictionary<string, List<TranslatableAttribute>> attrs) &&
@@ -900,7 +901,7 @@ public static class Localization
         Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
         writer.WriteStartObject();
         string name;
-        if (attr1 != null && attr1.Default != null && attr1.Language.Equals(language.LanguageCode, StringComparison.Ordinal))
+        if (attr1 != null && attr1.Default != null && attr1.Language.Equals(language.Code, StringComparison.Ordinal))
         {
             name = attr1.Default;
             writer.WritePropertyName(EnumNamePlaceholder);
@@ -909,7 +910,7 @@ public static class Localization
         }
         else if (Attribute.GetCustomAttributes(type, typeof(TranslatableAttribute))
                      .OfType<TranslatableAttribute>()
-                     .FirstOrDefault(x => x.Language.Equals(language.LanguageCode, StringComparison.Ordinal)) is { Default: { } } attr2)
+                     .FirstOrDefault(x => x.Language.Equals(language.Code, StringComparison.Ordinal)) is { Default: { } } attr2)
         {
             name = attr2.Default;
             writer.WritePropertyName(EnumNamePlaceholder);
@@ -938,7 +939,7 @@ public static class Localization
                 for (int j = 0; j < tas.Length; ++j)
                 {
                     TranslatableAttribute t = tas[j];
-                    if (((t.Language is null && language.IsDefault) || (t.Language is not null && t.Language.Equals(language.LanguageCode, StringComparison.Ordinal)) && (language.IsDefault || t.Default != null)))
+                    if (((t.Language is null && language.IsDefault) || (t.Language is not null && t.Language.Equals(language.Code, StringComparison.Ordinal)) && (language.IsDefault || t.Default != null)))
                         k1 = t.Default ?? EnumToStringDynamic(k0);
                     else if (otherlangs is not null && t.Language != null)
                     {
@@ -982,22 +983,22 @@ public static class Localization
         if (UCWarfare.IsLoaded && UCPlayer.FromID(player) is { Locale: { } locale })
             return locale.LanguageInfo;
 
-        PlayerLanguagePreferences prefs = await Data.LanguageDataStore.GetLanguagePreferences(player, token).ConfigureAwait(false);
+        LanguagePreferences prefs = await Data.LanguageDataStore.GetLanguagePreferences(player, token).ConfigureAwait(false);
         if (prefs == null)
             return Data.LanguageDataStore.GetInfoCached(L.Default) ?? Data.FallbackLanguageInfo;
 
-        return Data.LanguageDataStore.GetInfoCached(prefs.Language) ?? Data.LanguageDataStore.GetInfoCached(L.Default) ?? Data.FallbackLanguageInfo;
+        return prefs.Language ?? Data.LanguageDataStore.GetInfoCached(L.Default) ?? Data.FallbackLanguageInfo;
     }
     public static async ValueTask<CultureInfo> GetCulture(ulong player, CancellationToken token = default)
     {
         if (UCWarfare.IsLoaded && UCPlayer.FromID(player) is { Locale: { } locale })
             return locale.CultureInfo;
 
-        PlayerLanguagePreferences prefs = await Data.LanguageDataStore.GetLanguagePreferences(player, token).ConfigureAwait(false);
+        LanguagePreferences prefs = await Data.LanguageDataStore.GetLanguagePreferences(player, token).ConfigureAwait(false);
         if (prefs == null)
             return Data.LocalLocale;
 
-        return prefs.CultureCode != null && TryGetCultureInfo(prefs.CultureCode, out CultureInfo prefCulture) ? prefCulture : Data.LocalLocale;
+        return prefs.Culture != null && TryGetCultureInfo(prefs.Culture, out CultureInfo prefCulture) ? prefCulture : Data.LocalLocale;
     }
     public static CultureInfo GetCultureInfo(LanguageInfo? language)
     {
@@ -1009,12 +1010,12 @@ public static class Localization
             if (TryGetCultureInfo(language.DefaultCultureCode, out CultureInfo culture))
                 return culture;
         }
-        else if (language.AvailableCultureCodes.Length > 0)
+        else if (language.SupportedCultures is { Count: > 0 })
         {
-            string code = language.AvailableCultureCodes.FirstOrDefault(x =>
-                              x.Length == 5 && char.ToUpperInvariant(x[0]) == x[3] &&
-                              char.ToUpperInvariant(x[1]) == x[4]) ??
-                          language.AvailableCultureCodes[0];
+            string code = (language.SupportedCultures.FirstOrDefault(x =>
+                              x.CultureCode.Length == 5 && char.ToUpperInvariant(x.CultureCode[0]) == x.CultureCode[3] &&
+                              char.ToUpperInvariant(x.CultureCode[1]) == x.CultureCode[4]) ??
+                          language.SupportedCultures[0]).CultureCode;
 
             if (TryGetCultureInfo(code, out CultureInfo culture))
                 return culture;
@@ -1404,16 +1405,16 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     }
 
     public bool Equals(in LanguageSet other) => other.IMGUI == IMGUI &&
-                                                other.Language.LanguageCode.Equals(other.Language.LanguageCode, StringComparison.OrdinalIgnoreCase) &&
+                                                other.Language.Code.Equals(other.Language.Code, StringComparison.OrdinalIgnoreCase) &&
                                                 other.CultureInfo.Name.Equals(CultureInfo.Name, StringComparison.Ordinal);
 
     public bool MatchesPlayer(UCPlayer player) => player.Save.IMGUI == IMGUI &&
-                                                  player.Locale.LanguageInfo.LanguageCode.Equals(Language.LanguageCode, StringComparison.OrdinalIgnoreCase) &&
+                                                  player.Locale.LanguageInfo.Code.Equals(Language.Code, StringComparison.OrdinalIgnoreCase) &&
                                                   player.Locale.CultureInfo.Name.Equals(CultureInfo.Name);
 
     public bool MatchesPlayer(UCPlayer player, ulong team) => team == Team &&
                                                               player.Save.IMGUI == IMGUI &&
-                                                              player.Locale.LanguageInfo.LanguageCode.Equals(Language.LanguageCode, StringComparison.OrdinalIgnoreCase) &&
+                                                              player.Locale.LanguageInfo.Code.Equals(Language.Code, StringComparison.OrdinalIgnoreCase) &&
                                                               player.Locale.CultureInfo.Name.Equals(CultureInfo.Name);
     public void Add(UCPlayer pl) => Players.Add(pl);
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>

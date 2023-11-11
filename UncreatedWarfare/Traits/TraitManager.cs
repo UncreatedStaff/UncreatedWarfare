@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -699,11 +700,11 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
             value = null;
             if (loaded != null)
             {
-                if (loaded.TryGetValue(language.LanguageCode, out value))
+                if (loaded.TryGetValue(language.Code, out value))
                     isDefaultValue = language.IsDefault;
                 else if (!language.IsDefault && loaded.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
-                else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+                else if (@default != null && @default.TryGetValue(language.Code, out value))
                     isDefaultValue = language.IsDefault;
                 else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
@@ -713,7 +714,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                     isDefaultValue = true;
                 }
             }
-            else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+            else if (@default != null && @default.TryGetValue(language.Code, out value))
                 isDefaultValue = language.IsDefault;
             else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                 isDefaultValue = true;

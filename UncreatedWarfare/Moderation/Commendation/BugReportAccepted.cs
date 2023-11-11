@@ -20,7 +20,6 @@ public class BugReportAccepted : ModerationEntry
     public string? Commit { get; set; }
 
     [JsonPropertyName("issue")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int? Issue { get; set; }
     public override string GetDisplayName() => "Bug Report Accepted";
     protected override void ReadIntl(ByteReader reader, ushort version)

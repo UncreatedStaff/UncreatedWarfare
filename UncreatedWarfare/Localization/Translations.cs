@@ -19,6 +19,7 @@ using Uncreated.Players;
 using Uncreated.Properties;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
@@ -193,7 +194,7 @@ public class Translation
     {
         if ((_flags & TranslationFlags.SuppressWarnings) == TranslationFlags.SuppressWarnings) return;
         if ((_flags & TranslationFlags.TMProSign) == TranslationFlags.TMProSign && def.IndexOf("<size", StringComparison.OrdinalIgnoreCase) != -1)
-            L.LogWarning("[" + (lang == null ? "DEFAULT" : lang.LanguageCode.ToUpper()) + "] " + Key + " has a size tag, which shouldn't be on signs.", method: "TRANSLATIONS");
+            L.LogWarning("[" + (lang == null ? "DEFAULT" : lang.Code.ToUpper()) + "] " + Key + " has a size tag, which shouldn't be on signs.", method: "TRANSLATIONS");
         int ct = GetType().GenericTypeArguments.Length;
         int index = -2;
         int flag = 0;
@@ -225,7 +226,7 @@ public class Translation
         }
         --ct;
         if (max > ct)
-            L.LogError("[" + (lang == null ? "DEFAULT" : lang.LanguageCode.ToUpper()) + "] " + Key + " has " + (max - ct == 1 ? ("an extra paremeter: " + max) : $"{max - ct} extra parameters: Should have: {ct + 1}, has: {max + 1}"), method: "TRANSLATIONS");
+            L.LogError("[" + (lang == null ? "DEFAULT" : lang.Code.ToUpper()) + "] " + Key + " has " + (max - ct == 1 ? ("an extra paremeter: " + max) : $"{max - ct} extra parameters: Should have: {ct + 1}, has: {max + 1}"), method: "TRANSLATIONS");
     }
     public void AddTranslation(LanguageInfo language, string value)
     {
@@ -300,7 +301,7 @@ public class Translation
                     for (int i = 0; i < _data.Length; ++i)
                     {
                         LanguageInfo languageInfo = _data[i].Language;
-                        if (languageInfo.LanguageCode.Equals(language.FallbackTranslationLanguageCode, StringComparison.OrdinalIgnoreCase))
+                        if (languageInfo.Code.Equals(language.FallbackTranslationLanguageCode, StringComparison.OrdinalIgnoreCase))
                         {
                             return _data[i];
                         }
@@ -310,7 +311,7 @@ public class Translation
                 {
                     LanguageInfo languageInfo = _data[i].Language;
                     if (languageInfo.FallbackTranslationLanguageCode != null &&
-                        languageInfo.FallbackTranslationLanguageCode.Equals(language.LanguageCode, StringComparison.OrdinalIgnoreCase))
+                        languageInfo.FallbackTranslationLanguageCode.Equals(language.Code, StringComparison.OrdinalIgnoreCase))
                     {
                         return _data[i];
                     }
@@ -342,7 +343,7 @@ public class Translation
             for (int i = 0; i < _data.Length; ++i)
             {
                 LanguageInfo languageInfo = _data[i].Language;
-                if (languageInfo.LanguageCode.Equals(language.FallbackTranslationLanguageCode, StringComparison.OrdinalIgnoreCase))
+                if (languageInfo.Code.Equals(language.FallbackTranslationLanguageCode, StringComparison.OrdinalIgnoreCase))
                     return true;
             }
         }
@@ -350,7 +351,7 @@ public class Translation
         {
             LanguageInfo languageInfo = _data[i].Language;
             if (languageInfo.FallbackTranslationLanguageCode != null &&
-                languageInfo.FallbackTranslationLanguageCode.Equals(language.LanguageCode, StringComparison.OrdinalIgnoreCase))
+                languageInfo.FallbackTranslationLanguageCode.Equals(language.Code, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -1010,7 +1011,7 @@ public class Translation
         if ((flags & TranslationFlags.NoPlural) == TranslationFlags.NoPlural || word.Length < 3 || (flags & TranslationFlags.Plural) == 0)
             return word;
         //culture ??= LanguageAliasSet.GetCultureInfo(language);
-        if (language.LanguageCode.Equals(Languages.EnglishUS, StringComparison.OrdinalIgnoreCase))
+        if (language.Code.Equals(Languages.EnglishUS, StringComparison.OrdinalIgnoreCase))
         {
             if (word.Equals("is", StringComparison.InvariantCulture))
                 return "are";
@@ -1613,7 +1614,7 @@ public class Translation
     {
         if (path == null)
         {
-            DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, language.LanguageCode));
+            DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, language.Code));
             if (!dir.Exists)
                 dir.Create();
             FileInfo info = new FileInfo(Path.Combine(dir.FullName, LocalFileName));

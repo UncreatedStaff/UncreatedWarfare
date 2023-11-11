@@ -25,6 +25,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Ranks;
@@ -1188,25 +1189,25 @@ public class UCPlayerLocale
 {
     public static event Action<UCPlayer>? OnLocaleUpdated;
 
-    private PlayerLanguagePreferences _preferences;
+    private LanguagePreferences _preferences;
     private readonly bool _init;
 
     public UCPlayer Player { get; }
-    public string Language => LanguageInfo.LanguageCode;
+    public string Language => LanguageInfo.Code;
     public CultureInfo CultureInfo { get; private set; }
     internal bool PreferencesIsDirty { get; set; }
     public NumberFormatInfo ParseFormat { get; set; }
-    public PlayerLanguagePreferences Preferences
+    public LanguagePreferences Preferences
     {
         get => _preferences;
         set
         {
-            LanguageInfo info = Data.LanguageDataStore.GetInfoCached(value.Language) ?? Localization.GetDefaultLanguage();
+            LanguageInfo info = value.Language ?? Localization.GetDefaultLanguage();
             bool updated = false;
 
-            IsDefaultLanguage = info.LanguageCode.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+            IsDefaultLanguage = info.Code.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
 
-            if (!(value.CultureCode != null && Localization.TryGetCultureInfo(value.CultureCode, out CultureInfo culture)) &&
+            if (!(value.Culture != null && Localization.TryGetCultureInfo(value.Culture, out CultureInfo culture)) &&
                 !(info is { DefaultCultureCode: { } defaultCultureName } && Localization.TryGetCultureInfo(defaultCultureName, out culture)))
             {
                 culture = Data.LocalLocale;
@@ -1241,7 +1242,7 @@ public class UCPlayerLocale
     public LanguageInfo LanguageInfo { get; private set; }
     public bool IsDefaultLanguage { get; private set; }
     public bool IsDefaultCulture { get; private set; }
-    public UCPlayerLocale(UCPlayer player, PlayerLanguagePreferences preferences)
+    public UCPlayerLocale(UCPlayer player, LanguagePreferences preferences)
     {
         Player = player;
         Preferences = preferences;
@@ -1261,25 +1262,25 @@ public class UCPlayerLocale
             L.Log($"Updated culture for {Player}: {CultureInfo.DisplayName} -> {culture.DisplayName}.");
             ActionLog.Add(ActionLogType.ChangeCulture, CultureInfo.Name + " >> " + culture.Name, Player);
             CultureInfo = culture;
-            Preferences.CultureCode = culture.Name;
+            Preferences.Culture = culture.Name;
             IsDefaultCulture = culture.Name.Equals(Data.LocalLocale.Name, StringComparison.Ordinal);
             ParseFormat = Preferences.UseCultureForCommandInput ? culture.NumberFormat : Data.LocalLocale.NumberFormat;
             save = true;
         }
 
-        if (language != null && Data.LanguageDataStore.GetInfoCached(language) is { } languageInfo && !languageInfo.LanguageCode.Equals(LanguageInfo.LanguageCode, StringComparison.Ordinal))
+        if (language != null && Data.LanguageDataStore.GetInfoCached(language) is { } languageInfo && !languageInfo.Code.Equals(LanguageInfo.Code, StringComparison.Ordinal))
         {
             L.Log($"Updated language for {Player}: {LanguageInfo.DisplayName} -> {languageInfo.DisplayName}.");
-            ActionLog.Add(ActionLogType.ChangeLanguage, LanguageInfo.LanguageCode + " >> " + languageInfo.LanguageCode, Player);
-            Preferences.Language = languageInfo.PrimaryKey;
-            IsDefaultLanguage = languageInfo.LanguageCode.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+            ActionLog.Add(ActionLogType.ChangeLanguage, LanguageInfo.Code + " >> " + languageInfo.Code, Player);
+            Preferences.Language = languageInfo;
+            IsDefaultLanguage = languageInfo.Code.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
             LanguageInfo = languageInfo;
             save = true;
         }
 
         if (save)
         {
-            Preferences.LastUpdated = DateTimeOffset.UtcNow;
+            Preferences.LastUpdated = DateTime.UtcNow;
             if (holdSave)
             {
                 InvokeOnLocaleUpdated(Player);

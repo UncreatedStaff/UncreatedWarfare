@@ -176,7 +176,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
             }, false);
 
             if (!TeamManager.FactionsLoaded)
-                await TeamManager.ReloadFactions(Sql, false, token).ConfigureAwait(false);
+                await TeamManager.ReloadFactions(token).ConfigureAwait(false);
 
             for (int i = 0; i < bundles.Count; ++i)
             {
@@ -490,7 +490,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
             skip:
 
             if (!TeamManager.FactionsLoaded)
-                await TeamManager.ReloadFactions(Sql, false, token).ConfigureAwait(false);
+                await TeamManager.ReloadFactions(token).ConfigureAwait(false);
 
             _kits = kits.ToArray();
             Kits = new ReadOnlyCollection<Kit>(_kits);
@@ -553,9 +553,10 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
         All = -1
     }
 }
-
+#if NETSTANDARD || NETFRAMEWORK
 internal class WarfarePurchaseRecordsInterface : PurchaseRecordsInterface
 {
     public override IMySqlDatabase Sql => Data.AdminSql;
     public override IStripeService StripeService => Data.WarfareStripeService;
 }
+#endif

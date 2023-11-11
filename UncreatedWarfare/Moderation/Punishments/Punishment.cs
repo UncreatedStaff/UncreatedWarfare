@@ -24,14 +24,12 @@ public abstract class Punishment : ModerationEntry
     /// </summary>
     [JsonPropertyName("preset_type")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public PresetType PresetType { get; set; }
 
     /// <summary>
     /// Level of preset (indexed from 1).
     /// </summary>
     [JsonPropertyName("preset_level")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int PresetLevel { get; set; }
 
     /// <summary>
@@ -50,14 +48,12 @@ public abstract class Punishment : ModerationEntry
     /// All related appeals.
     /// </summary>
     [JsonPropertyName("appeals_detail")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Appeal?[]? Appeals { get; set; }
 
     /// <summary>
     /// All related reports.
     /// </summary>
     [JsonPropertyName("reports_detail")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Report?[]? Reports { get; set; }
 
     /// <summary>

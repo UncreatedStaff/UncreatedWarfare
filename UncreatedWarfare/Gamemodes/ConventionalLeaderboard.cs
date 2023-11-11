@@ -7,6 +7,7 @@ using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Gamemodes.UI;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 

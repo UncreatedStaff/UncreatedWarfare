@@ -13,6 +13,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -22,48 +23,48 @@ public class VehicleData : ITranslationArgument, IListItem
 {
     public const int VEHICLE_TYPE_MAX_CHAR_LIMIT = 20;
     [CommandSettable]
-    public string Name;
+    public string Name { get; set; }
     [CommandSettable]
-    public Guid VehicleID;
-    [JsonIgnore]
+    public Guid VehicleID { get; set; }
     [CommandSettable]
-    public PrimaryKey Faction;
+    public PrimaryKey Faction { get; set; }
     [CommandSettable]
-    public float RespawnTime;
+    public float RespawnTime { get; set; }
     [CommandSettable]
-    public int TicketCost;
+    public int TicketCost { get; set; }
     [CommandSettable]
-    public int CreditCost;
+    public int CreditCost { get; set; }
     [CommandSettable]
-    public float Cooldown;
+    public float Cooldown { get; set; }
     [CommandSettable]
-    public Branch Branch;
+    public Branch Branch { get; set; }
     [CommandSettable]
-    public Class RequiredClass;
+    public Class RequiredClass { get; set; }
     [CommandSettable]
-    public int RearmCost;
+    public int RearmCost { get; set; }
     [CommandSettable]
-    public VehicleType Type;
+    public VehicleType Type { get; set; }
     [CommandSettable]
-    public bool RequiresSL;
+    public bool RequiresSL { get; set; }
     [CommandSettable]
-    public ushort UnlockLevel;
+    public ushort UnlockLevel { get; set; }
     [CommandSettable]
-    public bool DisallowAbandons;
+    public bool DisallowAbandons { get; set; }
     [CommandSettable]
-    public bool CrewInvincible;
+    public bool CrewInvincible { get; set; }
     [CommandSettable]
-    public bool PassengersInvincible;
+    public bool PassengersInvincible { get; set; }
     [CommandSettable]
-    public float AbandonValueLossSpeed = 0.125f;
+    public float AbandonValueLossSpeed { get; set; } = 0.125f;
     [CommandSettable]
-    public int Map = -1;
-    public UnlockRequirement[] UnlockRequirements;
-    public Guid[] Items;
-    public Delay[] Delays;
+    public int Map { get; set; } = -1;
+    public UnlockRequirement[] UnlockRequirements { get; set; }
+    public Guid[] Items { get; set; }
+    public Delay[] Delays { get; set; }
+
     [JsonConverter(typeof(ByteArrayConverter))]
-    public byte[] CrewSeats;
-    public MetaSave? Metadata;
+    public byte[] CrewSeats { get; set; }
+    public MetaSave? Metadata { get; set; }
     [JsonIgnore]
     public PrimaryKey PrimaryKey { get; set; }
     // for JSON backwards compatability
@@ -237,8 +238,8 @@ public class VehicleData : ITranslationArgument, IListItem
 
 public class MetaSave
 {
-    public List<VBarricade>? Barricades;
-    public List<PageItem>? TrunkItems;
+    public List<VBarricade>? Barricades { get; set; }
+    public List<PageItem>? TrunkItems { get; set; }
     public MetaSave() { }
     public MetaSave(List<VBarricade>? barricades, List<PageItem>? trunkItems)
     {
@@ -249,16 +250,16 @@ public class MetaSave
 
 public class VBarricade : IListSubItem
 {
-    public Guid BarricadeID;
-    public ushort Health;
-    public float PosX;
-    public float PosY;
-    public float PosZ;
-    public float AngleX;
-    public float AngleY;
-    public float AngleZ;
+    public Guid BarricadeID { get; set; }
+    public ushort Health { get; set; }
+    public float PosX { get; set; }
+    public float PosY { get; set; }
+    public float PosZ { get; set; }
+    public float AngleX { get; set; }
+    public float AngleY { get; set; }
+    public float AngleZ { get; set; }
     [JsonIgnore]
-    public byte[] Metadata;
+    public byte[] Metadata { get; set; }
     // for backwards compatability
     public string State
     {
@@ -887,12 +888,12 @@ public struct Delay : IJsonReadWrite
 }
 internal sealed class ByteArrayConverter : JsonConverter<byte[]>
 {
-    public override byte[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override byte[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         switch (reader.TokenType)
         {
             case JsonTokenType.Null:
-                return null;
+                return null!;
             case JsonTokenType.String:
                 string str = reader.GetString()!;
                 try

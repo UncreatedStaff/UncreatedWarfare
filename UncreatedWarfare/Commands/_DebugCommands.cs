@@ -31,6 +31,8 @@ using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
+using Uncreated.Warfare.Models.Localization;
+
 #if DEBUG
 using HarmonyLib;
 using Uncreated.Warfare.Singletons;

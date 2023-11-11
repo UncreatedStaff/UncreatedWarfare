@@ -10,6 +10,7 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -593,7 +594,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             path = Path.Combine(path, "deaths.json");
         }
 
-        if (!DeathTranslations.TryGetValue(language.LanguageCode, out DeathCause[] causes) && (language.IsDefault || !DeathTranslations.TryGetValue(L.Default, out causes)))
+        if (!DeathTranslations.TryGetValue(language.Code, out DeathCause[] causes) && (language.IsDefault || !DeathTranslations.TryGetValue(L.Default, out causes)))
             causes = DefaultValues;
         List<DeathCause> causesFull = new List<DeathCause>(causes);
         if (causes != DefaultValues && writeMissing)
@@ -719,7 +720,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         if (string.IsNullOrEmpty(args.KillerName)) args.Flags &= ~DeathFlags.Killer;
         if (string.IsNullOrEmpty(args.Player3Name)) args.Flags &= ~DeathFlags.Player3;
         bool isDefault = false;
-        if (DeathTranslations.Count == 0 || (!DeathTranslations.TryGetValue(language.LanguageCode, out DeathCause[] causes) && (L.Default.Equals(language) || !DeathTranslations.TryGetValue(L.Default, out causes))))
+        if (DeathTranslations.Count == 0 || (!DeathTranslations.TryGetValue(language.Code, out DeathCause[] causes) && (L.Default.Equals(language) || !DeathTranslations.TryGetValue(L.Default, out causes))))
         {
             isDefault = true;
             causes = DefaultValues;
@@ -899,7 +900,7 @@ public struct DeathMessageArgs
         catch (FormatException)
         {
             L.LogWarning("Formatting error for template: \"" + template + "\" (" + Warfare.Localization.TranslateEnum(DeathCause, Warfare.Localization.GetDefaultLanguage()) + ":"
-                         + Warfare.Localization.TranslateEnum(Flags, Warfare.Localization.GetDefaultLanguage()) + ":" + language.LanguageCode.ToUpper() + ").");
+                         + Warfare.Localization.TranslateEnum(Flags, Warfare.Localization.GetDefaultLanguage()) + ":" + language.Code.ToUpper() + ").");
             return template.Replace("{0}", (string)format[0]);
         }
     }

@@ -15,7 +15,6 @@ namespace Uncreated.Warfare.Moderation.Records;
 [JsonConverter(typeof(ModerationEntryConverter))]
 public class Teamkill : ModerationEntry
 {
-    [JsonIgnore]
     public const string RoleTeamkilled = "Teamkilled";
 
     [JsonPropertyName("death_cause")]
@@ -23,11 +22,9 @@ public class Teamkill : ModerationEntry
     public EDeathCause? Cause { get; set; }
 
     [JsonPropertyName("item_guid")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Guid? Item { get; set; }
 
     [JsonPropertyName("item_name")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ItemName { get; set; }
 
     [JsonPropertyName("limb")]
@@ -35,7 +32,6 @@ public class Teamkill : ModerationEntry
     public ELimb? Limb { get; set; }
 
     [JsonPropertyName("distance")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double? Distance { get; set; }
     public override string GetDisplayName() => "Player Teamkill";
     public override Guid? GetIcon() => Item;

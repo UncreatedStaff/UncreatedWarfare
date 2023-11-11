@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
 using UnityEngine;

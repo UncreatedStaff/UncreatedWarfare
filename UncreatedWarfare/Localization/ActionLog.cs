@@ -223,7 +223,7 @@ public class ActionLog : MonoBehaviour
                 LoggedPlayers = new List<ulong>(64),
                 LoggedDataTypes = new List<ActionLogType>(32),
                 DataReferencedPlayers = new List<ulong>(48),
-                UtcOffset = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now)
+                UtcOffset = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now)
             };
             if (Util.IsValidSteam64Id(item.Player) && !_current.LoggedPlayers.Contains(item.Player))
                 _current.LoggedPlayers.Add(item.Player);
@@ -910,8 +910,7 @@ public enum ActionLogType : byte
     CreateModerationEntry,
     [Translatable("REMOVE_MOD_ENTRY")]
     RemoveModerationEntry,
-
-    [JsonIgnore]
+    
     [Translatable(IsPrioritizedTranslation = false)]
     [Obsolete("Don't use this.")]
     Max = RemoveModerationEntry

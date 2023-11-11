@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Quests;
 /// <summary>Stores information about a <see cref="Quests.QuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
@@ -49,7 +50,7 @@ public abstract class BaseQuestData : ITranslationArgument
             L.LogWarning("No translations for " + QuestType.ToString() + " quest.");
             return QuestType.ToString() + " - " + string.Join("|", formatting);
         }
-        if (Translations.TryGetValue(language.LanguageCode, out string v) || (!language.IsDefault && Translations.TryGetValue(L.Default, out v)))
+        if (Translations.TryGetValue(language.Code, out string v) || (!language.IsDefault && Translations.TryGetValue(L.Default, out v)))
         {
             try
             {

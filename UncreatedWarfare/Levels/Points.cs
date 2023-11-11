@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using MySql.Data.MySqlClient;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
@@ -19,6 +20,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -1188,7 +1190,6 @@ public enum XPReward
 
 public class PointsConfig : JSONConfigData
 {
-    [JsonIgnore]
     public const float DefaultCreditPercentage = 15f;
 
     [JsonPropertyName("player_starting_credits")]

@@ -13,6 +13,7 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Models.Localization;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands.CommandSystem;

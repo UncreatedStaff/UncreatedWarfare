@@ -10,11 +10,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Homebase.Unturned;
 using Uncreated.Homebase.Unturned.Warfare;
@@ -22,6 +24,7 @@ using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -30,6 +33,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
@@ -119,6 +123,7 @@ public static class Data
     internal static DatabaseInterface ModerationSql;
     internal static WarfareMySqlLanguageDataStore LanguageDataStore;
     internal static PurchaseRecordsInterface PurchasingDataStore;
+    internal static WarfareDbContext DbContext;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     public static bool UseFastKits;
@@ -127,7 +132,9 @@ public static class Data
     public static Reporter? Reporter;
     public static DeathTracker DeathTracker;
     public static Points Points;
+#if NETSTANDARD || NETFRAMEWORK
     public static WarfareStripeService WarfareStripeService;
+#endif
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;
@@ -250,6 +257,9 @@ public static class Data
     }
     internal static async Task LoadSQL(CancellationToken token)
     {
+        DbContext = new WarfareDbContext();
+        WarfareDatabases.LoadFromWarfareDbContext(DbContext);
+
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
         bool status = await DatabaseManager.OpenAsync(token);
         L.Log("Local MySql database status: " + status + ".", ConsoleColor.Magenta);
@@ -609,134 +619,136 @@ public static class Data
                 ui.UpdateUI(player);
         }
     }
-    public static LanguageInfo FallbackLanguageInfo { get; internal set; } = new LanguageInfo(1, L.Default)
+    public static LanguageInfo FallbackLanguageInfo { get; internal set; } = new LanguageInfo
     {
+        Key = 0,
+        Code = L.Default,
         DisplayName = "English",
-        Aliases = new string[]
+        Aliases = new LanguageAlias[]
         {
-            "English",
-            "American",
-            "British",
-            "Inglés",
-            "Ingles",
-            "Inglesa"
+            new LanguageAlias { Alias = "English" },
+            new LanguageAlias { Alias = "American" },
+            new LanguageAlias { Alias = "British" },
+            new LanguageAlias { Alias = "Inglés" },
+            new LanguageAlias { Alias = "Ingles" },
+            new LanguageAlias { Alias = "Inglesa" }
         },
-        Credits = new ulong[]
+        Contributors = new LanguageContributor[]
         {
-            76561198267927009,
-            76561198857595123
+            new LanguageContributor { Contributor = 76561198267927009 },
+            new LanguageContributor { Contributor = 76561198857595123 }
         },
         HasTranslationSupport = true,
         DefaultCultureCode = "en-US",
         RequiresIMGUI = false,
-        AvailableCultureCodes = new string[]
+        SupportedCultures = new LanguageCulture[]
         {
-           "en-001",
-           "en-029",
-           "en-150",
-           "en-AE",
-           "en-AG",
-           "en-AI",
-           "en-AS",
-           "en-AT",
-           "en-AU",
-           "en-BB",
-           "en-BE",
-           "en-BI",
-           "en-BM",
-           "en-BS",
-           "en-BW",
-           "en-BZ",
-           "en-CA",
-           "en-CC",
-           "en-CH",
-           "en-CK",
-           "en-CM",
-           "en-CX",
-           "en-CY",
-           "en-DE",
-           "en-DK",
-           "en-DM",
-           "en-ER",
-           "en-FI",
-           "en-FJ",
-           "en-FK",
-           "en-FM",
-           "en-GB",
-           "en-GD",
-           "en-GG",
-           "en-GH",
-           "en-GI",
-           "en-GM",
-           "en-GU",
-           "en-GY",
-           "en-HK",
-           "en-ID",
-           "en-IE",
-           "en-IL",
-           "en-IM",
-           "en-IN",
-           "en-IO",
-           "en-JE",
-           "en-JM",
-           "en-KE",
-           "en-KI",
-           "en-KN",
-           "en-KY",
-           "en-LC",
-           "en-LR",
-           "en-LS",
-           "en-MG",
-           "en-MH",
-           "en-MO",
-           "en-MP",
-           "en-MS",
-           "en-MT",
-           "en-MU",
-           "en-MW",
-           "en-MY",
-           "en-NA",
-           "en-NF",
-           "en-NG",
-           "en-NL",
-           "en-NR",
-           "en-NU",
-           "en-NZ",
-           "en-PG",
-           "en-PH",
-           "en-PK",
-           "en-PN",
-           "en-PR",
-           "en-PW",
-           "en-RW",
-           "en-SB",
-           "en-SC",
-           "en-SD",
-           "en-SE",
-           "en-SG",
-           "en-SH",
-           "en-SI",
-           "en-SL",
-           "en-SS",
-           "en-SX",
-           "en-SZ",
-           "en-TC",
-           "en-TK",
-           "en-TO",
-           "en-TT",
-           "en-TV",
-           "en-TZ",
-           "en-UG",
-           "en-UM",
-           "en-US",
-           "en-VC",
-           "en-VG",
-           "en-VI",
-           "en-VU",
-           "en-WS",
-           "en-ZA",
-           "en-ZM",
-           "en-ZW"
+           new LanguageCulture { CultureCode = "en-001" },
+           new LanguageCulture { CultureCode = "en-029" },
+           new LanguageCulture { CultureCode = "en-150" },
+           new LanguageCulture { CultureCode = "en-AE" },
+           new LanguageCulture { CultureCode = "en-AG" },
+           new LanguageCulture { CultureCode = "en-AI" },
+           new LanguageCulture { CultureCode = "en-AS" },
+           new LanguageCulture { CultureCode = "en-AT" },
+           new LanguageCulture { CultureCode = "en-AU" },
+           new LanguageCulture { CultureCode = "en-BB" },
+           new LanguageCulture { CultureCode = "en-BE" },
+           new LanguageCulture { CultureCode = "en-BI" },
+           new LanguageCulture { CultureCode = "en-BM" },
+           new LanguageCulture { CultureCode = "en-BS" },
+           new LanguageCulture { CultureCode = "en-BW" },
+           new LanguageCulture { CultureCode = "en-BZ" },
+           new LanguageCulture { CultureCode = "en-CA" },
+           new LanguageCulture { CultureCode = "en-CC" },
+           new LanguageCulture { CultureCode = "en-CH" },
+           new LanguageCulture { CultureCode = "en-CK" },
+           new LanguageCulture { CultureCode = "en-CM" },
+           new LanguageCulture { CultureCode = "en-CX" },
+           new LanguageCulture { CultureCode = "en-CY" },
+           new LanguageCulture { CultureCode = "en-DE" },
+           new LanguageCulture { CultureCode = "en-DK" },
+           new LanguageCulture { CultureCode = "en-DM" },
+           new LanguageCulture { CultureCode = "en-ER" },
+           new LanguageCulture { CultureCode = "en-FI" },
+           new LanguageCulture { CultureCode = "en-FJ" },
+           new LanguageCulture { CultureCode = "en-FK" },
+           new LanguageCulture { CultureCode = "en-FM" },
+           new LanguageCulture { CultureCode = "en-GB" },
+           new LanguageCulture { CultureCode = "en-GD" },
+           new LanguageCulture { CultureCode = "en-GG" },
+           new LanguageCulture { CultureCode = "en-GH" },
+           new LanguageCulture { CultureCode = "en-GI" },
+           new LanguageCulture { CultureCode = "en-GM" },
+           new LanguageCulture { CultureCode = "en-GU" },
+           new LanguageCulture { CultureCode = "en-GY" },
+           new LanguageCulture { CultureCode = "en-HK" },
+           new LanguageCulture { CultureCode = "en-ID" },
+           new LanguageCulture { CultureCode = "en-IE" },
+           new LanguageCulture { CultureCode = "en-IL" },
+           new LanguageCulture { CultureCode = "en-IM" },
+           new LanguageCulture { CultureCode = "en-IN" },
+           new LanguageCulture { CultureCode = "en-IO" },
+           new LanguageCulture { CultureCode = "en-JE" },
+           new LanguageCulture { CultureCode = "en-JM" },
+           new LanguageCulture { CultureCode = "en-KE" },
+           new LanguageCulture { CultureCode = "en-KI" },
+           new LanguageCulture { CultureCode = "en-KN" },
+           new LanguageCulture { CultureCode = "en-KY" },
+           new LanguageCulture { CultureCode = "en-LC" },
+           new LanguageCulture { CultureCode = "en-LR" },
+           new LanguageCulture { CultureCode = "en-LS" },
+           new LanguageCulture { CultureCode = "en-MG" },
+           new LanguageCulture { CultureCode = "en-MH" },
+           new LanguageCulture { CultureCode = "en-MO" },
+           new LanguageCulture { CultureCode = "en-MP" },
+           new LanguageCulture { CultureCode = "en-MS" },
+           new LanguageCulture { CultureCode = "en-MT" },
+           new LanguageCulture { CultureCode = "en-MU" },
+           new LanguageCulture { CultureCode = "en-MW" },
+           new LanguageCulture { CultureCode = "en-MY" },
+           new LanguageCulture { CultureCode = "en-NA" },
+           new LanguageCulture { CultureCode = "en-NF" },
+           new LanguageCulture { CultureCode = "en-NG" },
+           new LanguageCulture { CultureCode = "en-NL" },
+           new LanguageCulture { CultureCode = "en-NR" },
+           new LanguageCulture { CultureCode = "en-NU" },
+           new LanguageCulture { CultureCode = "en-NZ" },
+           new LanguageCulture { CultureCode = "en-PG" },
+           new LanguageCulture { CultureCode = "en-PH" },
+           new LanguageCulture { CultureCode = "en-PK" },
+           new LanguageCulture { CultureCode = "en-PN" },
+           new LanguageCulture { CultureCode = "en-PR" },
+           new LanguageCulture { CultureCode = "en-PW" },
+           new LanguageCulture { CultureCode = "en-RW" },
+           new LanguageCulture { CultureCode = "en-SB" },
+           new LanguageCulture { CultureCode = "en-SC" },
+           new LanguageCulture { CultureCode = "en-SD" },
+           new LanguageCulture { CultureCode = "en-SE" },
+           new LanguageCulture { CultureCode = "en-SG" },
+           new LanguageCulture { CultureCode = "en-SH" },
+           new LanguageCulture { CultureCode = "en-SI" },
+           new LanguageCulture { CultureCode = "en-SL" },
+           new LanguageCulture { CultureCode = "en-SS" },
+           new LanguageCulture { CultureCode = "en-SX" },
+           new LanguageCulture { CultureCode = "en-SZ" },
+           new LanguageCulture { CultureCode = "en-TC" },
+           new LanguageCulture { CultureCode = "en-TK" },
+           new LanguageCulture { CultureCode = "en-TO" },
+           new LanguageCulture { CultureCode = "en-TT" },
+           new LanguageCulture { CultureCode = "en-TV" },
+           new LanguageCulture { CultureCode = "en-TZ" },
+           new LanguageCulture { CultureCode = "en-UG" },
+           new LanguageCulture { CultureCode = "en-UM" },
+           new LanguageCulture { CultureCode = "en-US" },
+           new LanguageCulture { CultureCode = "en-VC" },
+           new LanguageCulture { CultureCode = "en-VG" },
+           new LanguageCulture { CultureCode = "en-VI" },
+           new LanguageCulture { CultureCode = "en-VU" },
+           new LanguageCulture { CultureCode = "en-WS" },
+           new LanguageCulture { CultureCode = "en-ZA" },
+           new LanguageCulture { CultureCode = "en-ZM" },
+           new LanguageCulture { CultureCode = "en-ZW" }
         }
     };
 }

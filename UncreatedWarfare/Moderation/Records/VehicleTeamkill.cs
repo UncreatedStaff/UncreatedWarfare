@@ -26,11 +26,9 @@ public class VehicleTeamkill : ModerationEntry
     public string? VehicleName { get; set; }
 
     [JsonPropertyName("item_guid")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Guid? Item { get; set; }
 
     [JsonPropertyName("item_name")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ItemName { get; set; }
     public override string GetDisplayName() => "Vehicle Teamkill";
     public override Guid? GetIcon() => Item;

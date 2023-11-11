@@ -1,4 +1,5 @@
-﻿#define TELEMETRY
+﻿#if NETSTANDARD || NETFRAMEWORK
+#define TELEMETRY
 using Cysharp.Threading.Tasks;
 using SDG.Unturned;
 using Stripe;
@@ -332,3 +333,4 @@ internal class UnityWebRequestsHttpClient : IHttpClient
         }
     }
 }
+#endif

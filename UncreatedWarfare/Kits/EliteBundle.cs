@@ -233,8 +233,8 @@ public class EliteBundle : IListItem
                 Nullable = true,
                 ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull,
                 ForeignKey = true,
-                ForeignKeyTable = FactionInfo.TABLE_MAIN,
-                ForeignKeyColumn = FactionInfo.COLUMN_PK
+                ForeignKeyTable = "factions",
+                ForeignKeyColumn = "pk"
             },
             new Schema.Column(ColumnBundleCost, "double")
         }, true, typeof(EliteBundle)),

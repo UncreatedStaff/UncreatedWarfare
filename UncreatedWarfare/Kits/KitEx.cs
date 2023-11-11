@@ -10,6 +10,7 @@ using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
@@ -67,7 +68,7 @@ public static class KitEx
         string? value = null;
         if (kit.SignText != null)
         {
-            isDefaultValue = !kit.SignText.TryGetValue(language.LanguageCode, out value);
+            isDefaultValue = !kit.SignText.TryGetValue(language.Code, out value);
             if (isDefaultValue && !language.IsDefault && writeMising)
                 kit.SignText.TryGetValue(L.Default, out value);
         }

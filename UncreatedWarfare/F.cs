@@ -1,5 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
-using MySqlConnector;
+using MySql.Data.MySqlClient;
 using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;

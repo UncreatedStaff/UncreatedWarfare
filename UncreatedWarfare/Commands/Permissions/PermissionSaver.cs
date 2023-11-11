@@ -114,7 +114,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
 public class PermissionSave
 {
     [JsonPropertyName("permission")]
-    public EAdminType PermissionLevel;
+    public EAdminType PermissionLevel { get; set; }
     [JsonPropertyName("members")]
-    public ulong[] Members;
+    public ulong[] Members { get; set; }
 }

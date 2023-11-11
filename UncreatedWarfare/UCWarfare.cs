@@ -1,16 +1,17 @@
 ﻿#define USE_DEBUGGER
 using Cysharp.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore;
 using SDG.Framework.Modules;
 using SDG.Framework.Utilities;
 using SDG.Unturned;
+using StackCleaner;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -36,6 +37,7 @@ using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using MainThreadTask = Uncreated.Framework.MainThreadTask;
 
 namespace Uncreated.Warfare;
 
@@ -101,6 +103,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             Provider.shutdown();
         }
     });
+
     private async Task EarlyLoad(CancellationToken token)
     {
 #if DEBUG
@@ -122,6 +125,17 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         L.Log("Registering Commands: ", ConsoleColor.Magenta);
 
         TeamManager.SetupConfig();
+        Type type = Type.GetType("System.Data.Common.DbConnectionExtensions, Microsoft.EntityFrameworkCore.Relational");
+
+        //Accessor.AddFunctionStepthrough(typeof(Expression).GetMethods(BindingFlags.Static | BindingFlags.Public).First(x => x.Name == "Lambda" && x.GetParameters().Length == 4 && x.GetParameters()[3].ParameterType == typeof(IEnumerable<ParameterExpression>)).MakeGenericMethod(typeof(System.Func<System.Data.Common.DbConnection, System.Data.IsolationLevel, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask< System.Data.Common.DbTransaction>>)));
+        //Accessor.AddFunctionStepthrough(typeof(Expression).GetMethod("ValidateLambdaArgs", BindingFlags.Static | BindingFlags.NonPublic));
+
+        //Patches.Patcher.Patch(
+        //    Type.GetType("System.Linq.Expressions.Error, System.Core").GetMethod("ExpressionTypeDoesNotMatchReturn",
+        //        BindingFlags.NonPublic | BindingFlags.Static), prefix: new HarmonyMethod(
+        //        Accessor.GetMethod(PatchTest)));
+
+        RuntimeHelpers.RunClassConstructor(type.TypeHandle);
 
         OffenseManager.Init();
         bool set = false;
@@ -165,16 +179,34 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         new PermissionSaver();
         await Data.LoadSQL(token).ConfigureAwait(false);
+
+        L.Log("Migrating database changes...", ConsoleColor.Magenta);
+
+        try
+        {
+            await Data.DbContext.Database.MigrateAsync(token);
+            L.Log(" + Done", ConsoleColor.Gray);
+        }
+        catch (Exception ex)
+        {
+            L.LogError(" + Failed to migrate databse.");
+            L.LogError(ex);
+            Provider.shutdown(10);
+            return;
+        }
+
         Data.LanguageDataStore = new WarfareMySqlLanguageDataStore();
-        await Data.ReloadLanguageDataStore(true, token).ConfigureAwait(false);
+        await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);
         await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
         Data.ModerationSql = new WarfareDatabaseInterface();
         // await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
 
+#if NETSTANDARD || NETFRAMEWORK
         Data.WarfareStripeService = new WarfareStripeService();
         Data.PurchasingDataStore = await PurchaseRecordsInterface.Create<WarfarePurchaseRecordsInterface>(false, token).ConfigureAwait(false);
+#endif
 
 
         await ToUpdate(token);
@@ -220,6 +252,23 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         ActionLog.Add(ActionLogType.ServerStartup, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
     }
+
+    private static void PatchTest(object p0, object p1)
+    {
+        Type t0 = (Type)p0;
+        Type t1 = (Type)p1;
+
+        L.LogDebug("Type 0");
+        L.LogDebug($" {t0.AssemblyQualifiedName}");
+        L.LogDebug($" {t0.Assembly.FullName}");
+        L.LogDebug($" {t0.Assembly.Location}");
+
+        L.LogDebug("Type 1");
+        L.LogDebug($" {t1.AssemblyQualifiedName}");
+        L.LogDebug($" {t1.Assembly.FullName}");
+        L.LogDebug($" {t1.Assembly.Location}");
+    }
+
     internal void InitNetClient()
     {
         if (NetClient != null)
@@ -310,7 +359,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             await ToUpdate(token);
         }
 
-#if DEBUG
+#if NETFRAMEWORK
         if (Config.Debug && System.IO.File.Exists(@"C:\orb.wav"))
         {
             System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"C:\orb.wav");
@@ -1165,6 +1214,7 @@ public class UCWarfareNexus : IModuleNexus
     void IModuleNexus.initialize()
     {
         ModuleHook.PreVanillaAssemblyResolvePostRedirects += ResolveAssemblyCompiler;
+        ModuleHook.PostVanillaAssemblyResolve += ErrorAssemblyNotResolved;
         try
         {
             Init2();
@@ -1199,7 +1249,12 @@ public class UCWarfareNexus : IModuleNexus
         UnityEngine.Object.DontDestroyOnLoad(go);
         go.AddComponent<UCWarfare>();
     }
-    private Assembly? ResolveAssemblyCompiler(object sender, ResolveEventArgs args)
+    private static Assembly? ErrorAssemblyNotResolved(object sender, ResolveEventArgs args)
+    {
+        CommandWindow.LogError($"Unknown assembly: {args.Name}.");
+        return null;
+    }
+    private static Assembly? ResolveAssemblyCompiler(object sender, ResolveEventArgs args)
     {
         const string runtime = "System.Runtime.CompilerServices.Unsafe";
 
@@ -1208,8 +1263,6 @@ public class UCWarfareNexus : IModuleNexus
             CommandWindow.LogWarning($"Redirected {args.Name} -> {runtime}.dll");
             return typeof(Unsafe).Assembly;
         }
-
-        CommandWindow.LogError($"Unknown assembly: {args.Name}.");
 
         return null;
     }

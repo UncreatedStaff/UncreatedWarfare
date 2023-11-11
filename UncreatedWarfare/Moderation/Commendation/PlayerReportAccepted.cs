@@ -18,8 +18,6 @@ public class PlayerReportAccepted : ModerationEntry
 {
     [JsonPropertyName("report_id")]
     public PrimaryKey ReportKey { get; set; }
-
-    [JsonIgnore]
     public Report? Report { get; set; }
 
     public override string GetDisplayName() => "Player Report Accepted";

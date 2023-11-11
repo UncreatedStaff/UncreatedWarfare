@@ -218,7 +218,7 @@ public readonly struct AppealResponse
     [JsonPropertyName("response")]
     public string Response { get; }
 
-    [JsonConstructor]
+    public AppealResponse() { }
     public AppealResponse(string question, string response)
     {
         Question = question;

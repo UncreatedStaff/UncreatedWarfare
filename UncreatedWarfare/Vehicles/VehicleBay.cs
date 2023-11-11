@@ -346,7 +346,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             for (int i = 0; i < proxy.Item.CrewSeats.Length; ++i)
                 if (proxy.Item.CrewSeats[i] == seat)
                     return false;
-            Util.AddToArray(ref proxy.Item.CrewSeats!, seat);
+            proxy.Item.CrewSeats = Util.AddToArray(proxy.Item.CrewSeats, seat);
             if (save)
                 await proxy.SaveItem(token).ConfigureAwait(false);
         }
@@ -387,7 +387,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             }
             if (index == -1)
                 return false;
-            Util.RemoveFromArray(ref proxy.Item.CrewSeats, index);
+            proxy.Item.CrewSeats = Util.RemoveFromArray(proxy.Item.CrewSeats, index);
             if (save)
                 await proxy.SaveItem(token).ConfigureAwait(false);
         }
@@ -486,8 +486,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             {
                 Nullable = true,
                 ForeignKey = true,
-                ForeignKeyColumn = FactionInfo.COLUMN_PK,
-                ForeignKeyTable = FactionInfo.TABLE_MAIN,
+                ForeignKeyColumn = "pk",
+                ForeignKeyTable = "factions",
                 ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull
             },
             new Schema.Column(COLUMN_VEHICLE_GUID, SqlTypes.GUID_STRING),
@@ -931,7 +931,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                          DelayType type = reader.ReadStringEnum(1, DelayType.None);
                                          if (type == DelayType.None)
                                              break;
-                                         Util.AddToArray(ref list[i].Delays!, new Delay(type, reader.IsDBNull(2) ? 0f : reader.GetFloat(2), reader.IsDBNull(3) ? null : reader.GetString(3)));
+                                         list[i].Delays = Util.AddToArray(list[i].Delays, new Delay(type, reader.IsDBNull(2) ? 0f : reader.GetFloat(2), reader.IsDBNull(3) ? null : reader.GetString(3)));
                                          break;
                                      }
                                  }
@@ -945,8 +945,9 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                      if (list[i].PrimaryKey.Key == pk)
                                      {
                                          UnlockRequirement? req = UnlockRequirement.Read(reader);
+
                                          if (req != null)
-                                            Util.AddToArray(ref list[i].UnlockRequirements!, req);
+                                             list[i].UnlockRequirements = Util.AddToArray(list[i].UnlockRequirements, req);
                                          break;
                                      }
                                  }
@@ -962,7 +963,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                          Guid? guid = reader.ReadGuidString(1);
                                          if (!guid.HasValue)
                                              throw new FormatException("Invalid GUID: " + reader.GetString(1));
-                                         Util.AddToArray(ref list[i].Items!, guid.Value);
+                                         list[i].Items = Util.AddToArray(list[i].Items, guid.Value);
                                          break;
                                      }
                                  }
@@ -976,7 +977,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                      if (list[i].PrimaryKey.Key == pk)
                                      {
                                          byte seat = reader.GetByte(1);
-                                         Util.AddToArray(ref list[i].CrewSeats!, seat);
+                                         list[i].CrewSeats = Util.AddToArray(list[i].CrewSeats, seat);
                                          break;
                                      }
                                  }
@@ -1247,7 +1248,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                  DelayType type = reader.ReadStringEnum(0, DelayType.None);
                                  if (type == DelayType.None)
                                      return;
-                                 Util.AddToArray(ref obj.Delays!, new Delay(type, reader.IsDBNull(1) ? 0f : reader.GetFloat(1), reader.IsDBNull(2) ? null : reader.GetString(2)));
+                                 obj.Delays = Util.AddToArray(obj.Delays, new Delay(type, reader.IsDBNull(1) ? 0f : reader.GetFloat(1), reader.IsDBNull(2) ? null : reader.GetString(2)));
                              }, token).ConfigureAwait(false);
         await Sql.QueryAsync($"SELECT `{UnlockRequirement.COLUMN_JSON}` " +
                              $"FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
@@ -1256,7 +1257,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                  Utf8JsonReader reader2 = new Utf8JsonReader(bytes, JsonEx.readerOptions);
                                  UnlockRequirement? req = UnlockRequirement.Read(ref reader2);
                                  if (req != null) return;
-                                 Util.AddToArray(ref obj.UnlockRequirements!, req);
+                                 obj.UnlockRequirements = Util.AddToArray(obj.UnlockRequirements, req)!;
                              }, token).ConfigureAwait(false);
         await Sql.QueryAsync($"SELECT `{COLUMN_ITEM_GUID}` " +
                              $"FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
@@ -1264,13 +1265,13 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                  Guid? guid = reader.ReadGuidString(0);
                                  if (!guid.HasValue)
                                      throw new FormatException("Invalid GUID: " + reader.GetString(0));
-                                 Util.AddToArray(ref obj.Items!, guid.Value);
+                                 obj.Items = Util.AddToArray(obj.Items, guid.Value);
                              }, token).ConfigureAwait(false);
         await Sql.QueryAsync($"SELECT `{COLUMN_CREW_SEATS_SEAT}` " +
                              $"FROM `{TABLE_CREW_SEATS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
                              {
                                  byte seat = reader.GetByte(0);
-                                 Util.AddToArray(ref obj.CrewSeats!, seat);
+                                 obj.CrewSeats = Util.AddToArray(obj.CrewSeats, seat);
                              }, token).ConfigureAwait(false);
         await Sql.QueryAsync($"SELECT `{PageItem.COLUMN_GUID}`,`{PageItem.COLUMN_X}`," +
                              $"`{PageItem.COLUMN_Y}`,`{PageItem.COLUMN_ROTATION}`,`{PageItem.COLUMN_AMOUNT}`,`{PageItem.COLUMN_METADATA}` " +

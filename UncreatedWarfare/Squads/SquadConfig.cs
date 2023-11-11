@@ -16,22 +16,22 @@ public sealed class SquadsConfig : Config<SquadConfigData>
         SquadManager.RallyUI.LoadFromConfig(Data.SquadRallyUI);
     }
 }
-[JsonSerializable(typeof(SquadConfigData))]
+
 public class SquadConfigData : JSONConfigData
 {
-    public ushort RallyTimer;
-    public ushort RallyCooldown;
-    public float RallyDespawnDistance;
-    public int SquadDisconnectTime;
-    public float MedicRange;
-    public ClassConfig[] Classes;
-    public JsonAssetReference<EffectAsset> EmptyMarker;
-    public JsonAssetReference<EffectAsset> SquadLeaderEmptyMarker;
-    public JsonAssetReference<EffectAsset> InjuredMarker;
-    public JsonAssetReference<EffectAsset> MedicMarker;
-    public JsonAssetReference<EffectAsset> SquadMenuUI;
-    public JsonAssetReference<EffectAsset> SquadListUI;
-    public JsonAssetReference<EffectAsset> SquadRallyUI;
+    public ushort RallyTimer { get; set; }
+    public ushort RallyCooldown  { get; set; }
+    public float RallyDespawnDistance  { get; set; }
+    public int SquadDisconnectTime  { get; set; }
+    public float MedicRange { get; set; }
+    public ClassConfig[] Classes { get; set; }
+    public JsonAssetReference<EffectAsset> EmptyMarker  { get; set; }
+    public JsonAssetReference<EffectAsset> SquadLeaderEmptyMarker  { get; set; }
+    public JsonAssetReference<EffectAsset> InjuredMarker  { get; set; }
+    public JsonAssetReference<EffectAsset> MedicMarker  { get; set; }
+    public JsonAssetReference<EffectAsset> SquadMenuUI  { get; set; }
+    public JsonAssetReference<EffectAsset> SquadListUI  { get; set; }
+    public JsonAssetReference<EffectAsset> SquadRallyUI { get; set; }
     public override void SetDefaults()
     {
         RallyTimer = 20;
@@ -76,13 +76,14 @@ public class SquadConfigData : JSONConfigData
 public struct ClassConfig
 {
     [JsonPropertyName("class")]
-    public Class Class;
+    public Class Class { get; set; }
     [JsonPropertyName("icon")]
-    public char Icon;
+    public char Icon { get; set; }
     [JsonPropertyName("marker_effect")]
-    public JsonAssetReference<EffectAsset> MarkerEffect;
+    public JsonAssetReference<EffectAsset> MarkerEffect { get; set; }
     [JsonPropertyName("marker_effect_squad_leader")]
-    public JsonAssetReference<EffectAsset> SquadLeaderMarkerEffect;
+    public JsonAssetReference<EffectAsset> SquadLeaderMarkerEffect { get; set; }
+    public ClassConfig() { }
     public ClassConfig(Class @class, char icon, JsonAssetReference<EffectAsset> markerEffect, JsonAssetReference<EffectAsset> squadLeaderMarkerEffect)
     {
         Class = @class;

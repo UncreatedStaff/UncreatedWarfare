@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -208,8 +209,8 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
 
 public class TraitData : ITranslationArgument
 {
-    [JsonIgnore] private string _typeName;
-    [JsonIgnore] public Type Type { get; private set; }
+    private string _typeName;
+    public Type Type { get; private set; }
 
     [JsonPropertyName("type")]
     public string TypeName
@@ -229,79 +230,74 @@ public class TraitData : ITranslationArgument
 
     [CommandSettable]
     [JsonPropertyName("credit_cost")]
-    public int CreditCost;
+    public int CreditCost { get; set; }
 
     [JsonPropertyName("squad_distribute_effect")]
-    public bool EffectDistributedToSquad;
+    public bool EffectDistributedToSquad { get; set; }
 
     [JsonPropertyName("squad_distribute_items")]
-    public bool ItemsDistributedToSquad;
+    public bool ItemsDistributedToSquad { get; set; }
 
     [JsonPropertyName("squad_distributed_multiplier")]
-    public float SquadDistributedMultiplier = 1f;
+    public float SquadDistributedMultiplier { get; set; } = 1f;
 
     [JsonPropertyName("squad_distributed_multiplier_leader")]
-    public float SquadLeaderDistributedMultiplier = 1f;
+    public float SquadLeaderDistributedMultiplier { get; set; } = 1f;
 
     [JsonPropertyName("require_squad")]
-    public bool RequireSquad;
+    public bool RequireSquad { get; set; }
 
     [JsonPropertyName("require_squad_leader")]
-    public bool RequireSquadLeader;
+    public bool RequireSquadLeader { get; set; }
 
     [JsonPropertyName("gamemode_list_is_blacklist")]
-    public bool GamemodeListIsBlacklist;
+    public bool GamemodeListIsBlacklist { get; set; }
 
     [JsonPropertyName("gamemode_list")]
-    public string[] GamemodeList;
+    public string[] GamemodeList { get; set; }
 
     [JsonPropertyName("class_list_is_blacklist")]
-    public bool ClassListIsBlacklist;
+    public bool ClassListIsBlacklist { get; set; }
 
     [JsonPropertyName("class_list")]
-    public Class[] ClassList;
+    public Class[] ClassList { get; set; }
 
     [JsonPropertyName("lasts_until_death")]
-    public bool LastsUntilDeath;
+    public bool LastsUntilDeath { get; set; }
 
     [JsonPropertyName("team")]
-    public ulong Team;
+    public ulong Team { get; set; }
 
     [JsonPropertyName("unlock_requirements")]
     public UnlockRequirement[] UnlockRequirements { get; set; }
 
     [JsonPropertyName("name")]
-    public TranslationList NameTranslations;
+    public TranslationList NameTranslations { get; set; }
 
     [JsonPropertyName("description")]
-    public TranslationList DescriptionTranslations;
+    public TranslationList DescriptionTranslations { get; set; }
 
     [JsonPropertyName("items_given")]
     public RotatableConfig<JsonAssetReference<ItemAsset>>[] ItemsGiven { get; set; }
 
     [JsonPropertyName("icon")]
-    public RotatableConfig<string> Icon;
+    public RotatableConfig<string> Icon { get; set; }
 
     [JsonPropertyName("request_cooldown")]
-    public RotatableConfig<float> Cooldown;
+    public RotatableConfig<float> Cooldown { get; set; }
 
     [JsonPropertyName("delays")]
-    public Delay[] Delays;
+    public Delay[] Delays { get; set; }
 
     [JsonPropertyName("effect_duration")]
-    public float EffectDuration;
+    public float EffectDuration { get; set; }
 
     [JsonPropertyName("tick_speed")]
-    public float TickSpeed;
+    public float TickSpeed { get; set; }
 
     [JsonPropertyName("data")]
-    public string Data;
+    public string Data { get; set; }
 
-    [JsonConstructor]
-    public TraitData()
-    {
-
-    }
     public bool CanClassUse(Class @class)
     {
         if (ClassList is null) return true;

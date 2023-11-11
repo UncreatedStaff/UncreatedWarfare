@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+﻿using MySql.Data.MySqlClient;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
@@ -69,7 +70,7 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
     public ulong LastEditor { get; set; }
 
     [JsonIgnore]
-    internal bool IsLoadDirty;
+    internal bool IsLoadDirty { get; set; }
     [JsonIgnore]
     internal List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>? ItemListCache { get; set; }
 
@@ -255,7 +256,7 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
         if (SignText is null) return Id;
         string rtn;
         language ??= Localization.GetDefaultLanguage();
-        if (SignText.TryGetValue(language.LanguageCode, out string val))
+        if (SignText.TryGetValue(language.Code, out string val))
             rtn = val ?? Id;
         else if (SignText.Count > 0)
             rtn = SignText.FirstOrDefault().Value ?? Id;
@@ -919,8 +920,8 @@ public abstract class UnlockRequirement : ICloneable, IVersionableReadWrite
 }
 public class UnlockRequirementConverter : JsonConverter<UnlockRequirement>
 {
-    public override UnlockRequirement? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        => UnlockRequirement.Read(ref reader);
+    public override UnlockRequirement Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        => UnlockRequirement.Read(ref reader)!;
     public override void Write(Utf8JsonWriter writer, UnlockRequirement value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();

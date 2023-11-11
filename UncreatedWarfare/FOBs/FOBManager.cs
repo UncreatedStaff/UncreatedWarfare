@@ -19,6 +19,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -1116,48 +1117,48 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
 public class FOBConfigData : JSONConfigData
 {
-    public float FOBMaxHeightAboveTerrain;
-    public bool RestrictFOBPlacement;
-    public ushort FOBID;
-    public ushort FOBRequiredBuild;
-    public int FOBBuildPickupRadius;
-    public int FOBBuildPickupRadiusNoBunker;
-    public byte FobLimit;
-    public int TicketsFOBRadioLost;
-    public float BaseFOBRepairHits;
-    public float SalvageRefundPercentage;
-    public float RepairBuildDiscountPercentage;
+    public float FOBMaxHeightAboveTerrain { get; set; }
+    public bool RestrictFOBPlacement { get; set; }
+    public ushort FOBID { get; set; }
+    public ushort FOBRequiredBuild { get; set; }
+    public int FOBBuildPickupRadius { get; set; }
+    public int FOBBuildPickupRadiusNoBunker { get; set; }
+    public byte FobLimit { get; set; }
+    public int TicketsFOBRadioLost { get; set; }
+    public float BaseFOBRepairHits { get; set; }
+    public float SalvageRefundPercentage { get; set; }
+    public float RepairBuildDiscountPercentage { get; set; }
 
-    public float AmmoCommandCooldown;
-    public ushort AmmoCrateRequiredBuild;
-    public ushort RepairStationRequiredBuild;
+    public float AmmoCommandCooldown { get; set; }
+    public ushort AmmoCrateRequiredBuild { get; set; }
+    public ushort RepairStationRequiredBuild { get; set; }
 
-    public List<BuildableData> Buildables;
-    public int AmmoBagMaxUses;
+    public List<BuildableData> Buildables { get; set; }
+    public int AmmoBagMaxUses { get; set; }
 
-    public float DeployMainDelay;
-    public float DeployFOBDelay;
+    public float DeployMainDelay { get; set; }
+    public float DeployFOBDelay { get; set; }
 
-    public bool EnableCombatLogger;
-    public uint CombatCooldown;
+    public bool EnableCombatLogger { get; set; }
+    public uint CombatCooldown { get; set; }
 
-    public bool EnableDeployCooldown;
-    public uint DeployCooldown;
-    public bool DeployCancelOnMove;
-    public bool DeployCancelOnDamage;
+    public bool EnableDeployCooldown { get; set; }
+    public uint DeployCooldown { get; set; }
+    public bool DeployCancelOnMove { get; set; }
+    public bool DeployCancelOnDamage { get; set; }
 
-    public bool ShouldRespawnAtMain;
-    public bool ShouldWipeAllFOBsOnRoundedEnded;
-    public bool ShouldSendPlayersBackToMainOnRoundEnded;
-    public bool ShouldKillMaincampers;
+    public bool ShouldRespawnAtMain { get; set; }
+    public bool ShouldWipeAllFOBsOnRoundedEnded { get; set; }
+    public bool ShouldSendPlayersBackToMainOnRoundEnded { get; set; }
+    public bool ShouldKillMaincampers { get; set; }
 
-    public ushort FirstFOBUiId;
-    public ushort BuildResourceUI;
+    public ushort FirstFOBUiId { get; set; }
+    public ushort BuildResourceUI { get; set; }
 
     [JsonConverter(typeof(Base64Converter))]
-    public byte[] T1RadioState;
+    public byte[] T1RadioState { get; set; }
     [JsonConverter(typeof(Base64Converter))]
-    public byte[] T2RadioState;
+    public byte[] T2RadioState { get; set; }
 
     public override void SetDefaults()
     {
@@ -1484,25 +1485,25 @@ public class FOBConfigData : JSONConfigData
 public class BuildableData : ITranslationArgument
 {
     [JsonPropertyName("foundationID")]
-    public RotatableConfig<JsonAssetReference<ItemAsset>> Foundation;
+    public RotatableConfig<JsonAssetReference<ItemAsset>> Foundation { get; set; }
     [JsonPropertyName("structureID")]
-    public RotatableConfig<JsonAssetReference<ItemAsset>>? FullBuildable;
+    public RotatableConfig<JsonAssetReference<ItemAsset>>? FullBuildable { get; set; }
     [JsonPropertyName("type")]
-    public BuildableType Type;
+    public BuildableType Type { get; set; }
     [JsonPropertyName("requiredHits")]
-    public RotatableConfig<int> RequiredHits;
+    public RotatableConfig<int> RequiredHits { get; set; }
     [JsonPropertyName("requiredBuild")]
-    public RotatableConfig<int> RequiredBuild;
+    public RotatableConfig<int> RequiredBuild { get; set; }
     [JsonPropertyName("team")]
-    public int Team;
+    public int Team { get; set; }
     [JsonPropertyName("limit")]
-    public int Limit;
+    public int Limit { get; set; }
     [JsonPropertyName("disabled")]
-    public RotatableConfig<bool> Disabled;
+    public RotatableConfig<bool> Disabled { get; set; }
     [JsonPropertyName("emplacementData")]
-    public EmplacementData? Emplacement;
+    public EmplacementData? Emplacement { get; set; }
     [JsonPropertyName("dontAutoWhitelist")]
-    public bool DontAutoWhitelist;
+    public bool DontAutoWhitelist { get; set; }
 
     public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
@@ -1563,21 +1564,20 @@ public class BuildableData : ITranslationArgument
     }
 }
 
-[JsonSerializable(typeof(EmplacementData))]
 public class EmplacementData
 {
     [JsonPropertyName("vehicleID")]
-    public JsonAssetReference<VehicleAsset> EmplacementVehicle;
+    public JsonAssetReference<VehicleAsset> EmplacementVehicle { get; set; }
     [JsonPropertyName("baseID")]
-    public JsonAssetReference<ItemAsset> BaseBarricade;
+    public JsonAssetReference<ItemAsset> BaseBarricade { get; set; }
     [JsonPropertyName("ammoID")]
-    public JsonAssetReference<ItemAsset> Ammo;
+    public JsonAssetReference<ItemAsset> Ammo { get; set; }
     [JsonPropertyName("ammoAmount")]
-    public int AmmoCount;
+    public int AmmoCount { get; set; }
     [JsonPropertyName("warnFriendlyProjectiles")]
-    public bool ShouldWarnFriendlies;
+    public bool ShouldWarnFriendlies { get; set; }
     [JsonPropertyName("warnEnemyProjectiles")]
-    public bool ShouldWarnEnemies;
+    public bool ShouldWarnEnemies { get; set; }
 }
 
 [Translatable("Buildable Type", Description = "Buildable types for FOB buildings.")]

@@ -10,6 +10,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 

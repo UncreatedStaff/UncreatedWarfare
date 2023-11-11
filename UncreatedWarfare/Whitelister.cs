@@ -357,9 +357,9 @@ public class Whitelister : ListSingleton<WhitelistItem>
 }
 public class WhitelistItem
 {
-    public Guid Item;
+    public Guid Item { get; set; }
     [CommandSettable]
-    public int Amount;
+    public int Amount { get; set; }
 
     public WhitelistItem()
     {

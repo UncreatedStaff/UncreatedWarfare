@@ -1,0 +1,1 @@
+This is a modified version of Lib.Harmony 2.2.2 compiled for .NET Standard 2.1 with the correct targeting for System.Reflection.Emit.

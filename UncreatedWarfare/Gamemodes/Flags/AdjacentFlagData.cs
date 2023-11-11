@@ -19,7 +19,7 @@ public struct AdjacentFlagData : IJsonReadWrite, IListItem
     public PrimaryKey PrimaryKey { get; set; }
 
     [JsonPropertyName("weight")]
-    public float Weight;
+    public float Weight { get; set; }
     public AdjacentFlagData(int flagId, float weight = 1f)
     {
         PrimaryKey = flagId;

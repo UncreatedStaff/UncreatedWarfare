@@ -1407,7 +1407,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     #endregion
 }
 
-[JsonSerializable(typeof(VehicleSpawn))]
 public class VehicleSpawn : IListItem
 {
     private SqlItem<VehicleData>? _vehicle;
