@@ -25,9 +25,11 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -85,7 +87,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public float LastSpoken;
     public string CharacterName;
     public string NickName;
-    public SqlItem<Kit>? ActiveKit;
+    public uint? ActiveKit;
     public string? MuteReason;
     public MuteType MuteType;
     public EChatMode LastChatMode = EChatMode.GLOBAL;
@@ -94,7 +96,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public TeamSelectorData? TeamSelectorData;
     public Coroutine? StorageCoroutine;
     public RankStatus[]? RankData;
-    public List<SqlItem<Kit>>? AccessibleKits;
+    public List<uint>? AccessibleKits;
     public List<HotkeyBinding>? HotkeyBindings;
     internal List<LayoutTransformation>? LayoutTransformations;
     public IBuff?[] ActiveBuffs = new IBuff?[BuffUI.MaxBuffs];
@@ -132,7 +134,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         CSteamID = steamID;
         AccountId = steamID.GetAccountID().m_AccountID;
         Save = save;
-        ActiveKit = KitManager.GetSingletonQuick()?.FindKit(Save.KitName, default, true).Result;
+        ActiveKit = KitManager.GetSingletonQuick()?.FindKit(Save.KitName, default, true).Result?.Item?.PrimaryKey;
         Locale = new UCPlayerLocale(this, data.LanguagePreferences);
         if (!Data.OriginalPlayerNames.TryGetValue(Steam64, out _cachedName))
             _cachedName = new PlayerNames(player);
@@ -215,13 +217,13 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public InteractableVehicle? CurrentVehicle => Player.movement.getVehicle();
     public bool IsInVehicle => CurrentVehicle != null;
     public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
-    public bool HasKit => ActiveKit?.Item is not null;
+    public bool HasKit => ActiveKit.HasValue;
     public bool JumpOnPunch { get; set; }
     public Zone? SafezoneZone { get; internal set; }
     public Zone? NoDropZone { get; internal set; }
     public Zone? NoPickZone { get; internal set; }
-    public Class KitClass => ActiveKit?.Item is { } kit ? kit.Class : Class.None;
-    public Branch Branch => ActiveKit?.Item is { } kit ? kit.Branch : Branch.Default;
+    public Class KitClass { get; private set; }
+    public Branch KitBranch { get; private set; }
     bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other != null && ((object?)other == this || other.Steam64 == Steam64); 
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public PlayerSave Save { get; }
@@ -755,17 +757,21 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     public void DeactivateMarker(SpottedComponent marker) => CurrentMarkers.Remove(marker);
     /// <remarks>Thread Safe</remarks>
-    public void ChangeKit(SqlItem<Kit>? kit)
+    public void ChangeKit(Kit? kit)
     {
         ItemTransformations.Clear();
         ItemDropTransformations.Clear();
-        if (kit?.Item == null)
+        if (kit == null)
         {
             ActiveKit = null;
+            KitClass = Class.None;
+            KitBranch = Branch.Default;
         }
         else
         {
-            ActiveKit = kit;
+            ActiveKit = kit.PrimaryKey;
+            KitClass = kit.Class;
+            KitBranch = kit.Branch;
         }
 
         Apply();

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
@@ -751,7 +752,7 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString("Permission: " + ctx.Caller.GetPermissions());
     }
 #if DEBUG
-    private static readonly InstanceSetter<InteractableVehicle, bool> SetEngineOn = Util.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly InstanceSetter<InteractableVehicle, bool>? SetEngineOn = Accessor.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField");
     private void drivetest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -788,7 +789,7 @@ public class DebugCommand : AsyncCommand
         Quaternion angle = ctx.Caller.Player.transform.rotation;
         InteractableVehicle veh = VehicleManager.spawnLockedVehicleForPlayerV2(asset.id, pos, angle, ctx.Caller.Player);
         //uint sim = 1;
-        SetEngineOn.Invoke(veh, true);
+        SetEngineOn?.Invoke(veh, true);
         RaycastHit[] results = new RaycastHit[16];
         yield return new WaitForSeconds(5f);
         //Array.ForEach(veh.transform.gameObject.GetComponentsInChildren<Collider>(), x => UnityEngine.Object.Destroy(x));
@@ -1266,7 +1267,7 @@ public class DebugCommand : AsyncCommand
         {
             try
             {
-                foreach (Type type in Util.GetTypesSafe())
+                foreach (Type type in Accessor.GetTypesSafe())
                 {
                     if (!string.IsNullOrEmpty(typeName) && !type.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
                         continue;

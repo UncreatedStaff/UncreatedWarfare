@@ -14,6 +14,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;

@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Properties;
@@ -1417,7 +1418,7 @@ public class Translation
     {
         if (FormatDisplays.Count > 0)
             FormatDisplays.Clear();
-        foreach (FieldInfo field in Util.GetTypesSafe().SelectMany(x => x.GetFields(BindingFlags.Public | BindingFlags.Static)).Where(x => (x.IsLiteral || x.IsInitOnly) && x.FieldType == typeof(string)))
+        foreach (FieldInfo field in Accessor.GetTypesSafe().SelectMany(x => x.GetFields(BindingFlags.Public | BindingFlags.Static)).Where(x => (x.IsLiteral || x.IsInitOnly) && x.FieldType == typeof(string)))
         {
             foreach (FormatDisplayAttribute attr in Attribute.GetCustomAttributes(field, typeof(FormatDisplayAttribute)).OfType<FormatDisplayAttribute>())
             {

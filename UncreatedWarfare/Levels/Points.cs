@@ -20,6 +20,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
@@ -816,7 +817,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         Branch oldbranch = Branch.Default;
         if (oldkit is { Item: { } oldkit2 })
             oldbranch = oldkit2.Branch;
-        if (player.Branch != oldbranch)
+        if (player.KitBranch != oldbranch)
         {
             player.PointsDirtyMask |= 0b00000100;
             XPUI.Update(player, false);

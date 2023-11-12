@@ -9,7 +9,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Networking.Purchasing;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
 using static Uncreated.Warfare.Kits.KitManager;
 

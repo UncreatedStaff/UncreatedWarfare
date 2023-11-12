@@ -757,10 +757,10 @@ public static class TeamManager
     }
     public static FactionInfo? GetFactionInfo(PrimaryKey id)
     {
-        int pk = id.Key;
-        if (pk < 0) return null;
-        if (_factions.Count > pk && _factions[pk].PrimaryKey.Key == pk)
-            return _factions[pk];
+        uint pk = id.Key;
+        if (pk == 0) return null;
+        if (_factions.Count > pk && _factions[(int)pk].PrimaryKey.Key == pk)
+            return _factions[(int)pk];
         for (int i = 0; i < _factions.Count; ++i)
         {
             if (_factions[i].PrimaryKey.Key == pk)
@@ -778,6 +778,18 @@ public static class TeamManager
         }
 
         return null;
+    }
+    public static FactionInfo? GetFactionInfo(Faction? faction)
+    {
+        if (faction == null) return null;
+        if (faction.Key.IsValid)
+        {
+            FactionInfo? info = GetFactionInfo(faction.Key);
+            if (info != null)
+                return info;
+        }
+
+        return !string.IsNullOrEmpty(faction.Id) ? GetFactionInfo(faction.Id) : null;
     }
     public static IEnumerable<UCPlayer> EnumerateTeam(ulong team) => PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == team);
     /// <summary>Advanced search using name, abbreviation, and short name.</summary>
@@ -1179,6 +1191,19 @@ public static class TeamManager
         }
         return 0ul;
     }
+    public static ulong GetTeamNumber(Faction? faction)
+    {
+        if (faction is not null)
+        {
+            if (faction.Id.Equals(Team1Faction.FactionId, StringComparison.Ordinal))
+                return 1ul;
+            if (faction.Id.Equals(Team2Faction.FactionId, StringComparison.Ordinal))
+                return 2ul;
+            if (faction.Id.Equals(AdminFaction.FactionId, StringComparison.Ordinal))
+                return 3ul;
+        }
+        return 0ul;
+    }
     public static bool HasTeam(Player player)
     {
         ulong t = player.GetTeam();
@@ -1441,10 +1466,11 @@ public static class TeamManager
             _data.Reload();
     }
 
-    public static RedirectType GetRedirectInfo(Guid input, out FactionInfo? faction, bool clothingOnly = false)
+    public static RedirectType GetRedirectInfo(Guid input, out FactionInfo? faction, out string? variant, bool clothingOnly = false)
     {
         FactionInfo team1 = Team1Faction;
         FactionInfo team2 = Team2Faction;
+        variant = null;
         for (int i = -2; i < _factions.Count; ++i)
         {
             faction = i == -2 ? team2 : (i == -1 ? team1 : _factions[i]);
@@ -1505,7 +1531,7 @@ public static class TeamManager
         
         return RedirectType.None;
     }
-    public static ItemAsset? GetRedirectInfo(RedirectType type, FactionInfo? kitFaction, FactionInfo? requesterTeam, out byte[] state, out byte amount)
+    public static ItemAsset? GetRedirectInfo(RedirectType type, /* TODO */ string variant, FactionInfo? kitFaction, FactionInfo? requesterTeam, out byte[] state, out byte amount)
     {
         if (requesterTeam == null)
             requesterTeam = kitFaction;
@@ -1688,16 +1714,16 @@ public static class TeamManager
 
         return rtn;
     }
-    internal static RedirectType GetClothingRedirect(Guid input, FactionInfo faction)
+    internal static RedirectType GetClothingRedirect(Guid input, out string? variant, FactionInfo faction)
     {
-        RedirectType type = GetRedirectInfo(input, out FactionInfo? foundFaction, true);
+        RedirectType type = GetRedirectInfo(input, out FactionInfo? foundFaction, out variant, true);
         if (type == RedirectType.None || foundFaction != faction)
             return RedirectType.None;
 
         return type;
     }
 
-    internal static RedirectType GetItemRedirect(Guid input) => GetRedirectInfo(input, out _, false);
+    internal static RedirectType GetItemRedirect(Guid input) => GetRedirectInfo(input, out _, out _, false);
 #if DEBUG
     [Obsolete]
     internal static Guid CheckClothingAssetRedirect(Guid input, ulong team)
@@ -2033,7 +2059,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     {
         Faction faction = new Faction
         {
-            Key = checked((uint)PrimaryKey.Key),
+            Key = PrimaryKey,
             Id = FactionId,
             Name = Name,
             ShortName = ShortName,
@@ -2050,7 +2076,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         foreach (KeyValuePair<string, string> kvp in NameTranslations)
         {
             FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: > 0 } lang)
+            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key.IsValid: true } lang)
                 continue;
             if (loc == null)
             {
@@ -2067,7 +2093,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         foreach (KeyValuePair<string, string> kvp in ShortNameTranslations)
         {
             FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: > 0 } lang)
+            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key.IsValid: true } lang)
                 continue;
             if (loc == null)
             {
@@ -2084,7 +2110,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         foreach (KeyValuePair<string, string> kvp in AbbreviationTranslations)
         {
             FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: > 0 } lang)
+            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key.IsValid: true } lang)
                 continue;
             if (loc == null)
             {
@@ -2447,7 +2473,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         if (UCWarfare.IsLoaded)
             Localization.ClearSection(TranslationSection.Factions);
 
-        List<Faction> factions = await db.Factions.ToListAsync(token).ConfigureAwait(false);
+        List<Faction> factions = await db.Factions
+            .Include(x => x.Assets)
+            .Include(x => x.Translations).ThenInclude(x => x.Language)
+            .ToListAsync(token).ConfigureAwait(false);
 
         if (factions.Count == 0 && uploadDefaultIfMissing)
         {

@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using DanielWillett.ReflectionTools;
+using HarmonyLib;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -213,7 +214,7 @@ public class ConfigSync : MonoBehaviour
             return;
         Assembly exeAssembly = Assembly.GetExecutingAssembly();
         bool isInternal = Assembly.GetCallingAssembly() == exeAssembly;
-        foreach (Type type in Util.GetTypesSafe(exeAssembly))
+        foreach (Type type in Accessor.GetTypesSafe(exeAssembly))
         {
             if (Attribute.GetCustomAttribute(type, typeof(SyncAttribute)) is SyncAttribute typeSync && typeSync.SyncId != 0 && !RegisteredTypes.ContainsKey(typeSync.SyncId))
             {

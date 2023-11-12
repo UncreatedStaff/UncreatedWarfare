@@ -1,32 +1,17 @@
-﻿using HarmonyLib;
-using SDG.NetPak;
+﻿using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using JetBrains.Annotations;
+using Uncreated.SQL;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 
 public static class UCInventoryManager
 {
-    public static void OnLoad()
-    {
-        try
-        {
-            Harmony.Patches.Patcher.Patch(
-                typeof(PlayerEquipment).GetMethod("InitializePlayer", BindingFlags.Instance | BindingFlags.NonPublic),
-                prefix: new HarmonyMethod(
-                    typeof(UCInventoryManager).GetMethod("GlassesFix", BindingFlags.Static | BindingFlags.NonPublic)));
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Error patching PlayerEquipment.InitializePlayer()");
-            L.LogError(ex);
-        }
-    }
     public static IKitItem[] ItemsFromInventory(UCPlayer player, bool addClothes = true, bool addItems = true, bool findAssetRedirects = false)
     {
         ThreadUtil.assertIsGameThread();
@@ -36,10 +21,10 @@ public static class UCInventoryManager
         RedirectType type;
         if (addItems)
         {
-            Items[] ia = player.Player.inventory.items;
+            SDG.Unturned.Items[] ia = player.Player.inventory.items;
             for (byte page = 0; page < PlayerInventory.STORAGE; ++page)
             {
-                Items it = ia[page];
+                SDG.Unturned.Items it = ia[page];
                 byte ct = it.getItemCount();
                 if (ct > 1 && page < PlayerInventory.SLOTS)
                 {
@@ -52,9 +37,9 @@ public static class UCInventoryManager
                     ItemAsset asset = jar.GetAsset();
                     if (asset == null)
                         continue;
-                    if (findAssetRedirects && (type = TeamManager.GetItemRedirect(asset.GUID)) != RedirectType.None)
-                        items.Add(new AssetRedirectItem(type, jar.x, jar.y, jar.rot, (Page)page));
-                    else items.Add(new PageItem(asset.GUID, jar.x, jar.y, jar.rot, jar.item.state, jar.item.amount, (Page)page));
+                    if (findAssetRedirects && (type = TeamManager.GetRedirectInfo(asset.GUID, out _, out string? variant, false)) != RedirectType.None)
+                        items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, jar.x, jar.y, jar.rot, (Page)page, type, variant));
+                    else items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(asset.GUID), jar.x, jar.y, jar.rot, (Page)page, jar.item.amount, jar.item.state));
                 }
             }
         }
@@ -64,52 +49,52 @@ public static class UCInventoryManager
             PlayerClothing playerClothes = player.Player.clothing;
             if (playerClothes.shirtAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.shirtAsset.GUID, playerFaction)) != RedirectType.None)
-                    items.Add(new AssetRedirectClothing(type, ClothingType.Shirt));
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.shirtAsset.GUID, out string? variant, playerFaction)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, type, ClothingType.Shirt, variant));
                 else
-                    items.Add(new ClothingItem(playerClothes.shirtAsset.GUID, ClothingType.Shirt, playerClothes.shirtState));
+                    items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(playerClothes.shirtAsset.GUID), ClothingType.Shirt, playerClothes.shirtState));
             }
             if (playerClothes.pantsAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.pantsAsset.GUID, playerFaction)) != RedirectType.None)
-                    items.Add(new AssetRedirectClothing(type, ClothingType.Pants));
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.pantsAsset.GUID, out string? variant, playerFaction)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, type, ClothingType.Pants, variant));
                 else
-                    items.Add(new ClothingItem(playerClothes.pantsAsset.GUID, ClothingType.Pants, playerClothes.pantsState));
+                    items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(playerClothes.pantsAsset.GUID), ClothingType.Pants, playerClothes.pantsState));
             }
             if (playerClothes.vestAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.vestAsset.GUID, playerFaction)) != RedirectType.None)
-                    items.Add(new AssetRedirectClothing(type, ClothingType.Vest));
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.vestAsset.GUID, out string? variant, playerFaction)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, type, ClothingType.Vest, variant));
                 else
-                    items.Add(new ClothingItem(playerClothes.vestAsset.GUID, ClothingType.Vest, playerClothes.vestState));
+                    items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(playerClothes.vestAsset.GUID), ClothingType.Vest, playerClothes.vestState));
             }
             if (playerClothes.hatAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.hatAsset.GUID, playerFaction)) != RedirectType.None)
-                    items.Add(new AssetRedirectClothing(type, ClothingType.Hat));
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.hatAsset.GUID, out string? variant, playerFaction)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, type, ClothingType.Hat, variant));
                 else
-                    items.Add(new ClothingItem(playerClothes.hatAsset.GUID, ClothingType.Hat, playerClothes.hatState));
+                    items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(playerClothes.hatAsset.GUID), ClothingType.Hat, playerClothes.hatState));
             }
             if (playerClothes.maskAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.maskAsset.GUID, playerFaction)) != RedirectType.None)
-                    items.Add(new AssetRedirectClothing(type, ClothingType.Mask));
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.maskAsset.GUID, out string? variant, playerFaction)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, type, ClothingType.Mask, variant));
                 else
-                    items.Add(new ClothingItem(playerClothes.maskAsset.GUID, ClothingType.Mask, playerClothes.maskState));
+                    items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(playerClothes.maskAsset.GUID), ClothingType.Mask, playerClothes.maskState));
             }
             if (playerClothes.backpackAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.backpackAsset.GUID, playerFaction)) != RedirectType.None)
-                    items.Add(new AssetRedirectClothing(type, ClothingType.Backpack));
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.backpackAsset.GUID, out string? variant, playerFaction)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, type, ClothingType.Backpack, variant));
                 else
-                    items.Add(new ClothingItem(playerClothes.backpackAsset.GUID, ClothingType.Backpack, playerClothes.backpackState));
+                    items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(playerClothes.backpackAsset.GUID), ClothingType.Backpack, playerClothes.backpackState));
             }
             if (playerClothes.glassesAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.glassesAsset.GUID, playerFaction)) != RedirectType.None)
-                    items.Add(new AssetRedirectClothing(type, ClothingType.Glasses));
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.glassesAsset.GUID, out string? variant, playerFaction)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, type, ClothingType.Glasses, variant));
                 else
-                    items.Add(new ClothingItem(playerClothes.glassesAsset.GUID, ClothingType.Glasses, playerClothes.glassesState));
+                    items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(playerClothes.glassesAsset.GUID), ClothingType.Glasses, playerClothes.glassesState));
             }
         }
 
@@ -126,7 +111,7 @@ public static class UCInventoryManager
             NetId id = player.Player.inventory.GetNetId();
             player.Player.equipment.dequip();
 
-            Items[] inv = player.Player.inventory.items;
+            SDG.Unturned.Items[] inv = player.Player.inventory.items;
             while (inv[0].getItemCount() > 0)
                 inv[0].removeItem(0);
             while (inv[1].getItemCount() > 0)
@@ -139,7 +124,7 @@ public static class UCInventoryManager
                 for (byte it = 0; it < c; ++it)
                     player.SendItemRemove(i, inv[i].items[it]);
             }
-            Items pg = inv[PlayerInventory.SLOTS];
+            SDG.Unturned.Items pg = inv[PlayerInventory.SLOTS];
             pg.clear();
             bool[,] b = Data.GetItemsSlots(pg);
             for (int x = 0; x < pg.width; ++x)
@@ -230,7 +215,7 @@ public static class UCInventoryManager
             for (int i = 0; i < items.Length; ++i)
             {
                 IKitItem item = items[i];
-                if (item is not IClothingJar clothingJar)
+                if (item is not IClothingKitItem clothingJar)
                     continue;
                 ItemAsset? asset = item.GetItem(null, faction, out _, out byte[] state);
                 if (asset == null || asset.type != clothingJar.Type.GetItemType())
@@ -276,21 +261,21 @@ public static class UCInventoryManager
                     })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 }
             }
-            Items[] p = player.Player.inventory.items;
+            SDG.Unturned.Items[] p = player.Player.inventory.items;
             bool ohi = Data.GetOwnerHasInventory(player.Player.inventory);
             if (ohi)
                 Data.SetOwnerHasInventory(player.Player.inventory, false);
-            List<(Item, IItemJar)>? toAddLater = null;
+            List<(Item, IPageKitItem)>? toAddLater = null;
             for (int i = 0; i < items.Length; ++i)
             {
                 IKitItem item = items[i];
-                if (item is not IItemJar jar)
+                if (item is not IPageKitItem jar)
                     continue;
                 ItemAsset? asset = item.GetItem(null, faction, out byte amt, out byte[] state);
 
                 if ((int)jar.Page < PlayerInventory.PAGES - 2 && asset != null)
                 {
-                    Items page = p[(int)jar.Page];
+                    SDG.Unturned.Items page = p[(int)jar.Page];
                     Item itm = new Item(asset.id, amt, 100, state);
                     // ensures multiple items are not put in the slots (causing the ghost gun issue)
                     if (jar.Page is Page.Primary or Page.Secondary)
@@ -299,14 +284,14 @@ public static class UCInventoryManager
                         {
                             L.LogWarning("Duplicate " + jar.Page.ToString().ToLowerInvariant() + " defined: " + item + ".");
                             L.Log("[GIVEITEMS] Removing " + (page.items[0].GetAsset().itemName) + " in place of duplicate.");
-                            (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((page.items[0].item, jar));
+                            (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((page.items[0].item, jar));
                             page.removeItem(0);
                         }
                     }
                     else if (IsOutOfBounds(page, jar.X, jar.Y, asset.size_x, asset.size_y, jar.Rotation))
                     {
                         L.LogWarning("Out of bounds item in " + jar.Page + " defined: " + item + ".");
-                        (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((itm, jar));
+                        (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((itm, jar));
                     }
 
                     int ic2 = page.getItemCount();
@@ -318,7 +303,7 @@ public static class UCInventoryManager
                             L.LogWarning("Overlapping item in " + jar.Page + " defined: " + item + ".");
                             L.Log("[GIVEITEMS] Removing " + (jar2.GetAsset().itemName) + " (" + jar2.x + ", " + jar2.y + " @ " + jar2.rot + "), in place of duplicate.");
                             page.removeItem((byte)j--);
-                            (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((jar2.item, jar));
+                            (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((jar2.item, jar));
                         }
                     }
 
@@ -326,7 +311,7 @@ public static class UCInventoryManager
                 }
                 else
                 {
-                    L.LogWarning("Unknown asset: " + (jar is IItem i2 ? i2.Item.ToString("N") : (jar is IAssetRedirect a2 ? a2.RedirectType.ToString() : jar.ToString()) + "."));
+                    L.LogWarning("Unknown asset: " + (jar is ISpecificKitItem i2 ? i2.Item.ToString() : (jar is IAssetRedirectKitItem a2 ? a2.RedirectType.ToString() : jar.ToString()) + "."));
                 }
             }
 
@@ -354,7 +339,7 @@ public static class UCInventoryManager
         {
             foreach (IKitItem item in items)
             {
-                if (item is IClothingJar clothing)
+                if (item is IClothingKitItem clothing)
                 {
                     ItemAsset? asset = item.GetItem(null, faction, out byte amt, out byte[] state);
                     if (asset is null)
@@ -419,7 +404,7 @@ public static class UCInventoryManager
             }
             foreach (IKitItem item in items)
             {
-                if (item is not IClothingJar)
+                if (item is not IClothingKitItem)
                 {
                     ItemAsset? asset = item.GetItem(null, faction, out byte amt, out byte[] state);
                     if (asset is null)
@@ -429,7 +414,7 @@ public static class UCInventoryManager
                     }
                     Item uitem = new Item(asset.id, amt, 100, state);
 
-                    if (item is not IItemJar jar || !player.Player.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
+                    if (item is not IPageKitItem jar || !player.Player.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
                     {
                         if (!player.Player.inventory.tryAddItem(uitem, true))
                         {
@@ -442,13 +427,13 @@ public static class UCInventoryManager
     }
     public static void SendPages(UCPlayer player)
     {
-        Items[] il = player.Player.inventory.items;
+        SDG.Unturned.Items[] il = player.Player.inventory.items;
         Data.SendInventory!.Invoke(player.Player.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
             writer =>
             {
                 for (int i = 0; i < PlayerInventory.PAGES - 2; ++i)
                 {
-                    Items i2 = il[i];
+                    SDG.Unturned.Items i2 = il[i];
                     int ct = i2.getItemCount();
                     writer.WriteUInt8(i2.width);
                     writer.WriteUInt8(i2.height);
@@ -483,11 +468,11 @@ public static class UCInventoryManager
         page = byte.MaxValue;
         return null;
     }
-    public static bool IsOverlapping(IItemJar jar1, IItemJar jar2, ItemAsset asset1, ItemAsset asset2) =>
+    public static bool IsOverlapping(IPageKitItem jar1, IPageKitItem jar2, ItemAsset asset1, ItemAsset asset2) =>
         jar1.Page == jar2.Page &&
         (jar1.Page is Page.Primary or Page.Secondary || 
          IsOverlapping(jar1.X, jar1.Y, asset1.size_x, asset1.size_y, jar2.X, jar2.Y, asset2.size_x, asset2.size_y, jar1.Rotation, jar2.Rotation));
-    public static bool IsOverlapping(IItemJar jar1, ItemAsset asset1, byte x, byte y, byte sizeX, byte sizeY, byte rotation) =>
+    public static bool IsOverlapping(IPageKitItem jar1, ItemAsset asset1, byte x, byte y, byte sizeX, byte sizeY, byte rotation) =>
         IsOverlapping(jar1.X, jar1.Y, asset1.size_x, asset1.size_y, x, y, sizeX, sizeY, jar1.Rotation, rotation);
     public static bool IsOverlapping(byte posX1, byte posY1, byte sizeX1, byte sizeY1, byte posX2, byte posY2, byte sizeX2, byte sizeY2, byte rotation1, byte rotation2)
     {
@@ -507,8 +492,8 @@ public static class UCInventoryManager
         return false;
     }
 
-    public static bool IsOutOfBounds(Items page, ItemJar jar) => IsOutOfBounds(page.width, page.height, jar.x, jar.y, jar.size_x, jar.size_y, jar.rot);
-    public static bool IsOutOfBounds(Items page, byte posX, byte posY, byte sizeX, byte sizeY, byte rotation) =>
+    public static bool IsOutOfBounds(SDG.Unturned.Items page, ItemJar jar) => IsOutOfBounds(page.width, page.height, jar.x, jar.y, jar.size_x, jar.size_y, jar.rot);
+    public static bool IsOutOfBounds(SDG.Unturned.Items page, byte posX, byte posY, byte sizeX, byte sizeY, byte rotation) =>
         IsOutOfBounds(page.width, page.height, posX, posY, sizeX, sizeY, rotation);
 
     public static bool IsOutOfBounds(byte pageSizeX, byte pageSizeY, byte posX, byte posY, byte sizeX, byte sizeY, byte rotation)
@@ -583,18 +568,6 @@ public static class UCInventoryManager
                     return;
                 }
             }
-        }
-    }
-    [UsedImplicitly]
-    private static void GlassesFix(PlayerEquipment __instance)
-    {
-        ItemGlassesAsset? ga = __instance.player.clothing.glassesAsset;
-        if (ga != null && ga.vision != ELightingVision.NONE &&
-            (__instance.player.clothing.glassesState == null
-            || __instance.player.clothing.glassesState.Length < 1))
-        {
-            __instance.player.clothing.glassesState = new byte[1];
-            __instance.ReceiveToggleVision();
         }
     }
 }

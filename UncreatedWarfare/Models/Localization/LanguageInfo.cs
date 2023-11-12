@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
 using System.Text.Json.Serialization;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Models.Localization;
 
@@ -16,7 +17,7 @@ public class LanguageInfo : ITranslationArgument
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("pk")]
-    public uint Key { get; set; }
+    public PrimaryKey Key { get; set; }
 
     [Required]
     [Column(TypeName = "char(5)")]

@@ -7,12 +7,14 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -220,9 +222,9 @@ public class TraitData : ITranslationArgument
         {
             if (value is null)
                 throw new JsonException("Type name must not be null.");
-            Type = Util.GetTypesSafe()
-                .Where(x => !x.IsAbstract && x.IsPublic && !x.IsGenericType && !x.IsNested && typeof(Trait).IsAssignableFrom(x))
-                .FirstOrDefault(x => x.Name.Equals(value, StringComparison.OrdinalIgnoreCase))
+            Type = Accessor.GetTypesSafe()
+                       .Where(x => !x.IsAbstract && x.IsPublic && !x.IsGenericType && !x.IsNested && typeof(Trait).IsAssignableFrom(x))
+                       .FirstOrDefault(x => x.Name.Equals(value, StringComparison.OrdinalIgnoreCase))
                    ?? throw new JsonException("Type name could not be identified: \"" + value + "\".");
             _typeName = value;
         }

@@ -8,11 +8,11 @@ using Uncreated.Warfare.Database.Automation;
 namespace Uncreated.Warfare.Database.ValueConverters;
 
 [ValueConverterCallback(nameof(Apply))]
-public class IPAddressConverter : ValueConverter<IPAddress?, string?>
+public class IPAddressValueConverter : ValueConverter<IPAddress?, string?>
 {
-    public static readonly IPAddressConverter Instance = new IPAddressConverter();
+    public static readonly IPAddressValueConverter Instance = new IPAddressValueConverter();
 
-    public IPAddressConverter() : base(
+    public IPAddressValueConverter() : base(
         x => x == null ? null : x.ToString(),
         x => x == null ? null : IPAddress.Parse(x))
     { }

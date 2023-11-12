@@ -7,11 +7,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
-using Uncreated.Framework;
+using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Components;
-#if DEBUG
-using Uncreated.Warfare.Gamemodes;
-#endif
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.SceneManagement;
@@ -62,7 +59,7 @@ internal class ProjectileSolver : MonoBehaviour
         {
             for (int y = 0; y < Regions.WORLD_SIZE; ++y)
             {
-                foreach (LevelObject obj2 in LevelObjects.objects[x, y].Where(o => o.asset != null && o.asset.type != EObjectType.SMALL && !GetIsDecal(o)))
+                foreach (LevelObject obj2 in LevelObjects.objects[x, y].Where(o => o.asset != null && o.asset.type != EObjectType.SMALL && o.asset.type != EObjectType.DECAL))
                 {
                     GameObject? orig = obj2.asset.GetOrLoadModel();
                     if (orig != null)
@@ -107,16 +104,14 @@ internal class ProjectileSolver : MonoBehaviour
         }
     }
 
-    //private static readonly InstanceGetter<UseableGun, Attachments> getAttachments = Util.GenerateInstanceGetter<UseableGun, Attachments>("thirdAttachments", BindingFlags.NonPublic);
-    private static readonly InstanceGetter<LevelObject, bool> GetIsDecal = Util.GenerateInstanceGetter<LevelObject, bool>("isDecal", BindingFlags.NonPublic);
-    private static readonly InstanceGetter<Rocket, bool> GetIsExploded = Util.GenerateInstanceGetter<Rocket, bool>("isExploded", BindingFlags.NonPublic);
+    //private static readonly InstanceGetter<UseableGun, Attachments>? getAttachments = Accessor.GenerateInstanceGetter<UseableGun, Attachments>("thirdAttachments");
+    private static readonly InstanceGetter<Rocket, bool> GetIsExploded = Accessor.GenerateInstanceGetter<Rocket, bool>("isExploded", throwOnError: true)!;
 
     [OperationTest(DisplayName = "ProjectileSolver Check")]
     [Conditional("DEBUG")]
     [UsedImplicitly]
     private static void TestServerSpawnLegacyImpact()
     {
-        Assert.IsNotNull(GetIsDecal);
         Assert.IsNotNull(GetIsExploded);
     }
 

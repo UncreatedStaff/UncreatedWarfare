@@ -8,6 +8,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Kits;
 using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs;

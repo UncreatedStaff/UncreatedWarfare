@@ -13,7 +13,10 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -167,25 +170,28 @@ public class VehicleData : ITranslationArgument, IListItem
     public void SaveMetaData(InteractableVehicle vehicle)
     {
         List<VBarricade>? barricades = null;
-        List<PageItem>? trunk = null;
+        List<IPageKitItem>? trunk = null;
 
         if (vehicle.trunkItems.items.Count > 0)
         {
-            trunk = new List<PageItem>();
+            trunk = new List<IPageKitItem>();
 
             foreach (ItemJar jar in vehicle.trunkItems.items)
             {
                 if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
                 {
-                    trunk.Add(new PageItem(
-                        asset.GUID,
-                        jar.x,
-                        jar.y,
-                        jar.rot,
-                        jar.item.metadata,
-                        jar.item.amount,
-                        0
-                    ));
+                    RedirectType redirect = TeamManager.GetRedirectInfo(asset.GUID, out _, out string? variant, false);
+                    if (redirect != RedirectType.None)
+                    {
+                        trunk.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned,
+                            jar.x, jar.y, jar.rot, Page.Storage, redirect, variant));
+                    }
+                    else
+                    {
+                        trunk.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned,
+                            new UnturnedAssetReference(asset.GUID), jar.x, jar.y, jar.rot, Page.Storage,
+                            jar.item.amount, jar.item.metadata));
+                    }
                 }
             }
         }
@@ -239,9 +245,9 @@ public class VehicleData : ITranslationArgument, IListItem
 public class MetaSave
 {
     public List<VBarricade>? Barricades { get; set; }
-    public List<PageItem>? TrunkItems { get; set; }
+    public List<IPageKitItem>? TrunkItems { get; set; }
     public MetaSave() { }
-    public MetaSave(List<VBarricade>? barricades, List<PageItem>? trunkItems)
+    public MetaSave(List<VBarricade>? barricades, List<IPageKitItem>? trunkItems)
     {
         Barricades = barricades;
         TrunkItems = trunkItems;
@@ -933,15 +939,12 @@ internal sealed class ByteArrayConverter : JsonConverter<byte[]>
             return;
         }
         writer.WriteStartArray();
-        JsonWriterOptions options2 = writer.Options;
-        if (value.Length < 12 && options2.Indented)
-            JsonEx.SetOptions(writer, options2 with { Indented = false });
+        JsonIndent indent = value.Length < 12 ? writer.StopIndenting() : default;
         for (int i = 0; i < value.Length; ++i)
         {
             writer.WriteNumberValue(value[i]);
         }
-        if (value.Length < 12 && options2.Indented)
-            JsonEx.SetOptions(writer, options2);
+        indent.Dispose();
         writer.WriteEndArray();
     }
 }

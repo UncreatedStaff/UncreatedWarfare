@@ -11,6 +11,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
@@ -457,7 +458,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         string name = FindUnusedSquadName(team);
-        Squad squad = new Squad(name, leader, team, leader.Branch);
+        Squad squad = new Squad(name, leader, team, leader.KitBranch);
         Squads.Add(squad);
         SortSquadNames();
         leader.Squad = squad;

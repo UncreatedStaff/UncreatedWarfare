@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Events;
@@ -112,7 +113,7 @@ public static class CommandHandler
         Commands.Clear();
         RegisterVanillaCommands();
         Type t = typeof(IExecutableCommand);
-        foreach (Type cmdType in Util
+        foreach (Type cmdType in Accessor
                      .GetTypesSafe(Assembly.GetCallingAssembly(), true)
                      .Where(x => !x.IsAbstract && !x.IsGenericType && !x.IsSpecialName && !x.IsNested && t.IsAssignableFrom(x)))
         {

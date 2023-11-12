@@ -12,6 +12,10 @@ public readonly struct UnturnedAssetReference
         Guid = guid;
         Id = 0;
     }
+    public UnturnedAssetReference(string guid)
+    {
+        this = Parse(guid);
+    }
     public UnturnedAssetReference(ushort id)
     {
         Id = id;

@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Teams;
 

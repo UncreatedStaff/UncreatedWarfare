@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
@@ -21,7 +22,9 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -645,7 +648,7 @@ public static class Localization
                     Directory.CreateDirectory(p);
             }
         }
-        foreach (KeyValuePair<Type, TranslatableAttribute> enumType in Util.GetTypesSafe(Assembly.GetExecutingAssembly())
+        foreach (KeyValuePair<Type, TranslatableAttribute> enumType in Accessor.GetTypesSafe(Assembly.GetExecutingAssembly())
                      .Where(x => x.IsEnum)
                      .SelectMany(x => Attribute.GetCustomAttributes(x, typeof(TranslatableAttribute)).OfType<TranslatableAttribute>().Select(y => new KeyValuePair<Type, TranslatableAttribute>(x, y)))
                      .Where(t => t.Value != null)

@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Database.ValueConverters;
 public class HWIDValueConverter : ValueConverter<HWID, byte[]>
 {
     public static readonly HWIDValueConverter Instance = new HWIDValueConverter();
-    public static readonly NullableConverter<HWID, byte[]> NullableInstance = new NullableConverter<HWID, byte[]>(Instance);
+    public static readonly NullableReferenceTypeConverter<HWID, byte[]> NullableInstance = new NullableReferenceTypeConverter<HWID, byte[]>(Instance);
 
     public HWIDValueConverter() : base(
         x => x.ToByteArray(),

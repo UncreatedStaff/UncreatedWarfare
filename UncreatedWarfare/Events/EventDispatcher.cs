@@ -19,11 +19,11 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events;
 public static class EventDispatcher

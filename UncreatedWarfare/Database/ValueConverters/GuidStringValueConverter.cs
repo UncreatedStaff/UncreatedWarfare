@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Database.ValueConverters;
 public class GuidStringValueConverter : ValueConverter<Guid, string>
 {
     public static readonly GuidStringValueConverter Instance = new GuidStringValueConverter();
-    public static readonly NullableConverter<Guid, string> NullableInstance = new NullableConverter<Guid, string>(Instance);
+    public static readonly NullableReferenceTypeConverter<Guid, string> NullableInstance = new NullableReferenceTypeConverter<Guid, string>(Instance);
     public GuidStringValueConverter() : base(
         x => x.ToString("N"),
         x => Guid.ParseExact(x, "N")) { }

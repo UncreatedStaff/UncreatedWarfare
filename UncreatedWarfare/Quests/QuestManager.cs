@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -378,7 +379,7 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<Type> types = Util.GetTypesSafe(Assembly.GetExecutingAssembly());
+        List<Type> types = Accessor.GetTypesSafe(Assembly.GetExecutingAssembly());
 
         foreach (Type type in types.Where(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {

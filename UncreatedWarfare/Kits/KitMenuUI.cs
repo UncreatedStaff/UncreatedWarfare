@@ -10,6 +10,8 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
@@ -445,7 +447,7 @@ public class KitMenuUI : UnturnedUI
         FactionInfo? plFaction = TeamManager.GetFactionSafe(player.GetTeam());
         ITransportConnection c = player.Connection;
         LblInfoTitle.SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
-        FactionInfo? faction = kit.Faction;
+        FactionInfo? faction = TeamManager.GetFactionInfo(kit.Faction);
 
         ValInfoFaction.SetText(c, faction?.GetShortName(player.Locale.LanguageInfo) ?? (DefaultLanguageCache != null && player.Locale.LanguageInfo.IsDefault
                 ? DefaultLanguageCache[29]
@@ -457,123 +459,32 @@ public class KitMenuUI : UnturnedUI
         
         ValInfoType.SetText(c, GetTypeString(player, kit.Type));
 
-        List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>? groups = kit.ItemListCache;
-        if (groups == null)
-        {
-            kit.ItemListCache = groups = new List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>();
-            List<IKitItem> items = new List<IKitItem>(kit.Items.OrderBy(x => x is not IItemJar jar || jar.Page > Page.Secondary));
-            items.Sort((a, b) => a.CompareTo(b));
-            string? clothSet = null;
-            for (int i = 0; i < items.Count; ++i)
-            {
-                IKitItem item = items[i];
-                if (item is IAssetRedirect redir)
-                {
-                    if (groups.Exists(x => x.Key.Value == redir.RedirectType))
-                        continue;
-                    if (redir.RedirectType <= RedirectType.Glasses)
-                    {
-                        ItemAsset? asset = TeamManager.GetRedirectInfo(redir.RedirectType, faction, null, out _, out _);
-                        if (asset != null)
-                        {
-                            if (redir.RedirectType is RedirectType.Shirt or RedirectType.Pants && clothSet == null)
-                            {
-                                if (asset != null)
-                                {
-                                    int index3 = asset.name.IndexOf(redir.RedirectType == RedirectType.Shirt ? "_Top" : "_Bottom", StringComparison.Ordinal);
-                                    if (index3 != -1)
-                                    {
-                                        clothSet = asset.name.Substring(0, index3).Replace('_', ' ');
-                                        continue;
-                                    }
-                                }
-                            }
-                            else if (clothSet != null && asset.name.StartsWith(clothSet, StringComparison.Ordinal))
-                            {
-                                continue;
-                            }
-                        }
-                    }
-                    groups.Add(
-                        new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(
-                            new KeyValuePair<ItemAsset?, RedirectType>(null, redir.RedirectType), 1));
-                }
-                else
-                {
-                    ItemAsset? asset = item.GetItem(kit, plFaction, out _, out _);
-                    if (asset != null)
-                    {
-                        if (asset.id > 30000 && asset is ItemClothingAsset)
-                        {
-                            if (clothSet == null && (asset is ItemShirtAsset || asset is ItemPantsAsset))
-                            {
-                                int index3 = asset.name.IndexOf(asset is ItemShirtAsset ? "_Top" : "_Bottom", StringComparison.Ordinal);
-                                if (index3 != -1)
-                                {
-                                    clothSet = asset.name.Substring(0, index3).Replace('_', ' ');
-                                    continue;
-                                }
-                            }
-                            else if (clothSet != null && asset.name.StartsWith(clothSet, StringComparison.Ordinal))
-                            {
-                                continue;
-                            }
-                        }
-                        int index2 = groups.FindLastIndex(x => x.Key.Key == asset);
-                        if (index2 == -1)
-                        {
-                            groups.Add(new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(
-                                new KeyValuePair<ItemAsset?, RedirectType>(asset, RedirectType.None), 1));
-                        }
-                        else
-                        {
-                            KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int> grp = groups[index2];
-                            groups[index2] = new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(grp.Key, grp.Value + 1);
-                        }
-                    }
-                }
-            }
-
-            if (clothSet != null)
-            {
-                int ind = 0;
-                for (int i = 0; i < groups.Count; ++i)
-                {
-                    if (groups[i].Key.Key is ItemGunAsset)
-                        ind = i + 1;
-                    else break;
-                }
-                groups.Insert(ind, new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(
-                    new KeyValuePair<ItemAsset?, RedirectType>(null, RedirectType.None), 255));
-            }
-
-            kit.ClothingSetCache = clothSet;
-        }
+        List<SimplifiedItemListEntry> groups = kit.SimplifiedItemList;
         int index = 0;
         for (int i = 0; i < groups.Count; ++i)
         {
             if (index >= IncludedItemsCount)
                 break;
-            KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int> grp = groups[i];
+            SimplifiedItemListEntry grp = groups[i];
             string icon;
             string name;
-            int amt = grp.Value;
-            if (grp.Key.Key != null)
+            int amt = grp.Count;
+            if (grp.Asset != null)
             {
-                if (!ItemIconProvider.TryGetIcon(grp.Key.Key, out icon, RichIcons, true))
+                if (!ItemIconProvider.TryGetIcon(grp.Asset, out icon, RichIcons, true))
                 {
-                    if (grp.Key.Key is ItemMagazineAsset)
+                    if (grp.Asset is ItemMagazineAsset)
                         icon = ItemIconProvider.GetIcon(RedirectType.StandardAmmoIcon, RichIcons, true);
-                    else if (grp.Key.Key is ItemMeleeAsset)
+                    else if (grp.Asset is ItemMeleeAsset)
                         icon = ItemIconProvider.GetIcon(RedirectType.StandardMeleeIcon, RichIcons, true);
-                    else if (grp.Key.Key is ItemThrowableAsset throwable)
+                    else if (grp.Asset is ItemThrowableAsset throwable)
                     {
                         if (throwable.isExplosive)
                             icon = ItemIconProvider.GetIcon(RedirectType.StandardGrenadeIcon, RichIcons, true);
                         else if (throwable.itemName.IndexOf("smoke", StringComparison.InvariantCultureIgnoreCase) != -1)
                             icon = ItemIconProvider.GetIcon(RedirectType.StandardSmokeGrenadeIcon, RichIcons, true);
                     }
-                    else if (grp.Key.Key is ItemClothingAsset cloth)
+                    else if (grp.Asset is ItemClothingAsset cloth)
                     {
                         RedirectType type = cloth.type switch
                         {
@@ -590,22 +501,17 @@ public class KitMenuUI : UnturnedUI
                             icon = ItemIconProvider.GetIcon(type, RichIcons, true);
                     }
                 }
-                name = grp.Key.Key.FriendlyName;
+                name = grp.Asset.FriendlyName;
             }
-            else if (grp.Key.Value != RedirectType.None)
+            else if (grp.RedirectType != RedirectType.None)
             {
-                icon = ItemIconProvider.GetIcon(grp.Key.Value, RichIcons, true);
-                name = Localization.TranslateEnum(grp.Key.Value, player.Locale.LanguageInfo);
+                icon = ItemIconProvider.GetIcon(grp.RedirectType, RichIcons, true);
+                name = Localization.TranslateEnum(grp.RedirectType, player.Locale.LanguageInfo);
             }
-            else if (grp.Value == 255)
+            else if (grp.ClothingSetName != null)
             {
                 icon = ItemIconProvider.GetIcon(RedirectType.Shirt, RichIcons, true);
-                if (kit.ClothingSetCache != null)
-                    name = kit.ClothingSetCache + " Set";
-                else if (faction != null)
-                    name = "Default " + faction.GetAbbreviation(player.Locale.LanguageInfo) + " Set.";
-                else
-                    name = "Default Set";
+                name = grp.ClothingSetName + " Set";
                 amt = 1;
             }
             else continue;

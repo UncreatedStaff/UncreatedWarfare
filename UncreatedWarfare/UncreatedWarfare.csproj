@@ -81,6 +81,9 @@
 
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="ReflectionTools">
+      <HintPath>..\..\ReflectionTools\ReflectionTools\bin\Release\net481\ReflectionTools.dll</HintPath>
+    </Reference>
 
     <Reference Include="System.Diagnostics.DiagnosticSource">
       <HintPath>$(ServerPath)\Modules\UncreatedWarfare\Libraries\System.Diagnostics.DiagnosticSource.dll</HintPath>
@@ -168,7 +171,6 @@
   </ItemGroup>
   <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->
   <ItemGroup>
-    <PackageReference Include="DanielWillett.ReflectionTools" Version="[1.0.4,)" />
     <PackageReference Include="DanielWillett.StackCleaner" Version="[1.4.2,)" />
 
     <!-- for the love of god do not touch these version numbers -->

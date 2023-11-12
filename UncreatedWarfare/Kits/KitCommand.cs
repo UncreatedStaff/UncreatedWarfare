@@ -13,6 +13,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using UnityEngine;

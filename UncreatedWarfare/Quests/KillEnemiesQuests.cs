@@ -945,7 +945,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && _branch.IsMatch(_player.Branch) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && _branch.IsMatch(_player.KitBranch) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= _killThreshold)

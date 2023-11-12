@@ -13,7 +13,7 @@ namespace Uncreated.Warfare.Database.ValueConverters;
 public class UnturnedAssetReferenceValueConverter : ValueConverter<UnturnedAssetReference, string>
 {
     public static readonly UnturnedAssetReferenceValueConverter Instance = new UnturnedAssetReferenceValueConverter();
-    public static readonly NullableConverter<UnturnedAssetReference, string> NullableInstance = new NullableConverter<UnturnedAssetReference, string>(Instance);
+    public static readonly NullableReferenceTypeConverter<UnturnedAssetReference, string> NullableInstance = new NullableReferenceTypeConverter<UnturnedAssetReference, string>(Instance);
     public UnturnedAssetReferenceValueConverter() : base(
             x => x.Guid == Guid.Empty ? x.Id != 0 ? x.Id.ToString(CultureInfo.InvariantCulture) : string.Empty : x.Guid.ToString("N"),
             x => x == null ? default : UnturnedAssetReference.Parse(x)) { }

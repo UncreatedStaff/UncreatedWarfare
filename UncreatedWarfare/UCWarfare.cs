@@ -1,11 +1,12 @@
 ﻿#define USE_DEBUGGER
 using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.IoC;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using SDG.Framework.Modules;
 using SDG.Framework.Utilities;
 using SDG.Unturned;
-using StackCleaner;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -102,6 +103,10 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             L.LogError(ex);
             Provider.shutdown();
         }
+        finally
+        {
+            _earlyLoadTask = null;
+        }
     });
 
     private async Task EarlyLoad(CancellationToken token)
@@ -114,6 +119,14 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         L.IsBufferingLogs = true;
 
+        Accessor.Logger = new L.UCLoggerFactory().CreateReflectionToolsLogger(disposeFactoryOnDispose: true);
+#if DEBUG
+        Accessor.LogDebugMessages = true;
+#endif
+        Accessor.LogInfoMessages = true;
+        Accessor.LogWarningMessages = true;
+        Accessor.LogErrorMessages = true;
+
         /* INITIALIZE UNCREATED NETWORKING */
         Logging.OnLogInfo += L.NetLogInfo;
         Logging.OnLogWarning += L.NetLogWarning;
@@ -125,17 +138,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         L.Log("Registering Commands: ", ConsoleColor.Magenta);
 
         TeamManager.SetupConfig();
-        Type type = Type.GetType("System.Data.Common.DbConnectionExtensions, Microsoft.EntityFrameworkCore.Relational");
-
-        //Accessor.AddFunctionStepthrough(typeof(Expression).GetMethods(BindingFlags.Static | BindingFlags.Public).First(x => x.Name == "Lambda" && x.GetParameters().Length == 4 && x.GetParameters()[3].ParameterType == typeof(IEnumerable<ParameterExpression>)).MakeGenericMethod(typeof(System.Func<System.Data.Common.DbConnection, System.Data.IsolationLevel, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask< System.Data.Common.DbTransaction>>)));
-        //Accessor.AddFunctionStepthrough(typeof(Expression).GetMethod("ValidateLambdaArgs", BindingFlags.Static | BindingFlags.NonPublic));
-
-        //Patches.Patcher.Patch(
-        //    Type.GetType("System.Linq.Expressions.Error, System.Core").GetMethod("ExpressionTypeDoesNotMatchReturn",
-        //        BindingFlags.NonPublic | BindingFlags.Static), prefix: new HarmonyMethod(
-        //        Accessor.GetMethod(PatchTest)));
-
-        RuntimeHelpers.RunClassConstructor(type.TypeHandle);
 
         OffenseManager.Init();
         bool set = false;
@@ -237,8 +239,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             L.LogError("Patching Error, perhaps Nelson changed something:");
             L.LogError(ex);
         }
-
-        UCInventoryManager.OnLoad();
+        
         gameObject.AddComponent<ActionLog>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
@@ -252,23 +253,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         ActionLog.Add(ActionLogType.ServerStartup, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
     }
-
-    private static void PatchTest(object p0, object p1)
-    {
-        Type t0 = (Type)p0;
-        Type t1 = (Type)p1;
-
-        L.LogDebug("Type 0");
-        L.LogDebug($" {t0.AssemblyQualifiedName}");
-        L.LogDebug($" {t0.Assembly.FullName}");
-        L.LogDebug($" {t0.Assembly.Location}");
-
-        L.LogDebug("Type 1");
-        L.LogDebug($" {t1.AssemblyQualifiedName}");
-        L.LogDebug($" {t1.Assembly.FullName}");
-        L.LogDebug($" {t1.Assembly.Location}");
-    }
-
     internal void InitNetClient()
     {
         if (NetClient != null)

@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Assets;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Models.Factions;
 

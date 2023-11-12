@@ -1,6 +1,7 @@
 ﻿
 //#define SHOW_BYTES
 
+using DanielWillett.ReflectionTools;
 using JetBrains.Annotations;
 using SDG.NetTransport;
 using SDG.Unturned;
@@ -10,13 +11,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Homebase.Unturned;
 using Uncreated.Homebase.Unturned.Warfare;
@@ -152,13 +151,13 @@ public static class Data
     internal static ClientInstanceMethod? SendInventory;
     // internal static ClientInstanceMethod? SendScreenshotDestination;
     internal static SingletonManager Singletons;
-    internal static InstanceSetter<PlayerStance, EPlayerStance> SetPrivateStance;
+    internal static InstanceSetter<PlayerStance, EPlayerStance>? SetPrivateStance;
+    internal static InstanceSetter<InteractableStorage, Items>? SetStorageInventory;
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
-    internal static InstanceSetter<InteractableStorage, Items> SetStorageInventory;
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
-    internal static InstanceGetter<UseableGun, bool> GetUseableGunReloading;
-    internal static StaticGetter<uint> GetItemManagerInstanceCount;
+    internal static InstanceGetter<UseableGun, bool>? GetUseableGunReloading;
+    internal static StaticGetter<uint>? GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
@@ -342,20 +341,21 @@ public static class Data
             L.LogWarning("Unable to gather all the RPCs needed for Fast Kits, kits will not work as quick.");
             UseFastKits = false;
         }
-        GetItemManagerInstanceCount = Util.GenerateStaticGetter<ItemManager, uint>("instanceCount", BindingFlags.NonPublic);
-        SetPrivateStance = Util.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance", BindingFlags.NonPublic);
-        SetStorageInventory = Util.GenerateInstanceSetter<InteractableStorage, Items>("_items", BindingFlags.NonPublic);
+        GetItemManagerInstanceCount = Accessor.GenerateStaticGetter<ItemManager, uint>("instanceCount");
+        SetPrivateStance = Accessor.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance");
+        SetStorageInventory = Accessor.GenerateInstanceSetter<InteractableStorage, Items>("_items");
+        RefreshIsConnectedToPower = (Action<InteractablePower>?)Accessor.GenerateInstanceCaller<InteractablePower>("RefreshIsConnectedToPower");
+        GetUseableGunReloading = Accessor.GenerateInstanceGetter<UseableGun, bool>("isReloading");
         try
         {
-            SetOwnerHasInventory = Util.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
-            GetOwnerHasInventory = Util.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
-            GetItemsSlots = Util.GenerateInstanceGetter<Items, bool[,]>("slots", BindingFlags.NonPublic);
-            GetUseableGunReloading = Util.GenerateInstanceGetter<UseableGun, bool>("isReloading", BindingFlags.NonPublic);
+            GetItemsSlots = Accessor.GenerateInstanceGetter<Items, bool[,]>("slots", throwOnError: true)!;
+            SetOwnerHasInventory = Accessor.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: true)!;
+            GetOwnerHasInventory = Accessor.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: true)!;
         }
         catch (Exception ex)
         {
             UseFastKits = false;
-            L.LogWarning("Couldn't generate a setter method for ownerHasInventory, kits will not work as quick.");
+            L.LogWarning("Couldn't generate a fast kits accessors, kits will not work as quick.");
             L.LogError(ex);
         }
         try
@@ -365,14 +365,6 @@ public static class Data
         catch (Exception ex)
         {
             L.LogWarning("Couldn't get replicateState from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
-        }
-        try
-        {
-            RefreshIsConnectedToPower = (Action<InteractablePower>?)Util.GenerateInstanceCaller<InteractablePower>("RefreshIsConnectedToPower");
-        }
-        catch (Exception ex)
-        {
-            L.LogWarning("Couldn't get RefreshIsConnectedToPower from InteractablePower, powered barricades will not update properly with the electrical grid. (" + ex.Message + ").");
         }
         try
         {
