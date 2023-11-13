@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Teams;
 
@@ -17,12 +16,11 @@ public class FactionAsset
     [Required]
     public Faction Faction { get; set; } = null!;
 
-    [ExcludedEnum(RedirectType.None)]
-    [ExcludedEnum(RedirectType.StandardAmmoIcon)]
-    [ExcludedEnum(RedirectType.StandardGrenadeIcon)]
-    [ExcludedEnum(RedirectType.StandardMeleeIcon)]
-    [ExcludedEnum(RedirectType.StandardSmokeGrenadeIcon)]
-    [ExcludedEnum(RedirectType.VehicleBay)]
+    [Required]
+    [Column("Faction")]
+    [ForeignKey(nameof(Faction))]
+    public uint FactionId { get; set; }
+
     public RedirectType Redirect { get; set; }
 
     public UnturnedAssetReference Asset { get; set; }

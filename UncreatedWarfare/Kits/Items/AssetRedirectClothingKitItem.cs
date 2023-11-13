@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using System;
-using Uncreated.SQL;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -9,11 +8,11 @@ namespace Uncreated.Warfare.Kits.Items;
 
 public class AssetRedirectClothingKitItem : IClothingKitItem, IAssetRedirectKitItem
 {
-    public PrimaryKey PrimaryKey { get; set; }
+    public uint PrimaryKey { get; set; }
     public RedirectType RedirectType { get; }
     public string? RedirectVariant { get; }
     public ClothingType Type { get; }
-    public AssetRedirectClothingKitItem(PrimaryKey key, RedirectType redirectType, ClothingType type, string? redirectVariant)
+    public AssetRedirectClothingKitItem(uint key, RedirectType redirectType, ClothingType type, string? redirectVariant)
     {
         PrimaryKey = key;
         RedirectType = redirectType;
@@ -22,7 +21,7 @@ public class AssetRedirectClothingKitItem : IClothingKitItem, IAssetRedirectKitI
     }
     public AssetRedirectClothingKitItem(AssetRedirectClothingKitItem copy)
     {
-        PrimaryKey = PrimaryKey.NotAssigned;
+        PrimaryKey = 0;
         RedirectType = copy.RedirectType;
         RedirectVariant = copy.RedirectVariant;
         Type = copy.Type;
@@ -54,6 +53,7 @@ public class AssetRedirectClothingKitItem : IClothingKitItem, IAssetRedirectKitI
         {
             Id = PrimaryKey,
             Kit = kit,
+            KitId = kit.PrimaryKey,
             ClothingSlot = Type,
             RedirectVariant = RedirectVariant,
             Redirect = RedirectType

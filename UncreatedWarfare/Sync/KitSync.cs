@@ -306,7 +306,7 @@ public static class KitSync
                     if (manager == null) return;
                     _updating = pk;
                     Kit? kit = await manager.Redownload(x => x.PrimaryKey == _deleting);
-                    L.Log("Received update notification for kit: \"" + (kit == null ? "<null>" : kit.Id) + "\" " + pk
+                    L.Log("Received update notification for kit: \"" + (kit == null ? "<null>" : kit.InternalName) + "\" " + pk
                           + " and redownloaded it from admin database.");
                     ctx.Acknowledge();
                 }

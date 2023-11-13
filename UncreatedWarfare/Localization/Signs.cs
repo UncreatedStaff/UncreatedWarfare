@@ -919,7 +919,7 @@ public class Signs : BaseSingleton, ILevelStartListener
             set
             {
                 _kitName = value;
-                if (_kit is not null && (value is null || !_kitName.Equals(_kit?.Id)))
+                if (_kit is not null && (value is null || !_kitName.Equals(_kit?.InternalName)))
                     _kit = null;
             }
         }

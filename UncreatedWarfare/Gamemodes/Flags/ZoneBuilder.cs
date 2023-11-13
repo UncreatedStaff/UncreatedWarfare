@@ -13,7 +13,7 @@ public class ZoneBuilder
     private float _spawnX;
     private float _spawnZ;
     /// <summary>Unique numerical Id of the zone. Used for adjacencies.</summary>
-    public int Id;
+    public uint Id;
     /// <summary>Name of the zone.</summary>
     public string? Name;
     /// <summary>Short name of the zone.</summary>
@@ -134,7 +134,7 @@ public class ZoneBuilder
     }
     /// <summary>Set the ID.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ZoneBuilder WithID(int id)
+    public ZoneBuilder WithID(uint id)
     {
         Id = id;
         return this;

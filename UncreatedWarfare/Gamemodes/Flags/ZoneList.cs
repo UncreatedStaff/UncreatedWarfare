@@ -1,5 +1,5 @@
 ﻿//#define MIGRATE
-using MySqlConnector;
+using MySql.Data.MySqlClient;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using MySql.Data.MySqlClient;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -374,7 +373,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
         }
 
         bool hasPk = pk.IsValid;
-        int pk2 = PrimaryKey.NotAssigned;
+        uint pk2 = PrimaryKey.NotAssigned;
         object[] objs = new object[hasPk ? 12 : 11];
         ZoneModel mdl = item.Data;
         objs[0] = mdl.Map;
@@ -397,7 +396,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             COLUMN_MAX_HEIGHT, COLUMN_FLAGS),
             objs, reader =>
             {
-                pk2 = reader.GetInt32(0);
+                pk2 = reader.GetUInt32(0);
             }, token).ConfigureAwait(false);
         pk = pk2;
         if (!pk.IsValid)
@@ -578,7 +577,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             objPks,
             reader =>
             {
-                (adj ??= new List<AdjacentFlagData>(5)).Add(new AdjacentFlagData(reader.GetInt32(0), reader.IsDBNull(1) ? 1f : reader.GetFloat(1)));
+                (adj ??= new List<AdjacentFlagData>(5)).Add(new AdjacentFlagData(reader.GetUInt32(0), reader.IsDBNull(1) ? 1f : reader.GetFloat(1)));
             }, token).ConfigureAwait(false);
 
         if (adj is not null)
@@ -675,7 +674,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
                     if (pk == list[i].Id)
                     {
                         ref List<AdjacentFlagData>? l = ref adj[i];
-                        (l ??= new List<AdjacentFlagData>(5)).Add(new AdjacentFlagData(reader.GetInt32(1), reader.GetFloat(2)));
+                        (l ??= new List<AdjacentFlagData>(5)).Add(new AdjacentFlagData(reader.GetUInt32(1), reader.GetFloat(2)));
                         return;
                     }
                 }
@@ -685,7 +684,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             $"SELECT {SqlTypes.ColumnList(COLUMN_PK_EXT, COLUMN_GRID_OBJ_INSTANCE_ID, COLUMN_GRID_OBJ_GUID, COLUMN_GRID_OBJ_POS_X, COLUMN_GRID_OBJ_POS_Y, COLUMN_GRID_OBJ_POS_Z)} FROM `{TABLE_GRID_OBJECTS}` WHERE `{COLUMN_PK_EXT}` " +
             pin, pkeys, reader =>
             {
-                gobjs.Add(new GridObject(reader.GetInt32(0), reader.IsDBNull(1) ? uint.MaxValue : reader.GetUInt32(1), reader.IsDBNull(2) ? Guid.Empty : reader.ReadGuidString(2) ?? Guid.Empty,
+                gobjs.Add(new GridObject(reader.GetUInt32(0), reader.IsDBNull(1) ? uint.MaxValue : reader.GetUInt32(1), reader.IsDBNull(2) ? Guid.Empty : reader.ReadGuidString(2) ?? Guid.Empty,
                     reader.IsDBNull(3) ? float.NaN : reader.GetFloat(3), reader.IsDBNull(4) ? float.NaN : reader.GetFloat(4), reader.IsDBNull(5) ? float.NaN : reader.GetFloat(5)));
             }, token).ConfigureAwait(false);
 
@@ -698,7 +697,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             
             if (adj[i] is { Count: > 0 } adjacents)
                 builder.WithAdjacencies(adjacents.ToArray());
-            int id = builder.Id;
+            uint id = builder.Id;
             builder.WithGridObjects(gobjs.Where(x => x.PrimaryKey.Key == id).ToArray());
             zones[i] = builder.Build().GetZone();
         }
@@ -805,7 +804,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             Flags = reader.IsDBNull(offset + 10) ? ZoneFlags.None : (ZoneFlags)reader.GetUInt64(offset + 10)
         };
         if (offset > 0)
-            mdl.Id = reader.GetInt32(offset - 1);
+            mdl.Id = reader.GetUInt32(offset - 1);
         if (mdl.Name == null && mdl.ShortName != null)
             mdl.Name = mdl.ShortName;
         return mdl;

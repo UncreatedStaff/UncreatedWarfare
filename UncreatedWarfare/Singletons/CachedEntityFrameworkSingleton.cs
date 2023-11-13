@@ -3,9 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Singletons;
 public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadSingleton where TEntity : class
@@ -138,6 +140,31 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
         }
     }
 
+    public async Task<TEntity?> GetEntity(Func<TEntity, bool> predicate, CancellationToken token = default)
+    {
+        await WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return GetEntityNoLock(predicate);
+        }
+        finally
+        {
+            Release();
+        }
+    }
+    public TEntity? GetEntityNoLock(Func<TEntity, bool> predicate)
+    {
+        WriteWait();
+        try
+        {
+            return GetEntityNoWriteLock(predicate);
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public TEntity? GetEntityNoWriteLock(Func<TEntity, bool> predicate) => _entities.FirstOrDefault(predicate);
     public async Task Add(TEntity entity, bool save = true, CancellationToken token = default)
     {
         await WaitAsync(token).ConfigureAwait(false);
@@ -593,6 +620,32 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             }
             await Task.WhenAll(tasks);
         }
+    }
+    public async Task<(SetPropertyResult, MemberInfo?)> SetProperty(TEntity entity, string property, string value, bool save, CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
+        if (entity is null)
+            return (SetPropertyResult.ObjectNotFound, null);
+        await WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            token.ThrowIfCancellationRequested();
+            return await SetPropertyNoLock(entity, property, value, save, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            Release();
+        }
+    }
+    protected async Task<(SetPropertyResult, MemberInfo?)> SetPropertyNoLock(TEntity entity, string property, string value, bool save, CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
+        (SetPropertyResult, MemberInfo?) rtn = (SettableUtil<TEntity>.SetProperty(entity, property, value, out MemberInfo? member), member);
+        if (save && rtn.Item1 == SetPropertyResult.Success)
+            await Update(entity, save, token: token).ConfigureAwait(false);
+        else
+            Data.DbContext.Update(entity);
+        return rtn;
     }
 
     protected virtual Task PreLoad(CancellationToken token) => Task.CompletedTask;

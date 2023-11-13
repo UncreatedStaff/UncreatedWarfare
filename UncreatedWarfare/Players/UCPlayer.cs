@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
@@ -134,7 +133,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         CSteamID = steamID;
         AccountId = steamID.GetAccountID().m_AccountID;
         Save = save;
-        ActiveKit = KitManager.GetSingletonQuick()?.FindKit(Save.KitName, default, true).Result?.Item?.PrimaryKey;
+        ActiveKit = Save.KitId;
         Locale = new UCPlayerLocale(this, data.LanguagePreferences);
         if (!Data.OriginalPlayerNames.TryGetValue(Steam64, out _cachedName))
             _cachedName = new PlayerNames(player);
@@ -431,6 +430,16 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             Keys.Dispose();
             KitMenuData = null!;
         }
+    }
+    public Kit? GetActiveKit()
+    {
+        uint? activeKit = ActiveKit;
+        return !activeKit.HasValue ? null : KitManager.GetSingletonQuick()?.GetKit(activeKit.Value);
+    }
+    public Kit? GetActiveKitNoWriteLock()
+    {
+        uint? activeKit = ActiveKit;
+        return !activeKit.HasValue ? null : KitManager.GetSingletonQuick()?.GetKitNoWriteLock(activeKit.Value);
     }
     public static UCPlayer? FromID(ulong steamID) => steamID == 0 ? null : PlayerManager.FromID(steamID);
     public static UCPlayer? FromCSteamID(CSteamID steamID) => steamID.m_SteamID == 0 ? null : FromID(steamID.m_SteamID);
@@ -921,6 +930,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public void EnsureSkillset(Skillset skillset)
     {
         ThreadUtil.assertIsGameThread();
+        if (!IsOnline)
+            return;
         Skill[][] skills = Player.skills.skills;
         if (skillset.SpecialityIndex >= skills.Length)
             throw new ArgumentOutOfRangeException(nameof(skillset), "Speciality index is out of range.");
@@ -932,10 +943,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             skillset.ServerSet(this);
         }
     }
-    public void EnsureSkillsets(Skillset[] skillsets)
+    public void EnsureDefaultSkillsets() => EnsureSkillsets(Array.Empty<Skillset>());
+    public void EnsureSkillsets(IEnumerable<Skillset> skillsets)
     {
         ThreadUtil.assertIsGameThread();
+        if (!IsOnline)
+            return;
+
         Skillset[] def = Skillset.DefaultSkillsets;
+        Skillset[] arr = skillsets as Skillset[] ?? skillsets.ToArray();
         Skill[][] skills = Player.skills.skills;
         for (int specIndex = 0; specIndex < skills.Length; ++specIndex)
         {
@@ -943,37 +959,34 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             for (int skillIndex = 0; skillIndex < specialtyArr.Length; ++skillIndex)
             {
                 Skill skill = specialtyArr[skillIndex];
-                for (int d = 0; d < skillsets.Length; ++d)
+                for (int i = 0; i < arr.Length; ++i)
                 {
-                    Skillset s = skillsets[d];
-                    if (s.SpecialityIndex == specIndex && s.SkillIndex == skillIndex)
-                    {
-                        if (s.Level != skill.level)
-                        {
-                            s.ServerSet(this);
-                        }
-                        goto c;
-                    }
+                    ref Skillset s = ref arr[i];
+                    if (s.SpecialityIndex != specIndex || s.SkillIndex != skillIndex)
+                        continue;
+
+                    if (s.Level != skill.level)
+                        s.ServerSet(this);
+
+                    goto c;
                 }
                 for (int d = 0; d < def.Length; ++d)
                 {
-                    Skillset s = def[d];
-                    if (s.SpecialityIndex == specIndex && s.SkillIndex == skillIndex)
-                    {
-                        if (s.Level != skill.level)
-                        {
-                            s.ServerSet(this);
-                        }
-                        goto c;
-                    }
+                    ref Skillset s = ref def[d];
+                    if (s.SpecialityIndex != specIndex || s.SkillIndex != skillIndex)
+                        continue;
+                    
+                    if (s.Level != skill.level)
+                        s.ServerSet(this);
+
+                    goto c;
                 }
 
                 byte defaultLvl = GetDefaultSkillLevel((EPlayerSpeciality)specIndex, (byte)skillIndex);
 
                 if (skill.level != defaultLvl)
-                {
                     Player.skills.ServerSetSkillLevel(specIndex, skillIndex, defaultLvl);
-                }
+                
                 c:;
             }
         }
@@ -1341,12 +1354,12 @@ public class UCPlayerLocale
 
 public class PlayerSave
 {
-    public const uint DataVersion = 5;
+    public const uint DataVersion = 6;
     public readonly ulong Steam64;
     [CommandSettable]
     public ulong Team;
     [CommandSettable]
-    public string KitName = string.Empty;
+    public uint KitId = 0;
     public string SquadName = string.Empty;
     public ulong SquadLeader;
     public bool SquadWasLocked;
@@ -1379,7 +1392,7 @@ public class PlayerSave
             throw new ArgumentException("Player does not own this save.", nameof(player));
 
         Team = player.GetTeam();
-        KitName = player.ActiveKit?.Item?.Id ?? string.Empty;
+        KitId = player.ActiveKit ?? 0;
         if (player.Squad != null && player.Squad.Leader.Steam64 != Steam64)
         {
             SquadName = player.Squad.Name;
@@ -1398,7 +1411,7 @@ public class PlayerSave
         Block block = new Block();
         block.writeUInt32(DataVersion);
         block.writeByte((byte)save.Team);
-        block.writeString(save.KitName);
+        block.writeUInt32(save.KitId);
         block.writeString(save.SquadName);
         block.writeUInt64(save.SquadLeader);
         block.writeBoolean(save.SquadWasLocked);
@@ -1438,7 +1451,10 @@ public class PlayerSave
         if (dv > 0)
         {
             save.Team = block.readByte();
-            save.KitName = block.readString();
+            if (dv < 6)
+                block.readString();
+            else
+                save.KitId = block.readUInt32();
             save.SquadName = block.readString();
             if (dv > 2)
             {

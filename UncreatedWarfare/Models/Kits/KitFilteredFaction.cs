@@ -8,16 +8,21 @@ namespace Uncreated.Warfare.Models.Kits;
 [Table("kits_faction_filters")]
 public class KitFilteredFaction : ICloneable
 {
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [Column("pk")]
-    public uint Id { get; set; }
-
     [Required]
     public Kit Kit { get; set; }
 
     [Required]
+    [ForeignKey(nameof(Kit))]
+    [Column("Kit")]
+    public uint KitId { get; set; }
+
+    [Required]
     public Faction Faction { get; set; }
+
+    [ForeignKey(nameof(Faction))]
+    [Required]
+    [Column("Faction")]
+    public uint FactionId { get; set; }
 
     public object Clone()
     {

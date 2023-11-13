@@ -249,87 +249,90 @@ public static class Localization
         {
             return "<#ff0000>INVALID LOADOUT</color>";
         }
-        SqlItem<Kit>? proxy = KitManager.GetLoadoutQuick(player, loadoutId);
-        Kit? kit = proxy?.Item;
-        if (kit != null)
+        Kit? kit = KitManager.GetSingletonQuick()?.GetLoadoutQuick(player, loadoutId);
+        if (kit == null)
         {
-            string name;
-            bool keepline = false;
-            if (!player.OnDuty())
+            return "<b>" + T.LoadoutName.Translate(player, "#" + loadoutId) + "</b>\n\n\n\n" +
+                   T.KitPremiumCost.Translate(player,
+                           Data.PurchasingDataStore is { LoadoutProduct.DefaultPrice.UnitAmountDecimal: { } price }
+                               ? decimal.Round(decimal.Divide(price, 100m), 2)
+                               : UCWarfare.Config.LoadoutCost)
+                       .ColorizeTMPro(UCWarfare.GetColorHex("kit_level_dollars"), true);
+        }
+
+        string name;
+        bool keepline = false;
+        if (!player.OnDuty())
+        {
+            name = kit.GetDisplayName(player.Locale.LanguageInfo, false);
+            for (int i = 0; i < name.Length; i++)
             {
-                name = kit.GetDisplayName(player.Locale.LanguageInfo, false);
-                for (int i = 0; i < name.Length; i++)
+                char @char = name[i];
+                if (@char == '\n')
                 {
-                    char @char = name[i];
-                    if (@char == '\n')
-                    {
-                        keepline = true;
-                        break;
-                    }
+                    keepline = true;
+                    break;
                 }
             }
+        }
+        else
+        {
+            name = kit.InternalName + '\n' + "(" + (char)(loadoutId + 47) + ") " + kit.GetDisplayName(player.Locale.LanguageInfo, false);
+            keepline = true;
+        }
+        name = "<b>" + name.ToUpper()
+            .ColorizeTMPro(
+                UCWarfare.GetColorHex(KitManager.IsFavoritedQuick(kit.PrimaryKey, player) ? "kit_public_header_fav" : "kit_public_header")
+                , true) + "</b>";
+        string cost = "<sub>" + T.LoadoutName.Translate(player, KitEx.GetLoadoutLetter(KitEx.ParseStandardLoadoutId(kit.InternalName))) + "</sub>";
+        if (!keepline) cost = "\n" + cost;
+
+        string playercount;
+        if (kit.NeedsUpgrade)
+        {
+            playercount = T.KitLoadoutUpgrade.Translate(player);
+        }
+        else if (kit.NeedsSetup)
+        {
+            playercount = T.KitLoadoutSetup.Translate(player);
+        }
+        else if (kit.RequiresNitro)
+        {
+            if (KitManager.IsNitroBoostingQuick(player.Steam64))
+                playercount = T.KitNitroBoostOwned.Translate(player);
             else
-            {
-                name = kit.Id + '\n' + "(" + (char)(loadoutId + 47) + ") " + kit.GetDisplayName(player.Locale.LanguageInfo, false);
-                keepline = true;
-            }
-            name = "<b>" + name.ToUpper()
-                .ColorizeTMPro(
-                    UCWarfare.GetColorHex(KitManager.IsFavoritedQuick(proxy!.LastPrimaryKey, player) ? "kit_public_header_fav" : "kit_public_header")
-                    , true) + "</b>";
-            string cost = "<sub>" + T.LoadoutName.Translate(player, KitEx.GetLoadoutLetter(KitEx.ParseStandardLoadoutId(kit.Id))) + "</sub>";
-            if (!keepline) cost = "\n" + cost;
+                playercount = T.KitNitroBoostNotOwned.Translate(player);
+        }
+        else if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+        {
+            playercount = T.KitUnlimited.Translate(player);
+        }
+        else if (kit.IsClassLimited(out int total, out int allowed, team, true))
+        {
+            playercount = T.KitPlayerCount.Translate(player, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
+        }
+        else
+        {
+            playercount = T.KitPlayerCount.Translate(player, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_available"), true);
+        }
 
-            string playercount;
-            if (kit.NeedsUpgrade)
-            {
-                playercount = T.KitLoadoutUpgrade.Translate(player);
-            }
-            else if (kit.NeedsSetup)
-            {
-                playercount = T.KitLoadoutSetup.Translate(player);
-            }
-            else if (kit.RequiresNitro)
-            {
-                if (KitManager.IsNitroBoostingQuick(player.Steam64))
-                    playercount = T.KitNitroBoostOwned.Translate(player);
-                else
-                    playercount = T.KitNitroBoostNotOwned.Translate(player);
-            }
-            else if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
-            {
-                playercount = T.KitUnlimited.Translate(player);
-            }
-            else if (kit.IsClassLimited(out int total, out int allowed, team, true))
-            {
-                playercount = T.KitPlayerCount.Translate(player, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
-            }
-            else
-            {
-                playercount = T.KitPlayerCount.Translate(player, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_available"), true);
-            }
+        string weapons = kit.WeaponText ?? string.Empty;
 
-            string weapons = kit.WeaponText ?? string.Empty;
-
-            if (weapons.Length > 0)
-            {
-                weapons = weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true);
-                return
-                    name + "\n" +
-                    cost + "\n" +
-                    weapons + "\n" +
-                    playercount;
-            }
-
+        if (weapons.Length > 0)
+        {
+            weapons = weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true);
             return
-                name + "\n\n" +
+                name + "\n" +
                 cost + "\n" +
+                weapons + "\n" +
                 playercount;
         }
 
-        return "<b>" + T.LoadoutName.Translate(player, "#" + loadoutId) + "</b>\n\n\n\n" +
-               T.KitPremiumCost.Translate(player, Data.PurchasingDataStore is { LoadoutProduct.DefaultPrice.UnitAmountDecimal: { } price } ? decimal.Round(decimal.Divide(price, 100m), 2) : UCWarfare.Config.LoadoutCost)
-                   .ColorizeTMPro(UCWarfare.GetColorHex("kit_level_dollars"), true);
+        return
+            name + "\n\n" +
+            cost + "\n" +
+            playercount;
+
     }
     public static string TranslateKitSign(Kit kit, UCPlayer player)
     {
@@ -353,7 +356,7 @@ public static class Localization
         }
         else
         {
-            name = kit.Id + "\n" + kit.GetDisplayName(player.Locale.LanguageInfo, false);
+            name = kit.InternalName + "\n" + kit.GetDisplayName(player.Locale.LanguageInfo, false);
             keepline = true;
         }
         name = "<b>" + name

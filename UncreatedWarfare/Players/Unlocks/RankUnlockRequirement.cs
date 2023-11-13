@@ -49,7 +49,7 @@ public class RankUnlockRequirement : UnlockRequirement
     {
         ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
         if (!success)
-            L.LogWarning("Invalid rank order in kit requirement: " + (kit?.Id ?? string.Empty) + " :: " + UnlockRank + ".");
+            L.LogWarning("Invalid rank order in kit requirement: " + (kit?.InternalName ?? string.Empty) + " :: " + UnlockRank + ".");
         return ctx.Reply(T.RequestKitLowRank, data);
     }
     public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)

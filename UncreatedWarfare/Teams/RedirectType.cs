@@ -1,7 +1,15 @@
-﻿namespace Uncreated.Warfare.Teams;
+﻿using Uncreated.Warfare.Database.Automation;
 
-[Translatable(Description = "Common items represented by a redirect Id.")]
+namespace Uncreated.Warfare.Teams;
+
 /// <summary>Max field character limit: <see cref="KitEx.RedirectTypeCharLimit"/>.</summary>
+[ExcludedEnum(None)]
+[ExcludedEnum(StandardAmmoIcon)]
+[ExcludedEnum(StandardGrenadeIcon)]
+[ExcludedEnum(StandardMeleeIcon)]
+[ExcludedEnum(StandardSmokeGrenadeIcon)]
+[ExcludedEnum(VehicleBay)]
+[Translatable(Description = "Common items represented by a redirect Id.")]
 public enum RedirectType : byte
 {
     None = 255,

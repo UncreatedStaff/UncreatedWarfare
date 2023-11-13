@@ -9,7 +9,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags;
 public struct ZoneModel : IListItem
 {
-    public int Id = -1;
+    public uint Id = 0;
     public int Map;
     public string Name = null!;
     public string? ShortName;
@@ -63,7 +63,7 @@ public struct ZoneModel : IListItem
         SpawnX = float.NaN;
         SpawnZ = float.NaN;
         UseMapCoordinates = false;
-        Id = -1;
+        Id = 0;
         Adjacencies = Array.Empty<AdjacentFlagData>();
         GridObjects = Array.Empty<GridObject>();
         Map = -1;
@@ -97,9 +97,9 @@ public struct ZoneModel : IListItem
         if (string.IsNullOrEmpty(Name))
             throw new ZoneReadException("Zones are required to define: name (string, max. 128 char), and optionally short-name (string, max. 64 char).") { Data = this };
         if (Name.Length > ZoneList.MaxNameLength)
-            throw new ZoneReadException("Name must be " + ZoneList.MaxNameLength.ToString(Warfare.Data.LocalLocale) + " characters or less.") { Data = this };
+            throw new ZoneReadException("Name must be " + ZoneList.MaxNameLength.ToString(Data.LocalLocale) + " characters or less.") { Data = this };
         if (ShortName is { Length: > ZoneList.MaxShortNameLength })
-            throw new ZoneReadException("Short name must be " + ZoneList.MaxShortNameLength.ToString(Warfare.Data.LocalLocale) + " characters or less.") { Data = this };
+            throw new ZoneReadException("Short name must be " + ZoneList.MaxShortNameLength.ToString(Data.LocalLocale) + " characters or less.") { Data = this };
         if (ZoneType == ZoneType.Invalid)
         {
             throw new ZoneReadException("Zone JSON data should have at least one valid data property: " + string.Join(", ", ValidProperties.Select(x => x.Name))) { Data = this };
@@ -137,10 +137,10 @@ public struct ZoneModel : IListItem
         {
             throw new ZoneReadException("Zone JSON data should have at least one valid data property: " + string.Join(", ", ValidProperties.Select(x => x.Name))) { Data = this };
         }
-        if (UseCase is < ZoneUseCase.Other or > ZoneUseCase.Lobby)
+        if (UseCase > ZoneUseCase.Lobby)
             throw new ZoneReadException("Use case is out of range, must be: Other (0), Flag (1), Team1Main (2), Team2Main (3), Team1MainCampZone (4), Team2MainCampZone (5), Lobby (6).");
         if (Map < 0 || Map >= MapScheduler.MapCount)
-            throw new ZoneReadException("Map index is out of range, must be between 0 and " + (MapScheduler.MapCount - 1).ToString(Warfare.Data.AdminLocale)) { Data = this };
+            throw new ZoneReadException("Map index is out of range, must be between 0 and " + (MapScheduler.MapCount - 1).ToString(Data.AdminLocale)) { Data = this };
         if (!IsBadFloat(MinimumHeight) && !IsBadFloat(MaximumHeight) && MaximumHeight <= MinimumHeight)
             throw new ZoneReadException("Max height is less than or equal to min height, it must be greater than it and vice versa (or not defined).") { Data = this };
         GridObjects ??= Array.Empty<GridObject>();

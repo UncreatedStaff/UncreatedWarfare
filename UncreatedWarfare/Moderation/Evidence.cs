@@ -44,7 +44,7 @@ public struct Evidence : IEquatable<Evidence>
     }
     public Evidence(ByteReader reader, ushort version)
     {
-        Id = reader.ReadInt32();
+        Id = reader.ReadUInt32();
         URL = reader.ReadString();
         SavedLocation = reader.ReadNullableString();
         Message = reader.ReadNullableString();

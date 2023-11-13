@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Singletons;
@@ -10,11 +9,11 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Kits.Items;
 public class SpecificClothingKitItem : IClothingKitItem, ISpecificKitItem
 {
-    public PrimaryKey PrimaryKey { get; set; }
+    public uint PrimaryKey { get; set; }
     public ClothingType Type { get; }
     public UnturnedAssetReference Item { get; }
     public byte[] State { get; }
-    public SpecificClothingKitItem(PrimaryKey primaryKey, UnturnedAssetReference item, ClothingType type, byte[] state)
+    public SpecificClothingKitItem(uint primaryKey, UnturnedAssetReference item, ClothingType type, byte[] state)
     {
         PrimaryKey = primaryKey;
         Item = item;
@@ -23,7 +22,7 @@ public class SpecificClothingKitItem : IClothingKitItem, ISpecificKitItem
     }
     public SpecificClothingKitItem(SpecificClothingKitItem copy)
     {
-        PrimaryKey = PrimaryKey.NotAssigned;
+        PrimaryKey = 0;
         Type = copy.Type;
         Item = copy.Item;
         State = copy.State;
@@ -71,6 +70,7 @@ public class SpecificClothingKitItem : IClothingKitItem, ISpecificKitItem
         {
             Id = PrimaryKey,
             Kit = kit,
+            KitId = kit.PrimaryKey,
             ClothingSlot = Type,
             Item = Item,
             Metadata = State

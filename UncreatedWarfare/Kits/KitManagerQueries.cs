@@ -1,26 +1,17 @@
-﻿using MySql.Data.MySqlClient;
+﻿using Microsoft.EntityFrameworkCore;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Uncreated.Framework;
-using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;
-using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
@@ -67,18 +58,6 @@ partial class KitManager
 
         try
         {
-            StringBuilder playerInList = new StringBuilder(players.Length * 32);
-
-            object[] args = new object[players.Length];
-            for (int i = 0; i < players.Length; ++i)
-            {
-                if (i != 0) playerInList.Append(',');
-                playerInList.Append('@').Append(i.ToString(Data.AdminLocale));
-                args[i] = players[i].Steam64;
-            }
-
-            playerInList.Append(");");
-            string inList = playerInList.ToString();
             List<uint>?[] kitOutput = new List<uint>[players.Length];
             List<HotkeyBinding>?[] bindings = new List<HotkeyBinding>[players.Length];
             List<LayoutTransformation>?[] layouts = new List<LayoutTransformation>[players.Length];
@@ -175,8 +154,7 @@ partial class KitManager
                         for (int i = 0; i < layouts2.Count; ++i)
                         {
                             LayoutTransformation l = layouts2[i];
-                            SqlItem<Kit>? proxy = singleton.FindProxyNoLock(l.Kit);
-                            Kit? kit = proxy?.Item;
+                            Kit? kit = singleton.GetKit(l.Kit);
                             if (kit is null)
                             {
                                 L.LogWarning("Kit for " + player + "'s layout transformation (" + l.Kit + ") not found.");
@@ -208,8 +186,7 @@ partial class KitManager
                         for (int i = 0; i < bindings2.Count; ++i)
                         {
                             HotkeyBinding b = bindings2[i];
-                            SqlItem<Kit>? proxy = singleton.FindProxyNoLock(b.Kit);
-                            Kit? kit = proxy?.Item;
+                            Kit? kit = singleton.GetKit(b.Kit);
                             if (kit is null)
                             {
                                 L.LogWarning("Kit for " + player + "'s hotkey (" + b.Kit + ") not found.");
@@ -281,7 +258,7 @@ partial class KitManager
     public static Task DownloadPlayerKitData(UCPlayer player, bool lockPurchaseSync, CancellationToken token = default) =>
         DownloadPlayersKitData(new UCPlayer[] { player }, lockPurchaseSync, token);
 
-    private static async Task AddAccessRow(PrimaryKey kit, ulong player, KitAccessType type, CancellationToken token = default)
+    private static async Task AddAccessRow(uint kit, ulong player, KitAccessType type, CancellationToken token = default)
     {
         await WarfareDatabases.Kits.KitAccess.AddAsync(new KitAccess
         {
@@ -293,7 +270,7 @@ partial class KitManager
         await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
-    public static Task HasAccess(uint kit, ulong player, CancellationToken token = default)
+    public static Task<bool> HasAccess(uint kit, ulong player, CancellationToken token = default)
     {
         return kit == 0 ? Task.FromResult(false) : WarfareDatabases.Kits.KitAccess.AnyAsync(x => x.KitId == kit && x.Steam64 == player, token);
     }
@@ -302,13 +279,13 @@ partial class KitManager
         uint pk = 0;
         if (UCWarfare.IsLoaded && GetSingletonQuick() is { } kitmanager)
         {
-            Kit? kitFound = (await kitmanager.FindKit(kit, token, true))?.Item;
+            Kit? kitFound = await kitmanager.FindKit(kit, token, true);
             if (kitFound is not null)
                 pk = kitFound.PrimaryKey;
         }
         if (pk == 0)
         {
-            Kit? kit2 = await WarfareDatabases.Kits.Kits.FirstOrDefaultAsync(x => x.Id == kit, token).ConfigureAwait(false);
+            Kit? kit2 = await WarfareDatabases.Kits.Kits.FirstOrDefaultAsync(x => x.InternalName == kit, token).ConfigureAwait(false);
 
             if (kit2 == null)
                 return false;
@@ -343,7 +320,7 @@ partial class KitManager
     }
     private static async Task<bool> RemoveAccessRow(string kit, ulong player, CancellationToken token = default)
     {
-        List<KitAccess> access = await WarfareDatabases.Kits.KitAccess.Where(x => x.Kit.Id == kit && x.Steam64 == player)
+        List<KitAccess> access = await WarfareDatabases.Kits.KitAccess.Where(x => x.Kit.InternalName == kit && x.Steam64 == player)
             .ToListAsync(token).ConfigureAwait(false);
 
         if (access is not { Count: > 0 })
@@ -355,7 +332,7 @@ partial class KitManager
     }
 
     /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> RemoveHotkey(uint kit, ulong player, byte slot, CancellationToken token = default)
+    public async Task<bool> RemoveHotkey(uint kit, ulong player, byte slot, CancellationToken token = default)
     {
         if (!KitEx.ValidSlot(slot))
             throw new ArgumentException("Invalid slot number.", nameof(slot));
@@ -370,7 +347,7 @@ partial class KitManager
         return true;
     }
     /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> RemoveHotkey(uint kit, ulong player, byte x, byte y, Page page, CancellationToken token = default)
+    public async Task<bool> RemoveHotkey(uint kit, ulong player, byte x, byte y, Page page, CancellationToken token = default)
     {
         List<KitHotkey> hotkeys = await WarfareDatabases.Kits.KitHotkeys.Where(h => h.Kit.PrimaryKey == kit && h.Steam64 == player && h.X == x && h.Y == y && h.Page == page)
             .ToListAsync(token).ConfigureAwait(false);
@@ -383,7 +360,7 @@ partial class KitManager
         return true;
     }
     /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> AddHotkey(uint kit, ulong player, byte slot, IPageKitItem item, CancellationToken token = default)
+    public async Task<KitHotkey> AddHotkey(uint kit, ulong player, byte slot, IPageKitItem item, CancellationToken token = default)
     {
         if (item is not ISpecificKitItem and not IAssetRedirectKitItem)
             throw new ArgumentException("Item must also implement IItem or IAssetRedirect.", nameof(item));
@@ -398,7 +375,7 @@ partial class KitManager
         if (hotkeys.Count > 0)
             WarfareDatabases.Kits.KitHotkeys.RemoveRange(hotkeys);
 
-        WarfareDatabases.Kits.KitHotkeys.Add(new KitHotkey
+        KitHotkey kitHotkey = new KitHotkey
         {
             Steam64 = player,
             KitId = kit,
@@ -408,46 +385,44 @@ partial class KitManager
             Y = y,
             Page = page,
             Slot = slot
-        });
+        };
+        WarfareDatabases.Kits.KitHotkeys.Add(kitHotkey);
 
         await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
-        return true;
+        return kitHotkey;
     }
-    internal async Task SaveFavorites(UCPlayer player, List<PrimaryKey> favoriteKits, CancellationToken token = default)
+    internal async Task SaveFavorites(UCPlayer player, IReadOnlyList<uint> favoriteKits, CancellationToken token = default)
     {
         token.CombineIfNeeded(UCWarfare.UnloadCancel);
         object[] args = new object[favoriteKits.Count + 1];
         args[0] = player.Steam64;
-        StringBuilder sb = new StringBuilder("(");
-        for (int i = 0; i < favoriteKits.Count; ++i)
-        {
-            args[i + 1] = favoriteKits[i].Key;
-            if (i != 0)
-                sb.Append("),(");
-            sb.Append("@0,@").Append(i + 1);
-        }
 
-        sb.Append(");");
+        ulong steam64 = player.Steam64;
 
-        if (args.Length <= 1)
+        List<KitFavorite> list = await WarfareDatabases.Kits.KitFavorites.Where(x => x.Steam64 == steam64).ToListAsync(token);
+        WarfareDatabases.Kits.KitFavorites.RemoveRange(list);
+        WarfareDatabases.Kits.KitFavorites.AddRange(favoriteKits.Select(x => new KitFavorite
         {
-            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_FAVORITES}` WHERE `{COLUMN_FAVORITE_PLAYER}`=@0;", args, token).ConfigureAwait(false);
-            return;
-        }
-        await Sql.NonQueryAsync($"DELETE FROM `{TABLE_FAVORITES}` WHERE `{COLUMN_FAVORITE_PLAYER}`=@0;" +
-                                F.StartBuildOtherInsertQueryNoUpdate(TABLE_FAVORITES,
-                                    COLUMN_FAVORITE_PLAYER, COLUMN_EXT_PK) + sb, args, token).ConfigureAwait(false);
+            Steam64 = steam64,
+            KitId = x
+        }));
+
+        await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+        
         player.KitMenuData.FavoritesDirty = false;
     }
-    public static async Task ResetLayout(UCPlayer player, PrimaryKey kit, bool lockPurchaseSync, CancellationToken token = default)
+    public async Task ResetLayout(UCPlayer player, uint kit, bool lockPurchaseSync, CancellationToken token = default)
     {
         if (lockPurchaseSync)
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            player.LayoutTransformations?.RemoveAll(x => x.Kit.Key == kit.Key);
-            await Data.AdminSql.NonQueryAsync($"DELETE FROM `{TABLE_LAYOUT_TRANSFORMATIONS}` WHERE `{COLUMN_HOTKEY_PLAYER}`=@0 AND `{COLUMN_EXT_PK}`=@1;",
-                new object[] { player.Steam64, kit.Key }, token).ConfigureAwait(false);
+            ulong steam64 = player.Steam64;
+            player.LayoutTransformations?.RemoveAll(x => x.Kit == kit);
+            List<KitLayoutTransformation> list = await WarfareDatabases.Kits.KitLayoutTransformations.Where(x => x.Steam64 == steam64 && x.KitId == kit).ToListAsync(token);
+            WarfareDatabases.Kits.KitLayoutTransformations.RemoveRange(list);
+
+            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
         }
         finally
         {
@@ -455,10 +430,10 @@ partial class KitManager
                 player.PurchaseSync.Release();
         }
     }
-    public static async Task SaveLayout(UCPlayer player, SqlItem<Kit> proxy, bool lockPurchaseSync, bool lockKit, CancellationToken token = default)
+    public async Task SaveLayout(UCPlayer player, Kit kit, bool lockPurchaseSync, bool lockKit, CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
-        List<LayoutTransformation> active = GetLayoutTransformations(player, proxy.LastPrimaryKey);
+        List<LayoutTransformation> active = GetLayoutTransformations(player, kit.PrimaryKey);
         List<(Page Page, Item Item, byte X, byte Y, byte Rotation, byte SizeX, byte SizeY)> inventory = new List<(Page, Item, byte, byte, byte, byte, byte)>(24);
         for (int pageIndex = 0; pageIndex < PlayerInventory.STORAGE; ++pageIndex)
         {
@@ -480,11 +455,10 @@ partial class KitManager
         try
         {
             if (lockKit)
-                await proxy.Enter(token).ConfigureAwait(false);
+                await WaitAsync(token).ConfigureAwait(false);
             try
             {
-                if (proxy.Item is not { Items: { } kitItems } kit)
-                    return;
+                IKitItem[] kitItems = kit.Items;
                 for (int i = 0; i < active.Count; ++i)
                 {
                     LayoutTransformation t = active[i];
@@ -582,7 +556,7 @@ partial class KitManager
                     }
                     if (colliding.Value.SizeX == sizeX1 && colliding.Value.SizeY == sizeY1)
                     {
-                        active.Add(new LayoutTransformation(jar.Page, orig.Page, jar.X, jar.Y, orig.X, orig.Y, orig.Rotation, proxy.LastPrimaryKey, new KitLayoutTransformation
+                        active.Add(new LayoutTransformation(jar.Page, orig.Page, jar.X, jar.Y, orig.X, orig.Y, orig.Rotation, kit.PrimaryKey, new KitLayoutTransformation
                         {
                             Steam64 = steam64,
                             Kit = kit,
@@ -598,7 +572,7 @@ partial class KitManager
                     }
                     else if (colliding.Value.SizeX == sizeY1 && colliding.Value.SizeY == sizeX1)
                     {
-                        active.Add(new LayoutTransformation(jar.Page, orig.Page, jar.X, jar.Y, orig.X, orig.Y, (byte)(orig.Rotation + 1 % 4), proxy.LastPrimaryKey, new KitLayoutTransformation
+                        active.Add(new LayoutTransformation(jar.Page, orig.Page, jar.X, jar.Y, orig.X, orig.Y, (byte)(orig.Rotation + 1 % 4), kit.PrimaryKey, new KitLayoutTransformation
                         {
                             Steam64 = steam64,
                             Kit = kit,
@@ -629,7 +603,7 @@ partial class KitManager
             finally
             {
                 if (lockKit)
-                    proxy.Release();
+                    Release();
             }
         }
         finally

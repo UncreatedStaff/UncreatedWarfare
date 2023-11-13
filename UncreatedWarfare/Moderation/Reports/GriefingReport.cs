@@ -334,7 +334,7 @@ public struct TeamkillRecord
     }
     public TeamkillRecord(ByteReader reader)
     {
-        Teamkill = reader.ReadInt32();
+        Teamkill = reader.ReadUInt32();
         Victim = reader.ReadUInt64();
         Cause = (EDeathCause)reader.ReadUInt16();
         Message = reader.ReadNullableString();
@@ -380,7 +380,7 @@ public struct VehicleTeamkillRecord
     }
     public VehicleTeamkillRecord(ByteReader reader)
     {
-        Teamkill = reader.ReadInt32();
+        Teamkill = reader.ReadUInt32();
         Victim = reader.ReadUInt64();
         Origin = (EDamageOrigin)reader.ReadUInt16();
         Message = reader.ReadNullableString();

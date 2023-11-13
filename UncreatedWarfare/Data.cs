@@ -103,7 +103,7 @@ public static class Data
         public const PlayerKey DropSupplyOverride = PlayerKey.PluginKey1;
     }
 
-    internal static readonly IUncreatedSingleton[] GamemodeListeners = new IUncreatedSingleton[1];
+    internal static IUncreatedSingleton[] GamemodeListeners;
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
     public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb96](?!h|(?:an)|(?:[e|a]t))\W{0,}[gqb96]{0,}\W{0,}[gqb96]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})", RegexOptions.IgnoreCase);
@@ -157,7 +157,7 @@ public static class Data
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
     internal static InstanceGetter<UseableGun, bool>? GetUseableGunReloading;
-    internal static StaticGetter<uint>? GetItemManagerInstanceCount;
+    internal static StaticGetter<uint> GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
@@ -312,6 +312,7 @@ public static class Data
 
 
         DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(true, token: token);
+        GamemodeListeners = new IUncreatedSingleton[1];
         GamemodeListeners[0] = Points = await Singletons.LoadSingletonAsync<Points>(true, token: token);
         await Singletons.LoadSingletonAsync<PlayerList>(true, token: token);
         await UCWarfare.ToUpdate(token);
@@ -341,7 +342,7 @@ public static class Data
             L.LogWarning("Unable to gather all the RPCs needed for Fast Kits, kits will not work as quick.");
             UseFastKits = false;
         }
-        GetItemManagerInstanceCount = Accessor.GenerateStaticGetter<ItemManager, uint>("instanceCount");
+        GetItemManagerInstanceCount = Accessor.GenerateStaticGetter<ItemManager, uint>("instanceCount", throwOnError: true)!;
         SetPrivateStance = Accessor.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance");
         SetStorageInventory = Accessor.GenerateInstanceSetter<InteractableStorage, Items>("_items");
         RefreshIsConnectedToPower = (Action<InteractablePower>?)Accessor.GenerateInstanceCaller<InteractablePower>("RefreshIsConnectedToPower");

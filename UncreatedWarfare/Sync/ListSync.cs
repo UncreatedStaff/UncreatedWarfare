@@ -109,7 +109,7 @@ public static class ListSync
         Task.Run(async () =>
         {
             ushort lastGrp = 0;
-            List<int> pks = new List<int>(16);
+            List<uint> pks = new List<uint>(16);
             for (int i = 0; i < q.Count; i++)
             {
                 if (lastGrp != q[i].Key)
@@ -128,7 +128,7 @@ public static class ListSync
                         {
                             for (int j = 0; j < pks.Count; j++)
                             {
-                                int pk = pks[j];
+                                uint pk = pks[j];
                                 lock (SendQueue)
                                 {
                                     int ind = SendQueue.FindLastIndex(x => x.Key == lastGrp && x.Value.Key == pk);
@@ -199,18 +199,18 @@ public static class ListSync
     }
     public static class NetCalls
     {
-        public static readonly NetCall<ushort, int> MulticastListItemUpdated = new NetCall<ushort, int>(ReceiveListItemUpdated);
-        public static readonly NetCall<ushort, int[]> MulticastListItemsUpdated = new NetCall<ushort, int[]>(ReceiveListItemsUpdated);
+        public static readonly NetCall<ushort, uint> MulticastListItemUpdated = new NetCall<ushort, uint>(ReceiveListItemUpdated);
+        public static readonly NetCall<ushort, uint[]> MulticastListItemsUpdated = new NetCall<ushort, uint[]>(ReceiveListItemsUpdated);
 
         [NetCall(ENetCall.FROM_SERVER, 3000)]
-        private static Task ReceiveListItemUpdated(MessageContext ctx, ushort syncId, int pkraw)
+        private static Task ReceiveListItemUpdated(MessageContext ctx, ushort syncId, uint pkraw)
         {
             PrimaryKey pk = pkraw;
             return UpdateItem(pk, syncId);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 3001)]
-        private static Task ReceiveListItemsUpdated(MessageContext ctx, ushort syncId, int[] pksraw)
+        private static Task ReceiveListItemsUpdated(MessageContext ctx, ushort syncId, uint[] pksraw)
         {
             PrimaryKey[] pks = new PrimaryKey[pksraw.Length];
             for (int i = 0; i < pksraw.Length; ++i)

@@ -1,12 +1,9 @@
 ﻿using SDG.Unturned;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using Uncreated.Players;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Unlocks;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Traits.Buffs;

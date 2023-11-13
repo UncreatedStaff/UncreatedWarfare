@@ -1,5 +1,4 @@
 ﻿using SDG.Unturned;
-using Uncreated.SQL;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
@@ -7,11 +6,11 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Kits;
 public struct HotkeyBinding
 {
-    public PrimaryKey Kit { get; set; }
+    public uint Kit { get; set; }
     public byte Slot { get; set; }
     public IPageKitItem Item { get; set; }
     public KitHotkey Model { get; set; }
-    public HotkeyBinding(PrimaryKey kit, byte slot, IPageKitItem item, KitHotkey model)
+    public HotkeyBinding(uint kit, byte slot, IPageKitItem item, KitHotkey model)
     {
         Kit = kit;
         Slot = slot;

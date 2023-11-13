@@ -14,7 +14,14 @@ public class KitItemModel : ICloneable
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("pk")]
     public uint Id { get; set; }
+
+    [Required]
     public Kit Kit { get; set; }
+
+    [ForeignKey(nameof(Kit))]
+    [Column("Kit")]
+    [Required]
+    public uint KitId { get; set; }
     public UnturnedAssetReference? Item { get; set; }
     public byte? X { get; set; }
     public byte? Y { get; set; }
@@ -22,6 +29,8 @@ public class KitItemModel : ICloneable
     public Page? Page { get; set; }
     public ClothingType? ClothingSlot { get; set; }
     public RedirectType? Redirect { get; set; }
+
+    [StringLength(36)]
     public string? RedirectVariant { get; set; }
     public byte? Amount { get; set; }
     public byte[]? Metadata { get; set; }
@@ -30,6 +39,7 @@ public class KitItemModel : ICloneable
     public KitItemModel(KitItemModel model)
     {
         Kit = model.Kit;
+        KitId = model.KitId;
         Item = model.Item;
         X = model.X;
         Y = model.Y;

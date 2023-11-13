@@ -13,8 +13,6 @@ using Uncreated.Warfare.Models.Kits;
 namespace Uncreated.Warfare.Networking.Purchasing;
 public class StripeEliteKit
 {
-    public const string IdMetadataKey = "product_key";
-
     private static readonly List<ProductFeatureOptions> Features = new List<ProductFeatureOptions>
     {
         new ProductFeatureOptions
@@ -44,7 +42,7 @@ public class StripeEliteKit
                     if (kit is not { Type: KitType.Elite, EliteKitInfo: null })
                         continue;
 
-                    needsStripeKits.Add((kit.Id, kit));
+                    needsStripeKits.Add((kit.InternalName, kit));
                 }
 
                 if (needsStripeKits.Count == 0)
@@ -58,7 +56,7 @@ public class StripeEliteKit
                     {
                         if (i != index) query.Append(" OR ");
 
-                        query.Append("metadata[\"" + IdMetadataKey + "\"]:\"")
+                        query.Append("metadata[\"" + PurchaseRecordsInterface.BundleIdMetadataKey + "\"]:\"")
                             .Append(needsStripeKits[i].id)
                             .Append('\"');
                     }
@@ -77,7 +75,7 @@ public class StripeEliteKit
 
                     foreach (Product product in existing.Data)
                     {
-                        if (product.Metadata == null || !product.Metadata.TryGetValue(IdMetadataKey, out string kitId))
+                        if (product.Metadata == null || !product.Metadata.TryGetValue(PurchaseRecordsInterface.BundleIdMetadataKey, out string kitId))
                         {
                             L.LogWarning($"Unknown product id key from searched product: {product.Name}.");
                             continue;
@@ -86,7 +84,7 @@ public class StripeEliteKit
                         (_, Kit kit) = needsStripeKits.Find(x => x.id.Equals(kitId, StringComparison.Ordinal));
                         kit.EliteKitInfo = new StripeEliteKit
                         {
-                            KitId = kit.Id,
+                            KitId = kit.InternalName,
                             PrimaryKey = kit.PrimaryKey,
                             Product = product
                         };
@@ -122,7 +120,7 @@ public class StripeEliteKit
         if (!UCWarfare.IsLoaded || stripeService?.StripeClient == null)
             throw new InvalidOperationException("Stripe service is not loaded in Data.StripeService.");
 
-        string id = kit.Id;
+        string id = kit.InternalName;
 
         StripeEliteKit eliteKit = new StripeEliteKit
         {
@@ -135,7 +133,7 @@ public class StripeEliteKit
         {
             StripeSearchResult<Product> existing = await stripeService.ProductService.SearchAsync(new ProductSearchOptions
             {
-                Query = $"metadata[\"{IdMetadataKey}\"]:\"{id}\"",
+                Query = $"metadata[\"{PurchaseRecordsInterface.BundleIdMetadataKey}\"]:\"{id}\"",
                 Limit = 1
             }, cancellationToken: token).ConfigureAwait(false);
             
@@ -164,11 +162,11 @@ public class StripeEliteKit
                 Shippable = false,
                 StatementDescriptor = id.ToUpperInvariant(),
                 TaxCode = StripeService.TaxCode,
-                Url = UCWarfare.IsLoaded && UCWarfare.Config.WebsiteUri != null ? new Uri(UCWarfare.Config.WebsiteUri, "kits/elites/" + Uri.EscapeDataString(kit.Id)).AbsoluteUri : ("https://uncreated.network/kits/elites/" + Uri.EscapeDataString(kit.Id)),
+                Url = UCWarfare.IsLoaded && UCWarfare.Config.WebsiteUri != null ? new Uri(UCWarfare.Config.WebsiteUri, "kits/elites/" + Uri.EscapeDataString(kit.InternalName)).AbsoluteUri : ("https://uncreated.network/kits/elites/" + Uri.EscapeDataString(kit.InternalName)),
                 Features = Features,
                 Metadata = new Dictionary<string, string>
                 {
-                    { IdMetadataKey, id }
+                    { PurchaseRecordsInterface.BundleIdMetadataKey, id }
                 }
             };
 
@@ -178,7 +176,7 @@ public class StripeEliteKit
         {
             stripeService.Semaphore.Release();
         }
-        await UniTask.SwitchToMainThread(token);
+        await UCWarfare.ToUpdate(token);
         eliteKit.Product = newProduct;
         return eliteKit;
     }

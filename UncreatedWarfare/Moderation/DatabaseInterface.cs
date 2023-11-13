@@ -203,7 +203,7 @@ public abstract class DatabaseInterface
         {
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
-                condition = Util.QuickFormat(condition!, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i, repeat: true);
+                condition = Util.QuickFormat(condition, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i, repeat: true);
         }
 
         if (!string.IsNullOrEmpty(condition))
@@ -299,7 +299,7 @@ public abstract class DatabaseInterface
             where = true;
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
-                condition = Util.QuickFormat(condition!, "@" + i.ToString(CultureInfo.InvariantCulture), i, repeat: true);
+                condition = Util.QuickFormat(condition, "@" + i.ToString(CultureInfo.InvariantCulture), i, repeat: true);
         }
         if (!string.IsNullOrEmpty(condition))
         {
@@ -534,7 +534,7 @@ public abstract class DatabaseInterface
         query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnRelatedEntry)} FROM `{TableRelatedEntries}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
         await Sql.QueryAsync(query, null, reader =>
         {
-            links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+            links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
         }, token).ConfigureAwait(false);
 
         F.ApplyQueriedList(links, (key, arr) =>
@@ -552,7 +552,7 @@ public abstract class DatabaseInterface
             query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedAppealsAppeal)} FROM `{TableLinkedAppeals}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
             await Sql.QueryAsync(query, null, reader =>
             {
-                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
             }, token).ConfigureAwait(false);
 
             F.ApplyQueriedList(links, (key, arr) =>
@@ -568,7 +568,7 @@ public abstract class DatabaseInterface
             query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedReportsReport)} FROM `{TableLinkedReports}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
             await Sql.QueryAsync(query, null, reader =>
             {
-                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
             }, token).ConfigureAwait(false);
 
             F.ApplyQueriedList(links, (key, arr) =>
@@ -606,7 +606,7 @@ public abstract class DatabaseInterface
             query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnAppealPunishmentsPunishment)} FROM `{TableAppealPunishments}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
             await Sql.QueryAsync(query, null, reader =>
             {
-                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
             }, token).ConfigureAwait(false);
 
             F.ApplyQueriedList(links, (key, arr) =>
@@ -734,7 +734,7 @@ public abstract class DatabaseInterface
             await Sql.QueryAsync(query, null, reader =>
             {
                 tks.Add(new PrimaryKeyPair<TeamkillRecord>(reader.GetInt32(0),
-                    new TeamkillRecord(reader.GetInt32(4), reader.GetUInt64(1), reader.ReadStringEnum(2, EDeathCause.KILL),
+                    new TeamkillRecord(reader.GetUInt32(4), reader.GetUInt64(1), reader.ReadStringEnum(2, EDeathCause.KILL),
                         reader.GetString(5), reader.IsDBNull(3) ? null : reader.GetBoolean(3), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)))));
             }, token).ConfigureAwait(false);
 
@@ -754,7 +754,7 @@ public abstract class DatabaseInterface
             await Sql.QueryAsync(query, null, reader =>
             {
                 vtks.Add(new PrimaryKeyPair<VehicleTeamkillRecord>(reader.GetInt32(0),
-                    new VehicleTeamkillRecord(reader.GetInt32(3), reader.GetUInt64(1), reader.ReadStringEnum(2, EDamageOrigin.Unknown),
+                    new VehicleTeamkillRecord(reader.GetUInt32(3), reader.GetUInt64(1), reader.ReadStringEnum(2, EDamageOrigin.Unknown),
                         reader.GetString(4), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)))));
             }, token).ConfigureAwait(false);
 
@@ -775,7 +775,7 @@ public abstract class DatabaseInterface
             await Sql.QueryAsync(query, null, reader =>
             {
                 reqs.Add(new PrimaryKeyPair<VehicleRequestRecord>(reader.GetInt32(0),
-                    new VehicleRequestRecord(reader.ReadGuidString(2) ?? Guid.Empty, reader.IsDBNull(1) ? PrimaryKey.NotAssigned : reader.GetInt32(1), reader.GetString(3),
+                    new VehicleRequestRecord(reader.ReadGuidString(2) ?? Guid.Empty, reader.IsDBNull(1) ? PrimaryKey.NotAssigned : reader.GetUInt32(1), reader.GetString(3),
                     new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)),
                     reader.IsDBNull(7) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(7), DateTimeKind.Utc)), reader.ReadStringEnum(5, EDamageOrigin.Unknown), reader.GetUInt64(4))));
             }, token).ConfigureAwait(false);
@@ -929,7 +929,7 @@ public abstract class DatabaseInterface
         }
 
         ModerationEntry entry = (ModerationEntry)Activator.CreateInstance(csType);
-        entry.Id = reader.GetInt32(0);
+        entry.Id = reader.GetUInt32(0);
         entry.Player = reader.GetUInt64(2);
         entry.Message = reader.IsDBNull(3) ? null : reader.GetString(3);
         entry.IsLegacy = reader.GetBoolean(4);
@@ -983,7 +983,7 @@ public abstract class DatabaseInterface
             ++offset;
             if (entry is PlayerReportAccepted praccept)
             {
-                praccept.ReportKey = reader.IsDBNull(offset) ? PrimaryKey.NotAssigned : reader.GetInt32(offset);
+                praccept.ReportKey = reader.IsDBNull(offset) ? PrimaryKey.NotAssigned : reader.GetUInt32(offset);
             }
         }
         if ((flag & (1 << 4)) != 0)
@@ -1053,7 +1053,7 @@ public abstract class DatabaseInterface
     private static Evidence ReadEvidence(MySqlDataReader reader, int offset)
     {
         return new Evidence(
-            reader.IsDBNull(offset) ? PrimaryKey.NotAssigned : reader.GetInt32(offset),
+            reader.IsDBNull(offset) ? PrimaryKey.NotAssigned : reader.GetUInt32(offset),
             reader.GetString(1 + offset),
             reader.IsDBNull(3 + offset) ? null : reader.GetString(3 + offset),
             reader.IsDBNull(2 + offset) ? null : reader.GetString(2 + offset),
@@ -1102,7 +1102,7 @@ public abstract class DatabaseInterface
 
         await Sql.QueryAsync(query, objs, reader =>
         {
-            pk = reader.GetInt32(0);
+            pk = reader.GetUInt32(0);
         }, token).ConfigureAwait(false);
 
         if (pk.IsValid)

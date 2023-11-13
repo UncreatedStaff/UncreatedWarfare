@@ -209,7 +209,7 @@ public abstract class Zone : IListItem, IZone
         Name = data.Name;
         MinHeight = data.MinimumHeight;
         MaxHeight = data.MaximumHeight;
-        PrimaryKey = data.Id < 0 ? PrimaryKey.NotAssigned : data.Id;
+        PrimaryKey = data.Id;
         if (data.UseMapCoordinates)
         {
             if (GridLocation.LegacyMapping)

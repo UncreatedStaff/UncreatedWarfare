@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 public struct AdjacentFlagData : IJsonReadWrite, IListItem
 {
     [JsonPropertyName("flag_id")]
-    public int LegacyFlagId
+    public uint LegacyFlagId
     {
         get => PrimaryKey.Key;
         set => PrimaryKey = value;
@@ -20,7 +20,7 @@ public struct AdjacentFlagData : IJsonReadWrite, IListItem
 
     [JsonPropertyName("weight")]
     public float Weight { get; set; }
-    public AdjacentFlagData(int flagId, float weight = 1f)
+    public AdjacentFlagData(uint flagId, float weight = 1f)
     {
         PrimaryKey = flagId;
         Weight = weight;
@@ -38,7 +38,7 @@ public struct AdjacentFlagData : IJsonReadWrite, IListItem
                 switch (prop)
                 {
                     case "flag_id":
-                        PrimaryKey = reader.GetInt32();
+                        PrimaryKey = reader.GetUInt32();
                         break;
                     case "weight":
                         Weight = (float)reader.GetDecimal();

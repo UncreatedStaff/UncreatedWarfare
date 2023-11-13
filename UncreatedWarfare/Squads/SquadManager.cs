@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Framework.UI;
-using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
@@ -85,13 +84,13 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         Squads.Clear();
     }
-    private static void OnKitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldKit)
+    private static void OnKitChanged(UCPlayer player, Kit? kit, Kit? oldKit)
     {
         _singleton.IsLoaded();
         ReplicateKitChange(player);
         ulong team = player.GetTeam();
         UCPlayer? cmd = _singleton.Commanders.GetCommander(team);
-        if (cmd != null && cmd.Steam64 == player.Steam64 && (kit?.Item == null || kit.Item.SquadLevel != SquadLevel.Commander))
+        if (cmd != null && cmd.Steam64 == player.Steam64 && kit is not { SquadLevel: SquadLevel.Commander })
         {
             if (team == 1ul)
                 _singleton.Commanders.ActiveCommanderTeam1 = null;

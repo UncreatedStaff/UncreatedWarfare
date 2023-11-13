@@ -70,7 +70,7 @@ public class Appeal : ModerationEntry
         DiscordUserId = reader.ReadNullableUInt64();
         PunishmentKeys = new PrimaryKey[reader.ReadInt32()];
         for (int i = 0; i < PunishmentKeys.Length; ++i)
-            PunishmentKeys[i] = reader.ReadInt32();
+            PunishmentKeys[i] = reader.ReadUInt32();
         Responses = new AppealResponse[reader.ReadInt32()];
         for (int i = 0; i < Responses.Length; ++i)
             Responses[i] = new AppealResponse(reader.ReadString(), reader.ReadString());

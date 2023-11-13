@@ -7,8 +7,13 @@ namespace Uncreated.Warfare.Models.Localization;
 [Table("lang_preferences")]
 public class LanguagePreferences
 {
+    [Required]
+    public LanguageInfo Language { get; set; } = null!;
+
+    [Required]
     [Column("Langauge")]
-    public LanguageInfo? Language { get; set; }
+    [ForeignKey(nameof(Language))]
+    public uint LanguageId { get; set; }
 
     [Key]
     public ulong Steam64 { get; set; }

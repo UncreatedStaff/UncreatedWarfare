@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+﻿using MySql.Data.MySqlClient;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,6 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using MySql.Data.MySqlClient;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
@@ -812,11 +811,11 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         }
     }
     private record struct XPData(ulong Steam64, ulong Team, uint XP, uint Credits);
-    private static void OnKitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldkit)
+    private static void OnKitChanged(UCPlayer player, Kit? kit, Kit? oldkit)
     {
         Branch oldbranch = Branch.Default;
-        if (oldkit is { Item: { } oldkit2 })
-            oldbranch = oldkit2.Branch;
+        if (oldkit != null)
+            oldbranch = oldkit.Branch;
         if (player.KitBranch != oldbranch)
         {
             player.PointsDirtyMask |= 0b00000100;

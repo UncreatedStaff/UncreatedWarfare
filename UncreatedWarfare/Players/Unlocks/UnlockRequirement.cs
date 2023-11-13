@@ -2,6 +2,7 @@
 using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -19,6 +20,8 @@ namespace Uncreated.Warfare.Players.Unlocks;
 [JsonConverter(typeof(UnlockRequirementConverter))]
 public abstract class UnlockRequirement : ICloneable, IVersionableReadWrite
 {
+    public uint PrimaryKey { get; set; }
+
     public const byte DataVersion = 0;
     private static readonly Dictionary<byte, KeyValuePair<Type, string[]>> Types = new Dictionary<byte, KeyValuePair<Type, string[]>>(4);
     private static readonly Dictionary<Type, byte> TypesInverse = new Dictionary<Type, byte>(4);
@@ -89,6 +92,13 @@ public abstract class UnlockRequirement : ICloneable, IVersionableReadWrite
     public static void Write(Utf8JsonWriter writer, UnlockRequirement requirement)
     {
         requirement.WriteProperties(writer);
+    }
+    public string ToJson(bool condensed = true)
+    {
+        using MemoryStream stream = new MemoryStream(32);
+        using Utf8JsonWriter writer = new Utf8JsonWriter(stream, condensed ? JsonEx.condensedWriterOptions : JsonEx.writerOptions);
+        writer.Flush();
+        return System.Text.Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Position);
     }
     protected abstract void ReadProperty(ref Utf8JsonReader reader, string property);
     protected abstract void WriteProperties(Utf8JsonWriter writer);

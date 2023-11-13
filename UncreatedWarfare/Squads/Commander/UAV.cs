@@ -11,6 +11,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
@@ -77,7 +78,7 @@ public class UAV : MonoBehaviour, IBuff
             return;
         }
 
-        Kit? reqKit = requester.ActiveKit?.Item;
+        Kit? reqKit = requester.GetActiveKit();
         if (reqKit == null)
         {
             requester.SendChat(T.RequestUAVNoKit);

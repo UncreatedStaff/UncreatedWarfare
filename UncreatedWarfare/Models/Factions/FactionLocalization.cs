@@ -15,10 +15,16 @@ public class FactionLocalization
     public Faction Faction { get; set; } = null!;
 
     [Required]
-    [ForeignKey(nameof(LanguageId))]
+    [Column("Faction")]
+    [ForeignKey(nameof(Faction))]
+    public uint FactionId { get; set; }
+
+    [Required]
     public Localization.LanguageInfo Language { get; set; } = null!;
 
     [Required]
+    [ForeignKey(nameof(Language))]
+    [Column("Language")]
     public uint LanguageId { get; set; }
 
     [MaxLength(32)]

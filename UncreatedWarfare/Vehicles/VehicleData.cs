@@ -170,28 +170,28 @@ public class VehicleData : ITranslationArgument, IListItem
     public void SaveMetaData(InteractableVehicle vehicle)
     {
         List<VBarricade>? barricades = null;
-        List<IPageKitItem>? trunk = null;
+        List<ISpecificPageKitItem>? trunk = null;
 
         if (vehicle.trunkItems.items.Count > 0)
         {
-            trunk = new List<IPageKitItem>();
+            trunk = new List<ISpecificPageKitItem>();
 
             foreach (ItemJar jar in vehicle.trunkItems.items)
             {
                 if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
                 {
                     RedirectType redirect = TeamManager.GetRedirectInfo(asset.GUID, out _, out string? variant, false);
-                    if (redirect != RedirectType.None)
-                    {
-                        trunk.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned,
-                            jar.x, jar.y, jar.rot, Page.Storage, redirect, variant));
-                    }
-                    else
-                    {
-                        trunk.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned,
-                            new UnturnedAssetReference(asset.GUID), jar.x, jar.y, jar.rot, Page.Storage,
-                            jar.item.amount, jar.item.metadata));
-                    }
+                    //if (redirect != RedirectType.None)
+                    //{
+                    //    trunk.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned,
+                    //        jar.x, jar.y, jar.rot, Page.Storage, redirect, variant));
+                    //} todo
+                    //else
+                    //{
+                    trunk.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned,
+                        new UnturnedAssetReference(asset.GUID), jar.x, jar.y, jar.rot, Page.Storage,
+                        jar.item.amount, jar.item.metadata));
+                    //}
                 }
             }
         }
@@ -245,9 +245,9 @@ public class VehicleData : ITranslationArgument, IListItem
 public class MetaSave
 {
     public List<VBarricade>? Barricades { get; set; }
-    public List<IPageKitItem>? TrunkItems { get; set; }
+    public List<ISpecificPageKitItem>? TrunkItems { get; set; } // todo convert to IPageKitItem
     public MetaSave() { }
-    public MetaSave(List<VBarricade>? barricades, List<IPageKitItem>? trunkItems)
+    public MetaSave(List<VBarricade>? barricades, List<ISpecificPageKitItem>? trunkItems)
     {
         Barricades = barricades;
         TrunkItems = trunkItems;

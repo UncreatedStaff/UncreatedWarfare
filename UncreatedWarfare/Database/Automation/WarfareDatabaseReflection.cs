@@ -142,7 +142,7 @@ public static class WarfareDatabaseReflection
 
                         dataType = (string)sqlEnumMethod
                             .MakeGenericMethod(clrType)
-                            .Invoke(null, values);
+                            .Invoke(null, values)!;
                     }
                     else if (values.Length == 1)
                     {
@@ -153,7 +153,7 @@ public static class WarfareDatabaseReflection
 
                         dataType = (string)sqlEnumMethod
                             .MakeGenericMethod(clrType)
-                            .Invoke(null, values);
+                            .Invoke(null, values)!;
                     }
                     else if (values.Length == 2)
                     {
@@ -164,7 +164,7 @@ public static class WarfareDatabaseReflection
 
                         dataType = (string)sqlEnumMethod
                             .MakeGenericMethod(clrType)
-                            .Invoke(null, values);
+                            .Invoke(null, values)!;
                     }
                     else
                     {
@@ -191,7 +191,7 @@ public static class WarfareDatabaseReflection
 
                         dataType = (string)sqlEnumMethod
                             .MakeGenericMethod(clrType)
-                            .Invoke(null, new object[] { array });
+                            .Invoke(null, new object[] { array })!;
                     }
                 }
                 else
@@ -202,9 +202,9 @@ public static class WarfareDatabaseReflection
 
                     dataType = (string)sqlEnumMethod
                         .MakeGenericMethod(clrType)
-                        .Invoke(null, Array.Empty<object>());
+                        .Invoke(null, Array.Empty<object>())!;
                 }
-
+                
                 ValueConverter converter = CreateValueConverter(ref converterType, clrType, nullable);
 
                 property.SetValueConverter(converter);
@@ -274,7 +274,7 @@ public static class WarfareDatabaseReflection
             {
                 try
                 {
-                    property.SetValueConverter((ValueConverter)Activator.CreateInstance(valConverterType));
+                    property.SetValueConverter((ValueConverter)Activator.CreateInstance(valConverterType)!);
 
                     Log($"Set converter for {property.DeclaringEntityType.Name}.{property.Name} to {valConverterType.Name}.");
                 }
@@ -333,9 +333,9 @@ public static class WarfareDatabaseReflection
             try
             {
                 if (valConverterType.GetConstructor(Array.Empty<Type>()) == null && valConverterType.GetConstructor(new Type[] { typeof(ConverterMappingHints) }) != null)
-                    converter = (ValueConverter)Activator.CreateInstance(valConverterType, new object?[] { null });
+                    converter = (ValueConverter)Activator.CreateInstance(valConverterType, new object?[] { null })!;
                 else
-                    converter = (ValueConverter)Activator.CreateInstance(valConverterType);
+                    converter = (ValueConverter)Activator.CreateInstance(valConverterType)!;
             }
             catch
             {
@@ -361,7 +361,7 @@ public static class WarfareDatabaseReflection
                         .MakeGenericType(clrType, secondaryType);
                     try
                     {
-                        converter = (ValueConverter)Activator.CreateInstance(valConverterType, new object?[] { converter });
+                        converter = (ValueConverter)Activator.CreateInstance(valConverterType, new object?[] { converter })!;
                     }
                     catch
                     {

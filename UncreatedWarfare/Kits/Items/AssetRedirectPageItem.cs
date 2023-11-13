@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using System;
-using Uncreated.SQL;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -8,7 +7,7 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Kits.Items;
 public class AssetRedirectPageKitItem : IAssetRedirectKitItem, IPageKitItem
 {
-    public PrimaryKey PrimaryKey { get; set; }
+    public uint PrimaryKey { get; set; }
     public RedirectType RedirectType { get; }
     public string? RedirectVariant { get; }
     public byte X { get; }
@@ -16,7 +15,7 @@ public class AssetRedirectPageKitItem : IAssetRedirectKitItem, IPageKitItem
     public byte Rotation { get; }
     public Page Page { get; }
 
-    public AssetRedirectPageKitItem(PrimaryKey key, byte x, byte y, byte rotation, Page page, RedirectType redirectType, string? redirectVariant)
+    public AssetRedirectPageKitItem(uint key, byte x, byte y, byte rotation, Page page, RedirectType redirectType, string? redirectVariant)
     {
         PrimaryKey = key;
         X = x;
@@ -28,7 +27,7 @@ public class AssetRedirectPageKitItem : IAssetRedirectKitItem, IPageKitItem
     }
     public AssetRedirectPageKitItem(AssetRedirectPageKitItem item)
     {
-        PrimaryKey = PrimaryKey.NotAssigned;
+        PrimaryKey = 0;
         RedirectType = item.RedirectType;
         RedirectVariant = item.RedirectVariant;
         X = item.X;
@@ -76,7 +75,8 @@ public class AssetRedirectPageKitItem : IAssetRedirectKitItem, IPageKitItem
             Rotation = Rotation,
             RedirectVariant = RedirectVariant,
             Redirect = RedirectType,
-            Kit = kit
+            Kit = kit,
+            KitId = kit.PrimaryKey
         };
     }
     public void WriteToModel(KitItemModel model)

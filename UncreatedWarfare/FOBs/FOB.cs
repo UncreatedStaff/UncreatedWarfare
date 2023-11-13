@@ -160,8 +160,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         Radio.FOB = this;
         _originalState = Radio.Barricade.GetServersideData().barricade.state;
 
-        ItemAsset? build = TeamManager.GetRedirectInfo(RedirectType.BuildSupply, null, TeamManager.GetFactionSafe(Team), out _, out _);
-        ItemAsset? ammo = TeamManager.GetRedirectInfo(RedirectType.AmmoSupply, null, TeamManager.GetFactionSafe(Team), out _, out _);
+        ItemAsset? build = TeamManager.GetRedirectInfo(RedirectType.BuildSupply, string.Empty, null, TeamManager.GetFactionSafe(Team), out _, out _);
+        ItemAsset? ammo = TeamManager.GetRedirectInfo(RedirectType.AmmoSupply, string.Empty, null, TeamManager.GetFactionSafe(Team), out _, out _);
         if (build != null)
             _buildItemId = build.id;
         if (ammo != null)

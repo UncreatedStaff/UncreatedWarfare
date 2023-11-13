@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Singletons;
@@ -10,7 +9,7 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Kits.Items;
 public class SpecificPageKitItem : ISpecificPageKitItem
 {
-    public PrimaryKey PrimaryKey { get; set; }
+    public uint PrimaryKey { get; set; }
     public UnturnedAssetReference Item { get; }
     public byte[] State { get; }
     public byte X { get; }
@@ -18,7 +17,7 @@ public class SpecificPageKitItem : ISpecificPageKitItem
     public byte Rotation { get; }
     public Page Page { get; }
     public byte Amount { get; }
-    public SpecificPageKitItem(PrimaryKey key, UnturnedAssetReference item, byte x, byte y, byte rotation, Page page, byte amount, byte[] state)
+    public SpecificPageKitItem(uint key, UnturnedAssetReference item, byte x, byte y, byte rotation, Page page, byte amount, byte[] state)
     {
         PrimaryKey = key;
         Item = item;
@@ -31,7 +30,7 @@ public class SpecificPageKitItem : ISpecificPageKitItem
     }
     public SpecificPageKitItem(SpecificPageKitItem copy)
     {
-        PrimaryKey = PrimaryKey.NotAssigned;
+        PrimaryKey = 0;
         Item = copy.Item;
         X = copy.X;
         Y = copy.Y;
@@ -82,6 +81,7 @@ public class SpecificPageKitItem : ISpecificPageKitItem
         {
             Id = PrimaryKey,
             Kit = kit,
+            KitId = kit.PrimaryKey,
             Amount = Amount,
             X = X,
             Y = Y,

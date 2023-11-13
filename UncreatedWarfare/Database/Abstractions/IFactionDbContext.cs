@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Uncreated.Warfare.Models.Factions;
+using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Database.Abstractions;
 public interface IFactionDbContext : IDbContext
@@ -16,7 +17,10 @@ public interface IFactionDbContext : IDbContext
             .HasMany(x => x.Translations)
             .WithOne(x => x.Faction);
 
-        modelBuilder.Entity<FactionLocalization>()
-            .HasOne(x => x.Language);
+        modelBuilder.Entity<LanguageInfo>()
+            .HasMany<FactionLocalization>()
+            .WithOne(x => x.Language);
+
+        // todo fk constraints
     }
 }

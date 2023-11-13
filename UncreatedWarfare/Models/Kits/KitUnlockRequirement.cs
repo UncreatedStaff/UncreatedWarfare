@@ -5,26 +5,24 @@ using Uncreated.Warfare.Models.Base;
 
 namespace Uncreated.Warfare.Models.Kits;
 
-[Table("kits_sign_text")]
-public class KitTranslation : BaseTranslation, ICloneable
+[Table("kits_unlock_requirements")]
+public class KitUnlockRequirement : BaseUnlockRequirement, ICloneable
 {
     [Required]
     public Kit Kit { get; set; }
-
-    [ForeignKey(nameof(Kit))]
+    
     [Required]
-    [Column("kit", Order = 1)]
+    [ForeignKey(nameof(Kit))]
+    [Column("Kit", Order = 1)]
     public uint KitId { get; set; }
 
     public object Clone()
     {
-        return new KitTranslation
+        return new KitUnlockRequirement
         {
             KitId = KitId,
             Kit = Kit,
-            Value = Value,
-            Language = Language,
-            LanguageId = LanguageId
+            Json = Json
         };
     }
 }

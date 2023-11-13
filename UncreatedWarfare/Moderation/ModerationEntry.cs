@@ -189,7 +189,7 @@ public abstract class ModerationEntry : IModerationEntry
     public virtual void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
-            Id = reader.GetInt32();
+            Id = reader.GetUInt32();
         else if (propertyName.Equals("target_steam_64", StringComparison.InvariantCultureIgnoreCase))
             Player = reader.GetUInt64();
         else if (propertyName.Equals("message", StringComparison.InvariantCultureIgnoreCase))
@@ -284,7 +284,7 @@ public abstract class ModerationEntry : IModerationEntry
     {
         ushort version = reader.ReadUInt16();
 
-        Id = reader.ReadInt32();
+        Id = reader.ReadUInt32();
         Player = reader.ReadUInt64();
         Message = reader.ReadNullableString();
         byte flag = reader.ReadUInt8();
@@ -635,11 +635,11 @@ public interface IDurationModerationEntry : IModerationEntry
     bool IsPermanent { get; set; }
 }
 
-public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>
+public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
 {
     public ModerationCache() { }
     public ModerationCache(int capacity) : base(capacity) { }
-    public new IModerationEntry this[int key]
+    public new IModerationEntry this[uint key]
     {
         get => base[key].Entry;
         set => base[key] = new ModerationEntryCacheEntry(value);

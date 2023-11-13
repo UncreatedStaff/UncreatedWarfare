@@ -1,19 +1,23 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using SDG.Unturned;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -329,7 +333,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Unlock")
                 {
-                    Aliases = new string[] { "unl", "unlk" },
+                    Aliases = new string[] { "unl", "ul" },
                     Permission = EAdminType.STAFF,
                     Description = "Unlock a completed loadout.",
                     Parameters = new CommandParameter[]
@@ -378,49 +382,54 @@ public sealed class KitCommand : AsyncCommand
                 try
                 {
                     PlayerEquipment equipment = ctx.Caller.Player.equipment;
+                    Kit? kit = ctx.Caller.GetActiveKit();
+                    if (kit is null)
+                        throw ctx.Reply(T.AmmoNoKit);
+                    
                     if (add)
                     {
-                        SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
-                        IItemJar? item = await manager.GetHeldItemFromKit(ctx.Caller, token).ConfigureAwait(false);
-                        if (proxy is null)
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.AmmoNoKit);
-                        }
-                        await proxy.Enter(token).ConfigureAwait(false);
+                        IPageKitItem? item = await manager.GetHeldItemFromKit(ctx.Caller, token).ConfigureAwait(false);
+                        await manager.WaitAsync(token).ConfigureAwait(false);
                         try
                         {
                             await UCWarfare.ToUpdate(token);
-                            Kit? kit = proxy.Item;
-                            if (kit is null)
-                                throw ctx.Reply(T.AmmoNoKit);
 
                             if (item == null)
                                 throw ctx.Reply(T.KitHotkeyNotHoldingItem);
 
-                            ItemAsset? asset = item is IItem i2
-                                ? Assets.find<ItemAsset>(i2.Item)
-                                : ((IKitItem)item).GetItem(kit, TeamManager.GetFactionSafe(ctx.Caller.GetTeam()), out _, out _);
+                            ItemAsset? asset = item is ISpecificKitItem i2
+                                ? i2.Item.GetAsset<ItemAsset>()
+                                : item.GetItem(kit, TeamManager.GetFactionSafe(ctx.Caller.GetTeam()), out _, out _);
                             if (asset == null)
                                 throw ctx.Reply(T.KitHotkeyNotHoldingItem);
 
                             if (!KitEx.CanBindHotkeyTo(asset, item.Page))
                                 throw ctx.Reply(T.KitHotkeyNotHoldingValidItem, asset);
 
-                            bool added = await KitManager.AddHotkey(proxy.LastPrimaryKey, ctx.CallerID, slot, item, token).ConfigureAwait(false);
+                            await manager.AddHotkey(kit.PrimaryKey, ctx.CallerID, slot, item, token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
-                            if (!added)
-                                throw ctx.SendUnknownError();
                             if (ctx.Caller.HotkeyBindings != null)
                             {
                                 // remove duplicates / conflicts
                                 ctx.Caller.HotkeyBindings.RemoveAll(x =>
-                                    x.Kit.Key == proxy.LastPrimaryKey.Key && (x.Slot == slot ||
+                                    x.Kit == kit.PrimaryKey && (x.Slot == slot ||
                                                                               x.Item.X == item.X &&
                                                                               x.Item.Y == item.Y &&
                                                                               x.Item.Page == item.Page));
                             }
-                            (ctx.Caller.HotkeyBindings ??= new List<HotkeyBinding>(32)).Add(new HotkeyBinding(proxy.LastPrimaryKey, slot, item));
+                            else ctx.Caller.HotkeyBindings = new List<HotkeyBinding>(32);
+
+                            ctx.Caller.HotkeyBindings.Add(new HotkeyBinding(kit.PrimaryKey, slot, item, new KitHotkey
+                            {
+                                Steam64 = ctx.CallerID,
+                                KitId = kit.PrimaryKey,
+                                Item = item is ISpecificKitItem item2 ? item2.Item : null,
+                                Redirect = item is IAssetRedirectKitItem redir ? redir.RedirectType : null,
+                                X = item.X,
+                                Y = item.Y,
+                                Page = item.Page,
+                                Slot = slot
+                            }));
 
                             byte index = KitEx.GetHotkeyIndex(slot);
 
@@ -434,28 +443,15 @@ public sealed class KitCommand : AsyncCommand
                         }
                         finally
                         {
-                            proxy.Release();
+                            manager.Release();
                         }
                     }
                     else
                     {
-                        SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
-                        if (proxy is null)
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.AmmoNoKit);
-                        }
-
-                        await proxy.Enter(token).ConfigureAwait(false);
+                        await manager.WaitAsync(token).ConfigureAwait(false);
                         try
                         {
-                            Kit? kit = proxy.Item;
-                            if (kit == null)
-                            {
-                                await UCWarfare.ToUpdate(token);
-                                throw ctx.Reply(T.AmmoNoKit);
-                            }
-                            bool removed = await KitManager.RemoveHotkey(proxy.LastPrimaryKey, ctx.CallerID, slot, token).ConfigureAwait(false);
+                            bool removed = await manager.RemoveHotkey(kit.PrimaryKey, ctx.CallerID, slot, token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
                             if (!removed)
                                 throw ctx.Reply(T.KitHotkeyNotFound, slot, kit);
@@ -466,7 +462,7 @@ public sealed class KitCommand : AsyncCommand
                         }
                         finally
                         {
-                            proxy.Release();
+                            manager.Release();
                         }
                     }
                 }
@@ -487,14 +483,14 @@ public sealed class KitCommand : AsyncCommand
                 await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
-                    if (proxy?.Item is not { } kit)
+                    Kit? kit = ctx.Caller.GetActiveKit();
+                    if (kit == null)
                     {
                         throw ctx.Reply(T.AmmoNoKit);
                     }
                     if (!KitManager.ShouldAllowLayouts(kit))
                         throw ctx.Reply(T.KitLayoutsNotSupported, kit);
-                    await KitManager.SaveLayout(ctx.Caller, proxy, false, true, token).ConfigureAwait(false);
+                    await manager.SaveLayout(ctx.Caller, kit, false, true, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                     throw ctx.Reply(T.KitLayoutSaved, kit);
                 }
@@ -509,11 +505,10 @@ public sealed class KitCommand : AsyncCommand
                 await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
-                    if (proxy?.Item is not { } kit)
-                    {
+                    Kit? kit = ctx.Caller.GetActiveKit();
+                    if (kit == null)
                         throw ctx.Reply(T.AmmoNoKit);
-                    }
+                    
                     if (!KitManager.ShouldAllowLayouts(kit))
                         throw ctx.Reply(T.KitLayoutsNotSupported, kit);
                     if (kit.Items != null)
@@ -521,7 +516,7 @@ public sealed class KitCommand : AsyncCommand
                         await UCWarfare.ToUpdate(token);
                         KitManager.TryReverseLayoutTransformations(ctx.Caller, kit.Items, kit.PrimaryKey);
                     }
-                    await KitManager.ResetLayout(ctx.Caller, kit.PrimaryKey, false, token);
+                    await manager.ResetLayout(ctx.Caller, kit.PrimaryKey, false, token);
                     await UCWarfare.ToUpdate(token);
                     throw ctx.Reply(T.KitLayoutReset, kit);
                 }
@@ -539,24 +534,24 @@ public sealed class KitCommand : AsyncCommand
             ctx.AssertRanByPlayer();
             
             ctx.AssertHelpCheck(1, "/kit <fav|unfav> (look at kit sign <b>or</b> [kit id]) - Favorite or unfavorite your kit or loadout.");
-            SqlItem<Kit>? proxy;
+            Kit? kit;
             UCPlayer player = ctx.Caller;
             UCPlayer.TryApplyViewLens(ref player);
             if (ctx.TryGetRange(1, out string kitName))
             {
-                proxy = await manager.FindKit(kitName, token).ConfigureAwait(false);
+                kit = await manager.FindKit(kitName, token).ConfigureAwait(false);
             }
             else if (ctx.TryGetTarget(out BarricadeDrop drop))
             {
                 kitName = drop.interactable is InteractableSign sign ? sign.text : null!;
-                proxy = Signs.GetKitFromSign(drop, out int loadoutId);
+                kit = Signs.GetKitFromSign(drop, out int loadoutId);
                 if (loadoutId > 0)
-                    proxy = await KitManager.GetLoadout(player, loadoutId, token).ConfigureAwait(false);
+                    kit = await manager.GetLoadout(player, loadoutId, token).ConfigureAwait(false);
             }
             else
                 throw ctx.SendCorrectUsage("/kit favorite (look at kit sign <b>or</b> [kit id]) - Favorite your kit or loadout.");
             
-            if (proxy?.Item is not { } kit)
+            if (kit == null)
             {
                 await UCWarfare.ToUpdate(token);
                 throw ctx.Reply(T.KitNotFound, kitName.Replace(Signs.Prefix, string.Empty));
@@ -577,12 +572,12 @@ public sealed class KitCommand : AsyncCommand
                 else
                 {
                     if (fav)
-                        (player.KitMenuData.FavoriteKits ??= new List<PrimaryKey>(8)).Add(kit.PrimaryKey);
+                        (player.KitMenuData.FavoriteKits ??= new List<uint>(8)).Add(kit.PrimaryKey);
                     else if (player.KitMenuData.FavoriteKits != null)
-                        player.KitMenuData.FavoriteKits.RemoveAll(x => x.Key == kit.PrimaryKey.Key);
+                        player.KitMenuData.FavoriteKits.RemoveAll(x => x == kit.PrimaryKey);
                     player.KitMenuData.FavoritesDirty = true;
-                    if (player.KitMenuData.FavoriteKits != null)
-                        await manager.SaveFavorites(player, player.KitMenuData.FavoriteKits, token).ConfigureAwait(false);
+                    
+                    await manager.SaveFavorites(player, (IReadOnlyList<uint>?)player.KitMenuData.FavoriteKits ?? Array.Empty<uint>(), token).ConfigureAwait(false);
                 }
                 await UCWarfare.ToUpdate(token);
 
@@ -592,7 +587,6 @@ public sealed class KitCommand : AsyncCommand
             {
                 player.PurchaseSync.Release();
             }
-
 
             await UCWarfare.ToUpdate(token);
             Signs.UpdateKitSigns(player, null);
@@ -607,10 +601,10 @@ public sealed class KitCommand : AsyncCommand
 
             if (ctx.TryGetRange(1, out string searchTerm))
             {
-                List<SqlItem<Kit>> res = await manager.FindKits(searchTerm, token, false);
+                IReadOnlyList<Kit> res = await manager.FindKits(searchTerm, token, false);
                 if (res.Count <= 0)
                     throw ctx.Reply(T.KitSearchResults, "--");
-                ctx.Reply(T.KitSearchResults, string.Join(", ", res.Select(x => x.Item?.Id ?? x.LastPrimaryKey.ToString())));
+                ctx.Reply(T.KitSearchResults, string.Join(", ", res.Select(x => x.InternalName + " [" + x.GetDisplayName(ctx.LanguageInfo) + "]")));
             }
             else
                 ctx.SendCorrectUsage("/kit <search|find> <term>");
@@ -624,32 +618,26 @@ public sealed class KitCommand : AsyncCommand
             if (ctx.TryGet(1, out string kitName))
             {
                 kitName = kitName.ToLowerInvariant();
-                SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                Kit kit;
-                if (proxy?.Item != null) // overwrite
+                Kit? kit = await manager.FindKit(kitName, token, true);
+                if (kit != null) // overwrite
                 {
                     await UCWarfare.ToUpdate(token);
-                    ctx.Reply(T.KitConfirmOverride, proxy.Item, proxy.Item);
+                    ctx.Reply(T.KitConfirmOverride, kit, kit);
                     bool didConfirm = await CommandWaiter.WaitAsync(ctx.Caller, typeof(ConfirmCommand), 10000);
                     if (!didConfirm)
                     {
                         await UCWarfare.ToUpdate(token);
                         throw ctx.Reply(T.KitCancelOverride);
                     }
-                    await proxy.Enter(token).ConfigureAwait(false);
+                    await manager.WaitAsync(token).ConfigureAwait(false);
                     try
                     {
-                        kit = proxy.Item;
-                        if (kit == null)
-                            goto @new;
                         IKitItem[] oldItems = kit.Items;
                         kit.Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true);
-                        kit.ItemListCache = null;
-                        kit.ClothingSetCache = null;
                         kit.WeaponText = KitManager.DetectWeaponText(kit);
                         kit.UpdateLastEdited(ctx.CallerID);
-                        ctx.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.Id + ".");
-                        await proxy.SaveItem(token).ConfigureAwait(false);
+                        ctx.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.InternalName + ".");
+                        await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
                         UCWarfare.RunTask(KitManager.OnItemsChangedLayoutHandler, oldItems, kit, token, ctx: "Update layouts after changing items.");
                         await UCWarfare.ToUpdate();
                         KitManager.UpdateSigns(kit);
@@ -657,12 +645,11 @@ public sealed class KitCommand : AsyncCommand
                     }
                     finally
                     {
-                        proxy.Release();
+                        manager.Release();
                     }
                     return;
                 }
-
-                @new:
+                
                 FactionInfo? faction = null;
                 Class @class = ctx.Caller.KitClass;
                 if (@class == Class.None) @class = Class.Unarmed;
@@ -693,7 +680,7 @@ public sealed class KitCommand : AsyncCommand
                 };
                 kit.Creator = kit.LastEditor = ctx.CallerID;
                 kit.WeaponText = KitManager.DetectWeaponText(kit);
-                await manager.AddOrUpdate(kit, token).ConfigureAwait(false);
+                await manager.Add(kit, token: token).ConfigureAwait(false);
                 ctx.LogAction(ActionLogType.CreateKit, kitName);
                 await UCWarfare.ToUpdate(token);
                 KitManager.UpdateSigns(kit);
@@ -708,25 +695,24 @@ public sealed class KitCommand : AsyncCommand
 
             if (ctx.TryGet(1, out string kitName))
             {
-                SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy?.Item != null)
+                Kit? kit = await manager.FindKit(kitName, token, true);
+                if (kit != null)
                 {
-                    bool ld = proxy.Item.Type == KitType.Loadout;
+                    bool ld = kit.Type == KitType.Loadout;
                     await UCWarfare.ToUpdate(token);
-                    ctx.Reply(T.KitConfirmDelete, proxy.Item, proxy.Item);
+                    ctx.Reply(T.KitConfirmDelete, kit, kit);
                     bool didConfirm = await CommandWaiter.WaitAsync(ctx.Caller, typeof(ConfirmCommand), 10000);
                     if (!didConfirm)
                     {
                         await UCWarfare.ToUpdate(token);
                         throw ctx.Reply(T.KitCancelDelete);
                     }
-
-                    Kit? item = proxy.Item;
-                    item.UpdateLastEdited(ctx.CallerID);
-                    await proxy.Delete(token).ConfigureAwait(false);
+                    
+                    kit.UpdateLastEdited(ctx.CallerID);
+                    await manager.Remove(kit, token: token).ConfigureAwait(false);
                     ctx.LogAction(ActionLogType.DeleteKit, kitName);
                     await UCWarfare.ToUpdate();
-                    ctx.Reply(T.KitDeleted, item);
+                    ctx.Reply(T.KitDeleted, kit);
                     if (!ld)
                         Signs.UpdateKitSigns(null, kitName);
                     else
@@ -747,15 +733,15 @@ public sealed class KitCommand : AsyncCommand
                 if (KitEx.ParseStandardLoadoutId(kitName) < 1 || kitName.Length < 18 || !ulong.TryParse(kitName.Substring(0, 17), NumberStyles.Number, Data.AdminLocale, out ulong playerId))
                     throw ctx.Reply(T.KitLoadoutIdBadFormat);
                 
-                SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy is { Item: { } kit })
+                Kit? kit = await manager.FindKit(kitName, token, true);
+                if (kit != null)
                 {
                     if (!kit.NeedsUpgrade)
                     {
                         if (kit.Season != UCWarfare.Season)
                         {
                             kit.Season = UCWarfare.Season;
-                            await proxy.SaveItem(token).ConfigureAwait(false);
+                            await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
                             throw ctx.Reply(T.KitUpgraded, kit);
                         }
@@ -768,7 +754,7 @@ public sealed class KitCommand : AsyncCommand
                     if (err != StandardErrorCode.Success)
                         throw ctx.SendUnknownError();
                     ctx.Reply(T.LoadoutUpgraded, kit, @class);
-                    await manager.GiveKit(ctx.Caller, proxy, false, token).ConfigureAwait(false);
+                    await manager.GiveKit(ctx.Caller, kit, false, token).ConfigureAwait(false);
                 }
                 else
                     ctx.Reply(T.KitNotFound, kitName);
@@ -776,26 +762,26 @@ public sealed class KitCommand : AsyncCommand
             else
                 ctx.SendCorrectUsage("/kit <upgrade|update|upg> <id> <new class>");
         }
-        else if (ctx.MatchParameter(0, "unlock", "unl"))
+        else if (ctx.MatchParameter(0, "unlock", "unl", "ul"))
         {
-            ctx.AssertHelpCheck(1, "/kit <unlock|unl> <id> - Unlocks a loadout so it's owner can use it.");
+            ctx.AssertHelpCheck(1, "/kit <unlock|unl|ul> <id> - Unlocks a loadout so it's owner can use it.");
 
             if (ctx.TryGet(1, out string kitName))
             {
-                SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy is null)
+                Kit? kit = await manager.FindKit(kitName, token, true);
+                if (kit is null)
                     throw ctx.Reply(T.KitNotFound);
-                await proxy.Enter(token).ConfigureAwait(false);
+                await manager.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    if (proxy is { Item: { } kit })
+                    if (kit != null)
                     {
                         if (!kit.NeedsSetup)
                         {
                             if (kit.Disabled)
                             {
                                 kit.Disabled = false;
-                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
                                 throw ctx.Reply(T.KitUnlocked, kit);
                             }
@@ -808,25 +794,16 @@ public sealed class KitCommand : AsyncCommand
                 }
                 finally
                 {
-                    proxy.Release();
+                    manager.Release();
                 }
 
                 (_, StandardErrorCode err) = await manager.UnlockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
                 if (err != StandardErrorCode.Success)
                     throw ctx.SendUnknownError();
-                await proxy.Enter(token).ConfigureAwait(false);
-                try
-                {
-                    if (proxy is { Item: { } kit })
-                        ctx.Reply(T.KitUnlocked, kit);
-                }
-                finally
-                {
-                    proxy.Release();
-                }
+                ctx.Reply(T.KitUnlocked, kit);
             }
             else
-                ctx.SendCorrectUsage("/kit <unlock|unl> <id>");
+                ctx.SendCorrectUsage("/kit <unlock|unl|ul> <id>");
         }
         else if (ctx.MatchParameter(0, "lock"))
         {
@@ -834,25 +811,25 @@ public sealed class KitCommand : AsyncCommand
 
             if (ctx.TryGet(1, out string kitName))
             {
-                SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy is null)
+                Kit? kit = await manager.FindKit(kitName, token, true);
+                if (kit is null)
                     throw ctx.Reply(T.KitNotFound);
-                await proxy.Enter(token).ConfigureAwait(false);
+                await manager.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    if (proxy is { Item: { } kit })
+                    if (kit != null)
                     {
-                        if (kit.Type != KitType.Loadout && !kit.Disabled)
+                        if (kit.Type != KitType.Loadout || !kit.Disabled)
                         {
                             if (!kit.Disabled)
                             {
                                 kit.Disabled = true;
-                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
                                 throw ctx.Reply(T.KitLocked, kit);
                             }
                             await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.DoesNotNeedUnlock, kit);
+                            throw ctx.Reply(T.DoesNotNeedLock, kit);
                         }
                     }
                     else
@@ -860,25 +837,17 @@ public sealed class KitCommand : AsyncCommand
                 }
                 finally
                 {
-                    proxy.Release();
+                    manager.Release();
                 }
 
                 (_, StandardErrorCode err) = await manager.LockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate();
                 if (err != StandardErrorCode.Success)
                     throw ctx.SendUnknownError();
-                try
-                {
-                    if (proxy is { Item: { } kit })
-                        ctx.Reply(T.KitLocked, kit);
-                }
-                finally
-                {
-                    proxy.Release();
-                }
+                ctx.Reply(T.KitLocked, kit);
             }
             else
-                ctx.SendCorrectUsage("/kit <unlock|unl> <id>");
+                ctx.SendCorrectUsage("/kit <lock> <id>");
         }
         else if (ctx.MatchParameter(0, "give", "g"))
         {
@@ -888,22 +857,22 @@ public sealed class KitCommand : AsyncCommand
             BarricadeDrop? drop = null;
             if (ctx.TryGet(1, out string kitName) || ctx.TryGetTarget(out drop))
             {
-                SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy?.Item == null && drop != null)
+                Kit? kit = await manager.FindKit(kitName, token, true);
+                if (kit == null && drop != null)
                 {
-                    proxy = Signs.GetKitFromSign(drop, out int loadout);
+                    kit = Signs.GetKitFromSign(drop, out int loadout);
                     if (loadout > 0)
                     {
                         UCPlayer pl = ctx.Caller;
                         UCPlayer.TryApplyViewLens(ref pl);
-                        proxy = await KitManager.GetLoadout(pl, loadout, token).ConfigureAwait(false);
+                        kit = await manager.GetLoadout(pl, loadout, token).ConfigureAwait(false);
                     }
                 }
                 
-                if (proxy?.Item != null)
+                if (kit != null)
                 {
-                    Class @class = proxy.Item.Class;
-                    await manager.GiveKit(ctx.Caller, proxy, true, token).ConfigureAwait(false);
+                    Class @class = kit.Class;
+                    await manager.GiveKit(ctx.Caller, kit, true, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                     ctx.LogAction(ActionLogType.GiveKit, kitName);
                     ctx.Reply(T.RequestSignGiven, @class);
@@ -920,13 +889,13 @@ public sealed class KitCommand : AsyncCommand
 
             if (ctx.TryGet(3, out string newValue) && ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out string property))
             {
-                SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy?.Item != null)
+                Kit? kit = await manager.FindKit(kitName, token, true);
+                if (kit != null)
                 {
-                    await proxy.Enter(token).ConfigureAwait(false);
+                    await manager.WaitAsync(token).ConfigureAwait(false);
                     try
                     {
-                        if (proxy.Item == null)
+                        if (kit == null)
                             throw ctx.Reply(T.KitNotFound, kitName);
                         if (ctx.MatchParameter(1, "level", "lvl"))
                         {
@@ -934,34 +903,34 @@ public sealed class KitCommand : AsyncCommand
                             {
                                 if (level == 0)
                                 {
-                                    UnlockRequirement[] ulr = proxy.Item.UnlockRequirements;
+                                    UnlockRequirement[] ulr = kit.UnlockRequirements;
                                     do
                                     {
                                         int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
                                         if (index == -1)
                                             break;
                                         Util.RemoveFromArray(ref ulr, index);
-                                        proxy.Item.UnlockRequirements = ulr;
+                                        kit.UnlockRequirements = ulr;
                                     } while (true);
                                 }
                                 else
                                 {
-                                    UnlockRequirement[] ulr = proxy.Item.UnlockRequirements;
+                                    UnlockRequirement[] ulr = kit.UnlockRequirements;
                                     int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
                                     UnlockRequirement req = new LevelUnlockRequirement { UnlockLevel = level };
                                     if (index == -1)
                                     {
                                         Util.AddToArray(ref ulr!, req);
-                                        proxy.Item.UnlockRequirements = ulr;
+                                        kit.UnlockRequirements = ulr;
                                     }
                                     else ((LevelUnlockRequirement)ulr[index]).UnlockLevel = level;
                                 }
-                                proxy.Item.UpdateLastEdited(ctx.CallerID);
-                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                kit.UpdateLastEdited(ctx.CallerID);
+                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
-                                ctx.Reply(T.KitPropertySet, property, proxy.Item, newValue);
+                                ctx.Reply(T.KitPropertySet, property, kit, newValue);
                                 ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": LEVEL >> " + newValue.ToUpper());
-                                KitManager.UpdateSigns(proxy.Item);
+                                KitManager.UpdateSigns(kit);
                                 ctx.Defer();
                             }
                             else
@@ -971,17 +940,19 @@ public sealed class KitCommand : AsyncCommand
                         {
                             ctx.AssertHelpCheck(2, "/kit <set|s> <sign> <language (default: " + L.Default + "> <text> - Sets the display text for the kit's kit sign.");
 
-                            string language = newValue;
+                            LanguageInfo? language = Data.LanguageDataStore.GetInfoCached(newValue, false);
+                            if (language == null)
+                                throw ctx.Reply(T.KitLanguageNotFound, newValue);
                             if (ctx.TryGetRange(4, out newValue))
                             {
                                 newValue = newValue.Replace("\\n", "\n");
-                                KitManager.SetTextNoLock(ctx.CallerID, proxy.Item, newValue, language);
-                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                manager.SetTextNoLock(ctx.CallerID, kit, newValue, language);
+                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
                                 newValue = newValue.Replace('\n', '\\');
-                                ctx.Reply(T.KitPropertySet, "sign text", proxy.Item, language + " : " + newValue);
+                                ctx.Reply(T.KitPropertySet, "sign text", kit, language + " : " + newValue);
                                 ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
-                                KitManager.UpdateSigns(proxy.Item);
+                                KitManager.UpdateSigns(kit);
                             }
                             else
                                 ctx.SendCorrectUsage("/kit set sign <kitname> <language> <sign text>");
@@ -992,14 +963,15 @@ public sealed class KitCommand : AsyncCommand
                             FactionInfo? faction = isNull ? null : TeamManager.FindFactionInfo(newValue);
                             if (faction != null || isNull)
                             {
-                                proxy.Item.Faction = faction;
-                                proxy.Item.UpdateLastEdited(ctx.CallerID);
-                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                kit.Faction = faction?.CreateModel();
+                                kit.FactionId = faction?.PrimaryKey;
+                                kit.UpdateLastEdited(ctx.CallerID);
+                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
-                                ctx.Reply(T.KitPropertySet, "faction", proxy.Item, faction?.GetName(Localization.GetDefaultLanguage())!);
+                                ctx.Reply(T.KitPropertySet, "faction", kit, faction?.GetName(Localization.GetDefaultLanguage())!);
                                 ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": FACTION >> " +
                                                                                (faction?.Name.ToUpper() ?? Translation.Null(TranslationFlags.NoRichText)));
-                                KitManager.UpdateSigns(proxy.Item);
+                                KitManager.UpdateSigns(kit);
                             }
                             else
                             {
@@ -1011,13 +983,12 @@ public sealed class KitCommand : AsyncCommand
                         }
                         else
                         {
-                            Kit kit = proxy.Item;
                             KitType prevType = kit.Type;
                             Class oldclass = kit.Class;
                             Branch oldbranch = kit.Branch;
                             float oldReqCooldown = kit.RequestCooldown;
-                            float oldTeamLimit = kit.TeamLimit;
-                            (SetPropertyResult result, MemberInfo? info) = await manager.SetProperty(proxy, property, newValue, false, token).ConfigureAwait(false);
+                            float? oldTeamLimit = kit.TeamLimit;
+                            (SetPropertyResult result, MemberInfo? info) = await manager.SetProperty(kit, property, newValue, false, token).ConfigureAwait(false);
                             if (info != null)
                                 property = info.Name;
                             switch (result)
@@ -1040,28 +1011,28 @@ public sealed class KitCommand : AsyncCommand
                                 case SetPropertyResult.Success:
                                     if (kit.Class != oldclass)
                                     {
-                                        if (Mathf.Abs(KitManager.GetDefaultTeamLimit(oldclass) - oldTeamLimit) < 0.005f)
-                                            kit.TeamLimit = KitManager.GetDefaultTeamLimit(kit.Class);
+                                        if (oldTeamLimit.HasValue && Mathf.Abs(KitManager.GetDefaultTeamLimit(oldclass) - oldTeamLimit.Value) < 0.005f)
+                                            kit.TeamLimit = null;
                                         if (KitManager.GetDefaultBranch(oldclass) == oldbranch)
                                             kit.Branch = KitManager.GetDefaultBranch(kit.Class);
                                         if (Mathf.Abs(KitManager.GetDefaultRequestCooldown(oldclass) - oldReqCooldown) < 0.25f)
                                             kit.RequestCooldown = KitManager.GetDefaultRequestCooldown(kit.Class);
                                     }
-                                    proxy.Item.UpdateLastEdited(ctx.CallerID);
-                                    await proxy.SaveItem(token).ConfigureAwait(false);
+                                    kit.UpdateLastEdited(ctx.CallerID);
+                                    await manager.Update(kit, token: token).ConfigureAwait(false);
                                     await UCWarfare.ToUpdate(token);
                                     KitManager.UpdateSigns(kit);
                                     ctx.Reply(T.KitPropertySet, property, kit, newValue);
                                     ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
                                     if (oldbranch != kit.Branch || oldclass != kit.Class || prevType != kit.Type)
-                                        manager.InvokeAfterMajorKitUpdate(proxy);
+                                        manager.InvokeAfterMajorKitUpdate(kit);
                                     return;
                             }
                         }
                     }
                     finally
                     {
-                        proxy.Release();
+                        manager.Release();
                     }
                 }
                 else
@@ -1076,43 +1047,30 @@ public sealed class KitCommand : AsyncCommand
 
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
-                SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy?.Item != null)
+                Kit? kit = await manager.FindKit(kitName, token, true);
+                if (kit != null)
                 {
-                    Kit? item;
-                    await proxy.Enter(token).ConfigureAwait(false);
-                    try
-                    {
-                        item = proxy.Item;
-                    }
-                    finally
-                    {
-                        proxy.Release();
-                    }
-                    if (item == null)
-                        throw ctx.Reply(T.KitNotFound, kitName);
-                    
                     if (!ctx.TryGet(3, out KitAccessType type) || type == KitAccessType.Unknown)
                         type = KitAccessType.Purchase;
 
-                    bool hasAccess = await KitManager.HasAccess(item, playerId, token).ConfigureAwait(false);
+                    bool hasAccess = await KitManager.HasAccess(kit, playerId, token).ConfigureAwait(false);
                     PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
                     if (hasAccess)
                     {
                         await UCWarfare.ToUpdate(token);
-                        ctx.Reply(T.KitAlreadyHasAccess, onlinePlayer as IPlayer ?? names, item);
+                        ctx.Reply(T.KitAlreadyHasAccess, onlinePlayer as IPlayer ?? names, kit);
                         return;
                     }
-                    await KitManager.GiveAccess(proxy, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
+                    await KitManager.GiveAccess(kit, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
                     KitSync.OnAccessChanged(playerId);
                     ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + kitName + ", REASON: " + type);
 
                     await UCWarfare.ToUpdate();
-                    ctx.Reply(T.KitAccessGiven, onlinePlayer as IPlayer ?? names, playerId, item);
+                    ctx.Reply(T.KitAccessGiven, onlinePlayer as IPlayer ?? names, playerId, kit);
                     if (onlinePlayer is not null)
                     {
-                        onlinePlayer.SendChat(T.KitAccessGivenDm, item);
-                        KitManager.UpdateSigns(item, onlinePlayer);
+                        onlinePlayer.SendChat(T.KitAccessGivenDm, kit);
+                        KitManager.UpdateSigns(kit, onlinePlayer);
                     }
                 }
                 else
@@ -1127,39 +1085,27 @@ public sealed class KitCommand : AsyncCommand
 
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
-                SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy?.Item != null)
+                Kit? kit = await manager.FindKit(kitName, token, true);
+                if (kit != null)
                 {
-                    Kit? item;
-                    await proxy.Enter(token).ConfigureAwait(false);
-                    try
-                    {
-                        item = proxy.Item;
-                    }
-                    finally
-                    {
-                        proxy.Release();
-                    }
-                    if (item == null)
-                        throw ctx.Reply(T.KitNotFound, kitName);
-                    bool hasAccess = await KitManager.HasAccess(item, playerId, token).ConfigureAwait(false);
+                    bool hasAccess = await KitManager.HasAccess(kit, playerId, token).ConfigureAwait(false);
                     PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
                     if (!hasAccess)
                     {
                         await UCWarfare.ToUpdate(token);
-                        ctx.Reply(T.KitAlreadyMissingAccess, onlinePlayer as IPlayer ?? names, item);
+                        ctx.Reply(T.KitAlreadyMissingAccess, onlinePlayer as IPlayer ?? names, kit);
                         return;
                     }
-                    await KitManager.RemoveAccess(proxy, playerId, token).ConfigureAwait(false);
+                    await KitManager.RemoveAccess(kit, playerId, token).ConfigureAwait(false);
                     ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " DENIED ACCESS TO " + kitName);
                     KitSync.OnAccessChanged(playerId);
 
                     await UCWarfare.ToUpdate();
-                    ctx.Reply(T.KitAccessRevoked, onlinePlayer as IPlayer ?? names, playerId, item);
+                    ctx.Reply(T.KitAccessRevoked, onlinePlayer as IPlayer ?? names, playerId, kit);
                     if (onlinePlayer is not null)
                     {
-                        onlinePlayer.SendChat(T.KitAccessRevokedDm, item);
-                        KitManager.UpdateSigns(item, onlinePlayer);
+                        onlinePlayer.SendChat(T.KitAccessRevokedDm, kit);
+                        KitManager.UpdateSigns(kit, onlinePlayer);
                     }
                 }
                 else
@@ -1174,19 +1120,19 @@ public sealed class KitCommand : AsyncCommand
 
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out string existingName))
             {
-                SqlItem<Kit>? existing = await manager.FindKit(existingName, token).ConfigureAwait(false);
-                if (existing?.Item == null)
+                Kit? existing = await manager.FindKit(existingName, token).ConfigureAwait(false);
+                if (existing == null)
                     throw ctx.Reply(T.KitNotFound, existingName);
-                await existing.Enter(token).ConfigureAwait(false);
+                await manager.WaitAsync(token).ConfigureAwait(false);
                 Kit kit;
                 try
                 {
-                    if (existing.Item == null)
+                    if (existing == null)
                         throw ctx.Reply(T.KitNotFound, existingName);
-                    SqlItem<Kit>? newKitProxy = await manager.FindKit(kitName, token).ConfigureAwait(false);
-                    if (newKitProxy?.Item != null)
+                    Kit? newKitProxy = await manager.FindKit(kitName, token).ConfigureAwait(false);
+                    if (newKitProxy != null)
                         throw ctx.Reply(T.KitNameTaken, kitName);
-                    kit = new Kit(kitName.ToLowerInvariant(), existing.Item)
+                    kit = new Kit(kitName.ToLowerInvariant(), existing)
                     {
                         Season = UCWarfare.Season,
                         Disabled = false,
@@ -1195,14 +1141,33 @@ public sealed class KitCommand : AsyncCommand
                 }
                 finally
                 {
-                    existing.Release();
+                    manager.Release();
                 }
 
-                await manager.AddOrUpdate(kit, token).ConfigureAwait(false);
+                await manager.Add(kit, token: token).ConfigureAwait(false);
+
+                foreach (KitSkillset skillset in kit.Skillsets)
+                    WarfareDatabases.Kits.Add(skillset);
+
+                foreach (KitFilteredFaction faction in kit.FactionFilter)
+                    WarfareDatabases.Kits.Add(faction);
+
+                foreach (KitFilteredMap map in kit.MapFilter)
+                    WarfareDatabases.Kits.Add(map);
+
+                foreach (KitItemModel item in kit.ItemModels)
+                    WarfareDatabases.Kits.Add(item);
+                
+                foreach (KitTranslation translation in kit.Translations)
+                    WarfareDatabases.Kits.Add(translation);
+                
+                foreach (KitUnlockRequirement unlockRequirement in kit.UnlockRequirementsModels)
+                    WarfareDatabases.Kits.Add(unlockRequirement);
+                
                 ctx.LogAction(ActionLogType.CreateKit, kitName + " COPIED FROM " + existingName);
                 await UCWarfare.ToUpdate();
                 KitManager.UpdateSigns(kit);
-                ctx.Reply(T.KitCopied, existing.Item, kit);
+                ctx.Reply(T.KitCopied, existing, kit);
             }
             else
                 ctx.SendCorrectUsage("/kit <copyfrom|cf> <kitname> <newkitname>");
@@ -1228,14 +1193,14 @@ public sealed class KitCommand : AsyncCommand
                     Creator = ctx.CallerID,
                     LastEditor = ctx.CallerID
                 };
-                SqlItem<Kit>? oldKit = await manager.FindKit(loadout.Id, token).ConfigureAwait(false);
-                if (oldKit?.Item == null)
+                Kit? oldKit = await manager.FindKit(loadout.InternalName, token).ConfigureAwait(false);
+                if (oldKit == null)
                 {
                     await UCWarfare.ToUpdate();
-                    SqlItem<Kit> kit = await manager.AddOrUpdate(loadout, token).ConfigureAwait(false);
-                    await KitManager.GiveAccess(kit, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
+                    await manager.Add(loadout, token: token).ConfigureAwait(false);
+                    await KitManager.GiveAccess(loadout, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
                     KitSync.OnAccessChanged(playerId);
-                    ctx.LogAction(ActionLogType.CreateKit, loadout.Id);
+                    ctx.LogAction(ActionLogType.CreateKit, loadout.InternalName);
                     await UCWarfare.ToUpdate();
                     KitManager.UpdateSigns(loadout);
                     ctx.Reply(T.LoadoutCreated, @class, onlinePlayer as IPlayer ?? names, playerId, loadout);
@@ -1243,7 +1208,7 @@ public sealed class KitCommand : AsyncCommand
                 else
                 {
                     await UCWarfare.ToUpdate();
-                    ctx.Reply(T.KitNameTaken, loadout.Id);
+                    ctx.Reply(T.KitNameTaken, loadout.InternalName);
                 }
             }
             else
@@ -1269,26 +1234,25 @@ public sealed class KitCommand : AsyncCommand
                         {
                             Skillset set = new Skillset(specialty, (byte)skillset, level);
                             string kitName = ctx.Get(1)!;
-                            SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                            if (proxy is null)
+                            Kit? kit = await manager.FindKit(kitName, token, true);
+                            if (kit is null)
                                 throw ctx.Reply(T.KitNotFound, kitName);
-                            await proxy.Enter(token).ConfigureAwait(false);
+                            await manager.WaitAsync(token).ConfigureAwait(false);
                             try
                             {
-                                if (proxy.Item is not { } kit)
-                                    throw ctx.Reply(T.KitNotFound, kitName);
-                                Skillset[] skillsets = kit.Skillsets;
-                                for (int i = 0; i < skillsets.Length; ++i)
+                                List<KitSkillset> skillsets = kit.Skillsets;
+                                for (int i = 0; i < skillsets.Count; ++i)
                                 {
-                                    if (skillsets[i].SkillIndex == set.SkillIndex && skillsets[i].SpecialityIndex == set.SpecialityIndex)
+                                    if (skillsets[i].Skillset.SkillIndex == set.SkillIndex && skillsets[i].Skillset.SpecialityIndex == set.SpecialityIndex)
                                     {
                                         if (add)
-                                            skillsets[i] = set;
+                                        {
+                                            skillsets[i].Skillset = set;
+                                            WarfareDatabases.Kits.Update(skillsets[i]);
+                                        }
                                         else
                                         {
-                                            set = skillsets[i];
-                                            Util.RemoveFromArray(ref skillsets, i);
-                                            kit.Skillsets = skillsets;
+                                            WarfareDatabases.Kits.Remove(skillsets[i]);
                                         }
                                         
                                         goto reply;
@@ -1297,17 +1261,24 @@ public sealed class KitCommand : AsyncCommand
 
                                 if (!add)
                                     throw ctx.Reply(T.KitSkillsetNotFound, set, kit);
-                                Util.AddToArray(ref skillsets!, set);
-                                kit.Skillsets = skillsets;
+                                KitSkillset skillsetModel = new KitSkillset
+                                {
+                                    Skillset = set,
+                                    Kit = kit,
+                                    KitId = kit.PrimaryKey
+                                };
+                                skillsets.Add(skillsetModel);
+                                WarfareDatabases.Kits.Add(skillsetModel);
                                 reply:
-                                await proxy.SaveItem(token);
-                                ctx.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.Id);
+                                await manager.Update(kit, token: token);
+                                ctx.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.InternalName);
                                 await UCWarfare.ToUpdate(token);
                                 ctx.Reply(add ? T.KitSkillsetAdded : T.KitSkillsetRemoved, set, kit);
                                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                                 {
                                     UCPlayer player = PlayerManager.OnlinePlayers[i];
-                                    if (player.ActiveKit is { Item: { } } && player.ActiveKit.LastPrimaryKey.Key == proxy.LastPrimaryKey.Key)
+                                    Kit? activeKit = player.GetActiveKit();
+                                    if (activeKit != null && activeKit.PrimaryKey == kit.PrimaryKey)
                                     {
                                         if (add)
                                             player.EnsureSkillset(set);
@@ -1320,7 +1291,7 @@ public sealed class KitCommand : AsyncCommand
                             }
                             finally
                             {
-                                proxy.Release();
+                                manager.Release();
                             }
                         }
                     }

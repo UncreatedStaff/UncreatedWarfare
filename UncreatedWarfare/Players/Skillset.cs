@@ -76,7 +76,8 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
     public void ServerSet(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
-        player.Player.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
+        if (player.IsOnline)
+            player.Player.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
     }
     /// <exception cref="FormatException"/>
     public static Skillset Read(MySqlDataReader reader, int colOffset = 0)
@@ -218,10 +219,6 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
 
     public bool Equals(Skillset other) => EqualsHelper(in other, true);
     public bool TypeEquals(in Skillset skillset) => EqualsHelper(in skillset, false);
-    public static void SetDefaultSkills(UCPlayer player)
-    {
-        player.EnsureSkillsets(Array.Empty<Skillset>());
-    }
     /// <returns>-1 if parse failure.</returns>
     public static int GetSkillsetFromEnglishName(string name, out EPlayerSpeciality speciality)
     {

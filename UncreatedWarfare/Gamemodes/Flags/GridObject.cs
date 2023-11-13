@@ -66,7 +66,7 @@ public class GridObject : IJsonReadWrite, IListItem
                 string prop = reader.GetString()!;
                 if (!reader.Read()) return;
                 if (string.Equals(prop, "flag_id", StringComparison.OrdinalIgnoreCase))
-                    PrimaryKey = reader.GetInt32();
+                    PrimaryKey = reader.GetUInt32();
                 else if (string.Equals(prop, "instance_id", StringComparison.OrdinalIgnoreCase))
                     ObjectInstanceId = reader.GetUInt32();
                 else if (string.Equals(prop, "object_guid", StringComparison.OrdinalIgnoreCase))

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Storage;
@@ -6,6 +7,7 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Users;
 
@@ -22,6 +24,8 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
     public DbSet<KitAccess> KitAccess => Set<KitAccess>();
     public DbSet<KitHotkey> KitHotkeys => Set<KitHotkey>();
     public DbSet<KitLayoutTransformation> KitLayoutTransformations => Set<KitLayoutTransformation>();
+    public DbSet<KitFavorite> KitFavorites => Set<KitFavorite>();
+    public DbSet<EliteBundle> EliteBundles => Set<EliteBundle>();
 
     /* configure database settings */
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -51,5 +55,7 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
 
         /* Adds preset value converters */
         WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder);
+
+        Console.WriteLine("Model created.");
     }
 }

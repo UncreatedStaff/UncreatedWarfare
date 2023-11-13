@@ -17,7 +17,7 @@ public class LanguageInfo : ITranslationArgument
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("pk")]
-    public PrimaryKey Key { get; set; }
+    public uint Key { get; set; }
 
     [Required]
     [Column(TypeName = "char(5)")]

@@ -99,10 +99,10 @@ public abstract class Punishment : ModerationEntry
         
         AppealKeys = new PrimaryKey[reader.ReadInt32()];
         for (int i = 0; i < AppealKeys.Length; ++i)
-            AppealKeys[i] = reader.ReadInt32();
+            AppealKeys[i] = reader.ReadUInt32();
         ReportKeys = new PrimaryKey[reader.ReadInt32()];
         for (int i = 0; i < ReportKeys.Length; ++i)
-            ReportKeys[i] = reader.ReadInt32();
+            ReportKeys[i] = reader.ReadUInt32();
         Appeals = null;
         Reports = null;
     }

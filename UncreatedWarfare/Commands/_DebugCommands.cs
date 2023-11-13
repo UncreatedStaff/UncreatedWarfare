@@ -20,8 +20,10 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
@@ -862,11 +864,6 @@ public class DebugCommand : AsyncCommand
         }
         else throw ctx.ReplyString("Debugger is not active.");
     }
-    private void translationtest(CommandInteraction ctx)
-    {
-        ctx.AssertRanByPlayer();
-        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.ActiveKit?.Item!);
-    }
     private void quest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -1108,8 +1105,8 @@ public class DebugCommand : AsyncCommand
         ulong team = ctx.Caller.GetTeam();
         if (manager != null)
         {
-            SqlItem<Kit>? sql = await manager.GetRecommendedSquadleaderKit(team, token).ConfigureAwait(false);
-            if (sql?.Item == null)
+            Kit? sql = await manager.GetRecommendedSquadleaderKit(team, token).ConfigureAwait(false);
+            if (sql == null)
                 ctx.SendUnknownError();
             else
                 await manager.GiveKit(ctx.Caller, sql, false, token).ConfigureAwait(false);
@@ -1230,29 +1227,6 @@ public class DebugCommand : AsyncCommand
             }
         });
     }
-#if DEBUG
-    private void migrateoldkits(CommandInteraction ctx)
-    {
-        ctx.AssertRanByConsole();
-
-        KitManager? manager = Data.Singletons.GetSingleton<KitManager>();
-        if (manager is not { IsLoaded: true })
-            throw ctx.SendGamemodeError();
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                await manager.MigrateOldKits().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                L.LogError(ex);
-            }
-        });
-        ctx.Defer();
-    }
-#endif
 
 #if DEBUG
     private void runtests(CommandInteraction ctx)

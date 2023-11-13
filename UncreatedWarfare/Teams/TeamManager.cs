@@ -22,7 +22,6 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Factions;
@@ -42,6 +41,7 @@ public static class TeamManager
     {
         new FactionInfo(FactionInfo.Admins, "Admins", "ADMIN", "Admins", "0099ff", "default")
         {
+            PrimaryKey = 1,
             NameTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "Администрация" },
@@ -55,6 +55,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.USA, "United States", "USA", "USA", "78b2ff", "usunarmed", @"https://i.imgur.com/P4JgkHB.png")
         {
+            PrimaryKey = 2,
             Build = "a70978a0b47e4017a0261e676af57042",
             Ammo = "51e1e372bf5341e1b4b16a0eacce37eb",
             FOBRadio = "7715ad81f1e24f60bb8f196dd09bd4ef",
@@ -87,6 +88,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Russia, "Russia", "RU", "Russia", "f53b3b", "ruunarmed", @"https://i.imgur.com/YMWSUZC.png")
         {
+            PrimaryKey = 3,
             Build = "6a8b8b3c79604aeea97f53c235947a1f",
             Ammo = "8dd66da5affa480ba324e270e52a46d7",
             FOBRadio = "fb910102ad954169abd4b0cb06a112c8",
@@ -122,6 +124,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.MEC, "Middle Eastern Coalition", "MEC", "MEC", "ffcd8c", "meunarmed", @"https://i.imgur.com/rPmpNzz.png")
         {
+            PrimaryKey = 4,
             Build = "9c7122f7e70e4a4da26a49b871087f9f",
             Ammo = "bfc9aed75a3245acbfd01bc78fcfc875",
             FOBRadio = "c7754ac78083421da73006b12a56811a",
@@ -152,6 +155,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/91Apxc5.png")
         {
+            PrimaryKey = 5,
             Build = "35eabf178e4e4d82aac34fcbf8e690e3",
             Ammo = "15857c3f693b4209b7b92a0b8438be34",
             FOBRadio = "439c32cced234f358e101294ea0ce3e4",
@@ -183,6 +187,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "chunarmed", @"https://i.imgur.com/Yns89Yk.png")
         {
+            PrimaryKey = 6,
             Build = "de7c4cafd0304848a7141e3860b2248a",
             Ammo = "2f3cfa9c6bb645fbab8f49ce556d1a1a",
             FOBRadio = "7bde55f70c494418bdd81926fb7d6359",
@@ -213,6 +218,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.USMC, "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, @"https://i.imgur.com/MO9nPmf.png")
         {
+            PrimaryKey = 7,
             DefaultHat = "9b14747d30c94b168898b14b3b03cbdd",
             DefaultShirt = "1d8c612e186b4f1588099c663d9d7a44",
             DefaultBackpack = "7971e03a140149f5bbad7d1c51bc7731",
@@ -240,6 +246,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Soviet, "Soviet", "SOV", "Soviet", "cc0000", null, @"https://i.imgur.com/vk8gBBm.png")
         {
+            PrimaryKey = 8,
             DefaultHat = "d8c9b02f6ad74216ae25ddd4a98d721c",
             DefaultShirt = "157148a3ebfb447e948b04cdd83d9335",
             DefaultBackpack = "118c5783814847e7bfe6eac1caa11568",
@@ -267,6 +274,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Poland, "Poland", "PL", "Poland", "dc143c", null, @"https://i.imgur.com/fu3nCS3.png")
         {
+            PrimaryKey = 9,
             DefaultHat = "ece14052a9d64994a3ef2ab1dc27a073",
             DefaultShirt = "71d35bb681f34b7196bb0e6685106ec4",
             DefaultBackpack = "90f7aa3817834edd82c6458fffbc2780",
@@ -295,6 +303,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Militia, "Militia", "MIL", "Militia", "526257", null)
         {
+            PrimaryKey = 10,
             TMProSpriteIndex = 9,
             NameTranslations = new TranslationList(4)
             {
@@ -315,6 +324,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Israel, "Israel Defense Forces", "IDF", "IDF", "005eb8", null, @"https://i.imgur.com/Wzdspd3.png")
         {
+            PrimaryKey = 11,
             DefaultHat = "6fa1828a5db147bca1c598e5b41fa319",
             DefaultShirt = "77dc77768d8f4d6b921bbe9a876432d0",
             DefaultBackpack = "67e14c9892b4459bb0d5b7f394f7f91d",
@@ -343,6 +353,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.France, "France", "FR", "France", "002654", null, @"https://i.imgur.com/TYY0kwp.png")
         {
+            PrimaryKey = 12,
             DefaultHat = "b53b694277184045a01ce82c55f81029",
             DefaultShirt = "e301b323c52d4feba57fe31e8dea2bca",
             DefaultBackpack = "a5d911ba6c464f89a9913cf198316c53",
@@ -370,6 +381,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Canada, "Canadian Armed Forces", "CAF", "Canada", "d80621", null, @"https://i.imgur.com/zs81UMe.png")
         {
+            PrimaryKey = 13,
             DefaultHat = "6e25bcbc24f047698a26d1da3831068f",
             DefaultShirt = "ae976b9a82ba48a488ae71e4ca3cee55",
             DefaultBackpack = "efb51b45aca34676a5d45ce8f28b7ed7",
@@ -398,6 +410,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.SouthAfrica, "South Africa", "ZA", "S. Africa", "007749", null, @"https://i.imgur.com/2orfzTh.png")
         {
+            PrimaryKey = 14,
             DefaultHat = "1fb9ad79c8d14168bdbcdcb33ed50064",
             DefaultShirt = "760f1e854d904bcf902b42c22015aa2a",
             DefaultBackpack = "0cd247d2c01643e49945ab37b16a6a0a",
@@ -425,6 +438,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Mozambique, "Mozambique", "MZ", "Mozambique", "ffd100", null, @"https://i.imgur.com/9nXhlMH.png")
         {
+            PrimaryKey = 15,
             DefaultHat = "8f30d92410f94318912b8a09f3ccdb9d",
             DefaultShirt = "b9d5f63ed6f84a5c8c339a86828e0642",
             DefaultBackpack = "68170172cf2a4dff8ecbd83964a0c13f",
@@ -755,6 +769,7 @@ public static class TeamManager
             _ => null
         };
     }
+    public static FactionInfo? GetFactionInfo(uint? id) => id.HasValue ? GetFactionInfo(id.Value) : null;
     public static FactionInfo? GetFactionInfo(PrimaryKey id)
     {
         uint pk = id.Key;
@@ -782,14 +797,14 @@ public static class TeamManager
     public static FactionInfo? GetFactionInfo(Faction? faction)
     {
         if (faction == null) return null;
-        if (faction.Key.IsValid)
+        if (faction.Key > 0)
         {
             FactionInfo? info = GetFactionInfo(faction.Key);
             if (info != null)
                 return info;
         }
 
-        return !string.IsNullOrEmpty(faction.Id) ? GetFactionInfo(faction.Id) : null;
+        return !string.IsNullOrEmpty(faction.InternalName) ? GetFactionInfo(faction.InternalName) : null;
     }
     public static IEnumerable<UCPlayer> EnumerateTeam(ulong team) => PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == team);
     /// <summary>Advanced search using name, abbreviation, and short name.</summary>
@@ -1195,11 +1210,11 @@ public static class TeamManager
     {
         if (faction is not null)
         {
-            if (faction.Id.Equals(Team1Faction.FactionId, StringComparison.Ordinal))
+            if (faction.InternalName.Equals(Team1Faction.FactionId, StringComparison.Ordinal))
                 return 1ul;
-            if (faction.Id.Equals(Team2Faction.FactionId, StringComparison.Ordinal))
+            if (faction.InternalName.Equals(Team2Faction.FactionId, StringComparison.Ordinal))
                 return 2ul;
-            if (faction.Id.Equals(AdminFaction.FactionId, StringComparison.Ordinal))
+            if (faction.InternalName.Equals(AdminFaction.FactionId, StringComparison.Ordinal))
                 return 3ul;
         }
         return 0ul;
@@ -2008,7 +2023,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
 
     public FactionInfo(Faction model)
     {
-        FactionId = model.Id;
+        FactionId = model.InternalName;
         Name = model.Name;
         Abbreviation = model.Abbreviation;
         ShortName = model.ShortName;
@@ -2060,7 +2075,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         Faction faction = new Faction
         {
             Key = PrimaryKey,
-            Id = FactionId,
+            InternalName = FactionId,
             Name = Name,
             ShortName = ShortName,
             Abbreviation = Abbreviation,
@@ -2076,7 +2091,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         foreach (KeyValuePair<string, string> kvp in NameTranslations)
         {
             FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key.IsValid: true } lang)
+            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
                 continue;
             if (loc == null)
             {
@@ -2093,7 +2108,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         foreach (KeyValuePair<string, string> kvp in ShortNameTranslations)
         {
             FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key.IsValid: true } lang)
+            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
                 continue;
             if (loc == null)
             {
@@ -2110,7 +2125,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         foreach (KeyValuePair<string, string> kvp in AbbreviationTranslations)
         {
             FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key.IsValid: true } lang)
+            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
                 continue;
             if (loc == null)
             {
@@ -2429,20 +2444,20 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     }
     public string GetName(LanguageInfo? language)
     {
-        if (language is null || language.IsDefault || NameTranslations is null || !NameTranslations.TryGetValue(language.Code, out string val))
+        if (language is null || language.IsDefault || NameTranslations is null || !NameTranslations.TryGetValue(language.Code, out string? val))
             return Name;
-        return val;
+        return val ?? Name;
     }
     public string GetShortName(LanguageInfo? language)
     {
         if (language is null || language.IsDefault)
             return ShortName ?? Name;
-        if (ShortNameTranslations is null || !ShortNameTranslations.TryGetValue(language.Code, out string val))
+        if (ShortNameTranslations is null || !ShortNameTranslations.TryGetValue(language.Code, out string? val))
         {
             if (NameTranslations is null || !NameTranslations.TryGetValue(language.Code, out val))
                 return ShortName ?? Name;
         }
-        return val;
+        return val ?? Name;
     }
     public string GetAbbreviation(LanguageInfo? language)
     {
@@ -2495,7 +2510,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         foreach (Faction faction in factions)
         {
             FactionInfo newFaction = new FactionInfo(faction);
-            FactionInfo? existing = list.Find(x => x._factionId.Equals(faction.Id, StringComparison.Ordinal));
+            FactionInfo? existing = list.Find(x => x._factionId.Equals(faction.InternalName, StringComparison.Ordinal));
             if (existing != null)
                 existing.CloneFrom(newFaction);
             else

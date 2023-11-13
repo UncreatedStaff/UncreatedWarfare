@@ -12,6 +12,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
@@ -304,10 +305,7 @@ public class VehicleComponent : MonoBehaviour
 
                     Quota += 0.5F;
 
-                    if (!_timeRewardedTable.ContainsKey(e.Player.Steam64))
-                        _timeRewardedTable.Add(e.Player.Steam64, DateTime.UtcNow);
-                    else
-                        _timeRewardedTable[e.Player.Steam64] = DateTime.UtcNow;
+                    _timeRewardedTable[e.Player.Steam64] = DateTime.UtcNow;
                 }
             }
             TransportTable.Remove(e.Player.Steam64);
@@ -331,10 +329,7 @@ public class VehicleComponent : MonoBehaviour
             EvaluateUsage(e.Player.SteamPlayer);
 
             if (!Data!.Item!.CrewSeats.Contains(e.NewSeat))
-            {
-                if (!TransportTable.ContainsKey(e.Player.Steam64))
-                    TransportTable.Add(e.Player.Steam64, e.Player.Position);
-            }
+                TransportTable.TryAdd(e.Player.Steam64, e.Player.Position);
             else
                 TransportTable.Remove(e.Player.Steam64);
         }
@@ -370,9 +365,9 @@ public class VehicleComponent : MonoBehaviour
         {
             _totalFlaresLeft = type switch
             {
-                VehicleType.AttackHeli => STARTING_FLARES_ATTACKHELI,
-                VehicleType.TransportAir => STARTING_FLARES_TRANSHELI,
-                VehicleType.Jet => STARTING_FLARES_JET,
+                VehicleType.AttackHeli => StartingFlaresAttackHeli,
+                VehicleType.TransportAir => StartingFlaresTransportHeli,
+                VehicleType.Jet => StartingFlaresJet,
                 _ => _totalFlaresLeft
             };
         }
@@ -496,19 +491,20 @@ public class VehicleComponent : MonoBehaviour
             yield break;
         if (Data.Item.Metadata?.TrunkItems != null)
         {
-            List<PageItem> trunk = Data.Item.Metadata.TrunkItems;
+            List<ISpecificPageKitItem> trunk = Data.Item.Metadata.TrunkItems;
             for (int i = 0; i < trunk.Count; i++)
             {
                 ItemAsset? asset;
-                if (build is not null && trunk[i].Item == build.GUID) asset = build;
-                else if (ammo is not null && trunk[i].Item == ammo.GUID) asset = ammo;
-                else asset = Assets.find(trunk[i].Item) as ItemAsset;
+                ISpecificPageKitItem trunkItem = trunk[i];
+                if (build is not null && trunkItem.Item.Guid == build.GUID) asset = build;
+                else if (ammo is not null && trunkItem.Item.Guid == ammo.GUID) asset = ammo;
+                else asset = trunkItem.Item.GetAsset<ItemAsset>();
 
-                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].X, trunk[i].Y, asset.size_x, asset.size_y, trunk[i].Rotation) &&
+                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunkItem.X, trunkItem.Y, asset.size_x, asset.size_y, trunkItem.Rotation) &&
                     TeamManager.IsInMain(Vehicle.lockedGroup.m_SteamID.GetTeam(), Vehicle.transform.position))
                 {
-                    Item item = new Item(asset.id, trunk[i].Amount, 100, Util.CloneBytes(trunk[i].State));
-                    Vehicle.trunkItems.addItem(trunk[i].X, trunk[i].Y, trunk[i].Rotation, item);
+                    Item item = new Item(asset.id, trunkItem.Amount, 100, Util.CloneBytes(trunkItem.State));
+                    Vehicle.trunkItems.addItem(trunkItem.X, trunkItem.Y, trunkItem.Rotation, item);
                     loaderCount++;
 
                     if (loaderCount >= 3)
@@ -592,18 +588,18 @@ public class VehicleComponent : MonoBehaviour
     }
     private float _timeLastFlare;
     private float _timeLastFlareDrop;
-    private int _flareBurst = 0;
-    const int STARTING_FLARES_ATTACKHELI = 30;
-    const int STARTING_FLARES_TRANSHELI = 50;
-    const int STARTING_FLARES_JET = 30;
-    public const int FLARE_BURST_COUNT = 10;
-    public const int FLARE_COOLDOWN = 11;
+    private int _flareBurst;
+    const int StartingFlaresAttackHeli = 30;
+    const int StartingFlaresTransportHeli = 50;
+    const int StartingFlaresJet = 30;
+    public const int FlareBurstCount = 10;
+    public const int FlareCooldown = 11;
     public void TryDropFlares()
     {
-        if (Time.time - _timeLastFlareDrop < FLARE_COOLDOWN || _totalFlaresLeft < 0)
+        if (Time.time - _timeLastFlareDrop < FlareCooldown || _totalFlaresLeft < 0)
             return;
 
-        _flareBurst = FLARE_BURST_COUNT;
+        _flareBurst = FlareBurstCount;
         _timeLastFlareDrop = Time.time;
 
         byte[] crewseats = Data?.Item == null ? Array.Empty<byte>() : Data.Item.CrewSeats;
@@ -613,32 +609,31 @@ public class VehicleComponent : MonoBehaviour
                 EffectManager.sendUIEffect(VehicleBay.Config.CountermeasureEffectID.Value, (short)VehicleBay.Config.CountermeasureEffectID.Value.Id, Vehicle.passengers[seat].player.transportConnection, true);
         }
     }
+
+    [UsedImplicitly]
     private void FixedUpdate()
     {
         if (_totalFlaresLeft > 0 && _flareBurst > 0 && Time.time - _timeLastFlare > 0.2f)
         {
-            if (_flareBurst > 0)
-            {
-                _timeLastFlare = Time.time;
+            _timeLastFlare = Time.time;
 
-                InteractableVehicle? countermeasureVehicle = VehicleManager.spawnVehicleV2(VehicleBay.Config.CountermeasureGUID.Value.Id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
+            InteractableVehicle? countermeasureVehicle = VehicleManager.spawnVehicleV2(VehicleBay.Config.CountermeasureGUID.Value.Id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
 
-                float sideforce = Random.Range(20, 30);
+            float sideforce = Random.Range(20, 30);
 
-                if (_flareBurst % 2 == 0) sideforce = -sideforce;
+            if (_flareBurst % 2 == 0) sideforce = -sideforce;
 
-                Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
-                Vector3 velocity = Vehicle.transform.forward * Vehicle.speed * 0.9f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
-                rigidbody.velocity = velocity;
+            Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
+            Vector3 velocity = Vehicle.transform.forward * Vehicle.speed * 0.9f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
+            rigidbody.velocity = velocity;
 
-                var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();
+            var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();
 
-                Countermeasure.ActiveCountermeasures.Add(countermeasure);
+            Countermeasure.ActiveCountermeasures.Add(countermeasure);
 
-                _totalFlaresLeft--;
-                _flareBurst--;
-                UpdateHUDFlares();
-            }
+            _totalFlaresLeft--;
+            _flareBurst--;
+            UpdateHUDFlares();
         }
     }
 }

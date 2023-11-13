@@ -1,5 +1,5 @@
 ﻿using System.Globalization;
-using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Players.Unlocks;
 
 namespace Uncreated.Warfare.Traits.Buffs;
 

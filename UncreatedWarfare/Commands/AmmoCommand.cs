@@ -12,6 +12,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -155,14 +156,13 @@ public class AmmoCommand : AsyncCommand
             if (!ctx.Caller.IsOnTeam)
                 throw ctx.Reply(T.NotOnCaptureTeam);
 
-            SqlItem<Kit>? kit = ctx.Caller.ActiveKit;
-            Kit? kit2 = kit?.Item;
-            if (kit2 == null)
+            Kit? kit = ctx.Caller.GetActiveKit();
+            if (kit == null)
                 throw ctx.Reply(T.AmmoNoKit);
 
             FOBManager? fobManager = Data.Singletons.GetSingleton<FOBManager>();
 
-            int ammoCost = KitManager.GetAmmoCost(kit2.Class);
+            int ammoCost = KitManager.GetAmmoCost(kit.Class);
 
             if (Data.Gamemode.CanRefillAmmoAt(barricade.asset))
             {

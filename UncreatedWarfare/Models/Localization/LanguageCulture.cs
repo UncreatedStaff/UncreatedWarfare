@@ -11,8 +11,13 @@ public class LanguageCulture
     [Column("pk")]
     public uint Id { get; set; }
 
-    [Column("Langauge")]
+    [Required]
     public LanguageInfo Language { get; set; } = null!;
+
+    [Required]
+    [Column("Langauge")]
+    [ForeignKey(nameof(Language))]
+    public uint LanguageId { get; set; }
 
     [MaxLength(16)]
     [Required]

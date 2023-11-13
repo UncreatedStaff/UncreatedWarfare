@@ -19,6 +19,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
@@ -367,7 +368,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             return false;
         }
 
-        Kit? kit = player.ActiveKit?.Item;
+        Kit? kit = player.GetActiveKit();
         if (kit == null || !kit.ContainsItem(buildable.Foundation.Value.Guid, player.GetTeam()) || _floatingItems == null)
         {
             player.SendChat(T.BuildNoRadio, buildable.Type == BuildableType.Bunker ? Config.FOBBuildPickupRadiusNoBunker : Config.FOBBuildPickupRadius);

@@ -14,7 +14,8 @@ public class Faction
 
     [Required]
     [MaxLength(16)]
-    public string Id { get; set; } = null!;
+    [Column("Id")]
+    public string InternalName { get; set; } = null!;
 
     [MaxLength(32)]
     [Required]

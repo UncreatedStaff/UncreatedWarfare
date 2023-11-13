@@ -12,8 +12,13 @@ public class KitLayoutTransformation
     [Column("pk")]
     public uint Id { get; set; }
     public ulong Steam64 { get; set; }
+
+    [Required]
     public Kit Kit { get; set; }
+
     [ForeignKey(nameof(Kit))]
+    [Required]
+    [Column("Kit")]
     public uint KitId { get; set; }
     public Page OldPage { get; set; }
     public byte OldX { get; set; }
