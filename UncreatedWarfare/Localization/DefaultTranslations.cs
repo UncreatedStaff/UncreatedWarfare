@@ -1496,6 +1496,12 @@ internal static class T
     public static readonly Translation<IPlayer> DutyOffBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#ff8c4a>off duty</color>.");
     #endregion
 
+    #region Speed Command
+    private const string SectionSpeed = "Speed Command";
+    [TranslationData(SectionDuty, IsPrioritizedTranslation = false)]
+    public static readonly Translation InvalidModifier = new Translation("<#c6d4b8>Speed modifier is invalid, must be below <b>10</b>");
+    #endregion
+
     #region Request
     private const string SectionRequest = "Request Command";
     [TranslationData(SectionRequest)]
