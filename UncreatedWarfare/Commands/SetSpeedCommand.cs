@@ -10,43 +10,76 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class SetSpeedCommand : Command {
-    private const string SYNTAX = "/setspeed <PlayerName> <SpeedMultiplier>";
-    private const string HELP = "Sets a player's speed modifier.";
+public class SpeedCommand : Command
+{
+    private const string Syntax = "/speed [player] <multiplier>";
+    private const string Help = "Sets a player's speed modifier.";
 
-    public SetSpeedCommand() : base("setspeed", EAdminType.MEMBER) {
-        Structure = new CommandStructure {
+    public SetSpeedCommand() : base("speed", EAdminType.MODERATOR)
+    {
+        Structure = new CommandStructure
+        {
             Description = HELP,
-            Parameters = new CommandParameter[] {
-                new CommandParameter("player", typeof(IPlayer)) {
-                    Parameters = new CommandParameter[] {
-                        new CommandParameter("mulitplier", typeof(byte))
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("player", typeof(IPlayer))
+                {
+                    Description = "The player whose speed multiplier changes. Omit to target yourself.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("mulitplier", typeof(float))
+                        {
+                            Description = "Change the speed multiplier of the target player."
+                        },
+                        new CommandParameter("default")
+                        {
+                            Aliases = new string[] { "reset" },
+                            Description = "Set the speed multiplier to 1x."
+                        }
                     }
+                },
+                new CommandParameter("mulitplier", typeof(float))
+                {
+                    Description = "Change the speed multiplier of the target player."
+                },
+                new CommandParameter("default")
+                {
+                    Aliases = new string[] { "reset" },
+                    Description = "Set the speed multiplier to 1x."
                 }
             }
         };
     }
 
-    public override void Execute(CommandInteraction ctx) {
-        ctx.AssertArgs(2, SYNTAX);
+    public override void Execute(CommandInteraction ctx)
+    {
+        ctx.AssertArgs(1, Syntax);
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        if (!ctx.TryGet(0, out ulong Id, out UCPlayer? target)) {
+        ctx.AssertOnDuty();
+
+        UCPlayer? target = ctx.Caller;
+        
+        if (ctx.HasArgs(2) && (!ctx.TryGet(0, out ulong Id, out target) || target == null))
             throw ctx.Reply(T.PlayerNotFound);
+
+        if (target == null) // ran by console
+            throw ctx.SendPlayerOnlyError();
+
+        int multParamIndex = ctx.HasArgs(2) ? 1 : 0;
+        if (!ctx.TryGet(multParamIndex, out float multiplier))
+        {
+            if (!ctx.MatchParameter(multParamIndex, "reset", "default"))
+                throw ctx.Reply(T.SpeedMultiplierInvalidValue, ctx.Get(multParamIndex)!);
+
+            multiplier = 1f;
         }
 
-        if (int.TryParse(ctx.Get(2), out int multiplier)) {
-            throw ctx.Reply(T.OptionsInvalidValue);
-        }
+        multiplier = Mathf.Clamp(multiplier, 0f, 10f);
 
-        if (target != null && target.IsOnline) {
-            throw ctx.Reply(T.PlayerNotFound);
-        }
+        if (target.Player.movement.pluginSpeedMultiplier == multiplier)
+            throw ctx.Reply(T.SpeedMultiplierAlreadySet, multiplier);
 
-        if (multiplier > 10) {
-            throw ctx.Reply(T.InvalidModifier);
-        }
-
-        target.Player.movement.pluginSpeedMultiplier = multiplier;
-        return;
+        target.Player.movement.sendPluginSpeedMultiplier(multiplier);
     }
 }
