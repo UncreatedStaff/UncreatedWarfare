@@ -1496,6 +1496,16 @@ internal static class T
     public static readonly Translation<IPlayer> DutyOffBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#ff8c4a>off duty</color>.");
     #endregion
 
+    #region Speed Command
+    private const string SectionSpeed = "Speed Command";
+    [TranslationData(SectionSpeed, IsPrioritizedTranslation = false)]
+    public static readonly Translation<string> SpeedMultiplierInvalidValue = new Translation<string>("<#b3a6a2>Speed multiplier <#fff>{0}</color> is invalid.");
+    [TranslationData(SectionSpeed, IsPrioritizedTranslation = false)]
+    public static readonly Translation<float> SpeedMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Speed multiplier is already <#fff>{0}</color>.");
+    [TranslationData(SectionSpeed, IsPrioritizedTranslation = false)]
+    public static readonly Translation<float, IPlayer> SetSpeedMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", "0.##", UCPlayer.FormatColoredCharacterName );
+    #endregion
+
     #region Request
     private const string SectionRequest = "Request Command";
     [TranslationData(SectionRequest)]
