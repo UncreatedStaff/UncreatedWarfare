@@ -81,5 +81,6 @@ public class SpeedCommand : Command
             throw ctx.Reply(T.SpeedMultiplierAlreadySet, multiplier);
 
         target.Player.movement.sendPluginSpeedMultiplier(multiplier);
+        ctx.Reply(T.SetSpeedMultiplier, multiplier, target);
     }
 }
