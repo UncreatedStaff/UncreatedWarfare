@@ -1,4 +1,5 @@
 ﻿#define FUNCTION_LOG
+#define LOG_ANSI
 
 using HarmonyLib;
 using JetBrains.Annotations;
@@ -8,6 +9,7 @@ using StackCleaner;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -54,9 +56,13 @@ public static class L
             Colors = Color32Config.Default,
 #endif
             IncludeNamespaces = false,
+            IncludeILOffset = true,
+            IncludeLineData = true,
             IncludeFileData = true,
-            IncludeAssemblyData = true,
-            IncludeSourceData = true
+            IncludeAssemblyData = false,
+            IncludeSourceData = true,
+            Locale = CultureInfo.InvariantCulture,
+            PutSourceDataOnNewLine = true,
         };
         
         if (Type.GetType("Cysharp.Threading.Tasks.UniTask, UniTask", throwOnError: false) is { } uniTaskType)

@@ -20,17 +20,20 @@ public interface ILanguageDbContext : IDbContext
         modelBuilder.Entity<LanguageInfo>()
             .HasMany(x => x.Aliases)
             .WithOne(x => x.Language)
-            .IsRequired(true);
+            .IsRequired(true)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<LanguageInfo>()
             .HasMany(x => x.Contributors)
             .WithOne(x => x.Language)
-            .IsRequired(true);
+            .IsRequired(true)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<LanguageInfo>()
             .HasMany(x => x.SupportedCultures)
             .WithOne(x => x.Language)
-            .IsRequired(true);
+            .IsRequired(true)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<LanguagePreferences>()
             .Property(x => x.UseCultureForCommandInput)

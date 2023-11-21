@@ -33,6 +33,9 @@ public class KitItemModel : ICloneable
     [StringLength(36)]
     public string? RedirectVariant { get; set; }
     public byte? Amount { get; set; }
+
+    [MaxLength(18)]
+    [Column(TypeName = "varbinary(18)")]
     public byte[]? Metadata { get; set; }
 
     public KitItemModel() { }

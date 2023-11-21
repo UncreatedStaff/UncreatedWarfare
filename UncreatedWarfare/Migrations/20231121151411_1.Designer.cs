@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231121151411_1")]
+    partial class _1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -309,7 +311,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.HasIndex("Steam64");
 
-                    b.ToTable("kits_favorites");
+                    b.ToTable("kit_favorites");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitFilteredFaction", b =>
@@ -398,8 +400,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("int unsigned");
 
                     b.Property<byte[]>("Metadata")
-                        .HasColumnType("varbinary(18)")
-                        .HasMaxLength(18);
+                        .HasColumnType("longblob");
 
                     b.Property<string>("Page")
                         .HasColumnType("enum('Primary','Secondary','Hands','Backpack','Vest','Shirt','Pants','Storage','Area')");
@@ -503,7 +504,7 @@ namespace Uncreated.Warfare.Migrations
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitTranslation", b =>
                 {
                     b.Property<uint>("KitId")
-                        .HasColumnName("Kit")
+                        .HasColumnName("kit")
                         .HasColumnType("int unsigned");
 
                     b.Property<uint>("LanguageId")

@@ -640,7 +640,7 @@ public static class KitEx
 
                 // Laser Rangefinder
                 if (Assets.find(new Guid("010de9d7d1fd49d897dc41249a22d436")) is ItemAsset rgf)
-                    items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(rgf.GUID), 1, 0, 0, Page.Backpack, 1, rgf.getState(EItemOrigin.ADMIN)));
+                    items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(rgf.GUID), 1, 0, 0, Page.Hands, 1, rgf.getState(EItemOrigin.ADMIN)));
                 break;
             case Class.APRifleman:
                 items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 3, 1, Page.Backpack, RedirectType.EntrenchingTool, null));

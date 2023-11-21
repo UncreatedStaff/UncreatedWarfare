@@ -493,7 +493,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             {
                 Nullable = true
             },
-            new Schema.Column(COLUMN_FACTION, SqlTypes.INCREMENT_KEY)
+            new Schema.Column(COLUMN_FACTION, SqlTypes.UINT)
             {
                 Nullable = true,
                 ForeignKey = true,

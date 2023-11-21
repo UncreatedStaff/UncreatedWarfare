@@ -4,7 +4,6 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
 using System.Text.Json.Serialization;
-using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Models.Localization;
 

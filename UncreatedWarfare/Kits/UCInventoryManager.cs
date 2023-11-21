@@ -292,6 +292,7 @@ public static class UCInventoryManager
                     {
                         L.LogWarning("Out of bounds item in " + jar.Page + " defined: " + item + ".");
                         (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((itm, jar));
+                        continue;
                     }
 
                     int ic2 = page.getItemCount();

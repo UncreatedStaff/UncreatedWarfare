@@ -212,6 +212,8 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
 public class TraitData : ITranslationArgument
 {
     private string _typeName;
+
+    [JsonIgnore]
     public Type Type { get; private set; }
 
     [JsonPropertyName("type")]
@@ -222,11 +224,11 @@ public class TraitData : ITranslationArgument
         {
             if (value is null)
                 throw new JsonException("Type name must not be null.");
-            Type = Accessor.GetTypesSafe()
+            Type = Accessor.GetTypesSafe(true)
                        .Where(x => !x.IsAbstract && x.IsPublic && !x.IsGenericType && !x.IsNested && typeof(Trait).IsAssignableFrom(x))
                        .FirstOrDefault(x => x.Name.Equals(value, StringComparison.OrdinalIgnoreCase))
                    ?? throw new JsonException("Type name could not be identified: \"" + value + "\".");
-            _typeName = value;
+            _typeName = Type.Name;
         }
     }
 
@@ -262,6 +264,7 @@ public class TraitData : ITranslationArgument
     public bool ClassListIsBlacklist { get; set; }
 
     [JsonPropertyName("class_list")]
+    [JsonConverter(typeof(ClassArrayConverter))]
     public Class[] ClassList { get; set; }
 
     [JsonPropertyName("lasts_until_death")]

@@ -13,7 +13,7 @@ public class KitTranslation : BaseTranslation, ICloneable
 
     [ForeignKey(nameof(Kit))]
     [Required]
-    [Column("kit", Order = 1)]
+    [Column("Kit", Order = 1)]
     public uint KitId { get; set; }
 
     public object Clone()

@@ -519,7 +519,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             if (deliverer != null)
             {
                 int groupsUnloaded = (buildRemoved + ammoRemoved) / 6;
-                if (groupsUnloaded > 0 && Points.PointsConfig.XPData.TryGetValue(XPReward.UnloadSupplies, out PointsConfig.XPRewardData data) &&
+                if (groupsUnloaded > 0 && Points.PointsConfig.XPData.TryGetValue(nameof(XPReward.UnloadSupplies), out PointsConfig.XPRewardData data) &&
                     data.Amount != 0)
                 {
                     int xp = data.Amount;
@@ -597,7 +597,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 {
                     ++player.SuppliesUnloaded;
                     if (player.SuppliesUnloaded >= 6 &&
-                        Points.PointsConfig.XPData.TryGetValue(XPReward.UnloadSupplies, out PointsConfig.XPRewardData data) && data.Amount != 0)
+                        Points.PointsConfig.XPData.TryGetValue(nameof(XPReward.UnloadSupplies), out PointsConfig.XPRewardData data) && data.Amount != 0)
                     {
                         int xp = data.Amount;
 

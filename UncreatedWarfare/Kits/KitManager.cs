@@ -2448,26 +2448,31 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
     {
         if (Data.Gamemode != null && Data.Gamemode.EveryMinute && Provider.clients.Count > 0)
         {
-            UCWarfare.RunTask(SaveAllPlayerFavorites, ctx: "Save all players' favorite kits.");
+            UCWarfare.RunTask(async (km, token) =>
+            {
+                await km.WriteWaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    await km.SaveAllPlayerFavorites(token);
+                }
+                finally
+                {
+                    km.WriteRelease();
+                }
+            }, this, ctx: "Save all players' favorite kits.");
         }
     }
+
+    // needs to be write locked
     private async Task SaveAllPlayerFavorites(CancellationToken token)
     {
-        await WriteWaitAsync(token).ConfigureAwait(false);
-        try
+        foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToArray())
         {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToArray())
+            if (player.KitMenuData is { FavoritesDirty: true, FavoriteKits: { } fk })
             {
-                if (player.KitMenuData is { FavoritesDirty: true, FavoriteKits: { } fk })
-                {
-                    await SaveFavorites(player, fk, token).ConfigureAwait(false);
-                    token.ThrowIfCancellationRequested();
-                }
+                await SaveFavorites(player, fk, token).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
             }
-        }
-        finally
-        {
-            WriteRelease();
         }
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)

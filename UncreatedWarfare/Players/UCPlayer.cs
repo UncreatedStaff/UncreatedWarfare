@@ -1292,6 +1292,7 @@ public class UCPlayerLocale
             L.Log($"Updated language for {Player}: {LanguageInfo.DisplayName} -> {languageInfo.DisplayName}.");
             ActionLog.Add(ActionLogType.ChangeLanguage, LanguageInfo.Code + " >> " + languageInfo.Code, Player);
             Preferences.Language = languageInfo;
+            Preferences.LanguageId = languageInfo.Key;
             IsDefaultLanguage = languageInfo.Code.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
             LanguageInfo = languageInfo;
             save = true;

@@ -1,10 +1,9 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Database;
@@ -130,7 +129,24 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
         {
             if (info.Key == 0)
                 await Sql.Languages.AddAsync(info, token);
+            else
+                Sql.Update(info);
             await Sql.SaveChangesAsync(token).ConfigureAwait(false);
+
+            lock (this)
+            {
+                _codes ??= new Dictionary<string, LanguageInfo>(16);
+                _langs ??= new List<LanguageInfo>(16);
+                _codes[info.Code] = info;
+                if (!_langs.Contains(info))
+                {
+                    int index = _langs.FindIndex(x => x.Code.Equals(info.Code, StringComparison.OrdinalIgnoreCase));
+                    if (index == -1)
+                        _langs.Add(info);
+                    else
+                        _langs[index] = info;
+                }
+            }
         }
         finally
         {
@@ -144,12 +160,21 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
         {
             if (!await Sql.LanguagePreferences.AnyAsync(x => x.Steam64 == preferences.Steam64, token).ConfigureAwait(false))
                 await Sql.LanguagePreferences.AddAsync(preferences, token);
+            else
+                Sql.Update(preferences);
             await Sql.SaveChangesAsync(token).ConfigureAwait(false);
         }
         finally
         {
             _semaphore.Release();
         }
+    }
+    private IQueryable<LanguageInfo> Include(IQueryable<LanguageInfo> set)
+    {
+        return set
+            .Include(x => x.Aliases)
+            .Include(x => x.Contributors)
+            .Include(x => x.SupportedCultures);
     }
     public async Task<LanguagePreferences> GetLanguagePreferences(ulong steam64, CancellationToken token = default)
     {
@@ -195,7 +220,7 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
     }
     public async Task GetLanguages(IList<LanguageInfo> outputList, CancellationToken token = default)
     {
-        List<LanguageInfo> info = await Sql.Languages.ToListAsync(token).ConfigureAwait(false);
+        List<LanguageInfo> info = await Include(Sql.Languages).ToListAsync(token).ConfigureAwait(false);
         if (outputList is List<LanguageInfo> list)
             list.AddRange(info);
         else

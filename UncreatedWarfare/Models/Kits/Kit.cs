@@ -25,7 +25,6 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Models.Kits;
 
 [Table("kits")]
-
 public class Kit : ITranslationArgument, ICloneable, IListItem
 {
     private int _listItemArrayVersion = -1;

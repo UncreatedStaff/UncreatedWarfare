@@ -81,9 +81,6 @@
 
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="ReflectionTools">
-      <HintPath>..\..\ReflectionTools\ReflectionTools\bin\Release\netstandard2.1\ReflectionTools.dll</HintPath>
-    </Reference>
 
     <Reference Include="System.Diagnostics.DiagnosticSource">
       <HintPath>$(ServerPath)\Modules\UncreatedWarfare\Libraries\System.Diagnostics.DiagnosticSource.dll</HintPath>
@@ -164,11 +161,6 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>.\..\Lib\Lib.Harmony\0Harmony.dll</HintPath>
-    </Reference>
-  </ItemGroup>
   <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->
   <ItemGroup>
     <PackageReference Include="DanielWillett.StackCleaner" Version="[1.4.2,)" />
@@ -179,6 +171,7 @@
     <PackageReference Include="System.Runtime.Caching" Version="4.5.0" />
     <PackageReference Include="System.Text.Json" Version="4.7.1" NoWarn="NU1605" />
 
+    <PackageReference Include="DanielWillett.ReflectionTools" Version="[2.0.1,)" />
     <PackageReference Include="MySqlConnector" Version="0.69.10" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.0" />

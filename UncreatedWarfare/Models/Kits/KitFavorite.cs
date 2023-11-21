@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Uncreated.Warfare.Models.Kits;
 
-[Table("kit_favorites")]
+[Table("kits_favorites")]
 public class KitFavorite
 {
 

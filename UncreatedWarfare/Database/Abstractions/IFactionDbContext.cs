@@ -11,16 +11,17 @@ public interface IFactionDbContext : IDbContext
     {
         modelBuilder.Entity<Faction>()
             .HasMany(x => x.Assets)
-            .WithOne(x => x.Faction);
+            .WithOne(x => x.Faction)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Faction>()
             .HasMany(x => x.Translations)
-            .WithOne(x => x.Faction);
+            .WithOne(x => x.Faction)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<LanguageInfo>()
             .HasMany<FactionLocalization>()
-            .WithOne(x => x.Language);
-
-        // todo fk constraints
+            .WithOne(x => x.Language)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
