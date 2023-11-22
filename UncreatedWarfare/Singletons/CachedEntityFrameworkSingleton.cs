@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Abstractions;
 
 namespace Uncreated.Warfare.Singletons;
 public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadSingleton where TEntity : class
@@ -24,6 +24,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
     public IReadOnlyList<TEntity> Items { get; private set; }
     private protected IList<TEntity> List => _entities;
     protected abstract DbSet<TEntity> Set { get; }
+    protected virtual IDbContext DbContext => Data.DbContext;
     protected CachedEntityFrameworkSingleton(string? reloadKey) : base(reloadKey)
     {
         WriteSemaphore = new UCSemaphore(0, 1);
@@ -60,7 +61,16 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             {
                 await PreLoad(token).ConfigureAwait(false);
 
-                _entities = await OnInclude(Set).ToListAsync(token).ConfigureAwait(false);
+                await DbContext.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    _entities = await OnInclude(Set).ToListAsync(token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    DbContext.Release();
+                }
+
                 Items = _entities.AsReadOnly();
             }
             finally
@@ -118,7 +128,16 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             {
                 await PreReload(token).ConfigureAwait(false);
 
-                _entities = await OnInclude(Set).ToListAsync(token).ConfigureAwait(false);
+                await DbContext.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    await DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                    _entities = await OnInclude(Set).ToListAsync(token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    DbContext.Release();
+                }
                 Items = _entities.AsReadOnly();
             }
             finally
@@ -170,67 +189,21 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                if (_entities.Contains(entity))
-                    return;
-
-                await Set.AddAsync(entity, token).ConfigureAwait(false);
-                if (save)
-                    await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
-                _entities.Add(entity);
-            }
-            finally
-            {
-                WriteRelease();
-            }
-
-            if (OnItemAdded != null)
-            {
-                await UCWarfare.ToUpdate(token);
-                await (OnItemAdded?.Invoke(entity) ?? Task.CompletedTask);
-            }
+            await AddNoLock(entity, save, token).ConfigureAwait(false);
         }
         finally
         {
             Release();
         }
     }
-    public async Task AddRange(IEnumerable<TEntity> entities, bool save = true, CancellationToken token = default)
+    public async Task AddRange(IEnumerable<TEntity> entities, bool save = true, bool convertList = true, CancellationToken token = default)
     {
-        List<TEntity> list = new List<TEntity>(entities);
+        List<TEntity> list = entities.ToListFast(convertList);
 
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                list.RemoveAll(x => _entities.Contains(x));
-                if (list.Count == 0)
-                    return;
-
-                await Set.AddRangeAsync(list.Where(x => !_entities.Contains(x)), token).ConfigureAwait(false);
-                if (save)
-                    await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
-                _entities.AddRange(list);
-            }
-            finally
-            {
-                WriteRelease();
-            }
-
-            if (OnItemAdded != null)
-            {
-                await UCWarfare.ToUpdate(token);
-                Task[] tasks = new Task[list.Count];
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    tasks[i] = OnItemAdded?.Invoke(list[i]) ?? Task.CompletedTask;
-                }
-                await Task.WhenAll(tasks);
-            }
+            await AddRangeNoLock(list, save, false, token).ConfigureAwait(false);
         }
         finally
         {
@@ -254,65 +227,21 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                if (!_entities.Contains(entity))
-                    return;
-
-                Set.Update(entity);
-                if (save)
-                    await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
-            }
-            finally
-            {
-                WriteRelease();
-            }
-
-            if (OnItemUpdated != null)
-            {
-                await UCWarfare.ToUpdate(token);
-                await (OnItemUpdated?.Invoke(entity) ?? Task.CompletedTask);
-            }
+            await UpdateNoLock(entity, save, token).ConfigureAwait(false);
         }
         finally
         {
             Release();
         }
     }
-    public async Task UpdateRange(IEnumerable<TEntity> entities, bool save = true, CancellationToken token = default)
+    public async Task UpdateRange(IEnumerable<TEntity> entities, bool save = true, bool convertList = true, CancellationToken token = default)
     {
-        List<TEntity> list = new List<TEntity>(entities);
+        List<TEntity> list = entities.ToListFast(convertList);
 
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                list.RemoveAll(x => !_entities.Contains(x));
-                if (list.Count == 0)
-                    return;
-
-                Set.UpdateRange(list);
-                if (save)
-                    await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
-            }
-            finally
-            {
-                WriteRelease();
-            }
-
-            if (OnItemUpdated != null)
-            {
-                await UCWarfare.ToUpdate(token);
-                Task[] tasks = new Task[list.Count];
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    tasks[i] = OnItemUpdated?.Invoke(list[i]) ?? Task.CompletedTask;
-                }
-                await Task.WhenAll(tasks);
-            }
+            await UpdateRangeNoLock(list, save, false, token).ConfigureAwait(false);
         }
         finally
         {
@@ -324,68 +253,37 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                if (!_entities.Remove(entity))
-                    return;
-
-                Set.Remove(entity);
-                if (save)
-                    await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
-            }
-            finally
-            {
-                WriteRelease();
-            }
-
-            if (OnItemDeleted != null)
-            {
-                await UCWarfare.ToUpdate(token);
-                await (OnItemDeleted?.Invoke(entity) ?? Task.CompletedTask);
-            }
+            await Remove(entity, save, token).ConfigureAwait(false);
         }
         finally
         {
             Release();
         }
     }
-    public async Task RemoveRange(IEnumerable<TEntity> entities, bool save = true, CancellationToken token = default)
+    public async Task<(SetPropertyResult, MemberInfo?)> SetProperty(TEntity entity, string property, string value, bool save, CancellationToken token = default)
     {
-        List<TEntity> list = new List<TEntity>(entities);
+        token.ThrowIfCancellationRequested();
+        if (entity is null)
+            return (SetPropertyResult.ObjectNotFound, null);
+        await WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            token.ThrowIfCancellationRequested();
+            return await SetPropertyNoLock(entity, property, value, save, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            Release();
+        }
+    }
+    public async Task RemoveRange(IEnumerable<TEntity> entities, bool save = true, bool convertList = true, CancellationToken token = default)
+    {
+        List<TEntity> list = entities.ToListFast(convertList);
 
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                list.RemoveAll(x => !_entities.Contains(x));
-                if (list.Count == 0)
-                    return;
-
-                for (int i = 0; i < list.Count; ++i)
-                    _entities.Remove(list[i]);
-
-                Set.RemoveRange(list);
-                if (save)
-                    await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
-            }
-            finally
-            {
-                WriteRelease();
-            }
-
-            if (OnItemDeleted != null)
-            {
-                await UCWarfare.ToUpdate(token);
-                Task[] tasks = new Task[list.Count];
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    tasks[i] = OnItemDeleted?.Invoke(list[i]) ?? Task.CompletedTask;
-                }
-                await Task.WhenAll(tasks);
-            }
+            await RemoveRangeNoLock(list, save, false, token).ConfigureAwait(false);
         }
         finally
         {
@@ -401,9 +299,17 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             if (_entities.Contains(entity))
                 return;
 
-            await Set.AddAsync(entity, token).ConfigureAwait(false);
-            if (save)
-                await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            await DbContext.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                await Set.AddAsync(entity, token).ConfigureAwait(false);
+                if (save)
+                    await DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            }
+            finally
+            {
+                DbContext.Release();
+            }
             _entities.Add(entity);
         }
         finally
@@ -417,10 +323,10 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             await (OnItemAdded?.Invoke(entity) ?? Task.CompletedTask);
         }
     }
-    public async Task AddRangeNoLock(IEnumerable<TEntity> entities, bool save = true, CancellationToken token = default)
+    public async Task AddRangeNoLock(IEnumerable<TEntity> entities, bool save = true, bool convertList = true, CancellationToken token = default)
     {
-        List<TEntity> list = new List<TEntity>(entities);
-        
+        List<TEntity> list = entities.ToListFast(convertList);
+
         await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -428,9 +334,17 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             if (list.Count == 0)
                 return;
 
-            await Set.AddRangeAsync(list.Where(x => !_entities.Contains(x)), token).ConfigureAwait(false);
-            if (save)
-                await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            await DbContext.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                await Set.AddRangeAsync(list.Where(x => !_entities.Contains(x)), token).ConfigureAwait(false);
+                if (save)
+                    await DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            }
+            finally
+            {
+                DbContext.Release();
+            }
             _entities.AddRange(list);
         }
         finally
@@ -458,7 +372,17 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             Func<TEntity, bool> v = selector.Compile();
             int index = _entities.FindIndex(x => v(x));
 
-            TEntity? entity = await OnInclude(Set).FirstOrDefaultAsync(selector, token).ConfigureAwait(false);
+            TEntity? entity;
+            await DbContext.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                entity = await OnInclude(Set).FirstOrDefaultAsync(selector, token).ConfigureAwait(false);
+            }
+            finally
+            {
+                DbContext.Release();
+            }
+            
             if (entity == null)
             {
                 if (index != -1)
@@ -496,7 +420,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             if (OnItemDeleted != null)
             {
                 await UCWarfare.ToUpdate(token);
-                await (OnItemDeleted?.Invoke(removed!) ?? Task.CompletedTask);
+                await (OnItemDeleted?.Invoke(removed) ?? Task.CompletedTask);
             }
         }
         else if (added != null)
@@ -504,7 +428,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             if (OnItemAdded != null)
             {
                 await UCWarfare.ToUpdate(token);
-                await (OnItemAdded?.Invoke(added!) ?? Task.CompletedTask);
+                await (OnItemAdded?.Invoke(added) ?? Task.CompletedTask);
             }
         }
 
@@ -518,9 +442,17 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             if (!_entities.Contains(entity))
                 return;
 
-            Set.Update(entity);
-            if (save)
-                await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            await DbContext.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                Set.Update(entity);
+                if (save)
+                    await DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            }
+            finally
+            {
+                DbContext.Release();
+            }
         }
         finally
         {
@@ -533,10 +465,10 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             await (OnItemUpdated?.Invoke(entity) ?? Task.CompletedTask);
         }
     }
-    public async Task UpdateRangeNoLock(IEnumerable<TEntity> entities, bool save = true, CancellationToken token = default)
+    public async Task UpdateRangeNoLock(IEnumerable<TEntity> entities, bool save = true, bool convertList = true, CancellationToken token = default)
     {
-        List<TEntity> list = new List<TEntity>(entities);
-        
+        List<TEntity> list = entities.ToListFast(convertList);
+
         await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -544,9 +476,17 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             if (list.Count == 0)
                 return;
 
-            Set.UpdateRange(list);
-            if (save)
-                await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            await DbContext.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                Set.UpdateRange(list);
+                if (save)
+                    await DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            }
+            finally
+            {
+                DbContext.Release();
+            }
         }
         finally
         {
@@ -572,9 +512,17 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             if (!_entities.Remove(entity))
                 return;
 
-            Set.Remove(entity);
-            if (save)
-                await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            await DbContext.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                Set.Remove(entity);
+                if (save)
+                    await DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            }
+            finally
+            {
+                DbContext.Release();
+            }
         }
         finally
         {
@@ -587,9 +535,9 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             await (OnItemDeleted?.Invoke(entity) ?? Task.CompletedTask);
         }
     }
-    public async Task RemoveRangeNoLock(IEnumerable<TEntity> entities, bool save = true, CancellationToken token = default)
+    public async Task RemoveRangeNoLock(IEnumerable<TEntity> entities, bool save = true, bool convertList = true, CancellationToken token = default)
     {
-        List<TEntity> list = new List<TEntity>(entities);
+        List<TEntity> list = entities.ToListFast(convertList);
         
         await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
         try
@@ -601,9 +549,17 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             for (int i = 0; i < list.Count; ++i)
                 _entities.Remove(list[i]);
 
-            Set.RemoveRange(list);
-            if (save)
-                await Data.DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            await DbContext.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                Set.RemoveRange(list);
+                if (save)
+                    await DbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            }
+            finally
+            {
+                DbContext.Release();
+            }
         }
         finally
         {
@@ -621,22 +577,6 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             await Task.WhenAll(tasks);
         }
     }
-    public async Task<(SetPropertyResult, MemberInfo?)> SetProperty(TEntity entity, string property, string value, bool save, CancellationToken token = default)
-    {
-        token.ThrowIfCancellationRequested();
-        if (entity is null)
-            return (SetPropertyResult.ObjectNotFound, null);
-        await WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            token.ThrowIfCancellationRequested();
-            return await SetPropertyNoLock(entity, property, value, save, token).ConfigureAwait(false);
-        }
-        finally
-        {
-            Release();
-        }
-    }
     protected async Task<(SetPropertyResult, MemberInfo?)> SetPropertyNoLock(TEntity entity, string property, string value, bool save, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
@@ -644,7 +584,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
         if (save && rtn.Item1 == SetPropertyResult.Success)
             await Update(entity, save, token: token).ConfigureAwait(false);
         else
-            Data.DbContext.Update(entity);
+            DbContext.Update(entity);
         return rtn;
     }
 

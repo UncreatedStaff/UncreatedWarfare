@@ -41,214 +41,232 @@ partial class KitManager
         List<KitHotkey>? bindingsToDelete = null;
         List<KitLayoutTransformation>? layoutsToDelete = null;
 
-
-        if (lockPurchaseSync)
-        {
-            Task[] tasks = new Task[players.Length];
-            for (int i = 0; i < players.Length; ++i)
-            {
-                UCPlayer pl = players[i];
-                CancellationToken token2 = token;
-                token2.CombineIfNeeded(pl.DisconnectToken);
-                tasks[i] = pl.PurchaseSync.WaitAsync(token2);
-            }
-
-            await Task.WhenAll(tasks).ConfigureAwait(false);
-        }
-
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            List<uint>?[] kitOutput = new List<uint>[players.Length];
-            List<HotkeyBinding>?[] bindings = new List<HotkeyBinding>[players.Length];
-            List<LayoutTransformation>?[] layouts = new List<LayoutTransformation>[players.Length];
-
-            List<KitAccess> kitAccesses = await WarfareDatabases.Kits.KitAccess.Where(x => steam64Ids.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
-            for (int i = 0; i < kitAccesses.Count; ++i)
+            if (lockPurchaseSync)
             {
-                KitAccess access = kitAccesses[i];
-                int index = Array.IndexOf(steam64Ids, access.Steam64);
-                if (index != -1 && access.KitId > 0)
+                Task[] tasks = new Task[players.Length];
+                for (int i = 0; i < players.Length; ++i)
                 {
-                    (kitOutput[index] ??= new List<uint>(16)).Add(access.KitId);
+                    UCPlayer pl = players[i];
+                    CancellationToken token2 = token;
+                    token2.CombineIfNeeded(pl.DisconnectToken);
+                    tasks[i] = pl.PurchaseSync.WaitAsync(token2);
                 }
+
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
 
-            List<KitHotkey> kitHotkeys = await WarfareDatabases.Kits.KitHotkeys.Where(x => steam64Ids.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
-            for (int i = 0; i < kitHotkeys.Count; ++i)
+            try
             {
-                KitHotkey hotkey = kitHotkeys[i];
-                int index = Array.IndexOf(steam64Ids, hotkey.Steam64);
-                if (index == -1 || hotkey.KitId == 0)
-                    continue;
+                List<uint>?[] kitOutput = new List<uint>[players.Length];
+                List<HotkeyBinding>?[] bindings = new List<HotkeyBinding>[players.Length];
+                List<LayoutTransformation>?[] layouts = new List<LayoutTransformation>[players.Length];
 
-                bool del = false;
-                if (!KitEx.ValidSlot(hotkey.Slot))
+                List<KitAccess> kitAccesses = await WarfareDatabases.Kits.KitAccess.Where(x => steam64Ids.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
+                for (int i = 0; i < kitAccesses.Count; ++i)
                 {
-                    L.LogWarning("Invalid kit slot (" + hotkey.Slot + ") in player " + hotkey.Steam64 + "'s hotkeys.");
-                    del = true;
-                }
-
-                IPageKitItem jar;
-
-                UnturnedAssetReference? reference = hotkey.Item;
-                if (reference.HasValue)
-                {
-                    jar = new SpecificPageKitItem(PrimaryKey.NotAssigned, reference.Value, hotkey.X, hotkey.Y, 0, hotkey.Page, 1, Array.Empty<byte>());
-                }
-                else
-                {
-                    RedirectType? redir = hotkey.Redirect;
-                    if (!redir.HasValue)
+                    KitAccess access = kitAccesses[i];
+                    int index = Array.IndexOf(steam64Ids, access.Steam64);
+                    if (index != -1 && access.KitId > 0)
                     {
-                        L.LogWarning("Failed to read redirect type and GUID from player " + hotkey.Steam64 + "'s hotkeys.");
+                        (kitOutput[index] ??= new List<uint>(16)).Add(access.KitId);
+                    }
+                }
+
+                List<KitHotkey> kitHotkeys = await WarfareDatabases.Kits.KitHotkeys.Where(x => steam64Ids.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
+                for (int i = 0; i < kitHotkeys.Count; ++i)
+                {
+                    KitHotkey hotkey = kitHotkeys[i];
+                    int index = Array.IndexOf(steam64Ids, hotkey.Steam64);
+                    if (index == -1 || hotkey.KitId == 0)
+                        continue;
+
+                    bool del = false;
+                    if (!KitEx.ValidSlot(hotkey.Slot))
+                    {
+                        L.LogWarning("Invalid kit slot (" + hotkey.Slot + ") in player " + hotkey.Steam64 + "'s hotkeys.");
                         del = true;
-                        jar = new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, hotkey.X, hotkey.Y, 0, hotkey.Page, RedirectType.None, null);
+                    }
+
+                    IPageKitItem jar;
+
+                    UnturnedAssetReference? reference = hotkey.Item;
+                    if (reference.HasValue)
+                    {
+                        jar = new SpecificPageKitItem(PrimaryKey.NotAssigned, reference.Value, hotkey.X, hotkey.Y, 0, hotkey.Page, 1, Array.Empty<byte>());
                     }
                     else
                     {
-                        jar = new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, hotkey.X, hotkey.Y, 0, hotkey.Page, redir.Value, null);
+                        RedirectType? redir = hotkey.Redirect;
+                        if (!redir.HasValue)
+                        {
+                            L.LogWarning("Failed to read redirect type and GUID from player " + hotkey.Steam64 + "'s hotkeys.");
+                            del = true;
+                            jar = new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, hotkey.X, hotkey.Y, 0, hotkey.Page, RedirectType.None, null);
+                        }
+                        else
+                        {
+                            jar = new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, hotkey.X, hotkey.Y, 0, hotkey.Page, redir.Value, null);
+                        }
                     }
+
+                    HotkeyBinding b = new HotkeyBinding(hotkey.KitId, hotkey.Slot, jar, hotkey);
+
+                    if (!del)
+                        (bindings[index] ??= new List<HotkeyBinding>(4)).Add(b);
+                    else
+                        (bindingsToDelete ??= new List<KitHotkey>(2)).Add(hotkey);
                 }
 
-                HotkeyBinding b = new HotkeyBinding(hotkey.KitId, hotkey.Slot, jar, hotkey);
-
-                if (!del)
-                    (bindings[index] ??= new List<HotkeyBinding>(4)).Add(b);
-                else
-                    (bindingsToDelete ??= new List<KitHotkey>(2)).Add(hotkey);
-            }
-
-            List<KitLayoutTransformation> kitLayouts = await WarfareDatabases.Kits.KitLayoutTransformations.Where(x => steam64Ids.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
-            for (int i = 0; i < kitLayouts.Count; ++i)
-            {
-                KitLayoutTransformation layout = kitLayouts[i];
-                int index = Array.IndexOf(steam64Ids, layout.Steam64);
-                if (index == -1 || layout.KitId == 0)
-                    continue;
-
-                LayoutTransformation l = new LayoutTransformation(layout.OldPage, layout.NewPage, layout.OldX, layout.OldY,
-                    layout.NewX, layout.NewY, layout.NewRotation, layout.KitId, layout);
-
-                (layouts[index] ??= new List<LayoutTransformation>(16)).Add(l);
-            }
-
-            KitManager? singleton = GetSingletonQuick();
-            if (singleton == null)
-                throw new SingletonUnloadedException(typeof(KitManager));
-
-            for (int i = 0; i < players.Length; ++i)
-                players[i].AccessibleKits = kitOutput[i] ?? new List<uint>(0);
-
-            await singleton.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                for (int p = 0; p < players.Length; ++p)
+                List<KitLayoutTransformation> kitLayouts = await WarfareDatabases.Kits.KitLayoutTransformations.Where(x => steam64Ids.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
+                for (int i = 0; i < kitLayouts.Count; ++i)
                 {
-                    UCPlayer player = players[p];
-                    if (!player.IsOnline)
+                    KitLayoutTransformation layout = kitLayouts[i];
+                    int index = Array.IndexOf(steam64Ids, layout.Steam64);
+                    if (index == -1 || layout.KitId == 0)
                         continue;
 
-                    List<LayoutTransformation>? layouts2 = layouts[p];
-                    if (layouts2 is { Count: > 0 })
+                    LayoutTransformation l = new LayoutTransformation(layout.OldPage, layout.NewPage, layout.OldX, layout.OldY,
+                        layout.NewX, layout.NewY, layout.NewRotation, layout.KitId, layout);
+
+                    (layouts[index] ??= new List<LayoutTransformation>(16)).Add(l);
+                }
+
+                KitManager? singleton = GetSingletonQuick();
+                if (singleton == null)
+                    throw new SingletonUnloadedException(typeof(KitManager));
+
+                for (int i = 0; i < players.Length; ++i)
+                    players[i].AccessibleKits = kitOutput[i] ?? new List<uint>(0);
+
+                await singleton.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    for (int p = 0; p < players.Length; ++p)
                     {
-                        for (int i = 0; i < layouts2.Count; ++i)
-                        {
-                            LayoutTransformation l = layouts2[i];
-                            Kit? kit = singleton.GetKit(l.Kit);
-                            if (kit is null)
-                            {
-                                L.LogWarning("Kit for " + player + "'s layout transformation (" + l.Kit + ") not found.");
-                                goto del;
-                            }
-
-                            // find matching item
-                            IKitItem? item = kit.Items?.FirstOrDefault(x =>
-                                x is IPageKitItem jar && jar.Page == l.OldPage && jar.X == l.OldX && jar.Y == l.OldY);
-                            if (item == null)
-                            {
-                                L.LogWarning(player + "'s layout transformation for kit " + l.Kit +
-                                             " has an invalid item position: " + l.OldPage + ", (" + l.OldX + ", " +
-                                             l.OldY + ").");
-                                goto del;
-                            }
-                            
+                        UCPlayer player = players[p];
+                        if (!player.IsOnline)
                             continue;
-                            del:
-                            (layoutsToDelete ??= new List<KitLayoutTransformation>()).Add(l.Model);
-                            layouts2.RemoveAtFast(i);
-                            --i;
-                        }
-                    }
 
-                    List<HotkeyBinding>? bindings2 = bindings[p];
-                    if (bindings2 is { Count: > 0 })
-                    {
-                        for (int i = 0; i < bindings2.Count; ++i)
+                        List<LayoutTransformation>? layouts2 = layouts[p];
+                        if (layouts2 is { Count: > 0 })
                         {
-                            HotkeyBinding b = bindings2[i];
-                            Kit? kit = singleton.GetKit(b.Kit);
-                            if (kit is null)
+                            for (int i = 0; i < layouts2.Count; ++i)
                             {
-                                L.LogWarning("Kit for " + player + "'s hotkey (" + b.Kit + ") not found.");
-                                goto del;
-                            }
+                                LayoutTransformation l = layouts2[i];
+                                Kit? kit = singleton.GetKit(l.Kit);
+                                if (kit is null)
+                                {
+                                    L.LogWarning("Kit for " + player + "'s layout transformation (" + l.Kit + ") not found.");
+                                    goto del;
+                                }
 
-                            // find matching item
-                            IPageKitItem? item = (IPageKitItem?)kit.Items?.FirstOrDefault(x =>
-                                x is IPageKitItem jar && jar.Page == b.Item.Page && jar.X == b.Item.X &&
-                                jar.Y == b.Item.Y &&
-                                (jar is ISpecificKitItem i1 && b.Item is ISpecificKitItem i2 && i1.Item == i2.Item ||
-                                 jar is IAssetRedirectKitItem r1 &&
-                                 b.Item is IAssetRedirectKitItem r2 && r1.RedirectType == r2.RedirectType));
-                            if (item == null)
-                            {
-                                L.LogWarning(player + "'s hotkey for kit " + b.Kit + " has an invalid item position: " +
-                                             b.Item + ".");
-                                goto del;
-                            }
+                                // find matching item
+                                IKitItem? item = kit.Items?.FirstOrDefault(x =>
+                                    x is IPageKitItem jar && jar.Page == l.OldPage && jar.X == l.OldX && jar.Y == l.OldY);
+                                if (item == null)
+                                {
+                                    L.LogWarning(player + "'s layout transformation for kit " + l.Kit +
+                                                 " has an invalid item position: " + l.OldPage + ", (" + l.OldX + ", " +
+                                                 l.OldY + ").");
+                                    goto del;
+                                }
 
-                            b.Item = item;
-                            bindings2[i] = b;
-
-                            continue;
+                                continue;
                             del:
-                            (bindingsToDelete ??= new List<KitHotkey>()).Add(b.Model);
-                            bindings2.RemoveAtFast(i);
-                            --i;
+                                (layoutsToDelete ??= new List<KitLayoutTransformation>()).Add(l.Model);
+                                layouts2.RemoveAtFast(i);
+                                --i;
+                            }
                         }
-                    }
 
-                    player.AccessibleKits = kitOutput[p];
-                    player.HotkeyBindings = bindings2;
-                    player.LayoutTransformations = layouts2;
+                        List<HotkeyBinding>? bindings2 = bindings[p];
+                        if (bindings2 is { Count: > 0 })
+                        {
+                            for (int i = 0; i < bindings2.Count; ++i)
+                            {
+                                HotkeyBinding b = bindings2[i];
+                                Kit? kit = singleton.GetKit(b.Kit);
+                                if (kit is null)
+                                {
+                                    L.LogWarning("Kit for " + player + "'s hotkey (" + b.Kit + ") not found.");
+                                    goto del;
+                                }
+
+                                // find matching item
+                                IPageKitItem? item = (IPageKitItem?)kit.Items?.FirstOrDefault(x =>
+                                    x is IPageKitItem jar && jar.Page == b.Item.Page && jar.X == b.Item.X &&
+                                    jar.Y == b.Item.Y &&
+                                    (jar is ISpecificKitItem i1 && b.Item is ISpecificKitItem i2 && i1.Item == i2.Item ||
+                                     jar is IAssetRedirectKitItem r1 &&
+                                     b.Item is IAssetRedirectKitItem r2 && r1.RedirectType == r2.RedirectType));
+                                if (item == null)
+                                {
+                                    L.LogWarning(player + "'s hotkey for kit " + b.Kit + " has an invalid item position: " +
+                                                 b.Item + ".");
+                                    goto del;
+                                }
+
+                                b.Item = item;
+                                bindings2[i] = b;
+
+                                continue;
+                            del:
+                                (bindingsToDelete ??= new List<KitHotkey>()).Add(b.Model);
+                                bindings2.RemoveAtFast(i);
+                                --i;
+                            }
+                        }
+
+                        player.AccessibleKits = kitOutput[p];
+                        player.HotkeyBindings = bindings2;
+                        player.LayoutTransformations = layouts2;
+                    }
+                }
+                finally
+                {
+                    singleton.Release();
                 }
             }
             finally
             {
-                singleton.Release();
+                for (int i = 0; i < players.Length; ++i)
+                {
+                    UCPlayer player = players[i];
+                    player.HasDownloadedKitData = true;
+                    player.IsDownloadingKitData = false;
+                    if (lockPurchaseSync)
+                        player.PurchaseSync.Release();
+                }
             }
+
+            if (bindingsToDelete is { Count: > 0 })
+                WarfareDatabases.Kits.KitHotkeys.RemoveRange(bindingsToDelete);
+            if (layoutsToDelete is { Count: > 0 })
+                WarfareDatabases.Kits.KitLayoutTransformations.RemoveRange(layoutsToDelete);
         }
         finally
         {
-            for (int i = 0; i < players.Length; ++i)
-            {
-                UCPlayer player = players[i];
-                player.HasDownloadedKitData = true;
-                player.IsDownloadingKitData = false;
-                if (lockPurchaseSync)
-                    player.PurchaseSync.Release();
-            }
+            WarfareDatabases.Kits.Release();
         }
 
-        if (bindingsToDelete is { Count: > 0 })
-            WarfareDatabases.Kits.KitHotkeys.RemoveRange(bindingsToDelete);
-        if (layoutsToDelete is { Count: > 0 })
-            WarfareDatabases.Kits.KitLayoutTransformations.RemoveRange(layoutsToDelete);
 
         if (bindingsToDelete is { Count: > 0 } || layoutsToDelete is { Count: > 0 })
         {
-            UCWarfare.RunTask(WarfareDatabases.Kits.SaveChangesAsync, token,
-                ctx: "Delete invalid hotkeys and/or layout transformations for " + players.Length + " player(s).");
+            UCWarfare.RunTask(async tkn =>
+            {
+                await WarfareDatabases.Kits.WaitAsync(tkn).ConfigureAwait(false);
+                try
+                {
+                    await WarfareDatabases.Kits.SaveChangesAsync(tkn).ConfigureAwait(false);
+                }
+                finally
+                {
+                    WarfareDatabases.Kits.Release();
+                }
+            }, CancellationToken.None, ctx: "Delete invalid hotkeys and/or layout transformations for " + players.Length + " player(s).");
         }
 
         await UCWarfare.ToUpdate(token);
@@ -260,19 +278,35 @@ partial class KitManager
 
     private static async Task AddAccessRow(uint kit, ulong player, KitAccessType type, CancellationToken token = default)
     {
-        await WarfareDatabases.Kits.KitAccess.AddAsync(new KitAccess
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
         {
-            KitId = kit,
-            Steam64 = player,
-            AccessType = type,
-            Timestamp = DateTimeOffset.UtcNow
-        }, token).ConfigureAwait(false);
-        await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+            await WarfareDatabases.Kits.KitAccess.AddAsync(new KitAccess
+            {
+                KitId = kit,
+                Steam64 = player,
+                AccessType = type,
+                Timestamp = DateTimeOffset.UtcNow
+            }, token).ConfigureAwait(false);
+            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
     }
     /// <remarks>Thread Safe</remarks>
-    public static Task<bool> HasAccess(uint kit, ulong player, CancellationToken token = default)
+    public static async Task<bool> HasAccess(uint kit, ulong player, CancellationToken token = default)
     {
-        return kit == 0 ? Task.FromResult(false) : WarfareDatabases.Kits.KitAccess.AnyAsync(x => x.KitId == kit && x.Steam64 == player, token);
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return kit != 0 && await WarfareDatabases.Kits.KitAccess.AnyAsync(x => x.KitId == kit && x.Steam64 == player, token);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
     }
     private static async Task<bool> AddAccessRow(string kit, ulong player, KitAccessType type, CancellationToken token = default)
     {
@@ -283,51 +317,76 @@ partial class KitManager
             if (kitFound is not null)
                 pk = kitFound.PrimaryKey;
         }
-        if (pk == 0)
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
         {
-            Kit? kit2 = await WarfareDatabases.Kits.Kits.FirstOrDefaultAsync(x => x.InternalName == kit, token).ConfigureAwait(false);
-
-            if (kit2 == null)
-                return false;
-
-            pk = kit2.PrimaryKey;
             if (pk == 0)
-                return false;
+            {
+                Kit? kit2 = await WarfareDatabases.Kits.Kits.FirstOrDefaultAsync(x => x.InternalName == kit, token).ConfigureAwait(false);
+
+                if (kit2 == null)
+                    return false;
+
+                pk = kit2.PrimaryKey;
+                if (pk == 0)
+                    return false;
+            }
+
+            await WarfareDatabases.Kits.KitAccess.AddAsync(new KitAccess
+            {
+                KitId = pk,
+                Steam64 = player,
+                AccessType = type,
+                Timestamp = DateTimeOffset.UtcNow
+            }, token).ConfigureAwait(false);
+
+            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
         }
 
-        await WarfareDatabases.Kits.KitAccess.AddAsync(new KitAccess
-        {
-            KitId = pk,
-            Steam64 = player,
-            AccessType = type,
-            Timestamp = DateTimeOffset.UtcNow
-        }, token).ConfigureAwait(false);
-
-        await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
         return true;
     }
     private static async Task<bool> RemoveAccessRow(uint kit, ulong player, CancellationToken token = default)
     {
-        List<KitAccess> access = await WarfareDatabases.Kits.KitAccess.Where(x => x.KitId == kit && x.Steam64 == player)
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<KitAccess> access = await WarfareDatabases.Kits.KitAccess.Where(x => x.KitId == kit && x.Steam64 == player)
             .ToListAsync(token).ConfigureAwait(false);
 
-        if (access is not { Count: > 0 })
-            return false;
+            if (access is not { Count: > 0 })
+                return false;
 
-        WarfareDatabases.Kits.KitAccess.RemoveRange(access);
-        await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+            WarfareDatabases.Kits.KitAccess.RemoveRange(access);
+            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
         return true;
     }
     private static async Task<bool> RemoveAccessRow(string kit, ulong player, CancellationToken token = default)
     {
-        List<KitAccess> access = await WarfareDatabases.Kits.KitAccess.Where(x => x.Kit.InternalName == kit && x.Steam64 == player)
-            .ToListAsync(token).ConfigureAwait(false);
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<KitAccess> access = await WarfareDatabases.Kits.KitAccess.Where(x => x.Kit.InternalName == kit && x.Steam64 == player)
+                .ToListAsync(token).ConfigureAwait(false);
 
-        if (access is not { Count: > 0 })
-            return false;
+            if (access is not { Count: > 0 })
+                return false;
 
-        WarfareDatabases.Kits.KitAccess.RemoveRange(access);
-        await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+            WarfareDatabases.Kits.KitAccess.RemoveRange(access);
+            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
         return true;
     }
 
@@ -336,27 +395,43 @@ partial class KitManager
     {
         if (!KitEx.ValidSlot(slot))
             throw new ArgumentException("Invalid slot number.", nameof(slot));
-        List<KitHotkey> hotkeys = await WarfareDatabases.Kits.KitHotkeys.Where(x => x.Kit.PrimaryKey == kit && x.Steam64 == player && x.Slot == slot)
-            .ToListAsync(token).ConfigureAwait(false);
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<KitHotkey> hotkeys = await WarfareDatabases.Kits.KitHotkeys.Where(x => x.Kit.PrimaryKey == kit && x.Steam64 == player && x.Slot == slot)
+                .ToListAsync(token).ConfigureAwait(false);
 
-        if (hotkeys is not { Count: > 0 })
-            return false;
+            if (hotkeys is not { Count: > 0 })
+                return false;
 
-        WarfareDatabases.Kits.KitHotkeys.RemoveRange(hotkeys);
-        await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+            WarfareDatabases.Kits.KitHotkeys.RemoveRange(hotkeys);
+            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
         return true;
     }
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> RemoveHotkey(uint kit, ulong player, byte x, byte y, Page page, CancellationToken token = default)
     {
-        List<KitHotkey> hotkeys = await WarfareDatabases.Kits.KitHotkeys.Where(h => h.Kit.PrimaryKey == kit && h.Steam64 == player && h.X == x && h.Y == y && h.Page == page)
-            .ToListAsync(token).ConfigureAwait(false);
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<KitHotkey> hotkeys = await WarfareDatabases.Kits.KitHotkeys.Where(h => h.Kit.PrimaryKey == kit && h.Steam64 == player && h.X == x && h.Y == y && h.Page == page)
+                .ToListAsync(token).ConfigureAwait(false);
 
-        if (hotkeys is not { Count: > 0 })
-            return false;
+            if (hotkeys is not { Count: > 0 })
+                return false;
 
-        WarfareDatabases.Kits.KitHotkeys.RemoveRange(hotkeys);
-        await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+            WarfareDatabases.Kits.KitHotkeys.RemoveRange(hotkeys);
+            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
         return true;
     }
     /// <remarks>Thread Safe</remarks>
@@ -367,49 +442,66 @@ partial class KitManager
         if (!KitEx.ValidSlot(slot))
             throw new ArgumentException("Invalid slot number.", nameof(slot));
 
-        byte x = item.X, y = item.Y;
-        Page page = item.Page;
-        List<KitHotkey> hotkeys = await WarfareDatabases.Kits.KitHotkeys.Where(h => h.Kit.PrimaryKey == kit && h.Steam64 == player && (h.X == x && h.Y == y && h.Page == page || h.Slot == slot))
-            .ToListAsync(token).ConfigureAwait(false);
-
-        if (hotkeys.Count > 0)
-            WarfareDatabases.Kits.KitHotkeys.RemoveRange(hotkeys);
-
-        KitHotkey kitHotkey = new KitHotkey
+        KitHotkey kitHotkey;
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
         {
-            Steam64 = player,
-            KitId = kit,
-            Item = item is ISpecificKitItem item2 ? item2.Item : null,
-            Redirect = item is IAssetRedirectKitItem redir ? redir.RedirectType : null,
-            X = x,
-            Y = y,
-            Page = page,
-            Slot = slot
-        };
-        WarfareDatabases.Kits.KitHotkeys.Add(kitHotkey);
+            byte x = item.X, y = item.Y;
+            Page page = item.Page;
+            List<KitHotkey> hotkeys = await WarfareDatabases.Kits.KitHotkeys.Where(h => h.Kit.PrimaryKey == kit && h.Steam64 == player && (h.X == x && h.Y == y && h.Page == page || h.Slot == slot))
+                .ToListAsync(token).ConfigureAwait(false);
 
-        await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+            if (hotkeys.Count > 0)
+                WarfareDatabases.Kits.KitHotkeys.RemoveRange(hotkeys);
+
+            kitHotkey = new KitHotkey
+            {
+                Steam64 = player,
+                KitId = kit,
+                Item = item is ISpecificKitItem item2 ? item2.Item : null,
+                Redirect = item is IAssetRedirectKitItem redir ? redir.RedirectType : null,
+                X = x,
+                Y = y,
+                Page = page,
+                Slot = slot
+            };
+            WarfareDatabases.Kits.KitHotkeys.Add(kitHotkey);
+
+            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
         return kitHotkey;
     }
     internal async Task SaveFavorites(UCPlayer player, IReadOnlyList<uint> favoriteKits, CancellationToken token = default)
     {
         token.CombineIfNeeded(UCWarfare.UnloadCancel);
-        object[] args = new object[favoriteKits.Count + 1];
-        args[0] = player.Steam64;
-
-        ulong steam64 = player.Steam64;
-
-        List<KitFavorite> list = await WarfareDatabases.Kits.KitFavorites.Where(x => x.Steam64 == steam64).ToListAsync(token);
-        WarfareDatabases.Kits.KitFavorites.RemoveRange(list);
-        WarfareDatabases.Kits.KitFavorites.AddRange(favoriteKits.Select(x => new KitFavorite
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
         {
-            Steam64 = steam64,
-            KitId = x
-        }));
+            object[] args = new object[favoriteKits.Count + 1];
+            args[0] = player.Steam64;
 
-        await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
-        
-        player.KitMenuData.FavoritesDirty = false;
+            ulong steam64 = player.Steam64;
+
+            List<KitFavorite> list = await WarfareDatabases.Kits.KitFavorites.Where(x => x.Steam64 == steam64).ToListAsync(token);
+            WarfareDatabases.Kits.KitFavorites.RemoveRange(list);
+            WarfareDatabases.Kits.KitFavorites.AddRange(favoriteKits.Select(x => new KitFavorite
+            {
+                Steam64 = steam64,
+                KitId = x
+            }));
+
+            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+            
+            player.KitMenuData.FavoritesDirty = false;
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
     }
     public async Task ResetLayout(UCPlayer player, uint kit, bool lockPurchaseSync, CancellationToken token = default)
     {
@@ -417,12 +509,20 @@ partial class KitManager
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            ulong steam64 = player.Steam64;
-            player.LayoutTransformations?.RemoveAll(x => x.Kit == kit);
-            List<KitLayoutTransformation> list = await WarfareDatabases.Kits.KitLayoutTransformations.Where(x => x.Steam64 == steam64 && x.KitId == kit).ToListAsync(token);
-            WarfareDatabases.Kits.KitLayoutTransformations.RemoveRange(list);
+            await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                ulong steam64 = player.Steam64;
+                player.LayoutTransformations?.RemoveAll(x => x.Kit == kit);
+                List<KitLayoutTransformation> list = await WarfareDatabases.Kits.KitLayoutTransformations.Where(x => x.Steam64 == steam64 && x.KitId == kit).ToListAsync(token);
+                WarfareDatabases.Kits.KitLayoutTransformations.RemoveRange(list);
 
-            await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+                await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+            }
+            finally
+            {
+                WarfareDatabases.Kits.Release();
+            }
         }
         finally
         {
@@ -590,15 +690,23 @@ partial class KitManager
 
                 uint kitId = kit.PrimaryKey;
 
-                List<KitLayoutTransformation> existing = await WarfareDatabases.Kits.KitLayoutTransformations
-                    .Where(x => x.Steam64 == steam64 && x.KitId == kitId).ToListAsync(token).ConfigureAwait(false);
+                await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    List<KitLayoutTransformation> existing = await WarfareDatabases.Kits.KitLayoutTransformations
+                        .Where(x => x.Steam64 == steam64 && x.KitId == kitId).ToListAsync(token).ConfigureAwait(false);
 
-                WarfareDatabases.Kits.KitLayoutTransformations.RemoveRange(existing);
+                    WarfareDatabases.Kits.KitLayoutTransformations.RemoveRange(existing);
 
-                if (active.Count > 0)
-                    await WarfareDatabases.Kits.KitLayoutTransformations.AddRangeAsync(active.Select(x => x.Model!), token);
+                    if (active.Count > 0)
+                        await WarfareDatabases.Kits.KitLayoutTransformations.AddRangeAsync(active.Select(x => x.Model), token);
 
-                await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+                    await WarfareDatabases.Kits.SaveChangesAsync(token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    WarfareDatabases.Kits.Release();
+                }
             }
             finally
             {
@@ -639,11 +747,19 @@ partial class KitManager
         if (changed.Count == 0)
             return;
 
-        uint id = kit.PrimaryKey;
-        List<KitLayoutTransformation> transformations =
-            await WarfareDatabases.Kits.KitLayoutTransformations.Where(x => x.KitId == id).ToListAsync(token).ConfigureAwait(false);
-        transformations.RemoveAll(x => !changed.Any(y => x.OldPage == y.Page && x.OldX == y.X && x.OldY == y.Y));
-        WarfareDatabases.Kits.KitLayoutTransformations.RemoveRange(transformations);
-        await WarfareDatabases.Kits.SaveChangesAsync(token);
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            uint id = kit.PrimaryKey;
+            List<KitLayoutTransformation> transformations =
+                await WarfareDatabases.Kits.KitLayoutTransformations.Where(x => x.KitId == id).ToListAsync(token).ConfigureAwait(false);
+            transformations.RemoveAll(x => !changed.Any(y => x.OldPage == y.Page && x.OldX == y.X && x.OldY == y.Y));
+            WarfareDatabases.Kits.KitLayoutTransformations.RemoveRange(transformations);
+            await WarfareDatabases.Kits.SaveChangesAsync(token);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
     }
 }

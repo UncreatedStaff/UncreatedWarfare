@@ -11,7 +11,7 @@ public class LanguagePreferences
     public LanguageInfo Language { get; set; } = null!;
 
     [Required]
-    [Column("Langauge")]
+    [Column("Language")]
     [ForeignKey(nameof(Language))]
     public uint LanguageId { get; set; }
 
@@ -25,5 +25,5 @@ public class LanguagePreferences
     public bool UseCultureForCommandInput { get; set; }
 
     [Required]
-    public DateTime LastUpdated { get; set; }
+    public DateTimeOffset LastUpdated { get; set; }
 }

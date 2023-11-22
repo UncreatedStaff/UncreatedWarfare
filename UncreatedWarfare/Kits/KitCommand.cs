@@ -1146,23 +1146,31 @@ public sealed class KitCommand : AsyncCommand
 
                 await manager.Add(kit, token: token).ConfigureAwait(false);
 
-                foreach (KitSkillset skillset in kit.Skillsets)
-                    WarfareDatabases.Kits.Add(skillset);
+                await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    foreach (KitSkillset skillset in kit.Skillsets)
+                        WarfareDatabases.Kits.Add(skillset);
 
-                foreach (KitFilteredFaction faction in kit.FactionFilter)
-                    WarfareDatabases.Kits.Add(faction);
+                    foreach (KitFilteredFaction faction in kit.FactionFilter)
+                        WarfareDatabases.Kits.Add(faction);
 
-                foreach (KitFilteredMap map in kit.MapFilter)
-                    WarfareDatabases.Kits.Add(map);
+                    foreach (KitFilteredMap map in kit.MapFilter)
+                        WarfareDatabases.Kits.Add(map);
 
-                foreach (KitItemModel item in kit.ItemModels)
-                    WarfareDatabases.Kits.Add(item);
-                
-                foreach (KitTranslation translation in kit.Translations)
-                    WarfareDatabases.Kits.Add(translation);
-                
-                foreach (KitUnlockRequirement unlockRequirement in kit.UnlockRequirementsModels)
-                    WarfareDatabases.Kits.Add(unlockRequirement);
+                    foreach (KitItemModel item in kit.ItemModels)
+                        WarfareDatabases.Kits.Add(item);
+
+                    foreach (KitTranslation translation in kit.Translations)
+                        WarfareDatabases.Kits.Add(translation);
+
+                    foreach (KitUnlockRequirement unlockRequirement in kit.UnlockRequirementsModels)
+                        WarfareDatabases.Kits.Add(unlockRequirement);
+                }
+                finally
+                {
+                    WarfareDatabases.Kits.Release();
+                }
                 
                 ctx.LogAction(ActionLogType.CreateKit, kitName + " COPIED FROM " + existingName);
                 await UCWarfare.ToUpdate();
@@ -1240,11 +1248,15 @@ public sealed class KitCommand : AsyncCommand
                             await manager.WaitAsync(token).ConfigureAwait(false);
                             try
                             {
-                                List<KitSkillset> skillsets = kit.Skillsets;
-                                for (int i = 0; i < skillsets.Count; ++i)
+                                await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+                                try
                                 {
-                                    if (skillsets[i].Skillset.SkillIndex == set.SkillIndex && skillsets[i].Skillset.SpecialityIndex == set.SpecialityIndex)
+                                    List<KitSkillset> skillsets = kit.Skillsets;
+                                    for (int i = 0; i < skillsets.Count; ++i)
                                     {
+                                        if (skillsets[i].Skillset.SkillIndex != set.SkillIndex || skillsets[i].Skillset.SpecialityIndex != set.SpecialityIndex)
+                                            continue;
+
                                         if (add)
                                         {
                                             skillsets[i].Skillset = set;
@@ -1254,21 +1266,27 @@ public sealed class KitCommand : AsyncCommand
                                         {
                                             WarfareDatabases.Kits.Remove(skillsets[i]);
                                         }
-                                        
+
                                         goto reply;
                                     }
+
+                                    if (!add)
+                                        throw ctx.Reply(T.KitSkillsetNotFound, set, kit);
+
+                                    KitSkillset skillsetModel = new KitSkillset
+                                    {
+                                        Skillset = set,
+                                        Kit = kit,
+                                        KitId = kit.PrimaryKey
+                                    };
+                                    skillsets.Add(skillsetModel);
+                                    WarfareDatabases.Kits.Add(skillsetModel);
+                                }
+                                finally
+                                {
+                                    WarfareDatabases.Kits.Release();
                                 }
 
-                                if (!add)
-                                    throw ctx.Reply(T.KitSkillsetNotFound, set, kit);
-                                KitSkillset skillsetModel = new KitSkillset
-                                {
-                                    Skillset = set,
-                                    Kit = kit,
-                                    KitId = kit.PrimaryKey
-                                };
-                                skillsets.Add(skillsetModel);
-                                WarfareDatabases.Kits.Add(skillsetModel);
                                 reply:
                                 await manager.Update(kit, token: token);
                                 ctx.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.InternalName);

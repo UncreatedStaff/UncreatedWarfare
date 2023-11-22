@@ -256,8 +256,17 @@ public static class Data
     }
     internal static async Task LoadSQL(CancellationToken token)
     {
-        DbContext = new WarfareDbContext();
-        WarfareDatabases.LoadFromWarfareDbContext(DbContext);
+        WarfareDatabases.Semaphore ??= new UCSemaphore();
+        await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            DbContext = new WarfareDbContext();
+            WarfareDatabases.LoadFromWarfareDbContext(DbContext);
+        }
+        finally
+        {
+            WarfareDatabases.Release();
+        }
 
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
         bool status = await DatabaseManager.OpenAsync(token);

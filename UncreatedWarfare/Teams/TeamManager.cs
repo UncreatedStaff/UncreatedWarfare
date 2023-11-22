@@ -1813,7 +1813,19 @@ public static class TeamManager
     [Obsolete]
     private static readonly Guid VestRedirect               = new Guid("2b22ac1b5de74755a24c2f05219c5e1f");
 #endif
-    public static Task ReloadFactions(CancellationToken token) => ReloadFactions(WarfareDatabases.Factions, UCWarfare.IsLoaded, token);
+    public static async Task ReloadFactions(CancellationToken token)
+    {
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            await ReloadFactions(WarfareDatabases.Factions, UCWarfare.IsLoaded, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
+    }
+
     public static Task ReloadFactions(IFactionDbContext db, bool uploadDefaultIfMissing, CancellationToken token)
     {
         if (_factions == null)

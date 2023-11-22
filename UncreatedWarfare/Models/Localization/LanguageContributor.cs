@@ -15,7 +15,7 @@ public class LanguageContributor
     public LanguageInfo Language { get; set; } = null!;
 
     [Required]
-    [Column("Langauge")]
+    [Column("Language")]
     [ForeignKey(nameof(Language))]
     public uint LanguageId { get; set; }
     public ulong Contributor { get; set; }

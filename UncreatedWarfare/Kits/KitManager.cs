@@ -100,12 +100,26 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         }
     }
 
-    protected override async Task PostReload(CancellationToken token)
+    public static IQueryable<Kit> IncludeKitData(IQueryable<Kit> set)
     {
-        await DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token).ConfigureAwait(false);
+        return set
+            .Include(x => x.ItemModels)
+            .Include(x => x.UnlockRequirementsModels)
+            .Include(x => x.Bundles)
+            .Include(x => x.FactionFilter)
+            .Include(x => x.MapFilter)
+            .Include(x => x.Skillsets)
+            .Include(x => x.Translations);
     }
 
-    protected override async Task PreUnload(CancellationToken token)
+    protected override IQueryable<Kit> OnInclude(IQueryable<Kit> set) => IncludeKitData(set);
+
+    protected override Task PostReload(CancellationToken token)
+    {
+        return DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token);
+    }
+
+    protected override Task PreUnload(CancellationToken token)
     {
         //EventDispatcher.InventoryItemRemoved -= OnInventoryItemRemoved;
         EventDispatcher.SwapClothingRequested -= OnSwapClothingRequested;
@@ -116,7 +130,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         EventDispatcher.PlayerJoined -= OnPlayerJoined;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         PlayerLife.OnPreDeath -= OnPreDeath;
-        await SaveAllPlayerFavorites(token).ConfigureAwait(false);
+        return SaveAllPlayerFavorites(token);
     }
     private Task OnItemsRefreshedIntl()
     {
@@ -1763,35 +1777,44 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
 
         language ??= Localization.GetDefaultLanguage();
 
-        int index = kit.Translations.FindIndex(x => x.LanguageId == language.Key);
-        if (index != -1)
+        WarfareDatabases.Kits.Wait(UCWarfare.UnloadCancel);
+        try
         {
-            KitTranslation translation = kit.Translations[index];
-            if (string.IsNullOrEmpty(text))
+            int index = kit.Translations.FindIndex(x => x.LanguageId == language.Key);
+            if (index != -1)
             {
-                WarfareDatabases.Kits.Remove(translation);
-                kit.Translations.RemoveAt(index);
+                KitTranslation translation = kit.Translations[index];
+                if (string.IsNullOrEmpty(text))
+                {
+                    WarfareDatabases.Kits.Remove(translation);
+                    kit.Translations.RemoveAt(index);
+                }
+                else
+                {
+                    WarfareDatabases.Kits.Update(translation);
+                    translation.Value = text;
+                }
             }
-            else
+            else if (!string.IsNullOrEmpty(text))
             {
-                WarfareDatabases.Kits.Update(translation);
-                translation.Value = text;
+                KitTranslation translation = new KitTranslation
+                {
+                    Kit = kit,
+                    KitId = kit.PrimaryKey,
+                    Value = text,
+                    Language = language,
+                    LanguageId = language.Key
+                };
+                WarfareDatabases.Kits.Add(translation);
+                kit.Translations.Add(translation);
             }
+            kit.UpdateLastEdited(setter);
+            WarfareDatabases.Kits.Update(kit);
         }
-        else if (!string.IsNullOrEmpty(text))
+        finally
         {
-            KitTranslation translation = new KitTranslation
-            {
-                Kit = kit,
-                KitId = kit.PrimaryKey,
-                Value = text,
-                Language = language,
-                LanguageId = language.Key
-            };
-            WarfareDatabases.Kits.Add(translation);
-            kit.Translations.Add(translation);
+            WarfareDatabases.Kits.Release();
         }
-        kit.UpdateLastEdited(setter);
     }
     /// <remarks>Thread Safe</remarks>
     public async Task SetText(ulong setter, Kit kit, string? text, LanguageInfo? language = null, bool updateSigns = true, CancellationToken token = default)
@@ -2426,8 +2449,16 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         {
             ulong s64 = player.Steam64;
 
-            player.KitMenuData.FavoriteKits = await WarfareDatabases.Kits.KitFavorites.Where(x => x.Steam64 == s64)
-                .Select(x => x.KitId).ToListAsync(token);
+            await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                player.KitMenuData.FavoriteKits = await WarfareDatabases.Kits.KitFavorites.Where(x => x.Steam64 == s64)
+                    .Select(x => x.KitId).ToListAsync(token);
+            }
+            finally
+            {
+                WarfareDatabases.Kits.Release();
+            }
 
             player.KitMenuData.FavoritesDirty = false;
         }

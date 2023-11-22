@@ -25,6 +25,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
@@ -184,6 +185,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         L.Log("Migrating database changes...", ConsoleColor.Magenta);
 
+        await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
         try
         {
             await Data.DbContext.Database.MigrateAsync(token);
@@ -191,6 +193,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         }
         catch (Exception ex)
         {
+            WarfareDatabases.Release();
             L.LogError(" + Failed to migrate databse.");
             L.LogError(ex);
             Provider.shutdown(10);
@@ -1007,6 +1010,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                     Data.RemoteSQL = null!;
                 }
             }
+            WarfareDatabases.Semaphore?.Dispose();
 #if DEBUG
             profiler2.Dispose();
 #endif

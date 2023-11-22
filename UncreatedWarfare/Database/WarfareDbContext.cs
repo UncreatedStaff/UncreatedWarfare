@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
@@ -58,4 +60,12 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
 
         Console.WriteLine("Model created.");
     }
+
+    public Task WaitAsync(CancellationToken token = default) => WarfareDatabases.WaitAsync(token);
+    public Task WaitAsync(TimeSpan timeout, CancellationToken token = default) => WarfareDatabases.WaitAsync(timeout, token);
+    public Task WaitAsync(int timeoutMilliseconds, CancellationToken token = default) => WarfareDatabases.WaitAsync(timeoutMilliseconds, token);
+    public void Wait(CancellationToken token = default) => WarfareDatabases.Wait(token);
+    public void Wait(TimeSpan timeout, CancellationToken token = default) => WarfareDatabases.Wait(timeout, token);
+    public void Wait(int timeoutMilliseconds, CancellationToken token = default) => WarfareDatabases.Wait(timeoutMilliseconds, token);
+    public void Release(int amt = 1) => WarfareDatabases.Release(amt);
 }

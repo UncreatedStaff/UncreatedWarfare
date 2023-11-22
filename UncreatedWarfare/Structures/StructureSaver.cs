@@ -358,6 +358,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             {
                 L.LogDebug("Resaving " + toSave.Count + " item(s)...");
                 await AddOrUpdateNoLock(toSave, token).ConfigureAwait(false);
+                L.LogDebug("  Done");
             }
             else
             {

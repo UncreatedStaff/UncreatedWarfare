@@ -10,6 +10,13 @@ using System.Threading.Tasks;
 namespace Uncreated.Warfare.Database.Abstractions;
 public interface IDbContext : IDisposable, IAsyncDisposable, IInfrastructure<IServiceProvider>, IDbContextDependencies, IDbSetCache, IDbContextPoolable, IResettableService
 {
+    Task WaitAsync(CancellationToken token = default);
+    Task WaitAsync(TimeSpan timeout, CancellationToken token = default);
+    Task WaitAsync(int timeoutMilliseconds, CancellationToken token = default);
+    void Wait(CancellationToken token = default);
+    void Wait(TimeSpan timeout, CancellationToken token = default);
+    void Wait(int timeoutMilliseconds, CancellationToken token = default);
+    void Release(int amt = 1);
     DatabaseFacade Database { get; }
     ChangeTracker ChangeTracker { get; }
     DbContextId ContextId { get; }

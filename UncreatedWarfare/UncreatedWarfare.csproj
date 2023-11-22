@@ -171,7 +171,7 @@
     <PackageReference Include="System.Runtime.Caching" Version="4.5.0" />
     <PackageReference Include="System.Text.Json" Version="4.7.1" NoWarn="NU1605" />
 
-    <PackageReference Include="DanielWillett.ReflectionTools" Version="[2.0.1,)" />
+    <PackageReference Include="DanielWillett.ReflectionTools" Version="[2.0.2,)" />
     <PackageReference Include="MySqlConnector" Version="0.69.10" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.0" />

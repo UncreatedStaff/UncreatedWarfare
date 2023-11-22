@@ -34,10 +34,10 @@ public class WarfareUserData
     public PermissionLevel PermissionLevel { get; set; } = PermissionLevel.Member;
 
     /// <remarks>UTC</remarks>
-    public DateTime? FirstJoined { get; set; }
+    public DateTimeOffset? FirstJoined { get; set; }
 
     /// <remarks>UTC</remarks>
-    public DateTime? LastJoined { get; set; }
+    public DateTimeOffset? LastJoined { get; set; }
     
     public HWID? LastHWID { get; set; }
     

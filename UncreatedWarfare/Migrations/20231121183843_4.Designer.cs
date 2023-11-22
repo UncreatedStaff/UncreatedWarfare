@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231121183843_4")]
+    partial class _4
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -203,9 +205,9 @@ namespace Uncreated.Warfare.Migrations
                         .IsRequired()
                         .HasColumnType("enum('Unarmed','Squadleader','Rifleman','Medic','Breacher','AutomaticRifleman','Grenadier','MachineGunner','LAT','HAT','Marksman','Sniper','APRifleman','CombatEngineer','Crewman','Pilot','SpecOps')");
 
-                    b.Property<DateTime>("CreatedTimestamp")
+                    b.Property<DateTimeOffset>("CreatedTimestamp")
                         .HasColumnName("CreatedAt")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime(6)");
 
                     b.Property<ulong>("Creator")
                         .HasColumnType("bigint unsigned");
@@ -229,9 +231,9 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("varchar(25) CHARACTER SET utf8mb4")
                         .HasMaxLength(25);
 
-                    b.Property<DateTime>("LastEditedTimestamp")
+                    b.Property<DateTimeOffset>("LastEditedTimestamp")
                         .HasColumnName("LastEditedAt")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime(6)");
 
                     b.Property<ulong>("LastEditor")
                         .HasColumnType("bigint unsigned");
@@ -287,9 +289,9 @@ namespace Uncreated.Warfare.Migrations
                         .IsRequired()
                         .HasColumnType("enum('Unknown','Credits','Event','Purchase','QuestReward')");
 
-                    b.Property<DateTime>("Timestamp")
+                    b.Property<DateTimeOffset>("Timestamp")
                         .HasColumnName("GivenAt")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("KitId", "Steam64");
 
@@ -673,7 +675,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("int unsigned");
 
                     b.Property<DateTime>("LastUpdated")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime(6)");
 
                     b.Property<bool>("UseCultureForCommandInput")
                         .ValueGeneratedOnAdd()
@@ -704,7 +706,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasMaxLength(30);
 
                     b.Property<DateTime?>("FirstJoined")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime(6)");
 
                     b.Property<byte[]>("LastHWID")
                         .HasColumnType("binary(20)");
@@ -713,7 +715,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("varchar(45)");
 
                     b.Property<DateTime?>("LastJoined")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("NickName")
                         .IsRequired()
