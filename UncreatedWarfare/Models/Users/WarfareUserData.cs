@@ -39,6 +39,8 @@ public class WarfareUserData
     /// <remarks>UTC</remarks>
     public DateTimeOffset? LastJoined { get; set; }
     
+    public uint TotalSeconds { get; set; }
+    
     public HWID? LastHWID { get; set; }
     
     public IPAddress? LastIPAddress { get; set; }

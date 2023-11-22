@@ -8,6 +8,7 @@
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
     <PackageLicenseExpression>N/A</PackageLicenseExpression>
+    <NoWarn>NU1701</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnablePreviewFeatures>true</EnablePreviewFeatures>
     <DoNotCopyLocalIfInGac>true</DoNotCopyLocalIfInGac>
