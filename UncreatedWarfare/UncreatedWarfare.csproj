@@ -1,27 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
-    <Product>Uncreated Warfare</Product>
-    <Version>4.0.0</Version>
+    <AssemblyTitle>Uncreated.Warfare</AssemblyTitle>
+    <AssemblyName>Uncreated.Warfare</AssemblyName>
+    <Title>Uncreated.Warfare</Title>
+    <Product>Uncreated.Warfare</Product>
+    <VersionPrefix>4.0.0</VersionPrefix>
+    <VersionBuild>0</VersionBuild>
+    <VersionSuffix>prerelease$(VersionBuild)</VersionSuffix>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
-    <PackageLicenseExpression>N/A</PackageLicenseExpression>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <NoWarn>NU1701</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnablePreviewFeatures>true</EnablePreviewFeatures>
     <DoNotCopyLocalIfInGac>true</DoNotCopyLocalIfInGac>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <PackageIcon>icon.png</PackageIcon> 
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/UncreatedStaff/UncreatedWarfare</RepositoryUrl>
     <RepositoryType>GitHub</RepositoryType>
     <PackageTags>Plugin</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
     <RootNamespace>Uncreated.Warfare</RootNamespace>
-    <AssemblyVersion>$(Version).0</AssemblyVersion>
-    <FileVersion>$(Version).0</FileVersion>
+    <AssemblyVersion>$(VersionPrefix).$(VersionBuild)</AssemblyVersion>
+    <FileVersion>$(VersionPrefix).$(VersionBuild)</FileVersion>
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
@@ -53,6 +58,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\LICENSE.txt" Pack="true" PackagePath="\" />
     <None Remove="Command_blank.txt" />
     <Compile Remove="Commands\Command_blank.txt" />
   </ItemGroup>
@@ -63,8 +71,8 @@
   </PropertyGroup>
 
   <!-- Build to module dir if it exists -->
-  <PropertyGroup Condition="'$(CopyToModule)' != 'False' And exists('$(ServerPath)\Modules\UncreatedWarfare\Bin')">
-    <OutDir>$(ServerPath)\Modules\UncreatedWarfare\Bin</OutDir>
+  <PropertyGroup Condition="'$(CopyToModule)' != 'False' And exists('$(ServerPath)\Modules\Uncreated.Warfare\Bin')">
+    <OutDir>$(ServerPath)\Modules\Uncreated.Warfare\Bin</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(CopyToModule)' == 'False'">
     <TargetFramework>net7.0</TargetFramework>
@@ -81,105 +89,31 @@
 
 
   <ItemGroup>
-    <Reference Include="Microsoft.CSharp" />
-
-    <Reference Include="System.Diagnostics.DiagnosticSource">
-      <HintPath>$(ServerPath)\Modules\UncreatedWarfare\Libraries\System.Diagnostics.DiagnosticSource.dll</HintPath>
-    </Reference>
-
-    <Reference Include="Assembly-CSharp">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-
-    <Reference Include="com.rlabrecque.steamworks.net">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
-    </Reference>
-
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-
-    <Reference Include="SDG.NetPak.Runtime">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\SDG.NetPak.Runtime.dll</HintPath>
-    </Reference>
-
-    <Reference Include="SDG.NetTransport">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\SDG.NetTransport.dll</HintPath>
-    </Reference>
-
-    <Reference Include="Stripe.net">
-      <HintPath>$(ServerPath)\Modules\UncreatedWarfare\Libraries\Stripe.net.dll</HintPath>
-    </Reference>
-
-    <Reference Include="Uncreated.UI">
-      <HintPath>$(ServerPath)\Modules\UncreatedWarfare\Libraries\Uncreated.UI.dll</HintPath>
-    </Reference>
-
-    <Reference Include="UncreatedNetworking">
-      <HintPath>$(ServerPath)\Modules\UncreatedWarfare\Libraries\UncreatedNetworking.dll</HintPath>
-    </Reference>
-
-    <Reference Include="UniTask">
-      <HintPath>$(ServerPath)\Modules\UncreatedWarfare\Libraries\UniTask.dll</HintPath>
-    </Reference>
-
-    <Reference Include="UnityEngine">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\UnityEngine.dll</HintPath>
-    </Reference>
-
-    <Reference Include="UnityEngine.AssetBundleModule">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
-    </Reference>
-
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-
-    <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
-    </Reference>
-
-    <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
-    </Reference>
-
-    <Reference Include="UnityEngine.UnityWebRequestModule">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
-    </Reference>
-
-    <Reference Include="UnturnedDat">
-      <HintPath>$(ServerPath)\Unturned_Data\Managed\UnturnedDat.dll</HintPath>
-    </Reference>
-
-  </ItemGroup>
-
-
-  <ItemGroup>
     <None Include="..\.editorconfig" Link=".editorconfig" />
-    <None Include="Resources\icon.png">
-      <Pack>True</Pack>
-      <PackagePath />
-    </None>
   </ItemGroup>
 
   <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->
   <ItemGroup>
     <PackageReference Include="DanielWillett.StackCleaner" Version="[1.4.2,)" />
+    <PackageReference Include="DanielWillett.ReflectionTools" Version="[2.0.2,)" />
+    <PackageReference Include="Uncreated.Networking.Warfare" Version="[3.0.0,)" />
+    <PackageReference Include="Uncreated.UI" Version="[1.0.0,)" />
+    <PackageReference Include="UniTask" Version="[2.5.0,)" />
+    <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
 
     <!-- for the love of god do not touch these version numbers -->
-    
+
     <PackageReference Include="System.Data.Common" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Caching" Version="4.5.0" />
     <PackageReference Include="System.Text.Json" Version="4.7.1" NoWarn="NU1605" />
 
-    <PackageReference Include="DanielWillett.ReflectionTools" Version="[2.0.2,)" />
     <PackageReference Include="MySqlConnector" Version="0.69.10" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.0" Private="true" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="3.1.2" />
-    <PackageReference Remove="System.ComponentModel.Annotations" />
+    <!--<PackageReference Remove="System.ComponentModel.Annotations" />-->
   </ItemGroup>
   <!-- ReSharper restore VulnerablePackage -->
 </Project>

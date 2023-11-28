@@ -1041,7 +1041,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         value = Parameters[parameter];
         return true;
     }
-    public bool TryGet<TEnum>(int parameter, out TEnum value) where TEnum : unmanaged, Enum
+    public bool TryGet<TEnum>(int parameter, out TEnum value, TEnum? min = null, TEnum? max = null) where TEnum : unmanaged, Enum
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1049,9 +1049,18 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = default;
             return false;
         }
-        return Enum.TryParse(GetParamForParse(parameter), true, out value);
+        
+        if (!Enum.TryParse(GetParamForParse(parameter), true, out value))
+            return false;
+        
+        if (min.HasValue && value.CompareTo(min.Value) < 0)
+            return false;
+        if (max.HasValue && value.CompareTo(max.Value) > 0)
+            return false;
+
+        return true;
     }
-    public bool TryGet(int parameter, out int value)
+    public bool TryGet(int parameter, out int value, int? min = null, int? max = null)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1059,9 +1068,18 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return int.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
+
+        if (!int.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
-    public bool TryGet(int parameter, out byte value)
+    public bool TryGet(int parameter, out byte value, byte? min = null, byte? max = null)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1069,9 +1087,17 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return byte.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
+        if (!byte.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
-    public bool TryGet(int parameter, out short value)
+    public bool TryGet(int parameter, out short value, short? min = null, short? max = null)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1079,9 +1105,17 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return short.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
+        if (!short.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
-    public bool TryGet(int parameter, out sbyte value)
+    public bool TryGet(int parameter, out sbyte value, sbyte? min = null, sbyte? max = null)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1089,7 +1123,15 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
+        if (!sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
     public bool TryGet(int parameter, out Guid value)
     {
@@ -1101,7 +1143,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         return Guid.TryParse(GetParamForParse(parameter), out value);
     }
-    public bool TryGet(int parameter, out uint value)
+    public bool TryGet(int parameter, out uint value, uint? min = null, uint? max = null)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1109,9 +1151,17 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return uint.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
+        if (!uint.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
-    public bool TryGet(int parameter, out ushort value)
+    public bool TryGet(int parameter, out ushort value, ushort? min = null, ushort? max = null)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1119,9 +1169,17 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return ushort.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
+        if (!ushort.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
-    public bool TryGet(int parameter, out ulong value)
+    public bool TryGet(int parameter, out ulong value, ulong? min = null, ulong? max = null)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1129,7 +1187,15 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
+        if (!ulong.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
     public bool TryGet(int parameter, out bool value)
     {
@@ -1199,7 +1265,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         value = 0ul;
         return false;
     }
-    public bool TryGet(int parameter, out float value, bool allowNonNumeric = false)
+    public bool TryGet(int parameter, out float value, float? min = null, float? max = null, bool allowNonNumeric = false)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1207,9 +1273,19 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return float.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value) && (allowNonNumeric || !float.IsNaN(value) && !float.IsInfinity(value));
+
+        allowNonNumeric &= !(min.HasValue && max.HasValue);
+        if (!float.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value) && (allowNonNumeric || !float.IsNaN(value) && !float.IsInfinity(value)))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
-    public bool TryGet(int parameter, out double value, bool allowNonNumeric = false)
+    public bool TryGet(int parameter, out double value, double? min = null, double? max = null, bool allowNonNumeric = false)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1217,9 +1293,19 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return double.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value) && (allowNonNumeric || !double.IsNaN(value) && !double.IsInfinity(value));
+
+        allowNonNumeric &= !(min.HasValue && max.HasValue);
+        if (!double.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value) && (allowNonNumeric || !double.IsNaN(value) && !double.IsInfinity(value)))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
-    public bool TryGet(int parameter, out decimal value)
+    public bool TryGet(int parameter, out decimal value, decimal? min = null, decimal? max = null)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1227,7 +1313,16 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return decimal.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
+
+        if (!decimal.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value))
+            return false;
+
+        if (min.HasValue && value < min)
+            return false;
+        if (max.HasValue && value > max)
+            return false;
+
+        return true;
     }
     // the ref ones are so you can count on your already existing variable not being overwritten
     public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
