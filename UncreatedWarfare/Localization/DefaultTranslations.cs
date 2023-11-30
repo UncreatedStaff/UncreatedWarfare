@@ -242,6 +242,12 @@ internal static class T
     [TranslationData(SectionPlayers, "Gets sent to a player when their message gets blocked by the chat filter.", "Amount of alphanumeric characters in succession.")]
     public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationFlags.NoColorOptimization);
     
+    [TranslationData(SectionPlayers, "Gets sent to a player if they're banned when they join.")]
+    public static readonly Translation<string, int> RejectBanned = new Translation<string, int>("You are banned for {1}: \"{0}\".", TranslationFlags.NoColorOptimization, arg1Fmt: FormatTimeLongAbbreviated);
+
+    [TranslationData(SectionPlayers, "Gets sent to a player if they're permanently banned when they join.")]
+    public static readonly Translation<string> RejectPermanentBanned = new Translation<string>("You are permanently banned: \"{0}\".", TranslationFlags.NoColorOptimization);
+    
     [TranslationData(SectionPlayers, "Gets sent to a player when their nick name gets blocked by the chat filter.", "Violating text.")]
     public static readonly Translation<string> NameProfanityNickNameKickMessage = new Translation<string>("Your nickname is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
     
@@ -1460,7 +1466,7 @@ internal static class T
     [TranslationData(SectionMute)]
     public static readonly Translation<string> MuteTextChatFeedbackPermanent  = new Translation<string>("<#ffff00>You're permanently muted in text chat because: <#9cffb3>{0}</color>.");
     [TranslationData(SectionMute)]
-    public static readonly Translation<DateTime, string> MuteTextChatFeedback = new Translation<DateTime, string>("<#ffff00>You're muted in text chat until <#cedcde>{0}</color> UTC because <#9cffb3>{1}</color>.", "r");
+    public static readonly Translation<DateTime, string> MuteTextChatFeedback = new Translation<DateTime, string>("<#ffff00>You're muted in text chat until <#cedcde>{0}</color> because <#9cffb3>{1}</color>.", "r");
     #endregion
 
     #region Unmute Command
@@ -1605,6 +1611,14 @@ internal static class T
     public static readonly Translation<VehicleData> RequestVehicleSuccess = new Translation<VehicleData>("<#b3a591>This {0} is now yours to take into battle.", VehicleData.COLORED_NAME);
     [TranslationData(SectionRequest)]
     public static readonly Translation<VehicleData> RequestVehicleDead = new Translation<VehicleData>("<#b3a591>The {0} was destroyed and will be restocked soon.", VehicleData.COLORED_NAME);
+    [TranslationData(SectionRequest)]
+    public static readonly Translation RequestVehicleAssetBannedGlobalPermanent = new Translation("<#b3a591>You are permanently banned from using all vehicles.");
+    [TranslationData(SectionRequest)]
+    public static readonly Translation<TimeSpan> RequestVehicleAssetBannedGlobal = new Translation<TimeSpan>("<#b3a591>You are banned from using all vehicles for another {0}.", FormatTimeLong);
+    [TranslationData(SectionRequest)]
+    public static readonly Translation<string> RequestVehicleAssetBannedPermanent = new Translation<string>("<#b3a591>You are permanently banned from using <#fff>{0}</color>.");
+    [TranslationData(SectionRequest)]
+    public static readonly Translation<TimeSpan, string> RequestVehicleAssetBanned = new Translation<TimeSpan, string>("<#b3a591>You are banned from using <#fff>{1}</color> for another {0}.", FormatTimeLong);
 
     #region Vehicle Request Delays
     [TranslationData(SectionRequest)]
@@ -3275,6 +3289,11 @@ internal static class T
     [FormatDisplay(typeof(int),      "Time (Long, seconds)")]
     [FormatDisplay(typeof(TimeSpan), "Time (Long)")]
     internal const string FormatTimeLong = "tlong";
+    [FormatDisplay(typeof(float),    "Time (Long Abbreviated, seconds)")]
+    [FormatDisplay(typeof(uint),     "Time (Long Abbreviated, seconds)")]
+    [FormatDisplay(typeof(int),      "Time (Long Abbreviated, seconds)")]
+    [FormatDisplay(typeof(TimeSpan), "Time (Long Abbreviated)")]
+    internal const string FormatTimeLongAbbreviated = "tlonga";
     [FormatDisplay(typeof(float),    "Time (Short mm:ss, seconds)")]
     [FormatDisplay(typeof(uint),     "Time (Short mm:ss, seconds)")]
     [FormatDisplay(typeof(int),      "Time (Short mm:ss, seconds)")]

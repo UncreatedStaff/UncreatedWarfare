@@ -46,6 +46,8 @@ public class MuteCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
+        throw ctx.SendNotImplemented();
+#if false
         ctx.AssertHelpCheck(0, SYNTAX + HELP);
         ctx.AssertHelpCheck(1, SYNTAX + HELP);
 
@@ -80,6 +82,7 @@ public class MuteCommand : Command
             }
         });
         ctx.Defer();
+#endif
     }
 }
 [Translatable("Mute Severity")]

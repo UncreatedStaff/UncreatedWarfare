@@ -115,8 +115,8 @@ public static class Data
     public static Dictionary<string, string> ColorsHex;
     public static Dictionary<string, Vector3> ExtraPoints;
     public static Dictionary<ulong, string> DefaultPlayerNames;
-    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
-    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
+    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames;
+    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents;
     internal static WarfareSQL DatabaseManager;
     internal static WarfareSQL? RemoteSQL;
     internal static DatabaseInterface ModerationSql;
@@ -156,12 +156,14 @@ public static class Data
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
-    internal static InstanceGetter<UseableGun, bool>? GetUseableGunReloading;
+    internal static InstanceGetter<UseableGun, bool> GetUseableGunReloading;
+    internal static InstanceGetter<PlayerLife, CSteamID>? GetRecentKiller;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
     internal static SteamPlayer NilSteamPlayer;
+
     [OperationTest(DisplayName = "Fast Kits Check")]
     [Conditional("DEBUG")]
     [UsedImplicitly]
@@ -290,6 +292,10 @@ public static class Data
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+
+        OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
+        PlaytimeComponents = new Dictionary<ulong, UCPlayerData>(Provider.maxPlayers);
+
         Singletons.OnSingletonLoaded += OnSingletonLoaded;
         Singletons.OnSingletonUnloaded += OnSingletonUnloaded;
         Singletons.OnSingletonReloaded += OnSingletonReloaded;
@@ -386,6 +392,15 @@ public static class Data
         catch (Exception ex)
         {
             L.LogWarning("Couldn't get ServerSpawnLegacyImpact from DamageTool, explosives will not play the flesh sound. (" + ex.Message + ").");
+        }
+
+        try
+        {
+            GetRecentKiller = Util.GenerateInstanceGetter<PlayerLife, CSteamID>("recentKiller", BindingFlags.NonPublic | BindingFlags.Instance);
+        }
+        catch (Exception ex)
+        {
+            L.LogWarning("Couldn't get PlayerLife.recentKiller from PlayerLife, other reputation sources will be ignored. (" + ex.Message + ").");
         }
 
         PullFromTransportConnectionListPool = null;
@@ -585,7 +600,6 @@ public static class Data
                     await UCWarfare.ToUpdate(token);
                 }
             }
-            await OffenseManager.OnConnected(token).ConfigureAwait(false);
             tkn.ThrowIfCancellationRequested();
             if (ActionLog.Instance != null)
                 await ActionLog.Instance.OnConnected(token).ConfigureAwait(false);

@@ -1837,10 +1837,11 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         }
     }
     public static async Task<string> GetFreeLoadoutName(ulong playerId) => KitEx.GetLoadoutName(playerId, await GetFreeLoadoutId(playerId));
-    public static async Task<int> GetFreeLoadoutId(ulong playerId)
+    public static Task<int> GetFreeLoadoutId(ulong playerId) => GetFreeLoadoutId(Data.AdminSql, playerId);
+    public static async Task<int> GetFreeLoadoutId(IMySqlDatabase sql, ulong playerId)
     {
         List<int> taken = new List<int>(4);
-        await Data.DatabaseManager.QueryAsync("SELECT `Id` FROM `kits` WHERE `Id` LIKE @0 ORDER BY `Id`;", new object[]
+        await sql.QueryAsync("SELECT `Id` FROM `kits` WHERE `Id` LIKE @0 ORDER BY `Id`;", new object[]
         {
             playerId.ToString(Data.AdminLocale) + "\\_%"
         }, reader =>

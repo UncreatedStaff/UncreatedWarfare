@@ -8,7 +8,7 @@ public class PlayerIPAddress : IListItem
 {
     private uint _packedIP;
     private IPAddress? _ip;
-
+    
     [JsonPropertyName("id")]
     public PrimaryKey PrimaryKey { get; set; }
 
@@ -40,7 +40,7 @@ public class PlayerIPAddress : IListItem
             RemotePlay = null;
         }
     }
-
+    
     [JsonPropertyName("ip")]
     public IPAddress? IPAddress
     {
@@ -55,10 +55,7 @@ public class PlayerIPAddress : IListItem
         }
     }
     public override string ToString() => IPAddress?.ToString() ?? "0.0.0.0";
-    public PlayerIPAddress()
-    {
-
-    }
+    public PlayerIPAddress() { }
     public PlayerIPAddress(PrimaryKey primaryKey, ulong steam64, uint packedIp, int loginCount, DateTimeOffset? firstLogin, DateTimeOffset lastLogin)
     {
         PrimaryKey = primaryKey;

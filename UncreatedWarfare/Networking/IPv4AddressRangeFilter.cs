@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,14 +26,14 @@ public sealed class IPv4AddressRangeFilter : IIPAddressFilter
 
         return false;
     }
-    public void RemoveFilteredIPs(IList<uint> ips)
+    public void RemoveFilteredIPs<T>(IList<T> ips, Func<T, uint> selector)
     {
         IPv4Range[] ranges = Ranges;
         for (int j = ips.Count - 1; j >= 0; --j)
         {
             for (int i = 0; i < ranges.Length; ++i)
             {
-                if (ranges[i].InRange(ips[j]))
+                if (ranges[i].InRange(selector(ips[j])))
                 {
                     ips.RemoveAt(j);
                     break;
@@ -41,9 +42,9 @@ public sealed class IPv4AddressRangeFilter : IIPAddressFilter
         }
     }
     public ValueTask<bool> IsFiltered(IPAddress ip, ulong player, CancellationToken token) => new ValueTask<bool>(IsFiltered(ip));
-    public ValueTask RemoveFilteredIPs(IList<uint> ips, ulong player, CancellationToken token)
+    public ValueTask RemoveFilteredIPs<T>(IList<T> ips, Func<T, uint> selector, ulong player, CancellationToken token)
     {
-        RemoveFilteredIPs(ips);
+        RemoveFilteredIPs(ips, selector);
         return new ValueTask();
     }
 

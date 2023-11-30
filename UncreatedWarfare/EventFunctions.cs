@@ -31,6 +31,8 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
@@ -862,14 +864,27 @@ public static class EventFunctions
         UCPlayer? player = UCPlayer.FromSteamPlayer(client);
         PlayerNames names = player != null ? player.Name : new PlayerNames(client);
         Chat.Broadcast(T.BattlEyeKickBroadcast, names);
+
         L.Log($"{names.PlayerName} ({client.playerID.steamID.m_SteamID}) was kicked by BattlEye for \"{reason}\".");
         ActionLog.Add(ActionLogType.KickedByBattlEye, "REASON: \"" + reason + "\"", client.playerID.steamID.m_SteamID);
-        if (UCWarfare.Config.ModerationSettings.BattleyeExclusions != null &&
-            !UCWarfare.Config.ModerationSettings.BattleyeExclusions.Contains(reason))
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        BattlEyeKick kick = new BattlEyeKick
         {
-            ulong id = client.playerID.steamID.m_SteamID;
-            OffenseManager.LogBattlEyeKicksPlayer(id, reason, DateTime.Now);
-        }
+            Actors = new RelatedActor[] { new RelatedActor(RelatedActor.RolePrimaryAdmin, true, Actors.BattlEye) },
+            Message = reason,
+            Id = PrimaryKey.NotAssigned,
+            RelevantLogsEnd = now,
+            RelevantLogsBegin = now.Subtract(TimeSpan.FromSeconds(Time.realtimeSinceStartup - client.joined)),
+            StartedTimestamp = now,
+            ResolvedTimestamp = now,
+            PendingReputation = 0d,
+            IsLegacy = false,
+            Player = client.playerID.steamID.m_SteamID
+        };
+
+        UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, kick, CancellationToken.None, ctx: "Log BattlEyeKick.");
     }
     internal static void OnConsume(Player instigatingPlayer, ItemConsumeableAsset consumeableAsset)
     {

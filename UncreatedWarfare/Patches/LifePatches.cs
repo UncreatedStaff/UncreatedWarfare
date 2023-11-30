@@ -2,6 +2,7 @@
 using HarmonyLib;
 using JetBrains.Annotations;
 using SDG.Unturned;
+using Steamworks;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
 // ReSharper disable InconsistentNaming
@@ -15,6 +16,20 @@ public static partial class Patches
     [HarmonyPatch]
     public static class LifePatches
     {
+        internal static bool IsSettingReputation = false;
+
+        // SDG.Unturned.PlayerLife
+        /// <summary>Prefix of <see cref="PlayerSkills.askRep(int)"/> to prevent vanilla player killed reputation calls.</summary>
+        [HarmonyPatch(typeof(PlayerSkills), nameof(PlayerSkills.askRep))]
+        [HarmonyPrefix]
+        [UsedImplicitly]
+        static bool DisableVanillaKillReputation(PlayerSkills __instance, int rep)
+        {
+            CSteamID recentKiller = Data.GetRecentKiller == null ? new CSteamID(1) : Data.GetRecentKiller(__instance.player.life);
+            // recent killer is set between death and when the player presses revive.
+            return recentKiller == CSteamID.Nil || IsSettingReputation;
+        }
+
         // SDG.Unturned.PlayerLife
         /// <summary>Prefix of <see cref="PlayerLife.askStarve(byte)"/> to prevent starving in main base.</summary>
         [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askStarve))]

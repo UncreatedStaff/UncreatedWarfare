@@ -19,6 +19,7 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Players;
+using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Moderation;
@@ -52,7 +53,51 @@ internal partial class ModerationUI
         data.Actors.Clear();
         data.Evidence.Clear();
     }
-    private void EditInActionMenu(UCPlayer player, bool editingExisting)
+    public bool EditEntry(UCPlayer player, ModerationEntry entry)
+    {
+        if (entry.IsLegacy && entry is not Punishment)
+            return false;
+
+        ModerationData data = GetOrAddModerationData(player);
+
+        if (entry is not Punishment punishment || punishment.PresetType == PresetType.None)
+        {
+            data.PendingType = ModerationReflection.GetType(entry.GetType()) ?? ModerationEntryType.None;
+            data.PendingPreset = PresetType.None;
+            data.PrimaryEditingEntry = entry;
+            data.SecondaryEditingEntry = null;
+            data.SelectedPlayer = entry.Player;
+            UpdateSelectedPlayer(player);
+            LoadActionMenu(player, true);
+        }
+        else
+        {
+            UCWarfare.RunTask(async () =>
+            {
+                Punishment[] punishments = await Data.ModerationSql.GetEntriesOfLevel<Punishment>(punishment.Player,
+                    punishment.PresetLevel, punishment.PresetType, token: player.DisconnectToken);
+
+                await UniTask.SwitchToMainThread(player.DisconnectToken);
+
+                // prevent spamming
+                data.LastViewedTime = Time.realtimeSinceStartup + 5f;
+
+                if (punishments.Length > 0)
+                    punishment = punishments[0];
+
+                data.PendingType = ModerationEntryType.None;
+                data.PendingPreset = punishment.PresetType;
+                data.PrimaryEditingEntry = punishment;
+                data.SecondaryEditingEntry = punishments.Length > 1 ? punishments[1] : null;
+                data.SelectedPlayer = entry.Player;
+                UpdateSelectedPlayer(player);
+                LoadActionMenu(player, true);
+            }, ctx: "Edit entry.");
+        }
+
+        return true;
+    }
+    private void LoadActionMenu(UCPlayer player, bool editingExisting)
     {
         ModerationData data = GetOrAddModerationData(player);
 
@@ -184,7 +229,7 @@ internal partial class ModerationUI
                 int v = Interlocked.Increment(ref data.ActionModeVersion);
                 if (data.PendingPreset == PresetType.None || !PunishmentPresets.TryGetPreset(data.PendingPreset, out PunishmentPreset[] presets))
                     return;
-                int nextLevel = await Data.ModerationSql.GetNextLevel(data.SelectedPlayer, data.PendingPreset, token).ConfigureAwait(false);
+                int nextLevel = await Data.ModerationSql.GetNextPresetLevel(data.SelectedPlayer, data.PendingPreset, token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
                 if (data.ActionModeVersion != v)
                     return;
@@ -265,7 +310,7 @@ internal partial class ModerationUI
 
         ModerationEntryType type = data.PendingType;
         ITransportConnection c = player.Connection;
-        bool hasForgiveable = false;
+        bool hasForgiveable = false, hasRemoveable = false;
         bool hasMute, hasAssetBan, isNote, hasPrimaryDuration, hasSecondaryDuration;
         if (!editingExisting)
         {
@@ -282,7 +327,7 @@ internal partial class ModerationUI
             }
             else
             {
-                PresetType presetType = data.PendingPresetValue.PresetType;
+                PresetType presetType = data.PendingPresetValue.Type;
                 if (presetType == PresetType.None)
                     goto hideAllElements;
 
@@ -299,8 +344,9 @@ internal partial class ModerationUI
             hasMute = data.PrimaryEditingEntry is Mute || data.SecondaryEditingEntry is Mute;
             hasAssetBan = data.PrimaryEditingEntry is AssetBan || data.SecondaryEditingEntry is AssetBan;
             isNote = data.PrimaryEditingEntry is Note && data.SecondaryEditingEntry is Note;
-            hasForgiveable = data.PrimaryEditingEntry is IForgiveableModerationEntry forgiveable && !forgiveable.IsApplied(true)
-                          || data.SecondaryEditingEntry is IForgiveableModerationEntry forgiveable2 && !forgiveable2.IsApplied(true);
+            hasRemoveable = data.PrimaryEditingEntry is { Removed: false } || data.SecondaryEditingEntry is { Removed: false };
+            hasForgiveable = hasRemoveable && (data.PrimaryEditingEntry is IForgiveableModerationEntry forgiveable && forgiveable.IsApplied(true)
+                          || data.SecondaryEditingEntry is IForgiveableModerationEntry forgiveable2 && forgiveable2.IsApplied(true));
             hasPrimaryDuration = data.PrimaryEditingEntry is IDurationModerationEntry;
             hasSecondaryDuration = data.SecondaryEditingEntry is IDurationModerationEntry;
         }
@@ -426,12 +472,16 @@ internal partial class ModerationUI
         if (editingExisting)
         {
             ModerationActionControls[1].Text.SetText(c, "Save");
-            ModerationActionControls[2].Text.SetText(c, "Remove");
-            ct = 3;
+            ct = 2;
+            if (hasRemoveable)
+            {
+                ModerationActionControls[ct].Text.SetText(c, "Remove");
+                ++ct;
+            }
             if (hasForgiveable)
             {
-                ModerationActionControls[3].Text.SetText(c, "Forgive");
-                ct = 4;
+                ModerationActionControls[ct].Text.SetText(c, "Forgive");
+                ++ct;
             }
 
             if (ct > ModerationActionControls.Length)
@@ -533,7 +583,6 @@ internal partial class ModerationUI
                     ModerationActionEvidence[i + startIndEvidence].Root.SetVisibility(c, false);
             }
 
-
             UCWarfare.RunTask(async token =>
             {
                 if (data.ActionVersion != v)
@@ -573,7 +622,7 @@ internal partial class ModerationUI
                     return;
                 int i = 0;
                 int ct = Math.Min(lenActor, data.Actors.Count - startIndActor);
-                ulong[] steamIds = await Data.ModerationSql.GetSteam64IDs(data.Actors.Skip(startIndActor).Take(lenActor).Select(x => x.Actor).ToArray(), token).ConfigureAwait(false);
+                ulong[] steamIds = await Data.ModerationSql.GetActorSteam64IDs(data.Actors.Skip(startIndActor).Take(lenActor).Select(x => x.Actor).ToArray(), token).ConfigureAwait(false);
 
                 if (data.ActionVersion != v)
                     return;
@@ -664,11 +713,11 @@ internal partial class ModerationUI
             ModerationEntryType.Mute => -70,
             ModerationEntryType.Kick => -20,
             ModerationEntryType.Warning => -15,
-            ModerationEntryType.BugReportAccepted => 150,
-            ModerationEntryType.PlayerReportAccepted => 80,
-            ModerationEntryType.Commendation => 100,
-            ModerationEntryType.Teamkill => -15,
-            ModerationEntryType.VehicleTeamkill => -25,
+            ModerationEntryType.BugReportAccepted => 80,
+            ModerationEntryType.PlayerReportAccepted => 25,
+            ModerationEntryType.Commendation => 80,
+            ModerationEntryType.Teamkill => -40,
+            ModerationEntryType.VehicleTeamkill => -50,
             _ => 0
         };
     }
@@ -714,6 +763,17 @@ internal partial class ModerationUI
                     data.SecondaryEditingEntry.StartedTimestamp = DateTimeOffset.UtcNow;
                 }
 
+                if (data.PrimaryEditingEntry is Punishment p)
+                {
+                    p.PresetType = data.PendingPresetValue.Type;
+                    p.PresetLevel = data.PendingPresetValue.Level;
+                }
+                if (data.SecondaryEditingEntry is Punishment p2)
+                {
+                    p2.PresetType = data.PendingPresetValue.Type;
+                    p2.PresetLevel = data.PendingPresetValue.Level;
+                }
+
                 if (data.PendingPresetValue.PrimaryDuration.HasValue && data.PrimaryEditingEntry is IDurationModerationEntry duration)
                     duration.Duration = data.PendingPresetValue.PrimaryDuration.Value;
 
@@ -755,11 +815,14 @@ internal partial class ModerationUI
         if (assetBan != null)
         {
             if (assetBan.Id.IsValid)
-                ModerationActionMiniInputBox1.SetText(player, assetBan.GetCommaList(true));
-            else if (ModerationActionMiniInputBox1.TextBox.GetOrAddData(player.Player).Text is { Length: > 0 } text)
+                ModerationActionInputBox3.SetText(player, assetBan.GetCommaList(true));
+            else if (ModerationActionInputBox3.TextBox.GetOrAddData(player.Player).Text is { Length: > 0 } text)
+            {
+                L.LogDebug($"Filled from save of text: \"{text}\".");
                 assetBan.FillFromText(text);
+            }
             else
-                ModerationActionMiniInputBox1.SetText(player, string.Empty);
+                ModerationActionInputBox3.SetText(player, string.Empty);
         }
     }
     private void Save(ModerationData data, UCPlayer player)
@@ -779,6 +842,26 @@ internal partial class ModerationUI
         data.PrimaryEditingEntry.Evidence = data.Evidence.ToArray();
         if (data.SecondaryEditingEntry != null)
             data.SecondaryEditingEntry.Evidence = data.PrimaryEditingEntry.Evidence;
+
+        if (data.PrimaryEditingEntry.IsAppealable)
+        {
+            if (string.IsNullOrWhiteSpace(data.PrimaryEditingEntry.Message))
+                data.PrimaryEditingEntry.Message = "Appeal at 'discord.gg/" + UCWarfare.Config.DiscordInviteCode + "'.";
+            else if (data.PrimaryEditingEntry.Message!.IndexOf(".gg/" + UCWarfare.Config.DiscordInviteCode, StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("unappealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("un-appealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("do not appeal", StringComparison.InvariantCultureIgnoreCase) == -1)
+            {
+                if (data.PrimaryEditingEntry.Message[data.PrimaryEditingEntry.Message.Length - 1] != '.')
+                    data.PrimaryEditingEntry.Message += ".";
+                if (data.PrimaryEditingEntry.Message[data.PrimaryEditingEntry.Message.Length - 1] != ' ')
+                    data.PrimaryEditingEntry.Message += " ";
+                data.PrimaryEditingEntry.Message += "Appeal at 'discord.gg/" + UCWarfare.Config.DiscordInviteCode + "'.";
+            }
+
+            if (data.SecondaryEditingEntry != null)
+                data.SecondaryEditingEntry.Message = data.PrimaryEditingEntry.Message;
+        }
 
         // add editor
         if (!Array.Exists(data.PrimaryEditingEntry.Actors, x => x.Actor.Id == player.Steam64))
@@ -828,6 +911,26 @@ internal partial class ModerationUI
         }
         for (int i = 0; i < ModerationActionControls.Length; ++i)
             ModerationActionControls[i].Root.Hide(player);
+
+        if (data.PrimaryEditingEntry != null && data.PrimaryEditingEntry.PendingReputation != 0)
+        {
+            UCPlayer? onlinePlayer = UCPlayer.FromID(data.PrimaryEditingEntry.Player);
+            if (onlinePlayer != null)
+            {
+                onlinePlayer.AddReputation((int)Math.Round(data.PrimaryEditingEntry.PendingReputation));
+                data.PrimaryEditingEntry.PendingReputation = 0d;
+            }
+        }
+        if (data.SecondaryEditingEntry != null && data.SecondaryEditingEntry.PendingReputation != 0)
+        {
+            UCPlayer? onlinePlayer = UCPlayer.FromID(data.SecondaryEditingEntry.Player);
+            if (onlinePlayer != null)
+            {
+                onlinePlayer.AddReputation((int)Math.Round(data.SecondaryEditingEntry.PendingReputation));
+                data.SecondaryEditingEntry.PendingReputation = 0d;
+            }
+        }
+
         UCWarfare.RunTask(async token =>
         {
             ModerationEntry? select = null;
@@ -886,7 +989,10 @@ internal partial class ModerationUI
                 }
             }
 
+            token = player.DisconnectToken;
             await UCWarfare.ToUpdate(token);
+            if (!player.IsOnline)
+                return;
             EndEditInActionMenu(player);
             SelectEntry(player, select);
             await RefreshModerationHistory(player, token).ConfigureAwait(false);
@@ -898,6 +1004,8 @@ internal partial class ModerationUI
                 {
                     entry.Id = PrimaryKey.NotAssigned;
                     current = entry;
+                    if (current is AssetBan b)
+                        L.LogDebug($"Entries: '{string.Join(", ", b.VehicleTypeFilter)}'.");
                     ActionLog.Add(ActionLogType.CreateModerationEntry, $"Entry Id {entry.Id}. {entry.GetType().Name}, \"{entry.Message ?? "No Message"}\".", player);
                 }
                 else
@@ -967,6 +1075,8 @@ internal partial class ModerationUI
                                 Append(changes, "-filter", currentAssetBan.VehicleTypeFilter[i].ToString());
                         }
 
+                        L.LogDebug($"Current entries: '{string.Join(", ", currentAssetBan.VehicleTypeFilter)}'.");
+                        L.LogDebug($"Entry entries:   '{string.Join(", ", entryAssetBan.VehicleTypeFilter)}'.");
                         currentAssetBan.VehicleTypeFilter = entryAssetBan.VehicleTypeFilter;
                     }
 
@@ -1171,7 +1281,7 @@ internal partial class ModerationUI
             {
                 await UCWarfare.ToUpdate(token);
                 SelectEntry(player, data.PrimaryEditingEntry);
-                EditInActionMenu(player, true);
+                LoadActionMenu(player, true);
                 await RefreshModerationHistory(player, token);
             }
             
@@ -1313,6 +1423,7 @@ internal partial class ModerationUI
                 Presets[(int)data.PendingPreset - 1].Enable(ucPlayer.Connection);
 
             data.PendingPreset = PresetType.None;
+            data.PendingPresetValue = null;
         }
 
         if (data.PendingType != ModerationEntryType.None && data.PendingType != type)
@@ -1327,8 +1438,9 @@ internal partial class ModerationUI
 
             LabeledStateButton? btn = GetModerationButton(type);
             btn?.Disable(ucPlayer.Connection);
-
-            EditInActionMenu(ucPlayer, false);
+            data.PrimaryEditingEntry = null;
+            data.SecondaryEditingEntry = null;
+            LoadActionMenu(ucPlayer, false);
         }
         else
         {
@@ -1366,6 +1478,7 @@ internal partial class ModerationUI
         if (!isDeselecting)
         {
             data.PendingPreset = preset;
+            data.PendingPresetValue = null;
             Presets[index].Disable(ucPlayer.Connection);
 
             if (data.PendingType != ModerationEntryType.None)
@@ -1376,7 +1489,10 @@ internal partial class ModerationUI
                 data.PendingType = ModerationEntryType.None;
             }
 
-            EditInActionMenu(ucPlayer, false);
+            data.PrimaryEditingEntry = null;
+            data.SecondaryEditingEntry = null;
+
+            LoadActionMenu(ucPlayer, false);
         }
         else
         {

@@ -545,6 +545,32 @@ public class Translation
                             break;
                     }
                 }
+                else if (format.Equals(Warfare.T.FormatTimeLongAbbreviated, StringComparison.Ordinal))
+                {
+                    int sec = -1;
+                    switch (value)
+                    {
+                        case float f:
+                            sec = Mathf.RoundToInt(f);
+                            goto default;
+                        case int i:
+                            sec = i;
+                            goto default;
+                        case uint i:
+                            sec = checked((int)i);
+                            goto default;
+                        case TimeSpan span:
+                            sec = (int)Math.Round(span.TotalSeconds);
+                            goto default;
+                        default:
+                            if (sec != -1)
+                            {
+                                val = Util.ToTimeString(sec);
+                                return true;
+                            }
+                            break;
+                    }
+                }
                 else
                 {
                     bool b1 = format.Equals(Warfare.T.FormatTimeShort_MM_SS, StringComparison.Ordinal);

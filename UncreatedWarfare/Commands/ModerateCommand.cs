@@ -22,6 +22,8 @@ public sealed class ModerateCommand : AsyncCommand
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertOnDuty();
+
+        ctx.AssertRanByPlayer();
         
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         

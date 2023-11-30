@@ -39,7 +39,7 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     private static readonly ByteWriter ReportWriter = new ByteWriter(false, 27);
     public WarfareSQL(MySqlData data) : base(data, "Uncreated Warfare", true)
     {
-        DebugLogging |= UCWarfare.Config.Debug;
+        DebugLogging |= UCWarfare.IsLoaded && UCWarfare.Config.Debug;
     }
 
     public static readonly string TableLevels = UCWarfare.Season switch
@@ -472,8 +472,14 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
                 PrimaryKey = true,
                 AutoIncrement = true
             },
-            new Schema.Column(ColumnIPAddressesSteam64, SqlTypes.STEAM_64),
-            new Schema.Column(ColumnIPAddressesPackedIP, SqlTypes.UINT),
+            new Schema.Column(ColumnIPAddressesSteam64, SqlTypes.STEAM_64)
+            {
+                Indexed = true
+            },
+            new Schema.Column(ColumnIPAddressesPackedIP, SqlTypes.UINT)
+            {
+                Indexed = true
+            },
             new Schema.Column(ColumnIPAddressesUnpackedIP, "char(15)"),
             new Schema.Column(ColumnIPAddressesLoginCount, SqlTypes.UINT)
             {
@@ -496,8 +502,14 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
                 AutoIncrement = true
             },
             new Schema.Column(ColumnHWIDsIndex, SqlTypes.UINT),
-            new Schema.Column(ColumnHWIDsSteam64, SqlTypes.STEAM_64),
-            new Schema.Column(ColumnHWIDsHWID, "binary(20)"),
+            new Schema.Column(ColumnHWIDsSteam64, SqlTypes.STEAM_64)
+            {
+                Indexed = true
+            },
+            new Schema.Column(ColumnHWIDsHWID, "binary(20)")
+            {
+                Indexed = true
+            },
             new Schema.Column(ColumnHWIDsLoginCount, SqlTypes.UINT)
             {
                 Default = "'1'"

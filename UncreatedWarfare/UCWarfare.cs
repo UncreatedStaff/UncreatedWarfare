@@ -206,7 +206,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
         Data.ModerationSql = new WarfareDatabaseInterface();
-        // await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
+        await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
+        Data.ModerationSql.OnModerationEntryUpdated += OffenseManager.OnModerationEntryUpdated;
+        Data.ModerationSql.OnNewModerationEntryAdded += OffenseManager.OnNewModerationEntryAdded;
 
 #if NETSTANDARD || NETFRAMEWORK
         Data.WarfareStripeService = new WarfareStripeService();
@@ -950,6 +952,12 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
             await LetTasksUnload(token).ConfigureAwait(false);
             await ToUpdate(token);
+
+            if (Data.ModerationSql != null)
+            {
+                Data.ModerationSql.OnModerationEntryUpdated -= OffenseManager.OnModerationEntryUpdated;
+                Data.ModerationSql.OnNewModerationEntryAdded -= OffenseManager.OnNewModerationEntryAdded;
+            }
 
 #if DEBUG
             profiler2 = ProfilingUtils.StartTracking("Destroy GameObjects");

@@ -5,5 +5,7 @@ namespace Uncreated.Warfare.Moderation.Punishments;
 [JsonConverter(typeof(ModerationEntryConverter))]
 public class Ban : DurationPunishment
 {
+    [JsonIgnore]
+    public override bool IsAppealable => true;
     public override string GetDisplayName() => "Ban";
 }

@@ -9,8 +9,8 @@ namespace Uncreated.Warfare.Moderation;
 public static class ModerationReflection
 {
     private static bool _hasReflected;
-    public static Map<ModerationEntryType, Type> Types = new Map<ModerationEntryType, Type>(16);
-    public static Dictionary<Type, ModerationEntryType[]> TypeInheritance = new Dictionary<Type, ModerationEntryType[]>(20);
+    private static Map<ModerationEntryType, Type> Types = new Map<ModerationEntryType, Type>(16);
+    private static Dictionary<Type, ModerationEntryType[]> TypeInheritance = new Dictionary<Type, ModerationEntryType[]>(20);
     public static Type? GetType(ModerationEntryType type)
     {
         CheckReflect();
@@ -25,6 +25,11 @@ public static class ModerationReflection
     {
         Type? sysType = GetType(type);
         return sysType != null && typeof(T).IsAssignableFrom(sysType);
+    }
+    public static bool TryGetInheritance(Type type, out ModerationEntryType[] types)
+    {
+        CheckReflect();
+        return TypeInheritance.TryGetValue(type, out types);
     }
     private static void CheckReflect()
     {
@@ -62,7 +67,10 @@ public static class ModerationReflection
 
         ICollection<Type> leafTypes = (Types as IDictionary<ModerationEntryType, Type>).Values;
         foreach (Type type in types2)
-            TypeInheritance.Add(type, leafTypes.Where(type.IsAssignableFrom).Select(x => Types[x]).ToArray());
+        {
+            ModerationEntryType[] moderationEntryTypes = leafTypes.Where(type.IsAssignableFrom).Select(x => Types[x]).ToArray();
+            TypeInheritance.Add(type, moderationEntryTypes);
+        }
     }
 }
 

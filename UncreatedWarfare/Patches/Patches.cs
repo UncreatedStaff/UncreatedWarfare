@@ -227,9 +227,9 @@ public static partial class Patches
                     caller.TimeUnmuted > DateTime.Now)
                 {
                     if (caller.TimeUnmuted == DateTime.MaxValue)
-                        caller.SendChat(T.MuteTextChatFeedbackPermanent, caller.MuteReason ?? "unknown");
+                        caller.SendChat(T.MuteTextChatFeedbackPermanent, caller.MuteReason ?? "No message");
                     else
-                        caller.SendChat(T.MuteTextChatFeedback, caller.TimeUnmuted, caller.MuteReason ?? "unknown");
+                        caller.SendChat(T.MuteTextChatFeedback, caller.TimeUnmuted, caller.MuteReason ?? "No message");
                     return false;
                 }
                 if (!duty)

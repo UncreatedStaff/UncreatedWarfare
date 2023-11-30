@@ -14,6 +14,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Structures;
@@ -433,6 +434,23 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
 
         if (vehicle.asset.canBeLocked)
         {
+            AssetBan? assetBan = await Data.ModerationSql.GetActiveAssetBan(ctx.CallerID, data.Type, token: token).ConfigureAwait(false);
+            if (assetBan != null)
+            {
+                if (assetBan.VehicleTypeFilter.Length == 0)
+                {
+                    if (assetBan.IsPermanent)
+                        throw ctx.Reply(T.RequestVehicleAssetBannedGlobalPermanent);
+
+                    throw ctx.Reply(T.RequestVehicleAssetBannedGlobal, assetBan.GetTimeUntilExpiry(false));
+                }
+
+                if (assetBan.IsPermanent)
+                    throw ctx.Reply(T.RequestVehicleAssetBannedPermanent, assetBan.GetCommaList(false));
+
+                throw ctx.Reply(T.RequestVehicleAssetBanned, assetBan.GetTimeUntilExpiry(false), assetBan.GetCommaList(false));
+            }
+
             if (data.CreditCost > 0)
             {
                 await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
