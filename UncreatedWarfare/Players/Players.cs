@@ -4,6 +4,7 @@ using System.Globalization;
 using Uncreated.Encoding;
 using Uncreated.Warfare;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Models.Localization;
 using UnityEngine;
 
 namespace Uncreated.Players;

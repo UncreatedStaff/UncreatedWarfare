@@ -10,7 +10,6 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
@@ -232,20 +231,6 @@ public class ReloadCommand : AsyncCommand
             L.LogError("Execption when reloading flags.");
             L.LogError(ex);
         }
-    }
-    internal static void ReloadKits()
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        KitManager manager = SingletonEx.AssertAndGet<KitManager>();
-        UCWarfare.RunTask(async () =>
-        {
-            await manager.DownloadAll();
-            await UCWarfare.ToUpdate();
-            Signs.UpdateKitSigns(null, null);
-            Signs.UpdateLoadoutSigns(null);
-        });
     }
     internal static void ReloadAllConfigFiles()
     {

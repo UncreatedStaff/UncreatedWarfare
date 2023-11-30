@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare;
 internal static class ItemIconProvider

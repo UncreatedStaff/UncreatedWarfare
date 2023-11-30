@@ -3,6 +3,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using Uncreated.Framework;
+using Uncreated.Warfare.Models.Localization;
 using UnityEngine;
 
 namespace Uncreated.Warfare;

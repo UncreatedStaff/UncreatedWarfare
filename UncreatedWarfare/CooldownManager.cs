@@ -8,6 +8,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
@@ -148,15 +149,15 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
 }
 public class CooldownConfig : JSONConfigData
 {
-    public RotatableConfig<float> DeployFOBCooldownMin;
-    public RotatableConfig<float> DeployFOBCooldownMax;
-    public RotatableConfig<int> DeployFOBPlayersMin;
-    public RotatableConfig<int> DeployFOBPlayersMax;
-    public RotatableConfig<float> DeployFOBCooldownAlpha;
-    public RotatableConfig<float> RequestKitCooldown;
-    public RotatableConfig<float> RequestVehicleCooldown;
-    public RotatableConfig<float> ReviveXPCooldown;
-    public RotatableConfig<float> GlobalTraitCooldown;
+    public RotatableConfig<float> DeployFOBCooldownMin { get; set; }
+    public RotatableConfig<float> DeployFOBCooldownMax { get; set; }
+    public RotatableConfig<int> DeployFOBPlayersMin { get; set; }
+    public RotatableConfig<int> DeployFOBPlayersMax { get; set; }
+    public RotatableConfig<float> DeployFOBCooldownAlpha { get; set; }
+    public RotatableConfig<float> RequestKitCooldown { get; set; }
+    public RotatableConfig<float> RequestVehicleCooldown { get; set; }
+    public RotatableConfig<float> ReviveXPCooldown { get; set; }
+    public RotatableConfig<float> GlobalTraitCooldown { get; set; }
     public override void SetDefaults()
     {
         DeployFOBCooldownMin = 60;

@@ -12,6 +12,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -159,8 +160,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         Radio.FOB = this;
         _originalState = Radio.Barricade.GetServersideData().barricade.state;
 
-        ItemAsset? build = TeamManager.GetRedirectInfo(RedirectType.BuildSupply, null, TeamManager.GetFactionSafe(Team), out _, out _);
-        ItemAsset? ammo = TeamManager.GetRedirectInfo(RedirectType.AmmoSupply, null, TeamManager.GetFactionSafe(Team), out _, out _);
+        ItemAsset? build = TeamManager.GetRedirectInfo(RedirectType.BuildSupply, string.Empty, null, TeamManager.GetFactionSafe(Team), out _, out _);
+        ItemAsset? ammo = TeamManager.GetRedirectInfo(RedirectType.AmmoSupply, string.Empty, null, TeamManager.GetFactionSafe(Team), out _, out _);
         if (build != null)
             _buildItemId = build.id;
         if (ammo != null)
@@ -518,7 +519,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             if (deliverer != null)
             {
                 int groupsUnloaded = (buildRemoved + ammoRemoved) / 6;
-                if (groupsUnloaded > 0 && Points.PointsConfig.XPData.TryGetValue(XPReward.UnloadSupplies, out PointsConfig.XPRewardData data) &&
+                if (groupsUnloaded > 0 && Points.PointsConfig.XPData.TryGetValue(nameof(XPReward.UnloadSupplies), out PointsConfig.XPRewardData data) &&
                     data.Amount != 0)
                 {
                     int xp = data.Amount;
@@ -596,7 +597,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 {
                     ++player.SuppliesUnloaded;
                     if (player.SuppliesUnloaded >= 6 &&
-                        Points.PointsConfig.XPData.TryGetValue(XPReward.UnloadSupplies, out PointsConfig.XPRewardData data) && data.Amount != 0)
+                        Points.PointsConfig.XPData.TryGetValue(nameof(XPReward.UnloadSupplies), out PointsConfig.XPRewardData data) && data.Amount != 0)
                     {
                         int xp = data.Amount;
 

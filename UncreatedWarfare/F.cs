@@ -1,5 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
-using MySqlConnector;
+using MySql.Data.MySqlClient;
 using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
@@ -22,7 +22,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
@@ -1753,6 +1753,40 @@ public static class F
             result[i] = (T)source[i + index].Clone();
         return result;
     }
+    public static T[] CloneReadOnlyList<T>(IReadOnlyList<T> source, int index = 0, int length = -1) where T : ICloneable
+    {
+        if (source == null)
+            return null!;
+        if (source.Count == 0)
+            return Array.Empty<T>();
+        if (index >= source.Count)
+            index = source.Count - 1;
+        if (length < 0 || length + index > source.Count)
+            length = source.Count - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        for (int i = 0; i < length; ++i)
+            result[i] = (T)source[i + index].Clone();
+        return result;
+    }
+    public static T[] CloneList<T>(IList<T> source, int index = 0, int length = -1) where T : ICloneable
+    {
+        if (source == null)
+            return null!;
+        if (source.Count == 0)
+            return Array.Empty<T>();
+        if (index >= source.Count)
+            index = source.Count - 1;
+        if (length < 0 || length + index > source.Count)
+            length = source.Count - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        for (int i = 0; i < length; ++i)
+            result[i] = (T)source[i + index].Clone();
+        return result;
+    }
     public static T[] CloneStructArray<T>(T[] source, int index = 0, int length = -1) where T : struct
     {
         if (source == null)
@@ -1767,6 +1801,50 @@ public static class F
             return Array.Empty<T>();
         T[] result = new T[length];
         Array.Copy(source, index, result, 0, length);
+        return result;
+    }
+    public static T[] CloneReadOnlyStructList<T>(IReadOnlyList<T> source, int index = 0, int length = -1) where T : struct
+    {
+        if (source == null)
+            return null!;
+        if (source.Count == 0)
+            return Array.Empty<T>();
+        if (index >= source.Count)
+            index = source.Count - 1;
+        if (length < 0 || length + index > source.Count)
+            length = source.Count - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        if (source is List<T> list)
+            list.CopyTo(index, result, 0, length);
+        else
+        {
+            for (int i = 0; i < source.Count; ++i)
+                result[i] = source[i];
+        }
+        return result;
+    }
+    public static T[] CloneStructList<T>(IList<T> source, int index = 0, int length = -1) where T : struct
+    {
+        if (source == null)
+            return null!;
+        if (source.Count == 0)
+            return Array.Empty<T>();
+        if (index >= source.Count)
+            index = source.Count - 1;
+        if (length < 0 || length + index > source.Count)
+            length = source.Count - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        if (source is List<T> list)
+            list.CopyTo(index, result, 0, length);
+        else
+        {
+            for (int i = 0; i < source.Count; ++i)
+                result[i] = source[i];
+        }
         return result;
     }
     public static bool ServerTrackQuest(this UCPlayer player, QuestAsset quest)

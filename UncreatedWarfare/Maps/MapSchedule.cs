@@ -46,7 +46,7 @@ internal class MapScheduler : MonoBehaviour
     public static readonly string GulfOfAqaba   = MapRotation[3].Name;
     public static readonly string ChangbaiShan  = MapRotation[4].Name;
 
-    public static string GetMapName(int index) => MapRotation[index].Name;
+    public static string GetMapName(uint index) => MapRotation[(int)index].Name;
 
     // Map to load if rotation is undefined
     private static readonly string DefaultMap = GulfOfAqaba;

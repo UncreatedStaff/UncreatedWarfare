@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 
@@ -401,10 +402,10 @@ public static class RankManager
 public class RankConfig : JSONConfigData
 {
     [JsonPropertyName("rank_data")]
-    public RankData[] Ranks;
+    public RankData[] Ranks { get; set; }
 
     [JsonPropertyName("officer_rank_index")]
-    public int OfficerRankIndex;
+    public int OfficerRankIndex { get; set; }
     public override void SetDefaults()
     {
         OfficerRankIndex = 9;
@@ -534,7 +535,7 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         lang ??= Localization.GetDefaultLanguage();
         culture ??= Localization.GetCultureInfo(lang);
         if (NameTranslations == null) return "L" + Order.ToString(culture);
-        if (NameTranslations.TryGetValue(lang.LanguageCode, out string rtn) || (!lang.IsDefault && NameTranslations.TryGetValue(L.Default, out rtn)))
+        if (NameTranslations.TryGetValue(lang.Code, out string rtn) || (!lang.IsDefault && NameTranslations.TryGetValue(L.Default, out rtn)))
             return rtn;
         return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(culture));
     }
@@ -545,7 +546,7 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         lang ??= Localization.GetDefaultLanguage();
         culture ??= Localization.GetCultureInfo(lang);
         if (AbbreviationTranslations == null) return "L" + Order.ToString(culture);
-        if (AbbreviationTranslations.TryGetValue(lang.LanguageCode, out string rtn) || (!lang.IsDefault && AbbreviationTranslations.TryGetValue(L.Default, out rtn)))
+        if (AbbreviationTranslations.TryGetValue(lang.Code, out string rtn) || (!lang.IsDefault && AbbreviationTranslations.TryGetValue(L.Default, out rtn)))
             return rtn;
         return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(culture));
     }

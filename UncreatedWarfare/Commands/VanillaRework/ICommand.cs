@@ -1,11 +1,10 @@
-﻿using SDG.Unturned;
+﻿using SDG.Framework.Utilities;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using SDG.Framework.Utilities;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -114,8 +113,8 @@ public class ICommand : Command
         {
             if (ctx.TryGet(0, out RedirectType type))
             {
-                FactionInfo? kitFaction = ctx.Caller.ActiveKit?.Item?.Faction;
-                asset = TeamManager.GetRedirectInfo(type, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
+                FactionInfo? kitFaction = TeamManager.GetFactionInfo(ctx.Caller.GetActiveKit()?.Faction);
+                asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                 if (asset != null)
                 {
                     itemAmt = amt;
@@ -153,8 +152,8 @@ public class ICommand : Command
                 }
                 if (ctx.TryGet(0, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = ctx.Caller.ActiveKit?.Item?.Faction;
-                    asset = TeamManager.GetRedirectInfo(type, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
+                    FactionInfo? kitFaction = TeamManager.GetFactionInfo(ctx.Caller.GetActiveKit()?.Faction);
+                    asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                     if (asset != null)
                     {
                         itemAmt = amt;
@@ -186,8 +185,8 @@ public class ICommand : Command
                 itemName = ctx.GetRange(0, ctx.ArgumentCount - 1)!;
                 if (Enum.TryParse(itemName, true, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = ctx.Caller.ActiveKit?.Item?.Faction;
-                    asset = TeamManager.GetRedirectInfo(type, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
+                    FactionInfo? kitFaction = TeamManager.GetFactionInfo(ctx.Caller.GetActiveKit()?.Faction);
+                    asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                     if (asset != null)
                     {
                         itemAmt = amt;
@@ -205,8 +204,8 @@ public class ICommand : Command
                 itemName = ctx.GetRange(0)!;
                 if (Enum.TryParse(itemName, true, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = ctx.Caller.ActiveKit?.Item?.Faction;
-                    asset = TeamManager.GetRedirectInfo(type, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
+                    FactionInfo? kitFaction = TeamManager.GetFactionInfo(ctx.Caller.GetActiveKit()?.Faction);
+                    asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                     if (asset != null)
                     {
                         itemAmt = amt;
@@ -223,6 +222,9 @@ public class ICommand : Command
             throw ctx.ReplyString("No item found.", "8f9494");
 
         foundItem:
+
+        amount = Math.Min(amount, 250);
+
         Item itemFromID = new Item(asset!.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));
         for (int i = 0; i < amount; i++)
         {

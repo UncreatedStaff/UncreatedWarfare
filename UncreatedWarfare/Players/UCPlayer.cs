@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
@@ -25,8 +24,11 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -84,7 +86,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public float LastSpoken;
     public string CharacterName;
     public string NickName;
-    public SqlItem<Kit>? ActiveKit;
+    public uint? ActiveKit;
     public string? MuteReason;
     public MuteType MuteType;
     public EChatMode LastChatMode = EChatMode.GLOBAL;
@@ -93,7 +95,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public TeamSelectorData? TeamSelectorData;
     public Coroutine? StorageCoroutine;
     public RankStatus[]? RankData;
-    public List<SqlItem<Kit>>? AccessibleKits;
+    public List<uint>? AccessibleKits;
     public List<HotkeyBinding>? HotkeyBindings;
     internal List<LayoutTransformation>? LayoutTransformations;
     public IBuff?[] ActiveBuffs = new IBuff?[BuffUI.MaxBuffs];
@@ -131,7 +133,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         CSteamID = steamID;
         AccountId = steamID.GetAccountID().m_AccountID;
         Save = save;
-        ActiveKit = KitManager.GetSingletonQuick()?.FindKit(Save.KitName, default, true).Result;
+        ActiveKit = Save.KitId;
         Locale = new UCPlayerLocale(this, data.LanguagePreferences);
         if (!Data.OriginalPlayerNames.TryGetValue(Steam64, out _cachedName))
             _cachedName = new PlayerNames(player);
@@ -214,13 +216,13 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public InteractableVehicle? CurrentVehicle => Player.movement.getVehicle();
     public bool IsInVehicle => CurrentVehicle != null;
     public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
-    public bool HasKit => ActiveKit?.Item is not null;
+    public bool HasKit => ActiveKit.HasValue;
     public bool JumpOnPunch { get; set; }
     public Zone? SafezoneZone { get; internal set; }
     public Zone? NoDropZone { get; internal set; }
     public Zone? NoPickZone { get; internal set; }
-    public Class KitClass => ActiveKit?.Item is { } kit ? kit.Class : Class.None;
-    public Branch Branch => ActiveKit?.Item is { } kit ? kit.Branch : Branch.Default;
+    public Class KitClass { get; private set; }
+    public Branch KitBranch { get; private set; }
     bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other != null && ((object?)other == this || other.Steam64 == Steam64); 
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public PlayerSave Save { get; }
@@ -428,6 +430,16 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             Keys.Dispose();
             KitMenuData = null!;
         }
+    }
+    public Kit? GetActiveKit()
+    {
+        uint? activeKit = ActiveKit;
+        return !activeKit.HasValue ? null : KitManager.GetSingletonQuick()?.GetKit(activeKit.Value);
+    }
+    public Kit? GetActiveKitNoWriteLock()
+    {
+        uint? activeKit = ActiveKit;
+        return !activeKit.HasValue ? null : KitManager.GetSingletonQuick()?.GetKitNoWriteLock(activeKit.Value);
     }
     public static UCPlayer? FromID(ulong steamID) => steamID == 0 ? null : PlayerManager.FromID(steamID);
     public static UCPlayer? FromCSteamID(CSteamID steamID) => steamID.m_SteamID == 0 ? null : FromID(steamID.m_SteamID);
@@ -754,17 +766,21 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     public void DeactivateMarker(SpottedComponent marker) => CurrentMarkers.Remove(marker);
     /// <remarks>Thread Safe</remarks>
-    public void ChangeKit(SqlItem<Kit>? kit)
+    public void ChangeKit(Kit? kit)
     {
         ItemTransformations.Clear();
         ItemDropTransformations.Clear();
-        if (kit?.Item == null)
+        if (kit == null)
         {
             ActiveKit = null;
+            KitClass = Class.None;
+            KitBranch = Branch.Default;
         }
         else
         {
-            ActiveKit = kit;
+            ActiveKit = kit.PrimaryKey;
+            KitClass = kit.Class;
+            KitBranch = kit.Branch;
         }
 
         Apply();
@@ -914,6 +930,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public void EnsureSkillset(Skillset skillset)
     {
         ThreadUtil.assertIsGameThread();
+        if (!IsOnline)
+            return;
         Skill[][] skills = Player.skills.skills;
         if (skillset.SpecialityIndex >= skills.Length)
             throw new ArgumentOutOfRangeException(nameof(skillset), "Speciality index is out of range.");
@@ -925,10 +943,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             skillset.ServerSet(this);
         }
     }
-    public void EnsureSkillsets(Skillset[] skillsets)
+    public void EnsureDefaultSkillsets() => EnsureSkillsets(Array.Empty<Skillset>());
+    public void EnsureSkillsets(IEnumerable<Skillset> skillsets)
     {
         ThreadUtil.assertIsGameThread();
+        if (!IsOnline)
+            return;
+
         Skillset[] def = Skillset.DefaultSkillsets;
+        Skillset[] arr = skillsets as Skillset[] ?? skillsets.ToArray();
         Skill[][] skills = Player.skills.skills;
         for (int specIndex = 0; specIndex < skills.Length; ++specIndex)
         {
@@ -936,37 +959,34 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             for (int skillIndex = 0; skillIndex < specialtyArr.Length; ++skillIndex)
             {
                 Skill skill = specialtyArr[skillIndex];
-                for (int d = 0; d < skillsets.Length; ++d)
+                for (int i = 0; i < arr.Length; ++i)
                 {
-                    Skillset s = skillsets[d];
-                    if (s.SpecialityIndex == specIndex && s.SkillIndex == skillIndex)
-                    {
-                        if (s.Level != skill.level)
-                        {
-                            s.ServerSet(this);
-                        }
-                        goto c;
-                    }
+                    ref Skillset s = ref arr[i];
+                    if (s.SpecialityIndex != specIndex || s.SkillIndex != skillIndex)
+                        continue;
+
+                    if (s.Level != skill.level)
+                        s.ServerSet(this);
+
+                    goto c;
                 }
                 for (int d = 0; d < def.Length; ++d)
                 {
-                    Skillset s = def[d];
-                    if (s.SpecialityIndex == specIndex && s.SkillIndex == skillIndex)
-                    {
-                        if (s.Level != skill.level)
-                        {
-                            s.ServerSet(this);
-                        }
-                        goto c;
-                    }
+                    ref Skillset s = ref def[d];
+                    if (s.SpecialityIndex != specIndex || s.SkillIndex != skillIndex)
+                        continue;
+                    
+                    if (s.Level != skill.level)
+                        s.ServerSet(this);
+
+                    goto c;
                 }
 
                 byte defaultLvl = GetDefaultSkillLevel((EPlayerSpeciality)specIndex, (byte)skillIndex);
 
                 if (skill.level != defaultLvl)
-                {
                     Player.skills.ServerSetSkillLevel(specIndex, skillIndex, defaultLvl);
-                }
+                
                 c:;
             }
         }
@@ -1188,25 +1208,25 @@ public class UCPlayerLocale
 {
     public static event Action<UCPlayer>? OnLocaleUpdated;
 
-    private PlayerLanguagePreferences _preferences;
+    private LanguagePreferences _preferences;
     private readonly bool _init;
 
     public UCPlayer Player { get; }
-    public string Language => LanguageInfo.LanguageCode;
+    public string Language => LanguageInfo.Code;
     public CultureInfo CultureInfo { get; private set; }
     internal bool PreferencesIsDirty { get; set; }
     public NumberFormatInfo ParseFormat { get; set; }
-    public PlayerLanguagePreferences Preferences
+    public LanguagePreferences Preferences
     {
         get => _preferences;
         set
         {
-            LanguageInfo info = Data.LanguageDataStore.GetInfoCached(value.Language) ?? Localization.GetDefaultLanguage();
+            LanguageInfo info = value.Language ?? Localization.GetDefaultLanguage();
             bool updated = false;
 
-            IsDefaultLanguage = info.LanguageCode.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+            IsDefaultLanguage = info.Code.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
 
-            if (!(value.CultureCode != null && Localization.TryGetCultureInfo(value.CultureCode, out CultureInfo culture)) &&
+            if (!(value.Culture != null && Localization.TryGetCultureInfo(value.Culture, out CultureInfo culture)) &&
                 !(info is { DefaultCultureCode: { } defaultCultureName } && Localization.TryGetCultureInfo(defaultCultureName, out culture)))
             {
                 culture = Data.LocalLocale;
@@ -1241,7 +1261,7 @@ public class UCPlayerLocale
     public LanguageInfo LanguageInfo { get; private set; }
     public bool IsDefaultLanguage { get; private set; }
     public bool IsDefaultCulture { get; private set; }
-    public UCPlayerLocale(UCPlayer player, PlayerLanguagePreferences preferences)
+    public UCPlayerLocale(UCPlayer player, LanguagePreferences preferences)
     {
         Player = player;
         Preferences = preferences;
@@ -1261,25 +1281,26 @@ public class UCPlayerLocale
             L.Log($"Updated culture for {Player}: {CultureInfo.DisplayName} -> {culture.DisplayName}.");
             ActionLog.Add(ActionLogType.ChangeCulture, CultureInfo.Name + " >> " + culture.Name, Player);
             CultureInfo = culture;
-            Preferences.CultureCode = culture.Name;
+            Preferences.Culture = culture.Name;
             IsDefaultCulture = culture.Name.Equals(Data.LocalLocale.Name, StringComparison.Ordinal);
             ParseFormat = Preferences.UseCultureForCommandInput ? culture.NumberFormat : Data.LocalLocale.NumberFormat;
             save = true;
         }
 
-        if (language != null && Data.LanguageDataStore.GetInfoCached(language) is { } languageInfo && !languageInfo.LanguageCode.Equals(LanguageInfo.LanguageCode, StringComparison.Ordinal))
+        if (language != null && Data.LanguageDataStore.GetInfoCached(language) is { } languageInfo && !languageInfo.Code.Equals(LanguageInfo.Code, StringComparison.Ordinal))
         {
             L.Log($"Updated language for {Player}: {LanguageInfo.DisplayName} -> {languageInfo.DisplayName}.");
-            ActionLog.Add(ActionLogType.ChangeLanguage, LanguageInfo.LanguageCode + " >> " + languageInfo.LanguageCode, Player);
-            Preferences.Language = languageInfo.PrimaryKey;
-            IsDefaultLanguage = languageInfo.LanguageCode.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+            ActionLog.Add(ActionLogType.ChangeLanguage, LanguageInfo.Code + " >> " + languageInfo.Code, Player);
+            Preferences.Language = languageInfo;
+            Preferences.LanguageId = languageInfo.Key;
+            IsDefaultLanguage = languageInfo.Code.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
             LanguageInfo = languageInfo;
             save = true;
         }
 
         if (save)
         {
-            Preferences.LastUpdated = DateTimeOffset.UtcNow;
+            Preferences.LastUpdated = DateTime.UtcNow;
             if (holdSave)
             {
                 InvokeOnLocaleUpdated(Player);
@@ -1334,12 +1355,12 @@ public class UCPlayerLocale
 
 public class PlayerSave
 {
-    public const uint DataVersion = 5;
+    public const uint DataVersion = 6;
     public readonly ulong Steam64;
     [CommandSettable]
     public ulong Team;
     [CommandSettable]
-    public string KitName = string.Empty;
+    public uint KitId = 0;
     public string SquadName = string.Empty;
     public ulong SquadLeader;
     public bool SquadWasLocked;
@@ -1372,7 +1393,7 @@ public class PlayerSave
             throw new ArgumentException("Player does not own this save.", nameof(player));
 
         Team = player.GetTeam();
-        KitName = player.ActiveKit?.Item?.Id ?? string.Empty;
+        KitId = player.ActiveKit ?? 0;
         if (player.Squad != null && player.Squad.Leader.Steam64 != Steam64)
         {
             SquadName = player.Squad.Name;
@@ -1391,7 +1412,7 @@ public class PlayerSave
         Block block = new Block();
         block.writeUInt32(DataVersion);
         block.writeByte((byte)save.Team);
-        block.writeString(save.KitName);
+        block.writeUInt32(save.KitId);
         block.writeString(save.SquadName);
         block.writeUInt64(save.SquadLeader);
         block.writeBoolean(save.SquadWasLocked);
@@ -1431,7 +1452,10 @@ public class PlayerSave
         if (dv > 0)
         {
             save.Team = block.readByte();
-            save.KitName = block.readString();
+            if (dv < 6)
+                block.readString();
+            else
+                save.KitId = block.readUInt32();
             save.SquadName = block.readString();
             if (dv > 2)
             {

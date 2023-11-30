@@ -18,8 +18,6 @@ public class PlayerReportAccepted : ModerationEntry
 {
     [JsonPropertyName("report_id")]
     public PrimaryKey ReportKey { get; set; }
-
-    [JsonIgnore]
     public Report? Report { get; set; }
 
     public override string GetDisplayName() => "Player Report Accepted";
@@ -27,7 +25,7 @@ public class PlayerReportAccepted : ModerationEntry
     {
         base.ReadIntl(reader, version);
 
-        ReportKey = reader.ReadInt32();
+        ReportKey = reader.ReadUInt32();
     }
     protected override void WriteIntl(ByteWriter writer)
     {
@@ -38,7 +36,7 @@ public class PlayerReportAccepted : ModerationEntry
     public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("report_id", StringComparison.InvariantCultureIgnoreCase))
-            ReportKey = reader.GetInt32();
+            ReportKey = reader.GetUInt32();
         else
             base.ReadProperty(ref reader, propertyName, options);
     }

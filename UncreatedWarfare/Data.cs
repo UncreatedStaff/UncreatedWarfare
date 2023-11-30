@@ -1,6 +1,7 @@
 ﻿
 //#define SHOW_BYTES
 
+using DanielWillett.ReflectionTools;
 using JetBrains.Annotations;
 using SDG.NetTransport;
 using SDG.Unturned;
@@ -22,6 +23,7 @@ using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -30,6 +32,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
@@ -100,7 +103,7 @@ public static class Data
         public const PlayerKey DropSupplyOverride = PlayerKey.PluginKey1;
     }
 
-    internal static readonly IUncreatedSingleton[] GamemodeListeners = new IUncreatedSingleton[1];
+    internal static IUncreatedSingleton[] GamemodeListeners;
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
     public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb96](?!h|(?:an)|(?:[e|a]t))\W{0,}[gqb96]{0,}\W{0,}[gqb96]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})", RegexOptions.IgnoreCase);
@@ -119,6 +122,7 @@ public static class Data
     internal static DatabaseInterface ModerationSql;
     internal static WarfareMySqlLanguageDataStore LanguageDataStore;
     internal static PurchaseRecordsInterface PurchasingDataStore;
+    internal static WarfareDbContext DbContext;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     public static bool UseFastKits;
@@ -127,7 +131,9 @@ public static class Data
     public static Reporter? Reporter;
     public static DeathTracker DeathTracker;
     public static Points Points;
+#if NETSTANDARD || NETFRAMEWORK
     public static WarfareStripeService WarfareStripeService;
+#endif
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;
@@ -145,12 +151,12 @@ public static class Data
     internal static ClientInstanceMethod? SendInventory;
     // internal static ClientInstanceMethod? SendScreenshotDestination;
     internal static SingletonManager Singletons;
-    internal static InstanceSetter<PlayerStance, EPlayerStance> SetPrivateStance;
+    internal static InstanceSetter<PlayerStance, EPlayerStance>? SetPrivateStance;
+    internal static InstanceSetter<InteractableStorage, Items>? SetStorageInventory;
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
-    internal static InstanceSetter<InteractableStorage, Items> SetStorageInventory;
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
-    internal static InstanceGetter<UseableGun, bool> GetUseableGunReloading;
+    internal static InstanceGetter<UseableGun, bool>? GetUseableGunReloading;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
@@ -250,6 +256,18 @@ public static class Data
     }
     internal static async Task LoadSQL(CancellationToken token)
     {
+        WarfareDatabases.Semaphore ??= new UCSemaphore();
+        await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            DbContext = new WarfareDbContext();
+            WarfareDatabases.LoadFromWarfareDbContext(DbContext);
+        }
+        finally
+        {
+            WarfareDatabases.Release();
+        }
+
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
         bool status = await DatabaseManager.OpenAsync(token);
         L.Log("Local MySql database status: " + status + ".", ConsoleColor.Magenta);
@@ -303,6 +321,7 @@ public static class Data
 
 
         DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(true, token: token);
+        GamemodeListeners = new IUncreatedSingleton[1];
         GamemodeListeners[0] = Points = await Singletons.LoadSingletonAsync<Points>(true, token: token);
         await Singletons.LoadSingletonAsync<PlayerList>(true, token: token);
         await UCWarfare.ToUpdate(token);
@@ -332,20 +351,21 @@ public static class Data
             L.LogWarning("Unable to gather all the RPCs needed for Fast Kits, kits will not work as quick.");
             UseFastKits = false;
         }
-        GetItemManagerInstanceCount = Util.GenerateStaticGetter<ItemManager, uint>("instanceCount", BindingFlags.NonPublic);
-        SetPrivateStance = Util.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance", BindingFlags.NonPublic);
-        SetStorageInventory = Util.GenerateInstanceSetter<InteractableStorage, Items>("_items", BindingFlags.NonPublic);
+        GetItemManagerInstanceCount = Accessor.GenerateStaticGetter<ItemManager, uint>("instanceCount", throwOnError: true)!;
+        SetPrivateStance = Accessor.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance");
+        SetStorageInventory = Accessor.GenerateInstanceSetter<InteractableStorage, Items>("_items");
+        RefreshIsConnectedToPower = (Action<InteractablePower>?)Accessor.GenerateInstanceCaller<InteractablePower>("RefreshIsConnectedToPower");
+        GetUseableGunReloading = Accessor.GenerateInstanceGetter<UseableGun, bool>("isReloading");
         try
         {
-            SetOwnerHasInventory = Util.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
-            GetOwnerHasInventory = Util.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
-            GetItemsSlots = Util.GenerateInstanceGetter<Items, bool[,]>("slots", BindingFlags.NonPublic);
-            GetUseableGunReloading = Util.GenerateInstanceGetter<UseableGun, bool>("isReloading", BindingFlags.NonPublic);
+            GetItemsSlots = Accessor.GenerateInstanceGetter<Items, bool[,]>("slots", throwOnError: true)!;
+            SetOwnerHasInventory = Accessor.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: true)!;
+            GetOwnerHasInventory = Accessor.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: true)!;
         }
         catch (Exception ex)
         {
             UseFastKits = false;
-            L.LogWarning("Couldn't generate a setter method for ownerHasInventory, kits will not work as quick.");
+            L.LogWarning("Couldn't generate a fast kits accessors, kits will not work as quick.");
             L.LogError(ex);
         }
         try
@@ -355,14 +375,6 @@ public static class Data
         catch (Exception ex)
         {
             L.LogWarning("Couldn't get replicateState from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
-        }
-        try
-        {
-            RefreshIsConnectedToPower = (Action<InteractablePower>?)Util.GenerateInstanceCaller<InteractablePower>("RefreshIsConnectedToPower");
-        }
-        catch (Exception ex)
-        {
-            L.LogWarning("Couldn't get RefreshIsConnectedToPower from InteractablePower, powered barricades will not update properly with the electrical grid. (" + ex.Message + ").");
         }
         try
         {
@@ -609,134 +621,136 @@ public static class Data
                 ui.UpdateUI(player);
         }
     }
-    public static LanguageInfo FallbackLanguageInfo { get; internal set; } = new LanguageInfo(1, L.Default)
+    public static LanguageInfo FallbackLanguageInfo { get; internal set; } = new LanguageInfo
     {
+        Key = 0,
+        Code = L.Default,
         DisplayName = "English",
-        Aliases = new string[]
+        Aliases = new LanguageAlias[]
         {
-            "English",
-            "American",
-            "British",
-            "Inglés",
-            "Ingles",
-            "Inglesa"
+            new LanguageAlias { Alias = "English" },
+            new LanguageAlias { Alias = "American" },
+            new LanguageAlias { Alias = "British" },
+            new LanguageAlias { Alias = "Inglés" },
+            new LanguageAlias { Alias = "Ingles" },
+            new LanguageAlias { Alias = "Inglesa" }
         },
-        Credits = new ulong[]
+        Contributors = new LanguageContributor[]
         {
-            76561198267927009,
-            76561198857595123
+            new LanguageContributor { Contributor = 76561198267927009 },
+            new LanguageContributor { Contributor = 76561198857595123 }
         },
         HasTranslationSupport = true,
         DefaultCultureCode = "en-US",
         RequiresIMGUI = false,
-        AvailableCultureCodes = new string[]
+        SupportedCultures = new LanguageCulture[]
         {
-           "en-001",
-           "en-029",
-           "en-150",
-           "en-AE",
-           "en-AG",
-           "en-AI",
-           "en-AS",
-           "en-AT",
-           "en-AU",
-           "en-BB",
-           "en-BE",
-           "en-BI",
-           "en-BM",
-           "en-BS",
-           "en-BW",
-           "en-BZ",
-           "en-CA",
-           "en-CC",
-           "en-CH",
-           "en-CK",
-           "en-CM",
-           "en-CX",
-           "en-CY",
-           "en-DE",
-           "en-DK",
-           "en-DM",
-           "en-ER",
-           "en-FI",
-           "en-FJ",
-           "en-FK",
-           "en-FM",
-           "en-GB",
-           "en-GD",
-           "en-GG",
-           "en-GH",
-           "en-GI",
-           "en-GM",
-           "en-GU",
-           "en-GY",
-           "en-HK",
-           "en-ID",
-           "en-IE",
-           "en-IL",
-           "en-IM",
-           "en-IN",
-           "en-IO",
-           "en-JE",
-           "en-JM",
-           "en-KE",
-           "en-KI",
-           "en-KN",
-           "en-KY",
-           "en-LC",
-           "en-LR",
-           "en-LS",
-           "en-MG",
-           "en-MH",
-           "en-MO",
-           "en-MP",
-           "en-MS",
-           "en-MT",
-           "en-MU",
-           "en-MW",
-           "en-MY",
-           "en-NA",
-           "en-NF",
-           "en-NG",
-           "en-NL",
-           "en-NR",
-           "en-NU",
-           "en-NZ",
-           "en-PG",
-           "en-PH",
-           "en-PK",
-           "en-PN",
-           "en-PR",
-           "en-PW",
-           "en-RW",
-           "en-SB",
-           "en-SC",
-           "en-SD",
-           "en-SE",
-           "en-SG",
-           "en-SH",
-           "en-SI",
-           "en-SL",
-           "en-SS",
-           "en-SX",
-           "en-SZ",
-           "en-TC",
-           "en-TK",
-           "en-TO",
-           "en-TT",
-           "en-TV",
-           "en-TZ",
-           "en-UG",
-           "en-UM",
-           "en-US",
-           "en-VC",
-           "en-VG",
-           "en-VI",
-           "en-VU",
-           "en-WS",
-           "en-ZA",
-           "en-ZM",
-           "en-ZW"
+           new LanguageCulture { CultureCode = "en-001" },
+           new LanguageCulture { CultureCode = "en-029" },
+           new LanguageCulture { CultureCode = "en-150" },
+           new LanguageCulture { CultureCode = "en-AE" },
+           new LanguageCulture { CultureCode = "en-AG" },
+           new LanguageCulture { CultureCode = "en-AI" },
+           new LanguageCulture { CultureCode = "en-AS" },
+           new LanguageCulture { CultureCode = "en-AT" },
+           new LanguageCulture { CultureCode = "en-AU" },
+           new LanguageCulture { CultureCode = "en-BB" },
+           new LanguageCulture { CultureCode = "en-BE" },
+           new LanguageCulture { CultureCode = "en-BI" },
+           new LanguageCulture { CultureCode = "en-BM" },
+           new LanguageCulture { CultureCode = "en-BS" },
+           new LanguageCulture { CultureCode = "en-BW" },
+           new LanguageCulture { CultureCode = "en-BZ" },
+           new LanguageCulture { CultureCode = "en-CA" },
+           new LanguageCulture { CultureCode = "en-CC" },
+           new LanguageCulture { CultureCode = "en-CH" },
+           new LanguageCulture { CultureCode = "en-CK" },
+           new LanguageCulture { CultureCode = "en-CM" },
+           new LanguageCulture { CultureCode = "en-CX" },
+           new LanguageCulture { CultureCode = "en-CY" },
+           new LanguageCulture { CultureCode = "en-DE" },
+           new LanguageCulture { CultureCode = "en-DK" },
+           new LanguageCulture { CultureCode = "en-DM" },
+           new LanguageCulture { CultureCode = "en-ER" },
+           new LanguageCulture { CultureCode = "en-FI" },
+           new LanguageCulture { CultureCode = "en-FJ" },
+           new LanguageCulture { CultureCode = "en-FK" },
+           new LanguageCulture { CultureCode = "en-FM" },
+           new LanguageCulture { CultureCode = "en-GB" },
+           new LanguageCulture { CultureCode = "en-GD" },
+           new LanguageCulture { CultureCode = "en-GG" },
+           new LanguageCulture { CultureCode = "en-GH" },
+           new LanguageCulture { CultureCode = "en-GI" },
+           new LanguageCulture { CultureCode = "en-GM" },
+           new LanguageCulture { CultureCode = "en-GU" },
+           new LanguageCulture { CultureCode = "en-GY" },
+           new LanguageCulture { CultureCode = "en-HK" },
+           new LanguageCulture { CultureCode = "en-ID" },
+           new LanguageCulture { CultureCode = "en-IE" },
+           new LanguageCulture { CultureCode = "en-IL" },
+           new LanguageCulture { CultureCode = "en-IM" },
+           new LanguageCulture { CultureCode = "en-IN" },
+           new LanguageCulture { CultureCode = "en-IO" },
+           new LanguageCulture { CultureCode = "en-JE" },
+           new LanguageCulture { CultureCode = "en-JM" },
+           new LanguageCulture { CultureCode = "en-KE" },
+           new LanguageCulture { CultureCode = "en-KI" },
+           new LanguageCulture { CultureCode = "en-KN" },
+           new LanguageCulture { CultureCode = "en-KY" },
+           new LanguageCulture { CultureCode = "en-LC" },
+           new LanguageCulture { CultureCode = "en-LR" },
+           new LanguageCulture { CultureCode = "en-LS" },
+           new LanguageCulture { CultureCode = "en-MG" },
+           new LanguageCulture { CultureCode = "en-MH" },
+           new LanguageCulture { CultureCode = "en-MO" },
+           new LanguageCulture { CultureCode = "en-MP" },
+           new LanguageCulture { CultureCode = "en-MS" },
+           new LanguageCulture { CultureCode = "en-MT" },
+           new LanguageCulture { CultureCode = "en-MU" },
+           new LanguageCulture { CultureCode = "en-MW" },
+           new LanguageCulture { CultureCode = "en-MY" },
+           new LanguageCulture { CultureCode = "en-NA" },
+           new LanguageCulture { CultureCode = "en-NF" },
+           new LanguageCulture { CultureCode = "en-NG" },
+           new LanguageCulture { CultureCode = "en-NL" },
+           new LanguageCulture { CultureCode = "en-NR" },
+           new LanguageCulture { CultureCode = "en-NU" },
+           new LanguageCulture { CultureCode = "en-NZ" },
+           new LanguageCulture { CultureCode = "en-PG" },
+           new LanguageCulture { CultureCode = "en-PH" },
+           new LanguageCulture { CultureCode = "en-PK" },
+           new LanguageCulture { CultureCode = "en-PN" },
+           new LanguageCulture { CultureCode = "en-PR" },
+           new LanguageCulture { CultureCode = "en-PW" },
+           new LanguageCulture { CultureCode = "en-RW" },
+           new LanguageCulture { CultureCode = "en-SB" },
+           new LanguageCulture { CultureCode = "en-SC" },
+           new LanguageCulture { CultureCode = "en-SD" },
+           new LanguageCulture { CultureCode = "en-SE" },
+           new LanguageCulture { CultureCode = "en-SG" },
+           new LanguageCulture { CultureCode = "en-SH" },
+           new LanguageCulture { CultureCode = "en-SI" },
+           new LanguageCulture { CultureCode = "en-SL" },
+           new LanguageCulture { CultureCode = "en-SS" },
+           new LanguageCulture { CultureCode = "en-SX" },
+           new LanguageCulture { CultureCode = "en-SZ" },
+           new LanguageCulture { CultureCode = "en-TC" },
+           new LanguageCulture { CultureCode = "en-TK" },
+           new LanguageCulture { CultureCode = "en-TO" },
+           new LanguageCulture { CultureCode = "en-TT" },
+           new LanguageCulture { CultureCode = "en-TV" },
+           new LanguageCulture { CultureCode = "en-TZ" },
+           new LanguageCulture { CultureCode = "en-UG" },
+           new LanguageCulture { CultureCode = "en-UM" },
+           new LanguageCulture { CultureCode = "en-US" },
+           new LanguageCulture { CultureCode = "en-VC" },
+           new LanguageCulture { CultureCode = "en-VG" },
+           new LanguageCulture { CultureCode = "en-VI" },
+           new LanguageCulture { CultureCode = "en-VU" },
+           new LanguageCulture { CultureCode = "en-WS" },
+           new LanguageCulture { CultureCode = "en-ZA" },
+           new LanguageCulture { CultureCode = "en-ZM" },
+           new LanguageCulture { CultureCode = "en-ZW" }
         }
     };
 }

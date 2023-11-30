@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Commands;
 public class LangCommand : AsyncCommand
@@ -57,7 +58,7 @@ public class LangCommand : AsyncCommand
                         continue;
 
                     if (++i != 0) sb.Append(", ");
-                    sb.Append(info.LanguageCode);
+                    sb.Append(info.Code);
                     sb.Append(" : ").Append(info.DisplayName);
                 }
             }
@@ -89,7 +90,7 @@ public class LangCommand : AsyncCommand
 
             LanguageInfo defaultInfo = Localization.GetDefaultLanguage();
 
-            await ctx.Caller.Locale.Update(defaultInfo.LanguageCode, Data.LocalLocale, token: token).ConfigureAwait(false);
+            await ctx.Caller.Locale.Update(defaultInfo.Code, Data.LocalLocale, token: token).ConfigureAwait(false);
             ctx.Reply(T.ResetLanguage, defaultInfo);
             CheckIMGUIRequirements(ctx, defaultInfo);
         }
@@ -106,7 +107,7 @@ public class LangCommand : AsyncCommand
             if (newSet == oldSet)
                 throw ctx.Reply(T.LangAlreadySet, oldSet);
 
-            await ctx.Caller.Locale.Update(newSet.LanguageCode, null, token: token).ConfigureAwait(false);
+            await ctx.Caller.Locale.Update(newSet.Code, null, token: token).ConfigureAwait(false);
             CheckIMGUIRequirements(ctx, newSet);
             ctx.Reply(T.ChangedLanguage, newSet);
         }

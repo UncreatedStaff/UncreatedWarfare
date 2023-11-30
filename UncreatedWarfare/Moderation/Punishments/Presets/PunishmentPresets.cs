@@ -310,29 +310,24 @@ public static class PunishmentPresets
 public sealed class PunishmentPreset
 {
     [JsonPropertyName("preset_type")]
-    public PresetType PresetType { get; }
+    public PresetType PresetType { get; set; }
 
     [JsonPropertyName("message")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? DefaultMessage { get; }
+    public string? DefaultMessage { get; set; }
 
     [JsonPropertyName("primary_moderation_type")]
-    public ModerationEntryType PrimaryModerationType { get; }
+    public ModerationEntryType PrimaryModerationType { get; set; }
 
     [JsonPropertyName("primary_duration")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TimeSpan? PrimaryDuration { get; set; }
 
     [JsonPropertyName("secondary_moderation_type")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ModerationEntryType? SecondaryModerationType { get; set; }
 
     [JsonPropertyName("secondary_duration")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TimeSpan? SecondaryDuration { get; set; }
 
     [JsonPropertyName("reputation")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double Reputation { get; set; }
 
     public PunishmentPreset(PresetType presetType, ModerationEntryType modType, string? defaultMessage)

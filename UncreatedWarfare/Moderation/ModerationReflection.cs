@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 
 namespace Uncreated.Warfare.Moderation;
@@ -30,7 +31,7 @@ public static class ModerationReflection
         if (_hasReflected) return;
         _hasReflected = true;
         Assembly assembly = Assembly.GetExecutingAssembly();
-        List<Type> types = Util.GetTypesSafe(assembly);
+        List<Type> types = Accessor.GetTypesSafe(assembly);
         List<Type> types2 = new List<Type>();
         for (int i = 0; i < types.Count; ++i)
         {

@@ -84,14 +84,14 @@ public class ChatAbuseReport : Report
     }
 }
 
-public readonly struct AbusiveChatRecord
+public struct AbusiveChatRecord
 {
     [JsonPropertyName("timestamp")]
-    public DateTimeOffset Timestamp { get; }
+    public DateTimeOffset Timestamp { get; set; }
     [JsonPropertyName("message")]
-    public string Message { get; }
+    public string Message { get; set; }
 
-    [JsonConstructor]
+    public AbusiveChatRecord() { }
     public AbusiveChatRecord(string message, DateTimeOffset timestamp)
     {
         Timestamp = timestamp;

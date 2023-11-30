@@ -1,10 +1,9 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.ReflectionTools;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using Uncreated.Framework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
@@ -18,7 +17,6 @@ public class DeathTracker : BaseReloadSingleton
     public const EDeathCause MainCampDeathCauseOffset = (EDeathCause)100;
     public const EDeathCause InEnemyMainDeathCause = (EDeathCause)37;
     private static DeathTracker Singleton;
-    private static readonly object[] PVPDeathInvocationArray = { true };
     private static readonly Dictionary<ulong, InjuredDeathCache> _injuredPlayers = new Dictionary<ulong, InjuredDeathCache>(Provider.maxPlayers);
     public static bool Loaded => Singleton.IsLoaded();
     public DeathTracker() : base("deaths") { }
@@ -45,9 +43,9 @@ public class DeathTracker : BaseReloadSingleton
         PlayerLife.onPlayerDied -= OnPlayerDied;
         Singleton = null!;
     }
-    private static readonly MethodInfo? PVPDeathField = typeof(PlayerLife).GetProperty("wasPvPDeath", BindingFlags.Instance | BindingFlags.NonPublic)?.GetSetMethod(true);
+    private static readonly InstanceSetter<PlayerLife, bool>? PVPDeathField = Accessor.GenerateInstancePropertySetter<PlayerLife, bool>("wasPvPDeath");
     private static readonly InstanceGetter<InteractableSentry, Player>? SentryTargetPlayerField =
-        Util.GenerateInstanceGetter<InteractableSentry, Player>("targetPlayer", BindingFlags.NonPublic);
+        Accessor.GenerateInstanceGetter<InteractableSentry, Player>("targetPlayer");
     private void OnPlayerDied(PlayerLife sender, EDeathCause cause, ELimb limb, CSteamID instigator)
     {
         UCPlayer? dead = UCPlayer.FromPlayer(sender.player);
@@ -148,7 +146,7 @@ public class DeathTracker : BaseReloadSingleton
             case >= MainCampDeathCauseOffset:
                 args.SpecialKey = "maincamp";
                 args.DeathCause = (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset);
-                PVPDeathField?.Invoke(dead.Player.life, PVPDeathInvocationArray);
+                PVPDeathField?.Invoke(dead.Player.life, true);
                 break;
         }
         UCPlayer? killer = UCPlayer.FromCSteamID(instigator);

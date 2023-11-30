@@ -10,12 +10,12 @@ public class VehicleBayConfig : Config<VehicleBayData>
 
 public class VehicleBayData : JSONConfigData
 {
-    public RotatableConfig<JsonAssetReference<EffectAsset>> CountermeasureEffectID;
-    public RotatableConfig<JsonAssetReference<VehicleAsset>> CountermeasureGUID;
-    public RotatableConfig<JsonAssetReference<ItemGunAsset>[]> TOWMissileWeapons;
-    public RotatableConfig<JsonAssetReference<ItemGunAsset>[]> GroundAAWeapons;
-    public RotatableConfig<JsonAssetReference<ItemGunAsset>[]> AirAAWeapons;
-    public RotatableConfig<JsonAssetReference<ItemGunAsset>[]> LaserGuidedWeapons;
+    public RotatableConfig<JsonAssetReference<EffectAsset>> CountermeasureEffectID { get; set; }
+    public RotatableConfig<JsonAssetReference<VehicleAsset>> CountermeasureGUID { get; set; }
+    public RotatableConfig<JsonAssetReference<ItemGunAsset>[]> TOWMissileWeapons { get; set; }
+    public RotatableConfig<JsonAssetReference<ItemGunAsset>[]> GroundAAWeapons { get; set; }
+    public RotatableConfig<JsonAssetReference<ItemGunAsset>[]> AirAAWeapons { get; set; }
+    public RotatableConfig<JsonAssetReference<ItemGunAsset>[]> LaserGuidedWeapons { get; set; }
 
     public override void SetDefaults()
     {

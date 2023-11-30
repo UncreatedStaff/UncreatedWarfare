@@ -182,9 +182,9 @@ internal class SyncableArrayConverterFactory : JsonConverterFactory
 
 internal class SyncableArrayConverter<T> : JsonConverter<SyncableArray<T>>
 {
-    public override SyncableArray<T>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override SyncableArray<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        return SyncableArray<T>.Read(ref reader, options);
+        return SyncableArray<T>.Read(ref reader, options)!;
     }
 
     public override void Write(Utf8JsonWriter writer, SyncableArray<T>? value, JsonSerializerOptions options)

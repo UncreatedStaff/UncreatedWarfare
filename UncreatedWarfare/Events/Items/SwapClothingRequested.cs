@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SDG.Unturned;
-using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Items;
 public class SwapClothingRequested : BreakablePlayerEvent

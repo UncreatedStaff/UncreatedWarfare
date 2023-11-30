@@ -188,7 +188,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     {
         _player.SendChat(T.ZoneDeleteEditingZoneDeleted);
         _currentBuilderIsExisting = false;
-        _currentBuilder!.Id = -1;
+        _currentBuilder!.Id = 0;
     }
     internal void CreateCommand(CommandInteraction ctx)
     {
@@ -243,7 +243,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             SpawnZ = pos.z,
             ZoneType = type,
             UseCase = ZoneUseCase.Flag,
-            Id = -1,
+            Id = 0,
             Adjacencies = Array.Empty<AdjacentFlagData>()
         };
         _currentBuilder.ZoneData.X = pos.x;
@@ -636,7 +636,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         throw ctx.Reply(T.ZoneEditFinalizeExists);
                     Zone zone = mdl.GetZone();
                     bool @new;
-                    int id = _currentBuilder.Id;
+                    uint id = _currentBuilder.Id;
                     _isLoading = true;
                     UCWarfare.RunTask(async () =>
                     {

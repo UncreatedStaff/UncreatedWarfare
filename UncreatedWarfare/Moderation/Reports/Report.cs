@@ -20,7 +20,6 @@ public class Report : ModerationEntry
 
     [JsonPropertyName("screenshot_data")]
     [JsonConverter(typeof(Base64Converter))]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public byte[]? ScreenshotJpgData { get; set; }
     public override string GetDisplayName() => "Report";
     protected override void ReadIntl(ByteReader reader, ushort version)

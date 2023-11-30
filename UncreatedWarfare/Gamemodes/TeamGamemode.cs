@@ -1,13 +1,11 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
-using SDG.Framework.Landscapes;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
@@ -141,15 +139,6 @@ public abstract class TeamGamemode : Gamemode, ITeams
             else
                 TeamManager.EvaluateBases();
         }
-
-#if DEBUG
-        // AMC damage multiplier test
-        if (EverySecond)
-        {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                player.SendString($"AMC Damage Mult: {player.GetAMCDamageMultiplier().ToString("F4", player.Locale.CultureInfo)}.");
-        }
-#endif
 
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {

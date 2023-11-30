@@ -36,7 +36,7 @@ public class BuyCommand : AsyncCommand
             throw ctx.SendUnknownError();
         if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign)
         {
-            if (Signs.GetKitFromSign(drop, out int ld) is { Item: not null } kit)
+            if (Signs.GetKitFromSign(drop, out int ld) is { } kit)
             {
                 await manager.BuyKit(ctx, kit, drop.model.position, token).ConfigureAwait(false);
                 return;

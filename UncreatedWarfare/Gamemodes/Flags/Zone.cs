@@ -6,6 +6,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -208,7 +209,7 @@ public abstract class Zone : IListItem, IZone
         Name = data.Name;
         MinHeight = data.MinimumHeight;
         MaxHeight = data.MaximumHeight;
-        PrimaryKey = data.Id < 0 ? PrimaryKey.NotAssigned : data.Id;
+        PrimaryKey = data.Id;
         if (data.UseMapCoordinates)
         {
             if (GridLocation.LegacyMapping)

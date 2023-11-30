@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Localization;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Structures;
@@ -11,21 +12,21 @@ public sealed class SavedStructure : IListItem, ITranslationArgument
 {
     public PrimaryKey PrimaryKey { get; set; } = PrimaryKey.NotAssigned;
     [JsonPropertyName("guid")]
-    public Guid ItemGuid;
+    public Guid ItemGuid { get; set; }
     [JsonPropertyName("instance_id")]
-    public uint InstanceID;
+    public uint InstanceID { get; set; }
     [JsonPropertyName("position")]
-    public Vector3 Position;
+    public Vector3 Position { get; set; }
     [JsonPropertyName("rotation")]
-    public Vector3 Rotation;
+    public Vector3 Rotation { get; set; }
     [CommandSettable]
     [JsonPropertyName("owner")]
-    public ulong Owner;
+    public ulong Owner { get; set; }
     [CommandSettable]
     [JsonPropertyName("group")]
-    public ulong Group;
+    public ulong Group { get; set; }
     [JsonIgnore]
-    public byte[] Metadata = Array.Empty<byte>();
+    public byte[] Metadata { get; set; } = Array.Empty<byte>();
     [JsonPropertyName("state")]
     public string StateString
     {
@@ -33,9 +34,9 @@ public sealed class SavedStructure : IListItem, ITranslationArgument
         set => Metadata = value is null ? Array.Empty<byte>() : Convert.FromBase64String(value);
     }
     [JsonIgnore]
-    internal ItemJarData[]? Items = null;
+    internal ItemJarData[]? Items { get; set; }
     [JsonIgnore]
-    internal ItemDisplayData? DisplayData = null;
+    internal ItemDisplayData? DisplayData { get; set; }
     [JsonIgnore]
     public IBuildable? Buildable { get; internal set; }
     public override string ToString()

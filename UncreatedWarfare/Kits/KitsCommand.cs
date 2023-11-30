@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -26,7 +25,7 @@ public sealed class KitsCommand : AsyncCommand
         if (UCWarfare.Config.DisableKitMenu)
             throw ctx.SendNotImplemented();
 
-#if RELEASE
+#if false
         if (!ctx.Caller.OnDuty() && ctx.CallerID is not 76561198839009178ul)
         {
             int c;
@@ -34,7 +33,7 @@ public sealed class KitsCommand : AsyncCommand
             try
             {
                 if (ctx.Caller.AccessibleKits != null)
-                    c = ctx.Caller.AccessibleKits.Count(x => x.Item is { } k && k.Type == KitType.Loadout);
+                    c = ctx.Caller.AccessibleKits.Count(x => x is { } k && k.Type == KitType.Loadout);
                 else
                     c = 0;
             }

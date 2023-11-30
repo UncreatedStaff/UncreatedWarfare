@@ -242,15 +242,15 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 
                 Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
 
-                if (medic.ActiveKit?.Item is { } mkit)
+                if (medic.GetActiveKit() is { } mkit)
                 {
                     Stats.StatsManager.ModifyStats(medic.Steam64, s =>
                     {
                         s.Revives++;
-                        Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == mkit.Id && k.Team == team);
+                        Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == mkit.InternalName && k.Team == team);
                         if (kitData == default)
                         {
-                            kitData = new Stats.WarfareStats.KitData { KitID = mkit.Id, Team = team, Revives = 1 };
+                            kitData = new Stats.WarfareStats.KitData { KitID = mkit.InternalName, Team = team, Revives = 1 };
                             s.Kits.Add(kitData);
                         }
                         else
@@ -358,15 +358,15 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                     ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastEnemyInjured.Translate(killer)));
 
                     Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
-                    if (killer is { ActiveKit.Item: { } kit })
+                    if (killer.GetActiveKit() is { } kit)
                     {
                         Stats.StatsManager.ModifyStats(killer.Steam64, s =>
                         {
                             s.Downs++;
-                            Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Id && k.Team == kteam);
+                            Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.InternalName && k.Team == kteam);
                             if (kitData == default)
                             {
-                                kitData = new Stats.WarfareStats.KitData { KitID = kit.Id, Team = kteam, Downs = 1 };
+                                kitData = new Stats.WarfareStats.KitData { KitID = kit.InternalName, Team = kteam, Downs = 1 };
                                 s.Kits.Add(kitData);
                             }
                             else
@@ -376,7 +376,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                         }, false);
                         if (Assets.find(item) is ItemAsset asset)
                         {
-                            Stats.StatsManager.ModifyWeapon(asset.id, kit.Id, w => w.Downs++, true);
+                            Stats.StatsManager.ModifyWeapon(asset.id, kit.InternalName, w => w.Downs++, true);
                         }
                     }
                     else

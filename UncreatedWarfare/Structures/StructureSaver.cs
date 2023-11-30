@@ -17,7 +17,6 @@ using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Sync;
@@ -359,6 +358,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             {
                 L.LogDebug("Resaving " + toSave.Count + " item(s)...");
                 await AddOrUpdateNoLock(toSave, token).ConfigureAwait(false);
+                L.LogDebug("  Done");
             }
             else
             {
@@ -661,7 +661,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 {
                     structure = str.Item;
                     status = false;
-                    goto save;
+                    goto save2;
                 }
             }
         }
@@ -725,36 +725,8 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         {
             structure.Metadata = Util.CloneBytes(data.barricade.state);
         }
-        save:
-        if (drop.interactable is InteractableSign sign && sign.text.StartsWith(Signs.Prefix + Signs.KitPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            KitManager? manager = KitManager.GetSingletonQuick();
-            if (manager != null)
-            {
-                SqlItem<Kit>? proxy = await manager.FindKit(sign.text.Substring(Signs.Prefix.Length + Signs.KitPrefix.Length), token).ConfigureAwait(false);
-                if (proxy is { Item: { } kit })
-                {
-                    await proxy.Enter(token);
-                    try
-                    {
-                        PrimaryKey[] keys = kit.RequestSigns;
-                        for (int i = 0; i < keys.Length; ++i)
-                        {
-                            if (keys[i].Key == structure.PrimaryKey.Key)
-                                goto save2;
-                        }
-
-                        Util.AddToArray(ref keys!, structure.PrimaryKey);
-                        kit.RequestSigns = keys;
-                    }
-                    finally
-                    {
-                        proxy.Release();
-                    }
-                }
-            }
-        }
         save2:
+
         return (await AddOrUpdate(structure, token).ConfigureAwait(false), status);
     }
     public Task RemoveItem(SavedStructure structure, CancellationToken token = default)
@@ -1341,7 +1313,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             if (hasPk)
                 p[12] = item.PrimaryKey.Key;
 
-            int pk2 = PrimaryKey.NotAssigned;
+            uint pk2 = PrimaryKey.NotAssigned;
             await Sql.QueryAsync($"INSERT INTO `{TABLE_MAIN}` ({SqlTypes.ColumnList(COLUMN_MAP, COLUMN_GUID,
                            COLUMN_POS_X, COLUMN_POS_Y, COLUMN_POS_Z,
                            COLUMN_ROT_X, COLUMN_ROT_Y, COLUMN_ROT_Z,
@@ -1359,7 +1331,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                            "SELECT @pk;",
             p, reader =>
             {
-                pk2 = reader.GetInt32(0);
+                pk2 = reader.GetUInt32(0);
             }, token).ConfigureAwait(false);
             PrimaryKey structKey = pk2;
             item.PrimaryKey = structKey;
@@ -1445,7 +1417,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                              $"WHERE `{COLUMN_MAP}`=@0;", new object[] { MapScheduler.Current },
             reader =>
             {
-                int pk = reader.GetInt32(0);
+                uint pk = reader.GetUInt32(0);
                 Guid? guid = reader.ReadGuidString(1);
                 if (!guid.HasValue)
                     L.LogWarning("Invalid item GUID at structure " + pk + ": \"" + reader.GetString(1) + "\".");
@@ -1480,7 +1452,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_PK, COLUMN_DISPLAY_SKIN, COLUMN_DISPLAY_MYTHIC,
                              COLUMN_DISPLAY_ROT, COLUMN_DISPLAY_DYNAMIC_PROPS, COLUMN_DISPLAY_TAGS)} FROM `{TABLE_DISPLAY_DATA}`;", null, reader =>
          {
-             PrimaryKey pk = reader.GetInt32(0);
+             PrimaryKey pk = reader.GetUInt32(0);
              for (int i = 0; i < str.Count; ++i)
              {
                  if (str[i].PrimaryKey.Key == pk.Key)
@@ -1503,7 +1475,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 if (!guid.HasValue)
                     L.LogWarning("Invalid item GUID at structure " + reader.GetInt32(0) + ": \"" + reader.GetString(1) + "\".");
                 else
-                    (itemData ??= new List<ItemJarData>(64)).Add(new ItemJarData(PrimaryKey.NotAssigned, reader.GetInt32(0),
+                    (itemData ??= new List<ItemJarData>(64)).Add(new ItemJarData(PrimaryKey.NotAssigned, reader.GetUInt32(0),
                         guid.Value, reader.GetByte(4), reader.GetByte(5), reader.GetByte(6),
                         reader.GetByte(2), reader.GetByte(3), reader.ReadByteArray(7)));
             }, token).ConfigureAwait(false);
@@ -1511,7 +1483,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         {
             for (int i = 0; i < str.Count; ++i)
             {
-                int pk = str[i].PrimaryKey.Key;
+                uint pk = str[i].PrimaryKey.Key;
                 ItemJarData[] d = itemData.Where(x => x.Structure.Key == pk).ToArray();
                 if (d.Length > 0)
                     str[i].Items = d;
@@ -1532,7 +1504,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                              $"FROM `{TABLE_MAIN}` WHERE `{COLUMN_PK}`=@0 LIMIT 1;", arr,
             reader =>
             {
-                int lpk = reader.GetInt32(0);
+                uint lpk = reader.GetUInt32(0);
                 Guid? guid = reader.ReadGuidString(1);
                 if (!guid.HasValue)
                     L.LogWarning("Invalid item GUID at structure " + lpk + ": \"" + reader.GetString(1) + "\".");
@@ -1581,7 +1553,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                              $"FROM `{TABLE_STRUCTURE_ITEMS}` WHERE `{COLUMN_ITEM_STRUCTURE_PK}`=@0;",
             arr, reader =>
             {
-                int lpk = reader.GetInt32(0);
+                uint lpk = reader.GetUInt32(0);
                 Guid? guid = reader.ReadGuidString(1);
                 if (!guid.HasValue)
                     L.LogWarning("Invalid item GUID at structure " + lpk + ": \"" + pk + "\".");

@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+﻿using MySql.Data.MySqlClient;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,8 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -357,7 +359,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             await UCWarfare.ToUpdate(token);
 
             int origAmt = parameters.Amount;
-            PointsConfig.XPData.TryGetValue(parameters.Reward, out PointsConfig.XPRewardData? data);
+            PointsConfig.XPData.TryGetValue(parameters.Reward.ToString(), out PointsConfig.XPRewardData? data);
             if (origAmt == 0)
             {
                 if (data == null || data.Amount == 0)
@@ -606,7 +608,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     public static void TryAwardDriverAssist(PlayerDied args, XPReward reward, int amount = 0, float quota = 0)
     {
         if (args.DriverAssist is null || !args.DriverAssist.IsOnline) return;
-        if (amount == 0 && PointsConfig.XPData.TryGetValue(reward, out PointsConfig.XPRewardData data))
+        if (amount == 0 && PointsConfig.XPData.TryGetValue(reward.ToString(), out PointsConfig.XPRewardData data))
             amount = data.Amount;
 
         AwardXP(args.DriverAssist, reward, T.XPToastKillDriverAssist, amount);
@@ -622,7 +624,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         InteractableVehicle vehicle = gunner.movement.getVehicle();
         if (vehicle != null)
         {
-            if (amount == 0 && PointsConfig.XPData.TryGetValue(reward, out PointsConfig.XPRewardData data))
+            if (amount == 0 && PointsConfig.XPData.TryGetValue(reward.ToString(), out PointsConfig.XPRewardData data))
                 amount = data.Amount;
             SteamPlayer driver = vehicle.passengers[0].player;
             if (driver != null &&
@@ -673,7 +675,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             }
 
             if (e.Player.Player.TryGetComponent(out SpottedComponent spotted) &&
-                PointsConfig.XPData.TryGetValue(XPReward.EnemyKilled, out PointsConfig.XPRewardData data))
+                PointsConfig.XPData.TryGetValue(nameof(XPReward.EnemyKilled), out PointsConfig.XPRewardData data))
             {
                 spotted.OnTargetKilled(Mathf.RoundToInt(data.Amount * 0.75f));
             }
@@ -809,12 +811,12 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         }
     }
     private record struct XPData(ulong Steam64, ulong Team, uint XP, uint Credits);
-    private static void OnKitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldkit)
+    private static void OnKitChanged(UCPlayer player, Kit? kit, Kit? oldkit)
     {
         Branch oldbranch = Branch.Default;
-        if (oldkit is { Item: { } oldkit2 })
-            oldbranch = oldkit2.Branch;
-        if (player.Branch != oldbranch)
+        if (oldkit != null)
+            oldbranch = oldkit.Branch;
+        if (player.KitBranch != oldbranch)
         {
             player.PointsDirtyMask |= 0b00000100;
             XPUI.Update(player, false);
@@ -988,7 +990,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             if (!vehicleWasFriendly)
                 Stats.StatsManager.ModifyTeam(dteam, t => t.VehiclesDestroyed++, false);
             int fullXP = 0;
-            if (PointsConfig.XPData.TryGetValue(xpreward, out PointsConfig.XPRewardData data) && data.Amount > 0)
+            if (PointsConfig.XPData.TryGetValue(xpreward.ToString(), out PointsConfig.XPRewardData data) && data.Amount > 0)
                 fullXP = data.Amount;
 
 
@@ -1188,7 +1190,6 @@ public enum XPReward
 
 public class PointsConfig : JSONConfigData
 {
-    [JsonIgnore]
     public const float DefaultCreditPercentage = 15f;
 
     [JsonPropertyName("player_starting_credits")]
@@ -1198,7 +1199,7 @@ public class PointsConfig : JSONConfigData
     public char ProgressBlockCharacter { get; set; }
 
     [JsonPropertyName("xp_data")]
-    public Dictionary<XPReward, XPRewardData> XPData { get; set; }
+    public Dictionary<string, XPRewardData> XPData { get; set; }
 
     [JsonPropertyName("global_xp_multiplier")]
     public float GlobalXPMultiplier { get; set; }
@@ -1207,9 +1208,9 @@ public class PointsConfig : JSONConfigData
     {
         StartingCredits = 500;
         ProgressBlockCharacter = '█';
-        XPData = new Dictionary<XPReward, XPRewardData>(35)
+        XPData = new Dictionary<string, XPRewardData>(35)
         {
-            { XPReward.Custom,
+            { nameof(XPReward.Custom),
                 new XPRewardData(0)
                 {
                     IgnoresGlobalMultiplier = true,
@@ -1218,15 +1219,15 @@ public class PointsConfig : JSONConfigData
                     ExcludeFromLeaderboard = true
                 }
             },
-            { XPReward.OnDuty,
+            { nameof(XPReward.OnDuty),
                 new XPRewardData(5)
                 {
                     ExcludeFromLeaderboard = true,
                 }
             },
-            { XPReward.EnemyKilled, new XPRewardData(10, DefaultCreditPercentage) },
-            { XPReward.CacheDestroyed, new XPRewardData(800, DefaultCreditPercentage) },
-            { XPReward.FriendlyCacheDestroyed,
+            { nameof(XPReward.EnemyKilled), new XPRewardData(10, DefaultCreditPercentage) },
+            { nameof(XPReward.CacheDestroyed), new XPRewardData(800, DefaultCreditPercentage) },
+            { nameof(XPReward.FriendlyCacheDestroyed),
                 new XPRewardData(-8000)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
@@ -1235,8 +1236,8 @@ public class PointsConfig : JSONConfigData
                     }
                 }
             },
-            { XPReward.KillAssist, new XPRewardData(5, DefaultCreditPercentage) },
-            { XPReward.Teamkill,
+            { nameof(XPReward.KillAssist), new XPRewardData(5, DefaultCreditPercentage) },
+            { nameof(XPReward.Teamkill),
                 new XPRewardData(-30)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
@@ -1245,7 +1246,7 @@ public class PointsConfig : JSONConfigData
                     }
                 }
             },
-            { XPReward.Suicide,
+            { nameof(XPReward.Suicide),
                 new XPRewardData(-20)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
@@ -1254,9 +1255,9 @@ public class PointsConfig : JSONConfigData
                     }
                 }
             },
-            { XPReward.Revive, new XPRewardData(30, DefaultCreditPercentage * 1.5f) },
-            { XPReward.RadioDestroyed, new XPRewardData(80, DefaultCreditPercentage * 1.5f) },
-            { XPReward.FriendlyRadioDestroyed,
+            { nameof(XPReward.Revive), new XPRewardData(30, DefaultCreditPercentage * 1.5f) },
+            { nameof(XPReward.RadioDestroyed), new XPRewardData(80, DefaultCreditPercentage * 1.5f) },
+            { nameof(XPReward.FriendlyRadioDestroyed),
                 new XPRewardData(-1000)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
@@ -1265,8 +1266,8 @@ public class PointsConfig : JSONConfigData
                     }
                 }
             },
-            { XPReward.BunkerDestroyed, new XPRewardData(60, DefaultCreditPercentage * 1.5f) },
-            { XPReward.FriendlyBunkerDestroyed,
+            { nameof(XPReward.BunkerDestroyed), new XPRewardData(60, DefaultCreditPercentage * 1.5f) },
+            { nameof(XPReward.FriendlyBunkerDestroyed),
                 new XPRewardData(-800)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
@@ -1275,35 +1276,35 @@ public class PointsConfig : JSONConfigData
                     }
                 }
             },
-            { XPReward.BunkerDeployment, new XPRewardData(10, DefaultCreditPercentage) },
-            { XPReward.FlagCaptured, new XPRewardData(50, DefaultCreditPercentage) },
-            { XPReward.FlagNeutralized, new XPRewardData(80, DefaultCreditPercentage) },
-            { XPReward.AttackingFlag, new XPRewardData(8, DefaultCreditPercentage) },
-            { XPReward.DefendingFlag, new XPRewardData(6, DefaultCreditPercentage) },
-            { XPReward.TransportingPlayer, new XPRewardData(10, DefaultCreditPercentage) },
-            { XPReward.Shoveling, new XPRewardData(2, 50f) },
-            { XPReward.BunkerBuilt, new XPRewardData(100, DefaultCreditPercentage * 1.5f) },
-            { XPReward.Resupply, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.RepairVehicle, new XPRewardData(3, DefaultCreditPercentage) },
-            { XPReward.UnloadSupplies, new XPRewardData(10, DefaultCreditPercentage) },
-            { XPReward.FriendlyFortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
-            { XPReward.FortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
-            { XPReward.FriendlyBuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
-            { XPReward.BuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
-            { XPReward.VehicleHumvee, new XPRewardData(25, DefaultCreditPercentage) },
-            { XPReward.VehicleTransportGround, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.VehicleScoutCar, new XPRewardData(30, DefaultCreditPercentage) },
-            { XPReward.VehicleLogisticsGround, new XPRewardData(25, DefaultCreditPercentage) },
-            { XPReward.VehicleAPC, new XPRewardData(60, DefaultCreditPercentage) },
-            { XPReward.VehicleIFV, new XPRewardData(70, DefaultCreditPercentage) },
-            { XPReward.VehicleMBT, new XPRewardData(100, DefaultCreditPercentage) },
-            { XPReward.VehicleTransportAir, new XPRewardData(30, DefaultCreditPercentage) },
-            { XPReward.VehicleAttackHeli, new XPRewardData(150, DefaultCreditPercentage) },
-            { XPReward.VehicleJet, new XPRewardData(200, DefaultCreditPercentage) },
-            { XPReward.VehicleAA, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.VehicleHMG, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.VehicleATGM, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.VehicleMortar, new XPRewardData(20, DefaultCreditPercentage) }
+            { nameof(XPReward.BunkerDeployment), new XPRewardData(10, DefaultCreditPercentage) },
+            { nameof(XPReward.FlagCaptured), new XPRewardData(50, DefaultCreditPercentage) },
+            { nameof(XPReward.FlagNeutralized), new XPRewardData(80, DefaultCreditPercentage) },
+            { nameof(XPReward.AttackingFlag), new XPRewardData(8, DefaultCreditPercentage) },
+            { nameof(XPReward.DefendingFlag), new XPRewardData(6, DefaultCreditPercentage) },
+            { nameof(XPReward.TransportingPlayer), new XPRewardData(10, DefaultCreditPercentage) },
+            { nameof(XPReward.Shoveling), new XPRewardData(2, 50f) },
+            { nameof(XPReward.BunkerBuilt), new XPRewardData(100, DefaultCreditPercentage * 1.5f) },
+            { nameof(XPReward.Resupply), new XPRewardData(20, DefaultCreditPercentage) },
+            { nameof(XPReward.RepairVehicle), new XPRewardData(3, DefaultCreditPercentage) },
+            { nameof(XPReward.UnloadSupplies), new XPRewardData(10, DefaultCreditPercentage) },
+            { nameof(XPReward.FriendlyFortificationDestroyed), new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
+            { nameof(XPReward.FortificationDestroyed), new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
+            { nameof(XPReward.FriendlyBuildableDestroyed), new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
+            { nameof(XPReward.BuildableDestroyed), new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
+            { nameof(XPReward.VehicleHumvee), new XPRewardData(25, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleTransportGround), new XPRewardData(20, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleScoutCar), new XPRewardData(30, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleLogisticsGround), new XPRewardData(25, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleAPC), new XPRewardData(60, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleIFV), new XPRewardData(70, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleMBT), new XPRewardData(100, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleTransportAir), new XPRewardData(30, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleAttackHeli), new XPRewardData(150, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleJet), new XPRewardData(200, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleAA), new XPRewardData(20, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleHMG), new XPRewardData(20, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleATGM), new XPRewardData(20, DefaultCreditPercentage) },
+            { nameof(XPReward.VehicleMortar), new XPRewardData(20, DefaultCreditPercentage) }
         };
 
         GlobalXPMultiplier = 1f;

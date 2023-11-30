@@ -12,6 +12,8 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
 using UnityEngine;
@@ -1892,8 +1894,8 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
             }
             else if (value._type == DynamicValueType.Wildcard && _isKitSelector)
             {
-                SqlItem<Kit>? rand = KitManager.GetSingletonQuick()?.GetRandomPublicKit();
-                _value = rand?.Item is null ? value._constant : rand.Item.Id;
+                Kit? rand = KitManager.GetSingletonQuick()?.GetRandomPublicKit();
+                _value = rand is null ? value._constant : rand.InternalName;
             }
             else
             {
@@ -2008,17 +2010,15 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
                 {
                     if (_kitName == null && !string.IsNullOrEmpty(_value))
                     {
-                        SqlItem<Kit>? find = KitManager.GetSingletonQuick()?.FindKitNoLock(_value!, true);
-                        Kit? item = find?.Item;
-                        if (item != null)
+                        Kit? kit = KitManager.GetSingletonQuick()?.FindKitNoLock(_value!, true);
+                        if (kit != null)
                         {
-                            _kitName = item.GetDisplayName(language);
+                            _kitName = kit.GetDisplayName(language);
                             // adds the faction name so kits named 'Rifleman #1', etc show the right team
-                            if (item.Type == KitType.Public && item.Faction is { } faction)
+                            if (kit.Type == KitType.Public && kit.Faction is { } faction)
                                 _kitName = faction.ShortName + " " + _kitName;
                         }
                         else _kitName = _value;
-                        _kitName = find?.Item is { } kit ? kit.GetDisplayName(language) : _value!;
                     }
                     else _kitName = _value!;
                     return _kitName;
@@ -2038,8 +2038,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
                         {
                             for (int i = 0; i < _values.Length; ++i)
                             {
-                                SqlItem<Kit>? find = m.FindKitNoLock(_value!, true);
-                                Kit? item = find?.Item;
+                                Kit? item = m.FindKitNoLock(_value!, true);
                                 if (item != null)
                                 {
                                     _kitNames[i] = item.GetDisplayName(language);

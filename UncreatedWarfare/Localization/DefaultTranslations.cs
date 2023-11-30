@@ -13,6 +13,9 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
@@ -839,6 +842,8 @@ internal static class T
     [TranslationData(SectionKits)]
     public static readonly Translation<Kit> KitLayoutReset                     = new Translation<Kit>("<#a0ad8e>Custom layout for <#fff>{0}</color> reset.", Kit.DisplayNameFormat);
     [TranslationData(SectionKits, IsPrioritizedTranslation = false)]
+    public static readonly Translation<string> KitLanguageNotFound             = new Translation<string>("<#ff8c69>Language not found: <#fff>{0}</color>.");
+    [TranslationData(SectionKits, IsPrioritizedTranslation = false)]
     public static readonly Translation<string, Kit, string> KitPropertySet     = new Translation<string, Kit, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg1Fmt: Kit.IdFormat);
     [TranslationData(SectionKits, IsPrioritizedTranslation = false)]
     public static readonly Translation<string> KitNameTaken                    = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> already exists.");
@@ -1520,8 +1525,10 @@ internal static class T
     public static readonly Translation<string> RequestUpgradeError = new Translation<string>("<#a4baa9>Error opening ticket: <#fff>{0}</color>.", FormatUppercase);
     [TranslationData(SectionRequest)]
     public static readonly Translation<Kit> DoesNotNeedUpgrade = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be upgraded.", Kit.DisplayNameFormat);
-    [TranslationData(SectionRequest)]
+    [TranslationData(SectionRequest, IsPrioritizedTranslation = false)]
     public static readonly Translation<Kit> DoesNotNeedUnlock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be unlocked.", Kit.DisplayNameFormat);
+    [TranslationData(SectionRequest, IsPrioritizedTranslation = false)]
+    public static readonly Translation<Kit> DoesNotNeedLock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be locked.", Kit.DisplayNameFormat);
     [TranslationData(SectionRequest)]
     public static readonly Translation<Kit> RequestUpgradeOnKit = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> can't be upgraded.", Kit.DisplayNameFormat);
     [TranslationData(SectionRequest)]
@@ -3358,7 +3365,7 @@ internal static class T
         }
 
         language ??= Localization.GetDefaultLanguage();
-        if (list.TryGetValue(language.LanguageCode, out local) || (!language.IsDefault && list.TryGetValue(L.Default, out local)))
+        if (list.TryGetValue(language.Code, out local) || (!language.IsDefault && list.TryGetValue(L.Default, out local)))
             return true;
         return (local = list.Values.FirstOrDefault()!) != null;
     }

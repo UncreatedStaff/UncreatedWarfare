@@ -5,13 +5,15 @@ using System.IO;
 using System.Reflection;
 using System.Text.Json;
 using Uncreated.Json;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -129,17 +131,16 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         if (e.NewGroup is 1 or 2)
             BuffUI.SendBuffs(e.Player);
     }
-    private static void OnKitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldKit)
+    private static void OnKitChanged(UCPlayer player, Kit? kit, Kit? oldKit)
     {
         Signs.UpdateTraitSigns(player, null);
-        Kit? kit2 = kit?.Item;
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
         {
             if (player.ActiveTraits[i] is Buff buff)
             {
                 if (buff.IsActivated)
                 {
-                    if (!buff.Data.CanClassUse(kit2 == null ? Class.None : kit2.Class))
+                    if (!buff.Data.CanClassUse(kit == null ? Class.None : kit.Class))
                     {
                         buff.IsActivated = false;
                         player.SendChat(T.TraitDisabledKitNotSupported, buff);
@@ -699,11 +700,11 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
             value = null;
             if (loaded != null)
             {
-                if (loaded.TryGetValue(language.LanguageCode, out value))
+                if (loaded.TryGetValue(language.Code, out value))
                     isDefaultValue = language.IsDefault;
                 else if (!language.IsDefault && loaded.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
-                else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+                else if (@default != null && @default.TryGetValue(language.Code, out value))
                     isDefaultValue = language.IsDefault;
                 else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
@@ -713,7 +714,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                     isDefaultValue = true;
                 }
             }
-            else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+            else if (@default != null && @default.TryGetValue(language.Code, out value))
                 isDefaultValue = language.IsDefault;
             else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                 isDefaultValue = true;

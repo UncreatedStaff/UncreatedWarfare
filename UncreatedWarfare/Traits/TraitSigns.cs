@@ -6,6 +6,8 @@ using System.Globalization;
 using Uncreated.Framework;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;

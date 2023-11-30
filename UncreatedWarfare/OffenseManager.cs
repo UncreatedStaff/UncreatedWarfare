@@ -396,7 +396,9 @@ public static class OffenseManager
                 {
                     string path = GetSavePath(index);
                     using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
-                    JsonSerializer.Serialize(str, col, JsonEx.condensedSerializerSettings);
+                    using Utf8JsonWriter writer = new Utf8JsonWriter(str);
+                    JsonSerializer.Serialize(writer, col, JsonEx.condensedSerializerSettings);
+                    writer.Flush();
                 }
             }
         }
@@ -414,7 +416,15 @@ public static class OffenseManager
                     T[]? t;
                     using (FileStream str = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
-                        t = JsonSerializer.Deserialize<T[]>(str, JsonEx.condensedSerializerSettings);
+                        int len = (int)Math.Min(int.MaxValue, str.Length);
+                        if (len < 1)
+                            t = null;
+                        else
+                        {
+                            byte[] bytes = new byte[len];
+                            str.Read(bytes, 0, bytes.Length);
+                            t = JsonSerializer.Deserialize<T[]>(bytes, JsonEx.condensedSerializerSettings);
+                        }
                     }
                     if (t is null) return;
                     col.AddRange(t);
@@ -1240,14 +1250,16 @@ public static class OffenseManager
         public DateTimeOffset Timestamp { get; set; }
     }
 
+    // ReSharper disable AutoPropertyCanBeMadeGetOnly.Local
     private struct Ban : ITimestampOffense, IEquatable<Ban>
     {
-        public readonly ulong Violator;
-        public readonly ulong Admin;
-        public readonly string Reason;
-        public readonly int Duration;
+        public ulong Violator { get; set; }
+        public ulong Admin { get; set; }
+        public string Reason { get; set; }
+        public int Duration { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public Ban() { }
         public Ban(ulong violator, ulong admin, string reason, int duration, DateTimeOffset timestamp)
         {
             Violator = violator;
@@ -1263,10 +1275,11 @@ public static class OffenseManager
     }
     private struct Unban : ITimestampOffense, IEquatable<Unban>
     {
-        public readonly ulong Violator;
-        public readonly ulong Admin;
+        public ulong Violator { get; set; }
+        public ulong Admin { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public Unban() { }
         public Unban(ulong violator, ulong admin, DateTimeOffset timestamp)
         {
             Violator = violator;
@@ -1280,11 +1293,12 @@ public static class OffenseManager
     }
     private struct Kick : ITimestampOffense, IEquatable<Kick>
     {
-        public readonly ulong Violator;
-        public readonly ulong Admin;
-        public readonly string Reason;
+        public ulong Violator { get; set; }
+        public ulong Admin { get; set; }
+        public string Reason { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public Kick() { }
         public Kick(ulong violator, ulong admin, string reason, DateTimeOffset timestamp)
         {
             Violator = violator;
@@ -1299,11 +1313,12 @@ public static class OffenseManager
     }
     private struct Warn : ITimestampOffense, IEquatable<Warn>
     {
-        public readonly ulong Violator;
-        public readonly ulong Admin;
-        public readonly string Reason;
+        public ulong Violator { get; set; }
+        public ulong Admin { get; set; }
+        public string Reason { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public Warn() { }
         public Warn(ulong violator, ulong admin, string reason, DateTimeOffset timestamp)
         {
             Violator = violator;
@@ -1318,13 +1333,14 @@ public static class OffenseManager
     }
     private struct Mute : ITimestampOffense, IEquatable<Mute>
     {
-        public readonly ulong Violator;
-        public readonly ulong Admin;
-        public readonly MuteType MuteType;
-        public readonly int Duration;
-        public readonly string Reason;
+        public ulong Violator { get; set; }
+        public ulong Admin { get; set; }
+        public MuteType MuteType { get; set; }
+        public int Duration { get; set; }
+        public string Reason { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public Mute() { }
         public Mute(ulong violator, ulong admin, MuteType muteType, int duration, string reason, DateTimeOffset timestamp)
         {
             Violator = violator;
@@ -1341,10 +1357,11 @@ public static class OffenseManager
     }
     private struct BattlEyeKick : ITimestampOffense, IEquatable<BattlEyeKick>
     {
-        public readonly ulong Violator;
-        public readonly string Reason;
+        public ulong Violator { get; set; }
+        public string Reason { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public BattlEyeKick() { }
         public BattlEyeKick(ulong violator, string reason, DateTimeOffset timestamp)
         {
             Violator = violator;
@@ -1358,12 +1375,13 @@ public static class OffenseManager
     }
     private struct Teamkill : ITimestampOffense, IEquatable<Teamkill>
     {
-        public readonly ulong Violator;
-        public readonly ulong Dead;
-        public readonly string DeathCause;
-        public readonly string ItemName;
+        public ulong Violator { get; set; }
+        public ulong Dead { get; set; }
+        public string DeathCause { get; set; }
+        public string ItemName { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public Teamkill() { }
         public Teamkill(ulong violator, ulong dead, string deathCause, string itemName, DateTimeOffset timestamp)
         {
             Violator = violator;
@@ -1379,11 +1397,12 @@ public static class OffenseManager
     }
     private struct VehicleTeamkill : ITimestampOffense, IEquatable<VehicleTeamkill>
     {
-        public readonly ulong Violator;
-        public readonly ushort VehicleID;
-        public readonly string VehicleName;
+        public ulong Violator { get; set; }
+        public ushort VehicleID { get; set; }
+        public string VehicleName { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public VehicleTeamkill() { }
         public VehicleTeamkill(ulong violator, ushort vehicleId, string vehicleName, DateTimeOffset timestamp)
         {
             Violator = violator;
@@ -1398,10 +1417,11 @@ public static class OffenseManager
     }
     private struct Unmute : ITimestampOffense, IEquatable<Unmute>
     {
-        public readonly ulong Violator;
-        public readonly ulong Admin;
+        public ulong Violator { get; set; }
+        public ulong Admin { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public Unmute() { }
         public Unmute(ulong violator, ulong admin, DateTimeOffset timestamp)
         {
             Violator = violator;
@@ -1415,12 +1435,13 @@ public static class OffenseManager
     }
     private struct IPWhitelist : ITimestampOffense, IEquatable<IPWhitelist>
     {
-        public readonly ulong Player;
-        public readonly ulong Admin;
-        public readonly IPv4Range Range;
-        public readonly bool Add;
+        public ulong Player { get; set; }
+        public ulong Admin { get; set; }
+        public IPv4Range Range { get; set; }
+        public bool Add { get; set; }
         public DateTimeOffset Timestamp { get; set; }
-        [JsonConstructor]
+        [UsedImplicitly]
+        public IPWhitelist() { }
         public IPWhitelist(ulong player, ulong admin, DateTimeOffset timestamp, IPv4Range range, bool add)
         {
             Player = player;
@@ -1434,6 +1455,7 @@ public static class OffenseManager
             return Player == offense.Player && Admin == offense.Admin && Timestamp == offense.Timestamp && Range == offense.Range && Add == offense.Add;
         }
     }
+    // ReSharper restore AutoPropertyCanBeMadeGetOnly.Local
     public static class NetCalls
     {
         public static readonly NetCall<ulong, ulong, string, int, DateTimeOffset> SendBanRequest = new NetCall<ulong, ulong, string, int, DateTimeOffset>(ReceiveBanRequest);

@@ -251,54 +251,54 @@ public class CheatingReport : Report
     }
 }
 
-public readonly struct AccuracyMap
+public struct AccuracyMap
 {
     [JsonPropertyName("overall_accuracy")]
-    public double OverallAccuracy { get; }
+    public double OverallAccuracy { get; set; }
 
     [JsonPropertyName("head_accuracy")]
-    public double HeadAccuracy { get; }
+    public double HeadAccuracy { get; set; }
 
     [JsonPropertyName("spine_accuracy")]
-    public double SpineAccuracy { get; }
+    public double SpineAccuracy { get; set; }
 
     [JsonPropertyName("left_foot_accuracy")]
-    public double LeftFootAccuracy { get; }
+    public double LeftFootAccuracy { get; set; }
 
     [JsonPropertyName("right_foot_accuracy")]
-    public double RightFootAccuracy { get; }
+    public double RightFootAccuracy { get; set; }
 
     [JsonPropertyName("left_leg_accuracy")]
-    public double LeftLegAccuracy { get; }
+    public double LeftLegAccuracy { get; set; }
 
     [JsonPropertyName("right_leg_accuracy")]
-    public double RightLegAccuracy { get; }
+    public double RightLegAccuracy { get; set; }
 
     [JsonPropertyName("left_hand_accuracy")]
-    public double LeftHandAccuracy { get; }
+    public double LeftHandAccuracy { get; set; }
 
     [JsonPropertyName("right_hand_accuracy")]
-    public double RightHandAccuracy { get; }
+    public double RightHandAccuracy { get; set; }
 
     [JsonPropertyName("left_arm_accuracy")]
-    public double LeftArmAccuracy { get; }
+    public double LeftArmAccuracy { get; set; }
 
     [JsonPropertyName("right_arm_accuracy")]
-    public double RightArmAccuracy { get; }
+    public double RightArmAccuracy { get; set; }
 
     [JsonPropertyName("left_back_accuracy")]
-    public double LeftBackAccuracy { get; }
+    public double LeftBackAccuracy { get; set; }
 
     [JsonPropertyName("right_back_accuracy")]
-    public double RightBackAccuracy { get; }
+    public double RightBackAccuracy { get; set; }
 
     [JsonPropertyName("left_front_accuracy")]
-    public double LeftFrontAccuracy { get; }
+    public double LeftFrontAccuracy { get; set; }
 
     [JsonPropertyName("right_front_accuracy")]
-    public double RightFrontAccuracy { get; }
+    public double RightFrontAccuracy { get; set; }
 
-    [JsonConstructor]
+    public AccuracyMap() { }
     public AccuracyMap(double overallAccuracy, double headAccuracy, double spineAccuracy, double leftFootAccuracy, double rightFootAccuracy, double leftLegAccuracy, double rightLegAccuracy, double leftHandAccuracy, double rightHandAccuracy, double leftArmAccuracy, double rightArmAccuracy, double leftBackAccuracy, double rightBackAccuracy, double leftFrontAccuracy, double rightFrontAccuracy)
     {
         OverallAccuracy = overallAccuracy;
@@ -375,7 +375,7 @@ public readonly struct ShotRecord
     [JsonPropertyName("distance")]
     public double Distance { get; }
 
-    [JsonConstructor]
+    public ShotRecord() { }
     public ShotRecord(Guid item, Guid ammo, string? itemName, string? ammoName, EPlayerKill hitType, IModerationActor? hitActor, Guid? hitAsset, string? hitAssetName, ELimb? limb, DateTimeOffset timestamp, Vector3 shootFromPoint, Vector3 shootFromRotation, Vector3? hitPoint, bool isProjectile, int damageDone, double distance)
     {
         Item = item;

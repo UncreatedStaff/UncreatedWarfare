@@ -25,6 +25,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Players;
@@ -379,8 +380,8 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             return false;
         }
         
-        int key = structure.LastPrimaryKey.Key;
-        if (key < 0)
+        uint key = structure.LastPrimaryKey.Key;
+        if (key == 0)
         {
             spawn = null!;
             return false;
@@ -429,8 +430,8 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             return false;
         }
 
-        int key = structure.LastPrimaryKey.Key;
-        if (key < 0)
+        uint key = structure.LastPrimaryKey.Key;
+        if (key == 0)
         {
             spawn = null!;
             return false;
@@ -1100,16 +1101,16 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             {
                 if (data.Metadata.TrunkItems is { Count: > 0 })
                 {
-                    foreach (PageItem k in data.Metadata.TrunkItems)
+                    foreach (ISpecificPageKitItem k in data.Metadata.TrunkItems)
                     {
-                        if (Assets.find(k.Item) is ItemAsset iasset)
-                        {
-                            Item item = new Item(iasset.id, k.Amount, 100, Util.CloneBytes(k.State));
-                            if (vehicle.trunkItems.checkSpaceEmpty(k.X, k.Y, iasset.size_x, iasset.size_y, k.Rotation))
-                                vehicle.trunkItems.addItem(k.X, k.Y, k.Rotation, item);
-                            else if (!vehicle.trunkItems.tryAddItem(item))
-                                ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
-                        }
+                        if (!k.Item.TryGetAsset(out ItemAsset iasset))
+                            continue;
+                        
+                        Item item = new Item(iasset.id, k.Amount, 100, Util.CloneBytes(k.State));
+                        if (vehicle.trunkItems.checkSpaceEmpty(k.X, k.Y, iasset.size_x, iasset.size_y, k.Rotation))
+                            vehicle.trunkItems.addItem(k.X, k.Y, k.Rotation, item);
+                        else if (!vehicle.trunkItems.tryAddItem(item))
+                            ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
                     }
                 }
                 if (data.Metadata.Barricades is { Count: > 0 })
@@ -1352,7 +1353,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             throw new ArgumentException("Item must have a valid structure key.", nameof(item));
 
         bool hasPk = pk.IsValid;
-        int pk2 = PrimaryKey.NotAssigned;
+        uint pk2 = PrimaryKey.NotAssigned;
         object[] objs = new object[hasPk ? 4 : 3];
         objs[0] = item.VehicleKey.Key;
         objs[1] = item.StructureKey.Key;
@@ -1362,7 +1363,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         await Sql.QueryAsync(F.BuildInitialInsertQuery(TABLE_MAIN, COLUMN_PK, hasPk, null, null, COLUMN_VEHICLE, COLUMN_STRUCTURE, COLUMN_SIGN),
             objs, reader =>
             {
-                pk2 = reader.GetInt32(0);
+                pk2 = reader.GetUInt32(0);
             }, token).ConfigureAwait(false);
         pk = pk2;
         if (!pk.IsValid)
@@ -1383,7 +1384,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                                 $"WHERE `b`.`{StructureSaver.COLUMN_PK}`=`a`.`{COLUMN_STRUCTURE}` LIMIT 1) = @1 LIMIT 1;", new object[] { pk2, MapScheduler.Current },
             reader =>
             {
-                obj = new VehicleSpawn(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.IsDBNull(3) ? PrimaryKey.NotAssigned : reader.GetInt32(3));
+                obj = new VehicleSpawn(reader.GetUInt32(0), reader.GetUInt32(1), reader.GetUInt32(2), reader.IsDBNull(3) ? PrimaryKey.NotAssigned : reader.GetUInt32(3));
             }, token).ConfigureAwait(false);
 
         return obj;
@@ -1399,7 +1400,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                              $"WHERE `b`.`{StructureSaver.COLUMN_PK}`=`a`.`{COLUMN_STRUCTURE}` LIMIT 1) = @0;", new object[] { MapScheduler.Current },
             reader =>
             {
-                spawns.Add(new VehicleSpawn(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.IsDBNull(3) ? PrimaryKey.NotAssigned : reader.GetInt32(3)));
+                spawns.Add(new VehicleSpawn(reader.GetUInt32(0), reader.GetUInt32(1), reader.GetUInt32(2), reader.IsDBNull(3) ? PrimaryKey.NotAssigned : reader.GetUInt32(3)));
             }, token).ConfigureAwait(false);
 
         return spawns.ToArray();
@@ -1407,7 +1408,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     #endregion
 }
 
-[JsonSerializable(typeof(VehicleSpawn))]
 public class VehicleSpawn : IListItem
 {
     private SqlItem<VehicleData>? _vehicle;

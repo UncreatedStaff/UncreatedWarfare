@@ -1,7 +1,8 @@
-﻿using Cysharp.Threading.Tasks;
+﻿using Microsoft.EntityFrameworkCore;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -14,14 +15,21 @@ using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Assets;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Layouts;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -32,25 +40,24 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
 // todo add delays to kits
-public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync, IGameTickListener, IPlayerDisconnectListener, ITCPConnectedListener
+public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync, IGameTickListener, IPlayerDisconnectListener, ITCPConnectedListener
 {
     private static int _v;
     private static KitMenuUI? _menuUi;
     public static KitMenuUI MenuUI => _menuUi ??= new KitMenuUI();
     private readonly List<Kit> _kitListTemp = new List<Kit>(64);
-    public override bool AwaitLoad => true;
-    public override MySqlDatabase Sql => Data.AdminSql;
     public static event KitChanged? OnKitChanged;
     public static event KitAccessCallback? OnKitAccessChanged;
     public static event System.Action? OnFavoritesRefreshed;
-    public KitManager() : base("kits", SCHEMAS)
+    protected override DbSet<Kit> Set => Data.DbContext.Kits;
+    public KitManager() : base("kits")
     {
         OnItemDeleted += OnKitDeleted;
         OnItemUpdated += OnKitUpdated;
         OnItemAdded   += OnKitUpdated;
         OnKitAccessChanged += OnKitAccessChangedIntl;
     }
-    public override async Task PostLoad(CancellationToken token)
+    protected override async Task PostLoad(CancellationToken token)
     {
         PlayerLife.OnPreDeath += OnPreDeath;
         EventDispatcher.GroupChanged += OnGroupChanged;
@@ -62,14 +69,15 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         EventDispatcher.SwapClothingRequested += OnSwapClothingRequested;
         OnItemsRefreshed += OnItemsRefreshedIntl;
         //await MigrateOldKits(token).ConfigureAwait(false);
-        List<SqlItem<Kit>>? dirty = null;
-        WriteWait();
+        List<Kit>? dirty = null;
+        WriteWait(token);
         try
         {
-            foreach (SqlItem<Kit> kit in List)
+            foreach (Kit kit in Items)
             {
-                if (kit.Item is { IsLoadDirty: true })
-                    (dirty ??= new List<SqlItem<Kit>>()).Add(kit);
+                VerifyKitIntegrity(kit);
+                if (kit is { IsLoadDirty: true })
+                    (dirty ??= new List<Kit>()).Add(kit);
             }
         }
         finally
@@ -77,31 +85,41 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             WriteRelease();
         }
 
-        await Data.PurchasingDataStore.RefreshBundles(true, false, token).ConfigureAwait(false);
-        await Data.PurchasingDataStore.RefreshKits(false, false, true, token).ConfigureAwait(false);
-        await Data.PurchasingDataStore.FetchStripeKitProducts(false, token).ConfigureAwait(false);
+        // await Data.PurchasingDataStore.RefreshBundles(true, false, token).ConfigureAwait(false);
+        // await Data.PurchasingDataStore.RefreshKits(false, false, true, token).ConfigureAwait(false);
+        // await Data.PurchasingDataStore.FetchStripeKitProducts(false, token).ConfigureAwait(false);
 
         if (dirty != null)
         {
-            foreach (SqlItem<Kit> kit in dirty)
+            await UpdateRangeNoLock(dirty, token: token).ConfigureAwait(false);
+            foreach (Kit kit in dirty)
             {
-                if (kit.Item != null)
-                {
-                    L.Log("Saving kit " + kit.Item.Id + " after dirty load.");
-                    await kit.SaveItem(token).ConfigureAwait(false);
-                    kit.Item.IsLoadDirty = false;
-                }
+                L.Log("Saved kit " + kit.InternalName + " after dirty load.");
+                kit.IsLoadDirty = false;
             }
         }
     }
 
-    public override async Task PostReload(CancellationToken token)
+    public static IQueryable<Kit> IncludeKitData(IQueryable<Kit> set)
     {
-        await UCWarfare.ToUpdate(token);
-        await DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token).ConfigureAwait(false);
+        return set
+            .Include(x => x.ItemModels)
+            .Include(x => x.UnlockRequirementsModels)
+            .Include(x => x.Bundles)
+            .Include(x => x.FactionFilter)
+            .Include(x => x.MapFilter)
+            .Include(x => x.Skillsets)
+            .Include(x => x.Translations);
     }
 
-    public override async Task PreUnload(CancellationToken token)
+    protected override IQueryable<Kit> OnInclude(IQueryable<Kit> set) => IncludeKitData(set);
+
+    protected override Task PostReload(CancellationToken token)
+    {
+        return DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token);
+    }
+
+    protected override Task PreUnload(CancellationToken token)
     {
         //EventDispatcher.InventoryItemRemoved -= OnInventoryItemRemoved;
         EventDispatcher.SwapClothingRequested -= OnSwapClothingRequested;
@@ -112,25 +130,23 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         EventDispatcher.PlayerJoined -= OnPlayerJoined;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         PlayerLife.OnPreDeath -= OnPreDeath;
-        await SaveAllPlayerFavorites(token).ConfigureAwait(false);
-        await base.PreUnload(token).ConfigureAwait(false);
+        return SaveAllPlayerFavorites(token);
     }
-    private void OnItemsRefreshedIntl()
+    private Task OnItemsRefreshedIntl()
     {
         Localization.ClearSection(TranslationSection.Kits);
         WriteWait();
         try
         {
             int ct = 0;
-            foreach (SqlItem<Kit> kit in Items)
+            foreach (Kit kit in Items)
             {
-                Kit? item = kit.Item;
-                if (item is { Type: KitType.Public or KitType.Elite, Requestable: true })
+                if (kit is { Type: KitType.Public or KitType.Elite, Requestable: true })
                 {
                     ++ct;
-                    foreach (string language in item.SignText.Keys)
+                    foreach (KitTranslation language in kit.Translations)
                     {
-                        if (Data.LanguageDataStore.GetInfoCached(language) is { } langInfo)
+                        if (Data.LanguageDataStore.GetInfoCached(language.KitId) is { } langInfo)
                             langInfo.IncrementSection(TranslationSection.Kits, 1);
                     }
                 }
@@ -147,20 +163,20 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             await WaitAsync().ConfigureAwait(false);
             try
             {
-                SqlItem<Kit>? kit = string.IsNullOrEmpty(TeamManager.Team1UnarmedKit) ? null : FindKitNoLock(TeamManager.Team1UnarmedKit!);
-                if (kit?.Item == null)
+                Kit? kit = string.IsNullOrEmpty(TeamManager.Team1UnarmedKit) ? null : FindKitNoLock(TeamManager.Team1UnarmedKit);
+                if (kit == null)
                 {
                     needsT1Unarmed = true;
                     L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, an attempt will be made to auto-generate one.");
                 }
-                kit = string.IsNullOrEmpty(TeamManager.Team2UnarmedKit) ? null : FindKitNoLock(TeamManager.Team2UnarmedKit!);
-                if (kit?.Item == null)
+                kit = string.IsNullOrEmpty(TeamManager.Team2UnarmedKit) ? null : FindKitNoLock(TeamManager.Team2UnarmedKit);
+                if (kit == null)
                 {
                     needsT2Unarmed = true;
                     L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, an attempt will be made to auto-generate one.");
                 }
                 kit = string.IsNullOrEmpty(TeamManager.DefaultKit) ? null : FindKitNoLock(TeamManager.DefaultKit);
-                if (kit?.Item == null)
+                if (kit == null)
                 {
                     needsDefault = true;
                     L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, an attempt will be made to auto-generate one.");
@@ -175,96 +191,98 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 return;
             if (needsT1Unarmed && !string.IsNullOrEmpty(TeamManager.Team1UnarmedKit))
             {
-                SqlItem<Kit> proxy = await CreateDefaultKit(TeamManager.Team1Faction, TeamManager.Team1UnarmedKit!);
-                L.Log("Created default kit for team 1: \"" + proxy.Item?.Id + "\".");
+                Kit kit = await CreateDefaultKit(TeamManager.Team1Faction, TeamManager.Team1UnarmedKit);
+                L.Log("Created default kit for team 1: \"" + kit.InternalName + "\".");
             }
             if (needsT2Unarmed && !string.IsNullOrEmpty(TeamManager.Team2UnarmedKit))
             {
-                SqlItem<Kit> proxy = await CreateDefaultKit(TeamManager.Team2Faction, TeamManager.Team2UnarmedKit!);
-                L.Log("Created default kit for team 2: \"" + proxy.Item?.Id + "\".");
+                Kit kit = await CreateDefaultKit(TeamManager.Team2Faction, TeamManager.Team2UnarmedKit);
+                L.Log("Created default kit for team 2: \"" + kit.InternalName + "\".");
             }
             if (needsDefault && !string.IsNullOrEmpty(TeamManager.DefaultKit))
             {
-                SqlItem<Kit> proxy = await CreateDefaultKit(null, TeamManager.DefaultKit);
-                L.Log("Created default kit: \"" + proxy.Item?.Id + "\".");
+                Kit kit = await CreateDefaultKit(null, TeamManager.DefaultKit);
+                L.Log("Created default kit: \"" + kit.InternalName + "\".");
             }
         });
+
+        return Task.CompletedTask;
     }
 
     private static readonly IKitItem[] DefaultKitItems =
     {
         // MRE
-        new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Hands),
-        new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 1, 0, 0, Array.Empty<byte>(), 1, Page.Hands),
+        new SpecificPageKitItem(0, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Page.Hands, 1, Array.Empty<byte>()),
+        new SpecificPageKitItem(0, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 1, 0, 0, Page.Hands, 1, Array.Empty<byte>()),
 
         // Bottled Soda
-        new PageItem(new Guid("c83390665c6546b8befbf6f15ef202c4"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Hands),
+        new SpecificPageKitItem(0, new UnturnedAssetReference("c83390665c6546b8befbf6f15ef202c4"), 2, 0, 0, Page.Hands, 1, Array.Empty<byte>()),
 
         // Bottled Water
-        new PageItem(new Guid("f81d68ebb2a8490dbe1545d432b9c099"), 2, 1, 0, Array.Empty<byte>(), 1, Page.Hands),
+        new SpecificPageKitItem(0, new UnturnedAssetReference("f81d68ebb2a8490dbe1545d432b9c099"), 2, 1, 0, Page.Hands, 1, Array.Empty<byte>()),
 
         // Binoculars
-        new PageItem(new Guid("f260c581cf504098956f424d62345982"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands),
+        new SpecificPageKitItem(0, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 0, 2, 0, Page.Hands, 1, Array.Empty<byte>()),
 
         // Earpiece
-        new ClothingItem(new Guid("2ecf1b15a59f4125a2d55c88479529c2"), ClothingType.Mask, Array.Empty<byte>())
+        new SpecificClothingKitItem(0, new UnturnedAssetReference("2ecf1b15a59f4125a2d55c88479529c2"), ClothingType.Mask, Array.Empty<byte>())
     };
 
     private static readonly IKitItem[] DefaultKitClothes =
     {
-        new ClothingItem(new Guid("c3adf16156004b40a839ed1b80583c32"), ClothingType.Shirt, Array.Empty<byte>()),
-        new ClothingItem(new Guid("67a6ec52e4b24ffd89f75ceee0eb5179"), ClothingType.Pants, Array.Empty<byte>())
+        new SpecificClothingKitItem(0, new UnturnedAssetReference("c3adf16156004b40a839ed1b80583c32"), ClothingType.Shirt, Array.Empty<byte>()),
+        new SpecificClothingKitItem(0, new UnturnedAssetReference("67a6ec52e4b24ffd89f75ceee0eb5179"), ClothingType.Pants, Array.Empty<byte>())
     };
 
-    private async Task<SqlItem<Kit>> CreateDefaultKit(FactionInfo? faction, string name, CancellationToken token = default)
+    private async Task<Kit> CreateDefaultKit(FactionInfo? faction, string name, CancellationToken token = default)
     {
         List<IKitItem> items = new List<IKitItem>(DefaultKitItems.Length + 6);
         items.AddRange(DefaultKitItems);
-        SqlItem<Kit>? proxy = await FindKit(name, token, true).ConfigureAwait(false);
-        if (proxy is not null)
-            return proxy;
+        Kit? existing = await FindKit(name, token, true).ConfigureAwait(false);
+        if (existing is not null)
+            return existing;
         if (faction != null)
         {
-            if (faction.DefaultShirt.ValidReference(out ItemShirtAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Shirt }))
-                items.Add(new AssetRedirectClothing(RedirectType.Shirt, ClothingType.Shirt));
-            if (faction.DefaultPants.ValidReference(out ItemPantsAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Pants }))
-                items.Add(new AssetRedirectClothing(RedirectType.Pants, ClothingType.Pants));
-            if (faction.DefaultVest.ValidReference(out ItemVestAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Vest }))
-                items.Add(new AssetRedirectClothing(RedirectType.Vest, ClothingType.Vest));
-            if (faction.DefaultHat.ValidReference(out ItemHatAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Hat }))
-                items.Add(new AssetRedirectClothing(RedirectType.Hat, ClothingType.Hat));
-            if (faction.DefaultMask.ValidReference(out ItemMaskAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Mask }))
-                items.Add(new AssetRedirectClothing(RedirectType.Mask, ClothingType.Mask));
-            if (faction.DefaultBackpack.ValidReference(out ItemBackpackAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Backpack }))
-                items.Add(new AssetRedirectClothing(RedirectType.Backpack, ClothingType.Backpack));
-            if (faction.DefaultGlasses.ValidReference(out ItemGlassesAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Glasses }))
-                items.Add(new AssetRedirectClothing(RedirectType.Glasses, ClothingType.Glasses));
-            Kit kit = new Kit(name, Class.Unarmed, GetDefaultBranch(Class.Unarmed), KitType.Special, SquadLevel.Member, faction)
+            if (faction.DefaultShirt.ValidReference(out ItemShirtAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Shirt }))
+                items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Shirt, ClothingType.Shirt, null));
+            if (faction.DefaultPants.ValidReference(out ItemPantsAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Pants }))
+                items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Pants, ClothingType.Pants, null));
+            if (faction.DefaultVest.ValidReference(out ItemVestAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Vest }))
+                items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Vest, ClothingType.Vest, null));
+            if (faction.DefaultHat.ValidReference(out ItemHatAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Hat }))
+                items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Hat, ClothingType.Hat, null));
+            if (faction.DefaultMask.ValidReference(out ItemMaskAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Mask }))
+                items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Mask, ClothingType.Mask, null));
+            if (faction.DefaultBackpack.ValidReference(out ItemBackpackAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Backpack }))
+                items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Backpack, ClothingType.Backpack, null));
+            if (faction.DefaultGlasses.ValidReference(out ItemGlassesAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Glasses }))
+                items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Glasses, ClothingType.Glasses, null));
+            existing = new Kit(name, Class.Unarmed, GetDefaultBranch(Class.Unarmed), KitType.Special, SquadLevel.Member, faction)
             {
-                Items = items.ToArray(),
-                FactionFilter = new PrimaryKey[] { faction.PrimaryKey },
-                FactionFilterIsWhitelist = true
+                FactionFilterIsWhitelist = true,
+                Items = items.ToArray()
             };
-            proxy = await AddOrUpdate(kit, token).ConfigureAwait(false);
+            existing.FactionFilter.Add(new KitFilteredFaction { FactionId = faction.PrimaryKey, Kit = existing });
+            await Add(existing, token: token).ConfigureAwait(false);
         }
         else
         {
             for (int i = 0; i < DefaultKitClothes.Length; ++i)
             {
-                if (DefaultKitClothes[i] is IClothingJar jar && !items.Exists(x => x is IClothingJar jar2 && jar2.Type == jar.Type))
+                if (DefaultKitClothes[i] is IClothingKitItem jar && !items.Exists(x => x is IClothingKitItem jar2 && jar2.Type == jar.Type))
                 {
                     items.Add(DefaultKitClothes[i]);
                 }
             }
-            Kit kit = new Kit(name, Class.Unarmed, GetDefaultBranch(Class.Unarmed), KitType.Special, SquadLevel.Member, null)
+            existing = new Kit(name, Class.Unarmed, GetDefaultBranch(Class.Unarmed), KitType.Special, SquadLevel.Member, null)
             {
                 Items = items.ToArray()
             };
-            proxy = await AddOrUpdate(kit, token).ConfigureAwait(false);
+            await Add(existing, token: token).ConfigureAwait(false);
         }
         ActionLog.Add(ActionLogType.CreateKit, name);
-        UpdateSigns(proxy);
-        return proxy;
+        UpdateSigns(existing);
+        return existing;
     }
     public static KitManager? GetSingletonQuick() => Data.Is(out IKitRequests r) ? r.KitManager : Data.Singletons?.GetSingleton<KitManager>();
     public static float GetDefaultTeamLimit(Class @class) => @class switch
@@ -290,8 +308,8 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     /// <remarks>Thread Safe</remarks>
     public async Task TryGiveKitOnJoinTeam(UCPlayer player, CancellationToken token = default)
     {
-        SqlItem<Kit>? kit = await GetDefaultKit(player.GetTeam(), token).ConfigureAwait(false);
-        if (kit?.Item == null)
+        Kit? kit = await GetDefaultKit(player.GetTeam(), token).ConfigureAwait(false);
+        if (kit == null)
         {
             L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
             await UCWarfare.ToUpdate(token);
@@ -301,71 +319,79 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
         await GiveKit(player, kit, true, token).ConfigureAwait(false);
     }
-    public async Task<SqlItem<Kit>?> TryGiveUnarmedKit(UCPlayer player, CancellationToken token = default)
+    public async Task<Kit?> TryGiveUnarmedKit(UCPlayer player, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SqlItem<Kit>? kit = await GetDefaultKit(player.GetTeam(), token).ConfigureAwait(false);
-        if (kit?.Item != null)
+        Kit? kit = await GetDefaultKit(player.GetTeam(), token).ConfigureAwait(false);
+        if (kit != null)
         {
             await GiveKit(player, kit, true, token).ConfigureAwait(false);
             return kit;
         }
         return null;
     }
-    public async Task<SqlItem<Kit>?> TryGiveRiflemanKit(UCPlayer player, bool tip = true, CancellationToken token = default)
+    public async Task<Kit?> TryGiveRiflemanKit(UCPlayer player, bool tip = true, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SqlItem<Kit>? rifleman;
+        Kit? rifleman;
         ulong t2;
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            t2 = player.GetTeam();
-            FactionInfo? t = player.Faction;
-            rifleman = Items.FirstOrDefault(k =>
-                k.Item != null &&
-                k.Item.Class == Class.Rifleman &&
-               !k.Item.Disabled &&
-               !k.Item.IsFactionAllowed(t) &&
-               !k.Item.IsCurrentMapAllowed() &&
-               (k.Item.Type == KitType.Public && k.Item.CreditCost <= 0 || HasAccessQuick(k, player)) &&
-               !k.Item.IsLimited(out _, out _, t2, false) &&
-               !k.Item.IsClassLimited(out _, out _, t2, false) &&
-                k.Item.MeetsUnlockRequirements(player)
-            );
+            await UCWarfare.ToUpdate(token);
+            WriteWait(token);
+            try
+            {
+                t2 = player.GetTeam();
+                FactionInfo? t = player.Faction;
+                rifleman = Items.FirstOrDefault(k =>
+                    k != null &&
+                    k.Class == Class.Rifleman &&
+                    !k.Disabled &&
+                    !k.IsFactionAllowed(t) &&
+                    !k.IsCurrentMapAllowed() &&
+                    (k.Type == KitType.Public && k.CreditCost <= 0 || HasAccessQuick(k, player)) &&
+                    !k.IsLimited(out _, out _, t2, false) &&
+                    !k.IsClassLimited(out _, out _, t2, false) &&
+                    k.MeetsUnlockRequirements(player)
+                );
+            }
+            finally
+            {
+                WriteRelease();
+            }
         }
         finally
         {
             Release();
         }
 
-        if (rifleman?.Item == null)
-        {
-            rifleman = await GetDefaultKit(t2, token).ConfigureAwait(false);
-        }
+        rifleman ??= await GetDefaultKit(t2, token).ConfigureAwait(false);
         await GiveKit(player, rifleman, tip, token).ConfigureAwait(false);
-        return rifleman?.Item == null ? null : rifleman;
+        return rifleman;
     }
-    private async Task<SqlItem<Kit>?> GetDefaultKit(ulong team, CancellationToken token = default)
+    public Kit? GetKit(uint primaryKey) => GetEntityNoLock(x => x.PrimaryKey == primaryKey);
+    public Kit? GetKitNoWriteLock(uint primaryKey) => GetEntityNoWriteLock(x => x.PrimaryKey == primaryKey);
+    private async Task<Kit?> GetDefaultKit(ulong team, CancellationToken token = default)
     {
         string? kitname = team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit;
-        SqlItem<Kit>? kit = team is 1 or 2 && kitname != null ? (await FindKit(kitname, token).ConfigureAwait(false)) : null;
-        if (kit?.Item == null)
+        Kit? kit = team is 1 or 2 && kitname != null ? (await FindKit(kitname, token).ConfigureAwait(false)) : null;
+        if (kit == null)
             kit = await FindKit(TeamManager.DefaultKit, token).ConfigureAwait(false);
         return kit;
     }
-    public async Task<SqlItem<Kit>?> GetRecommendedSquadleaderKit(ulong team, CancellationToken token = default)
+    public async Task<Kit?> GetRecommendedSquadleaderKit(ulong team, CancellationToken token = default)
     {
         await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             for (int i = 0; i < Items.Count; ++i)
             {
-                if (Items[i].Item is { } kit)
+                if (Items[i] is { } kit)
                 {
                     if (kit.Class == Class.Squadleader && kit.IsPublicKit && kit.IsRequestable(team))
                         return Items[i];
@@ -386,20 +412,29 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             Class.Crewman => Branch.Armor,
             _ => Branch.Infantry
         };
-    public SqlItem<Kit>? GetRandomPublicKit()
+    public Kit? GetRandomPublicKit()
     {
-        List<SqlItem<Kit>> kits = new List<SqlItem<Kit>>(List.ToArray().Where(x => x.Item is { IsPublicKit: true, Requestable: true }));
+        List<Kit> kits;
+        WriteWait();
+        try
+        {
+            kits = new List<Kit>(Items.Where(x => x is { IsPublicKit: true, Requestable: true }));
+        }
+        finally
+        {
+            WriteRelease();
+        }
         return kits.Count == 0 ? null : kits[UnityEngine.Random.Range(0, kits.Count)];
     }
     public static bool ShouldDequipOnExitVehicle(Class @class) => @class is Class.LAT or Class.HAT;
     /// <remarks>Thread Safe</remarks>
-    public async Task<SqlItem<Kit>?> FindKit(string id, CancellationToken token = default, bool exactMatchOnly = true)
+    public async Task<Kit?> FindKit(string id, CancellationToken token = default, bool exactMatchOnly = true)
     {
         await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
-            int index = F.StringIndexOf(List, x => x.Item?.Id, id, exactMatchOnly);
-            return index == -1 ? null : List[index];
+            int index = F.StringIndexOf(Items, x => x.InternalName, id, exactMatchOnly);
+            return index == -1 ? null : Items[index];
         }
         finally
         {
@@ -409,7 +444,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
     /// <param name="index">Indexed from 1.</param>
     /// <remarks>Thread Safe</remarks>
-    public static async Task<SqlItem<Kit>?> GetLoadout(UCPlayer player, int index, CancellationToken token = default)
+    public async Task<Kit?> GetLoadout(UCPlayer player, int index, CancellationToken token = default)
     {
         await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
@@ -423,47 +458,41 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     }
 
     /// <summary>Use with purchase sync.</summary>
-    public static bool IsFavoritedQuick(PrimaryKey kit, UCPlayer player)
+    public static bool IsFavoritedQuick(uint kit, UCPlayer player)
     {
-        if (!kit.IsValid)
+        if (kit == 0)
             return false;
-
-        try
+        
+        if (player.KitMenuData is { FavoriteKits: { } favs })
         {
-            int key = kit.Key;
-            if (player.KitMenuData is { FavoriteKits: { } favs })
+            for (int i = 0; i < favs.Count; ++i)
             {
-                for (int i = 0; i < favs.Count; ++i)
-                {
-                    if (favs[i].Key == key)
-                        return true;
-                }
+                if (favs[i] == kit)
+                    return true;
             }
-        }
-        catch (Exception ex)
-        {
-            L.LogError(ex);
         }
 
         return false;
     }
     /// <summary>Indexed from 1.</summary>
-    public static SqlItem<Kit>? GetLoadoutQuick(UCPlayer player, int signIndex)
+    public Kit? GetLoadoutQuick(UCPlayer player, int signIndex)
     {
         if (signIndex <= 0)
             return null;
 
+        WriteWait();
         try
         {
             if (player.AccessibleKits != null)
             {
-                foreach (SqlItem<Kit> kit in player.AccessibleKits
-                             .Where(x => x?.Item != null && x.Item.Type == KitType.Loadout)
-                             .OrderByDescending(x => IsFavoritedQuick(x.LastPrimaryKey, player))
-                             .ThenBy(x => x.Item?.Id ?? string.Empty))
+                foreach (Kit? kit in player.AccessibleKits
+                             .Select(x => GetEntityNoWriteLock(y => y.PrimaryKey == x))
+                             .Where(x => x != null && x.Type == KitType.Loadout)
+                             .OrderByDescending(x => IsFavoritedQuick(x!.PrimaryKey, player))
+                             .ThenBy(x => x!.InternalName ?? string.Empty))
                 {
                     if (--signIndex <= 0)
-                        return kit;
+                        return kit!;
                 }
             }
         }
@@ -471,16 +500,20 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         {
             L.LogError(ex);
         }
+        finally
+        {
+            WriteRelease();
+        }
 
         return null;
     }
-    public SqlItem<Kit>? FindKitNoLock(string id, bool exactMatchOnly = true)
+    public Kit? FindKitNoLock(string id, bool exactMatchOnly = true)
     {
         WriteWait();
         try
         {
-            int index = F.StringIndexOf(List, x => x.Item?.Id, id, exactMatchOnly);
-            return index == -1 ? null : List[index];
+            int index = F.StringIndexOf(Items, x => x.InternalName, id, exactMatchOnly);
+            return index == -1 ? null : Items[index];
         }
         finally
         {
@@ -488,13 +521,13 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
     }
     /// <remarks>Thread Safe</remarks>
-    public async Task<List<SqlItem<Kit>>> FindKits(string id, CancellationToken token = default, bool exactMatchOnly = true)
+    public async Task<List<Kit>> FindKits(string id, CancellationToken token = default, bool exactMatchOnly = true)
     {
-        List<SqlItem<Kit>> kits = new List<SqlItem<Kit>>(4);
+        List<Kit> kits = new List<Kit>(4);
         await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
-            F.StringSearch(List, kits, x => x.Item?.Id, id, exactMatchOnly);
+            F.StringSearch(Items, kits, x => x.InternalName, id, exactMatchOnly);
         }
         finally
         {
@@ -503,13 +536,13 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
         return kits;
     }
-    public List<SqlItem<Kit>> FindKitsNoLock(string id, bool exactMatchOnly = true)
+    public List<Kit> FindKitsNoLock(string id, bool exactMatchOnly = true)
     {
         WriteWait();
         try
         {
-            List<SqlItem<Kit>> kits = new List<SqlItem<Kit>>(4);
-            F.StringSearch(List, kits, x => x.Item?.Id, id, exactMatchOnly);
+            List<Kit> kits = new List<Kit>(4);
+            F.StringSearch(Items, kits, x => x.InternalName, id, exactMatchOnly);
             return kits;
         }
         finally
@@ -518,34 +551,18 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
     }
     /// <remarks>Thread Safe</remarks>
-    public async Task GiveKit(UCPlayer player, SqlItem<Kit>? kit, bool tip = true, CancellationToken token = default)
+    public async Task GiveKit(UCPlayer player, Kit? kit, bool tip = true, CancellationToken token = default)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));
-        SqlItem<Kit>? oldKit = null;
+        Kit? oldKit = null;
         if (kit is null)
         {
             await RemoveKit(player, token).ConfigureAwait(false);
             return;
         }
-        await kit.Enter(token).ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            WriteWait();
-            Kit? kitItem;
-            try
-            {
-                kitItem = kit.Item;
-            }
-            finally
-            {
-                WriteRelease();
-            }
-            if (kitItem == null)
-            {
-                await RemoveKit(player, token).ConfigureAwait(false);
-                return;
-            }
-
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
             {
@@ -553,15 +570,11 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                WriteWait();
+                WriteWait(token);
                 Kit? old = null;
                 try
                 {
-                    if (player.HasKit)
-                    {
-                        oldKit = player.ActiveKit;
-                        old = oldKit?.Item;
-                    }
+                    oldKit = player.GetActiveKitNoWriteLock();
                     GrantKit(player, kit, tip);
                 }
                 finally
@@ -578,15 +591,15 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
         finally
         {
-            kit.Release();
+            Release();
         }
         if (OnKitChanged != null)
             UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, kit, oldKit), default);
     }
-    public async Task<SqlItem<Kit>?> GetKitFromSign(BarricadeDrop drop, UCPlayer looker, CancellationToken token = default)
+    public async Task<Kit?> GetKitFromSign(BarricadeDrop drop, UCPlayer looker, CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
-        SqlItem<Kit>? kit = Signs.GetKitFromSign(drop, out int loadoutId);
+        Kit? kit = Signs.GetKitFromSign(drop, out int loadoutId);
         if (kit is null && loadoutId > 0)
         {
             kit = await GetLoadout(looker, loadoutId, token).ConfigureAwait(false);
@@ -595,21 +608,11 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
         return kit;
     }
-    internal async Task GiveKitNoLock(UCPlayer player, SqlItem<Kit>? kit, bool tip = true, CancellationToken token = default, bool psLock = true)
+    internal async Task GiveKitNoLock(UCPlayer player, Kit? kit, bool tip = true, CancellationToken token = default, bool psLock = true)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));
-        SqlItem<Kit>? oldKit = null;
-        Kit? kitItem;
-        await WriteWaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            kitItem = kit?.Item;
-        }
-        finally
-        {
-            WriteRelease();
-        }
-        if (kitItem == null)
+        Kit? oldKit = null;
+        if (kit == null)
         {
             await RemoveKit(player, token, psLock).ConfigureAwait(false);
             return;
@@ -618,19 +621,14 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (kitItem == null)
-            {
-                await RemoveKit(player, token, psLock).ConfigureAwait(false);
-                return;
-            }
             await UCWarfare.ToUpdate(token);
-            WriteWait();
+            WriteWait(token);
             try
             {
-                if (player.HasKit)
-                    oldKit = player.ActiveKit;
+                oldKit = player.GetActiveKitNoWriteLock();
                 GrantKit(player, kit, tip);
-                if (oldKit?.Item != null)
+                UpdateSigns(kit);
+                if (oldKit != null)
                     UpdateSigns(oldKit);
             }
             finally
@@ -654,15 +652,14 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            SqlItem<Kit>? oldKit = null;
-            if (player.HasKit)
-                oldKit = player.ActiveKit;
+            Kit? oldKit = null;
             await UCWarfare.ToUpdate(token);
-            WriteWait();
+            WriteWait(token);
             try
             {
+                oldKit = player.GetActiveKitNoWriteLock();
                 GrantKit(player, null, false);
-                if (oldKit?.Item != null)
+                if (oldKit != null)
                     UpdateSigns(oldKit);
             }
             finally
@@ -678,25 +675,26 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 player.PurchaseSync.Release();
         }
     }
-    private static void GrantKit(UCPlayer player, SqlItem<Kit>? kit, bool tip = true)
+    // must be write-locked
+    private static void GrantKit(UCPlayer player, Kit? kit, bool tip = true)
     {
         ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Kit? k = kit?.Item;
         if (UCWarfare.Config.ModifySkillLevels)
-            player.EnsureSkillsets(k?.Skillsets ?? Array.Empty<Skillset>());
+            player.EnsureSkillsets(kit?.Skillsets.Select(x => x.Skillset) ?? Array.Empty<Skillset>());
         player.ChangeKit(kit);
-        if (k != null)
+        if (kit != null)
         {
-            UpdateSigns(k);
-            GiveKitToPlayerInventory(player, k, true, false, tip);
+            GiveKitToPlayerInventory(player, kit, true, false, tip);
+
+            // bind hotkeys
             if (player.HotkeyBindings != null)
             {
                 foreach (HotkeyBinding binding in player.HotkeyBindings)
                 {
-                    if (binding.Kit.Key == k.PrimaryKey.Key)
+                    if (binding.Kit == kit.PrimaryKey)
                     {
                         byte index = KitEx.GetHotkeyIndex(binding.Slot);
                         if (index != byte.MaxValue)
@@ -714,7 +712,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                                 }
                             }
 
-                            ItemAsset? asset = binding.GetAsset(k, player.GetTeam());
+                            ItemAsset? asset = binding.GetAsset(kit, player.GetTeam());
                             if (asset != null && KitEx.CanBindHotkeyTo(asset, page))
                                 player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)page, x, y);
                         }
@@ -727,73 +725,71 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     }
     public async Task ResupplyKit(UCPlayer player, bool ignoreAmmoBags = false, CancellationToken token = default)
     {
-        if (player.HasKit)
-        {
-            await ResupplyKit(player, player.ActiveKit!, ignoreAmmoBags, token).ConfigureAwait(false);
-        }
+        if (!player.HasKit)
+            return;
+
+        Kit? kit = player.GetActiveKit();
+
+        if (kit == null)
+            return;
+
+        await ResupplyKit(player, kit, ignoreAmmoBags, token).ConfigureAwait(false);
     }
-    public async Task ResupplyKit(UCPlayer player, SqlItem<Kit> kit, bool ignoreAmmoBags = false, CancellationToken token = default)
+    public async Task ResupplyKit(UCPlayer player, Kit kit, bool ignoreAmmoBags = false, CancellationToken token = default)
     {
         if (kit is null) throw new ArgumentNullException(nameof(kit));
-        await kit.Enter(token).ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
             await UCWarfare.ToUpdate(token);
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            List<KeyValuePair<ItemJar, Page>> nonKitItems = new List<KeyValuePair<ItemJar, Page>>(16);
-            Kit? k;
-            WriteWait();
+            WriteWait(token);
             try
             {
-                k = kit.Item;
-            }
-            finally
-            {
-                WriteRelease();
-            }
-            
-            for (byte page = 0; page < PlayerInventory.PAGES - 2; ++page)
-            {
-                byte count = player.Player.inventory.getItemCount(page);
-                for (byte i = 0; i < count; ++i)
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+                List<KeyValuePair<ItemJar, Page>> nonKitItems = new List<KeyValuePair<ItemJar, Page>>(16);
+                for (byte page = 0; page < PlayerInventory.PAGES - 2; ++page)
                 {
-                    ItemJar jar = player.Player.inventory.items[page].getItem(i);
-                    ItemAsset? asset = jar.item.GetAsset();
-                    if (asset is null) continue;
-                    if (k == null || !k.ContainsItem(asset.GUID, player.GetTeam()))
+                    byte count = player.Player.inventory.getItemCount(page);
+                    for (byte i = 0; i < count; ++i)
                     {
+                        ItemJar jar = player.Player.inventory.items[page].getItem(i);
+                        ItemAsset? asset = jar.item.GetAsset();
+                        if (asset is null) continue;
+                        if (kit != null && kit.ContainsItem(asset.GUID, player.GetTeam()))
+                            continue;
+
                         WhitelistItem? item = null;
-                        if (!Whitelister.Loaded || Whitelister.IsWhitelisted(asset.GUID, out item))
+                        if (Whitelister.Loaded && !Whitelister.IsWhitelisted(asset.GUID, out item))
+                            continue;
+
+                        if (item is { Amount: < byte.MaxValue } && item.Amount != 0)
                         {
-                            if (item != null && item.Amount < byte.MaxValue && item.Amount != 0)
+                            int amt = 0;
+                            for (int w = 0; w < nonKitItems.Count; ++w)
                             {
-                                int amt = 0;
-                                for (int w = 0; w < nonKitItems.Count; ++w)
-                                {
-                                    if (nonKitItems[w].Key.GetAsset() is { } ia2 && ia2.GUID == item.Item)
-                                    {
-                                        ++amt;
-                                        if (amt >= item.Amount)
-                                            goto s;
-                                    }
-                                }
+                                if (nonKitItems[w].Key.GetAsset() is not { } ia2 || ia2.GUID != item.Item)
+                                    continue;
+
+                                ++amt;
+                                if (amt >= item.Amount)
+                                    goto s;
                             }
-                            nonKitItems.Add(new KeyValuePair<ItemJar, Page>(jar, (Page)page));
-                            s: ;
                         }
+                        nonKitItems.Add(new KeyValuePair<ItemJar, Page>(jar, (Page)page));
+                    s:;
                     }
                 }
-            }
 
-            GiveKitToPlayerInventory(player, k, true, ignoreAmmoBags);
-            bool playEffectEquip = true;
-            bool playEffectDrop = true;
-            foreach (KeyValuePair<ItemJar, Page> jar in nonKitItems)
-            {
-                if (!player.Player.inventory.tryAddItem(jar.Key.item, jar.Key.x, jar.Key.y, (byte)jar.Value, jar.Key.rot))
+                GiveKitToPlayerInventory(player, kit, true, ignoreAmmoBags);
+                bool playEffectEquip = true;
+                bool playEffectDrop = true;
+                foreach (KeyValuePair<ItemJar, Page> jar in nonKitItems)
                 {
+                    if (player.Player.inventory.tryAddItem(jar.Key.item, jar.Key.x, jar.Key.y, (byte)jar.Value, jar.Key.rot))
+                        continue;
+
                     if (!player.Player.inventory.tryAddItem(jar.Key.item, false, playEffectEquip))
                     {
                         ItemManager.dropItem(jar.Key.item, player.Position, playEffectDrop, true, true);
@@ -802,10 +798,14 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     else playEffectEquip = false;
                 }
             }
+            finally
+            {
+                WriteRelease();
+            }
         }
         finally
         {
-            kit.Release();
+            Release();
         }
     }
     private static void GiveKitToPlayerInventory(UCPlayer player, Kit? kit, bool clear, bool ignoreAmmobags, bool tip = true)
@@ -823,9 +823,9 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         player.Player.equipment.dequip();
         if (kit == null)
             return;
-        LayoutTransformation[] layout = player.LayoutTransformations == null || !player.HasDownloadedKitData || !kit.PrimaryKey.IsValid || !ShouldAllowLayouts(kit)
+        LayoutTransformation[] layout = player.LayoutTransformations == null || !player.HasDownloadedKitData || kit.PrimaryKey == 0 || !ShouldAllowLayouts(kit)
             ? Array.Empty<LayoutTransformation>()
-            : player.LayoutTransformations.Where(x => x.Kit.Key == kit.PrimaryKey.Key).ToArray();
+            : player.LayoutTransformations.Where(x => x.Kit == kit.PrimaryKey).ToArray();
         IKitItem[] items = kit.Items;
         FactionInfo? faction = player.Faction;
         if (Data.UseFastKits)
@@ -836,7 +836,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             for (int i = 0; i < items.Length; ++i)
             {
                 IKitItem item = items[i];
-                if (item is not IClothingJar clothingJar)
+                if (item is not IClothingKitItem clothingJar)
                     continue;
                 ItemAsset? asset = item.GetItem(kit, faction, out _, out byte[] state);
                 if (asset == null || asset.type != clothingJar.Type.GetItemType())
@@ -867,7 +867,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 }
                 else
                 {
-                    L.LogWarning("Duplicate " + clothingJar.Type + " defined for " + kit.Id + ", " + item + ".");
+                    L.LogWarning("Duplicate " + clothingJar.Type + " defined for " + kit.InternalName + ", " + item + ".");
                 }
             }
             byte[] blank = Array.Empty<byte>();
@@ -888,18 +888,18 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 }
             }
-            Items[] p = player.Player.inventory.items;
+            SDG.Unturned.Items[] p = player.Player.inventory.items;
             bool ohi = Data.GetOwnerHasInventory(player.Player.inventory);
             if (ohi)
                 Data.SetOwnerHasInventory(player.Player.inventory, false);
-            List<(Item, IItemJar)>? toAddLater = null;
+            List<(Item, IPageKitItem)>? toAddLater = null;
             for (int i = 0; i < kit.Items.Length; ++i)
             {
                 IKitItem item = kit.Items[i];
-                if (item is not IItemJar jar)
+                if (item is not IPageKitItem jar)
                     continue;
                 ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
-                if (item is not IAssetRedirect && asset is ItemGunAsset && !UCWarfare.Config.DisableAprilFools && HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS))
+                if (item is not IAssetRedirectKitItem && asset is ItemGunAsset && !UCWarfare.Config.DisableAprilFools && HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS))
                 {
                                            // Dootpressor
                     if (Assets.find(new Guid("c3d3123823334847a9fd294e5d764889")) is ItemBarrelAsset barrel)
@@ -955,16 +955,16 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 retry:
                 if ((int)givePage < PlayerInventory.PAGES - 2 && asset != null)
                 {
-                    Items page = p[(int)givePage];
+                    SDG.Unturned.Items page = p[(int)givePage];
                     Item itm = new Item(asset.id, amt, 100, state);
                     // ensures multiple items are not put in the slots (causing the ghost gun issue)
                     if (givePage is Page.Primary or Page.Secondary)
                     {
                         if (page.getItemCount() > 0)
                         {
-                            L.LogWarning("[GIVE KIT] Duplicate " + givePage.ToString().ToLowerInvariant() + " defined for " + kit.Id + ", " + item + ".");
+                            L.LogWarning("[GIVE KIT] Duplicate " + givePage.ToString().ToLowerInvariant() + " defined for " + kit.InternalName + ", " + item + ".");
                             L.Log("[GIVE KIT] Removing " + (page.items[0].GetAsset().itemName) + " in place of duplicate.");
-                            (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((page.items[0].item, jar));
+                            (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((page.items[0].item, jar));
                             page.removeItem(0);
                         }
 
@@ -977,13 +977,13 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                         // if an item is out of range of it's container with a layout override, remove it and try again
                         if (layoutAffected)
                         {
-                            L.LogDebug("[GIVE KIT] Out of bounds layout item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
+                            L.LogDebug("[GIVE KIT] Out of bounds layout item in " + givePage + " defined for " + kit.InternalName + ", " + item + ".");
                             L.LogDebug("[GIVE KIT] Retrying at original position.");
                             ResetToOriginal();
                             goto retry;
                         }
-                        L.LogWarning("[GIVE KIT] Out of bounds item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
-                        (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((itm, jar));
+                        L.LogWarning("[GIVE KIT] Out of bounds item in " + givePage + " defined for " + kit.InternalName + ", " + item + ".");
+                        (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((itm, jar));
                     }
 
                     int ic2 = page.getItemCount();
@@ -995,15 +995,15 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                             // if an overlap is detected with a layout override, remove it and try again
                             if (layoutAffected)
                             {
-                                L.LogDebug("[GIVE KIT] Overlapping layout item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
+                                L.LogDebug("[GIVE KIT] Overlapping layout item in " + givePage + " defined for " + kit.InternalName + ", " + item + ".");
                                 L.LogDebug("[GIVE KIT] Retrying at original position.");
                                 ResetToOriginal();
                                 goto retry;
                             }
-                            L.LogWarning("[GIVE KIT] Overlapping item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
+                            L.LogWarning("[GIVE KIT] Overlapping item in " + givePage + " defined for " + kit.InternalName + ", " + item + ".");
                             L.Log("[GIVE KIT] Removing " + (jar2.GetAsset().itemName) + " (" + jar2.x + ", " + jar2.y + " @ " + jar2.rot + "), in place of duplicate.");
                             page.removeItem((byte)j--);
-                            (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((jar2.item, jar));
+                            (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((jar2.item, jar));
                         }
                     }
 
@@ -1014,7 +1014,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     page.addItem(giveX, giveY, giveRot, itm);
                 }
                 // if a clothing item asset redirect is missing it's likely a kit being requested on a faction without those clothes.
-                else if (item is not (IAssetRedirect and IClothingJar))
+                else if (item is not (IAssetRedirectKitItem and IClothingKitItem))
                     ReportItemError(kit, item, asset);
             }
 
@@ -1023,7 +1023,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             {
                 for (int i = 0; i < toAddLater.Count; ++i)
                 {
-                    (Item item, IItemJar jar) = toAddLater[i];
+                    (Item item, IPageKitItem jar) = toAddLater[i];
                     if (!player.Player.inventory.tryAddItemAuto(item, false, false, false, !hasPlayedEffect))
                     {
                         ItemManager.dropItem(item, player.Position, !hasPlayedEffect, true, false);
@@ -1033,7 +1033,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     {
                         for (int pageIndex = 0; pageIndex < PlayerInventory.STORAGE; ++pageIndex)
                         {
-                            Items page = player.Player.inventory.items[pageIndex];
+                            SDG.Unturned.Items page = player.Player.inventory.items[pageIndex];
                             int c = page.getItemCount();
                             for (int index = 0; index < c; ++index)
                             {
@@ -1059,7 +1059,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         {
             foreach (IKitItem item in kit.Items)
             {
-                if (item is IClothingJar clothing)
+                if (item is IClothingKitItem clothing)
                 {
                     ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
                     if (asset is null)
@@ -1124,7 +1124,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             }
             foreach (IKitItem item in kit.Items)
             {
-                if (item is not IClothingJar)
+                if (item is not IClothingKitItem)
                 {
                     ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
                     if (asset is null)
@@ -1134,7 +1134,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     }
                     Item uitem = new Item(asset.id, amt, 100, state);
 
-                    if (item is not IItemJar jar || !player.Player.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
+                    if (item is not IPageKitItem jar || !player.Player.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
                     {
                         if (!player.Player.inventory.tryAddItem(uitem, true))
                         {
@@ -1159,7 +1159,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         else if (player.Player.inventory.items[(int)Page.Secondary].getItemCount() > 0)
             player.Player.equipment.ServerEquip((byte)Page.Secondary, 0, 0);
     }
-    internal static void TryReverseLayoutTransformations(UCPlayer player, IKitItem[] kitItems, PrimaryKey kit)
+    internal static void TryReverseLayoutTransformations(UCPlayer player, IKitItem[] kitItems, uint kit)
     {
         ThreadUtil.assertIsGameThread();
         if (player.LayoutTransformations is not { Count: > 0 })
@@ -1168,26 +1168,26 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         for (int i = 0; i < player.LayoutTransformations.Count; ++i)
         {
             LayoutTransformation t = player.LayoutTransformations[i];
-            if (t.Kit.Key != kit.Key)
+            if (t.Kit != kit)
                 continue;
             
             ReverseLayoutTransformation(t, player, kitItems, kit, ref i);
             if (i < 0) i = 0;
         }
     }
-    private static void ReverseLayoutTransformation(LayoutTransformation transformation, UCPlayer player, IKitItem[] kitItems, PrimaryKey kit, ref int i)
+    private static void ReverseLayoutTransformation(LayoutTransformation transformation, UCPlayer player, IKitItem[] kitItems, uint kit, ref int i)
     {
         if (player.LayoutTransformations == null)
             return;
         PlayerInventory inv = player.Player.inventory;
-        Items page = inv.items[(int)transformation.NewPage];
+        SDG.Unturned.Items page = inv.items[(int)transformation.NewPage];
         ItemJar? current = page.getItem(page.getIndex(transformation.NewX, transformation.NewY));
         if (current == null || current.item?.GetAsset() is not { } asset1)
         {
             L.LogDebug("Current item not in inventory.");
             return;
         }
-        IItemJar? original = (IItemJar?)kitItems.FirstOrDefault(x => x is IItemJar jar && jar.X == transformation.OldX && jar.Y == transformation.OldY && jar.Page == transformation.OldPage);
+        IPageKitItem? original = (IPageKitItem?)kitItems.FirstOrDefault(x => x is IPageKitItem jar && jar.X == transformation.OldX && jar.Y == transformation.OldY && jar.Page == transformation.OldPage);
         if (original == null)
         {
             L.LogDebug("Transformation was not in original kit items.");
@@ -1207,7 +1207,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     continue;
                 }
                 int index = player.LayoutTransformations.FindIndex(x =>
-                    x.Kit.Key == kit.Key && x.NewX == jar.x && x.NewY == jar.y &&
+                    x.Kit == kit && x.NewX == jar.x && x.NewY == jar.y &&
                     x.NewPage == transformation.OldPage);
                 if (index < 0)
                 {
@@ -1225,18 +1225,29 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         inv.ReceiveDragItem((byte)transformation.NewPage, current.x, current.y, (byte)original.Page, original.X, original.Y, original.Rotation);
         L.LogDebug($"Reversing {transformation.NewPage}, ({current.x}, {current.y}) to {original.Page}, ({original.X}, {original.Y}) @ rot {original.Rotation}.");
     }
-    public static List<LayoutTransformation> GetLayoutTransformations(UCPlayer player, PrimaryKey kit)
+    public static List<LayoutTransformation> GetLayoutTransformations(UCPlayer player, uint kit)
     {
         ThreadUtil.assertIsGameThread();
         List<LayoutTransformation> output = new List<LayoutTransformation>(player.ItemTransformations.Count);
-        Items[] p = player.Player.inventory.items;
+        SDG.Unturned.Items[] p = player.Player.inventory.items;
         for (int i = 0; i < player.ItemTransformations.Count; i++)
         {
             ItemTransformation transformation = player.ItemTransformations[i];
-            Items upage = p[(int)transformation.NewPage];
+            SDG.Unturned.Items upage = p[(int)transformation.NewPage];
             ItemJar? jar = upage.getItem(upage.getIndex(transformation.NewX, transformation.NewY));
             if (jar != null && jar.item == transformation.Item)
-                output.Add(new LayoutTransformation(transformation.OldPage, transformation.NewPage, transformation.OldX, transformation.OldY, jar.x, jar.y, jar.rot, kit));
+                output.Add(new LayoutTransformation(transformation.OldPage, transformation.NewPage, transformation.OldX, transformation.OldY, jar.x, jar.y, jar.rot, kit, new KitLayoutTransformation
+                {
+                    KitId = kit,
+                    NewPage = transformation.NewPage,
+                    NewX = jar.x,
+                    NewY = jar.y,
+                    NewRotation = jar.rot,
+                    OldPage = transformation.OldPage,
+                    OldX = transformation.OldX,
+                    OldY = transformation.OldY,
+                    Steam64 = player.Steam64
+                }));
             else
                 L.LogDebug($"Unable to convert ItemTransformation to LayoutTransformation: {transformation.OldPage} -> {transformation.NewPage}, ({transformation.OldX} -> {transformation.NewX}, {transformation.OldY} -> {transformation.NewY}).");
         }
@@ -1247,24 +1258,23 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     {
         if (asset == null)
         {
-            L.LogWarning("Unknown item in kit \"" + kit.Id + "\": {" +
+            L.LogWarning("Unknown item in kit \"" + kit.InternalName + "\": {" +
                          item switch
                          {
-                             IItem i2 => i2.Item.ToString("N"),
-                             IBaseItem i2 => i2.Item.ToString("N"),
+                             ISpecificKitItem i2 => i2.Item.ToString(),
                              _ => item.ToString()
                          } + "}.");
         }
-        else if (item is IClothingJar clothing)
+        else if (item is IClothingKitItem clothing)
         {
             L.LogWarning("Invalid " + clothing.Type.ToString().ToLowerInvariant() +
-                         " in kit \"" + kit.Id + "\" for item " + asset.itemName +
+                         " in kit \"" + kit.InternalName + "\" for item " + asset.itemName +
                          " {" + asset.GUID.ToString("N") + "}.");
         }
         else
         {
             L.LogWarning("Invalid item" +
-                         " in kit \"" + kit.Id + "\" for item " + asset.itemName +
+                         " in kit \"" + kit.InternalName + "\" for item " + asset.itemName +
                          " {" + asset.GUID.ToString("N") + "}.");
         }
     }
@@ -1276,25 +1286,25 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             await UCWarfare.ToUpdate(token);
             if (!e.Player.IsOnline)
                 return;
-            WriteWait();
+            WriteWait(token);
             try
             {
-                foreach (SqlItem<Kit> kit in Items)
+                foreach (Kit kit in Items)
                 {
-                    if (kit.Item != null && kit.Item.Type != KitType.Loadout && kit.Item.UnlockRequirements != null)
+                    if (kit.Type == KitType.Loadout || kit.UnlockRequirements == null)
+                        continue;
+
+                    for (int j = 0; j < kit.UnlockRequirements.Length; j++)
                     {
-                        for (int j = 0; j < kit.Item.UnlockRequirements.Length; j++)
+                        if (kit.UnlockRequirements[j] is not QuestUnlockRequirement { UnlockPresets.Length: > 0 } req || req.CanAccess(e.Player))
+                            continue;
+                        
+                        for (int r = 0; r < req.UnlockPresets.Length; r++)
                         {
-                            if (kit.Item.UnlockRequirements[j] is QuestUnlockRequirement { UnlockPresets.Length: > 0 } req && !req.CanAccess(e.Player))
+                            if (req.UnlockPresets[r] == e.PresetKey)
                             {
-                                for (int r = 0; r < req.UnlockPresets.Length; r++)
-                                {
-                                    if (req.UnlockPresets[r] == e.PresetKey)
-                                    {
-                                        e.Break();
-                                        return;
-                                    }
-                                }
+                                e.Break();
+                                return;
                             }
                         }
                     }
@@ -1324,34 +1334,29 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             PlayerEquipment equipment = player.Player.equipment;
             for (int i = 0; i < 8; ++i)
                 equipment.ServerClearItemHotkey((byte)i);
-            WriteWait();
+            WriteWait(token);
             try
             {
-                foreach (SqlItem<Kit> kit in Items)
+                foreach (Kit kit in Items)
                 {
-                    if (kit.Item != null && kit.Item.Type != KitType.Loadout && kit.Item.UnlockRequirements != null)
+                    if (kit == null || kit.Type == KitType.Loadout || kit.UnlockRequirements == null)
+                        continue;
+
+                    for (int j = 0; j < kit.UnlockRequirements.Length; j++)
                     {
-                        for (int j = 0; j < kit.Item.UnlockRequirements.Length; j++)
+                        if (kit.UnlockRequirements[j] is not QuestUnlockRequirement { UnlockPresets.Length: > 0 } req || req.CanAccess(player))
+                            continue;
+
+                        if (Assets.find(req.QuestID) is QuestAsset quest)
+                            QuestManager.TryAddQuest(player, quest);
+                        else
+                            L.LogWarning("Unknown quest id " + req.QuestID + " in kit requirement for " + kit.InternalName);
+                        
+                        for (int r = 0; r < req.UnlockPresets.Length; r++)
                         {
-                            if (kit.Item.UnlockRequirements[j] is QuestUnlockRequirement { UnlockPresets.Length: > 0 } req && !req.CanAccess(player))
-                            {
-                                if (Assets.find(req.QuestID) is QuestAsset quest)
-                                {
-                                    QuestManager.TryAddQuest(player, quest);
-                                }
-                                else
-                                {
-                                    L.LogWarning("Unknown quest id " + req.QuestID + " in kit requirement for " + kit.Item.Id);
-                                }
-                                for (int r = 0; r < req.UnlockPresets.Length; r++)
-                                {
-                                    BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
-                                    if (tracker == null)
-                                    {
-                                        L.LogWarning("Failed to create tracker for kit " + kit.Item.Id + ", player " + player.Name.PlayerName);
-                                    }
-                                }
-                            }
+                            BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
+                            if (tracker == null)
+                                L.LogWarning("Failed to create tracker for kit " + kit.InternalName + ", player " + player.Name.PlayerName);
                         }
                     }
                 }
@@ -1373,16 +1378,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? player = UCPlayer.FromPlayer(life.player);
-        Kit? active;
-        WriteWait();
-        try
-        {
-            active = player?.ActiveKit?.Item;
-        }
-        finally
-        {
-            WriteRelease();
-        }
+        Kit? active = player?.GetActiveKit();
         if (active != null)
         {
             for (byte page = 0; page < PlayerInventory.PAGES - 2; page++)
@@ -1410,29 +1406,30 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     /// <remarks>Thread Safe</remarks>
     public async Task DequipKit(Kit kit, CancellationToken token = default)
     {
-        SqlItem<Kit>? t1def = null;
-        SqlItem<Kit>? t2def = null;
+        Kit? t1def = null;
+        Kit? t2def = null;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            if (pl.ActiveKit is not null && pl.ActiveKit.LastPrimaryKey.Key == kit.PrimaryKey.Key)
-            {
-                ulong team = pl.GetTeam();
-                if (team == 1 && (t1def ??= await GetDefaultKit(1ul, token))?.Item != null)
-                    await GiveKit(pl, t1def == kit ? null : t1def, false, token);
-                else if (team == 2 && (t2def ??= await GetDefaultKit(2ul, token))?.Item != null)
-                    await GiveKit(pl, t2def == kit ? null : t2def, false, token);
-                else
-                    await GiveKit(pl, null, false, token);
-            }
+            uint? activeKit = pl.ActiveKit;
+            if (!activeKit.HasValue || activeKit.Value != kit.PrimaryKey)
+                continue;
+            
+            ulong team = pl.GetTeam();
+            if (team == 1 && (t1def ??= await GetDefaultKit(1ul, token)) != null)
+                await GiveKit(pl, t1def == kit ? null : t1def, false, token);
+            else if (team == 2 && (t2def ??= await GetDefaultKit(2ul, token)) != null)
+                await GiveKit(pl, t2def == kit ? null : t2def, false, token);
+            else
+                await GiveKit(pl, null, false, token);
         }
     }
     /// <remarks>Thread Safe</remarks>
     public async Task DequipKit(UCPlayer player, CancellationToken token = default)
     {
         ulong team = player.GetTeam();
-        SqlItem<Kit>? dkit = await GetDefaultKit(team, token);
-        if (dkit?.Item != null)
+        Kit? dkit = await GetDefaultKit(team, token);
+        if (dkit != null)
             await GiveKit(player, dkit, true, token);
         else
             await GiveKit(player, null, false, token);
@@ -1440,32 +1437,39 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     /// <remarks>Thread Safe</remarks>
     public Task DequipKit(UCPlayer player, Kit kit, CancellationToken token = default)
     {
-        if (player.ActiveKit is not null && player.ActiveKit.LastPrimaryKey.Key == kit.PrimaryKey.Key)
+        uint? activeKit = player.ActiveKit;
+        if (activeKit is not null && activeKit == kit.PrimaryKey)
         {
             return DequipKit(player, token);
         }
 
         return Task.CompletedTask;
     }
-    private void OnKitAccessChangedIntl(SqlItem<Kit> kit, ulong player, bool newAccess, KitAccessType type)
+    private void OnKitAccessChangedIntl(Kit kit, ulong player, bool newAccess, KitAccessType type)
     {
         if (newAccess) return;
         UCPlayer? pl = UCPlayer.FromID(player);
-        if (pl != null && kit.Item != null && pl.ActiveKit == kit)
+        if (pl != null && kit != null)
         {
-            UCWarfare.RunTask(DequipKit, pl, kit.Item, ctx: "Dequiping " + kit.Item?.Id + " from " + player + ".");
+            uint? activeKit = pl.ActiveKit;
+            if (activeKit.HasValue && activeKit.Value == kit.PrimaryKey)
+                UCWarfare.RunTask(DequipKit, pl, kit, ctx: "Dequiping " + kit.InternalName + " from " + player + ".");
         }
     }
-    private void OnKitDeleted(SqlItem<Kit> proxy, Kit kit)
+    private Task OnKitDeleted(Kit kit)
     {
         if (UCWarfare.Config.EnableSync)
             KitSync.OnKitDeleted(kit.PrimaryKey);
-        Task.Run(() => Util.TryWrap(DequipKit(kit), "Failed to dequip " + kit.Id + " from all."));
+        Task.Run(() => Util.TryWrap(DequipKit(kit), "Failed to dequip " + kit.InternalName + " from all."));
+
+        return Task.CompletedTask;
     }
-    private void OnKitUpdated(SqlItem<Kit> kit)
+    private Task OnKitUpdated(Kit kit)
     {
         if (UCWarfare.Config.EnableSync)
             KitSync.OnKitUpdated(kit);
+
+        return Task.CompletedTask;
     }
     private void OnPlayerLeaving(PlayerEvent e) => OnTeamPlayerCountChanged();
     private void OnPlayerJoined(PlayerJoined e) => OnTeamPlayerCountChanged();
@@ -1485,12 +1489,10 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 {
                     for (int i = 0; i < Items.Count; i++)
                     {
-                        SqlItem<Kit> item = Items[i];
-                        if (item.Item == null)
-                            continue;
-                        if (item.Item.TeamLimit < 1f)
+                        Kit item = Items[i];
+                        if (item.TeamLimit < 1f)
                         {
-                            _kitListTemp.Add(item.Item);
+                            _kitListTemp.Add(item);
                         }
                     }
                 }
@@ -1499,7 +1501,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     WriteRelease();
                 }
                 for (int i = 0; i < _kitListTemp.Count; ++i)
-                    Signs.UpdateKitSigns(null, _kitListTemp[i].Id);
+                    Signs.UpdateKitSigns(null, _kitListTemp[i].InternalName);
                 _kitListTemp.Clear();
             }
             finally
@@ -1576,7 +1578,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
         else
         {
-            Signs.UpdateKitSigns(player, kit.Id);
+            Signs.UpdateKitSigns(player, kit.InternalName);
         }
     }
     private static void UpdateSignsIntl(SqlItem<Kit> kit, UCPlayer? player)
@@ -1590,67 +1592,49 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         Signs.UpdateKitSigns(player, kitId);
     }
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> GiveAccess(Kit kit, UCPlayer player, KitAccessType type, CancellationToken token = default)
-    {
-        SqlItem<Kit>? proxy = await FindProxy(kit.PrimaryKey, token).ConfigureAwait(false);
-        if (proxy?.Item == null)
-            return false;
-        return await GiveAccess(proxy, player, type, token).ConfigureAwait(false);
-    }
-    /// <remarks>Thread Safe</remarks>
-    public async Task<bool> GiveAccess(Kit kit, ulong player, KitAccessType type, CancellationToken token = default)
-    {
-        SqlItem<Kit>? proxy = await FindProxy(kit.PrimaryKey, token).ConfigureAwait(false);
-        if (proxy?.Item == null)
-            return false;
-        return await GiveAccess(proxy, player, type, token).ConfigureAwait(false);
-    }
-    /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> GiveAccess(string kit, UCPlayer player, KitAccessType type, CancellationToken token = default)
+    public static async Task<bool> GiveAccess(string kitId, UCPlayer player, KitAccessType type, CancellationToken token = default)
     {
         KitManager? manager = GetSingletonQuick();
         if (manager == null)
-            return await AddAccessRow(kit, player.Steam64, type, token).ConfigureAwait(false);
+            return await AddAccessRow(kitId, player.Steam64, type, token).ConfigureAwait(false);
 
-        SqlItem<Kit>? proxy = await manager.FindKit(kit, token).ConfigureAwait(false);
-        if (proxy?.Item == null)
+        Kit? kit = await manager.FindKit(kitId, token).ConfigureAwait(false);
+        if (kit == null)
             return false;
-        return await GiveAccess(proxy, player, type, token).ConfigureAwait(false);
+        return await GiveAccess(kit, player, type, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> GiveAccess(string kit, ulong player, KitAccessType type, CancellationToken token = default)
+    public static async Task<bool> GiveAccess(string kitId, ulong player, KitAccessType type, CancellationToken token = default)
     {
         KitManager? manager = GetSingletonQuick();
         if (manager == null)
-            return await AddAccessRow(kit, player, type, token).ConfigureAwait(false);
+            return await AddAccessRow(kitId, player, type, token).ConfigureAwait(false);
 
-        SqlItem<Kit>? proxy = await manager.FindKit(kit, token).ConfigureAwait(false);
-        if (proxy?.Item == null)
+        Kit? kit = await manager.FindKit(kitId, token).ConfigureAwait(false);
+        if (kit == null)
             return false;
-        return await GiveAccess(proxy, player, type, token).ConfigureAwait(false);
+        return await GiveAccess(kit, player, type, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> GiveAccess(SqlItem<Kit> kit, UCPlayer player, KitAccessType type, CancellationToken token = default)
+    public static async Task<bool> GiveAccess(Kit kit, UCPlayer player, KitAccessType type, CancellationToken token = default)
     {
         if (!player.IsOnline)
         {
             return await GiveAccess(kit, player.Steam64, type, token).ConfigureAwait(false);
         }
-
+        
         await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (player.AccessibleKits != null && player.AccessibleKits.Contains(kit))
+            if (player.AccessibleKits != null && player.AccessibleKits.Contains(kit.PrimaryKey))
                 return true;
-            bool access = await AddAccessRow(kit.PrimaryKey, player.Steam64, type, token).ConfigureAwait(false);
-            if (access)
-            {
-                (player.AccessibleKits ??= new List<SqlItem<Kit>>(4)).Add(kit);
-                if (OnKitAccessChanged != null)
-                    UCWarfare.RunOnMainThread(() => OnKitAccessChanged?.Invoke(kit, player.Steam64, true, type), default);
-            }
+            await AddAccessRow(kit.PrimaryKey, player.Steam64, type, token).ConfigureAwait(false);
 
-            return access;
+            (player.AccessibleKits ??= new List<uint>(4)).Add(kit.PrimaryKey);
+            if (OnKitAccessChanged != null)
+                UCWarfare.RunOnMainThread(() => OnKitAccessChanged?.Invoke(kit, player.Steam64, true, type), default);
+
+            return true;
         }
         finally
         {
@@ -1658,60 +1642,44 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
     }
     /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> GiveAccess(SqlItem<Kit> kit, ulong player, KitAccessType type, CancellationToken token = default)
+    public static async Task<bool> GiveAccess(Kit kit, ulong player, KitAccessType type, CancellationToken token = default)
     {
-        if (!kit.PrimaryKey.IsValid)
+        if (kit.PrimaryKey == 0)
             return false;
-        UCPlayer? online = UCPlayer.FromID(player);
+        UCPlayer? online = UCWarfare.IsLoaded ? UCPlayer.FromID(player) : null;
         if (online != null && online.IsOnline)
             return await GiveAccess(kit, online, type, token).ConfigureAwait(false);
-        bool res = await AddAccessRow(kit.PrimaryKey, player, type, token).ConfigureAwait(false);
+        await AddAccessRow(kit.PrimaryKey, player, type, token).ConfigureAwait(false);
         if (OnKitAccessChanged != null)
             UCWarfare.RunOnMainThread(() => OnKitAccessChanged?.Invoke(kit, player, true, type), default);
-        return res;
+        return true;
     }
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> RemoveAccess(Kit kit, UCPlayer player, CancellationToken token = default)
-    {
-        SqlItem<Kit>? proxy = await FindProxy(kit.PrimaryKey, token).ConfigureAwait(false);
-        if (proxy?.Item == null)
-            return false;
-        return await RemoveAccess(proxy, player, token).ConfigureAwait(false);
-    }
-    /// <remarks>Thread Safe</remarks>
-    public async Task<bool> RemoveAccess(string kit, UCPlayer player, CancellationToken token = default)
+    public async Task<bool> RemoveAccess(string kitId, UCPlayer player, CancellationToken token = default)
     {
         KitManager? manager = GetSingletonQuick();
         if (manager == null)
-            return await RemoveAccessRow(kit, player.Steam64, token).ConfigureAwait(false);
+            return await RemoveAccessRow(kitId, player.Steam64, token).ConfigureAwait(false);
 
-        SqlItem<Kit>? proxy = await manager.FindKit(kit, token).ConfigureAwait(false);
-        if (proxy?.Item == null)
+        Kit? kit = await manager.FindKit(kitId, token).ConfigureAwait(false);
+        if (kit == null)
             return false;
-        return await RemoveAccess(proxy, player, token).ConfigureAwait(false);
+        return await RemoveAccess(kit, player.Steam64, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> RemoveAccess(Kit kit, ulong player, CancellationToken token = default)
-    {
-        SqlItem<Kit>? proxy = await FindProxy(kit.PrimaryKey, token).ConfigureAwait(false);
-        if (proxy?.Item == null)
-            return false;
-        return await RemoveAccess(proxy, player, token).ConfigureAwait(false);
-    }
-    /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> RemoveAccess(string kit, ulong player, CancellationToken token = default)
+    public static async Task<bool> RemoveAccess(string kitId, ulong player, CancellationToken token = default)
     {
         KitManager? manager = GetSingletonQuick();
         if (manager == null)
-            return await RemoveAccessRow(kit, player, token).ConfigureAwait(false);
+            return await RemoveAccessRow(kitId, player, token).ConfigureAwait(false);
 
-        SqlItem<Kit>? proxy = await manager.FindKit(kit, token).ConfigureAwait(false);
-        if (proxy?.Item == null)
+        Kit? kit = await manager.FindKit(kitId, token).ConfigureAwait(false);
+        if (kit == null)
             return false;
-        return await RemoveAccess(proxy, player, token).ConfigureAwait(false);
+        return await RemoveAccess(kit, player, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> RemoveAccess(SqlItem<Kit> kit, UCPlayer player, CancellationToken token = default)
+    public static async Task<bool> RemoveAccess(Kit kit, UCPlayer player, CancellationToken token = default)
     {
         if (!player.IsOnline)
         {
@@ -1725,7 +1693,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             access = await RemoveAccessRow(kit.PrimaryKey, player.Steam64, token).ConfigureAwait(false);
             if (access)
             {
-                player.AccessibleKits?.Remove(kit);
+                player.AccessibleKits?.Remove(kit.PrimaryKey);
                 if (OnKitAccessChanged != null)
                     UCWarfare.RunOnMainThread(() => OnKitAccessChanged?.Invoke(kit, player.Steam64, false, KitAccessType.Unknown), default);
             }
@@ -1741,9 +1709,9 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         return access;
     }
     /// <remarks>Thread Safe</remarks>
-    public static async Task<bool> RemoveAccess(SqlItem<Kit> kit, ulong player, CancellationToken token = default)
+    public static async Task<bool> RemoveAccess(Kit kit, ulong player, CancellationToken token = default)
     {
-        if (!kit.PrimaryKey.IsValid)
+        if (kit.PrimaryKey == 0)
             return false;
         UCPlayer? online = UCPlayer.FromID(player);
         if (online is { IsOnline: true })
@@ -1758,19 +1726,25 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     /// <remarks>Thread Safe</remarks>
     public static bool HasAccessQuick(Kit kit, UCPlayer player) => HasAccessQuick(kit.PrimaryKey, player);
     /// <remarks>Thread Safe</remarks>
-    public static bool HasAccessQuick(PrimaryKey kit, UCPlayer player)
+    public static bool HasAccessQuick(uint kit, UCPlayer player)
     {
-        if (player.AccessibleKits == null || !kit.IsValid)
+        if (player.AccessibleKits == null || kit == 0)
             return false;
-        int k = kit.Key;
+        uint k = kit;
         for (int i = 0; i < player.AccessibleKits.Count; ++i)
         {
-            if (player.AccessibleKits[i].PrimaryKey.Key == k)
+            if (player.AccessibleKits[i] == k)
                 return true;
         }
 
         return false;
     }
+    /// <remarks>Thread Safe</remarks>
+    public static ValueTask<bool> HasAccessQuick(SqlItem<Kit> kit, ulong player, CancellationToken token = default)
+        => HasAccessQuick(kit.PrimaryKey, player, token);
+    /// <remarks>Thread Safe</remarks>
+    public static ValueTask<bool> HasAccessQuick(Kit kit, ulong player, CancellationToken token = default)
+        => HasAccessQuick(kit.PrimaryKey, player, token);
     /// <remarks>Thread Safe</remarks>
     public static Task<bool> HasAccess(SqlItem<Kit> kit, UCPlayer player, CancellationToken token = default)
         => HasAccess(kit.PrimaryKey, player.Steam64, token);
@@ -1784,18 +1758,12 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     public static Task<bool> HasAccess(Kit kit, ulong player, CancellationToken token = default)
         => HasAccess(kit.PrimaryKey, player, token);
     /// <remarks>Thread Safe</remarks>
-    public static Task<bool> HasAccess(PrimaryKey kit, UCPlayer player, CancellationToken token = default)
+    public static Task<bool> HasAccess(uint kit, UCPlayer player, CancellationToken token = default)
         => HasAccess(kit, player.Steam64, token);
     /// <remarks>Thread Safe</remarks>
-    public static ValueTask<bool> HasAccessQuick(SqlItem<Kit> kit, ulong player, CancellationToken token = default)
-        => HasAccessQuick(kit.PrimaryKey, player, token);
-    /// <remarks>Thread Safe</remarks>
-    public static ValueTask<bool> HasAccessQuick(Kit kit, ulong player, CancellationToken token = default)
-        => HasAccessQuick(kit.PrimaryKey, player, token);
-    /// <remarks>Thread Safe</remarks>
-    public static ValueTask<bool> HasAccessQuick(PrimaryKey kit, ulong player, CancellationToken token = default)
+    public static ValueTask<bool> HasAccessQuick(uint kit, ulong player, CancellationToken token = default)
     {
-        if (!kit.IsValid)
+        if (kit == 0)
             return new ValueTask<bool>(false);
         UCPlayer? pl = UCPlayer.FromID(player);
         if (pl != null && pl.IsOnline)
@@ -1803,25 +1771,60 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         return new ValueTask<bool>(HasAccess(kit, player, token));
     }
     /// <summary>Will not update signs.</summary>
-    public static void SetTextNoLock(ulong setter, Kit kit, string? text, string language = L.Default)
+    public void SetTextNoLock(ulong setter, Kit kit, string? text, LanguageInfo? language = null)
     {
         if (kit is null) throw new ArgumentNullException(nameof(kit));
-        kit.SignText.Remove(language);
-        if (!string.IsNullOrEmpty(text))
-            kit.SignText.Add(language, text!);
-        kit.UpdateLastEdited(setter);
-    }
-    /// <remarks>Thread Safe</remarks>
-    public static async Task SetText(ulong setter, SqlItem<Kit> kit, string? text, string language = L.Default, bool updateSigns = true, CancellationToken token = default)
-    {
-        if (kit is null) throw new ArgumentNullException(nameof(kit));
-        language ??= L.Default;
-        await kit.Enter(token).ConfigureAwait(false);
+
+        language ??= Localization.GetDefaultLanguage();
+
+        WarfareDatabases.Kits.Wait(UCWarfare.UnloadCancel);
         try
         {
-            if (kit.Item == null) return;
-            SetTextNoLock(setter, kit.Item, text, language);
-            await kit.SaveItem(token).ConfigureAwait(false);
+            int index = kit.Translations.FindIndex(x => x.LanguageId == language.Key);
+            if (index != -1)
+            {
+                KitTranslation translation = kit.Translations[index];
+                if (string.IsNullOrEmpty(text))
+                {
+                    WarfareDatabases.Kits.Remove(translation);
+                    kit.Translations.RemoveAt(index);
+                }
+                else
+                {
+                    WarfareDatabases.Kits.Update(translation);
+                    translation.Value = text;
+                }
+            }
+            else if (!string.IsNullOrEmpty(text))
+            {
+                KitTranslation translation = new KitTranslation
+                {
+                    Kit = kit,
+                    KitId = kit.PrimaryKey,
+                    Value = text,
+                    Language = language,
+                    LanguageId = language.Key
+                };
+                WarfareDatabases.Kits.Add(translation);
+                kit.Translations.Add(translation);
+            }
+            kit.UpdateLastEdited(setter);
+            WarfareDatabases.Kits.Update(kit);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task SetText(ulong setter, Kit kit, string? text, LanguageInfo? language = null, bool updateSigns = true, CancellationToken token = default)
+    {
+        if (kit is null) throw new ArgumentNullException(nameof(kit));
+        await WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            SetTextNoLock(setter, kit, text, language);
+            await Update(kit, token: token).ConfigureAwait(false);
             if (updateSigns)
             {
                 await UCWarfare.ToUpdate(token);
@@ -1830,7 +1833,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
         finally
         {
-            kit.Release();
+            Release();
         }
     }
     public static async Task<string> GetFreeLoadoutName(ulong playerId) => KitEx.GetLoadoutName(playerId, await GetFreeLoadoutId(playerId));
@@ -1871,25 +1874,22 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         return lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
     }
 
-    public async Task<(SqlItem<Kit>?, StandardErrorCode)> UpgradeLoadout(ulong fromPlayer, ulong player, Class @class, string loadoutName, CancellationToken token = default)
+    public async Task<(Kit?, StandardErrorCode)> UpgradeLoadout(ulong fromPlayer, ulong player, Class @class, string loadoutName, CancellationToken token = default)
     {
         Kit dequipKit;
-        SqlItem<Kit>? existing = await FindKit(loadoutName, token, true).ConfigureAwait(false);
-        if (existing is null)
-            return (existing, StandardErrorCode.NotFound);
+        Kit? kit = await FindKit(loadoutName, token, true).ConfigureAwait(false);
+        if (kit is null)
+            return (kit, StandardErrorCode.NotFound);
 
-        await existing.Enter(token).ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (existing.Item is not { } kit)
-                return (existing, StandardErrorCode.NotFound);
-
             if (kit.Season >= UCWarfare.Season)
-                return (existing, StandardErrorCode.InvalidData);
+                return (kit, StandardErrorCode.InvalidData);
 
             Class oldClass = kit.Class;
             kit.FactionFilterIsWhitelist = false;
-            kit.FactionFilter = Array.Empty<PrimaryKey>();
+            kit.FactionFilter.Clear();
             kit.Class = @class;
             kit.Faction = null;
             kit.UpdateLastEdited(fromPlayer);
@@ -1898,10 +1898,8 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             kit.WeaponText = string.Empty;
             kit.Disabled = true;
             kit.Season = UCWarfare.Season;
-            kit.ClothingSetCache = null;
-            kit.ItemListCache = null;
             kit.MapFilterIsWhitelist = false;
-            kit.MapFilter = Array.Empty<PrimaryKey>();
+            kit.MapFilter.Clear();
             kit.Branch = GetDefaultBranch(@class);
             kit.TeamLimit = GetDefaultTeamLimit(@class);
             kit.RequestCooldown = GetDefaultRequestCooldown(@class);
@@ -1911,16 +1909,16 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             kit.UnlockRequirements = Array.Empty<UnlockRequirement>();
             kit.PremiumCost = 0m;
 
-            await existing.SaveItem(token).ConfigureAwait(false);
-            ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutName} (#{kit.PrimaryKey.Key}). Class: {oldClass} -> {@class}. Old Faction: {kit.FactionKey}", fromPlayer);
+            await UpdateNoLock(kit, token: token).ConfigureAwait(false);
+            ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutName} (#{kit.PrimaryKey}). Class: {oldClass} -> {@class}. Old Faction: {kit.Faction?.Key ?? 0}", fromPlayer);
             dequipKit = kit;
         }
         finally
         {
-            existing.Release();
+            Release();
         }
 
-        if (!(await HasAccess(dequipKit, player, token)))
+        if (!await HasAccess(dequipKit, player, token))
         {
             await GiveAccess(dequipKit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
             KitSync.OnAccessChanged(player);
@@ -1933,76 +1931,76 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
         await DequipKit(dequipKit, token).ConfigureAwait(false);
 
-        return (existing, StandardErrorCode.Success);
+        return (kit, StandardErrorCode.Success);
     }
-    public async Task<(SqlItem<Kit>?, StandardErrorCode)> UnlockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
+    public async Task<(Kit?, StandardErrorCode)> UnlockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
     {
         Kit dequipKit;
-        SqlItem<Kit>? existing = await FindKit(loadoutName, token, true).ConfigureAwait(false);
+        Kit? existing = await FindKit(loadoutName, token, true).ConfigureAwait(false);
         if (existing is null)
             return (existing, StandardErrorCode.NotFound);
         ulong player = 0;
-        await existing.Enter(token).ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (existing.Item is not { } kit)
+            if (existing is not { } kit)
                 return (existing, StandardErrorCode.NotFound);
             
             ActionLog.Add(ActionLogType.UnlockLoadout, loadoutName, fromPlayer);
             
             kit.UpdateLastEdited(fromPlayer);
             kit.Disabled = false;
-            kit.ClothingSetCache = null;
-            kit.ItemListCache = null;
+            kit.MarkRemoteItemsDirty();
+            kit.MarkRemoteUnlockRequirementsDirty();
             if (string.IsNullOrEmpty(kit.WeaponText))
                 kit.WeaponText = DetectWeaponText(kit);
             dequipKit = kit;
 
-            if (kit.Id.Length >= 17)
-                ulong.TryParse(kit.Id.Substring(0, 17), NumberStyles.Number, Data.AdminLocale, out player);
+            if (kit.InternalName.Length >= 17)
+                ulong.TryParse(kit.InternalName.Substring(0, 17), NumberStyles.Number, Data.AdminLocale, out player);
 
-            await existing.SaveItem(token).ConfigureAwait(false);
+            await UpdateNoLock(kit, token: token).ConfigureAwait(false);
         }
         finally
         {
-            existing.Release();
+            Release();
         }
 
         await UCWarfare.ToUpdate(token);
         if (UCPlayer.FromID(player) is { } pl)
         {
             Signs.UpdateLoadoutSigns(pl);
-            pl.SendChat(T.DMLoadoutUnlocked, existing?.Item!);
+            pl.SendChat(T.DMLoadoutUnlocked, existing);
         }
 
         await DequipKit(dequipKit, token).ConfigureAwait(false);
 
         return (existing, StandardErrorCode.Success);
     }
-    public async Task<(SqlItem<Kit>?, StandardErrorCode)> LockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
+    public async Task<(Kit?, StandardErrorCode)> LockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
     {
         Kit dequipKit;
-        SqlItem<Kit>? existing;
+        Kit? kit;
         ulong player = 0;
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            existing = FindKitNoLock(loadoutName, true);
-            if (existing?.Item is not { } kit)
-                return (existing, StandardErrorCode.NotFound);
+            kit = FindKitNoLock(loadoutName, true);
+            if (kit == null)
+                return (kit, StandardErrorCode.NotFound);
             
             ActionLog.Add(ActionLogType.UnlockLoadout, loadoutName, fromPlayer);
             
             kit.UpdateLastEdited(fromPlayer);
             kit.Disabled = true;
-            kit.ClothingSetCache = null;
-            kit.ItemListCache = null;
+            kit.MarkRemoteItemsDirty();
+            kit.MarkRemoteUnlockRequirementsDirty();
             if (string.IsNullOrEmpty(kit.WeaponText))
                 kit.WeaponText = DetectWeaponText(kit);
             dequipKit = kit;
 
-            if (kit.Id.Length >= 17)
-                ulong.TryParse(kit.Id.Substring(0, 17), NumberStyles.Number, Data.AdminLocale, out player);
+            if (kit.InternalName.Length >= 17)
+                ulong.TryParse(kit.InternalName.Substring(0, 17), NumberStyles.Number, Data.AdminLocale, out player);
         }
         finally
         {
@@ -2017,28 +2015,28 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
         await DequipKit(dequipKit, token).ConfigureAwait(false);
 
-        return (existing, StandardErrorCode.Success);
+        return (kit, StandardErrorCode.Success);
     }
-    public async Task<(SqlItem<Kit>, StandardErrorCode)> CreateLoadout(ulong fromPlayer, ulong player, Class @class, string displayName, CancellationToken token = default)
+    public async Task<(Kit, StandardErrorCode)> CreateLoadout(ulong fromPlayer, ulong player, Class @class, string displayName, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         string loadoutName = await GetFreeLoadoutName(player).ConfigureAwait(false);
-        SqlItem<Kit>? existing = await FindKit(loadoutName, token, true).ConfigureAwait(false);
-        if (existing?.Item != null)
-            return (existing, StandardErrorCode.GenericError);
+        Kit? kit = await FindKit(loadoutName, token, true).ConfigureAwait(false);
+        if (kit != null)
+            return (kit, StandardErrorCode.GenericError);
 
         IKitItem[] items = KitEx.GetDefaultLoadoutItems(@class);
-        Kit loadout = new Kit(loadoutName, @class, GetDefaultBranch(@class), KitType.Loadout, SquadLevel.Member, null)
+        kit = new Kit(loadoutName, @class, GetDefaultBranch(@class), KitType.Loadout, SquadLevel.Member, null)
         {
             Items = items,
             Creator = fromPlayer,
             WeaponText = string.Empty,
             Disabled = true
         };
-        SetTextNoLock(fromPlayer, loadout, displayName);
-        SqlItem<Kit> kit = await AddOrUpdate(loadout, token).ConfigureAwait(false);
+        SetTextNoLock(fromPlayer, kit, displayName);
+        await Add(kit, token: token).ConfigureAwait(false);
         ActionLog.Add(ActionLogType.CreateKit, loadoutName, fromPlayer);
         
         await GiveAccess(kit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
@@ -2058,10 +2056,10 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     public static string DetectWeaponText(Kit kit)
     {
         IKitItem[] items = kit.Items;
-        List<KeyValuePair<IItemJar, ItemGunAsset>> guns = new List<KeyValuePair<IItemJar, ItemGunAsset>>(2);
+        List<KeyValuePair<IPageKitItem, ItemGunAsset>> guns = new List<KeyValuePair<IPageKitItem, ItemGunAsset>>(2);
         for (int i = 0; i < items.Length; ++i)
         {
-            if (items[i] is IItem item and IItemJar jar && Assets.find(item.Item) is ItemGunAsset asset)
+            if (items[i] is ISpecificKitItem item and IPageKitItem jar && item.Item.TryGetAsset(out ItemGunAsset asset))
             {
                 for (int b = 0; b < BlacklistedWeaponsTextItems.Length; ++b)
                 {
@@ -2069,7 +2067,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                         goto skip;
                 }
 
-                guns.Add(new KeyValuePair<IItemJar, ItemGunAsset>(jar, asset));
+                guns.Add(new KeyValuePair<IPageKitItem, ItemGunAsset>(jar, asset));
                 skip: ;
             }
         }
@@ -2080,20 +2078,28 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         guns.Sort((a, b) => a.Key.Page.CompareTo(b.Key.Page));
         return string.Join(", ", guns.Select(x => x.Value.itemName.ToUpperInvariant()));
     }
-    internal void InvokeAfterMajorKitUpdate(SqlItem<Kit> proxy)
+    internal void InvokeAfterMajorKitUpdate(Kit kit)
     {
-        if (proxy is null)
+        ThreadUtil.assertIsGameThread();
+
+        if (kit is null)
             return;
+
+        BitArray mask = new BitArray(PlayerManager.OnlinePlayers.Count);
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
-            if (PlayerManager.OnlinePlayers[i].ActiveKit == proxy)
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            uint? activeKit = player.ActiveKit;
+            if (activeKit.HasValue && activeKit.Value == kit.PrimaryKey)
             {
-                PlayerManager.OnlinePlayers[i].ChangeKit(proxy);
+                player.ChangeKit(kit);
+                mask[i] = true;
             }
         }
 
         if (OnKitChanged == null)
             return;
+
         // waits a frame in case something tries to lock the kit and to ensure we are on main thread.
         UCWarfare.RunOnMainThread(() =>
         {
@@ -2101,40 +2107,36 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
-                if (PlayerManager.OnlinePlayers[i].ActiveKit == proxy)
-                {
-                    OnKitChanged.Invoke(PlayerManager.OnlinePlayers[i], proxy, proxy);
-                }
+                if (mask[i])
+                    OnKitChanged.Invoke(PlayerManager.OnlinePlayers[i], kit, kit);
             }
         }, true);
     }
     public async Task RequestLoadout(int loadoutId, CommandInteraction ctx, CancellationToken token = default)
     {
-        ulong team = ctx.Caller.GetTeam();
-        SqlItem<Kit>? loadout = await GetLoadout(ctx.Caller, loadoutId, token).ConfigureAwait(false);
-        if (loadout?.Item == null)
-            throw ctx.Reply(T.RequestLoadoutNotOwned);
-        await loadout.Enter(token).ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (loadout.Item is not { } kit)
+            ulong team = ctx.Caller.GetTeam();
+            Kit? loadout = await GetLoadout(ctx.Caller, loadoutId, token).ConfigureAwait(false);
+            if (loadout == null)
                 throw ctx.Reply(T.RequestLoadoutNotOwned);
-            if (kit.NeedsUpgrade)
+            if (loadout.NeedsUpgrade)
                 throw ctx.Reply(T.RequestKitNeedsUpgrade);
-            if (kit.NeedsSetup)
+            if (loadout.NeedsSetup)
                 throw ctx.Reply(T.RequestKitNeedsSetup);
-            if (kit.Disabled || kit.Season != UCWarfare.Season && kit.Season > 0)
+            if (loadout.Disabled || loadout.Season != UCWarfare.Season && loadout.Season > 0)
                 throw ctx.Reply(T.RequestKitDisabled);
-            if (!kit.IsCurrentMapAllowed())
+            if (!loadout.IsCurrentMapAllowed())
                 throw ctx.Reply(T.RequestKitMapBlacklisted);
-            if (!kit.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
+            if (!loadout.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
                 throw ctx.Reply(T.RequestKitFactionBlacklisted);
-            if (kit.IsClassLimited(out _, out int allowedPlayers, team))
+            if (loadout.IsClassLimited(out _, out int allowedPlayers, team))
             {
                 ctx.Reply(T.RequestKitLimited, allowedPlayers);
                 return;
             }
-            ctx.LogAction(ActionLogType.RequestKit, $"Loadout #{loadoutId}: {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class)}");
+            ctx.LogAction(ActionLogType.RequestKit, $"Loadout #{loadoutId}: {loadout.InternalName}, Team {team}, Class: {Localization.TranslateEnum(loadout.Class)}");
 
             if (!await GrantKitRequest(ctx, loadout, token).ConfigureAwait(false))
             {
@@ -2142,15 +2144,15 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 throw ctx.SendUnknownError();
             }
 
-            if (kit.Class == Class.Squadleader)
-                TryCreateKitOnRequestSquadleaderKit(ctx);
+            if (loadout.Class == Class.Squadleader)
+                TryCreateSquadOnRequestSquadleaderKit(ctx);
         }
         finally
         {
-            loadout.Release();
+            Release();
         }
     }
-    public async Task RequestKit(SqlItem<Kit> proxy, CommandInteraction ctx, CancellationToken token = default)
+    public async Task RequestKit(Kit kit, CommandInteraction ctx, CancellationToken token = default)
     {
         await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
@@ -2162,46 +2164,47 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         {
             ctx.Caller.PurchaseSync.Release();
         }
-        await proxy.Enter(token).ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
 
             await UCWarfare.ToUpdate(token);
             ulong team = ctx.Caller.GetTeam();
-            Kit? kit;
-            await WriteWaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                kit = proxy.Item;
-            }
-            finally
-            {
-                WriteRelease();
-            }
-            if (kit == null)
-                throw ctx.Reply(T.KitNotFound, proxy.LastPrimaryKey.ToString());
-            if (ctx.Caller.HasKit && ctx.Caller.ActiveKit!.PrimaryKey.Key == kit.PrimaryKey.Key)
+            
+            // already requested
+            uint? activeKit = ctx.Caller.ActiveKit;
+            if (activeKit.HasValue && activeKit.Value == kit.PrimaryKey)
                 throw ctx.Reply(T.RequestKitAlreadyOwned);
+
+            // outdated kit
             if (kit.Disabled || kit.Season != UCWarfare.Season && kit.Season > 0)
                 throw ctx.Reply(T.RequestKitDisabled);
+
+            // map filter
             if (!kit.IsCurrentMapAllowed())
                 throw ctx.Reply(T.RequestKitMapBlacklisted);
+
+            // faction filter
             if (!kit.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
                 throw ctx.Reply(T.RequestKitFactionBlacklisted);
-            if (kit.IsPublicKit)
+            
+            // check credits bought
+            if (kit.IsPublicKit && kit.CreditCost > 0 && !HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
             {
-                if (kit.CreditCost > 0 && !HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
-                {
-                    if (ctx.Caller.CachedCredits >= kit.CreditCost)
-                        throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
-                    else
-                        throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
-                }
+                if (ctx.Caller.CachedCredits >= kit.CreditCost)
+                    throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
+                else
+                    throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
             }
+            // elite access
             else if (!kit.RequiresNitro && !HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
                 throw ctx.Reply(T.RequestKitMissingAccess);
+
+            // team limits
             if (kit.IsLimited(out _, out int allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
                 throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
+
+            // squad leader limit
             if (kit.Class == Class.Squadleader && ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
                 throw ctx.Reply(T.RequestKitNotSquadleader);
 
@@ -2214,10 +2217,12 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 kit.Class is not Class.Crewman and not Class.Pilot)
                 throw ctx.Reply(T.KitOnGlobalCooldown, requestCooldown);
             if (kit.IsPaid && kit.RequestCooldown > 0f &&
-                CooldownManager.HasCooldown(ctx.Caller, CooldownType.PremiumKit, out Cooldown premiumCooldown, kit.Id) &&
+                CooldownManager.HasCooldown(ctx.Caller, CooldownType.PremiumKit, out Cooldown premiumCooldown, kit.InternalName) &&
                 !ctx.Caller.OnDutyOrAdmin() &&
                 !UCWarfare.Config.OverrideKitRequirements)
                 throw ctx.Reply(T.KitOnCooldown, premiumCooldown);
+
+            // unlock requirements
             if (kit.UnlockRequirements != null)
             {
                 for (int i = 0; i < kit.UnlockRequirements.Length; i++)
@@ -2228,13 +2233,16 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     throw req.RequestKitFailureToMeet(ctx, kit);
                 }
             }
+
             bool hasAccess = kit.CreditCost == 0 && kit.IsPublicKit || UCWarfare.Config.OverrideKitRequirements;
             if (!hasAccess)
             {
+                // double check access against database
                 hasAccess = await HasAccess(kit, ctx.Caller.Steam64, token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
                 if (!hasAccess)
                 {
+                    // check nitro boost status
                     if (kit.RequiresNitro)
                     {
                         try
@@ -2261,9 +2269,9 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             if (kit.IsLimited(out _, out allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
                 throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
 
-            ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class)}");
+            ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.InternalName}, Team {team}, Class: {Localization.TranslateEnum(kit.Class)}");
 
-            if (!await GrantKitRequest(ctx, proxy, token).ConfigureAwait(false))
+            if (!await GrantKitRequest(ctx, kit, token).ConfigureAwait(false))
             {
                 await UCWarfare.ToUpdate(token);
                 throw ctx.SendUnknownError();
@@ -2277,15 +2285,15 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 if (SquadManager.AreSquadLimited(team, out int requiredTeammatesForMoreSquads))
                     throw ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
 
-                TryCreateKitOnRequestSquadleaderKit(ctx);
+                TryCreateSquadOnRequestSquadleaderKit(ctx);
             }
         }
         finally
         {
-            proxy.Release();
+            Release();
         }
     }
-    private static void TryCreateKitOnRequestSquadleaderKit(CommandInteraction ctx)
+    private static void TryCreateSquadOnRequestSquadleaderKit(CommandInteraction ctx)
     {
         if (ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
             throw ctx.Reply(T.RequestKitNotSquadleader);
@@ -2302,25 +2310,21 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
     }
     /// <exception cref="BaseCommandInteraction"/>
-    public async Task BuyKit(CommandInteraction ctx, SqlItem<Kit> proxy, Vector3? effectPos = null, CancellationToken token = default)
+    public async Task BuyKit(CommandInteraction ctx, Kit kit, Vector3? effectPos = null, CancellationToken token = default)
     {
         if (!ctx.Caller.HasDownloadedKitData)
             await DownloadPlayerKitData(ctx.Caller, false, token).ConfigureAwait(false);
 
         ulong team = ctx.Caller.GetTeam();
-        await proxy.Enter(token).ConfigureAwait(false);
-        Kit? kit;
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            kit = proxy.Item;
-            if (kit == null)
-                throw ctx.Reply(T.KitNotFound, proxy.LastPrimaryKey.ToString());
             if (!kit.IsPublicKit)
             {
                 if (UCWarfare.Config.WebsiteUri != null && kit.EliteKitInfo != null)
                 {
                     ctx.Caller.Player.sendBrowserRequest("Purchase " + kit.GetDisplayName(ctx.LanguageInfo) + " on our website.",
-                        new Uri(UCWarfare.Config.WebsiteUri, "checkout/addtocart?productkeys=" + Uri.EscapeDataString(kit.Id)).OriginalString);
+                        new Uri(UCWarfare.Config.WebsiteUri, "checkout/addtocart?productkeys=" + Uri.EscapeDataString(kit.InternalName)).OriginalString);
 
                     throw ctx.Defer();
                 }
@@ -2354,58 +2358,43 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 ctx.Caller.PurchaseSync.Release();
             }
 
-            bool access = await AddAccessRow(kit.PrimaryKey, ctx.CallerID, KitAccessType.Credits, token).ConfigureAwait(false);
+            await AddAccessRow(kit.PrimaryKey, ctx.CallerID, KitAccessType.Credits, token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
-            if (access)
-            {
-                (ctx.Caller.AccessibleKits ??= new List<SqlItem<Kit>>(4)).Add(proxy);
-                if (OnKitAccessChanged != null)
-                    UCWarfare.RunOnMainThread(() => OnKitAccessChanged?.Invoke(proxy, ctx.CallerID, true, KitAccessType.Credits), default);
-            }
-            else throw ctx.SendUnknownError();
             
-            ctx.LogAction(ActionLogType.BuyKit, "BOUGHT KIT " + kit.Id + " FOR " + kit.CreditCost + " CREDITS");
-            L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Id);
+            (ctx.Caller.AccessibleKits ??= new List<uint>(4)).Add(kit.PrimaryKey);
+            if (OnKitAccessChanged != null)
+                UCWarfare.RunOnMainThread(() => OnKitAccessChanged?.Invoke(kit, ctx.CallerID, true, KitAccessType.Credits), default);
+            
+            ctx.LogAction(ActionLogType.BuyKit, "BOUGHT KIT " + kit.InternalName + " FOR " + kit.CreditCost + " CREDITS");
+            L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.InternalName);
         }
         finally
         {
-            proxy.Release();
+            Release();
         }
 
         UpdateSigns(kit, ctx.Caller);
         if (Gamemode.Config.EffectPurchase.ValidReference(out EffectAsset effect))
         {
-            F.TriggerEffectReliable(effect, EffectManager.SMALL, effectPos ?? ctx.Caller.Position);
+            F.TriggerEffectReliable(effect, EffectManager.SMALL, effectPos ?? (ctx.Caller.Player.look.aim.position + ctx.Caller.Player.look.aim.forward * 0.25f));
         }
 
         ctx.Reply(T.RequestKitBought, kit.CreditCost);
     }
-    private async Task<bool> GrantKitRequest(CommandInteraction ctx, SqlItem<Kit> proxy, CancellationToken token = default)
+    private async Task<bool> GrantKitRequest(CommandInteraction ctx, Kit kit, CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
         ulong team = ctx.Caller.GetTeam();
         AmmoCommand.WipeDroppedItems(ctx.CallerID);
-        await GiveKitNoLock(ctx.Caller, proxy, true, token).ConfigureAwait(false);
-        Kit? kit;
-        await WriteWaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            kit = proxy?.Item;
-        }
-        finally
-        {
-            WriteRelease();
-        }
-        if (kit == null)
-            return true;
-        string id = kit.Id;
+        await GiveKitNoLock(ctx.Caller, kit, true, token).ConfigureAwait(false);
+        string id = kit.InternalName;
         Stats.StatsManager.ModifyKit(id, k => k.TimesRequested++);
         Stats.StatsManager.ModifyStats(ctx.CallerID, s =>
         {
             Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == id && k.Team == team);
             if (kitData == default)
             {
-                kitData = new Stats.WarfareStats.KitData() { KitID = id, Team = (byte)team, TimesRequested = 1 };
+                kitData = new Stats.WarfareStats.KitData { KitID = id, Team = (byte)team, TimesRequested = 1 };
                 s.Kits.Add(kitData);
             }
             else
@@ -2415,7 +2404,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         ctx.Reply(T.RequestSignGiven, kit.Class);
 
         if (kit.IsPaid && kit.RequestCooldown > 0)
-            CooldownManager.StartCooldown(ctx.Caller, CooldownType.PremiumKit, kit.RequestCooldown, kit.Id);
+            CooldownManager.StartCooldown(ctx.Caller, CooldownType.PremiumKit, kit.RequestCooldown, kit.InternalName);
         CooldownManager.StartCooldown(ctx.Caller, CooldownType.RequestKit, CooldownManager.Config.RequestKitCooldown);
 
         return true;
@@ -2423,11 +2412,16 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     private async Task SetupPlayer(UCPlayer player, CancellationToken token = default)
     {
         ulong team = player.GetTeam();
-        Kit? kit = player.ActiveKit?.Item;
+        Kit? kit = player.GetActiveKit();
         if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(out _, out _, team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out _, team)))
             await TryGiveRiflemanKit(player, false, token).ConfigureAwait(false);
         else if (UCWarfare.Config.ModifySkillLevels)
-            player.EnsureSkillsets(kit.Skillsets ?? Array.Empty<Skillset>());
+        {
+            if (kit.Skillsets is { Count: > 0 })
+                player.EnsureSkillsets(kit.Skillsets.Select(x => x.Skillset));
+            else
+                player.EnsureDefaultSkillsets();
+        }
     }
     async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player, CancellationToken token)
     {
@@ -2438,7 +2432,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             return;
         }
         //UCInventoryManager.ClearInventory(player);
-        player.EnsureSkillsets(Array.Empty<Skillset>());
+        player.EnsureDefaultSkillsets();
         _ = RefreshFavorites(player, false, token);
         _ = IsNitroBoosting(player.Steam64, token);
     }
@@ -2453,13 +2447,19 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             await player.PurchaseSync.WaitAsync(token);
         try
         {
-            player.KitMenuData.FavoriteKits = new List<PrimaryKey>(
-                player.KitMenuData.FavoriteKits == null ? 5 : player.KitMenuData.FavoriteKits.Count);
-            await Sql.QueryAsync(F.BuildSelectWhere(TABLE_FAVORITES, COLUMN_FAVORITE_PLAYER, 0, COLUMN_EXT_PK),
-                new object[] { player.Steam64 }, reader =>
-                {
-                    player.KitMenuData.FavoriteKits.Add(reader.GetInt32(0));
-                }, token).ConfigureAwait(false);
+            ulong s64 = player.Steam64;
+
+            await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                player.KitMenuData.FavoriteKits = await WarfareDatabases.Kits.KitFavorites.Where(x => x.Steam64 == s64)
+                    .Select(x => x.KitId).ToListAsync(token);
+            }
+            finally
+            {
+                WarfareDatabases.Kits.Release();
+            }
+
             player.KitMenuData.FavoritesDirty = false;
         }
         finally
@@ -2479,26 +2479,31 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     {
         if (Data.Gamemode != null && Data.Gamemode.EveryMinute && Provider.clients.Count > 0)
         {
-            UCWarfare.RunTask(SaveAllPlayerFavorites, ctx: "Save all players' favorite kits.");
+            UCWarfare.RunTask(async (km, token) =>
+            {
+                await km.WriteWaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    await km.SaveAllPlayerFavorites(token);
+                }
+                finally
+                {
+                    km.WriteRelease();
+                }
+            }, this, ctx: "Save all players' favorite kits.");
         }
     }
+
+    // needs to be write locked
     private async Task SaveAllPlayerFavorites(CancellationToken token)
     {
-        await WriteWaitAsync(token).ConfigureAwait(false);
-        try
+        foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToArray())
         {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToArray())
+            if (player.KitMenuData is { FavoritesDirty: true, FavoriteKits: { } fk })
             {
-                if (player.KitMenuData is { FavoritesDirty: true, FavoriteKits: { } fk })
-                {
-                    await SaveFavorites(player, fk, token).ConfigureAwait(false);
-                    token.ThrowIfCancellationRequested();
-                }
+                await SaveFavorites(player, fk, token).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
             }
-        }
-        finally
-        {
-            WriteRelease();
         }
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
@@ -2589,20 +2594,30 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             if (UCPlayer.FromID(player) is { } pl)
             {
                 pl.SendChat(state == 1 ? T.StartedNitroBoosting : T.StoppedNitroBoosting);
+                Kit? activeKit;
+
                 WriteWait();
+                List<string> toUpdate = new List<string>(16);
+
                 try
                 {
                     for (int i = 0; i < Items.Count; ++i)
                     {
-                        if (Items[i] is { Item: { RequiresNitro: true, Id: { } id } })
-                            Signs.UpdateKitSigns(pl, id);
+                        if (Items[i] is { RequiresNitro: true, InternalName: { } id })
+                            toUpdate.Add(id);
                     }
+
+                    activeKit = pl.GetActiveKitNoWriteLock();
                 }
                 finally
                 {
                     WriteRelease();
                 }
-                if (state == 0 && pl.ActiveKit is { Item.RequiresNitro: true })
+
+                for (int i = 0; i < toUpdate.Count; ++i)
+                    Signs.UpdateKitSigns(pl, toUpdate[i]);
+
+                if (state == 0 && activeKit is { RequiresNitro: true })
                 {
                     UCWarfare.RunTask(TryGiveRiflemanKit, pl, true, Data.Gamemode.UnloadToken,
                         ctx: "Giving rifleman kit to " + player + " after losing nitro boost.");
@@ -2646,27 +2661,29 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
     }
 
-    public Task<IItemJar?> GetHeldItemFromKit(UCPlayer player, CancellationToken token = default)
+    public Task<IPageKitItem?> GetHeldItemFromKit(UCPlayer player, CancellationToken token = default)
     {
         ItemJar? held = player.GetHeldItem(out byte page);
         return held == null
-            ? Task.FromResult<IItemJar?>(null)
+            ? Task.FromResult<IPageKitItem?>(null)
             : GetItemFromKit(player, held, (Page)page, token);
     }
 
-    /// <summary>Gets the exact <see cref="IKitItem"/> and <see cref="IItemJar"/> that the player is holding from their kit (accounts for the item being moved).</summary>
-    public Task<IItemJar?> GetItemFromKit(UCPlayer player, ItemJar jar, Page page, CancellationToken token = default) =>
+    /// <summary>Gets the exact <see cref="IKitItem"/> and <see cref="IPageKitItem"/> that the player is holding from their kit (accounts for the item being moved).</summary>
+    public Task<IPageKitItem?> GetItemFromKit(UCPlayer player, ItemJar jar, Page page, CancellationToken token = default) =>
         GetItemFromKit(player, jar.x, jar.y, jar.item, page, token);
-    public async Task<IItemJar?> GetItemFromKit(UCPlayer player, byte x, byte y, Item item, Page page, CancellationToken token = default)
+    public async Task<IPageKitItem?> GetItemFromKit(UCPlayer player, byte x, byte y, Item item, Page page, CancellationToken token = default)
     {
-        SqlItem<Kit>? proxy = player.ActiveKit!;
-        if (proxy?.Item is null)
+        Kit? kit = player.GetActiveKit();
+
+        if (kit is null)
             return null;
-        await proxy.Enter(token);
+
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
             await UCWarfare.ToUpdate(token);
-            WriteWait();
+            WriteWait(token);
             try
             {
                 L.LogDebug("Looking for kit item: " + (item.GetAsset()?.itemName ?? "null") + $" at {page}, ({x}, {y}).");
@@ -2688,18 +2705,19 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 ItemAsset asset = item.GetAsset();
                 if (asset == null)
                     return null;
-                foreach (IKitItem item2 in proxy.Item.Items)
+                FactionInfo? faction = TeamManager.GetFactionSafe(player.GetTeam());
+                foreach (IKitItem item2 in kit.Items)
                 {
-                    if (item2 is IItemJar jar2 && jar2.Page == page && jar2.X == x && jar2.Y == y)
+                    if (item2 is IPageKitItem jar2 && jar2.Page == page && jar2.X == x && jar2.Y == y)
                     {
-                        if (jar2 is IItem pgItem)
+                        if (jar2 is ISpecificKitItem { Item.Id: 0 } pgItem)
                         {
-                            if (pgItem.Item == asset.GUID)
+                            if (pgItem.Item.Equals(asset.GUID))
                                 return jar2;
                         }
                         else
                         {
-                            if (item2.GetItem(proxy.Item, TeamManager.GetFactionSafe(player.GetTeam()), out _, out _) is { } asset2 && asset2.GUID == asset.GUID)
+                            if (item2.GetItem(kit, faction, out _, out _) is { } asset2 && asset2.GUID == asset.GUID)
                                 return jar2;
                         }
 
@@ -2714,7 +2732,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
         finally
         {
-            proxy.Release();
+            Release();
         }
 
         L.LogDebug($"Kit item at: {page}, ({x}, {y}) not found.");
@@ -2738,28 +2756,29 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         // move hotkey to a different item of the same type
         UCWarfare.RunTask(async token =>
         {
-            IItemJar? jar2 = await GetItemFromKit(e.Player, e.OldX, e.OldY, e.Item, e.OldPage, token).ConfigureAwait(false);
+            IPageKitItem? jar2 = await GetItemFromKit(e.Player, e.OldX, e.OldY, e.Item, e.OldPage, token).ConfigureAwait(false);
             if (jar2 == null || !e.Player.IsOnline) return;
             await e.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
             {
                 if (!e.Player.IsOnline || e.Player.HotkeyBindings is not { Count: > 0 }) return;
                 await UCWarfare.ToUpdate(token);
+                Kit? activeKit = e.Player.GetActiveKit();
                 if (!e.Player.IsOnline || e.Player.HotkeyBindings is not { Count: > 0 }) return;
                 for (int i = 0; i < e.Player.HotkeyBindings.Count; ++i)
                 {
                     HotkeyBinding b = e.Player.HotkeyBindings[i];
 
-                    if (b.Item is IItem item && jar2 is IItem item2 && item.Item == item2.Item ||
-                        b.Item is IAssetRedirect redir && jar2 is IAssetRedirect redir2 && redir.RedirectType == redir2.RedirectType)
+                    if (b.Item is ISpecificKitItem item && jar2 is ISpecificKitItem item2 && item.Item == item2.Item ||
+                        b.Item is IAssetRedirectKitItem redir && jar2 is IAssetRedirectKitItem redir2 && redir.RedirectType == redir2.RedirectType)
                     {
                         // found a binding for that item
                         if (b.Item.X != jar2.X || b.Item.Y != jar2.Y || b.Item.Page != jar2.Page)
                             continue;
                         ItemAsset? asset = b.Item switch
                         {
-                            IItem item3 => Assets.find<ItemAsset>(item3.Item),
-                            IKitItem ki => ki.GetItem(e.Player.ActiveKit?.Item, TeamManager.GetFactionSafe(e.Player.GetTeam()), out _, out _),
+                            ISpecificKitItem item3 => item3.Item.GetAsset<ItemAsset>(),
+                            IKitItem ki => ki.GetItem(activeKit, TeamManager.GetFactionSafe(e.Player.GetTeam()), out _, out _),
                             _ => null
                         };
                         if (asset == null)
@@ -2770,7 +2789,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                         // find new item to bind the item to
                         for (int p = PlayerInventory.SLOTS; p < PlayerInventory.STORAGE; ++p)
                         {
-                            Items page = inv.items[p];
+                            SDG.Unturned.Items page = inv.items[p];
                             int c = page.getItemCount();
                             for (int index = 0; index < c; ++index)
                             {
@@ -2795,7 +2814,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             }
         }, tkn, ctx: "Set keybind to new item after it's dropped.");
     }
-    private static void OnItemPickedUp(ItemPickedUp e)
+    private void OnItemPickedUp(ItemPickedUp e)
     {
         UCPlayer pl = e.Player;
         if (e.Jar != null)
@@ -2830,65 +2849,58 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             }
             rebind:
             // resend hotkeys from picked up item
-            if (UCWarfare.IsLoaded && e.Player.HotkeyBindings != null && origX < byte.MaxValue)
-            {
-                CancellationToken tkn = UCWarfare.UnloadCancel;
-                if (Data.Gamemode != null)
-                    tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
-                tkn.CombineIfNeeded(e.Player.DisconnectToken);
-                UCWarfare.RunTask(async token =>
-                {
-                    token.ThrowIfCancellationRequested();
+            if (!UCWarfare.IsLoaded || e.Player.HotkeyBindings == null || origX >= byte.MaxValue)
+                return;
 
-                    await e.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            CancellationToken tkn = UCWarfare.UnloadCancel;
+            if (Data.Gamemode != null)
+                tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
+            tkn.CombineIfNeeded(e.Player.DisconnectToken);
+            UCWarfare.RunTask(async token =>
+            {
+                token.ThrowIfCancellationRequested();
+
+                await e.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    if (e.Player.HotkeyBindings == null)
+                        return;
+
+                    await WaitAsync(token).ConfigureAwait(false);
                     try
                     {
-                        if (e.Player.HotkeyBindings == null)
-                            return;
-
-                        SqlItem<Kit>? proxy = e.Player.ActiveKit;
-                        if (proxy?.Item is null)
-                            return;
-
-                        await proxy.Enter(token).ConfigureAwait(false);
-                        try
+                        Kit? activeKit = e.Player.GetActiveKit();
+                        if (activeKit == null) return;
+                        foreach (HotkeyBinding binding in e.Player.HotkeyBindings)
                         {
-                            Kit? kit = e.Player.ActiveKit?.Item;
-                            if (kit == null) return;
-                            foreach (HotkeyBinding binding in e.Player.HotkeyBindings)
-                            {
-                                if (binding.Kit.Key == kit.PrimaryKey.Key)
-                                {
-                                    if (binding.Item.X == origX && binding.Item.Y == origY && binding.Item.Page == origPage)
-                                    {
-                                        ItemAsset? asset = binding.GetAsset(kit, e.Player.GetTeam());
-                                        if (asset != null)
-                                        {
-                                            byte index = KitEx.GetHotkeyIndex(binding.Slot);
-                                            if (index == byte.MaxValue || !KitEx.CanBindHotkeyTo(asset, e.Page)) continue;
-                                            e.Player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)e.Page, e.X, e.Y);
-                                            // L.LogDebug($"Updating old hotkey (picked up): {asset.itemName} at {e.Page}, ({e.X}, {e.Y}).");
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        finally
-                        {
-                            proxy.Release();
+                            if (binding.Kit != activeKit.PrimaryKey || binding.Item.X != origX || binding.Item.Y != origY || binding.Item.Page != origPage)
+                                continue;
+                                
+                            ItemAsset? asset = binding.GetAsset(activeKit, e.Player.GetTeam());
+                            if (asset == null)
+                                continue;
+                                
+                            byte index = KitEx.GetHotkeyIndex(binding.Slot);
+                            if (index == byte.MaxValue || !KitEx.CanBindHotkeyTo(asset, e.Page)) continue;
+                            e.Player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)e.Page, e.X, e.Y);
+                            // L.LogDebug($"Updating old hotkey (picked up): {asset.itemName} at {e.Page}, ({e.X}, {e.Y}).");
+                            break;
                         }
                     }
                     finally
                     {
-                        e.Player.PurchaseSync.Release();
+                        Release();
                     }
+                }
+                finally
+                {
+                    e.Player.PurchaseSync.Release();
+                }
 
-                }, tkn, ctx: "Checking for new binding of picked up item.");
-            }
+            }, tkn, ctx: "Checking for new binding of picked up item.");
         }
     }
-    private static void OnItemMoved(ItemMoved e)
+    private void OnItemMoved(ItemMoved e)
     {
         if (e.NewX == e.OldX && e.NewY == e.OldY && e.NewPage == e.OldPage)
             return;
@@ -2902,14 +2914,14 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             for (int i = 0; i < pl.ItemTransformations.Count; ++i)
             {
                 ItemTransformation t = pl.ItemTransformations[i];
-                if (t.Item == e.Jar.item)
-                {
-                    pl.ItemTransformations[i] = new ItemTransformation(t.OldPage, e.NewPage, t.OldX, t.OldY, e.NewX, e.NewY, t.Item);
-                    origX = t.OldX;
-                    origY = t.OldY;
-                    origPage = t.OldPage;
-                    goto swap;
-                }
+                if (t.Item != e.Jar.item)
+                    continue;
+
+                pl.ItemTransformations[i] = new ItemTransformation(t.OldPage, e.NewPage, t.OldX, t.OldY, e.NewX, e.NewY, t.Item);
+                origX = t.OldX;
+                origY = t.OldY;
+                origPage = t.OldPage;
+                goto swap;
             }
             
             pl.ItemTransformations.Add(new ItemTransformation(e.OldPage, e.NewPage, e.OldX, e.OldY, e.NewX, e.NewY, e.Jar.item));
@@ -2919,19 +2931,19 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
 
         swap:
-        if (e.IsSwap && e.SwappedJar != null)
+        if (e is { IsSwap: true, SwappedJar: not null })
         {
             for (int i = 0; i < pl.ItemTransformations.Count; ++i)
             {
                 ItemTransformation t = pl.ItemTransformations[i];
-                if (t.Item == e.SwappedJar.item)
-                {
-                    pl.ItemTransformations[i] = new ItemTransformation(t.OldPage, e.OldPage, t.OldX, t.OldY, e.OldX, e.OldY, t.Item);
-                    swapOrigX = t.OldX;
-                    swapOrigY = t.OldY;
-                    swapOrigPage = t.OldPage;
-                    goto rebind;
-                }
+                if (t.Item != e.SwappedJar.item)
+                    continue;
+
+                pl.ItemTransformations[i] = new ItemTransformation(t.OldPage, e.OldPage, t.OldX, t.OldY, e.OldX, e.OldY, t.Item);
+                swapOrigX = t.OldX;
+                swapOrigY = t.OldY;
+                swapOrigPage = t.OldPage;
+                goto rebind;
             }
             
             pl.ItemTransformations.Add(new ItemTransformation(e.NewPage, e.OldPage, e.NewX, e.NewY, e.OldX, e.OldY, e.SwappedJar.item));
@@ -2958,47 +2970,47 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     if (e.Player.HotkeyBindings == null)
                         return;
 
-                    SqlItem<Kit>? proxy = e.Player.ActiveKit;
-                    if (proxy?.Item is null)
-                        return;
-
-                    await proxy.Enter(token).ConfigureAwait(false);
+                    await WaitAsync(token).ConfigureAwait(false);
                     try
                     {
-                        Kit? kit = e.Player.ActiveKit?.Item;
-                        if (kit == null) return;
+                        Kit? kit = e.Player.GetActiveKit();
+                        if (kit is null)
+                            return;
+
                         foreach (HotkeyBinding binding in e.Player.HotkeyBindings)
                         {
-                            if (binding.Kit.Key == kit.PrimaryKey.Key)
+                            if (binding.Kit != kit.PrimaryKey)
+                                continue;
+
+                            byte index = KitEx.GetHotkeyIndex(binding.Slot);
+                            if (index == byte.MaxValue)
+                                continue;
+
+                            if (binding.Item.X == origX && binding.Item.Y == origY && binding.Item.Page == origPage)
                             {
-                                byte index = KitEx.GetHotkeyIndex(binding.Slot);
-                                if (index == byte.MaxValue) continue;
-                                if (binding.Item.X == origX && binding.Item.Y == origY && binding.Item.Page == origPage)
+                                ItemAsset? asset = binding.GetAsset(kit, e.Player.GetTeam());
+                                if (asset != null && KitEx.CanBindHotkeyTo(asset, e.NewPage))
                                 {
-                                    ItemAsset? asset = binding.GetAsset(kit, e.Player.GetTeam());
-                                    if (asset != null && KitEx.CanBindHotkeyTo(asset, e.NewPage))
-                                    {
-                                        e.Player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)e.NewPage, e.NewX, e.NewY);
-                                        // L.LogDebug($"Updating old hotkey: {asset.itemName} at {e.NewPage}, ({e.NewX}, {e.NewY}).");
-                                    }
-                                    if (!e.IsSwap)
-                                        break;
+                                    e.Player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)e.NewPage, e.NewX, e.NewY);
+                                    // L.LogDebug($"Updating old hotkey: {asset.itemName} at {e.NewPage}, ({e.NewX}, {e.NewY}).");
                                 }
-                                else if (binding.Item.X == swapOrigX && binding.Item.Y == swapOrigY && binding.Item.Page == swapOrigPage)
+                                if (!e.IsSwap)
+                                    break;
+                            }
+                            else if (binding.Item.X == swapOrigX && binding.Item.Y == swapOrigY && binding.Item.Page == swapOrigPage)
+                            {
+                                ItemAsset? asset = binding.GetAsset(kit, e.Player.GetTeam());
+                                if (asset != null && !KitEx.CanBindHotkeyTo(asset, e.OldPage))
                                 {
-                                    ItemAsset? asset = binding.GetAsset(kit, e.Player.GetTeam());
-                                    if (asset != null && !KitEx.CanBindHotkeyTo(asset, e.OldPage))
-                                    {
-                                        e.Player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)e.OldPage, e.OldX, e.OldY);
-                                        // L.LogDebug($"Updating old swap hotkey: {asset.itemName} at {e.OldPage}, ({e.OldX}, {e.OldY}).");
-                                    }
+                                    e.Player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)e.OldPage, e.OldX, e.OldY);
+                                    // L.LogDebug($"Updating old swap hotkey: {asset.itemName} at {e.OldPage}, ({e.OldX}, {e.OldY}).");
                                 }
                             }
                         }
                     }
                     finally
                     {
-                        proxy.Release();
+                        Release();
                     }
                 }
                 finally
@@ -3023,45 +3035,44 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     {
         if (kit.FactionFilter != null)
         {
-            for (int i = 0; i < kit.FactionFilter.Length; ++i)
+            for (int i = 0; i < kit.FactionFilter.Count; ++i)
             {
-                PrimaryKey comparator = kit.FactionFilter[i];
-                for (int j = kit.FactionFilter.Length - 1; j > i; --j)
+                KitFilteredFaction comparator = kit.FactionFilter[i];
+                for (int j = kit.FactionFilter.Count - 1; j > i; --j)
                 {
-                    if (comparator.Key == kit.FactionFilter[j].Key)
+                    if (comparator.FactionId == kit.FactionFilter[j].FactionId)
                     {
-                        PrimaryKey[] keys = kit.FactionFilter;
-                        L.LogWarning("Duplicate faction filter found in kit \"" + kit.Id + "\" " + kit.PrimaryKey +
-                                     ": " + TeamManager.GetFactionInfo(keys[i])?.Name + ".");
-                        Util.RemoveFromArray(ref keys, j);
-                        kit.FactionFilter = keys;
+                        kit.FactionFilter.RemoveAt(j);
+                        L.LogWarning("Duplicate faction filter found in kit \"" + kit.InternalName + "\" " + kit.PrimaryKey +
+                                     ": " + comparator.Faction.Name + ".");
                         kit.IsLoadDirty = true;
                     }
                 }
             }
-            if (kit.FactionFilterIsWhitelist && kit.FactionKey.IsValid && !Array.Exists(kit.FactionFilter, x => x.Key == kit.FactionKey.Key))
+            if (kit is { FactionFilterIsWhitelist: true, FactionId: not null, Faction: not null } && !kit.FactionFilter.Exists(x => x.FactionId == kit.FactionId.Value))
             {
-                PrimaryKey[] keys = kit.FactionFilter;
-                Util.AddToArray(ref keys!, kit.FactionKey);
-                L.LogWarning("Faction was not in whitelist for kit \"" + kit.Id + "\" " + kit.PrimaryKey +
-                             ": " + TeamManager.GetFactionInfo(kit.FactionKey)?.Name + ".");
-                kit.FactionFilter = keys;
+                kit.FactionFilter.Add(new KitFilteredFaction
+                {
+                    Faction = kit.Faction,
+                    FactionId = kit.FactionId.Value,
+                    Kit = kit
+                });
+                L.LogWarning("Faction was not in whitelist for kit \"" + kit.InternalName + "\" " + kit.PrimaryKey +
+                             ": " + kit.Faction.Name + ".");
                 kit.IsLoadDirty = true;
             }
         }
         if (kit.MapFilter != null)
         {
-            for (int i = 0; i < kit.MapFilter.Length; ++i)
+            for (int i = 0; i < kit.MapFilter.Count; ++i)
             {
-                PrimaryKey comparator = kit.MapFilter[i];
-                for (int j = kit.MapFilter.Length - 1; j > i; --j)
+                KitFilteredMap comparator = kit.MapFilter[i];
+                for (int j = kit.MapFilter.Count - 1; j > i; --j)
                 {
-                    if (comparator.Key == kit.MapFilter[j].Key)
+                    if (comparator.Map == kit.MapFilter[j].Map)
                     {
-                        PrimaryKey[] keys = kit.MapFilter;
-                        L.LogWarning("Duplicate map filter found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ": " + MapScheduler.GetMapName(keys[i]) + ".");
-                        Util.RemoveFromArray(ref keys, j);
-                        kit.MapFilter = keys;
+                        kit.MapFilter.RemoveAt(j);
+                        L.LogWarning("Duplicate map filter found in kit \"" + kit.InternalName + "\" " + kit.PrimaryKey + ": " + MapScheduler.GetMapName(comparator.Map) + ".");
                         kit.IsLoadDirty = true;
                     }
                 }
@@ -3069,17 +3080,15 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
         if (kit.Skillsets != null)
         {
-            for (int i = 0; i < kit.Skillsets.Length; ++i)
+            for (int i = 0; i < kit.Skillsets.Count; ++i)
             {
-                Skillset comparator = kit.Skillsets[i];
-                for (int j = kit.Skillsets.Length - 1; j > i; --j)
+                KitSkillset comparator = kit.Skillsets[i];
+                for (int j = kit.Skillsets.Count - 1; j > i; --j)
                 {
-                    if (comparator == kit.Skillsets[j])
+                    if (comparator.Skillset.TypeEquals(kit.Skillsets[j].Skillset))
                     {
-                        Skillset[] skillsets = kit.Skillsets;
-                        L.LogWarning("Duplicate skillset found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ": " + skillsets[i] + ".");
-                        Util.RemoveFromArray(ref skillsets, j);
-                        kit.Skillsets = skillsets;
+                        L.LogWarning("Duplicate skillset found in kit \"" + kit.InternalName + "\" " + kit.PrimaryKey + ": " + kit.Skillsets[j].Skillset + ".");
+                        kit.Skillsets.RemoveAt(j);
                         kit.IsLoadDirty = true;
                     }
                 }
@@ -3095,27 +3104,9 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     if (comparator.Equals(kit.UnlockRequirements[j]))
                     {
                         UnlockRequirement[] reqs = kit.UnlockRequirements;
-                        L.LogWarning("Duplicate unlock requirement found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ": " + reqs[i] + ".");
+                        L.LogWarning("Duplicate unlock requirement found in kit \"" + kit.InternalName + "\" " + kit.PrimaryKey + ": " + reqs[i] + ".");
                         Util.RemoveFromArray(ref reqs, j);
                         kit.UnlockRequirements = reqs;
-                        kit.IsLoadDirty = true;
-                    }
-                }
-            }
-        }
-        if (kit.RequestSigns != null)
-        {
-            for (int i = 0; i < kit.RequestSigns.Length; ++i)
-            {
-                PrimaryKey comparator = kit.RequestSigns[i];
-                for (int j = kit.RequestSigns.Length - 1; j > i; --j)
-                {
-                    if (comparator.Key == kit.RequestSigns[j].Key)
-                    {
-                        PrimaryKey[] keys = kit.RequestSigns;
-                        L.LogWarning("Duplicate request sign found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ": " + keys[i] + ".");
-                        Util.RemoveFromArray(ref keys, j);
-                        kit.RequestSigns = keys;
                         kit.IsLoadDirty = true;
                     }
                 }
@@ -3131,7 +3122,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     if (comparator.Equals(kit.Items[j]))
                     {
                         IKitItem[] items = kit.Items;
-                        L.LogWarning("Duplicate item found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ":" + Environment.NewLine + comparator);
+                        L.LogWarning("Duplicate item found in kit \"" + kit.InternalName + "\" " + kit.PrimaryKey + ":" + Environment.NewLine + comparator);
                         Util.RemoveFromArray(ref items, j);
                         kit.Items = items;
                         kit.IsLoadDirty = true;
@@ -3145,23 +3136,23 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 IKitItem comparator = kit.Items[i];
                 if (alreadyChecked != null && alreadyChecked.Contains(i))
                     continue;
-                if (comparator is IClothingJar cjar)
+                if (comparator is IClothingKitItem cjar)
                 {
                     for (int j = kit.Items.Length - 1; j >= 0; --j)
                     {
                         if (i == j)
                             continue;
-                        if (kit.Items[j] is IClothingJar cjar2 && cjar.Type == cjar2.Type)
-                            L.LogError("Conflicting item found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ":" + Environment.NewLine + comparator + " / " + kit.Items[j]);
+                        if (kit.Items[j] is IClothingKitItem cjar2 && cjar.Type == cjar2.Type)
+                            L.LogError("Conflicting item found in kit \"" + kit.InternalName + "\" " + kit.PrimaryKey + ":" + Environment.NewLine + comparator + " / " + kit.Items[j]);
                     }
                 }
-                else if (comparator is IItemJar ijar)
+                else if (comparator is IPageKitItem ijar)
                 {
                     for (int j = kit.Items.Length - 1; j >= 0; --j)
                     {
                         if (i == j)
                             continue;
-                        if (kit.Items[j] is IItemJar ijar2)
+                        if (kit.Items[j] is IPageKitItem ijar2)
                         {
                             if (ijar.Page != ijar2.Page) continue;
                             ItemAsset? asset1 = comparator.GetItem(kit, null, out _, out _);
@@ -3172,7 +3163,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                                     continue;
                                 alreadyChecked ??= new List<int>();
                                 alreadyChecked.Add(j);
-                                L.LogError("Overlapping item found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ":" + Environment.NewLine
+                                L.LogError("Overlapping item found in kit \"" + kit.InternalName + "\" " + kit.PrimaryKey + ":" + Environment.NewLine
                                            + comparator + " / " + kit.Items[j]);
                             }
                         }

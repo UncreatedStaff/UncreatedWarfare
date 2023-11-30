@@ -32,7 +32,7 @@ internal static class StatsCoroutine
                     UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(Provider.clients[i]);
                     if (ucplayer == null) continue;
                     byte team = ucplayer.Player.channel.owner.GetTeamByte();
-                    string? id = ucplayer.ActiveKit?.Item?.Id;
+                    string? id = ucplayer.GetActiveKit()?.InternalName;
                     if (id != null)
                     {
                         StatsManager.ModifyStats(ucplayer.Steam64, s =>
@@ -41,7 +41,7 @@ internal static class StatsCoroutine
                             WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == id && k.Team == team);
                             if (kitData == default)
                             {
-                                kitData = new WarfareStats.KitData() { KitID = id, Team = team, PlaytimeMinutes = (uint)UCWarfare.Config.StatsInterval };
+                                kitData = new WarfareStats.KitData { KitID = id, Team = team, PlaytimeMinutes = (uint)UCWarfare.Config.StatsInterval };
                                 s.Kits.Add(kitData);
                             }
                             else
