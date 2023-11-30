@@ -24,6 +24,8 @@ public class UnmuteCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
+        throw ctx.SendNotImplemented();
+#if false
         ctx.AssertArgs(1, SYNTAX);
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
@@ -54,5 +56,6 @@ public class UnmuteCommand : Command
             ctx.Defer();
         }
         else ctx.Reply(T.PlayerNotFound);
+#endif
     }
 }

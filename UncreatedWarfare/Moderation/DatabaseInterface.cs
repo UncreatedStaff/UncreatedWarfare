@@ -4,6 +4,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +20,7 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Moderation.Reports;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -28,11 +31,48 @@ using Report = Uncreated.Warfare.Moderation.Reports.Report;
 namespace Uncreated.Warfare.Moderation;
 public abstract class DatabaseInterface
 {
-    public static readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
+    public readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
     private readonly Dictionary<ulong, string> _iconUrlCacheSmall = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheMedium = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheFull = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, PlayerNames> _usernameCache = new Dictionary<ulong, PlayerNames>(128);
+
+    private IIPAddressFilter[]? _nonRemotePlayAddressFilters;
+    private IIPAddressFilter[]? _ipAddressFilters;
+    private IPv4AddressRangeFilter[]? _remotePlayAddressFilters;
+
+    private readonly string[] _columns =
+    {
+        ColumnEntriesPrimaryKey,
+        ColumnEntriesType, ColumnEntriesSteam64,
+        ColumnEntriesMessage,
+        ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp,
+        ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
+        ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
+        ColumnEntriesRelavantLogsStartTimestamp,
+        ColumnEntriesRelavantLogsEndTimestamp,
+        ColumnEntriesRemoved, ColumnEntriesRemovedBy,
+        ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason
+    };
+
+    public IIPAddressFilter[] NonRemotePlayFilters => _nonRemotePlayAddressFilters ??= new IIPAddressFilter[]
+    {
+        new MySqlAddressFilter(() => Sql)
+    };
+    public IIPAddressFilter[] IPAddressFilters => _ipAddressFilters ??= new IIPAddressFilter[]
+    {
+        IPv4AddressRangeFilter.GeforceNow,
+        IPv4AddressRangeFilter.VKPlay,
+        NonRemotePlayFilters[0]
+    };
+    public IPv4AddressRangeFilter[] RemotePlayAddressFilters => _remotePlayAddressFilters ??= new IPv4AddressRangeFilter[]
+    {
+        IPv4AddressRangeFilter.GeforceNow,
+        IPv4AddressRangeFilter.VKPlay
+    };
+
+    public event Action<ModerationEntry>? OnNewModerationEntryAdded;
+    public event Action<ModerationEntry>? OnModerationEntryUpdated;
     public ModerationCache Cache { get; } = new ModerationCache(64);
     public bool TryGetAvatar(IModerationActor actor, AvatarSize size, out string avatar)
     {
@@ -186,13 +226,13 @@ public abstract class DatabaseInterface
         // ReSharper disable once CoVariantArrayConversion
         await Fill(result, detail, baseOnly, mask, token).ConfigureAwait(false);
     }
-    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
+    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : IModerationEntry
         => (T[])await ReadAll(typeof(T), actor, relation, detail, baseOnly, start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
     public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         ModerationEntryType[]? types = null;
         if (type != typeof(ModerationEntry) && type != typeof(IModerationEntry))
-            ModerationReflection.TypeInheritance.TryGetValue(typeof(T), out types);
+            ModerationReflection.TryGetInheritance(type, out types);
 
         StringBuilder sb = new StringBuilder("SELECT ", 164);
         int flag = AppendReadColumns(sb, type, baseOnly);
@@ -219,10 +259,10 @@ public abstract class DatabaseInterface
                 sb.Append($" EXISTS (SELECT `a`.`{ColumnActorsId}` FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0)");
                 break;
             case ActorRelationType.IsAdminActor:
-                sb.Append($" EXISTS (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` != 0)");
+                sb.Append($" EXISTS (SELECT * FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` != 0)");
                 break;
             case ActorRelationType.IsNonAdminActor:
-                sb.Append($" EXISTS (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` == 0)");
+                sb.Append($" EXISTS (SELECT * FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` == 0)");
                 break;
         }
         
@@ -280,13 +320,13 @@ public abstract class DatabaseInterface
         
         return rtn;
     }
-    public async Task<T[]> ReadAll<T>(bool detail = true, bool baseOnly = false, DateTimeOffset ? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : IModerationEntry
+    public async Task<T[]> ReadAll<T>(bool detail = true, bool baseOnly = false, DateTimeOffset ? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : class, IModerationEntry
         => (T[])await ReadAll(typeof(T), detail, baseOnly, start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
     public async Task<Array> ReadAll(Type type, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         ModerationEntryType[]? types = null;
         if (type != typeof(ModerationEntry) && type != typeof(IModerationEntry))
-            ModerationReflection.TypeInheritance.TryGetValue(type, out types);
+            ModerationReflection.TryGetInheritance(type, out types);
 
         StringBuilder sb = new StringBuilder("SELECT ", 164);
         int flag = AppendReadColumns(sb, type, baseOnly);
@@ -391,7 +431,7 @@ public abstract class DatabaseInterface
     {
         if (!typeof(Punishment).IsAssignableFrom(type))
             return Array.Empty<Punishment>();
-        ModerationReflection.TypeInheritance.TryGetValue(type, out ModerationEntryType[] types);
+        ModerationReflection.TryGetInheritance(type, out ModerationEntryType[] types);
 
         StringBuilder sb = new StringBuilder("SELECT ", 164);
         int flag = AppendReadColumns(sb, type, baseOnly);
@@ -406,7 +446,7 @@ public abstract class DatabaseInterface
 
         if (types is { Length: > 0 })
         {
-            sb.Append($"AND `main`.`{ColumnEntriesType}` IN (");
+            sb.Append($" AND `main`.`{ColumnEntriesType}` IN (");
 
             for (int i = 0; i < types.Length; ++i)
             {
@@ -526,57 +566,61 @@ public abstract class DatabaseInterface
                 info.Evidence = arr;
         }, false);
 
-        if (baseOnly) return;
-
         List<PrimaryKeyPair<PrimaryKey>> links = new List<PrimaryKeyPair<PrimaryKey>>();
 
-        // RelatedEntries
-        query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnRelatedEntry)} FROM `{TableRelatedEntries}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-        await Sql.QueryAsync(query, null, reader =>
+        if (!baseOnly)
         {
-            links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
-        }, token).ConfigureAwait(false);
+            // RelatedEntries
+            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnRelatedEntry)} FROM `{TableRelatedEntries}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+            await Sql.QueryAsync(query, null, reader =>
+            {
+                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
+            }, token).ConfigureAwait(false);
 
-        F.ApplyQueriedList(links, (key, arr) =>
-        {
-            IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
-            if (info != null)
-                info.RelatedEntryKeys = arr;
-        }, false);
+            F.ApplyQueriedList(links, (key, arr) =>
+            {
+                IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
+                if (info != null)
+                    info.RelatedEntryKeys = arr;
+            }, false);
+        }
         
         if (anyPunishments)
         {
-            links.Clear();
-
-            // Punishment.Appeals
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedAppealsAppeal)} FROM `{TableLinkedAppeals}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            if (!baseOnly)
             {
-                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
-            }, token).ConfigureAwait(false);
+                links.Clear();
 
-            F.ApplyQueriedList(links, (key, arr) =>
-            {
-                Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
-                if (info != null)
-                    info.AppealKeys = arr;
-            }, false);
+                // Punishment.Appeals
+                query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedAppealsAppeal)} FROM `{TableLinkedAppeals}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+                await Sql.QueryAsync(query, null, reader =>
+                {
+                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                }, token).ConfigureAwait(false);
 
-            links.Clear();
+                F.ApplyQueriedList(links, (key, arr) =>
+                {
+                    Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
+                    if (info != null)
+                        info.AppealKeys = arr;
+                }, false);
 
-            // Punishment.Reports
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedReportsReport)} FROM `{TableLinkedReports}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
-            {
-                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
-            }, token).ConfigureAwait(false);
+                links.Clear();
 
-            F.ApplyQueriedList(links, (key, arr) =>
-            {
-                Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
-                if (info != null)
-                    info.ReportKeys = arr;
-            }, false);
+                // Punishment.Reports
+                query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedReportsReport)} FROM `{TableLinkedReports}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+                await Sql.QueryAsync(query, null, reader =>
+                {
+                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                }, token).ConfigureAwait(false);
+
+                F.ApplyQueriedList(links, (key, arr) =>
+                {
+                    Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
+                    if (info != null)
+                        info.ReportKeys = arr;
+                }, false);
+            }
 
             if (anyAssetBans)
             {
@@ -598,7 +642,7 @@ public abstract class DatabaseInterface
             }
         }
 
-        if (anyAppeals)
+        if (!baseOnly && anyAppeals)
         {
             links.Clear();
 
@@ -634,7 +678,7 @@ public abstract class DatabaseInterface
             }, false);
         }
 
-        if (anyChatAbuseReports)
+        if (!baseOnly && anyChatAbuseReports)
         {
             List<PrimaryKeyPair<AbusiveChatRecord>> chats = new List<PrimaryKeyPair<AbusiveChatRecord>>();
 
@@ -654,7 +698,7 @@ public abstract class DatabaseInterface
             }, false);
         }
 
-        if (anyCheatingReports)
+        if (!baseOnly && anyCheatingReports)
         {
             List<PrimaryKeyPair<ShotRecord>> shots = new List<PrimaryKeyPair<ShotRecord>>();
 
@@ -700,7 +744,7 @@ public abstract class DatabaseInterface
             }, false);
         }
 
-        if (anyGreifingReports)
+        if (!baseOnly && anyGreifingReports)
         {
             List<PrimaryKeyPair<StructureDamageRecord>> damages = new List<PrimaryKeyPair<StructureDamageRecord>>();
 
@@ -806,20 +850,200 @@ public abstract class DatabaseInterface
             await Task.WhenAll(tasks.AsArrayFast()).ConfigureAwait(false);
         }
     }
-    private static int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
+    public async Task<T[]> GetActiveEntries<T>(ulong steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
+        => (T[])await GetActiveEntries(typeof(T), steam64, detail, baseOnly, condition, orderBy, conditionArgs, start, end, token);
+    public Task<Array> GetActiveEntries(Type type, ulong steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
     {
-        sb.Append(SqlTypes.ColumnListAliased("main", ColumnEntriesPrimaryKey,
-            ColumnEntriesType, ColumnEntriesSteam64,
-            ColumnEntriesMessage,
-            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp,
-            ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp,
-            ColumnEntriesRelavantLogsEndTimestamp,
-            ColumnEntriesRemoved, ColumnEntriesRemovedBy,
-            ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason));
+        bool dur = typeof(IDurationModerationEntry).IsAssignableFrom(type);
+        string cond = (dur
+            ? $"(`dur`.`{ColumnDurationsForgiven}` = 0 OR `dur`.`{ColumnDurationsForgiven}` IS NULL) AND "
+            : string.Empty) + $"`main`.`{ColumnEntriesRemoved}` = 0";
+        if (dur)
+        {
+            cond += " AND " + Util.BuildCheckDurationClause("dur", "main", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp);
+        }
+
+        if (condition != null)
+            cond += " AND (" + condition + ")";
+        
+        if (dur)
+            orderBy ??= $"(IF(`dur`.`{ColumnDurationsDurationSeconds}` < 0, 2147483647, `dur`.`{ColumnDurationsDurationSeconds}`)) DESC";
+
+        return ReadAll(type, steam64, ActorRelationType.IsTarget, detail, baseOnly, start, end, cond, orderBy, conditionArgs, token: token);
+    }
+    public async Task<T[]> GetActiveEntries<T>(ulong baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
+        => (T[])await GetActiveEntries(typeof(T), baseSteam64, addresses, hwids, detail, baseOnly, condition, orderBy, conditionArgs, start, end, token);
+    public async Task<Array> GetActiveEntries(Type type, ulong baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
+    {
+        bool dur = typeof(IDurationModerationEntry).IsAssignableFrom(type);
+        string cond = (dur
+            ? $"(`dur`.`{ColumnDurationsForgiven}` = 0 OR `dur`.`{ColumnDurationsForgiven}` IS NULL) AND "
+            : string.Empty) + $"`main`.`{ColumnEntriesRemoved}` = 0";
+        if (dur)
+            cond += " AND " + Util.BuildCheckDurationClause("dur", "main", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp);
+
+        if (condition != null)
+            cond += " AND (" + condition + ")";
+
+        ModerationEntryType[]? types = null;
+        if (type != typeof(ModerationEntry) && type != typeof(IModerationEntry))
+            ModerationReflection.TryGetInheritance(type, out types);
+
+        StringBuilder sb = new StringBuilder("SELECT ", 164);
+        int flag = AppendReadColumns(sb, type, baseOnly);
+        AppendTables(sb, flag);
+        sb.Append(" WHERE");
+        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 2 + hwids.Count * 2) { baseSteam64 };
+        if (conditionArgs != null && !string.IsNullOrEmpty(condition))
+        {
+            args.AddRange(conditionArgs);
+            for (int i = 0; i < conditionArgs.Length; ++i)
+                cond = Util.QuickFormat(cond, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i, repeat: true);
+        }
+
+        if (!string.IsNullOrEmpty(cond))
+            sb.Append(" (").Append(cond).Append(')');
+
+        if (start.HasValue && end.HasValue)
+        {
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)} AND `main`.`{ColumnEntriesStartTimestamp}` <= @{(args.Count + 1).ToString(CultureInfo.InvariantCulture)}");
+
+            args.Add(start.Value.UtcDateTime);
+            args.Add(end.Value.UtcDateTime);
+        }
+        else if (start.HasValue)
+        {
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)}");
+            args.Add(start.Value.UtcDateTime);
+        }
+        else if (end.HasValue)
+        {
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` <= @1");
+            args.Add(end.Value.UtcDateTime);
+        }
+
+        if (types is { Length: > 0 })
+        {
+            if (types.Length == 1)
+            {
+                sb.Append($" AND `main`.`{ColumnEntriesType}`=@{args.Count.ToString(CultureInfo.InvariantCulture)}");
+                args.Add(types[0].ToString());
+            }
+            else
+            {
+                sb.Append($" AND `main`.`{ColumnEntriesType}` IN (");
+
+                for (int i = 0; i < types.Length; ++i)
+                {
+                    if (i != 0)
+                        sb.Append(',');
+                    sb.Append('@').Append(args.Count.ToString(CultureInfo.InvariantCulture));
+                    args.Add(types[i].ToString());
+                }
+
+                sb.Append(")");
+            }
+        }
+
+        if (addresses.Count > 0 || hwids.Count > 0)
+            sb.Append($" AND (`main`.`{ColumnEntriesSteam64}`=@0 OR ");
+        else
+            sb.Append($" AND `main`.`{ColumnEntriesSteam64}`=@0 ");
+
+        if (addresses.Count > 0)
+        {
+            sb.Append($"(EXISTS (SELECT * FROM `{WarfareSQL.TableIPAddresses}` AS `ip` WHERE `ip`.`{WarfareSQL.ColumnIPAddressesSteam64}`=`main`.`{ColumnEntriesSteam64}`");
+
+            sb.Append($"AND `ip`.`{WarfareSQL.ColumnIPAddressesPackedIP}` IN (");
+
+            for (int i = 0; i < addresses.Count; ++i)
+            {
+                if (i != 0)
+                    sb.Append(',');
+                sb.Append(addresses[i].PackedIP.ToString(CultureInfo.InvariantCulture));
+            }
+
+            sb.Append(")))");
+        }
+
+        if (hwids.Count > 0)
+        {
+            if (addresses.Count > 0)
+                sb.Append(" OR ");
+            sb.Append($"(EXISTS (SELECT * FROM `{WarfareSQL.TableHWIDs}` AS `hwid` WHERE `hwid`.`{WarfareSQL.ColumnHWIDsSteam64}`=`main`.`{ColumnEntriesSteam64}`");
+
+            sb.Append($"AND `hwid`.`{WarfareSQL.ColumnHWIDsHWID}` IN (");
+
+            for (int i = 0; i < hwids.Count; ++i)
+            {
+                if (i != 0)
+                    sb.Append(',');
+                sb.Append('@').Append(args.Count.ToString(CultureInfo.InvariantCulture));
+                args.Add(hwids[i].HWID.ToByteArray());
+            }
+
+            sb.Append(")))");
+        }
+
+        if (addresses.Count > 0 || hwids.Count > 0)
+            sb.Append(')');
+
+        if (orderBy != null)
+            sb.Append(" ORDER BY ").Append(orderBy);
+        else if (dur)
+            sb.Append($" ORDER BY (IF(`dur`.`{ColumnDurationsDurationSeconds}` < 0, 2147483647, `dur`.`{ColumnDurationsDurationSeconds}`)) DESC");
+
+        sb.Append(';');
+
+        ArrayList entries = new ArrayList(16);
+        await Sql.QueryAsync(sb.ToString(), args, reader =>
+        {
+            ModerationEntry? entry = ReadEntry(flag, reader);
+            if (type.IsInstanceOfType(entry))
+                entries.Add(entry);
+        }, token).ConfigureAwait(false);
+
+        Array rtn = entries.ToArray(type);
+
+        // ReSharper disable once CoVariantArrayConversion
+        await Fill((ModerationEntry[])rtn, detail, baseOnly, null, token).ConfigureAwait(false);
+
+        return rtn;
+    }
+    public async Task<AssetBan?> GetActiveAssetBan(ulong steam64, VehicleType type, bool detail = true, CancellationToken token = default)
+    {
+        AssetBan? result = null;
+        
+        await Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnListAliased("e", _columns)}, " +
+            $"{SqlTypes.ColumnListAliased("d", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason)}, " +
+            $"{SqlTypes.ColumnListAliased("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel)}" +
+            $"FROM `{TableEntries}` AS `e` LEFT JOIN `{TableDurationPunishments}` AS `d` ON `e`.`{ColumnEntriesPrimaryKey}`=`d`.`{ColumnExternalPrimaryKey}` LEFT JOIN `{TablePunishments}` AS `pnsh` ON `e`.`{ColumnEntriesPrimaryKey}`=`pnsh`.`{ColumnExternalPrimaryKey}` " +
+            $"WHERE `e`.`{ColumnEntriesSteam64}` = @0 " +
+            $"AND `e`.`{ColumnEntriesType}` = '" + nameof(ModerationEntryType.AssetBan) + "' " +
+            $"AND `d`.`{ColumnDurationsForgiven}` = 0 " +
+            $"AND `e`.`{ColumnEntriesRemoved}` = 0 " +
+            $"AND {Util.BuildCheckDurationClause("d", "e", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp)} " +
+            $"AND (NOT EXISTS (SELECT NULL FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`) " +
+            $"OR (@1 IN (SELECT `a`.`{ColumnAssetBanFiltersType}` FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`))) " +
+            $"ORDER BY (IF(`d`.`{ColumnDurationsDurationSeconds}` < 0, 2147483647, `d`.`{ColumnDurationsDurationSeconds}`)) DESC;",
+            new object[] { steam64, type.ToString() },
+            reader =>
+            {
+                result = ReadEntry(1 | (1 << 9), reader) as AssetBan;
+                return true;
+            }, token).ConfigureAwait(false);
+
+        if (detail && result != null)
+            await Fill(new IModerationEntry[] { result }, true, false, token: token).ConfigureAwait(false);
+
+        return result;
+    }
+    private int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
+    {
+        sb.Append(SqlTypes.ColumnListAliased("main", _columns));
         int flag = 0;
-        if (type.IsAssignableFrom(typeof(DurationPunishment)) || typeof(DurationPunishment).IsAssignableFrom(type))
+        if (type.IsAssignableFrom(typeof(IDurationModerationEntry)) || typeof(IDurationModerationEntry).IsAssignableFrom(type) || type.IsAssignableFrom(typeof(DurationPunishment)) || typeof(DurationPunishment).IsAssignableFrom(type))
         {
             flag |= 1;
             sb.Append("," + SqlTypes.ColumnListAliased("dur", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason));
@@ -852,8 +1076,7 @@ public abstract class DatabaseInterface
         if (!baseOnly && (type.IsAssignableFrom(typeof(VehicleTeamkill)) || typeof(VehicleTeamkill).IsAssignableFrom(type)))
         {
             flag |= 1 << 6;
-            sb.Append("," + SqlTypes.ColumnListAliased("vtks", ColumnVehicleTeamkillsAsset, ColumnVehicleTeamkillsAssetName,
-                ColumnVehicleTeamkillsDamageOrigin, ColumnVehicleTeamkillsVehicleAsset, ColumnVehicleTeamkillsVehicleAssetName));
+            sb.Append("," + SqlTypes.ColumnListAliased("vtks", ColumnVehicleTeamkillsDamageOrigin, ColumnVehicleTeamkillsVehicleAsset, ColumnVehicleTeamkillsVehicleAssetName));
         }
         if (!baseOnly && (type.IsAssignableFrom(typeof(Appeal)) || typeof(Appeal).IsAssignableFrom(type)))
         {
@@ -1009,11 +1232,9 @@ public abstract class DatabaseInterface
         }
         if ((flag & (1 << 6)) != 0)
         {
-            offset += 5;
+            offset += 3;
             if (entry is VehicleTeamkill tk)
             {
-                tk.Item = reader.IsDBNull(offset - 4) ? null : reader.ReadGuidString(offset - 4);
-                tk.ItemName = reader.IsDBNull(offset - 3) ? null : reader.GetString(offset - 3);
                 tk.Origin = reader.IsDBNull(offset - 2) ? null : reader.ReadStringEnum<EDamageOrigin>(offset - 2);
                 tk.Vehicle = reader.IsDBNull(offset - 1) ? null : reader.ReadGuidString(offset - 1);
                 tk.VehicleName = reader.IsDBNull(offset) ? null : reader.GetString(offset);
@@ -1071,9 +1292,9 @@ public abstract class DatabaseInterface
     public async Task AddOrUpdate(IModerationEntry entry, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-
         PrimaryKey pk = entry.Id;
-        object[] objs = new object[pk.IsValid ? 16 : 15];
+        bool isNew = !pk.IsValid;
+        object[] objs = new object[!isNew ? 16 : 15];
         objs[0] = (ModerationReflection.GetType(entry.GetType()) ?? ModerationEntryType.None).ToString();
         objs[1] = entry.Player;
         objs[2] = (object?)entry.Message.MaxLength(1024) ?? DBNull.Value;
@@ -1090,10 +1311,10 @@ public abstract class DatabaseInterface
         objs[13] = entry.RemovedTimestamp.HasValue ? entry.RemovedTimestamp.Value.UtcDateTime : DBNull.Value;
         objs[14] = (object?)entry.RemovedMessage ?? DBNull.Value;
 
-        if (pk.IsValid)
+        if (!isNew)
             objs[15] = pk.Key;
 
-        string query = F.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, pk.IsValid, null, null,
+        string query = F.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, !isNew, null, null,
             ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
             ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
@@ -1146,8 +1367,13 @@ public abstract class DatabaseInterface
         }
 
         Cache.AddOrUpdate(mod);
+
+        if (isNew)
+            UCWarfare.RunOnMainThread(() => OnNewModerationEntryAdded?.Invoke(mod));
+        else
+            UCWarfare.RunOnMainThread(() => OnModerationEntryUpdated?.Invoke(mod));
     }
-    public async Task<int> GetNextLevel(ulong player, PresetType type, CancellationToken token = default)
+    public async Task<int> GetNextPresetLevel(ulong player, PresetType type, CancellationToken token = default)
     {
         if (type == PresetType.None)
             throw new ArgumentException("Preset type can not be None.", nameof(type));
@@ -1171,7 +1397,7 @@ public abstract class DatabaseInterface
         
         return max + 1;
     }
-    public async Task<ulong[]> GetSteam64IDs(IList<IModerationActor> actors, CancellationToken token = default)
+    public async Task<ulong[]> GetActorSteam64IDs(IList<IModerationActor> actors, CancellationToken token = default)
     {
         ulong[] steamIds = new ulong[actors.Count];
         bool anyDiscord = false;
@@ -1240,6 +1466,147 @@ public abstract class DatabaseInterface
                 UpdateUsernames(name.Steam64, name);
             }
         }
+    }
+    public async Task<PlayerIPAddress[]> GetIPAddresses(ulong player, bool removeFiltered, CancellationToken token = default)
+    {
+        List<PlayerIPAddress> addresses = new List<PlayerIPAddress>(4);
+
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(WarfareSQL.ColumnIPAddressesPrimaryKey,
+            WarfareSQL.ColumnIPAddressesSteam64, WarfareSQL.ColumnIPAddressesPackedIP, WarfareSQL.ColumnIPAddressesLoginCount,
+            WarfareSQL.ColumnIPAddressesLastLogin, WarfareSQL.ColumnIPAddressesFirstLogin)} FROM `{WarfareSQL.TableIPAddresses}` WHERE `{WarfareSQL.ColumnIPAddressesSteam64}`=@0;",
+            new object[] { player }, reader =>
+            {
+                addresses.Add(new PlayerIPAddress(reader.GetInt32(0), reader.GetUInt64(1), reader.GetUInt32(2), reader.GetInt32(3),
+                    reader.IsDBNull(5) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)),
+                    new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(4), DateTimeKind.Utc))));
+            }, token).ConfigureAwait(false);
+
+        IPv4AddressRangeFilter[] remotePlay = RemotePlayAddressFilters;
+
+        for (int i = 0; i < addresses.Count; ++i)
+        {
+            PlayerIPAddress ipAddr = addresses[i];
+            for (int j = 0; j < remotePlay.Length; ++j)
+            {
+                if (remotePlay[j].IsFiltered(ipAddr.PackedIP))
+                {
+                    ipAddr.RemotePlay = true;
+                    if (removeFiltered)
+                    {
+                        addresses.RemoveAt(i);
+                        --i;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (removeFiltered)
+        {
+            IIPAddressFilter[] filters = NonRemotePlayFilters;
+
+            for (int i = 0; i < filters.Length; ++i)
+                await filters[i].RemoveFilteredIPs(addresses, x => x.PackedIP, player, token).ConfigureAwait(false);
+        }
+
+        PlayerIPAddress[] addressArray = addresses.ToArray();
+
+        return addressArray;
+    }
+    public async Task<PlayerHWID[]> GetHWIDs(ulong player, CancellationToken token = default)
+    {
+        List<PlayerHWID> hwids = new List<PlayerHWID>(9);
+
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(WarfareSQL.ColumnHWIDsPrimaryKey, WarfareSQL.ColumnHWIDsIndex,
+            WarfareSQL.ColumnHWIDsSteam64, WarfareSQL.ColumnHWIDsHWID, WarfareSQL.ColumnHWIDsLoginCount,
+            WarfareSQL.ColumnHWIDsLastLogin, WarfareSQL.ColumnHWIDsFirstLogin)} FROM `{WarfareSQL.TableHWIDs}` WHERE `{WarfareSQL.ColumnHWIDsSteam64}`=@0",
+            new object[] { player }, reader =>
+            {
+                hwids.Add(new PlayerHWID(reader.GetInt32(0), reader.GetInt32(1),
+                    reader.GetUInt64(2), HWID.ReadFromDataReader(3, reader), reader.GetInt32(4),
+                    reader.IsDBNull(6) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)),
+                    new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc))));
+            }, token).ConfigureAwait(false);
+
+        return hwids.ToArray();
+    }
+    public bool IsRemotePlay(IPAddress address) => IsRemotePlay(OffenseManager.Pack(address));
+    public bool IsRemotePlay(uint address)
+    {
+        IPv4AddressRangeFilter[] filters = RemotePlayAddressFilters;
+
+        for (int i = 0; i < filters.Length; ++i)
+        {
+            if (filters[i].IsFiltered(address))
+                return true;
+        }
+
+        return false;
+    }
+    public bool IsAnyRemotePlay(IEnumerable<IPAddress> addresses) => IsAnyRemotePlay(addresses.Select(OffenseManager.Pack));
+    public bool IsAnyRemotePlay(IEnumerable<uint> addresses)
+    {
+        IPv4AddressRangeFilter[] filters = RemotePlayAddressFilters;
+
+        foreach (uint addr in addresses)
+        {
+            for (int i = 0; i < filters.Length; ++i)
+            {
+                if (filters[i].IsFiltered(addr))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+    public async Task<bool> IsIPFiltered(IPAddress address, ulong steam64, CancellationToken token = default)
+    {
+        IIPAddressFilter[] filters = IPAddressFilters;
+
+        for (int i = 0; i < filters.Length; ++i)
+        {
+            if (await filters[i].IsFiltered(address, steam64, token).ConfigureAwait(false))
+                return true;
+        }
+
+        return false;
+    }
+    public Task<StandardErrorCode> WhitelistIP(ulong targetId, ulong callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
+        => WhitelistIP(targetId, callerId, range, true, timestamp, token);
+    public Task<StandardErrorCode> UnwhitelistIP(ulong targetId, ulong callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
+        => WhitelistIP(targetId, callerId, range, false, timestamp, token);
+    public async Task<StandardErrorCode> WhitelistIP(ulong targetId, ulong callerId, IPv4Range range, bool add, DateTimeOffset timestamp, CancellationToken token)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        if (add)
+        {
+            await Sql.NonQueryAsync(
+                $"DELETE FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0 AND " +
+                $"`{WarfareSQL.ColumnIPWhitelistsIPRange}` = @2; INSERT INTO `{WarfareSQL.TableIPWhitelists}` " +
+                $"(`{WarfareSQL.ColumnIPWhitelistsSteam64}`, `{WarfareSQL.ColumnIPWhitelistsAdmin}`, `{WarfareSQL.ColumnIPWhitelistsIPRange}`) VALUES (@0, @1, @2);",
+                new object[] { targetId, callerId, range.ToString() }, token).ConfigureAwait(false);
+        }
+        else
+        {
+
+            StandardErrorCode success = (await Sql.NonQueryAsync(
+                $"DELETE FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0 AND `{WarfareSQL.ColumnIPWhitelistsIPRange}` = @1;",
+                new object[] { targetId, range.ToString() }, token).ConfigureAwait(false)) > 0 ? StandardErrorCode.Success : StandardErrorCode.NotFound;
+
+            if (success == StandardErrorCode.NotFound)
+                return StandardErrorCode.NotFound;
+        }
+
+        if (UCWarfare.IsLoaded)
+        {
+            ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.ToString(CultureInfo.InvariantCulture)} FOR {range}.", callerId);
+
+            L.Log($"{targetId} was ip {(add ? "whitelisted" : "blacklisted")} by {callerId} on {range}.", ConsoleColor.Cyan);
+        }
+
+        return StandardErrorCode.Success;
     }
 
     public const string TableEntries = "moderation_entries";
@@ -1335,8 +1702,6 @@ public abstract class DatabaseInterface
     public const string ColumnVehicleTeamkillsDamageOrigin = "DamageOrigin";
     public const string ColumnVehicleTeamkillsVehicleAsset = "VehicleAsset";
     public const string ColumnVehicleTeamkillsVehicleAssetName = "VehicleAssetName";
-    public const string ColumnVehicleTeamkillsAsset = "Asset";
-    public const string ColumnVehicleTeamkillsAssetName = "AssetName";
 
     public const string ColumnAppealsTicketId = "TicketId";
     public const string ColumnAppealsState = "State";
@@ -1737,14 +2102,6 @@ public abstract class DatabaseInterface
                 Nullable = true
             },
             new Schema.Column(ColumnVehicleTeamkillsVehicleAssetName, SqlTypes.String(48))
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnVehicleTeamkillsAsset, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnVehicleTeamkillsAssetName, SqlTypes.String(48))
             {
                 Nullable = true
             },

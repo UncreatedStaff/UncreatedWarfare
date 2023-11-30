@@ -169,7 +169,7 @@ public readonly struct HWID : IEquatable<HWID>
         b = 0;
         if (c is < '0' or > 'f' or > 'F' and < 'a' or > '9' and < 'A')
             return false;
-
+        
         if (c >= 'A')
             b = (byte)(c - 55);
         else if (c >= 'a')
@@ -203,7 +203,7 @@ public readonly struct HWID : IEquatable<HWID>
         int offset = str[0] == '0' && str[1] == 'x' ? 2 : 0;
         if (offset == 2 && str.Length != 42)
             return false;
-
+        
         for (int i = 0; i < Size; ++i)
         {
             if (!TryParseBase16Nibble(str[i * 2 + offset], out byte high) || !TryParseBase16Nibble(str[i * 2 + offset + 1], out byte low))

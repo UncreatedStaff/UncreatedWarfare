@@ -276,11 +276,17 @@ public class SpottedComponent : MonoBehaviour
         }
     }
 
-    public void OnTargetKilled(int assistXP)
+    public void OnTargetKilled(int assistXP, int assistRep)
     {
         if (CurrentSpotter != null)
         {
-            Points.AwardXP(CurrentSpotter, XPReward.KillAssist, assistXP);
+            Points.AwardXP(new XPParameters(CurrentSpotter.Steam64, _team, assistXP)
+            {
+                OverrideReputationAmount = assistRep,
+                Multiplier = 1f,
+                Message = PointsConfig.GetDefaultTranslation(CurrentSpotter.Locale.LanguageInfo, CurrentSpotter.Locale.CultureInfo, XPReward.KillAssist),
+                Reward = XPReward.KillAssist
+            });
         }
     }
     [UsedImplicitly]

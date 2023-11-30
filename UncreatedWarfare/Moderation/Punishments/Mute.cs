@@ -13,6 +13,9 @@ namespace Uncreated.Warfare.Moderation.Punishments;
 [JsonConverter(typeof(ModerationEntryConverter))]
 public class Mute : DurationPunishment
 {
+    [JsonIgnore]
+    public override bool IsAppealable => true;
+
     /// <summary>
     /// Which areas of communication the mute applies to.
     /// </summary>

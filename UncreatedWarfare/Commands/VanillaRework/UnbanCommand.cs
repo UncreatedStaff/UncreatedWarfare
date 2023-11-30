@@ -24,8 +24,10 @@ public class UnbanCommand : AsyncCommand
             }
         };
     }
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override Task Execute(CommandInteraction ctx, CancellationToken token)
     {
+        throw ctx.SendNotImplemented();
+#if false
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
         if (!ctx.HasArgs(1))
@@ -57,5 +59,6 @@ public class UnbanCommand : AsyncCommand
             ctx.Reply(T.UnbanSuccessFeedback, targetNames);
             Chat.Broadcast(LanguageSet.AllBut(ctx.CallerID), T.UnbanSuccessBroadcast, targetNames, ctx.Caller);
         }
+#endif
     }
 }

@@ -4,16 +4,20 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Networking;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Networking;
 public sealed class MySqlAddressFilter : IIPAddressFilter
 {
-    public static MySqlAddressFilter Instance = new MySqlAddressFilter();
-    private MySqlAddressFilter() { }
+    private readonly Func<IMySqlDatabase> _database;
+    public MySqlAddressFilter(Func<IMySqlDatabase> database)
+    {
+        _database = database;
+    }
     public async ValueTask<bool> IsFiltered(IPAddress ip, ulong player, CancellationToken token)
     {
         bool matched = false;
-        await Data.AdminSql.QueryAsync($"SELECT `{WarfareSQL.ColumnIPWhitelistsIPRange}` FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0;",
+        await _database().QueryAsync($"SELECT `{WarfareSQL.ColumnIPWhitelistsIPRange}` FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0;",
             new object[] { player }, reader =>
             {
                 if (!reader.IsDBNull(0))
@@ -33,9 +37,9 @@ public sealed class MySqlAddressFilter : IIPAddressFilter
 
         return matched;
     }
-    public async ValueTask RemoveFilteredIPs(IList<uint> ips, ulong player, CancellationToken token)
+    public async ValueTask RemoveFilteredIPs<T>(IList<T> ips, Func<T, uint> selector, ulong player, CancellationToken token)
     {
-        await Data.AdminSql.QueryAsync($"SELECT `{WarfareSQL.ColumnIPWhitelistsIPRange}` FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0;",
+        await _database().QueryAsync($"SELECT `{WarfareSQL.ColumnIPWhitelistsIPRange}` FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0;",
             new object[] { player }, reader =>
             {
                 if (!reader.IsDBNull(0))
@@ -47,7 +51,7 @@ public sealed class MySqlAddressFilter : IIPAddressFilter
                     {
                         for (int i = ips.Count - 1; i >= 0; --i)
                         {
-                            if (range.InRange(ips[i]))
+                            if (range.InRange(selector(ips[i])))
                                 ips.RemoveAt(i);
                         }
                     }

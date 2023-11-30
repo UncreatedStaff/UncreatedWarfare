@@ -34,6 +34,8 @@ public class KickCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
+        throw ctx.SendNotImplemented();
+#if false
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
         if (!ctx.HasArgs(2))
@@ -63,5 +65,6 @@ public class KickCommand : Command
             Chat.Broadcast(LanguageSet.AllBut(ctx.CallerID), T.KickSuccessBroadcast, names, callerNames);
             ctx.Reply(T.KickSuccessFeedback, names);
         }
+#endif
     }
 }
