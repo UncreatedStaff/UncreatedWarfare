@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.Localization;
 
@@ -18,5 +19,12 @@ public class LanguageContributor
     [Column("Language")]
     [ForeignKey(nameof(Language))]
     public uint LanguageId { get; set; }
+
+    [Required]
+    [ForeignKey(nameof(ContributorData))]
+    [Column("Contributor")]
     public ulong Contributor { get; set; }
+
+    [Required]
+    public WarfareUserData ContributorData { get; set; }
 }

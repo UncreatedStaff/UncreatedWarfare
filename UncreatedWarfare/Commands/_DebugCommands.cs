@@ -9,11 +9,13 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using DanielWillett.ReflectionTools;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -35,6 +37,8 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Permissions;
 
 #if DEBUG
 using HarmonyLib;
@@ -1815,6 +1819,51 @@ public class DebugCommand : AsyncCommand
         finally
         {
             zl.WriteRelease();
+        }
+    }
+
+    private async Task migrateusers(CommandInteraction ctx, CancellationToken token)
+    {
+        ctx.AssertRanByConsole();
+
+        await WarfareDatabases.WaitAsync(token);
+        try
+        {
+            HashSet<ulong> s64s = new HashSet<ulong>(8192);
+
+            foreach (WarfareUserData data in await Data.DbContext.UserData.ToListAsync(token))
+                s64s.Add(data.Steam64);
+
+            foreach (KitAccess access in await Data.DbContext.KitAccess.ToListAsync(token))
+            {
+                if (!s64s.Add(access.Steam64))
+                    continue;
+
+                PlayerNames username = await Data.AdminSql.GetUsernamesAsync(access.Steam64, token).ConfigureAwait(false);
+
+                WarfareUserData data = new WarfareUserData
+                {
+                    PermissionLevel = PermissionLevel.Member,
+                    FirstJoined = null,
+                    LastJoined = null,
+                    LastIPAddress = null,
+                    LastHWID = null,
+                    TotalSeconds = 0,
+                    Steam64 = access.Steam64,
+                    CharacterName = username.CharacterName.MaxLength(30)!,
+                    DisplayName = null,
+                    NickName = username.NickName.MaxLength(30)!,
+                    PlayerName = username.PlayerName.MaxLength(48)!
+                };
+
+                Data.DbContext.UserData.Add(data);
+            }
+
+            await Data.DbContext.SaveChangesAsync(token);
+        }
+        finally
+        {
+            WarfareDatabases.Release();
         }
     }
 }

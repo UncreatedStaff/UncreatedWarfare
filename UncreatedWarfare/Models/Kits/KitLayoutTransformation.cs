@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.Kits;
 
@@ -11,7 +12,14 @@ public class KitLayoutTransformation
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("pk")]
     public uint Id { get; set; }
+
+    [Required]
+    [ForeignKey(nameof(PlayerData))]
+    [Column("Steam64")]
     public ulong Steam64 { get; set; }
+
+    [Required]
+    public WarfareUserData PlayerData { get; set; }
 
     [Required]
     public Kit Kit { get; set; }

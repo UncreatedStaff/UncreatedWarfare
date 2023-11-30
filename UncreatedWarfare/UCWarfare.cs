@@ -185,20 +185,20 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         L.Log("Migrating database changes...", ConsoleColor.Magenta);
 
-        await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            await Data.DbContext.Database.MigrateAsync(token);
-            L.Log(" + Done", ConsoleColor.Gray);
-        }
-        catch (Exception ex)
-        {
-            WarfareDatabases.Release();
-            L.LogError(" + Failed to migrate databse.");
-            L.LogError(ex);
-            Provider.shutdown(10);
-            return;
-        }
+        // await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
+        // try
+        // {
+        //     await Data.DbContext.Database.MigrateAsync(token);
+        //     L.Log(" + Done", ConsoleColor.Gray);
+        // }
+        // catch (Exception ex)
+        // {
+        //     WarfareDatabases.Release();
+        //     L.LogError(" + Failed to migrate databse.");
+        //     L.LogError(ex);
+        //     Provider.shutdown(10);
+        //     return;
+        // }
 
         Data.LanguageDataStore = new WarfareMySqlLanguageDataStore();
         await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);

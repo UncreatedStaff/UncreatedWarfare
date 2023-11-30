@@ -13,12 +13,15 @@ using System.Reflection;
 using Uncreated.Networking;
 using Uncreated.SQL;
 using Uncreated.Warfare.Database.ValueConverters;
+using Uncreated.Warfare.Database.ValueGenerators;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Database.Automation;
 public static class WarfareDatabaseReflection
 {
+    public static int MaxAssetNameLength => 48;
+
     /* automatically applied value converters by type */
     public static void AddValueConverters(IDictionary<Type, Type> valueConverters)
     {
@@ -118,6 +121,30 @@ public static class WarfareDatabaseReflection
                 {
                     property.DeclaringEntityType.AddProperty(name, typeof(uint));
                     Log($"Added packed IP column for {property.DeclaringEntityType.ClrType.Name}.{member?.Name ?? "null"}: {name}.");
+                }
+            }
+
+            if (member != null && member.IsDefinedSafe<IndexAttribute>())
+            {
+                property.DeclaringEntityType.AddIndex(property);
+                Log($"Added generic index for {property.DeclaringEntityType.ClrType.Name}.{member?.Name ?? "null"}.");
+            }
+
+            if (member != null && member.TryGetAttributeSafe(out AddNameAttribute addNameAttribute))
+            {
+                string name = addNameAttribute.ColumnName ?? (property.Name + "Name");
+                if (!property.DeclaringEntityType.GetProperties().Any(x => x.Name.Equals(name, StringComparison.Ordinal)))
+                {
+                    IMutableProperty assetNameProperty = property.DeclaringEntityType.AddProperty(name, typeof(string));
+                    assetNameProperty.SetMaxLength(MaxAssetNameLength);
+                    assetNameProperty.IsNullable = nullable;
+                    assetNameProperty.SetDefaultValue(nullable ? null : new string('0', 32));
+                    assetNameProperty.SetValueGeneratorFactory((_, entityType) => AssetNameValueGenerator.Get(entityType.ClrType, property));
+                    Log($"Added asset name column for {property.DeclaringEntityType.ClrType.Name}.{member?.Name ?? "null"}: {name} (max length: {MaxAssetNameLength})");
+                }
+                else
+                {
+                    Log($"Asset name column already exists in {property.DeclaringEntityType.ClrType.Name}.{member?.Name ?? "null"}: {name}");
                 }
             }
 

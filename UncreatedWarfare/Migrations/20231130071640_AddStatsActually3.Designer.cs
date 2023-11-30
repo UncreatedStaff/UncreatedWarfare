@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231130071640_AddStatsActually3")]
+    partial class AddStatsActually3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -902,13 +904,6 @@ namespace Uncreated.Warfare.Migrations
                         .IsRequired()
                         .HasColumnType("char(32)");
 
-                    b.Property<string>("ItemName")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("varchar(48) CHARACTER SET utf8mb4")
-                        .HasMaxLength(48)
-                        .HasDefaultValue("00000000000000000000000000000000");
-
                     b.Property<float>("PositionX")
                         .HasColumnType("float");
 
@@ -1006,10 +1001,6 @@ namespace Uncreated.Warfare.Migrations
                     b.Property<string>("PrimaryAsset")
                         .HasColumnType("char(32)");
 
-                    b.Property<string>("PrimaryAssetName")
-                        .HasColumnType("varchar(48) CHARACTER SET utf8mb4")
-                        .HasMaxLength(48);
-
                     b.Property<ulong?>("RelatedPlayer")
                         .HasColumnName("RelatedPlayer")
                         .HasColumnType("bigint unsigned");
@@ -1029,10 +1020,6 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("SecondaryAsset")
                         .HasColumnType("char(32)");
-
-                    b.Property<string>("SecondaryAssetName")
-                        .HasColumnType("varchar(48) CHARACTER SET utf8mb4")
-                        .HasMaxLength(48);
 
                     b.Property<ulong>("SessionId")
                         .HasColumnName("Session")

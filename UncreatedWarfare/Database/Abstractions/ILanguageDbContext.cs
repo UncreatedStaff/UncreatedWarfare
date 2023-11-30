@@ -35,6 +35,16 @@ public interface ILanguageDbContext : IDbContext
             .IsRequired(true)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<LanguageContributor>()
+            .HasOne(x => x.ContributorData)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<LanguagePreferences>()
+            .HasOne(x => x.PlayerData)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
         modelBuilder.Entity<LanguagePreferences>()
             .Property(x => x.UseCultureForCommandInput)
             .HasDefaultValue(false);

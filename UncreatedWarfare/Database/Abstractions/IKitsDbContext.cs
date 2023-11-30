@@ -64,7 +64,9 @@ public interface IKitsDbContext : IDbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<KitLayoutTransformation>()
-            .HasIndex(x => x.Steam64);
+            .HasOne(x => x.PlayerData)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<Kit>()
             .HasMany<KitFavorite>()
@@ -72,12 +74,29 @@ public interface IKitsDbContext : IDbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<KitFavorite>()
-            .HasIndex(x => x.Steam64);
+            .HasOne(x => x.PlayerData)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<KitAccess>()
+            .HasOne(x => x.PlayerData)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<KitHotkey>()
+            .HasOne(x => x.PlayerData)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<Faction>()
             .HasMany<KitFilteredFaction>()
             .WithOne(x => x.Faction)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<EliteBundle>()
+            .HasOne(x => x.Faction)
+            .WithMany()
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<KitSkillset>()
             .Property(x => x.Skill)

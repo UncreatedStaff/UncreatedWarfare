@@ -7,6 +7,17 @@ public readonly struct UnturnedAssetReference
 {
     public Guid Guid { get; }
     public ushort Id { get; }
+
+    public string? GetFriendlyName()
+    {
+        // multi-threaded access may become a problem here but assets aren't updated during play so it should be okay.
+        if (UCWarfare.IsLoaded && !SDG.Unturned.Assets.isLoading)
+            return GetAsset<Asset>()?.FriendlyName;
+
+        return null;
+    }
+
+
     public UnturnedAssetReference(Guid guid)
     {
         Guid = guid;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.Localization;
 
@@ -15,8 +16,14 @@ public class LanguagePreferences
     [ForeignKey(nameof(Language))]
     public uint LanguageId { get; set; }
 
+    [Required]
+    [ForeignKey(nameof(PlayerData))]
+    [Column("Steam64")]
     [Key]
     public ulong Steam64 { get; set; }
+
+    [Required]
+    public WarfareUserData PlayerData { get; set; }
 
     [MaxLength(16)]
     public string? Culture { get; set; }

@@ -26,13 +26,11 @@ public class EliteBundle
     [StringLength(255)]
     public string Description { get; set; }
 
-    [Required]
     [ForeignKey(nameof(Faction))]
     [Column("Faction")]
-    public uint FactionId { get; set; }
-
-    [Required]
-    public Faction Faction { get; set; }
+    public uint? FactionId { get; set; }
+    
+    public Faction? Faction { get; set; }
 
     /// <summary>
     /// In US dollars.

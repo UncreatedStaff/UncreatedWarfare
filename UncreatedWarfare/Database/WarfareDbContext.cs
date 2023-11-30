@@ -8,13 +8,16 @@ using Pomelo.EntityFrameworkCore.MySql.Storage;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Factions;
+using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Seasons;
+using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Database;
-public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext
+public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, ISeasonsDbContext, IGameDataDbContext
 {
     internal static string? ConnStringOverride = null;
 
@@ -28,6 +31,13 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
     public DbSet<KitLayoutTransformation> KitLayoutTransformations => Set<KitLayoutTransformation>();
     public DbSet<KitFavorite> KitFavorites => Set<KitFavorite>();
     public DbSet<EliteBundle> EliteBundles => Set<EliteBundle>();
+    public DbSet<GameRecord> Games => Set<GameRecord>();
+    public DbSet<SessionRecord> Sessions => Set<SessionRecord>();
+    public DbSet<MapData> Maps => Set<MapData>();
+    public DbSet<SeasonData> Seasons => Set<SeasonData>();
+    public DbSet<DeathRecord> DeathRecords => Set<DeathRecord>();
+    public DbSet<DamageRecord> DamageRecords => Set<DamageRecord>();
+    public DbSet<AidRecord> AidRecords => Set<AidRecord>();
 
     /* configure database settings */
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -54,6 +64,9 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
         IFactionDbContext.ConfigureModels(modelBuilder);
         IUserDataDbContext.ConfigureModels(modelBuilder);
         IKitsDbContext.ConfigureModels(modelBuilder);
+        IStatsDbContext.ConfigureModels(modelBuilder);
+        ISeasonsDbContext.ConfigureModels(modelBuilder);
+        IGameDataDbContext.ConfigureModels(modelBuilder);
 
         /* Adds preset value converters */
         WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder);
