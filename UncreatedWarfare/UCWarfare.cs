@@ -1,6 +1,9 @@
 ﻿#define USE_DEBUGGER
 using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.IoC;
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore;
 using SDG.Framework.Modules;
 using SDG.Framework.Utilities;
 using SDG.Unturned;
@@ -22,6 +25,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
@@ -35,6 +39,7 @@ using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using MainThreadTask = Uncreated.Framework.MainThreadTask;
 
 namespace Uncreated.Warfare;
 
@@ -99,7 +104,12 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             L.LogError(ex);
             Provider.shutdown();
         }
+        finally
+        {
+            _earlyLoadTask = null;
+        }
     });
+
     private async Task EarlyLoad(CancellationToken token)
     {
 #if DEBUG
@@ -109,6 +119,14 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
               "Please stop using this plugin now.", ConsoleColor.Green);
 
         L.IsBufferingLogs = true;
+
+        Accessor.Logger = new L.UCLoggerFactory().CreateReflectionToolsLogger(disposeFactoryOnDispose: true);
+#if DEBUG
+        Accessor.LogDebugMessages = true;
+#endif
+        Accessor.LogInfoMessages = true;
+        Accessor.LogWarningMessages = true;
+        Accessor.LogErrorMessages = true;
 
         /* INITIALIZE UNCREATED NETWORKING */
         Logging.OnLogInfo += L.NetLogInfo;
@@ -164,8 +182,26 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         new PermissionSaver();
         await Data.LoadSQL(token).ConfigureAwait(false);
+
+        L.Log("Migrating database changes...", ConsoleColor.Magenta);
+
+        // await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
+        // try
+        // {
+        //     await Data.DbContext.Database.MigrateAsync(token);
+        //     L.Log(" + Done", ConsoleColor.Gray);
+        // }
+        // catch (Exception ex)
+        // {
+        //     WarfareDatabases.Release();
+        //     L.LogError(" + Failed to migrate databse.");
+        //     L.LogError(ex);
+        //     Provider.shutdown(10);
+        //     return;
+        // }
+
         Data.LanguageDataStore = new WarfareMySqlLanguageDataStore();
-        await Data.ReloadLanguageDataStore(true, token).ConfigureAwait(false);
+        await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);
         await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
@@ -174,8 +210,10 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         Data.ModerationSql.OnModerationEntryUpdated += OffenseManager.OnModerationEntryUpdated;
         Data.ModerationSql.OnNewModerationEntryAdded += OffenseManager.OnNewModerationEntryAdded;
 
+#if NETSTANDARD || NETFRAMEWORK
         Data.WarfareStripeService = new WarfareStripeService();
         Data.PurchasingDataStore = await PurchaseRecordsInterface.Create<WarfarePurchaseRecordsInterface>(false, token).ConfigureAwait(false);
+#endif
 
 
         await ToUpdate(token);
@@ -206,8 +244,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             L.LogError("Patching Error, perhaps Nelson changed something:");
             L.LogError(ex);
         }
-
-        UCInventoryManager.OnLoad();
+        
         gameObject.AddComponent<ActionLog>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
@@ -311,7 +348,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             await ToUpdate(token);
         }
 
-#if DEBUG
+#if NETFRAMEWORK
         if (Config.Debug && System.IO.File.Exists(@"C:\orb.wav"))
         {
             System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"C:\orb.wav");
@@ -373,6 +410,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         UCPlayerLocale.OnLocaleUpdated += EventFunctions.OnLocaleUpdated;
         ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
         BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
+        StructureManager.onDeployStructureRequested += EventFunctions.OnStructureTryPlaced;
+        ItemManager.onTakeItemRequested += EventFunctions.OnPickedUpItemRequested;
+        PlayerEquipment.OnPunch_Global += EventFunctions.OnPunch;
         UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
@@ -420,6 +460,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
         UCPlayerLocale.OnLocaleUpdated -= EventFunctions.OnLocaleUpdated;
         BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
+        StructureManager.onDeployStructureRequested -= EventFunctions.OnStructureTryPlaced;
+        ItemManager.onTakeItemRequested -= EventFunctions.OnPickedUpItemRequested;
+        PlayerEquipment.OnPunch_Global -= EventFunctions.OnPunch;
         UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
@@ -975,6 +1018,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                     Data.RemoteSQL = null!;
                 }
             }
+            WarfareDatabases.Semaphore?.Dispose();
 #if DEBUG
             profiler2.Dispose();
 #endif
@@ -1166,6 +1210,7 @@ public class UCWarfareNexus : IModuleNexus
     void IModuleNexus.initialize()
     {
         ModuleHook.PreVanillaAssemblyResolvePostRedirects += ResolveAssemblyCompiler;
+        ModuleHook.PostVanillaAssemblyResolve += ErrorAssemblyNotResolved;
         try
         {
             Init2();
@@ -1200,7 +1245,12 @@ public class UCWarfareNexus : IModuleNexus
         UnityEngine.Object.DontDestroyOnLoad(go);
         go.AddComponent<UCWarfare>();
     }
-    private Assembly? ResolveAssemblyCompiler(object sender, ResolveEventArgs args)
+    private static Assembly? ErrorAssemblyNotResolved(object sender, ResolveEventArgs args)
+    {
+        CommandWindow.LogError($"Unknown assembly: {args.Name}.");
+        return null;
+    }
+    private static Assembly? ResolveAssemblyCompiler(object sender, ResolveEventArgs args)
     {
         const string runtime = "System.Runtime.CompilerServices.Unsafe";
 
@@ -1209,8 +1259,6 @@ public class UCWarfareNexus : IModuleNexus
             CommandWindow.LogWarning($"Redirected {args.Name} -> {runtime}.dll");
             return typeof(Unsafe).Assembly;
         }
-
-        CommandWindow.LogError($"Unknown assembly: {args.Name}.");
 
         return null;
     }

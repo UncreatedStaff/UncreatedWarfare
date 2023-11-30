@@ -160,7 +160,7 @@ public class JsonZoneProvider
                     if (prop.Equals("error"))
                         throw new ZoneReadException("The zone being read was corrupted on write.") { Data = mdl };
                     else if (prop.Equals("id", StringComparison.Ordinal))
-                        reader.TryGetInt32(out mdl.Id);
+                        reader.TryGetUInt32(out mdl.Id);
                     else if (prop.Equals("name", StringComparison.Ordinal))
                         mdl.Name = reader.GetString() ?? string.Empty;
                     else if (prop.Equals("short-name", StringComparison.Ordinal) || prop.Equals("short_name", StringComparison.Ordinal))

@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits.Buffs;

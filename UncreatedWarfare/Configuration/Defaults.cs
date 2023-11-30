@@ -437,7 +437,7 @@ partial class JSONMethods
 }
 public class Base64Converter : JsonConverter<byte[]>
 {
-    public override byte[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override byte[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.String)
         {
@@ -473,7 +473,7 @@ public class Base64Converter : JsonConverter<byte[]>
             return bytes.ToArray();
         }
         else if (reader.TokenType == JsonTokenType.Null)
-            return null;
+            return null!;
         throw new JsonException("Unexpected token " + reader.TokenType + " while reading byte[].");
     }
     public override void Write(Utf8JsonWriter writer, byte[] value, JsonSerializerOptions options)

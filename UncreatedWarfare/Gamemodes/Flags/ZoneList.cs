@@ -1,5 +1,5 @@
 ﻿//#define MIGRATE
-using MySqlConnector;
+using MySql.Data.MySqlClient;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
@@ -171,7 +170,52 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             return fl.ZoneData;
         return null;
     }
-    private void OnItemDownloadedIntl(SqlItem<Zone> obj)
+    public void TickZoneFlags(UCPlayer player, bool forceFlags = false)
+    {
+        player.SafezoneZone = null;
+        player.NoDropZone = null;
+        player.NoPickZone = null;
+        WriteWait();
+        try
+        {
+            bool flagGm = !forceFlags && Data.Is(out FlagGamemode gm) && gm.ConsumeFlagUseCaseZones;
+            Vector3 pos = player.Position;
+            for (int i = 0; i < List.Count; ++i)
+            {
+                Zone? zone = List[i]?.Item;
+
+                if (zone is null || zone.Data.Flags == ZoneFlags.None || flagGm && zone.Data.UseCase == ZoneUseCase.Flag || !zone.IsInside(pos))
+                    continue;
+                
+                ApplyZoneFlags(player, zone);
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public static void ApplyZoneFlags(UCPlayer player, Zone zone)
+    {
+        if ((zone.Data.Flags & ZoneFlags.Safezone) != 0)
+        {
+            if (player.SafezoneZone is null || player.SafezoneZone.BoundsArea > zone.BoundsArea)
+                player.SafezoneZone = zone;
+        }
+
+        if ((zone.Data.Flags & ZoneFlags.NoDropItems) != 0)
+        {
+            if (player.NoDropZone is null || player.NoDropZone.BoundsArea > zone.BoundsArea)
+                player.NoDropZone = zone;
+        }
+
+        if ((zone.Data.Flags & ZoneFlags.NoPickItems) != 0)
+        {
+            if (player.NoPickZone is null || player.NoPickZone.BoundsArea > zone.BoundsArea)
+                player.NoPickZone = zone;
+        }
+    }
+    private static void OnItemDownloadedIntl(SqlItem<Zone> obj)
     {
         if (obj.Item is { Data.UseCase: ZoneUseCase.Team1Main or ZoneUseCase.Team2Main or ZoneUseCase.Team1MainCampZone or ZoneUseCase.Team2MainCampZone })
         {
@@ -202,6 +246,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
     public const string COLUMN_USE_MAP_COORDS = "UseRelativeMapCoords";
     public const string COLUMN_MIN_HEIGHT = "MinHeight";
     public const string COLUMN_MAX_HEIGHT = "MaxHeight";
+    public const string COLUMN_FLAGS = "Flags";
 
     public const string COLUMN_PK_EXT = "Zone";
 
@@ -241,7 +286,8 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             new Schema.Column(COLUMN_USE_CASE, SqlTypes.Enum<ZoneUseCase>()),
             new Schema.Column(COLUMN_USE_MAP_COORDS, SqlTypes.BOOLEAN),
             new Schema.Column(COLUMN_MIN_HEIGHT, SqlTypes.FLOAT) { Nullable = true },
-            new Schema.Column(COLUMN_MAX_HEIGHT, SqlTypes.FLOAT) { Nullable = true }
+            new Schema.Column(COLUMN_MAX_HEIGHT, SqlTypes.FLOAT) { Nullable = true },
+            new Schema.Column(COLUMN_FLAGS, SqlTypes.ULONG) { Default = "0" }
 
         }, true, typeof(ZoneModel)),
         new Schema(TABLE_CIRCLE_DATA, new Schema.Column[]
@@ -327,8 +373,8 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
         }
 
         bool hasPk = pk.IsValid;
-        int pk2 = PrimaryKey.NotAssigned;
-        object[] objs = new object[hasPk ? 11 : 10];
+        uint pk2 = PrimaryKey.NotAssigned;
+        object[] objs = new object[hasPk ? 12 : 11];
         ZoneModel mdl = item.Data;
         objs[0] = mdl.Map;
         objs[1] = mdl.ZoneType.ToString();
@@ -340,16 +386,17 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
         objs[7] = mdl.UseMapCoordinates;
         objs[8] = !float.IsNaN(mdl.MinimumHeight) ? mdl.MinimumHeight : DBNull.Value;
         objs[9] = !float.IsNaN(mdl.MaximumHeight) ? mdl.MaximumHeight : DBNull.Value;
+        objs[10] = (ulong)mdl.Flags;
         if (hasPk)
-            objs[10] = pk.Key;
+            objs[11] = pk.Key;
         await Sql.QueryAsync(F.BuildInitialInsertQuery(TABLE_MAIN, COLUMN_PK, hasPk, COLUMN_PK_EXT,
             new string[] { TABLE_POLYGON_DATA, TABLE_ADJACENCIES, TABLE_GRID_OBJECTS },
             COLUMN_MAP, COLUMN_ZONE_TYPE, COLUMN_NAME, COLUMN_SHORT_NAME, COLUMN_SPAWN_X,
             COLUMN_SPAWN_Z, COLUMN_USE_CASE, COLUMN_USE_MAP_COORDS, COLUMN_MIN_HEIGHT,
-            COLUMN_MAX_HEIGHT),
+            COLUMN_MAX_HEIGHT, COLUMN_FLAGS),
             objs, reader =>
             {
-                pk2 = reader.GetInt32(0);
+                pk2 = reader.GetUInt32(0);
             }, token).ConfigureAwait(false);
         pk = pk2;
         if (!pk.IsValid)
@@ -465,7 +512,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
         ZoneModel? mdlN = null;
         await Sql.QueryAsync(F.BuildSelectWhereLimit1(TABLE_MAIN, COLUMN_PK, 0, COLUMN_MAP, COLUMN_ZONE_TYPE, COLUMN_NAME,
             COLUMN_SHORT_NAME, COLUMN_SPAWN_X, COLUMN_SPAWN_Z, COLUMN_USE_CASE, COLUMN_USE_MAP_COORDS,
-            COLUMN_MIN_HEIGHT, COLUMN_MAX_HEIGHT),
+            COLUMN_MIN_HEIGHT, COLUMN_MAX_HEIGHT, COLUMN_FLAGS),
             objPks, reader =>
             {
                 mdlN = ReadZoneModel(reader, 0);
@@ -530,7 +577,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             objPks,
             reader =>
             {
-                (adj ??= new List<AdjacentFlagData>(5)).Add(new AdjacentFlagData(reader.GetInt32(0), reader.IsDBNull(1) ? 1f : reader.GetFloat(1)));
+                (adj ??= new List<AdjacentFlagData>(5)).Add(new AdjacentFlagData(reader.GetUInt32(0), reader.IsDBNull(1) ? 1f : reader.GetFloat(1)));
             }, token).ConfigureAwait(false);
 
         if (adj is not null)
@@ -561,7 +608,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
         List<ZoneBuilder> list = new List<ZoneBuilder>(64);
         await Sql.QueryAsync(F.BuildSelectWhere(TABLE_MAIN, COLUMN_MAP, 0, COLUMN_PK, COLUMN_MAP, COLUMN_ZONE_TYPE, COLUMN_NAME,
                 COLUMN_SHORT_NAME, COLUMN_SPAWN_X, COLUMN_SPAWN_Z, COLUMN_USE_CASE, COLUMN_USE_MAP_COORDS,
-                COLUMN_MIN_HEIGHT, COLUMN_MAX_HEIGHT),
+                COLUMN_MIN_HEIGHT, COLUMN_MAX_HEIGHT, COLUMN_FLAGS),
             new object[] { MapScheduler.Current }, reader =>
             {
                 list.Add(new ZoneBuilder(ReadZoneModel(reader, 1)));
@@ -627,7 +674,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
                     if (pk == list[i].Id)
                     {
                         ref List<AdjacentFlagData>? l = ref adj[i];
-                        (l ??= new List<AdjacentFlagData>(5)).Add(new AdjacentFlagData(reader.GetInt32(1), reader.GetFloat(2)));
+                        (l ??= new List<AdjacentFlagData>(5)).Add(new AdjacentFlagData(reader.GetUInt32(1), reader.GetFloat(2)));
                         return;
                     }
                 }
@@ -637,7 +684,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             $"SELECT {SqlTypes.ColumnList(COLUMN_PK_EXT, COLUMN_GRID_OBJ_INSTANCE_ID, COLUMN_GRID_OBJ_GUID, COLUMN_GRID_OBJ_POS_X, COLUMN_GRID_OBJ_POS_Y, COLUMN_GRID_OBJ_POS_Z)} FROM `{TABLE_GRID_OBJECTS}` WHERE `{COLUMN_PK_EXT}` " +
             pin, pkeys, reader =>
             {
-                gobjs.Add(new GridObject(reader.GetInt32(0), reader.IsDBNull(1) ? uint.MaxValue : reader.GetUInt32(1), reader.IsDBNull(2) ? Guid.Empty : reader.ReadGuidString(2) ?? Guid.Empty,
+                gobjs.Add(new GridObject(reader.GetUInt32(0), reader.IsDBNull(1) ? uint.MaxValue : reader.GetUInt32(1), reader.IsDBNull(2) ? Guid.Empty : reader.ReadGuidString(2) ?? Guid.Empty,
                     reader.IsDBNull(3) ? float.NaN : reader.GetFloat(3), reader.IsDBNull(4) ? float.NaN : reader.GetFloat(4), reader.IsDBNull(5) ? float.NaN : reader.GetFloat(5)));
             }, token).ConfigureAwait(false);
 
@@ -650,7 +697,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             
             if (adj[i] is { Count: > 0 } adjacents)
                 builder.WithAdjacencies(adjacents.ToArray());
-            int id = builder.Id;
+            uint id = builder.Id;
             builder.WithGridObjects(gobjs.Where(x => x.PrimaryKey.Key == id).ToArray());
             zones[i] = builder.Build().GetZone();
         }
@@ -754,9 +801,10 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             UseMapCoordinates = !reader.IsDBNull(offset + 7) && reader.GetBoolean(offset + 7),
             MinimumHeight = reader.IsDBNull(offset + 8) ? float.NaN : reader.GetFloat(offset + 8),
             MaximumHeight = reader.IsDBNull(offset + 9) ? float.NaN : reader.GetFloat(offset + 9),
+            Flags = reader.IsDBNull(offset + 10) ? ZoneFlags.None : (ZoneFlags)reader.GetUInt64(offset + 10)
         };
         if (offset > 0)
-            mdl.Id = reader.GetInt32(offset - 1);
+            mdl.Id = reader.GetUInt32(offset - 1);
         if (mdl.Name == null && mdl.ShortName != null)
             mdl.Name = mdl.ShortName;
         return mdl;

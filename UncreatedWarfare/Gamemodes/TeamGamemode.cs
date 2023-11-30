@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -28,6 +29,36 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
 
     }
+    [UsedImplicitly]
+    private void FixedUpdate()
+    {
+        if (State != State.Staging)
+            return;
+
+        TeamManager.EvaluateBases();
+    }
+    public override void Subscribe()
+    {
+        TeamManager.OnPlayerLeftMainBase += OnLeftMainBase;
+        base.Subscribe();
+    }
+    public override Task UnloadAsync(CancellationToken token)
+    {
+        TeamManager.OnPlayerLeftMainBase -= OnLeftMainBase;
+        return base.UnloadAsync(token);
+    }
+    public virtual bool CanLeaveMainInStaging(ulong team) => team == 1ul && !_shouldHaveBlockerT1 || team == 2ul && !_shouldHaveBlockerT2;
+    private void OnLeftMainBase(UCPlayer player, ulong team)
+    {
+        if (player.OnDuty())
+            return;
+
+        if (State != State.Staging || CanLeaveMainInStaging(team))
+            return;
+
+        TeamManager.RubberbandPlayer(player, team);
+        TeamManager.EvaluateBases();
+    }
     protected override Task PreInit(CancellationToken token)
     {
         token.CombineIfNeeded(UnloadToken);
@@ -50,11 +81,11 @@ public abstract class TeamGamemode : Gamemode, ITeams
         ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
-            L.Log("Joining players into menu...");
+            L.LogDebug("Joining players into menu...");
             TeamSelector.JoinTeamBehavior behaviour;
             if (TeamSelector.ShuffleTeamsNextGame)
             {
-                L.Log("Teams are to be SHUFFLED.");
+                L.LogDebug("Teams are to be SHUFFLED.");
                 behaviour = TeamSelector.JoinTeamBehavior.Shuffle;
             }
             else
@@ -92,7 +123,22 @@ public abstract class TeamGamemode : Gamemode, ITeams
     protected override void EventLoopAction()
     {
         if (EveryXSeconds(Config.GeneralMainCheckSeconds))
-            TeamManager.EvaluateBases();
+        {
+            if (State == State.Staging)
+            {
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                {
+                    UCPlayer player = PlayerManager.OnlinePlayers[i];
+                    ulong team = player.GetTeam();
+                    if (CanLeaveMainInStaging(team) || TeamManager.InMainCached(player) || player.OnDuty())
+                        continue;
+
+                    TeamManager.RubberbandPlayer(player, team);
+                }
+            }
+            else
+                TeamManager.EvaluateBases();
+        }
 
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
@@ -103,32 +149,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
                 player.Player.life.simulatedModifyOxygen(100);
             }
         }
-
-        // todo improve this a little
-        if (State == State.Staging && (_shouldHaveBlockerT1 || _shouldHaveBlockerT2))
-        {
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-            {
-                UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                ulong team = pl.GetTeam();
-                if (pl.OnDuty() || team is not 1 and not 2) continue;
-
-                if (team == 1 && _shouldHaveBlockerT1 || team == 2 && _shouldHaveBlockerT2)
-                {
-                    if (!TeamManager.IsInMain(pl))
-                    {
-                        InteractableVehicle? veh = pl.CurrentVehicle;
-                        if (veh != null)
-                        {
-                            pl.Player.movement.forceRemoveFromVehicle();
-                            if (veh.gameObject.TryGetComponent(out Rigidbody rb))
-                                rb.velocity = Vector3.zero;
-                        }
-                        TeamManager.TeleportToMain(pl, team);
-                    }
-                }
-            }
-        }
+        base.EventLoopAction();
     }
     protected override Task OnReady(CancellationToken token)
     {
@@ -210,7 +231,6 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         base.OnPlayerDeath(e);
         _mainCampers.Remove(e.Player.Steam64);
-        EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
     protected override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token)
     {

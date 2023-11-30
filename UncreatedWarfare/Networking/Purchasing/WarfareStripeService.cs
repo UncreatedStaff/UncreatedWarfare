@@ -40,7 +40,7 @@ public class StripeService : IStripeService, IDisposable
         Semaphore.Dispose();
     }
 }
-
+#if NETSTANDARD || NETFRAMEWORK
 public class WarfareStripeService : IStripeService
 {
     public IStripeClient StripeClient { get; }
@@ -66,3 +66,4 @@ public class WarfareStripeService : IStripeService
         Semaphore.Dispose();
     }
 }
+#endif

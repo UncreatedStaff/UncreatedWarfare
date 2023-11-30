@@ -513,7 +513,7 @@ public class ActionManager : BaseSingleton
             {
                 caller.SuppliesUnloaded = -difference;
 
-                if (Points.PointsConfig.XPData.TryGetValue(XPReward.UnloadSupplies, out PointsConfig.XPRewardData data))
+                if (Points.PointsConfig.XPData.TryGetValue(nameof(XPReward.UnloadSupplies), out PointsConfig.XPRewardData data))
                 {
                     int xp = data.Amount * Mathf.CeilToInt(difference / (float)REQUIRED_UNLOAD_AMOUNT_FOR_REWARD);
 

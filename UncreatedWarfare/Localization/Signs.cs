@@ -10,6 +10,8 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
@@ -120,7 +122,7 @@ public class Signs : BaseSingleton, ILevelStartListener
         isNew = true;
         return comp;
     }
-    public static SqlItem<Kit>? GetKitFromSign(BarricadeDrop drop, out int loadoutId)
+    public static Kit? GetKitFromSign(BarricadeDrop drop, out int loadoutId)
     {
         if (ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent kitsign)
         {
@@ -907,6 +909,7 @@ public class Signs : BaseSingleton, ILevelStartListener
     {
         private bool _warn;
         private string _kitName;
+        private KitManager? _lastManager;
         public int LoadoutIndex { get; set; } = -1;
         public bool IsLoadout { get; set; }
         public override bool PerPlayer => true;
@@ -916,24 +919,24 @@ public class Signs : BaseSingleton, ILevelStartListener
             set
             {
                 _kitName = value;
-                if (_kit is not null && (value is null || !_kitName.Equals(_kit?.Item?.Id)))
+                if (_kit is not null && (value is null || !_kitName.Equals(_kit?.InternalName)))
                     _kit = null;
             }
         }
 
-        private SqlItem<Kit>? _kit;
-        public SqlItem<Kit>? Kit
+        private Kit? _kit;
+        public Kit? Kit
         {
             get
             {
                 if (KitName is null)
                     return null;
-                if (_kit?.Item != null && _kit.Manager is KitManager m && m.IsLoaded)
+                if (_kit != null && _lastManager is { IsLoaded: true })
                     return _kit;
-                m = KitManager.GetSingletonQuick()!;
-                if (m == null)
+                _lastManager = KitManager.GetSingletonQuick()!;
+                if (_lastManager == null)
                     return _kit = null;
-                return _kit = m.FindKitNoLock(KitName, true);
+                return _kit = _lastManager.FindKitNoLock(KitName, true);
             }
         }
         public override bool CheckStillValid() => Sign != null &&
@@ -978,7 +981,7 @@ public class Signs : BaseSingleton, ILevelStartListener
             {
                 return LoadoutIndex > -1 ? Localization.TranslateLoadoutSign((byte)LoadoutIndex, player!) : Sign.text;
             }
-            Kit? kit = Kit?.Item;
+            Kit? kit = Kit;
             return kit != null ? Localization.TranslateKitSign(kit, player!) : Sign.text;
         }
     }

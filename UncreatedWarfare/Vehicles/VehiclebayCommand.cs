@@ -357,7 +357,9 @@ public class VehicleBayCommand : AsyncCommand
                     {
                         ctx.LogAction(ActionLogType.SetVehicleDataProperty, "ADDED DELAY " + type + " VALUE: " + val.ToString(Data.AdminLocale)
                             + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
-                        Delay.AddDelay(ref data.Item.Delays, type, val, gamemode);
+                        Delay[] itemDelays = data.Item.Delays;
+                        Delay.AddDelay(ref itemDelays, type, val, gamemode);
+                        data.Item.Delays = itemDelays;
                         Signs.UpdateVehicleBaySigns(null, data.Item);
                         foreach (SqlItem<VehicleSpawn> spawn in spawner.EnumerateSpawns(data))
                         {
@@ -371,8 +373,10 @@ public class VehicleBayCommand : AsyncCommand
                     else
                     {
                         int rem = 0;
-                        while (Delay.RemoveDelay(ref data.Item.Delays, type, val, gamemode))
+                        Delay[] itemDelays = data.Item.Delays;
+                        while (Delay.RemoveDelay(ref itemDelays, type, val, gamemode))
                             ++rem;
+                        data.Item.Delays = itemDelays;
                         if (rem > 0)
                         {
                             Signs.UpdateVehicleBaySigns(null, data.Item);

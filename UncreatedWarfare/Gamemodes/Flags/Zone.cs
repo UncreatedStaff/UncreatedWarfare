@@ -6,16 +6,22 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
-/// <summary>
-/// Do not depend on object equality for your plugins. Zone objects will be cycled every time the file is re-read.
-/// The equality operators and function will compare names with <see cref="StringComparison.OrdinalIgnoreCase"/>. This is the most reliable way to compare <see cref="Zone"/>s.
-/// </summary>
-public abstract class Zone : IDeployable, IListItem
+public interface IZone : IDeployable
+{
+    bool IsInside(Vector2 location);
+    bool IsInside(Vector3 location);
+    Vector2 GetClosestPointOnBorder(Vector2 location);
+    Vector3 GetClosestPointOnBorder(Vector3 location);
+    Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center);
+}
+
+public abstract class Zone : IListItem, IZone
 {
     public PrimaryKey PrimaryKey { get; set; }
 
@@ -33,6 +39,7 @@ public abstract class Zone : IDeployable, IListItem
         SpawnZ = Spawn.y,
         UseMapCoordinates = false,
         UseCase = Data.UseCase,
+        Flags = Data.Flags,
         GridObjects = Data.GridObjects
     };
     internal readonly bool UseMapCoordinates;
@@ -93,7 +100,7 @@ public abstract class Zone : IDeployable, IListItem
         }
     }
     protected bool SucessfullyParsed = false;
-    internal readonly ZoneModel Data;
+    public readonly ZoneModel Data;
     protected Vector2[]? ParticleSpawnPoints;
     /// <summary>
     /// Display name for the zone.
@@ -164,6 +171,27 @@ public abstract class Zone : IDeployable, IListItem
         return new Vector2((x - GridLocation.ImageSize.X / 2f) * GridLocation.DistanceScale.x, -z * GridLocation.DistanceScale.y);
     }
 
+    /// <summary>
+    /// Get the closest point to <param name="location"/> inside or on this zone's border.
+    /// </summary>
+    public abstract Vector2 GetClosestPointOnBorder(Vector2 location);
+
+    /// <summary>
+    /// Get the closest point to <param name="location"/> inside or on this zone's border.
+    /// </summary>
+    public virtual Vector3 GetClosestPointOnBorder(Vector3 location)
+    {
+        Vector2 closestPt = GetClosestPointOnBorder(new Vector2(location.x, location.z));
+
+        float y = location.y;
+        if (!float.IsNaN(MinHeight) && y < MinHeight)
+            y = MinHeight;
+        else if (!float.IsNaN(MaxHeight) && y > MaxHeight)
+            y = MaxHeight;
+
+        return new Vector3(closestPt.x, y, closestPt.y);
+    }
+
     Vector3 IDeployable.SpawnPosition => Spawn3D + new Vector3(0, 1.5f, 0);
     
     /// <summary>
@@ -181,7 +209,7 @@ public abstract class Zone : IDeployable, IListItem
         Name = data.Name;
         MinHeight = data.MinimumHeight;
         MaxHeight = data.MaximumHeight;
-        PrimaryKey = data.Id < 0 ? PrimaryKey.NotAssigned : data.Id;
+        PrimaryKey = data.Id;
         if (data.UseMapCoordinates)
         {
             if (GridLocation.LegacyMapping)

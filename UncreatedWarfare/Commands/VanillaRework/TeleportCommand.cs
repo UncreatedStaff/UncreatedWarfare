@@ -110,6 +110,18 @@ public class TeleportCommand : Command
         if (ctx.MatchParameter(0, "jump", "j"))
         {
             ctx.AssertRanByPlayer();
+            if (ctx.MatchParameter(1, "start", "s", "begin"))
+            {
+                StartJumping(ctx.Caller);
+                throw ctx.Reply(T.TeleportStartJump);
+            }
+            
+            if (ctx.MatchParameter(1, "end", "e", "stop"))
+            {
+                StopJumping(ctx.Caller);
+                throw ctx.Reply(T.TeleportStopJump);
+            }
+
             bool raycast = !ctx.TryGet(1, out float distance);
             Jump(raycast, distance, ctx.Caller);
             Vector3 castPt = ctx.Caller.Position;
@@ -328,6 +340,14 @@ public class TeleportCommand : Command
         if (float.TryParse(arg.Substring(1), NumberStyles.Number, Data.AdminLocale, out float offset) || float.TryParse(arg.Substring(1), NumberStyles.Number, Data.LocalLocale, out offset))
             return offset;
         return 0;
+    }
+    public static void StartJumping(UCPlayer player)
+    {
+        player.JumpOnPunch = true;
+    }
+    public static void StopJumping(UCPlayer player)
+    {
+        player.JumpOnPunch = false;
     }
     public static void Jump(bool raycast, float distance, UCPlayer player)
     {

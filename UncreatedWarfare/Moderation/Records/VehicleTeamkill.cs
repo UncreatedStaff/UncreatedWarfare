@@ -24,6 +24,13 @@ public class VehicleTeamkill : ModerationEntry
 
     [JsonPropertyName("vehicle_name")]
     public string? VehicleName { get; set; }
+
+    [JsonPropertyName("item_guid")]
+    public Guid? Item { get; set; }
+
+    [JsonPropertyName("item_name")]
+    public string? ItemName { get; set; }
+
     public override string GetDisplayName() => "Vehicle Teamkill";
     protected override void ReadIntl(ByteReader reader, ushort version)
     {

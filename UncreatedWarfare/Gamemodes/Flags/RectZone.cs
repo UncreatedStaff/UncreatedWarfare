@@ -100,6 +100,78 @@ public sealed class RectZone : Zone
         return (float.IsNaN(MinHeight) || location.y >= MinHeight) && (float.IsNaN(MaxHeight) || location.y <= MaxHeight) &&
                location.x > Center.x - _size.x / 2 && location.x < Center.x + _size.x / 2 && location.z > Center.y - _size.y / 2 && location.z < Center.y + _size.y / 2;
     }
+
+    /// <inheritdoc/>
+    public override Vector2 GetClosestPointOnBorder(Vector2 location)
+    {
+        int gx, gy;
+
+        float top = Center.y + _size.y / 2f;
+        float bot = Center.y - _size.y / 2f;
+        float right = Center.x + _size.x / 2f;
+        float left = Center.x - _size.x / 2f;
+
+        if (location.y > top)
+            gy = 1;
+        else if (location.y < bot)
+            gy = -1;
+        else
+            gy = 0;
+
+        if (location.x > right)
+            gx = 1;
+        else if (location.x < left)
+            gx = -1;
+        else
+            gx = 0;
+
+        // inside rect
+        if (gx == 0 && gy == 0)
+        {
+            float distTop = top - location.y;
+            float distBot = location.y - bot;
+            float distRight = right - location.x;
+            float distLeft = location.x - left;
+
+            if (distTop <= distBot && distTop <= distRight && distTop <= distLeft)
+                return new Vector2(location.x, top);
+            
+            if (distBot <= distTop && distBot <= distRight && distBot <= distLeft)
+                return new Vector2(location.x, bot);
+            
+            if (distRight <= distBot && distRight <= distTop && distRight <= distLeft)
+                return new Vector2(right, location.y);
+
+            // distLeft is lowest
+            return new Vector2(left, location.y);
+        }
+
+        if (gx == 1)
+        {
+            if (gy == 1)
+                return new Vector2(right, top);
+            if (gy == -1)
+                return new Vector2(right, bot);
+
+            return new Vector2(right, location.y);
+        }
+        if (gx == -1)
+        {
+            if (gy == 1)
+                return new Vector2(left, top);
+            if (gy == -1)
+                return new Vector2(left, bot);
+
+            return new Vector2(left, location.y);
+        }
+
+        if (gy == 1)
+            return new Vector2(location.x, top);
+        
+        // gy == -1
+        return new Vector2(location.x, bot);
+    }
+
     /// <inheritdoc/>
     public override string ToString() => $"{base.ToString()} Size: {_size.x}x{_size.y}";
     /// <inheritdoc/>

@@ -1,16 +1,15 @@
-﻿using SDG.NetTransport;
+﻿using JetBrains.Annotations;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Commands.VanillaRework;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -25,7 +24,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         "radius", "addgobj", "addgridobj", "addobject", "delgobj", "delgridobj", "delobject", "sizex", "width",
         "length", "size", "sizez", "corner", "height", "depth", "center", "position", "origin", "spawn", "spawnpoint", "respawn",
         "name", "title", "longname", "use", "use-case", "usecase", "shortname", "short", "short name", "abbreviation",
-        "abbr", "undo", "redo", "seeadj", "adjacencies", "addadj", "addadjacency", "adj", "deladj", "remadj"
+        "abbr", "undo", "redo", "seeadj", "adjacencies", "addadj", "addadjacency", "adj", "deladj", "remadj", "flags"
     };
     private const float NearbyPointDistanceSqr = 5f * 5f;
     private const int PointRows = 30;
@@ -33,7 +32,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     private UCPlayer _player = null!;
     private static EffectAsset? _edit;
     private const short EditKey = 25432;
-    private const string ZoneEditUsage = "/zone edit <existing|maxheight|minheight|finalize|cancel|use case|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|short name|type|addgobj|delgobj> [value]";
+    private const string ZoneEditUsage = "/zone edit <existing|maxheight|minheight|finalize|cancel|use case|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|short name|type|addgobj|delgobj|flags> [value]";
     private ZoneBuilder? _currentBuilder;
     private bool _currentBuilderIsExisting;
     private List<Vector2>? _currentPoints;
@@ -51,7 +50,6 @@ internal class ZonePlayerComponent : MonoBehaviour
     private readonly List<Transaction> _undoBuffer = new List<Transaction>(16);
     private readonly List<Transaction> _redoBuffer = new List<Transaction>(4);
     private volatile bool _isLoading;
-    private bool _listening;
     internal static void UIInit()
     {
         _edit = Assets.find<EffectAsset>(new Guid("503fed1019db4c7e9c365bf6e108b43f"));
@@ -190,7 +188,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     {
         _player.SendChat(T.ZoneDeleteEditingZoneDeleted);
         _currentBuilderIsExisting = false;
-        _currentBuilder!.Id = -1;
+        _currentBuilder!.Id = 0;
     }
     internal void CreateCommand(CommandInteraction ctx)
     {
@@ -245,7 +243,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             SpawnZ = pos.z,
             ZoneType = type,
             UseCase = ZoneUseCase.Flag,
-            Id = -1,
+            Id = 0,
             Adjacencies = Array.Empty<AdjacentFlagData>()
         };
         _currentBuilder.ZoneData.X = pos.x;
@@ -284,36 +282,18 @@ internal class ZonePlayerComponent : MonoBehaviour
     }
     private void StartEditing()
     {
-        if (!_listening)
-        {
-            PlayerEquipment.OnPunch_Global += OnPunch;
-            _listening = true;
-        }
+        _player.JumpOnPunch = true;
     }
     private void StopEditing()
     {
-        if (_listening)
-        {
-            PlayerEquipment.OnPunch_Global -= OnPunch;
-            _listening = false;
-        }
+        _player.JumpOnPunch = false;
     }
     [UsedImplicitly]
     private void OnDestroy()
     {
         StopEditing();
     }
-
-    private void OnPunch(PlayerEquipment arg1, EPlayerPunch arg2)
-    {
-        if (arg2 != EPlayerPunch.RIGHT || arg1.player.channel.owner.playerID.steamID.m_SteamID != this._player.Steam64 || !_player.OnDuty())
-            return;
-
-        TeleportCommand.Jump(true, default, _player);
-        Vector3 castPt = _player.Position;
-        _player.SendChat(T.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
-    }
-
+    
     private void RefreshPreview()
     {
         ThreadUtil.assertIsGameThread();
@@ -656,7 +636,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         throw ctx.Reply(T.ZoneEditFinalizeExists);
                     Zone zone = mdl.GetZone();
                     bool @new;
-                    int id = _currentBuilder.Id;
+                    uint id = _currentBuilder.Id;
                     _isLoading = true;
                     UCWarfare.RunTask(async () =>
                     {
@@ -1315,6 +1295,19 @@ internal class ZonePlayerComponent : MonoBehaviour
                 else
                     throw ctx.Reply(T.ZoneEditUseCaseInvalid);
             }
+            else if (ctx.MatchParameter(0, "flags", "flag", "options"))
+            {
+                if (!ctx.HasArgs(2))
+                    throw ctx.Reply(T.ZoneEditFlagsInvalid);
+
+                if (Enum.TryParse(ctx.GetRange(1)!.Replace(" ", string.Empty).Trim(), true, out ZoneFlags flags))
+                {
+                    AddTransaction(new SetFlagsTransaction(_currentBuilder!.Flags, flags));
+                    SetFlags(flags);
+                }
+                else
+                    throw ctx.Reply(T.ZoneEditFlagsInvalid);
+            }
             else if (ctx.MatchParameter(0, "shortname", "short", "abbreviation", "abbr"))
             {
                 if (!ctx.HasArgs(2))
@@ -1493,6 +1486,11 @@ internal class ZonePlayerComponent : MonoBehaviour
     {
         _currentBuilder!.UseCase = uc;
         _player.SendChat(T.ZoneEditUseCaseSuccess, uc);
+    }
+    private void SetFlags(ZoneFlags flags)
+    {
+        _currentBuilder!.Flags = flags;
+        _player.SendChat(T.ZoneEditFlagsSuccess, flags);
     }
     private void SetName(string name)
     {
@@ -1882,6 +1880,24 @@ internal class ZonePlayerComponent : MonoBehaviour
         public override void Undo(ZonePlayerComponent component)
         {
             component.SetUseCase(_old);
+        }
+    }
+    private class SetFlagsTransaction : Transaction
+    {
+        private readonly ZoneFlags _old;
+        private readonly ZoneFlags _new;
+        public SetFlagsTransaction(ZoneFlags old, ZoneFlags @new) : base(false)
+        {
+            _old = old;
+            _new = @new;
+        }
+        public override void Redo(ZonePlayerComponent component)
+        {
+            component.SetFlags(_new);
+        }
+        public override void Undo(ZonePlayerComponent component)
+        {
+            component.SetFlags(_old);
         }
     }
     private class SetTypeTransaction : Transaction

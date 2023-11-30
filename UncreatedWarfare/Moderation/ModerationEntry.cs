@@ -42,7 +42,6 @@ public abstract class ModerationEntry : IModerationEntry
 
     /// <inheritdoc/>
     [JsonPropertyName("is_legacy")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsLegacy { get; set; }
 
     /// <inheritdoc/>
@@ -63,17 +62,14 @@ public abstract class ModerationEntry : IModerationEntry
 
     /// <inheritdoc/>
     [JsonPropertyName("legacy_id")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public uint? LegacyId { get; set; }
 
     /// <inheritdoc/>
     [JsonPropertyName("relevant_logs_begin_utc")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public DateTimeOffset? RelevantLogsBegin { get; set; }
 
     /// <inheritdoc/>
     [JsonPropertyName("relevant_logs_end_utc")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public DateTimeOffset? RelevantLogsEnd { get; set; }
 
     /// <inheritdoc/>
@@ -197,7 +193,7 @@ public abstract class ModerationEntry : IModerationEntry
     public virtual void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
-            Id = reader.GetInt32();
+            Id = reader.GetUInt32();
         else if (propertyName.Equals("target_steam_64", StringComparison.InvariantCultureIgnoreCase))
             Player = reader.GetUInt64();
         else if (propertyName.Equals("message", StringComparison.InvariantCultureIgnoreCase))
@@ -292,7 +288,7 @@ public abstract class ModerationEntry : IModerationEntry
     {
         ushort version = reader.ReadUInt16();
 
-        Id = reader.ReadInt32();
+        Id = reader.ReadUInt32();
         Player = reader.ReadUInt64();
         Message = reader.ReadNullableString();
         byte flag = reader.ReadUInt8();
@@ -497,7 +493,6 @@ public interface IModerationEntry
     /// If the entry was from before the moderation rewrite.
     /// </summary>
     [JsonPropertyName("is_legacy")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     bool IsLegacy { get; set; }
 
     /// <summary>
@@ -528,21 +523,18 @@ public interface IModerationEntry
     /// Unique legacy ID to only this type of entry. Only will exist when <see cref="IsLegacy"/> is <see langword="true"/>.
     /// </summary>
     [JsonPropertyName("legacy_id")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     uint? LegacyId { get; set; }
 
     /// <summary>
     /// Start time of <see cref="ActionLog"/>s relevant to this entry.
     /// </summary>
     [JsonPropertyName("relevant_logs_begin_utc")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     DateTimeOffset? RelevantLogsBegin { get; set; }
 
     /// <summary>
     /// End time of <see cref="ActionLog"/>s relevant to this entry.
     /// </summary>
     [JsonPropertyName("relevant_logs_end_utc")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     DateTimeOffset? RelevantLogsEnd { get; set; }
 
     /// <summary>
@@ -647,11 +639,11 @@ public interface IDurationModerationEntry : IModerationEntry
     bool IsPermanent { get; set; }
 }
 
-public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>
+public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
 {
     public ModerationCache() { }
     public ModerationCache(int capacity) : base(capacity) { }
-    public new IModerationEntry this[int key]
+    public new IModerationEntry this[uint key]
     {
         get => base[key].Entry;
         set => base[key] = new ModerationEntryCacheEntry(value);
@@ -698,10 +690,10 @@ public readonly struct ModerationEntryCacheEntry
 }
 public sealed class ModerationEntryConverter : JsonConverter<ModerationEntry>
 {
-    public override ModerationEntry? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override ModerationEntry Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.Null)
-            return null;
+            return null!;
         else if (reader.TokenType != JsonTokenType.StartObject)
             throw new JsonException($"Unexpected token parsing ModerationEntry: {reader.TokenType}.");
 

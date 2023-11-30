@@ -6,10 +6,12 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Uncreated.Framework.UI;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 
@@ -427,24 +429,23 @@ public class KitMenuUI : UnturnedUI
     }
     private void RefreshSelected(UCPlayer player)
     {
-        SqlItem<Kit>? selected = player.KitMenuData.SelectedKit;
-        if (selected?.Item is not { } kit)
+        Kit? selected = player.KitMenuData.SelectedKit;
+        if (selected is null)
         {
             LogicClearKit.SetVisibility(player.Connection, true);
             return;
         }
 
-        OpenKit(player, kit);
+        OpenKit(player, selected);
     }
     private void OpenKit(UCPlayer player, Kit kit)
     {
         if (DefaultLanguageCache == null)
             CacheLanguages();
-        L.LogDebug("Opening kit: " + kit.Id);
-        FactionInfo? plFaction = TeamManager.GetFactionSafe(player.GetTeam());
+        L.LogDebug("Opening kit: " + kit.InternalName);
         ITransportConnection c = player.Connection;
         LblInfoTitle.SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
-        FactionInfo? faction = kit.Faction;
+        FactionInfo? faction = TeamManager.GetFactionInfo(kit.FactionId);
 
         ValInfoFaction.SetText(c, faction?.GetShortName(player.Locale.LanguageInfo) ?? (DefaultLanguageCache != null && player.Locale.LanguageInfo.IsDefault
                 ? DefaultLanguageCache[29]
@@ -456,123 +457,32 @@ public class KitMenuUI : UnturnedUI
         
         ValInfoType.SetText(c, GetTypeString(player, kit.Type));
 
-        List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>? groups = kit.ItemListCache;
-        if (groups == null)
-        {
-            kit.ItemListCache = groups = new List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>();
-            List<IKitItem> items = new List<IKitItem>(kit.Items.OrderBy(x => x is not IItemJar jar || jar.Page > Page.Secondary));
-            items.Sort((a, b) => a.CompareTo(b));
-            string? clothSet = null;
-            for (int i = 0; i < items.Count; ++i)
-            {
-                IKitItem item = items[i];
-                if (item is IAssetRedirect redir)
-                {
-                    if (groups.Exists(x => x.Key.Value == redir.RedirectType))
-                        continue;
-                    if (redir.RedirectType <= RedirectType.Glasses)
-                    {
-                        ItemAsset? asset = TeamManager.GetRedirectInfo(redir.RedirectType, faction, null, out _, out _);
-                        if (asset != null)
-                        {
-                            if (redir.RedirectType is RedirectType.Shirt or RedirectType.Pants && clothSet == null)
-                            {
-                                if (asset != null)
-                                {
-                                    int index3 = asset.name.IndexOf(redir.RedirectType == RedirectType.Shirt ? "_Top" : "_Bottom", StringComparison.Ordinal);
-                                    if (index3 != -1)
-                                    {
-                                        clothSet = asset.name.Substring(0, index3).Replace('_', ' ');
-                                        continue;
-                                    }
-                                }
-                            }
-                            else if (clothSet != null && asset.name.StartsWith(clothSet, StringComparison.Ordinal))
-                            {
-                                continue;
-                            }
-                        }
-                    }
-                    groups.Add(
-                        new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(
-                            new KeyValuePair<ItemAsset?, RedirectType>(null, redir.RedirectType), 1));
-                }
-                else
-                {
-                    ItemAsset? asset = item.GetItem(kit, plFaction, out _, out _);
-                    if (asset != null)
-                    {
-                        if (asset.id > 30000 && asset is ItemClothingAsset)
-                        {
-                            if (clothSet == null && (asset is ItemShirtAsset || asset is ItemPantsAsset))
-                            {
-                                int index3 = asset.name.IndexOf(asset is ItemShirtAsset ? "_Top" : "_Bottom", StringComparison.Ordinal);
-                                if (index3 != -1)
-                                {
-                                    clothSet = asset.name.Substring(0, index3).Replace('_', ' ');
-                                    continue;
-                                }
-                            }
-                            else if (clothSet != null && asset.name.StartsWith(clothSet, StringComparison.Ordinal))
-                            {
-                                continue;
-                            }
-                        }
-                        int index2 = groups.FindLastIndex(x => x.Key.Key == asset);
-                        if (index2 == -1)
-                        {
-                            groups.Add(new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(
-                                new KeyValuePair<ItemAsset?, RedirectType>(asset, RedirectType.None), 1));
-                        }
-                        else
-                        {
-                            KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int> grp = groups[index2];
-                            groups[index2] = new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(grp.Key, grp.Value + 1);
-                        }
-                    }
-                }
-            }
-
-            if (clothSet != null)
-            {
-                int ind = 0;
-                for (int i = 0; i < groups.Count; ++i)
-                {
-                    if (groups[i].Key.Key is ItemGunAsset)
-                        ind = i + 1;
-                    else break;
-                }
-                groups.Insert(ind, new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(
-                    new KeyValuePair<ItemAsset?, RedirectType>(null, RedirectType.None), 255));
-            }
-
-            kit.ClothingSetCache = clothSet;
-        }
+        List<SimplifiedItemListEntry> groups = kit.SimplifiedItemList;
         int index = 0;
         for (int i = 0; i < groups.Count; ++i)
         {
             if (index >= IncludedItemsCount)
                 break;
-            KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int> grp = groups[i];
+            SimplifiedItemListEntry grp = groups[i];
             string icon;
             string name;
-            int amt = grp.Value;
-            if (grp.Key.Key != null)
+            int amt = grp.Count;
+            if (grp.Asset != null)
             {
-                if (!ItemIconProvider.TryGetIcon(grp.Key.Key, out icon, RichIcons, true))
+                if (!ItemIconProvider.TryGetIcon(grp.Asset, out icon, RichIcons, true))
                 {
-                    if (grp.Key.Key is ItemMagazineAsset)
+                    if (grp.Asset is ItemMagazineAsset)
                         icon = ItemIconProvider.GetIcon(RedirectType.StandardAmmoIcon, RichIcons, true);
-                    else if (grp.Key.Key is ItemMeleeAsset)
+                    else if (grp.Asset is ItemMeleeAsset)
                         icon = ItemIconProvider.GetIcon(RedirectType.StandardMeleeIcon, RichIcons, true);
-                    else if (grp.Key.Key is ItemThrowableAsset throwable)
+                    else if (grp.Asset is ItemThrowableAsset throwable)
                     {
                         if (throwable.isExplosive)
                             icon = ItemIconProvider.GetIcon(RedirectType.StandardGrenadeIcon, RichIcons, true);
                         else if (throwable.itemName.IndexOf("smoke", StringComparison.InvariantCultureIgnoreCase) != -1)
                             icon = ItemIconProvider.GetIcon(RedirectType.StandardSmokeGrenadeIcon, RichIcons, true);
                     }
-                    else if (grp.Key.Key is ItemClothingAsset cloth)
+                    else if (grp.Asset is ItemClothingAsset cloth)
                     {
                         RedirectType type = cloth.type switch
                         {
@@ -589,22 +499,17 @@ public class KitMenuUI : UnturnedUI
                             icon = ItemIconProvider.GetIcon(type, RichIcons, true);
                     }
                 }
-                name = grp.Key.Key.FriendlyName;
+                name = grp.Asset.FriendlyName;
             }
-            else if (grp.Key.Value != RedirectType.None)
+            else if (grp.RedirectType != RedirectType.None)
             {
-                icon = ItemIconProvider.GetIcon(grp.Key.Value, RichIcons, true);
-                name = Localization.TranslateEnum(grp.Key.Value, player.Locale.LanguageInfo);
+                icon = ItemIconProvider.GetIcon(grp.RedirectType, RichIcons, true);
+                name = Localization.TranslateEnum(grp.RedirectType, player.Locale.LanguageInfo);
             }
-            else if (grp.Value == 255)
+            else if (grp.ClothingSetName != null)
             {
                 icon = ItemIconProvider.GetIcon(RedirectType.Shirt, RichIcons, true);
-                if (kit.ClothingSetCache != null)
-                    name = kit.ClothingSetCache + " Set";
-                else if (faction != null)
-                    name = "Default " + faction.GetAbbreviation(player.Locale.LanguageInfo) + " Set.";
-                else
-                    name = "Default Set";
+                name = grp.ClothingSetName + " Set";
                 amt = 1;
             }
             else continue;
@@ -622,7 +527,7 @@ public class KitMenuUI : UnturnedUI
         }
 
         WarfareStats? stats = StatsManager.OnlinePlayers.FirstOrDefault(x => x.Steam64 == player.Steam64);
-        if (stats != null && stats.Kits.FirstOrDefault(x => x.KitID.Equals(kit.Id, StringComparison.Ordinal)) is { } kitStats)
+        if (stats != null && stats.Kits.FirstOrDefault(x => x.KitID.Equals(kit.InternalName, StringComparison.Ordinal)) is { } kitStats)
         {
             ValStatsKills.SetText(c, kitStats.Kills.ToString(player.Locale.CultureInfo));
             ValStatsDeaths.SetText(c, kitStats.Deaths.ToString(player.Locale.CultureInfo));
@@ -684,7 +589,7 @@ public class KitMenuUI : UnturnedUI
         LogicClearList.SetVisibility(player.Connection, true);
         for (int i = 0; i < player.KitMenuData.Kits.Length; ++i)
         {
-            if (player.KitMenuData.Kits[i].Item is { } kit)
+            if (player.KitMenuData.Kits[i] is { } kit)
             {
                 SendKit(player, i, kit, player.KitMenuData.Favorited[i]);
             }
@@ -697,7 +602,7 @@ public class KitMenuUI : UnturnedUI
         if (kit.Type != KitType.Loadout)
             FavoriteLabels[index].SetText(c, favorited ? "<#fd0>¼" : "¼");
         WeaponLabels[index].SetText(c, kit.WeaponText ?? string.Empty);
-        IdLabels[index].SetText(c, kit.Id);
+        IdLabels[index].SetText(c, kit.InternalName);
         NameLabels[index].SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
         StatusLabels[index].SetText(c, hasAccess ? Gamemode.Config.UIIconPlayer.ToString() : string.Empty);
         ClassLabels[index].SetText(c, kit.Class.GetIcon().ToString());
@@ -778,21 +683,21 @@ public class KitMenuUI : UnturnedUI
     }
     private void OnKitClicked(int kitIndex, UCPlayer player)
     {
-        if (player.KitMenuData.Kits.Length > kitIndex && player.KitMenuData.Kits[kitIndex].Item is { } kit)
+        if (player.KitMenuData.Kits.Length > kitIndex && player.KitMenuData.Kits[kitIndex] is { } kit)
             OpenKit(player, kit);
     }
     private void OnFavoriteToggled(int kitIndex, UCPlayer player)
     {
-        if (player.KitMenuData.Kits.Length > kitIndex && player.KitMenuData.Kits[kitIndex].Item is { } kit && kit.Type != KitType.Loadout)
+        if (player.KitMenuData.Kits.Length > kitIndex && player.KitMenuData.Kits[kitIndex] is { } kit && kit.Type != KitType.Loadout)
         {
             bool fav = player.KitMenuData.Favorited[kitIndex] = !player.KitMenuData.Favorited[kitIndex];
             FavoriteLabels[kitIndex].SetText(player.Connection, fav ? "<#fd0>¼" : "¼");
             player.KitMenuData.FavoritesDirty = true;
-            L.LogDebug((fav ? "Favorited " : "Unfavorited ") + kit.Id);
+            L.LogDebug((fav ? "Favorited " : "Unfavorited ") + kit.InternalName);
             if (fav)
-                (player.KitMenuData.FavoriteKits ??= new List<PrimaryKey>(8)).Add(kit.PrimaryKey);
+                (player.KitMenuData.FavoriteKits ??= new List<uint>(8)).Add(kit.PrimaryKey);
             else
-                player.KitMenuData.FavoriteKits?.RemoveAll(x => x.Key == kit.PrimaryKey.Key);
+                player.KitMenuData.FavoriteKits?.RemoveAll(x => x == kit.PrimaryKey);
         }
     }
     private void OnActionButtonClicked(UnturnedButton button, Player player)
@@ -804,7 +709,7 @@ public class KitMenuUI : UnturnedUI
             LogicActionButton.SetVisibility(pl.Connection, false);
             return;
         }
-        if (pl.KitMenuData.SelectedKit is { Item: { } } proxy)
+        if (pl.KitMenuData.SelectedKit is { } proxy)
         {
             CancellationToken tkn = pl.DisconnectToken;
             tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
@@ -858,12 +763,12 @@ public sealed class KitMenuUIData : IPlayerComponent
     public ulong ActiveTeam { get; set; }
     public byte Tab { get; set; }
     public Class Filter { get; set; }
-    public SqlItem<Kit>? SelectedKit { get; set; }
+    public Kit? SelectedKit { get; set; }
     public bool IsAlive { get; set; }
     public bool IsOpen { get; set; }
     public bool FavoritesDirty { get; set; }
-    public SqlItem<Kit>[] Kits { get; set; } = Array.Empty<SqlItem<Kit>>();
-    public List<PrimaryKey>? FavoriteKits { get; set; }
+    public Kit[] Kits { get; set; } = Array.Empty<Kit>();
+    public List<uint>? FavoriteKits { get; set; }
     public bool[] Favorited { get; set; } = Array.Empty<bool>();
     private FactionInfo? _faction;
     private UCPlayer? _viewLensPlayer;
@@ -876,7 +781,7 @@ public sealed class KitMenuUIData : IPlayerComponent
         KitManager? manager = KitManager.GetSingletonQuick();
         if (manager == null)
         {
-            Kits = Array.Empty<SqlItem<Kit>>();
+            Kits = Array.Empty<Kit>();
             return;
         }
         manager.WriteWait();
@@ -887,23 +792,23 @@ public sealed class KitMenuUIData : IPlayerComponent
 
             _faction = _viewLensPlayer.Faction;
 
-            Func<SqlItem<Kit>, bool> predicate = Tab switch
+            Func<Kit, bool> predicate = Tab switch
             {
                 0 => KitListBasePredicate,
                 1 => KitListElitePredicate,
                 2 => KitListLoadoutPredicate,
                 3 => KitListSpecialPredicate,
-                _ => x => x.Item != null,
+                _ => _ => true,
             };
 #if DEBUG
             using IDisposable disp = L.IndentLog(1);
 #endif
             L.LogDebug(manager.Items.Count + " searched... ");
             Kits = manager.Items.Where(predicate)
-                .OrderByDescending(x => FavoriteKits?.Contains(x.LastPrimaryKey))
+                .OrderByDescending(x => FavoriteKits?.Contains(x.PrimaryKey))
                 .ThenBy(x =>
                 {
-                    string dn = x.Item?.GetDisplayName(null) ?? x.PrimaryKey.Key.ToString();
+                    string dn = x.GetDisplayName(null);
                     if (dn.Length <= 0 || char.IsDigit(dn[0]))
                         dn = "ZZ" + dn;
                     return dn;
@@ -911,14 +816,14 @@ public sealed class KitMenuUIData : IPlayerComponent
             L.LogDebug(Kits.Length + " selected for tab " + Tab + "... ");
             if (Kits.Length > KitMenuUI.KitListCount)
             {
-                SqlItem<Kit>[] old = Kits;
-                Kits = new SqlItem<Kit>[KitMenuUI.KitListCount];
+                Kit[] old = Kits;
+                Kits = new Kit[KitMenuUI.KitListCount];
                 Array.Copy(old, Kits, KitMenuUI.KitListCount);
             }
             if (Favorited.Length != Kits.Length)
                 Favorited = new bool[Kits.Length];
             for (int i = 0; i < Kits.Length; ++i)
-                Favorited[i] = FavoriteKits != null && FavoriteKits.Contains(Kits[i].LastPrimaryKey);
+                Favorited[i] = FavoriteKits != null && FavoriteKits.Contains(Kits[i].PrimaryKey);
             _viewLensPlayer = null;
         }
         finally
@@ -927,14 +832,14 @@ public sealed class KitMenuUIData : IPlayerComponent
         }
     }
 
-    private bool KitListBasePredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Public } kit && (Filter == Class.None || kit.Class == Filter) && kit.Class > Class.Unarmed && kit.IsRequestable(_faction);
-    private bool KitListElitePredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Elite } kit && (Filter == Class.None || kit.Class == Filter) && kit.Class > Class.Unarmed && kit.IsRequestable(_faction);
-    private bool KitListLoadoutPredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Loadout } kit && (Filter == Class.None || kit.Class == Filter) && kit.Class > Class.Unarmed && kit.Requestable &&
-           (Player.OnDuty() && kit.Creator == Player.Steam64 || KitManager.HasAccessQuick(x, _viewLensPlayer!));
-    private bool KitListSpecialPredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Special } kit && (Filter == Class.None || kit.Class == Filter) && kit.Class > Class.Unarmed && kit.IsRequestable(_faction)
+    private bool KitListBasePredicate(Kit x)
+        => x is { Type: KitType.Public } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction);
+    private bool KitListElitePredicate(Kit x)
+        => x is { Type: KitType.Elite } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction);
+    private bool KitListLoadoutPredicate(Kit x)
+        => x is { Type: KitType.Loadout } && (Filter == Class.None || x.Class == Filter) && x is { Class: > Class.Unarmed, Requestable: true } &&
+           (Player.OnDuty() && x.Creator == Player.Steam64 || KitManager.HasAccessQuick(x, _viewLensPlayer!));
+    private bool KitListSpecialPredicate(Kit x)
+        => x is { Type: KitType.Special } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction)
            && (Player.OnDuty() || KitManager.HasAccessQuick(x, _viewLensPlayer!));
 }

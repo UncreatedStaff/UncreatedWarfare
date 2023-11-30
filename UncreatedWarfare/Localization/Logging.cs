@@ -1,4 +1,5 @@
 ﻿#define FUNCTION_LOG
+#define LOG_ANSI
 
 using HarmonyLib;
 using JetBrains.Annotations;
@@ -8,6 +9,7 @@ using StackCleaner;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -41,18 +43,28 @@ public static class L
     private static ICommandInputOutput? _defaultIOHandler;
     private delegate void OutputToConsole(string value, ConsoleColor color);
     private static OutputToConsole? _outputToConsoleMethod;
-    private static readonly StackTraceCleaner Cleaner;
+    internal static readonly StackTraceCleaner Cleaner;
     public static UCLogger Logger => _logger ??= new UCLogger();
     static L()
     {
         StackCleanerConfiguration config = new StackCleanerConfiguration
         {
             ColorFormatting = StackColorFormatType.ExtendedANSIColor,
-            Colors = UnityColor32Config.Default,
+#if NETSTANDARD || NETFRAMEWORK
+            Colors = Type.GetType("UnityEngine.Color, UnityEngine.CoreModule") != null ? UnityColor32Config.Default : Color32Config.Default,
+#else
+            Colors = Color32Config.Default,
+#endif
             IncludeNamespaces = false,
-            IncludeFileData = true
+            IncludeILOffset = true,
+            IncludeLineData = true,
+            IncludeFileData = true,
+            IncludeAssemblyData = false,
+            IncludeSourceData = true,
+            Locale = CultureInfo.InvariantCulture,
+            PutSourceDataOnNewLine = true,
         };
-
+        
         if (Type.GetType("Cysharp.Threading.Tasks.UniTask, UniTask", throwOnError: false) is { } uniTaskType)
         {
             List<Type> hiddenTypes = new List<Type>(config.GetHiddenTypes())
@@ -159,7 +171,7 @@ public static class L
     {
         try
         {
-            _notWindows = Application.platform is not RuntimePlatform.WindowsEditor and not RuntimePlatform.WindowsPlayer;
+            _notWindows = Application.platform is not RuntimePlatform.WindowsEditor and not RuntimePlatform.WindowsPlayer and not RuntimePlatform.WindowsServer;
             if (_init) return;
             _init = true;
             F.CheckDir(Data.Paths.Logs, out _, true);
@@ -694,13 +706,20 @@ public static class L
 
     public sealed class UCLogger : ILogger
     {
+        private readonly string? _categoryName;
         internal UCLogger() { }
+        internal UCLogger(string categoryName)
+        {
+            _categoryName = categoryName;
+        }
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             if (!IsEnabled(logLevel))
                 return;
 
             string str = formatter(state, exception);
+            if (logLevel is not LogLevel.Warning and not LogLevel.Critical and not LogLevel.Error && !string.IsNullOrWhiteSpace(_categoryName))
+                str = "[" + _categoryName + "] " + str;
             switch (logLevel)
             {
                 default:
@@ -708,7 +727,7 @@ public static class L
                     break;
                 case LogLevel.Trace:
                 case LogLevel.Debug:
-                    LogDebug(str);
+                    LogDebug(str, ConsoleColor.DarkGray);
                     break;
                 case LogLevel.Warning:
                     LogWarning(str, method: eventId.ToString());
@@ -729,6 +748,12 @@ public static class L
         }
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => default;
+    }
+    public sealed class UCLoggerFactory : ILoggerFactory, ILoggerProvider
+    {
+        public void Dispose() { }
+        public ILogger CreateLogger(string categoryName) => new UCLogger(categoryName);
+        public void AddProvider(ILoggerProvider provider) { }
     }
     private class UCUnityLogger : UnityEngine.ILogger
     {

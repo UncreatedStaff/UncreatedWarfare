@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using SDG.Framework.Landscapes;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -9,20 +10,22 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using MySqlConnector;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Factions;
+using Uncreated.Warfare.Models.Localization;
 using UnityEngine;
+using Vector3 = UnityEngine.Vector3;
 
 namespace Uncreated.Warfare.Teams;
 
@@ -36,13 +39,13 @@ public static class TeamManager
     {
         new FactionInfo(FactionInfo.Admins, "Admins", "ADMIN", "Admins", "0099ff", "default")
         {
-            PrimaryKey = 0,
-            NameTranslations = new Dictionary<string, string>(4)
+            PrimaryKey = 1,
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "Администрация" },
                 { Languages.ChineseSimplified, "管理员" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.ChineseSimplified, "管理员" }
             },
@@ -50,7 +53,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.USA, "United States", "USA", "USA", "78b2ff", "usunarmed", @"https://i.imgur.com/P4JgkHB.png")
         {
-            PrimaryKey = 1,
+            PrimaryKey = 2,
             Build = "a70978a0b47e4017a0261e676af57042",
             Ammo = "51e1e372bf5341e1b4b16a0eacce37eb",
             FOBRadio = "7715ad81f1e24f60bb8f196dd09bd4ef",
@@ -62,18 +65,18 @@ public static class TeamManager
             DefaultPants = "ad3740ed150040edafef80594b89357d",
             DefaultGlasses = "588933b9da0043d6896d3f6d3f2105b4",
             DefaultMask = "3a7ff1898393450187e970abfc3efbf1",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "США" },
                 { Languages.Romanian, "Statele Unite ale Americi" },
                 { Languages.Swedish, "Förenta Staterna" },
                 { Languages.ChineseSimplified, "美利坚合众国" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.ChineseSimplified, "美利坚" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "США" },
                 { Languages.ChineseSimplified, "美国" }
@@ -83,7 +86,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Russia, "Russia", "RU", "Russia", "f53b3b", "ruunarmed", @"https://i.imgur.com/YMWSUZC.png")
         {
-            PrimaryKey = 2,
+            PrimaryKey = 3,
             Build = "6a8b8b3c79604aeea97f53c235947a1f",
             Ammo = "8dd66da5affa480ba324e270e52a46d7",
             FOBRadio = "fb910102ad954169abd4b0cb06a112c8",
@@ -94,21 +97,21 @@ public static class TeamManager
             DefaultVest = "8bcb7b352fe841d88cf421f2d7aa760e",
             DefaultPants = "cede4da725eb4749b66b9d138b0e557d",
             DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "РОССИЯ" },
                 { Languages.Romanian, "Rusia" },
                 { Languages.Swedish, "Ryssland" },
                 { Languages.ChineseSimplified, "俄罗斯联邦" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "РОССИЯ" },
                 { Languages.Romanian, "Rusia" },
                 { Languages.Swedish, "Ryssland" },
                 { Languages.ChineseSimplified, "俄罗斯" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "РФ" },
                 { Languages.Swedish, "RY" },
@@ -119,7 +122,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.MEC, "Middle Eastern Coalition", "MEC", "MEC", "ffcd8c", "meunarmed", @"https://i.imgur.com/rPmpNzz.png")
         {
-            PrimaryKey = 3,
+            PrimaryKey = 4,
             Build = "9c7122f7e70e4a4da26a49b871087f9f",
             Ammo = "bfc9aed75a3245acbfd01bc78fcfc875",
             FOBRadio = "c7754ac78083421da73006b12a56811a",
@@ -131,18 +134,18 @@ public static class TeamManager
             DefaultPants = "3c0e787a6f034545800023ac3aa589e4",
             TMProSpriteIndex = 3,
             Emoji = "938653900913901598|938654469518950410",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Coalitia Orientului Mijlociu" },
                 { Languages.Swedish, "Mellanöstern Koalition" },
                 { Languages.ChineseSimplified, "中东联盟" },
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "MK" },
                 { Languages.ChineseSimplified, "中东国" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "MK" },
                 { Languages.ChineseSimplified, "中东" }
@@ -150,7 +153,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/91Apxc5.png")
         {
-            PrimaryKey = 4,
+            PrimaryKey = 5,
             Build = "35eabf178e4e4d82aac34fcbf8e690e3",
             Ammo = "15857c3f693b4209b7b92a0b8438be34",
             FOBRadio = "439c32cced234f358e101294ea0ce3e4",
@@ -162,19 +165,19 @@ public static class TeamManager
             DefaultPants = "31ed5cd8918e4693bc7431483b130e05",
             TMProSpriteIndex = 4,
             Emoji = "🇩🇪",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Germania" },
                 { Languages.Swedish, "Tyskland" },
                 { Languages.ChineseSimplified, "德意志联邦共和国" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Germania" },
                 { Languages.Swedish, "Tyskland" },
                 { Languages.ChineseSimplified, "德意志国" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "TY" },
                 { Languages.ChineseSimplified, "德国" }
@@ -182,7 +185,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "chunarmed", @"https://i.imgur.com/Yns89Yk.png")
         {
-            PrimaryKey = 5,
+            PrimaryKey = 6,
             Build = "de7c4cafd0304848a7141e3860b2248a",
             Ammo = "2f3cfa9c6bb645fbab8f49ce556d1a1a",
             FOBRadio = "7bde55f70c494418bdd81926fb7d6359",
@@ -195,17 +198,17 @@ public static class TeamManager
             DefaultMask = "5df6ed112bb7430e86f19c30403ebacb",
             TMProSpriteIndex = 5,
             Emoji = "🇨🇳",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "Kina" },
                 { Languages.ChineseSimplified, "中华人民共和国" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "Kina" },
                 { Languages.ChineseSimplified, "中国" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "KN" },
                 { Languages.ChineseSimplified, "中国" }
@@ -213,7 +216,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.USMC, "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, @"https://i.imgur.com/MO9nPmf.png")
         {
-            PrimaryKey = 6,
+            PrimaryKey = 7,
             DefaultHat = "9b14747d30c94b168898b14b3b03cbdd",
             DefaultShirt = "1d8c612e186b4f1588099c663d9d7a44",
             DefaultBackpack = "7971e03a140149f5bbad7d1c51bc7731",
@@ -223,17 +226,17 @@ public static class TeamManager
             DefaultMask = "3a7ff1898393450187e970abfc3efbf1",
             TMProSpriteIndex = 6,
             Emoji = "989069549817171978|989032657834885150",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "US Marinkår" },
                 { Languages.ChineseSimplified, "美利坚合众国海军陆战队" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "U.S.M." },
                 { Languages.ChineseSimplified, "海军陆战队" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "USM" },
                 { Languages.ChineseSimplified, "海军陆战队" }
@@ -241,7 +244,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Soviet, "Soviet", "SOV", "Soviet", "cc0000", null, @"https://i.imgur.com/vk8gBBm.png")
         {
-            PrimaryKey = 7,
+            PrimaryKey = 8,
             DefaultHat = "d8c9b02f6ad74216ae25ddd4a98d721c",
             DefaultShirt = "157148a3ebfb447e948b04cdd83d9335",
             DefaultBackpack = "118c5783814847e7bfe6eac1caa11568",
@@ -249,19 +252,19 @@ public static class TeamManager
             DefaultPants = "ef9852b99d9e4591904fb42ab9f46134",
             TMProSpriteIndex = 7,
             Emoji = "989037438972334091|989037438972334091",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Sovietic" },
                 { Languages.Swedish, "Sovjet" },
                 { Languages.ChineseSimplified, "苏维埃社会主义共和国联盟" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Sovietic" },
                 { Languages.Swedish, "Sovjet" },
                 { Languages.ChineseSimplified, "苏联" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "SOV" },
                 { Languages.ChineseSimplified, "苏联" }
@@ -269,7 +272,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Poland, "Poland", "PL", "Poland", "dc143c", null, @"https://i.imgur.com/fu3nCS3.png")
         {
-            PrimaryKey = 8,
+            PrimaryKey = 9,
             DefaultHat = "ece14052a9d64994a3ef2ab1dc27a073",
             DefaultShirt = "71d35bb681f34b7196bb0e6685106ec4",
             DefaultBackpack = "90f7aa3817834edd82c6458fffbc2780",
@@ -278,19 +281,19 @@ public static class TeamManager
             DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             TMProSpriteIndex = 8,
             Emoji = "🇵🇱",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Polonia" },
                 { Languages.Swedish, "Polen" },
                 { Languages.ChineseSimplified, "波兰共和国" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Polonia" },
                 { Languages.Swedish, "Polen" },
                 { Languages.ChineseSimplified, "波兰" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "PL" },
                 { Languages.ChineseSimplified, "波兰" }
@@ -298,28 +301,28 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Militia, "Militia", "MIL", "Militia", "526257", null)
         {
-            PrimaryKey = 9,
+            PrimaryKey = 10,
             TMProSpriteIndex = 9,
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Militie" },
                 { Languages.Swedish, "Milis" },
                 { Languages.ChineseSimplified, "民兵组织" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Militie" },
                 { Languages.Swedish, "Milis" },
                 { Languages.ChineseSimplified, "民兵" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.ChineseSimplified, "民兵" }
             }
         },
         new FactionInfo(FactionInfo.Israel, "Israel Defense Forces", "IDF", "IDF", "005eb8", null, @"https://i.imgur.com/Wzdspd3.png")
         {
-            PrimaryKey = 10,
+            PrimaryKey = 11,
             DefaultHat = "6fa1828a5db147bca1c598e5b41fa319",
             DefaultShirt = "77dc77768d8f4d6b921bbe9a876432d0",
             DefaultBackpack = "67e14c9892b4459bb0d5b7f394f7f91d",
@@ -328,19 +331,19 @@ public static class TeamManager
             DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             TMProSpriteIndex = 10,
             Emoji = "🇮🇱",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Forta de aparare a Israelului" },
                 { Languages.Swedish, "Israelsk Försvarsmakt" },
                 { Languages.ChineseSimplified, "以色列国防军" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "IDF" },
                 { Languages.Swedish, "IF" },
                 { Languages.ChineseSimplified, "以色列" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "IF" },
                 { Languages.ChineseSimplified, "以色列" }
@@ -348,7 +351,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.France, "France", "FR", "France", "002654", null, @"https://i.imgur.com/TYY0kwp.png")
         {
-            PrimaryKey = 11,
+            PrimaryKey = 12,
             DefaultHat = "b53b694277184045a01ce82c55f81029",
             DefaultShirt = "e301b323c52d4feba57fe31e8dea2bca",
             DefaultBackpack = "a5d911ba6c464f89a9913cf198316c53",
@@ -356,19 +359,19 @@ public static class TeamManager
             DefaultPants = "af4625a9a5e04aa8b9105e08c869998f",
             TMProSpriteIndex = 11,
             Emoji = "🇫🇷",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Franta" },
                 { Languages.Swedish, "Frankrike" },
                 { Languages.ChineseSimplified, "法兰西共和国" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Franta" },
                 { Languages.Swedish, "Frankrike" },
                 { Languages.ChineseSimplified, "法兰西" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "FR" },
                 { Languages.ChineseSimplified, "法国" }
@@ -376,7 +379,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.Canada, "Canadian Armed Forces", "CAF", "Canada", "d80621", null, @"https://i.imgur.com/zs81UMe.png")
         {
-            PrimaryKey = 12,
+            PrimaryKey = 13,
             DefaultHat = "6e25bcbc24f047698a26d1da3831068f",
             DefaultShirt = "ae976b9a82ba48a488ae71e4ca3cee55",
             DefaultBackpack = "efb51b45aca34676a5d45ce8f28b7ed7",
@@ -385,19 +388,19 @@ public static class TeamManager
             DefaultGlasses = "588933b9da0043d6896d3f6d3f2105b4",
             TMProSpriteIndex = 12,
             Emoji = "🇨🇦",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Forta armata canadiene" },
                 { Languages.Swedish, "Kanadas Försvarsmakt" },
                 { Languages.ChineseSimplified, "加拿大军队" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Canada" },
                 { Languages.Swedish, "Kanada" },
                 { Languages.ChineseSimplified, "加拿大" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "KF" },
                 { Languages.ChineseSimplified, "加拿大" }
@@ -405,7 +408,7 @@ public static class TeamManager
         },
         new FactionInfo(FactionInfo.SouthAfrica, "South Africa", "ZA", "S. Africa", "007749", null, @"https://i.imgur.com/2orfzTh.png")
         {
-            PrimaryKey = 13,
+            PrimaryKey = 14,
             DefaultHat = "1fb9ad79c8d14168bdbcdcb33ed50064",
             DefaultShirt = "760f1e854d904bcf902b42c22015aa2a",
             DefaultBackpack = "0cd247d2c01643e49945ab37b16a6a0a",
@@ -414,26 +417,26 @@ public static class TeamManager
             DefaultMask = "9c2b4e15517e434fac0cf0f4bdf0c278",
             TMProSpriteIndex = 13,
             Emoji = "🇿🇦",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Africa de Sud" },
                 { Languages.Swedish, "Sydafrika" },
                 { Languages.ChineseSimplified, "南非共和国" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "S. Africa" },
                 { Languages.Swedish, "S. Afrika" },
                 { Languages.ChineseSimplified, "南非" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.ChineseSimplified, "南非" }
             }
         },
         new FactionInfo(FactionInfo.Mozambique, "Mozambique", "MZ", "Mozambique", "ffd100", null, @"https://i.imgur.com/9nXhlMH.png")
         {
-            PrimaryKey = 14,
+            PrimaryKey = 15,
             DefaultHat = "8f30d92410f94318912b8a09f3ccdb9d",
             DefaultShirt = "b9d5f63ed6f84a5c8c339a86828e0642",
             DefaultBackpack = "68170172cf2a4dff8ecbd83964a0c13f",
@@ -441,19 +444,19 @@ public static class TeamManager
             DefaultPants = "3f0ad0fd305f4deea96a84d4c9ebaae0",
             TMProSpriteIndex = 14,
             Emoji = "🇲🇿",
-            NameTranslations = new Dictionary<string, string>(4)
+            NameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Mozambic" },
                 { Languages.Swedish, "Mocambique" },
                 { Languages.ChineseSimplified, "莫桑比克共和国" }
             },
-            ShortNameTranslations = new Dictionary<string, string>(4)
+            ShortNameTranslations = new TranslationList(4)
             {
                 { Languages.Romanian, "Mozambic" },
                 { Languages.Swedish, "Mocambique" },
                 { Languages.ChineseSimplified, "莫桑比克" }
             },
-            AbbreviationTranslations = new Dictionary<string, string>(4)
+            AbbreviationTranslations = new TranslationList(4)
             {
                 { Languages.Swedish, "MC" },
                 { Languages.ChineseSimplified, "莫桑比克" }
@@ -764,12 +767,13 @@ public static class TeamManager
             _ => null
         };
     }
+    public static FactionInfo? GetFactionInfo(uint? id) => id.HasValue ? GetFactionInfo(id.Value) : null;
     public static FactionInfo? GetFactionInfo(PrimaryKey id)
     {
-        int pk = id.Key;
-        if (pk < 0) return null;
-        if (_factions.Count > pk && _factions[pk].PrimaryKey.Key == pk)
-            return _factions[pk];
+        uint pk = id.Key;
+        if (pk == 0) return null;
+        if (_factions.Count > pk && _factions[(int)pk].PrimaryKey.Key == pk)
+            return _factions[(int)pk];
         for (int i = 0; i < _factions.Count; ++i)
         {
             if (_factions[i].PrimaryKey.Key == pk)
@@ -787,6 +791,18 @@ public static class TeamManager
         }
 
         return null;
+    }
+    public static FactionInfo? GetFactionInfo(Faction? faction)
+    {
+        if (faction == null) return null;
+        if (faction.Key > 0)
+        {
+            FactionInfo? info = GetFactionInfo(faction.Key);
+            if (info != null)
+                return info;
+        }
+
+        return !string.IsNullOrEmpty(faction.InternalName) ? GetFactionInfo(faction.InternalName) : null;
     }
     public static IEnumerable<UCPlayer> EnumerateTeam(ulong team) => PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == team);
     /// <summary>Advanced search using name, abbreviation, and short name.</summary>
@@ -1188,6 +1204,19 @@ public static class TeamManager
         }
         return 0ul;
     }
+    public static ulong GetTeamNumber(Faction? faction)
+    {
+        if (faction is not null)
+        {
+            if (faction.InternalName.Equals(Team1Faction.FactionId, StringComparison.Ordinal))
+                return 1ul;
+            if (faction.InternalName.Equals(Team2Faction.FactionId, StringComparison.Ordinal))
+                return 2ul;
+            if (faction.InternalName.Equals(AdminFaction.FactionId, StringComparison.Ordinal))
+                return 3ul;
+        }
+        return 0ul;
+    }
     public static bool HasTeam(Player player)
     {
         ulong t = player.GetTeam();
@@ -1258,6 +1287,36 @@ public static class TeamManager
             _ => false
         };
     }
+    public static void RubberbandPlayer(UCPlayer player, ulong team)
+    {
+        Zone? main = GetMain(team);
+        if (main == null)
+            return;
+
+        L.LogDebug($"{player} left main while in staging phase.");
+        InteractableVehicle? veh = player.CurrentVehicle;
+        if (veh != null)
+        {
+            player.Player.movement.forceRemoveFromVehicle();
+            if (veh.gameObject.TryGetComponent(out Rigidbody rb))
+            {
+                rb.AddForce(-rb.velocity * 4 + Vector3.one);
+            }
+        }
+
+        Vector3 pos = main.GetClosestPointOnBorder(player.Position);
+        Vector3 pos2 = 2 * (pos - player.Position) + player.Position;
+        if (!main.IsInside(pos2))
+            pos2 = pos;
+        Landscape.getWorldHeight(pos2, out float height);
+        height += 0.01f;
+
+        if (pos2.y < height)
+            pos2.y = height;
+
+        player.Player.teleportToLocationUnsafe(pos2, player.Yaw);
+    }
+    public static bool InMainCached(UCPlayer player) => PlayerBaseStatus != null && PlayerBaseStatus.TryGetValue(player.Steam64, out byte team) && team != 0;
     public static void EvaluateBases()
     {
 #if DEBUG
@@ -1311,17 +1370,97 @@ public static class TeamManager
     }
     private static void InvokeOnLeftMain(UCPlayer player, ulong team)
     {
-        player.SendChat(T.LeftMain, GetFaction(team));
-        ActionLog.Add(ActionLogType.LeftMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) + 
-                                                   ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
+        if (Data.Gamemode is not TeamGamemode { State: State.Staging } tg || tg.CanLeaveMainInStaging(team) || player.OnDuty())
+        {
+            player.SendChat(T.LeftMain, GetFaction(team));
+            ActionLog.Add(ActionLogType.LeftMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) +
+                                                  ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
+        }
         OnPlayerLeftMainBase?.Invoke(player, team);
     }
     private static void InvokeOnEnterMain(UCPlayer player, ulong team)
     {
-        player.SendChat(T.EnteredMain, GetFaction(team));
-        ActionLog.Add(ActionLogType.EnterMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) + 
-                                                    ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
+        if (Data.Gamemode is not TeamGamemode { State: State.Staging } tg || tg.CanLeaveMainInStaging(team) || player.OnDuty())
+        {
+            player.SendChat(T.EnteredMain, GetFaction(team));
+            ActionLog.Add(ActionLogType.EnterMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) +
+                                                   ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
+        }
         OnPlayerEnteredMainBase?.Invoke(player, team);
+    }
+    public static float GetAMCDamageMultiplier(ulong team, Vector3 position)
+    {
+        if (team is not 1ul and not 2ul)
+            return 1f;
+
+        Zone? amc = TryGetTeamZone(team, true);
+        if (amc == null)
+            return 1f;
+
+        Zone? main = TryGetTeamZone(team, false);
+        if (main == null)
+            return 1f;
+
+        if (!amc.IsInside(position))
+            return 1f;
+        if (main.IsInside(position))
+            return 0f;
+
+        Vector3 mainPt = main.GetClosestPointOnBorder(position);
+        Vector3 amcPt = amc.GetClosestPointOnBorder(position);
+
+        double exponent = Gamemode.Config.GeneralAMCDamageMultiplierPower / 2d;
+
+        if (exponent == 0d)
+            exponent = 1d;
+
+        float mainDist = (mainPt - position).sqrMagnitude;
+        float amcDist = (amcPt - position).sqrMagnitude;
+
+        if (exponent - 1d is > 0.0001 or < -0.0001)
+        {
+            mainDist = (float)Math.Pow(mainDist, exponent);
+            amcDist = (float)Math.Pow(amcDist, exponent);
+        }
+
+        return mainDist / (mainDist + amcDist);
+    }
+    public static float GetAMCDamageMultiplier(ulong team, Vector2 position)
+    {
+        if (team is not 1ul and not 2ul)
+            return 1f;
+
+        Zone? amc = TryGetTeamZone(team, true);
+        if (amc == null)
+            return 1f;
+
+        Zone? main = TryGetTeamZone(team, false);
+        if (main == null)
+            return 1f;
+
+        if (!amc.IsInside(position))
+            return 1f;
+        if (main.IsInside(position))
+            return 0f;
+
+        Vector2 mainPt = main.GetClosestPointOnBorder(position);
+        Vector2 amcPt = amc.GetClosestPointOnBorder(position);
+
+        double exponent = Gamemode.Config.GeneralAMCDamageMultiplierPower / 2d;
+
+        if (exponent == 0d)
+            exponent = 1d;
+
+        float mainDist = (mainPt - position).sqrMagnitude;
+        float amcDist = (amcPt - position).sqrMagnitude;
+
+        if (exponent - 1d is > 0.0001 or < -0.0001)
+        {
+            mainDist = (float)Math.Pow(mainDist, exponent);
+            amcDist = (float)Math.Pow(amcDist, exponent);
+        }
+
+        return mainDist / (mainDist + amcDist);
     }
     internal static void OnConfigReload()
     {
@@ -1340,10 +1479,11 @@ public static class TeamManager
             _data.Reload();
     }
 
-    public static RedirectType GetRedirectInfo(Guid input, out FactionInfo? faction, bool clothingOnly = false)
+    public static RedirectType GetRedirectInfo(Guid input, out FactionInfo? faction, out string? variant, bool clothingOnly = false)
     {
         FactionInfo team1 = Team1Faction;
         FactionInfo team2 = Team2Faction;
+        variant = null;
         for (int i = -2; i < _factions.Count; ++i)
         {
             faction = i == -2 ? team2 : (i == -1 ? team1 : _factions[i]);
@@ -1404,7 +1544,7 @@ public static class TeamManager
         
         return RedirectType.None;
     }
-    public static ItemAsset? GetRedirectInfo(RedirectType type, FactionInfo? kitFaction, FactionInfo? requesterTeam, out byte[] state, out byte amount)
+    public static ItemAsset? GetRedirectInfo(RedirectType type, /* TODO */ string variant, FactionInfo? kitFaction, FactionInfo? requesterTeam, out byte[] state, out byte amount)
     {
         if (requesterTeam == null)
             requesterTeam = kitFaction;
@@ -1587,16 +1727,16 @@ public static class TeamManager
 
         return rtn;
     }
-    internal static RedirectType GetClothingRedirect(Guid input, FactionInfo faction)
+    internal static RedirectType GetClothingRedirect(Guid input, out string? variant, FactionInfo faction)
     {
-        RedirectType type = GetRedirectInfo(input, out FactionInfo? foundFaction, true);
+        RedirectType type = GetRedirectInfo(input, out FactionInfo? foundFaction, out variant, true);
         if (type == RedirectType.None || foundFaction != faction)
             return RedirectType.None;
 
         return type;
     }
 
-    internal static RedirectType GetItemRedirect(Guid input) => GetRedirectInfo(input, out _, false);
+    internal static RedirectType GetItemRedirect(Guid input) => GetRedirectInfo(input, out _, out _, false);
 #if DEBUG
     [Obsolete]
     internal static Guid CheckClothingAssetRedirect(Guid input, ulong team)
@@ -1671,15 +1811,27 @@ public static class TeamManager
     [Obsolete]
     private static readonly Guid VestRedirect               = new Guid("2b22ac1b5de74755a24c2f05219c5e1f");
 #endif
-    public static Task ReloadFactions(CancellationToken token) => ReloadFactions(Data.AdminSql, true, token);
-    public static Task ReloadFactions(IMySqlDatabase sql, bool checkTables, CancellationToken token)
+    public static async Task ReloadFactions(CancellationToken token)
+    {
+        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            await ReloadFactions(WarfareDatabases.Factions, UCWarfare.IsLoaded, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            WarfareDatabases.Kits.Release();
+        }
+    }
+
+    public static Task ReloadFactions(IFactionDbContext db, bool uploadDefaultIfMissing, CancellationToken token)
     {
         if (_factions == null)
         {
-            _factions = new List<FactionInfo>(DefaultFactions.Length);
+            _factions = new List<FactionInfo>(DefaultFactions);
             _factionsReadonly = _factions.AsReadOnly();
         }
-        return FactionInfo.DownloadFactions(sql, _factions, checkTables, token);
+        return FactionInfo.DownloadFactions(db, _factions, uploadDefaultIfMissing, token);
     }
     public static void WriteFactionLocalization(LanguageInfo language, string path, bool writeMising)
     {
@@ -1740,11 +1892,11 @@ public static class TeamManager
             value = null;
             if (loaded != null)
             {
-                if (loaded.TryGetValue(language.LanguageCode, out value))
+                if (loaded.TryGetValue(language.Code, out value))
                     isDefaultValue = language.IsDefault;
                 else if (!language.IsDefault && loaded.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
-                else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+                else if (@default != null && @default.TryGetValue(language.Code, out value))
                     isDefaultValue = language.IsDefault;
                 else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
@@ -1754,7 +1906,7 @@ public static class TeamManager
                     isDefaultValue = true;
                 }
             }
-            else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+            else if (@default != null && @default.TryGetValue(language.Code, out value))
                 isDefaultValue = language.IsDefault;
             else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                 isDefaultValue = true;
@@ -1763,790 +1915,6 @@ public static class TeamManager
         }
     }
 }
-public class FactionInfo : ITranslationArgument, IListItem, ICloneable
-{
-    public const string UnknownTeamImgURL = @"https://i.imgur.com/z0HE5P3.png";
-    public const int FactionIDMaxCharLimit = 16;
-    public const int FactionNameMaxCharLimit = 32;
-    public const int FactionShortNameMaxCharLimit = 24;
-    public const int FactionAbbreviationMaxCharLimit = 6;
-    public const int FactionImageLinkMaxCharLimit = 128;
-
-    public const string Admins = "admins";
-    public const string USA = "usa";
-    public const string Russia = "russia";
-    public const string MEC = "mec";
-    public const string Germany = "germany";
-    public const string China = "china";
-    public const string USMC = "usmc";
-    public const string Soviet = "soviet";
-    public const string Poland = "poland";
-    public const string Militia = "militia";
-    public const string Israel = "israel";
-    public const string France = "france";
-    public const string Canada = "canada";
-    public const string SouthAfrica = "southafrica";
-    public const string Mozambique = "mozambique";
-
-    public static DataMask QueryMask { get; set; } = DataMask.All;
-
-    [Obsolete("Africa was split into individual countries.")]
-    public const string LegacyAfrica = "africa";
-
-    [JsonIgnore]
-    private string _factionId;
-    [JsonPropertyName("displayName")]
-    public string Name;
-    [JsonPropertyName("shortName")]
-    public string ShortName;
-    [JsonPropertyName("nameLocalization")]
-    public Dictionary<string, string>? NameTranslations;
-    [JsonPropertyName("shortNameLocalization")]
-    public Dictionary<string, string>? ShortNameTranslations;
-    [JsonPropertyName("abbreviationLocalization")]
-    public Dictionary<string, string>? AbbreviationTranslations;
-    [JsonPropertyName("abbreviation")]
-    public string Abbreviation;
-    [JsonPropertyName("color")]
-    public string HexColor;
-    [JsonPropertyName("unarmed")]
-    public string? UnarmedKit;
-    [JsonPropertyName("flagImg")]
-    public string FlagImageURL;
-    [JsonPropertyName("ammoSupplies")]
-    public JsonAssetReference<ItemAsset>? Ammo;
-    [JsonPropertyName("buildingSupplies")]
-    public JsonAssetReference<ItemAsset>? Build;
-    [JsonPropertyName("rallyPoint")]
-    public JsonAssetReference<ItemBarricadeAsset>? RallyPoint;
-    [JsonPropertyName("radio")]
-    public JsonAssetReference<ItemBarricadeAsset>? FOBRadio;
-    [JsonPropertyName("defaultBackpack")]
-    public JsonAssetReference<ItemBackpackAsset>? DefaultBackpack;
-    [JsonPropertyName("defaultShirt")]
-    public JsonAssetReference<ItemShirtAsset>? DefaultShirt;
-    [JsonPropertyName("defaultPants")]
-    public JsonAssetReference<ItemPantsAsset>? DefaultPants;
-    [JsonPropertyName("defaultVest")]
-    public JsonAssetReference<ItemVestAsset>? DefaultVest;
-    [JsonPropertyName("defaultHat")]
-    public JsonAssetReference<ItemHatAsset>? DefaultHat;
-    [JsonPropertyName("defaultGlasses")]
-    public JsonAssetReference<ItemGlassesAsset>? DefaultGlasses;
-    [JsonPropertyName("defaultMask")]
-    public JsonAssetReference<ItemMaskAsset>? DefaultMask;
-    [JsonPropertyName("tmProSpriteIndex")]
-    public uint? TMProSpriteIndex;
-    [JsonPropertyName("emoji")]
-    public string? Emoji;
-    [JsonIgnore]
-    public PrimaryKey PrimaryKey { get; set; }
-    [JsonIgnore]
-    public string Sprite => "<sprite index=" + (TMProSpriteIndex.HasValue ? TMProSpriteIndex.Value.ToString(Data.AdminLocale) : "0") + ">";
-    [JsonPropertyName("factionId")]
-    public string FactionId
-    {
-        get => _factionId;
-        set
-        {
-            if (value.Length > FactionIDMaxCharLimit)
-                throw new ArgumentException("Faction ID must be less than " + FactionIDMaxCharLimit + " characters.", "factionId");
-            _factionId = value;
-        }
-    }
-
-    public FactionInfo() { }
-    public FactionInfo(string factionId, string name, string abbreviation, string shortName, string hexColor, string? unarmedKit, string flagImage = UnknownTeamImgURL)
-    {
-        FactionId = factionId;
-        Name = name;
-        Abbreviation = abbreviation;
-        ShortName = shortName;
-        HexColor = hexColor;
-        UnarmedKit = unarmedKit;
-        FlagImageURL = flagImage;
-    }
-
-    [FormatDisplay("ID")]
-    public const string FormatId = "i";
-    [FormatDisplay("Colored ID")]
-    public const string FormatColorId = "ic";
-    [FormatDisplay("Short Name")]
-    public const string FormatShortName = "s";
-    [FormatDisplay("Display Name")]
-    public const string FormatDisplayName = "d";
-    [FormatDisplay("Abbreviation")]
-    public const string FormatAbbreviation = "a";
-    [FormatDisplay("Colored Short Name")]
-    public const string FormatColorShortName = "sc";
-    [FormatDisplay("Colored Display Name")]
-    public const string FormatColorDisplayName = "dc";
-    [FormatDisplay("Colored Abbreviation")]
-    public const string FormatColorAbbreviation = "ac";
-
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
-    {
-        if (format is not null)
-        {
-            if (format.Equals(FormatColorDisplayName, StringComparison.Ordinal))
-                return Localization.Colorize(HexColor, GetName(language), flags);
-            if (format.Equals(FormatShortName, StringComparison.Ordinal))
-                return GetShortName(language);
-            if (format.Equals(FormatColorShortName, StringComparison.Ordinal))
-                return Localization.Colorize(HexColor, GetShortName(language), flags);
-            if (format.Equals(FormatAbbreviation, StringComparison.Ordinal))
-                return GetAbbreviation(language);
-            if (format.Equals(FormatColorAbbreviation, StringComparison.Ordinal))
-                return Localization.Colorize(HexColor, GetAbbreviation(language), flags);
-            if (format.Equals(FormatId, StringComparison.Ordinal) ||
-                format.Equals(FormatColorId, StringComparison.Ordinal))
-            {
-                ulong team = 0;
-                if (TeamManager.Team1Faction == this)
-                    team = 1;
-                else if (TeamManager.Team2Faction == this)
-                    team = 2;
-                else if (TeamManager.AdminFaction == this)
-                    team = 3;
-                if (format.Equals(FormatId, StringComparison.Ordinal))
-                    return team.ToString(culture ?? Data.LocalLocale);
-
-                return Localization.Colorize(HexColor, team.ToString(culture ?? Data.LocalLocale), flags);
-            }
-        }
-        return GetName(language);
-    }
-    public string GetName(LanguageInfo? language)
-    {
-        if (language is null || language.IsDefault || NameTranslations is null || !NameTranslations.TryGetValue(language.LanguageCode, out string val))
-            return Name;
-        return val;
-    }
-    public string GetShortName(LanguageInfo? language)
-    {
-        if (language is null || language.IsDefault)
-            return ShortName ?? Name;
-        if (ShortNameTranslations is null || !ShortNameTranslations.TryGetValue(language.LanguageCode, out string val))
-        {
-            if (NameTranslations is null || !NameTranslations.TryGetValue(language.LanguageCode, out val))
-                return ShortName ?? Name;
-        }
-        return val;
-    }
-    public string GetAbbreviation(LanguageInfo? language)
-    {
-        if (language is null || language.IsDefault || AbbreviationTranslations is null || !AbbreviationTranslations.TryGetValue(language.LanguageCode, out string val))
-            return Abbreviation;
-        return val;
-    }
-    // ReSharper disable InconsistentNaming
-    public const string TABLE_MAIN = "factions";
-    public const string TABLE_MAP_ASSETS = "faction_assets";
-    public const string TABLE_NAME_TRANSLATIONS = "faction_name_translations";
-    public const string TABLE_SHORT_NAME_TRANSLATIONS = "faction_short_name_translations";
-    public const string TABLE_ABBREVIATIONS_TRANSLATIONS = "faction_abbreviation_translations";
-    public const string COLUMN_PK = "pk";
-    public const string COLUMN_ID = "Id";
-    public const string COLUMN_NAME = "Name";
-    public const string COLUMN_SHORT_NAME = "ShortName";
-    public const string COLUMN_ABBREVIATION = "Abbreviation";
-    public const string COLUMN_HEX_COLOR = "HexColor";
-    public const string COLUMN_UNARMED_KIT = "UnarmedKit";
-    public const string COLUMN_FLAG_IMAGE_URL = "FlagImageUrl";
-    public const string COLUMN_SPRITE_INDEX = "SpriteIndex";
-    public const string COLUMN_EMOJI = "Emoji";
-    public const string COLUMN_EXT_PK = "Faction";
-    public const string COLUMN_ASSETS_SUPPLY_AMMO = "AmmoSupply";
-    public const string COLUMN_ASSETS_SUPPLY_BUILD = "BuildSupply";
-    public const string COLUMN_ASSETS_RALLY_POINT = "RallyPoint";
-    public const string COLUMN_ASSETS_FOB_RADIO = "Radio";
-    public const string COLUMN_ASSETS_DEFAULT_BACKPACK = "DefaultBackpack";
-    public const string COLUMN_ASSETS_DEFAULT_SHIRT = "DefaultShirt";
-    public const string COLUMN_ASSETS_DEFAULT_PANTS = "DefaultPants";
-    public const string COLUMN_ASSETS_DEFAULT_VEST = "DefaultVest";
-    public const string COLUMN_ASSETS_DEFAULT_GLASSES = "DefaultGlasses";
-    public const string COLUMN_ASSETS_DEFAULT_MASK = "DefaultMask";
-    public const string COLUMN_ASSETS_DEFAULT_HAT = "DefaultHat";
-    public static readonly Schema[] SCHEMAS =
-    {
-        new Schema(TABLE_MAIN, new Schema.Column[]
-        {
-            new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            },
-            new Schema.Column(COLUMN_ID, "varchar(" + FactionIDMaxCharLimit.ToString(CultureInfo.InvariantCulture) + ")"),
-            new Schema.Column(COLUMN_NAME, "varchar(" + FactionNameMaxCharLimit.ToString(CultureInfo.InvariantCulture) + ")"),
-            new Schema.Column(COLUMN_SHORT_NAME, "varchar(" + FactionShortNameMaxCharLimit.ToString(CultureInfo.InvariantCulture) + ")"),
-            new Schema.Column(COLUMN_ABBREVIATION, "varchar(" + FactionAbbreviationMaxCharLimit.ToString(CultureInfo.InvariantCulture) + ")")
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_HEX_COLOR, "char(6)")
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_UNARMED_KIT, "varchar(" + KitEx.KitNameMaxCharLimit.ToString(CultureInfo.InvariantCulture) + ")")
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_FLAG_IMAGE_URL, "varchar(" + FactionImageLinkMaxCharLimit.ToString(CultureInfo.InvariantCulture) + ")")
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_SPRITE_INDEX, SqlTypes.UINT)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_EMOJI, SqlTypes.String(64))
-            {
-                Nullable = true
-            }
-        }, true, typeof(FactionInfo)),
-        new Schema(TABLE_MAP_ASSETS, new Schema.Column[]
-        {
-            new Schema.Column(COLUMN_EXT_PK, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                ForeignKey = true,
-                AutoIncrement = true,
-                ForeignKeyTable = TABLE_MAIN,
-                ForeignKeyColumn = COLUMN_PK
-            },
-            new Schema.Column(COLUMN_ASSETS_SUPPLY_AMMO, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_SUPPLY_BUILD, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_RALLY_POINT, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_FOB_RADIO, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_DEFAULT_BACKPACK, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_DEFAULT_SHIRT, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_DEFAULT_PANTS, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_DEFAULT_VEST, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_DEFAULT_GLASSES, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_DEFAULT_MASK, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_ASSETS_DEFAULT_HAT, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-        }, false, typeof(FactionInfo)),
-        F.GetTranslationListSchema(TABLE_NAME_TRANSLATIONS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, FactionNameMaxCharLimit),
-        F.GetTranslationListSchema(TABLE_SHORT_NAME_TRANSLATIONS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, FactionShortNameMaxCharLimit),
-        F.GetTranslationListSchema(TABLE_ABBREVIATIONS_TRANSLATIONS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, FactionAbbreviationMaxCharLimit)
-    };
-    // ReSharper restore InconsistantNaming
-
-    private static async Task AddDefaults(IMySqlDatabase sql, CancellationToken token = default)
-    {
-        StringBuilder builder = new StringBuilder($"INSERT INTO `{TABLE_MAIN}` (`{COLUMN_PK}`,`{COLUMN_ID}`,`{COLUMN_NAME}`,`{COLUMN_SHORT_NAME}`,`{COLUMN_ABBREVIATION}`," +
-                                                  $"`{COLUMN_HEX_COLOR}`,`{COLUMN_UNARMED_KIT}`,`{COLUMN_FLAG_IMAGE_URL}`,`{COLUMN_SPRITE_INDEX}`,`{COLUMN_EMOJI}`) VALUES ", 256);
-        object[] objs = new object[TeamManager.DefaultFactions.Length * 10];
-        for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
-        {
-            FactionInfo def = TeamManager.DefaultFactions[i];   
-            def.PrimaryKey = i + 1;
-            int index = i * 10;
-            F.AppendPropertyList(builder, index, 10);
-            objs[index] = def.PrimaryKey.Key;
-            objs[index + 1] = def.FactionId;
-            objs[index + 2] = def.Name;
-            objs[index + 3] = def.ShortName;
-            objs[index + 4] = (object?)def.Abbreviation ?? DBNull.Value;
-            objs[index + 5] = (object?)def.HexColor ?? DBNull.Value;
-            objs[index + 6] = (object?)def.UnarmedKit ?? DBNull.Value;
-            objs[index + 7] = (object?)def.FlagImageURL ?? DBNull.Value;
-            objs[index + 8] = def.TMProSpriteIndex.HasValue ? def.TMProSpriteIndex.Value : DBNull.Value;
-            objs[index + 9] = string.IsNullOrEmpty(def.Emoji) ? DBNull.Value : def.Emoji!;
-        }
-
-        builder.Append(';');
-        await sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
-        builder.Clear();
-        builder.Append($"INSERT INTO `{TABLE_MAP_ASSETS}` (`{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`,`{COLUMN_ASSETS_RALLY_POINT}`," +
-                       $"`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`,`{COLUMN_ASSETS_DEFAULT_SHIRT}`," +
-                       $"`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}`,`{COLUMN_ASSETS_DEFAULT_GLASSES}`," +
-                       $"`{COLUMN_ASSETS_DEFAULT_MASK}`,`{COLUMN_ASSETS_DEFAULT_HAT}`) VALUES ");
-        const int length = 12;
-        objs = new object[TeamManager.DefaultFactions.Length * length];
-        for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
-        {
-            FactionInfo def = TeamManager.DefaultFactions[i];
-            int st = i * length;
-            F.AppendPropertyList(builder, st, length);
-            objs[st] = def.PrimaryKey.Key;
-            if (def.Ammo is null) objs[st + 1] = DBNull.Value;
-            else objs[st + 1] = def.Ammo.Guid.ToString("N");
-
-            if (def.Build is null) objs[st + 2] = DBNull.Value;
-            else objs[st + 2] = def.Build.Guid.ToString("N");
-
-            if (def.RallyPoint is null) objs[st + 3] = DBNull.Value;
-            else objs[st + 3] = def.RallyPoint.Guid.ToString("N");
-
-            if (def.FOBRadio is null) objs[st + 4] = DBNull.Value;
-            else objs[st + 4] = def.FOBRadio.Guid.ToString("N");
-
-            if (def.DefaultBackpack is null) objs[st + 5] = DBNull.Value;
-            else objs[st + 5] = def.DefaultBackpack.Guid.ToString("N");
-
-            if (def.DefaultShirt is null) objs[st + 6] = DBNull.Value;
-            else objs[st + 6] = def.DefaultShirt.Guid.ToString("N");
-
-            if (def.DefaultPants is null) objs[st + 7] = DBNull.Value;
-            else objs[st + 7] = def.DefaultPants.Guid.ToString("N");
-
-            if (def.DefaultVest is null) objs[st + 8] = DBNull.Value;
-            else objs[st + 8] = def.DefaultVest.Guid.ToString("N");
-
-            if (def.DefaultGlasses is null) objs[st + 9] = DBNull.Value;
-            else objs[st + 9] = def.DefaultGlasses.Guid.ToString("N");
-
-            if (def.DefaultMask is null) objs[st + 10] = DBNull.Value;
-            else objs[st + 10] = def.DefaultMask.Guid.ToString("N");
-
-            if (def.DefaultHat is null) objs[st + 11] = DBNull.Value;
-            else objs[st + 11] = def.DefaultHat.Guid.ToString("N");
-        }
-
-        builder.Append(';');
-
-        await sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
-        builder.Clear();
-        builder.Append($"INSERT INTO `{TABLE_NAME_TRANSLATIONS}` (`{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}`) VALUES ");
-        List<object> objs2 = new List<object>(TeamManager.DefaultFactions.Length * 3);
-        bool f = false;
-        for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
-        {
-            FactionInfo def = TeamManager.DefaultFactions[i];
-            if (def.NameTranslations == null)
-                continue;
-            foreach (KeyValuePair<string, string> v in def.NameTranslations)
-            {
-                if (f)
-                    builder.Append(',');
-                else
-                    f = true;
-                int c = objs2.Count;
-                builder.Append("(@" + c.ToString(Data.AdminLocale) + ",@" + (c + 1).ToString(Data.AdminLocale) + ",@" + (c + 2).ToString(Data.AdminLocale) + ")");
-                objs2.Add(def.PrimaryKey.Key);
-                objs2.Add(v.Key);
-                objs2.Add(v.Value);
-            }
-        }
-        if (objs2.Count != 0)
-        {
-            builder.Append(';');
-            await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
-            objs2.Clear();
-        }
-
-        builder.Clear();
-        builder.Append($"INSERT INTO `{TABLE_SHORT_NAME_TRANSLATIONS}` (`{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}`) VALUES ");
-        f = false;
-        for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
-        {
-            FactionInfo def = TeamManager.DefaultFactions[i];
-            if (def.ShortNameTranslations == null)
-                continue;
-            foreach (KeyValuePair<string, string> v in def.ShortNameTranslations)
-            {
-                if (f)
-                    builder.Append(',');
-                else
-                    f = true;
-                int c = objs2.Count;
-                builder.Append("(@" + c.ToString(Data.AdminLocale) + ",@" + (c + 1).ToString(Data.AdminLocale) + ",@" + (c + 2).ToString(Data.AdminLocale) + ")");
-                objs2.Add(def.PrimaryKey.Key);
-                objs2.Add(v.Key);
-                objs2.Add(v.Value);
-            }
-        }
-
-        if (objs2.Count != 0)
-        {
-            builder.Append(';');
-            await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
-            objs2.Clear();
-        }
-        builder.Clear();
-        builder.Append($"INSERT INTO `{TABLE_ABBREVIATIONS_TRANSLATIONS}` (`{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}`) VALUES ");
-        f = false;
-        for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
-        {
-            FactionInfo def = TeamManager.DefaultFactions[i];
-            if (def.AbbreviationTranslations == null)
-                continue;
-            foreach (KeyValuePair<string, string> v in def.AbbreviationTranslations)
-            {
-                if (f)
-                    builder.Append(',');
-                else
-                    f = true;
-                int c = objs2.Count;
-                builder.Append("(@" + c.ToString(Data.AdminLocale) + ",@" + (c + 1).ToString(Data.AdminLocale) + ",@" + (c + 2).ToString(Data.AdminLocale) + ")");
-                objs2.Add(def.PrimaryKey.Key);
-                objs2.Add(v.Key);
-                objs2.Add(v.Value);
-            }
-        }
-
-        if (objs2.Count == 0)
-            return;
-
-        builder.Append(';');
-        await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
-    }
-    public static async Task DownloadFactions(IMySqlDatabase sql, List<FactionInfo> list, bool checkTables, CancellationToken token = default)
-    {
-        if (UCWarfare.IsLoaded)
-            Localization.ClearSection(TranslationSection.Factions);
-
-        int ct = 0;
-        if (checkTables)
-        {
-            int[] vals = await sql.VerifyTables(SCHEMAS, token).ConfigureAwait(false);
-            if (vals[0] == 3)
-            {
-                await AddDefaults(sql, token).ConfigureAwait(false);
-                AddDefaultsToList();
-            }
-        }
-
-        bool queried = false;
-        try
-        {
-            await sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_ID}`,`{COLUMN_NAME}`," +
-                                 $"`{COLUMN_SHORT_NAME}`,`{COLUMN_ABBREVIATION}`,`{COLUMN_HEX_COLOR}`,`{COLUMN_UNARMED_KIT}`," +
-                                 $"`{COLUMN_FLAG_IMAGE_URL}`,`{COLUMN_SPRITE_INDEX}`,`{COLUMN_EMOJI}` FROM `{TABLE_MAIN}`;", null,
-                reader =>
-                {
-                    int pk = reader.GetInt32(0);
-                    string name = reader.GetString(2);
-                    string id = reader.GetString(1);
-                    string shortName = reader.IsDBNull(3) ? name : reader.GetString(3);
-                    string abbreviation = reader.IsDBNull(4) ? shortName.ToUpperInvariant() : reader.GetString(4);
-                    string hexColor = reader.IsDBNull(5) ? UCWarfare.GetColorHex("default") : reader.GetString(5);
-                    string? unarmedKit = reader.IsDBNull(6) ? null : reader.GetString(6);
-                    string flag = reader.IsDBNull(7) ? UnknownTeamImgURL : reader.GetString(7);
-                    uint? spriteIndex = reader.IsDBNull(8) ? null : reader.GetUInt32(8);
-                    string? emoji = reader.IsDBNull(9) ? null : reader.GetString(9);
-                    for (int i = 0; i < list.Count; ++i)
-                    {
-                        if (list[i].PrimaryKey.Key == pk)
-                        {
-                            FactionInfo faction = list[i];
-                            faction.FactionId = id;
-                            faction.Name = name;
-                            faction.ShortName = shortName;
-                            faction.Abbreviation = abbreviation;
-                            faction.HexColor = hexColor;
-                            faction.UnarmedKit = unarmedKit;
-                            faction.FlagImageURL = flag;
-                            faction.TMProSpriteIndex = spriteIndex;
-                            faction.Emoji = emoji;
-                            return;
-                        }
-                    }
-                    list.Add(
-                        new FactionInfo(
-                            id,
-                            name,
-                            abbreviation,
-                            shortName,
-                            hexColor,
-                            unarmedKit,
-                            flag)
-                        {
-                            PrimaryKey = pk,
-                            TMProSpriteIndex = spriteIndex,
-                            Emoji = emoji,
-                        });
-                    ct += 3;
-                }, token).ConfigureAwait(false);
-            queried = true;
-            if (UCWarfare.IsLoaded)
-            {
-                Localization.IncrementSection(TranslationSection.Factions, ct);
-            }
-
-            if ((QueryMask & DataMask.Assets) != 0)
-            {
-                await sql.QueryAsync(
-                    $"SELECT `{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`," +
-                    $"`{COLUMN_ASSETS_RALLY_POINT}`,`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`," +
-                    $"`{COLUMN_ASSETS_DEFAULT_SHIRT}`,`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}`," +
-                    $"`{COLUMN_ASSETS_DEFAULT_GLASSES}`,`{COLUMN_ASSETS_DEFAULT_MASK}`,`{COLUMN_ASSETS_DEFAULT_HAT}` FROM `{TABLE_MAP_ASSETS}`;", null,
-                    reader =>
-                    {
-                        int pk = reader.GetInt32(0);
-                        for (int i = 0; i < list.Count; ++i)
-                        {
-                            if (list[i].PrimaryKey.Key == pk)
-                            {
-                                FactionInfo faction = list[i];
-                                if (!reader.IsDBNull(1))
-                                {
-                                    Guid? guid = reader.ReadGuidString(1);
-                                    if (guid.HasValue)
-                                        faction.Ammo = new JsonAssetReference<ItemAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(2))
-                                {
-                                    Guid? guid = reader.ReadGuidString(2);
-                                    if (guid.HasValue)
-                                        faction.Build = new JsonAssetReference<ItemAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(3))
-                                {
-                                    Guid? guid = reader.ReadGuidString(3);
-                                    if (guid.HasValue)
-                                        faction.RallyPoint = new JsonAssetReference<ItemBarricadeAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(4))
-                                {
-                                    Guid? guid = reader.ReadGuidString(4);
-                                    if (guid.HasValue)
-                                        faction.FOBRadio = new JsonAssetReference<ItemBarricadeAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(5))
-                                {
-                                    Guid? guid = reader.ReadGuidString(5);
-                                    if (guid.HasValue)
-                                        faction.DefaultBackpack = new JsonAssetReference<ItemBackpackAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(6))
-                                {
-                                    Guid? guid = reader.ReadGuidString(6);
-                                    if (guid.HasValue)
-                                        faction.DefaultShirt = new JsonAssetReference<ItemShirtAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(7))
-                                {
-                                    Guid? guid = reader.ReadGuidString(7);
-                                    if (guid.HasValue)
-                                        faction.DefaultPants = new JsonAssetReference<ItemPantsAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(8))
-                                {
-                                    Guid? guid = reader.ReadGuidString(8);
-                                    if (guid.HasValue)
-                                        faction.DefaultVest = new JsonAssetReference<ItemVestAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(9))
-                                {
-                                    Guid? guid = reader.ReadGuidString(9);
-                                    if (guid.HasValue)
-                                        faction.DefaultGlasses = new JsonAssetReference<ItemGlassesAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(10))
-                                {
-                                    Guid? guid = reader.ReadGuidString(10);
-                                    if (guid.HasValue)
-                                        faction.DefaultMask = new JsonAssetReference<ItemMaskAsset>(guid.Value);
-                                }
-                                if (!reader.IsDBNull(11))
-                                {
-                                    Guid? guid = reader.ReadGuidString(11);
-                                    if (guid.HasValue)
-                                        faction.DefaultHat = new JsonAssetReference<ItemHatAsset>(guid.Value);
-                                }
-                                break;
-                            }
-                        }
-                    }, token).ConfigureAwait(false);
-            }
-
-            if ((QueryMask & DataMask.Name) != 0)
-            {
-                await sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}` FROM `{TABLE_NAME_TRANSLATIONS}`;", null,
-                    reader =>
-                    {
-                        int pk = reader.GetInt32(0);
-                        for (int i = 0; i < list.Count; ++i)
-                        {
-                            if (list[i].PrimaryKey.Key == pk)
-                            {
-                                string lang = reader.GetString(1);
-                                FactionInfo faction = list[i];
-                                if (faction.NameTranslations == null)
-                                    faction.NameTranslations = new Dictionary<string, string>(1);
-                                else if (faction.NameTranslations.ContainsKey(lang))
-                                    break;
-                                faction.NameTranslations.Add(lang, reader.GetString(2));
-                                TryIncrement(lang);
-                                break;
-                            }
-                        }
-                    }, token).ConfigureAwait(false);
-            }
-
-            if ((QueryMask & DataMask.ShortName) != 0)
-            {
-                await sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}` FROM `{TABLE_SHORT_NAME_TRANSLATIONS}`;", null,
-                    reader =>
-                    {
-                        int pk = reader.GetInt32(0);
-                        for (int i = 0; i < list.Count; ++i)
-                        {
-                            if (list[i].PrimaryKey.Key == pk)
-                            {
-                                string lang = reader.GetString(1);
-                                FactionInfo faction = list[i];
-                                if (faction.ShortNameTranslations == null)
-                                    faction.ShortNameTranslations = new Dictionary<string, string>(1);
-                                else if (faction.ShortNameTranslations.ContainsKey(lang))
-                                    break;
-                                faction.ShortNameTranslations.Add(lang, reader.GetString(2));
-                                TryIncrement(lang);
-                                break;
-                            }
-                        }
-                    }, token).ConfigureAwait(false);
-            }
-
-            if ((QueryMask & DataMask.Abbreviation) != 0)
-            {
-                await sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}` FROM `{TABLE_ABBREVIATIONS_TRANSLATIONS}`;", null,
-                    reader =>
-                    {
-                        int pk = reader.GetInt32(0);
-                        for (int i = 0; i < list.Count; ++i)
-                        {
-                            if (list[i].PrimaryKey.Key == pk)
-                            {
-                                string lang = reader.GetString(1);
-                                FactionInfo faction = list[i];
-                                if (faction.AbbreviationTranslations == null)
-                                    faction.AbbreviationTranslations = new Dictionary<string, string>(1);
-                                else if (faction.AbbreviationTranslations.ContainsKey(lang))
-                                    break;
-                                faction.AbbreviationTranslations.Add(lang, reader.GetString(2));
-                                TryIncrement(lang);
-                                break;
-                            }
-                        }
-                    }, token).ConfigureAwait(false);
-            }
-        }
-        catch (MySqlException)
-        {
-            if (!queried)
-            {
-                list.AddRange(TeamManager.DefaultFactions);
-            }
-        }
-
-        void TryIncrement(string lang)
-        {
-            if (UCWarfare.IsLoaded && Data.LanguageDataStore.GetInfoCached(lang) is { } language)
-                language.IncrementSection(TranslationSection.Factions, 1);
-        }
-
-        void AddDefaultsToList()
-        {
-            for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
-            {
-                int pk = TeamManager.DefaultFactions[i].PrimaryKey.Key;
-                FactionInfo def = TeamManager.DefaultFactions[i];
-                bool found = false;
-                for (int j = 0; j < list.Count; ++j)
-                {
-                    if (list[j].PrimaryKey == pk)
-                    {
-                        FactionInfo faction = list[j];
-                        faction.FactionId = def.FactionId;
-                        faction.Name = def.Name;
-                        faction.ShortName = def.ShortName;
-                        faction.Abbreviation = def.Abbreviation;
-                        faction.HexColor = def.HexColor;
-                        faction.UnarmedKit = def.UnarmedKit;
-                        faction.FlagImageURL = def.FlagImageURL;
-                        faction.TMProSpriteIndex = def.TMProSpriteIndex;
-                        faction.Emoji = def.Emoji;
-                        faction.Ammo = def.Ammo?.Clone() as JsonAssetReference<ItemAsset>;
-                        faction.Build = def.Build?.Clone() as JsonAssetReference<ItemAsset>;
-                        faction.RallyPoint = def.RallyPoint?.Clone() as JsonAssetReference<ItemBarricadeAsset>;
-                        faction.FOBRadio = def.FOBRadio?.Clone() as JsonAssetReference<ItemBarricadeAsset>;
-                        faction.DefaultBackpack = def.DefaultBackpack?.Clone() as JsonAssetReference<ItemBackpackAsset>;
-                        faction.DefaultShirt = def.DefaultShirt?.Clone() as JsonAssetReference<ItemShirtAsset>;
-                        faction.DefaultPants = def.DefaultPants?.Clone() as JsonAssetReference<ItemPantsAsset>;
-                        faction.DefaultVest = def.DefaultVest?.Clone() as JsonAssetReference<ItemVestAsset>;
-                        faction.DefaultGlasses = def.DefaultGlasses?.Clone() as JsonAssetReference<ItemGlassesAsset>;
-                        faction.DefaultMask = def.DefaultMask?.Clone() as JsonAssetReference<ItemMaskAsset>;
-                        faction.DefaultHat = def.DefaultHat?.Clone() as JsonAssetReference<ItemHatAsset>;
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    list.Add((FactionInfo)def.Clone());
-                }
-            }
-        }
-    }
-
-    public object Clone()
-    {
-        return new FactionInfo(FactionId, Name, Abbreviation, ShortName, HexColor, UnarmedKit, FlagImageURL)
-        {
-            PrimaryKey = PrimaryKey,
-            Ammo = Ammo?.Clone() as JsonAssetReference<ItemAsset>,
-            Build = Build?.Clone() as JsonAssetReference<ItemAsset>,
-            RallyPoint = RallyPoint?.Clone() as JsonAssetReference<ItemBarricadeAsset>,
-            FOBRadio = FOBRadio?.Clone() as JsonAssetReference<ItemBarricadeAsset>,
-            DefaultBackpack = DefaultBackpack?.Clone() as JsonAssetReference<ItemBackpackAsset>,
-            DefaultShirt = DefaultShirt?.Clone() as JsonAssetReference<ItemShirtAsset>,
-            DefaultPants = DefaultPants?.Clone() as JsonAssetReference<ItemPantsAsset>,
-            DefaultVest = DefaultVest?.Clone() as JsonAssetReference<ItemVestAsset>,
-            DefaultGlasses = DefaultGlasses?.Clone() as JsonAssetReference<ItemGlassesAsset>,
-            DefaultMask = DefaultMask?.Clone() as JsonAssetReference<ItemMaskAsset>,
-            DefaultHat = DefaultHat?.Clone() as JsonAssetReference<ItemHatAsset>
-        };
-    }
-
-    [Flags]
-    public enum DataMask
-    {
-        Assets = 1 << 0,
-        ShortName = 1 << 1,
-        Abbreviation = 1 << 2,
-        Name = 1 << 3,
-        All = Assets | ShortName | Abbreviation | Name
-    }
-}
-
 public class TeamConfig : Config<TeamConfigData>
 {
     public TeamConfig() : base(Warfare.Data.Paths.BaseDirectory, "teams.json", "teams")
@@ -2561,27 +1929,27 @@ public class TeamConfig : Config<TeamConfigData>
 public class TeamConfigData : JSONConfigData
 {
     [JsonPropertyName("t1Faction")]
-    public RotatableConfig<string> Team1FactionId;
+    public RotatableConfig<string> Team1FactionId { get; set; }
     [JsonPropertyName("t2Faction")]
-    public RotatableConfig<string> Team2FactionId;
+    public RotatableConfig<string> Team2FactionId { get; set; }
     [JsonPropertyName("adminFaction")]
-    public RotatableConfig<string> AdminFactionId;
+    public RotatableConfig<string> AdminFactionId { get; set; }
 
     [JsonPropertyName("defaultkit")]
-    public RotatableConfig<string> DefaultKit;
+    public RotatableConfig<string> DefaultKit { get; set; }
     [JsonPropertyName("team1spawnangle")]
-    public RotatableConfig<float> Team1SpawnYaw;
+    public RotatableConfig<float> Team1SpawnYaw { get; set; }
     [JsonPropertyName("team2spawnangle")]
-    public RotatableConfig<float> Team2SpawnYaw;
+    public RotatableConfig<float> Team2SpawnYaw { get; set; }
     [JsonPropertyName("lobbyspawnangle")]
-    public RotatableConfig<float> LobbySpawnpointYaw;
+    public RotatableConfig<float> LobbySpawnpointYaw { get; set; }
 
     [JsonPropertyName("team_switch_cooldown")]
-    public float TeamSwitchCooldown;
+    public float TeamSwitchCooldown { get; set; }
     [JsonPropertyName("allowedTeamGap")]
-    public float AllowedDifferencePercent;
+    public float AllowedDifferencePercent { get; set; }
     [JsonPropertyName("balanceTeams")]
-    public bool BalanceTeams;
+    public bool BalanceTeams { get; set; }
     public override void SetDefaults()
     {
         // don't even think about leaking these

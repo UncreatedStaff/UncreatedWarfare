@@ -771,6 +771,7 @@ public static class OffenseManager
 
         UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, log, CancellationToken.None, ctx: "Log teamkill.");
     }
+    // ReSharper restore AutoPropertyCanBeMadeGetOnly.Local
     public static class NetCalls
     {
 #if false

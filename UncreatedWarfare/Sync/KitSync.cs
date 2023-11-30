@@ -9,16 +9,17 @@ using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
 
 namespace Uncreated.Warfare.Sync;
 public static class KitSync
 {
-    private static readonly List<int> PendingKits;
-    private static readonly List<int> PendingKitDeletions;
+    private static readonly List<uint> PendingKits;
+    private static readonly List<uint> PendingKitDeletions;
     private static readonly List<ulong> PendingAccessChanges;
     private static readonly UCSemaphore Semaphore = new UCSemaphore();
-    private static volatile int _deleting = -1;
-    private static volatile int _updating = -1;
+    private static volatile uint _deleting = uint.MaxValue;
+    private static volatile uint _updating = uint.MaxValue;
     private static int _version;
 #if DEBUG
     private static void SemaphoreWaitCallback()
@@ -32,8 +33,8 @@ public static class KitSync
 #endif
     static KitSync()
     {
-        PendingKits = new List<int>(8);
-        PendingKitDeletions = new List<int>(2);
+        PendingKits = new List<uint>(8);
+        PendingKitDeletions = new List<uint>(2);
         PendingAccessChanges = new List<ulong>(64);
 #if DEBUG
         Semaphore.WaitCallback += SemaphoreWaitCallback;
@@ -77,7 +78,7 @@ public static class KitSync
                             {
                                 while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                                 {
-                                    if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int pk))
+                                    if (reader.TokenType == JsonTokenType.Number && reader.TryGetUInt32(out uint pk))
                                     {
                                         if (!PendingKits.Contains(pk))
                                             PendingKits.Add(pk);
@@ -91,7 +92,7 @@ public static class KitSync
                             {
                                 while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                                 {
-                                    if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int pk))
+                                    if (reader.TokenType == JsonTokenType.Number && reader.TryGetUInt32(out uint pk))
                                     {
                                         if (!PendingKitDeletions.Contains(pk))
                                             PendingKitDeletions.Add(pk);
@@ -154,21 +155,21 @@ public static class KitSync
 
         writer.Flush();
     }
-    public static void OnKitUpdated(SqlItem<Kit> kit)
+    public static void OnKitUpdated(Kit kit)
     {
-        if (_updating == kit.LastPrimaryKey.Key)
+        if (_updating == kit.PrimaryKey)
             return;
         Task.Run(async () =>
         {
             await Semaphore.WaitAsync();
             try
             {
-                PendingKits.Add(kit.LastPrimaryKey);
+                PendingKits.Add(kit.PrimaryKey);
                 if (!UCWarfare.CanUseNetCall)
                     return;
-                RequestResponse response = await NetCalls.MulticastKitUpdated.RequestAck(UCWarfare.I.NetClient!, kit.LastPrimaryKey);
+                RequestResponse response = await NetCalls.MulticastKitUpdated.RequestAck(UCWarfare.I.NetClient!, kit.PrimaryKey);
                 if (response.Responded)
-                    PendingKits.Remove(kit.LastPrimaryKey);
+                    PendingKits.Remove(kit.PrimaryKey);
                 else
                     L.LogWarning("Failed to send kit update to homebase.");
                 SavePendings();
@@ -241,7 +242,7 @@ public static class KitSync
             try
             {
                 PendingKits.RemoveAll(x => PendingKitDeletions.Contains(x));
-                foreach (int update in PendingKits)
+                foreach (uint update in PendingKits)
                 {
                     if (!UCWarfare.CanUseNetCall || v != _version)
                         return;
@@ -254,7 +255,7 @@ public static class KitSync
                     else
                         L.LogWarning("Failed to send kit update to homebase.");
                 }
-                foreach (int delete in PendingKitDeletions)
+                foreach (uint delete in PendingKitDeletions)
                 {
                     if (!UCWarfare.CanUseNetCall || v != _version)
                         return;
@@ -289,12 +290,12 @@ public static class KitSync
     }
     public static class NetCalls
     {
-        public static readonly NetCall<int> MulticastKitUpdated = new NetCall<int>(OnForeignKitUpdated);
-        public static readonly NetCall<int> MulticastKitDeleted = new NetCall<int>(OnForeignKitDeleted);
+        public static readonly NetCall<uint> MulticastKitUpdated = new NetCall<uint>(OnForeignKitUpdated);
+        public static readonly NetCall<uint> MulticastKitDeleted = new NetCall<uint>(OnForeignKitDeleted);
         public static readonly NetCall<ulong> MulticastKitAccessChanged = new NetCall<ulong>(OnForeignAccessUpdated);
 
         [NetCall(ENetCall.FROM_SERVER, 3008)]
-        private static async Task OnForeignKitUpdated(MessageContext ctx, int pk)
+        private static async Task OnForeignKitUpdated(MessageContext ctx, uint pk)
         {
             try
             {
@@ -304,14 +305,14 @@ public static class KitSync
                     KitManager? manager = KitManager.GetSingletonQuick();
                     if (manager == null) return;
                     _updating = pk;
-                    SqlItem<Kit>? kit = await manager.Download(pk);
-                    L.Log("Received update notification for kit: \"" + (kit?.Item == null ? "<null>" : kit.Item.Id) + "\" " + pk
+                    Kit? kit = await manager.Redownload(x => x.PrimaryKey == _deleting);
+                    L.Log("Received update notification for kit: \"" + (kit == null ? "<null>" : kit.InternalName) + "\" " + pk
                           + " and redownloaded it from admin database.");
                     ctx.Acknowledge();
                 }
                 finally
                 {
-                    _updating = -1;
+                    _updating = uint.MaxValue;
                     Semaphore.Release();
                 }
             }
@@ -322,7 +323,7 @@ public static class KitSync
             }
         }
         [NetCall(ENetCall.FROM_SERVER, 3006)]
-        private static async Task OnForeignKitDeleted(MessageContext ctx, int pk)
+        private static async Task OnForeignKitDeleted(MessageContext ctx, uint pk)
         {
             try
             {
@@ -332,15 +333,13 @@ public static class KitSync
                     KitManager? manager = KitManager.GetSingletonQuick();
                     if (manager == null) return;
                     _deleting = pk;
-                    SqlItem<Kit>? kit = await manager.FindProxy(pk).ConfigureAwait(false);
-                    if (kit is not null)
-                        await kit.Delete().ConfigureAwait(false);
+                    await manager.Redownload(x => x.PrimaryKey == _deleting);
                     L.Log("Received delete notification for kit: \"" + pk + "\" and removed it from the cache.", ConsoleColor.DarkGray);
                     ctx.Acknowledge();
                 }
                 finally
                 {
-                    _deleting = -1;
+                    _deleting = uint.MaxValue;
                     Semaphore.Release();
                 }
             }

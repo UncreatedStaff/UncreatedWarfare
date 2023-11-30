@@ -1,15 +1,9 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using Uncreated.Framework;
 using Uncreated.Framework.UI;
-using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
@@ -120,7 +114,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             return null;
         foreach (Passenger turret in vehicle.turrets)
         {
-            if (turret.turretAim == transform && turret.player != null)
+            if (turret != null && turret.turretAim == transform && turret.player != null)
             {
                 return UCPlayer.FromSteamPlayer(turret.player);
             }

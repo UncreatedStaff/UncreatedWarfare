@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -304,13 +305,23 @@ public class RotatableConfig<T> : IReadWrite, INotifyValueUpdate
                     int targetIndex;
                     lock (_mapValueCache)
                     {
+                        using MemoryStream str = new MemoryStream(64);
+                        using Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
                         foreach (JsonProperty prop in root.EnumerateObject())
                         {
                             string map = prop.Name;
                             T obj;
                             bool isNull = false;
                             if (prop.Value.ValueKind != JsonValueKind.Null)
-                                obj = prop.Value.Deserialize<T>(JsonEx.serializerSettings)!;
+                            {
+                                prop.Value.WriteTo(writer);
+                                writer.Flush();
+                                str.Seek(0L, SeekOrigin.Begin);
+                                obj = JsonSerializer.Deserialize<T>(str.ToArray(), JsonEx.serializerSettings);
+                                str.Seek(0L, SeekOrigin.Begin);
+                                str.SetLength(0);
+                                writer.Reset();
+                            }
                             else
                             {
                                 isNull = true;
@@ -357,14 +368,18 @@ public class RotatableConfig<T> : IReadWrite, INotifyValueUpdate
                 }
                 else
                 {
-                    T obj = doc.Deserialize<T>(JsonEx.serializerSettings)!;
+                    using MemoryStream str = new MemoryStream(64);
+                    using Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
+                    doc.WriteTo(writer);
+                    writer.Flush();
+                    T? obj = JsonSerializer.Deserialize<T>(str.ToArray(), JsonEx.serializerSettings);
                     if (obj == null)
                         return new RotatableConfig<T>();
                     else
                         return new RotatableConfig<T>(0, new MapValue[] { new MapValue(obj, false) });
                 }
             default:
-                T val = (T)JsonSerializer.Deserialize(ref reader, typeof(T), JsonEx.serializerSettings)!;
+                T? val = (T)JsonSerializer.Deserialize(ref reader, typeof(T), JsonEx.serializerSettings)!;
                 if (val == null)
                     return new RotatableConfig<T>();
                 else

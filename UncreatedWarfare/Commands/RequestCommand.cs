@@ -15,6 +15,8 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Moderation.Punishments;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
@@ -97,7 +99,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                     if (manager == null)
                         throw ctx.SendGamemodeError();
 
-                    SqlItem<Kit>? proxy;
+                    Kit? kit;
                     if (drop != null && kitId == null)
                     {
                         StructureSaver? saver = StructureSaver.GetSingletonQuick();
@@ -110,32 +112,24 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                         await UCWarfare.ToUpdate(token);
                         if (sign != null)
                         {
-                            proxy = Signs.GetKitFromSign(drop, out int loadoutId);
+                            kit = Signs.GetKitFromSign(drop, out int loadoutId);
                             if (loadoutId > 0)
                             {
                                 UCPlayer pl = ctx.Caller;
                                 UCPlayer.TryApplyViewLens(ref pl);
-                                proxy = KitManager.GetLoadoutQuick(pl, loadoutId);
-                                if (proxy?.Item is not { Id: { } kitId2 })
+                                kit = manager.GetLoadoutQuick(pl, loadoutId);
+                                if (kit == null)
                                     throw ctx.Reply(T.KitNotFound, "#" + loadoutId.ToString(ctx.CultureInfo));
-                                kitId = kitId2;
                             }
                         }
                         else throw ctx.Reply(T.RequestNoTarget);
                     }
                     else if (kitId != null)
                     {
-                        proxy = await manager.FindKit(kitId, token, false);
-                        if (proxy?.Item?.Id is not { } kitId2)
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.KitNotFound, kitId);
-                        }
-                        kitId = kitId2;
+                        kit = await manager.FindKit(kitId, token, false);
                     }
                     else throw ctx.SendUnknownError();
                     
-                    Kit? kit = proxy?.Item;
                     if (kit == null)
                         throw ctx.Reply(T.KitNotFound, kitId!);
 
@@ -145,7 +139,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                     if (!kit.NeedsUpgrade)
                         throw ctx.Reply(T.DoesNotNeedUpgrade, kit);
 
-                    int id = KitEx.ParseStandardLoadoutId(kit.Id, out ulong playerId);
+                    int id = KitEx.ParseStandardLoadoutId(kit.InternalName, out ulong playerId);
                     if (ctx.CallerID != playerId)
                     {
                         // requesting upgrade for a different player's kit
@@ -228,8 +222,8 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
             await UCWarfare.ToUpdate(token);
             if (sign != null)
             {
-                SqlItem<Kit>? proxy = Signs.GetKitFromSign(drop, out int loadoutId);
-                if (proxy?.Item != null || loadoutId > 0)
+                Kit? kit = Signs.GetKitFromSign(drop, out int loadoutId);
+                if (kit != null || loadoutId > 0)
                 {
                     ctx.AssertGamemode(out IKitRequests gm);
                     KitManager manager = gm.KitManager;
@@ -237,7 +231,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                     if (loadoutId > 0)
                         await manager.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
                     else
-                        await manager.RequestKit(proxy!, ctx, token).ConfigureAwait(false);
+                        await manager.RequestKit(kit!, ctx, token).ConfigureAwait(false);
                     return;
                 }
                 if (TraitManager.Loaded && sign.text.StartsWith(Signs.Prefix + Signs.TraitPrefix, StringComparison.OrdinalIgnoreCase))
@@ -351,6 +345,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                         {
                             data.Release();
                         }
+                        // ReSharper disable once RedundantJumpStatement
                         return;
                     }
                 }
@@ -385,8 +380,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
         if (data.RequiresSL && ctx.Caller.Squad == null)
             throw ctx.Reply(T.RequestVehicleNotSquadLeader);
 
-        SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
-        Kit? kit = proxy?.Item;
+        Kit? kit = ctx.Caller.GetActiveKit();
         if (kit == null)
             throw ctx.Reply(T.RequestVehicleNoKit);
 

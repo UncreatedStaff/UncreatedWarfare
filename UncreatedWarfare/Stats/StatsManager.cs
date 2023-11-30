@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -535,16 +536,16 @@ public static class StatsManager
                 }
                 if (e.Killer.HasKit || !string.IsNullOrEmpty(e.KillerKitName))
                 {
-                    Kit? kit = e.KillerKitName != null ? KitManager.GetSingletonQuick()?.FindKitNoLock(e.KillerKitName, true)?.Item : e.Killer.ActiveKit?.Item;
+                    Kit? kit = e.KillerKitName != null ? KitManager.GetSingletonQuick()?.FindKitNoLock(e.KillerKitName, true) : e.Killer.GetActiveKit();
                     if (kit != null)
                     {
                         ModifyStats(e.Killer.Steam64, s =>
                         {
                             s.Kills++;
-                            WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID.Equals(kit.Id, StringComparison.OrdinalIgnoreCase) && k.Team == e.KillerTeam);
+                            WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID.Equals(kit.InternalName, StringComparison.OrdinalIgnoreCase) && k.Team == e.KillerTeam);
                             if (kitData == default)
                             {
-                                kitData = new WarfareStats.KitData { KitID = kit.Id, Team = (byte)e.KillerTeam, Kills = 1 };
+                                kitData = new WarfareStats.KitData { KitID = kit.InternalName, Team = (byte)e.KillerTeam, Kills = 1 };
                                 if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
                                     kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
                                 s.Kits.Add(kitData);
@@ -566,7 +567,7 @@ public static class StatsManager
                         }, false);
                         if (!e.PrimaryAssetIsVehicle && Assets.find(e.PrimaryAsset) is ItemAsset asset)
                         {
-                            ModifyWeapon(asset.id, kit.Id, x =>
+                            ModifyWeapon(asset.id, kit.InternalName, x =>
                             {
                                 x.Kills++;
                                 switch (e.Limb)
@@ -586,7 +587,7 @@ public static class StatsManager
                                 }
                                 x.AverageKillDistance = (x.AverageKillDistance * x.AverageKillDistanceCounter + e.KillDistance) / ++x.AverageKillDistanceCounter;
                             }, true);
-                            ModifyKit(kit.Id, k =>
+                            ModifyKit(kit.InternalName, k =>
                             {
                                 k.Kills++;
                                 if (e.Cause == EDeathCause.GUN)
@@ -609,16 +610,16 @@ public static class StatsManager
 
         Task.Run(() => Data.DatabaseManager.AddDeath(e.Player.Steam64, e.DeadTeam));
         ModifyTeam(e.DeadTeam, t => t.Deaths++, false);
-        Kit? kit2 = e.PlayerKitName != null ? KitManager.GetSingletonQuick()?.FindKitNoLock(e.PlayerKitName, true)?.Item : e.Player.ActiveKit?.Item;
+        Kit? kit2 = e.PlayerKitName != null ? KitManager.GetSingletonQuick()?.FindKitNoLock(e.PlayerKitName, true) : e.Player.GetActiveKit();
         if (kit2 != null)
         {
             ModifyStats(e.Player.Steam64, s =>
             {
                 s.Deaths++;
-                WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit2.Id && k.Team == e.DeadTeam);
+                WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit2.InternalName && k.Team == e.DeadTeam);
                 if (kitData == default)
                 {
-                    kitData = new WarfareStats.KitData { KitID = kit2.Id, Team = (byte)e.DeadTeam, Deaths = 1 };
+                    kitData = new WarfareStats.KitData { KitID = kit2.InternalName, Team = (byte)e.DeadTeam, Deaths = 1 };
                     s.Kits.Add(kitData);
                 }
                 else kitData.Deaths++;
@@ -626,10 +627,10 @@ public static class StatsManager
             ItemJar? primary = e.Player.Player.inventory.items[0].items.FirstOrDefault();
             ItemJar? secondary = e.Player.Player.inventory.items[1].items.FirstOrDefault();
             if (primary != null)
-                ModifyWeapon(primary.item.id, kit2.Id, x => x.Deaths++, true);
+                ModifyWeapon(primary.item.id, kit2.InternalName, x => x.Deaths++, true);
             if (secondary != null && (primary == null || primary.item.id != secondary.item.id)) // prevents 2 of the same gun from counting twice
-                ModifyWeapon(secondary.item.id, kit2.Id, x => x.Deaths++, true);
-            ModifyKit(kit2.Id, k => k.Deaths++, true);
+                ModifyWeapon(secondary.item.id, kit2.InternalName, x => x.Deaths++, true);
+            ModifyKit(kit2.InternalName, k => k.Deaths++, true);
         }
         else
             ModifyStats(e.Player.Steam64, s => s.Deaths++, false);
@@ -639,17 +640,17 @@ public static class StatsManager
     {
         ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
         ModifyTeam(lostTeam, t => t.FlagsLost++, false);
-        List<int> kits = new List<int>(flag.Team1TotalPlayers + flag.Team2TotalPlayers);
+        List<uint> kits = new List<uint>(flag.Team1TotalPlayers + flag.Team2TotalPlayers);
         List<UCPlayer> c = capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2;
         List<UCPlayer> l = capturedTeam == 1 ? flag.PlayersOnFlagTeam2 : flag.PlayersOnFlagTeam1;
         for (int p = 0; p < c.Count; p++)
         {
             UCPlayer pl = c[p];
             ModifyStats(pl.Steam64, s => s.FlagsCaptured++, false);
-            SqlItem<Kit>? kit = pl.ActiveKit;
-            if (kit?.Item != null && !kits.Contains(kit.PrimaryKey))
+            Kit? kit = pl.GetActiveKit();
+            if (kit != null && !kits.Contains(kit.PrimaryKey))
             {
-                string? name = kit.Item?.Id;
+                string? name = kit.InternalName;
                 if (name != null)
                 {
                     ModifyKit(name, k => k.FlagsCaptured++, true);
@@ -716,21 +717,18 @@ public static class StatsManager
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                SqlItem<Kit>? kit2 = await manager.FindKit(kitId).ConfigureAwait(false);
+                Kit? kit2 = await manager.FindKit(kitId).ConfigureAwait(false);
                 if (kit2 is not null)
                 {
-                    await kit2.Enter().ConfigureAwait(false);
+                    await manager.WaitAsync().ConfigureAwait(false);
                     try
                     {
-                        if (kit2.Item != null)
-                        {
-                            @class = kit2.Item.Class;
-                            sname = kit2.Item.GetDisplayName();
-                        }
+                        @class = kit2.Class;
+                        sname = kit2.GetDisplayName();
                     }
                     finally
                     {
-                        kit2.Release();
+                        manager.Release();
                     }
                 }
             }
@@ -761,20 +759,20 @@ public static class StatsManager
                 KitManager? manager = KitManager.GetSingletonQuick();
                 if (manager != null)
                 {
-                    SqlItem<Kit>? kit2 = await manager.FindKit(kitId).ConfigureAwait(false);
+                    Kit? kit2 = await manager.FindKit(kitId).ConfigureAwait(false);
                     if (kit2 is not null)
                     {
-                        await kit2.Enter().ConfigureAwait(false);
+                        await manager.WaitAsync().ConfigureAwait(false);
                         try
                         {
-                            if (kit2.Item != null)
+                            if (kit2 != null)
                             {
-                                kitname = kit2.Item.GetDisplayName();
+                                kitname = kit2.GetDisplayName();
                             }
                         }
                         finally
                         {
-                            kit2.Release();
+                            manager.Release();
                         }
                     }
                 }
@@ -795,27 +793,37 @@ public static class StatsManager
         internal static async Task ReceiveRequestKitList(MessageContext context)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
-            if (manager != null)
+            if (manager == null)
             {
-                await manager.WaitAsync().ConfigureAwait(false);
+                context.Reply(SendKitList, Array.Empty<string>());
+                return;
+            }
+
+            await manager.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await manager.WriteWaitAsync().ConfigureAwait(false);
                 List<string> kits = new List<string>();
                 try
                 {
                     for (int i = 0; i < manager.Items.Count; ++i)
                     {
-                        SqlItem<Kit> it = manager.Items[i];
-                        if (it.Item != null && it.Item.Type != KitType.Loadout)
-                            kits.Add(it.Item.Id);
+                        Kit kit = manager.Items[i];
+                        if (kit != null && kit.Type != KitType.Loadout)
+                            kits.Add(kit.InternalName);
                     }
+
                     context.Reply(SendKitList, kits.ToArray());
                 }
                 finally
                 {
-                    manager.Release();
+                    manager.WriteRelease();
                 }
             }
-            else
-                context.Reply(SendKitList, Array.Empty<string>());
+            finally
+            {
+                manager.Release();
+            }
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2012)]
@@ -831,17 +839,17 @@ public static class StatsManager
             if (manager != null)
             {
                 await manager.WaitAsync().ConfigureAwait(false);
-                List<string> kitnames = new List<string>();
-                List<WarfareWeapon> weapons = new List<WarfareWeapon>();
                 try
                 {
+                    List<string> kitnames = new List<string>();
+                    List<WarfareWeapon> weapons = new List<WarfareWeapon>();
                     for (int i = 0; i < files.Length; i++)
                     {
                         if (WarfareWeapon.IO.ReadFrom(files[i], out WarfareWeapon w))
                         {
                             weapons.Add(w);
-                            SqlItem<Kit>? kit2 = await manager.FindKit(w.KitID).ConfigureAwait(false);
-                            kitnames.Add(kit2?.Item?.GetDisplayName() ?? w.KitID);
+                            Kit? kit2 = await manager.FindKit(w.KitID).ConfigureAwait(false);
+                            kitnames.Add(kit2?.GetDisplayName() ?? w.KitID);
                         }
                     }
                     context.Reply(SendWeapons, weapons.ToArray(), itemName, kitnames.ToArray());
@@ -910,11 +918,11 @@ public static class StatsManager
                 {
                     for (int i = 0; i < allkits.Length; i++)
                     {
-                        SqlItem<Kit>? k = manager.FindKitNoLock(allkits[i].KitID, true);
-                        if (k?.Item != null)
+                        Kit? k = manager.FindKitNoLock(allkits[i].KitID, true);
+                        if (k != null)
                         {
-                            classes[i] = (byte)k.Item.Class;
-                            kitnames[i] = k.Item.GetDisplayName();
+                            classes[i] = (byte)k.Class;
+                            kitnames[i] = k.GetDisplayName();
                         }
                     }
                 }

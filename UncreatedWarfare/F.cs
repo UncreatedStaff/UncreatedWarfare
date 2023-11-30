@@ -1,4 +1,6 @@
-﻿using SDG.NetTransport;
+﻿using Cysharp.Threading.Tasks;
+using MySql.Data.MySqlClient;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -6,15 +8,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
-using JetBrains.Annotations;
-using MySqlConnector;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -24,7 +22,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
@@ -39,7 +37,6 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
-    private static readonly char[] ignore = { '.', ',', '&', '-', '_' };
     internal static readonly char[] SpaceSplit = { ' ' };
     public const string COLUMN_LANGUAGE = "Language";
     public const string COLUMN_VALUE = "Value";
@@ -601,7 +598,7 @@ public static class F
         if (!Data.Is<ITeams>()) return false;
         return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
     }
-    public static bool IsOnFlag(this Player player) => player != null && Data.Is(out IFlagRotation fg) && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
+    public static bool IsOnFlag(this Player player) => player != null && Data.Is(out IFlagRotation fg) && fg.OnFlag != null && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
     public static bool IsOnFlag(this Player player, out Flag flag)
     {
 #if DEBUG
@@ -614,9 +611,9 @@ public static class F
                 flag = null!;
                 return false;
             }
-            if (fg.OnFlag.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int id))
+            if (fg.OnFlag.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int index))
             {
-                flag = fg.Rotation.Find(x => x.ID == id);
+                flag = fg.Rotation[index];
                 return flag != null;
             }
         }
@@ -881,6 +878,18 @@ public static class F
             if (asset.id == id) return true;
         }
         return false;
+    }
+    public static bool HasGuid<T>(this RotatableConfig<JsonAssetReference<T>[]> assets, Guid guid) where T : Asset
+    {
+        if (assets is null || !assets.HasValue)
+            return false;
+        return assets.Value.HasGuid(guid);
+    }
+    public static bool HasID<T>(this RotatableConfig<JsonAssetReference<T>[]> assets, ushort id) where T : Asset
+    {
+        if (assets is null || !assets.HasValue)
+            return false;
+        return assets.Value.HasID(id);
     }
     public static TAsset? GetAsset<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference) where TAsset : Asset
     {
@@ -1744,6 +1753,40 @@ public static class F
             result[i] = (T)source[i + index].Clone();
         return result;
     }
+    public static T[] CloneReadOnlyList<T>(IReadOnlyList<T> source, int index = 0, int length = -1) where T : ICloneable
+    {
+        if (source == null)
+            return null!;
+        if (source.Count == 0)
+            return Array.Empty<T>();
+        if (index >= source.Count)
+            index = source.Count - 1;
+        if (length < 0 || length + index > source.Count)
+            length = source.Count - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        for (int i = 0; i < length; ++i)
+            result[i] = (T)source[i + index].Clone();
+        return result;
+    }
+    public static T[] CloneList<T>(IList<T> source, int index = 0, int length = -1) where T : ICloneable
+    {
+        if (source == null)
+            return null!;
+        if (source.Count == 0)
+            return Array.Empty<T>();
+        if (index >= source.Count)
+            index = source.Count - 1;
+        if (length < 0 || length + index > source.Count)
+            length = source.Count - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        for (int i = 0; i < length; ++i)
+            result[i] = (T)source[i + index].Clone();
+        return result;
+    }
     public static T[] CloneStructArray<T>(T[] source, int index = 0, int length = -1) where T : struct
     {
         if (source == null)
@@ -1758,6 +1801,50 @@ public static class F
             return Array.Empty<T>();
         T[] result = new T[length];
         Array.Copy(source, index, result, 0, length);
+        return result;
+    }
+    public static T[] CloneReadOnlyStructList<T>(IReadOnlyList<T> source, int index = 0, int length = -1) where T : struct
+    {
+        if (source == null)
+            return null!;
+        if (source.Count == 0)
+            return Array.Empty<T>();
+        if (index >= source.Count)
+            index = source.Count - 1;
+        if (length < 0 || length + index > source.Count)
+            length = source.Count - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        if (source is List<T> list)
+            list.CopyTo(index, result, 0, length);
+        else
+        {
+            for (int i = 0; i < source.Count; ++i)
+                result[i] = source[i];
+        }
+        return result;
+    }
+    public static T[] CloneStructList<T>(IList<T> source, int index = 0, int length = -1) where T : struct
+    {
+        if (source == null)
+            return null!;
+        if (source.Count == 0)
+            return Array.Empty<T>();
+        if (index >= source.Count)
+            index = source.Count - 1;
+        if (length < 0 || length + index > source.Count)
+            length = source.Count - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        if (source is List<T> list)
+            list.CopyTo(index, result, 0, length);
+        else
+        {
+            for (int i = 0; i < source.Count; ++i)
+                result[i] = source[i];
+        }
         return result;
     }
     public static bool ServerTrackQuest(this UCPlayer player, QuestAsset quest)

@@ -27,6 +27,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     public List<Flag> LoadedFlags => AllFlags;
     public Dictionary<ulong, int> OnFlag => OnFlagDict;
     public virtual bool AllowPassengersToCapture => false;
+    public virtual bool ConsumeFlagUseCaseZones => false;
     public virtual ElectricalGridBehaivor ElectricalGridBehavior => ElectricalGridBehaivor.EnabledWhenInRotation;
     protected FlagGamemode(string name, float eventLoopSpeed) : base(name, eventLoopSpeed)
     { }
@@ -95,6 +96,19 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         {
             Flag f = FlagRotation[i];
             if (f != null) CheckFlagForPlayerChanges(f);
+        }
+        if (ConsumeFlagUseCaseZones)
+        {
+            for (int j = 0; j < FlagRotation.Count; j++)
+            {
+                Flag flag = FlagRotation[j];
+                Zone? zone = FlagRotation[j].ZoneData.Item;
+                if (zone is null)
+                    continue;
+
+                for (int i = 0; i < flag.PlayersOnFlag.Count; ++i)
+                    ZoneList.ApplyZoneFlags(flag.PlayersOnFlag[i], zone);
+            }
         }
 #if DEBUG && TIME_FLAG_CHECK
         stopwatch.Stop();
@@ -210,10 +224,10 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #endif
         if (flag == null)
             return;
-        if (OnFlagDict.TryGetValue(playerId, out int fid) && fid == flag.ID)
+        if (OnFlagDict.TryGetValue(playerId, out int index) && index == flag.Index)
         {
             OnFlagDict.Remove(playerId);
-            if (player != null)
+            if (player is not null && player.IsOnline)
                 flag.ExitPlayer(player);
         }
     }
@@ -222,17 +236,17 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (OnFlagDict.TryGetValue(player.Steam64, out int fid))
+        if (OnFlagDict.TryGetValue(player.Steam64, out int index))
         {
-            if (fid != flag.ID)
+            if (index != flag.Index)
             {
-                Flag? oldFlag = FlagRotation.FirstOrDefault(f => f.ID == fid);
-                if (oldFlag == null) OnFlagDict.Remove(player.Steam64);
-                else RemovePlayerFromFlag(player.Steam64, player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
-                OnFlagDict.Add(player.Steam64, flag.ID);
+                Flag? oldFlag = FlagRotation[index];
+                if (oldFlag != null)
+                    RemovePlayerFromFlag(player.Steam64, player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
+                OnFlagDict[player.Steam64] = flag.Index;
             }
         }
-        else OnFlagDict.Add(player.Steam64, flag.ID);
+        else OnFlagDict.Add(player.Steam64, flag.Index);
         flag.EnterPlayer(player);
     }
     protected abstract void PlayerEnteredFlagRadius(Flag flag, UCPlayer player);
@@ -545,5 +559,16 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         AllEnabled,
         EnabledWhenObjective,
         EnabledWhenInRotation
+    }
+
+    public static IZone GetZoneOrFlag(Zone zone)
+    {
+        IZone zoneInterface;
+        if (Data.Is(out IFlagRotation rot))
+            zoneInterface = (IZone?)rot.Rotation.Find(x => x.ZoneData.LastPrimaryKey.Key == zone.PrimaryKey.Key) ?? zone;
+        else
+            zoneInterface = zone;
+
+        return zoneInterface;
     }
 }

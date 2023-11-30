@@ -38,7 +38,7 @@ public static class Actors
         return new DiscordActor(id);
     }
 }
-[JsonConverter(typeof(ActorConverter))]
+
 public interface IModerationActor
 {
     bool Async { get; }
@@ -178,16 +178,12 @@ public enum AvatarSize
 
 public readonly struct RelatedActor : IEquatable<RelatedActor>
 {
-    [JsonIgnore]
     public const string RolePrimaryAdmin = "Primary Admin";
     
-    [JsonIgnore]
     public const string RoleRemovingAdmin = "Removing Admin";
     
-    [JsonIgnore]
     public const string RoleReporter = "Reporter";
     
-    [JsonIgnore]
     public const string RoleEditor = "Editor";
 
     [JsonPropertyName("role")]
@@ -199,8 +195,8 @@ public readonly struct RelatedActor : IEquatable<RelatedActor>
     [JsonPropertyName("actor")]
     [JsonConverter(typeof(ActorConverter))]
     public IModerationActor Actor { get; }
-
-    [JsonConstructor]
+    
+    public RelatedActor() { }
     public RelatedActor(string role, bool admin, IModerationActor actor)
     {
         Role = role;
@@ -253,10 +249,10 @@ public readonly struct RelatedActor : IEquatable<RelatedActor>
 }
 public sealed class ActorConverter : JsonConverter<IModerationActor>
 {
-    public override IModerationActor? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override IModerationActor Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.Null)
-            return null;
+            return null!;
         if (reader.TokenType != JsonTokenType.Number || !reader.TryGetUInt64(out ulong id))
             throw new JsonException("Reading actor expected type: UInt64, instead of " + reader.TokenType + ".");
 

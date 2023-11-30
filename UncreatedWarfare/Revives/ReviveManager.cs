@@ -53,14 +53,16 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     public DamagePlayerParameters GetParameters(ulong player) => _injuredPlayers.TryGetValue(player, out DownedPlayerData data) ? data.Parameters : default;
     public bool CanPlayerInjure(in DamagePlayerParameters parameters)
     {
+        int unclampedDamage = Mathf.FloorToInt(parameters.damage * parameters.times);
+        byte actualDamage = (byte)Math.Min(byte.MaxValue, unclampedDamage);
         return parameters.player != null &&
-               parameters.player.movement.getVehicle() == null && parameters.cause != EDeathCause.VEHICLE &&
-               SafezoneManager.checkPointValid(parameters.player.transform.position) && 
+               parameters.player.movement.getVehicle() == null &&
+               parameters.cause != EDeathCause.VEHICLE &&
               !parameters.player.life.isDead &&
-               parameters.damage > parameters.player.life.health &&
+               actualDamage > parameters.player.life.health &&
                parameters.cause != EDeathCause.LANDMINE &&
                parameters.cause < DeathTracker.MainCampDeathCauseOffset && // main campers can't get downed, makes death messages easier
-               parameters.damage < 300;
+               unclampedDamage < 300;
     }
     public override void Load()
     {
@@ -215,8 +217,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 {
                     if (CooldownManager.Config.ReviveXPCooldown <= 0 || (uctarget != null &&
                       !(CooldownManager.HasCooldown(ucmedic, CooldownType.Revive, out Cooldown cooldown) &&
-                        cooldown.data.Length > 0 &&
-                        cooldown.data[0] is ulong id &&
+                        cooldown.Parameters.Length > 0 &&
+                        cooldown.Parameters[0] is ulong id &&
                         id == uctarget.Steam64)))
                     {
                         Points.AwardXP(ucmedic, XPReward.Revive);
@@ -240,15 +242,15 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 
                 Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
 
-                if (medic.ActiveKit?.Item is { } mkit)
+                if (medic.GetActiveKit() is { } mkit)
                 {
                     Stats.StatsManager.ModifyStats(medic.Steam64, s =>
                     {
                         s.Revives++;
-                        Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == mkit.Id && k.Team == team);
+                        Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == mkit.InternalName && k.Team == team);
                         if (kitData == default)
                         {
-                            kitData = new Stats.WarfareStats.KitData { KitID = mkit.Id, Team = team, Revives = 1 };
+                            kitData = new Stats.WarfareStats.KitData { KitID = mkit.InternalName, Team = team, Revives = 1 };
                             s.Kits.Add(kitData);
                         }
                         else
@@ -356,15 +358,15 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                     ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastEnemyInjured.Translate(killer)));
 
                     Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
-                    if (killer is { ActiveKit.Item: { } kit })
+                    if (killer.GetActiveKit() is { } kit)
                     {
                         Stats.StatsManager.ModifyStats(killer.Steam64, s =>
                         {
                             s.Downs++;
-                            Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Id && k.Team == kteam);
+                            Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.InternalName && k.Team == kteam);
                             if (kitData == default)
                             {
-                                kitData = new Stats.WarfareStats.KitData { KitID = kit.Id, Team = kteam, Downs = 1 };
+                                kitData = new Stats.WarfareStats.KitData { KitID = kit.InternalName, Team = kteam, Downs = 1 };
                                 s.Kits.Add(kitData);
                             }
                             else
@@ -374,7 +376,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                         }, false);
                         if (Assets.find(item) is ItemAsset asset)
                         {
-                            Stats.StatsManager.ModifyWeapon(asset.id, kit.Id, w => w.Downs++, true);
+                            Stats.StatsManager.ModifyWeapon(asset.id, kit.InternalName, w => w.Downs++, true);
                         }
                     }
                     else

@@ -524,6 +524,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(611)]
     [JsonPropertyName("general_main_check_seconds")]
     public RotatableConfig<float> GeneralMainCheckSeconds { get; set; }
+
+    [Sync(612)]
+    [JsonPropertyName("general_amc_dmg_power")]
+    public RotatableConfig<double> GeneralAMCDamageMultiplierPower { get; set; }
     #endregion
 
     #region Advance and Secure (1001 to 1100)
@@ -745,7 +749,7 @@ public sealed class GamemodeConfigData : JSONConfigData
             "fb910102ad954169abd4b0cb06a112c8", // Russia
             "c7754ac78083421da73006b12a56811a", // MEC
             "439c32cced234f358e101294ea0ce3e4", // Germany
-            "7bde55f70c494418bdd81926fb7d6359" //China
+            "7bde55f70c494418bdd81926fb7d6359"  //China
         };
         RallyPoints = new JsonAssetReference<ItemBarricadeAsset>[]
         {
@@ -861,6 +865,8 @@ public sealed class GamemodeConfigData : JSONConfigData
         #endregion
 
         #region General Gamemode Config
+        GeneralAMCDamageMultiplierPower = 2f;
+        GeneralMainCheckSeconds = 0.25f;
         GeneralAMCKillTime = 10f;
         GeneralLeaderboardDelay = 8f;
         GeneralLeaderboardTime = 30f;

@@ -33,6 +33,7 @@ using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Records;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
@@ -69,6 +70,20 @@ public static class EventFunctions
                 DroppedItems.Add(steam64, new List<uint> { newItem.instanceID });
 
             DroppedItemsOwners[newItem.instanceID] = steam64;
+        }
+    }
+    internal static void OnPunch(PlayerEquipment equipment, EPlayerPunch hand)
+    {
+        if (hand != EPlayerPunch.RIGHT)
+            return;
+
+        UCPlayer? player = UCPlayer.FromPlayer(equipment.player);
+
+        if (player != null && player.JumpOnPunch && player.OnDuty())
+        {
+            TeleportCommand.Jump(true, -1f, player);
+            Vector3 castPt = player.Position;
+            player.SendChat(T.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
         }
     }
     internal static void OnItemRemoved(ItemData item)
@@ -291,6 +306,26 @@ public static class EventFunctions
     {
         return !(TeamManager.IsInAnyMainOrAMCOrLobby(position) || FOBManager.Loaded && FOBManager.IsPointInFOB(position, out _));
     }
+
+    internal static void OnStructureTryPlaced(Structure structure, ItemStructureAsset asset, ref Vector3 point, ref float angleX,
+        ref float angleY, ref float angleZ, ref ulong owner, ref ulong group, ref bool shouldAllow)
+    {
+        if (!shouldAllow) return;
+        UCPlayer? player = UCPlayer.FromID(owner);
+        if (player is null)
+        {
+            shouldAllow = false;
+            return;
+        }
+
+        bool perms = player.OnDuty();
+
+        if (!perms && !CheckZoneBuildablePermissions(player, point, asset))
+        {
+            shouldAllow = false;
+            // return;
+        }
+    }
     internal static void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angleX,
         ref float angleY, ref float angleZ, ref ulong owner, ref ulong group, ref bool shouldAllow)
     {
@@ -330,6 +365,13 @@ public static class EventFunctions
                     }
                 }
             }
+            
+            if (!perms && !CheckZoneBuildablePermissions(player, point, asset))
+            {
+                shouldAllow = false;
+                return;
+            }
+
             RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angleX, ref angleY, ref angleZ, ref owner, ref group, ref shouldAllow);
             if (!shouldAllow) return;
 
@@ -359,39 +401,130 @@ public static class EventFunctions
             shouldAllow = false;
         }
     }
+    private static bool CheckZoneBuildablePermissions(UCPlayer placer, Vector3 point, ItemAsset asset)
+    {
+        if (!Data.Singletons.TryGetSingleton(out ZoneList list))
+            return true;
+        ZoneFlags flags = GetNoBuildingZoneFlags(asset);
+        if (flags != ZoneFlags.None)
+        {
+            list.WriteWait();
+            try
+            {
+                for (int i = 0; i < list.Items.Count; ++i)
+                {
+                    Zone? zone = list.Items[i]?.Item;
+                    if (zone == null || (zone.Data.Flags & flags) == 0 || !zone.IsInside(point))
+                        continue;
+
+                    placer.SendChat(T.ProhibitedPlacementZone, asset, FlagGamemode.GetZoneOrFlag(zone));
+                    return false;
+                }
+            }
+            finally
+            {
+                list.WriteRelease();
+            }
+        }
+
+        return true;
+    }
+    public static void OnPickedUpItemRequested(Player player, byte x, byte y, uint instanceId, byte toX, byte toY, byte toRotation, byte toPage, ItemData itemData, ref bool shouldAllow)
+    {
+        UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
+        if (ucplayer == null || ucplayer.OnDuty())
+            return;
+
+        if (toPage == PlayerInventory.STORAGE && player.inventory.isStorageTrunk)
+        {
+            InteractableVehicle? vehicle = UCVehicleManager.FindVehicleFromTrunkStorage(player.inventory.items[PlayerInventory.STORAGE]);
+            if (vehicle != null)
+            {
+                if (vehicle.TryGetComponent(out VehicleComponent component) && component.NoPickZone != null)
+                {
+                    ucplayer.SendChat(T.ProhibitedPickupZone, itemData.item.GetAsset(), FlagGamemode.GetZoneOrFlag(component.NoPickZone));
+                    shouldAllow = false;
+                }
+                return;
+            }
+        }
+
+        if (ucplayer.NoPickZone != null)
+        {
+            ucplayer.SendChat(T.ProhibitedPickupZone, itemData.item.GetAsset(), FlagGamemode.GetZoneOrFlag(ucplayer.NoPickZone));
+            shouldAllow = false;
+            // return;
+        }
+    }
+    private static ZoneFlags GetNoBuildingZoneFlags(ItemAsset asset)
+    {
+        if (asset is ItemBarricadeAsset barricade)
+        {
+            if (RallyManager.IsRally(barricade))
+                return ZoneFlags.NoRallies | ZoneFlags.NoBuilding;
+
+            if (barricade.build is EBuild.SPIKE or EBuild.WIRE)
+                return ZoneFlags.NoTraps | ZoneFlags.NoBuilding;
+        }
+
+        if (Gamemode.Config.FOBRadios.Value.HasGuid(asset.GUID))
+            return ZoneFlags.NoRadios | ZoneFlags.NoBuilding;
+
+        if (Gamemode.Config.BarricadeFOBBunkerBase.MatchGuid(asset.GUID))
+            return ZoneFlags.NoBunkers | ZoneFlags.NoBuilding;
+
+        if (FOBManager.FindBuildable(asset) is not null)
+            return ZoneFlags.NoFOBBuilding | ZoneFlags.NoBuilding;
+
+        return ZoneFlags.NoBuilding;
+    }
     internal static void OnItemDropRequested(ItemDropRequested e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (e.Item.GetAsset() is not { } itemAsset)
+            return;
+
         if (e.Page == PlayerInventory.STORAGE && e.Player.Player.inventory.isStorageTrunk)
         {
-            FactionInfo? faction = TeamManager.GetFactionSafe(e.Player.GetTeam());
-            if (faction is null || Assets.find(EAssetType.ITEM, e.Item.id) is not ItemAsset item || !TeamManager.IsInMain(e.Player))
-                return;
-            faction.Build.ValidReference(out ItemAsset? buildAsset);
-            faction.Ammo.ValidReference(out ItemAsset? ammoAsset);
-            bool build = buildAsset is not null && buildAsset.GUID == item.GUID;
-            if (!build && !(ammoAsset is not null && ammoAsset.GUID == item.GUID))
-                return;
             Items? trunk = e.Player.Player.inventory.items[PlayerInventory.STORAGE];
-            if (trunk is null || e.Player.Keys.IsKeyDown(Data.Keys.DropSupplyOverride))
-                return;
-            for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
+            InteractableVehicle? vehicle = UCVehicleManager.FindVehicleFromTrunkStorage(trunk);
+            if (vehicle != null)
             {
-                if (VehicleManager.vehicles[i].trunkItems == trunk)
+                VehicleBay? bay = VehicleBay.GetSingletonQuick();
+                if (bay?.GetDataSync(vehicle.asset.GUID) is { } data && VehicleData.IsLogistics(data.Type))
                 {
-                    VehicleBay? bay = VehicleBay.GetSingletonQuick();
-                    if (bay?.GetDataSync(VehicleManager.vehicles[i].asset.GUID) is { } data && VehicleData.IsLogistics(data.Type))
+                    FactionInfo? faction = TeamManager.GetFactionSafe(e.Player.GetTeam());
+                    if (faction is not null && TeamManager.IsInMain(e.Player))
                     {
-                        trunk.removeItem(e.Index);
-                        Item it2 = new Item((!build ? buildAsset : ammoAsset)!.id, true);
-                        trunk.addItem(e.X, e.Y, e.ItemJar.rot, it2);
-                        e.Break();
+                        faction.Build.ValidReference(out ItemAsset? buildAsset);
+                        faction.Ammo.ValidReference(out ItemAsset? ammoAsset);
+                        bool build = buildAsset is not null && buildAsset.GUID == itemAsset.GUID;
+                        if (build || ammoAsset is not null && ammoAsset.GUID == itemAsset.GUID)
+                        {
+                            trunk.removeItem(e.Index);
+                            Item it2 = new Item(build ? buildAsset : ammoAsset, EItemOrigin.WORLD);
+                            trunk.addItem(e.X, e.Y, e.ItemJar.rot, it2);
+                            e.Break();
+                            return;
+                        }
                     }
-                    return;
                 }
+
+                if (!e.Player.OnDuty() && vehicle.TryGetComponent(out VehicleComponent component) && component.NoDropZone != null)
+                {
+                    e.Player.SendChat(T.ProhibitedDropZone, itemAsset, FlagGamemode.GetZoneOrFlag(component.NoDropZone));
+                    e.Break();
+                }
+                return;
             }
+        }
+        
+        if (!e.Player.OnDuty() && e.Player.NoDropZone != null)
+        {
+            e.Player.SendChat(T.ProhibitedDropZone, itemAsset, FlagGamemode.GetZoneOrFlag(e.Player.NoDropZone));
+            e.Break();
         }
     }
     internal static void OnPreVehicleDamage(CSteamID instigatorSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
@@ -399,132 +532,155 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (!shouldAllow)
+            return;
+
         if (F.IsInMain(vehicle.transform.position))
         {
             shouldAllow = false;
             return;
         }
 
-        if (shouldAllow)
+        if (damageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage && !(vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE))
         {
-            if (damageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage && !(vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE))
-            {
-                pendingTotalDamage = (ushort)Mathf.RoundToInt(pendingTotalDamage * 0.13f);
-            }
+            pendingTotalDamage = (ushort)Mathf.RoundToInt(pendingTotalDamage * 0.13f);
+        }
 
-            if (!vehicle.TryGetComponent(out VehicleComponent c))
+        UCPlayer? instigator = UCPlayer.FromCSteamID(instigatorSteamID);
+
+        // AMC damage multiplier application
+        if (instigator != null)
+        {
+            ulong team = vehicle.lockedGroup.m_SteamID.GetTeam();
+            VehicleComponent? component = vehicle.GetComponent<VehicleComponent>();
+            float vehicleDamageMultiplier = component != null && component.SafezoneZone != null ? 0f : TeamManager.GetAMCDamageMultiplier(team, vehicle.transform.position);
+            float instigatorDamageMultiplier = instigator.GetAMCDamageMultiplier();
+
+            if (vehicleDamageMultiplier > 0f && instigatorDamageMultiplier > 0f)
             {
-                c = vehicle.gameObject.AddComponent<VehicleComponent>();
-                c.Initialize(vehicle);
+                float dmgMult = Mathf.Min(vehicleDamageMultiplier, instigatorDamageMultiplier);
+
+                pendingTotalDamage = (ushort)Mathf.RoundToInt(pendingTotalDamage * dmgMult);
             }
-            UCPlayer? instigator = UCPlayer.FromCSteamID(instigatorSteamID);
-            c.LastDamageOrigin = damageOrigin;
-            c.LastInstigator = instigatorSteamID.m_SteamID;
-            if (instigatorSteamID != CSteamID.Nil)
+            else
             {
-                c.LastItem = Guid.Empty;
-                c.LastItemIsVehicle = false;
-                instigatorSteamID.TryGetPlayerData(out UCPlayerData? instigatorData);
-                switch (damageOrigin)
-                {
-                    case EDamageOrigin.Grenade_Explosion:
-                        if (instigatorData != null)
+                shouldAllow = false;
+                return;
+            }
+        }
+
+        if (!vehicle.TryGetComponent(out VehicleComponent c))
+        {
+            c = vehicle.gameObject.AddComponent<VehicleComponent>();
+            c.Initialize(vehicle);
+        }
+
+        c.LastDamageOrigin = damageOrigin;
+        c.LastInstigator = instigatorSteamID.m_SteamID;
+        if (instigatorSteamID != CSteamID.Nil)
+        {
+            c.LastItem = Guid.Empty;
+            c.LastItemIsVehicle = false;
+            instigatorSteamID.TryGetPlayerData(out UCPlayerData? instigatorData);
+            switch (damageOrigin)
+            {
+                case EDamageOrigin.Grenade_Explosion:
+                    if (instigatorData != null)
+                    {
+                        ThrowableComponent? a = instigatorData.ActiveThrownItems.FirstOrDefault(x => x.IsExplosive);
+                        if (a != null)
+                            c.LastItem = a.Throwable;
+                    }
+                    break;
+                case EDamageOrigin.Rocket_Explosion:
+                    if (instigatorData != null) c.LastItem = instigatorData.LastRocketShot;
+                    break;
+                case EDamageOrigin.Vehicle_Explosion:
+                    if (instigatorData != null)
+                    {
+                        c.LastItemIsVehicle = true;
+                        c.LastItem = instigatorData.LastExplodedVehicle;
+                    }
+                    break;
+                case EDamageOrigin.Bullet_Explosion:
+                case EDamageOrigin.Useable_Melee:
+                case EDamageOrigin.Useable_Gun:
+                    if (instigator != null && instigator.Player.equipment.asset != null) c.LastItem = instigator.Player.equipment.asset.GUID;
+                    break;
+                case EDamageOrigin.Food_Explosion:
+                    if (instigatorData != null) c.LastItem = instigatorData.LastExplosiveConsumed;
+                    break;
+                case EDamageOrigin.Trap_Explosion:
+                    BarricadeDrop? drop = instigatorData?.ExplodingLandmine;
+                    UCPlayer? triggerer = null;
+                    if (drop == null)
+                    {
+                        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                         {
-                            ThrowableComponent? a = instigatorData.ActiveThrownItems.FirstOrDefault(x => x.IsExplosive);
-                            if (a != null)
-                                c.LastItem = a.Throwable;
+                            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                            if (pl.Player.TryGetPlayerData(out UCPlayerData d) && d.TriggeringLandmine != null &&
+                                (d.TriggeringLandmine.model.position - vehicle.transform.position).sqrMagnitude < 225f)
+                            {
+                                triggerer = pl;
+                                c.LastItem = d.TriggeringLandmine.asset.GUID;
+                                break;
+                            }
                         }
-                        break;
-                    case EDamageOrigin.Rocket_Explosion:
-                        if (instigatorData != null) c.LastItem = instigatorData.LastRocketShot;
-                        break;
-                    case EDamageOrigin.Vehicle_Explosion:
-                        if (instigatorData != null)
-                        {
-                            c.LastItemIsVehicle = true;
-                            c.LastItem = instigatorData.LastExplodedVehicle;
-                        }
-                        break;
-                    case EDamageOrigin.Bullet_Explosion:
-                    case EDamageOrigin.Useable_Melee:
-                    case EDamageOrigin.Useable_Gun:
-                        if (instigator != null && instigator.Player.equipment.asset != null) c.LastItem = instigator.Player.equipment.asset.GUID;
-                        break;
-                    case EDamageOrigin.Food_Explosion:
-                        if (instigatorData != null) c.LastItem = instigatorData.LastExplosiveConsumed;
-                        break;
-                    case EDamageOrigin.Trap_Explosion:
-                        BarricadeDrop? drop = instigatorData?.ExplodingLandmine;
-                        UCPlayer? triggerer = null;
-                        if (drop == null)
+                    }
+                    else if (instigatorData != null)
+                    {
+                        if (instigatorData.TriggeringLandmine == drop)
+                            triggerer = instigator;
+                    }
+                    if (drop != null)
+                    {
+                        c.LastItem = drop.asset.GUID;
+                        if (triggerer == null)
                         {
                             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                             {
                                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                                if (pl.Player.TryGetPlayerData(out UCPlayerData d) && d.TriggeringLandmine != null &&
-                                    (d.TriggeringLandmine.model.position - vehicle.transform.position).sqrMagnitude < 225f)
+                                if (pl.Player.TryGetPlayerData(out UCPlayerData d) && d.TriggeringLandmine == drop)
                                 {
                                     triggerer = pl;
-                                    c.LastItem = d.TriggeringLandmine.asset.GUID;
                                     break;
                                 }
                             }
                         }
-                        else if (instigatorData != null)
-                        {
-                            if (instigatorData.TriggeringLandmine == drop)
-                                triggerer = instigator;
-                        }
-                        if (drop != null)
-                        {
-                            c.LastItem = drop.asset.GUID;
-                            if (triggerer == null)
-                            {
-                                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                                {
-                                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                                    if (pl.Player.TryGetPlayerData(out UCPlayerData d) && d.TriggeringLandmine == drop)
-                                    {
-                                        triggerer = pl;
-                                        break;
-                                    }
-                                }
-                            }
-                            // if the trap belongs to the triggerer's team, blame the triggerer
-                            if (triggerer != null && (instigator == null || triggerer.Steam64 != instigator.Steam64) &&
-                                (drop.GetServersideData().group.GetTeam() == triggerer.GetTeam()))
-                                c.LastInstigator = triggerer.Steam64;
-                        }
-                        break;
-                }
-
-                if (!c.DamageTable.TryGetValue(instigatorSteamID.m_SteamID, out KeyValuePair<ushort, DateTime> pair))
-                    c.DamageTable.Add(instigatorSteamID.m_SteamID, new KeyValuePair<ushort, DateTime>(pendingTotalDamage, DateTime.Now));
-                else
-                    c.DamageTable[instigatorSteamID.m_SteamID] = new KeyValuePair<ushort, DateTime>((ushort)(pair.Key + pendingTotalDamage), DateTime.Now);
-
-                if (instigator != null)
-                {
-                    InteractableVehicle attackerVehicle = instigator.Player.movement.getVehicle();
-                    if (attackerVehicle != null)
-                    {
-                        c.Quota += pendingTotalDamage * 0.015F;
+                        // if the trap belongs to the triggerer's team, blame the triggerer
+                        if (triggerer != null && (instigator == null || triggerer.Steam64 != instigator.Steam64) &&
+                            (drop.GetServersideData().group.GetTeam() == triggerer.GetTeam()))
+                            c.LastInstigator = triggerer.Steam64;
                     }
-                }
+                    break;
             }
 
-            if (damageOrigin == EDamageOrigin.Useable_Gun)
+            if (!c.DamageTable.TryGetValue(instigatorSteamID.m_SteamID, out KeyValuePair<ushort, DateTime> pair))
+                c.DamageTable.Add(instigatorSteamID.m_SteamID, new KeyValuePair<ushort, DateTime>(pendingTotalDamage, DateTime.Now));
+            else
+                c.DamageTable[instigatorSteamID.m_SteamID] = new KeyValuePair<ushort, DateTime>((ushort)(pair.Key + pendingTotalDamage), DateTime.Now);
+
+            if (instigator != null)
             {
-                if ((vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && pendingTotalDamage > vehicle.health && pendingTotalDamage > 200)
+                InteractableVehicle attackerVehicle = instigator.Player.movement.getVehicle();
+                if (attackerVehicle != null)
                 {
-                    canRepair = false;
+                    c.Quota += pendingTotalDamage * 0.015F;
                 }
-
-                VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
             }
-            if (damageOrigin == EDamageOrigin.Rocket_Explosion)
-                VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
         }
+
+        if (damageOrigin == EDamageOrigin.Useable_Gun)
+        {
+            if ((vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && pendingTotalDamage > vehicle.health && pendingTotalDamage > 200)
+            {
+                canRepair = false;
+            }
+
+            VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
+        }
+        if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+            VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
     }
 
     internal static void OnPostPlayerConnected(PlayerJoined e)
@@ -537,8 +693,16 @@ public static class EventFunctions
             // reset the player to spawn if they have joined in a different game as they last played in.
             UCPlayer ucplayer = e.Player;
             ucplayer.Loading = true;
+
             if (UCPlayer.LoadingUI.IsValid)
                 UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
+
+            if (ucplayer.Player.life.isDead)
+            {
+                ucplayer.Player.life.ServerRespawn(false);
+                L.LogDebug("Player " + ucplayer + " was dead, respawning.");
+            }
+
             if (Data.Gamemode.LeaderboardUp(out ILeaderboard lb))
             {
                 L.LogDebug("Joining leaderboard...");
@@ -560,7 +724,7 @@ public static class EventFunctions
                 L.LogDebug("Player " + ucplayer + " played this game and can rejoin their team, joining back to " + ucplayer.Save.Team + ".");
                 ulong other = TeamManager.Other(ucplayer.Save.Team);
                 Vector3 pos = ucplayer.Position;
-                // if there's no teammates nearby then teleport them
+                // if there's teammates nearby then teleport them back to their main base
                 bool teleport = PlayerManager.OnlinePlayers.Any(x =>
                     x.GetTeam() == other &&
                     (x.Position - pos).sqrMagnitude <= EnemyNearbyRespawnDistance * EnemyNearbyRespawnDistance);
@@ -585,12 +749,6 @@ public static class EventFunctions
                 PlayerSave.WriteToSaveFile(ucplayer.Save);
             }
 
-            if (ucplayer.Player.life.isDead)
-            {
-                ucplayer.Player.life.ServerRespawn(false);
-                L.LogDebug("Player " + ucplayer + " was dead, respawning.");
-            }
-
             ulong team = ucplayer.GetTeam();
             PlayerNames names = ucplayer.Name;
             
@@ -605,6 +763,10 @@ public static class EventFunctions
 
             pt.StartTracking(ucplayer.Player);
             Data.PlaytimeComponents.Add(ucplayer.Steam64, pt);
+
+            if (Data.Singletons.TryGetComponent(out ZoneList zoneList))
+                zoneList.TickZoneFlags(ucplayer, true);
+
             CancellationToken token = ucplayer.DisconnectToken;
             UCWarfare.RunTask(async tkn =>
             {
@@ -1032,13 +1194,10 @@ public static class EventFunctions
             CTFUI.CaptureUI.Send(e.Player, in p);
         }
     }
-    static readonly Dictionary<ulong, long> LastSentMessages = new Dictionary<ulong, long>();
-    internal static void RemoveDamageMessageTicks(ulong player)
-    {
-        LastSentMessages.Remove(player);
-    }
     internal static void OnPlayerDamageRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
     {
+        if (parameters.player.movement.isSafe)
+            return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -1047,7 +1206,7 @@ public static class EventFunctions
             shouldAllow = false;
             return;
         }
-        Vector3 pos = parameters.player.transform.position;
+        // Vector3 pos = parameters.player.transform.position;
         if (TeamManager.IsInAnyMainOrLobby(parameters.player))
         {
             shouldAllow = false;
@@ -1060,36 +1219,61 @@ public static class EventFunctions
             shouldAllow = false;
             return;
         }
-        if (parameters.cause < DeathTracker.MainCampDeathCauseOffset && Data.Gamemode is TeamGamemode gm && gm.EnableAMC && OffenseManager.IsValidSteam64Id(parameters.killer) && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
+        //if (parameters.cause < DeathTracker.MainCampDeathCauseOffset && Data.Gamemode is TeamGamemode gm && gm.EnableAMC && OffenseManager.IsValidSteam64Id(parameters.killer) && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
+        //{
+        //    Player killer = PlayerTool.getPlayer(parameters.killer);
+        //    if (killer != null)
+        //    {
+        //        ulong killerteam = killer.GetTeam();
+        //        ulong deadteam = parameters.player.GetTeam();
+        //        if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(pos)) ||
+        //            (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(pos)))
+        //        {
+        //            // if the player has shot since they died
+        //            if (!killer.TryGetPlayerData(out UCPlayerData comp) || comp.LastGunShot != default)
+        //                goto next;
+        //            shouldAllow = false;
+        //            byte newdamage = (byte)Math.Min(byte.MaxValue, Mathf.RoundToInt(parameters.damage * parameters.times * UCWarfare.Config.AMCDamageMultiplier));
+        //            killer.life.askDamage(newdamage, parameters.direction * newdamage, (EDeathCause)((int)DeathTracker.MainCampDeathCauseOffset + (int)parameters.cause),
+        //            parameters.limb, parameters.player.channel.owner.playerID.steamID, out _, true, ERagdollEffect.NONE, false, true);
+        //            if (!LastSentMessages.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out long lasttime) || new TimeSpan(DateTime.Now.Ticks - lasttime).TotalSeconds > 5)
+        //            {
+        //                killer.SendChat(T.AntiMainCampWarning);
+        //                if (lasttime == default)
+        //                    LastSentMessages.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, DateTime.Now.Ticks);
+        //                else
+        //                    LastSentMessages[parameters.player.channel.owner.playerID.steamID.m_SteamID] = DateTime.Now.Ticks;
+        //            }
+        //        }
+        //    }
+        //}
+        // next:
+        if (!shouldAllow) return;
+
+        UCPlayer? killer = UCPlayer.FromCSteamID(parameters.killer);
+
+        // AMC damage multiplier application
+        if (ucplayer != null && killer != null)
         {
-            Player killer = PlayerTool.getPlayer(parameters.killer);
-            if (killer != null)
+            float targetDamageMult = ucplayer.GetAMCDamageMultiplier();
+            float killerDamageMult = killer.GetAMCDamageMultiplier();
+            if (targetDamageMult > 0f && killerDamageMult > 0f)
             {
-                ulong killerteam = killer.GetTeam();
-                ulong deadteam = parameters.player.GetTeam();
-                if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(pos)) ||
-                    (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(pos)))
-                {
-                    // if the player has shot since they died
-                    if (!killer.TryGetPlayerData(out UCPlayerData comp) || comp.LastGunShot != default)
-                        goto next;
-                    shouldAllow = false;
-                    byte newdamage = (byte)Math.Min(byte.MaxValue, Mathf.RoundToInt(parameters.damage * parameters.times * UCWarfare.Config.AMCDamageMultiplier));
-                    killer.life.askDamage(newdamage, parameters.direction * newdamage, (EDeathCause)((int)DeathTracker.MainCampDeathCauseOffset + (int)parameters.cause),
-                    parameters.limb, parameters.player.channel.owner.playerID.steamID, out _, true, ERagdollEffect.NONE, false, true);
-                    if (!LastSentMessages.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out long lasttime) || new TimeSpan(DateTime.Now.Ticks - lasttime).TotalSeconds > 5)
-                    {
-                        killer.SendChat(T.AntiMainCampWarning);
-                        if (lasttime == default)
-                            LastSentMessages.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, DateTime.Now.Ticks);
-                        else
-                            LastSentMessages[parameters.player.channel.owner.playerID.steamID.m_SteamID] = DateTime.Now.Ticks;
-                    }
-                }
+                float dmgMult = Mathf.Min(targetDamageMult, killerDamageMult);
+
+                parameters.times *= dmgMult;
+            }
+            else
+            {
+                shouldAllow = false;
+                return;
             }
         }
-        next:
-        if (!shouldAllow) return;
+        else if (ucplayer != null && ucplayer.SafezoneZone != null)
+        {
+            shouldAllow = false;
+            return;
+        }
 
         // prevent damage to crew members
         if (parameters.cause == EDeathCause.GUN)
@@ -1407,7 +1591,6 @@ public static class EventFunctions
         ulong s64 = e.Steam64;
         DroppedItems.Remove(s64);
         TeamManager.PlayerBaseStatus?.Remove(s64);
-        RemoveDamageMessageTicks(s64);
         Tips.OnPlayerDisconnected(s64);
         UCPlayer ucplayer = e.Player;
         try

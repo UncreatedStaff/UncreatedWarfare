@@ -13,6 +13,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
@@ -341,7 +342,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         JoinUI.OptionsIMGUICheckToggle.SetVisibility(c, player.Save.IMGUI);
         JoinUI.OptionsTrackQuestsCheckToggle.SetVisibility(c, player.Save.TrackQuests);
 
-        JoinUI.LanguageSearchBox.SetText(c, player.Locale.LanguageInfo.LanguageCode);
+        JoinUI.LanguageSearchBox.SetText(c, player.Locale.LanguageInfo.Code);
         JoinUI.CultureSearchBox.SetText(c, player.Locale.CultureInfo.Name);
 
         for (int i = 1; i < JoinUI.Languages.Length; ++i)
@@ -373,7 +374,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         ITransportConnection c = player.Connection;
         box.Name.SetText(c, name);
 
-        string details = language.LanguageCode + " <#444>|</color> Support: <#fff>" +
+        string details = language.Code + " <#444>|</color> Support: <#fff>" +
                          language.Support.ToString("P0", player.Locale.CultureInfo) + "</color>" +
                          " (" + (language.IsDefault ? Localization.TotalDefaultTranslations : language.TotalDefaultTranslations).ToString(player.Locale.CultureInfo) + "/" + 
                          Localization.TotalDefaultTranslations.ToString(player.Locale.CultureInfo) + ")";
@@ -392,12 +393,16 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             box.ContributorsLabel.SetVisibility(c, true);
             box.Contributors.SetText(c, "Uncreated Warfare Developers");
         }
-        else if (language.Credits.Length > 0)
+        else if (language.Contributors is { Count: > 0 })
         {
             UCWarfare.RunTask(async token =>
             {
+                ulong[] credits = new ulong[language.Contributors.Count];
+                for (int i = 0; i < language.Contributors.Count; ++i)
+                    credits[i] = language.Contributors[i].Contributor;
+
                 token.CombineIfNeeded(UCWarfare.UnloadCancel);
-                PlayerNames[] names = await Data.AdminSql.GetUsernamesAsync(language.Credits, token).ConfigureAwait(false);
+                PlayerNames[] names = await Data.AdminSql.GetUsernamesAsync(credits, token).ConfigureAwait(false);
                 box.Contributors.SetText(c, string.Join(Environment.NewLine, names.Select(PlayerNames.SelectPlayerName)));
                 box.ContributorsLabel.SetVisibility(c, true);
             }, player.DisconnectToken);
@@ -501,11 +506,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             if (language != player.Locale.LanguageInfo && !string.IsNullOrWhiteSpace(language.DefaultCultureCode))
                 Localization.TryGetCultureInfo(language.DefaultCultureCode!, out culture);
 
-            await player.Locale.Update(language.LanguageCode, culture, holdSave: true, token).ConfigureAwait(false);
+            await player.Locale.Update(language.Code, culture, holdSave: true, token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
 
             JoinUI.CultureSearchBox.SetText(player.Connection, string.Empty);
-            JoinUI.LanguageSearchBox.SetText(player.Connection, language.LanguageCode);
+            JoinUI.LanguageSearchBox.SetText(player.Connection, language.Code);
 
             OnCultureSearch(player, string.Empty);
 
@@ -708,19 +713,19 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (info.HasTranslationSupport && !results.Contains(info) && info.NativeName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        if (info.NativeName != null && info.HasTranslationSupport && !results.Contains(info) && info.NativeName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x))))
+                        if (info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x.Alias))))
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x))))
+                        if (info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x.Alias))))
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
@@ -732,7 +737,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.NativeName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                        if (info.NativeName != null && info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.NativeName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();

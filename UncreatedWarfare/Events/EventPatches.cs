@@ -13,10 +13,10 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
-using Uncreated.Warfare.Kits;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Random = UnityEngine.Random;
+using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events;
 internal static class EventPatches

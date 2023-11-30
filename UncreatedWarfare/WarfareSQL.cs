@@ -37,7 +37,7 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     public const string TIME_FORMAT_SQL = "{0:" + TIME_FORMAT_SQL_I + "}";
     public const string TIME_FORMAT_SQL_I = "yyyy-MM-dd HH:mm:ss";
     private static readonly ByteWriter ReportWriter = new ByteWriter(false, 27);
-    public WarfareSQL(MySqlData data) : base(data, "Uncreated Warfare")
+    public WarfareSQL(MySqlData data) : base(data, "Uncreated Warfare", true)
     {
         DebugLogging |= UCWarfare.IsLoaded && UCWarfare.Config.Debug;
     }

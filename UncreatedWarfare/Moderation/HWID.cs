@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Encoding;
+using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Database.ValueConverters;
 
 namespace Uncreated.Warfare.Moderation;
 
@@ -13,6 +15,7 @@ namespace Uncreated.Warfare.Moderation;
 
 [StructLayout(LayoutKind.Explicit, Size = 20)]
 [JsonConverter(typeof(HWIDJsonConverter))]
+[ValueConverter(typeof(HWIDValueConverter))]
 public readonly struct HWID : IEquatable<HWID>
 {
     public const int Size = 20;

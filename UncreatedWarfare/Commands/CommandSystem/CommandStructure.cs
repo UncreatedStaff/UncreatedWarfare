@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Uncreated.Framework;
+using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Commands.CommandSystem;
 public sealed class CommandStructure
@@ -45,7 +46,7 @@ public sealed class CommandStructure
         if (DescriptionTranslations == null)
             return Description;
 
-        if (language != null && DescriptionTranslations.TryGetValue(language.LanguageCode, out string desc))
+        if (language != null && DescriptionTranslations.TryGetValue(language.Code, out string desc))
             return desc;
 
         return Description;
@@ -356,7 +357,7 @@ public sealed class CommandParameter
         if (DescriptionTranslations == null)
             return Description;
 
-        if (language != null && DescriptionTranslations.TryGetValue(language.LanguageCode, out string desc))
+        if (language != null && DescriptionTranslations.TryGetValue(language.Code, out string desc))
             return desc;
 
         return Description;

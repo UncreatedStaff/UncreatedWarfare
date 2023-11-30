@@ -1,15 +1,16 @@
-﻿using System;
+﻿using SDG.Framework.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using SDG.Framework.Utilities;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -19,16 +20,16 @@ namespace Uncreated.Warfare;
 public struct Point3D
 {
     [JsonPropertyName("name")]
-    public string Name;
+    public string Name { get; set; }
     [JsonPropertyName("x")]
-    public float X;
+    public float X { get; set; }
     [JsonPropertyName("y")]
-    public float Y;
+    public float Y { get; set; }
     [JsonPropertyName("z")]
-    public float Z;
+    public float Z { get; set; }
     [JsonIgnore]
     public readonly Vector3 Vector3 { get => new Vector3(X, Y, Z); }
-    [JsonConstructor]
+    public Point3D() { }
     public Point3D(string name, float x, float y, float z)
     {
         this.Name = name;
@@ -41,11 +42,11 @@ public struct SerializableVector3 : IJsonReadWrite
 {
     public static readonly SerializableVector3 Zero = new SerializableVector3(0, 0, 0);
     [JsonPropertyName("x")]
-    public float X;
+    public float X { get; set; }
     [JsonPropertyName("y")]
-    public float Y;
+    public float Y { get; set; }
     [JsonPropertyName("z")]
-    public float Z;
+    public float Z { get; set; }
     [JsonIgnore]
     public Vector3 Vector3
     {
@@ -83,7 +84,7 @@ public struct SerializableVector3 : IJsonReadWrite
         Y = v.y;
         Z = v.z;
     }
-    [JsonConstructor]
+    public SerializableVector3() { }
     public SerializableVector3(float x, float y, float z)
     {
         this.X = x;
@@ -127,9 +128,9 @@ public struct SerializableTransform : IJsonReadWrite
 {
     public static readonly SerializableTransform Zero = new SerializableTransform(SerializableVector3.Zero, SerializableVector3.Zero);
     [JsonPropertyName("position")]
-    public SerializableVector3 SerializablePosition;
+    public SerializableVector3 SerializablePosition { get; set; }
     [JsonPropertyName("euler_angles")]
-    public SerializableVector3 SerializableRotation;
+    public SerializableVector3 SerializableRotation { get; set; }
     [JsonIgnore]
     public readonly Quaternion Rotation { get => Quaternion.Euler(SerializableRotation.Vector3); }
     [JsonIgnore]
@@ -155,7 +156,7 @@ public struct SerializableTransform : IJsonReadWrite
         hashCode = hashCode * -1521134295 + SerializableRotation.GetHashCode();
         return hashCode;
     }
-    [JsonConstructor]
+    public SerializableTransform() { }
     public SerializableTransform(SerializableVector3 serializablePosition, SerializableVector3 euler_angles)
     {
         this.SerializablePosition = serializablePosition;
@@ -220,8 +221,9 @@ public struct SerializableTransform : IJsonReadWrite
 public sealed class TranslationList : Dictionary<string, string>, ICloneable, IReadWrite
 {
     public const int DefaultCharLength = 255;
-    public TranslationList() { }
-    public TranslationList(int capacity) : base(capacity) { }
+    public TranslationList() : this(0) { }
+    public TranslationList(int capacity) : base(capacity, StringComparer.Ordinal) { }
+    public TranslationList(IDictionary<string, string> dictionary) : base(dictionary, StringComparer.Ordinal) { }
     public TranslationList(string @default)
     {
         Add(L.Default, @default);
@@ -247,7 +249,7 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable, IR
     public string? Translate(LanguageInfo language)
     {
         language ??= Localization.GetDefaultLanguage();
-        if (TryGetValue(language.LanguageCode, out string value))
+        if (TryGetValue(language.Code, out string value))
             return value;
 
         if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value))
@@ -259,7 +261,8 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable, IR
         return Count > 0 ? Values.ElementAt(0) : null;
     }
 
-    public object Clone() => new TranslationList(this);
+    public TranslationList Clone() => new TranslationList(this);
+    object ICloneable.Clone() => Clone();
     public void Read(ByteReader reader)
     {
         Clear();
@@ -300,12 +303,12 @@ public sealed class ArrayConverter<TElement, TConverter> : JsonConverter<TElemen
         if (_converter == null)
             throw new JsonException($"Invalid converter for type: {typeof(TElement)} (using factory: {typeof(TConverter)}).");
     }
-    public override TElement?[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override TElement?[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         CheckConverter(options);
 
         if (reader.TokenType == JsonTokenType.Null)
-            return null;
+            return null!;
 
         if (reader.TokenType == JsonTokenType.StartArray)
         {
@@ -409,12 +412,11 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
 [Obsolete]
 public class LanguageAliasSet : ITranslationArgument
 {
-    public string key;
-    public string display_name;
-    public string[] values;
+    public string key { get; set; }
+    public string display_name { get; set; }
+    public string[] values { get; set; }
     [JsonPropertyName("requires_imgui")]
-    public bool RequiresIMGUI;
-    [JsonConstructor]
+    public bool RequiresIMGUI { get; set; }
     public LanguageAliasSet(string key, string display_name, string[] values)
     {
         this.key = key;

@@ -146,7 +146,7 @@ public class ReportCommand : AsyncCommand
         PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(target, token);
         await UCWarfare.ToUpdate(token);
 
-        if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, CooldownType.Report, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
+        if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, CooldownType.Report, out Cooldown cd) && cd.Parameters.Length > 0 && cd.Parameters[0] is ulong ul && ul == target)
         {
             ctx.Reply(T.ReportCooldown, targetNames);
             return;
@@ -179,7 +179,7 @@ public class ReportCommand : AsyncCommand
         await UCWarfare.ToUpdate();
         string typename = GetName(type);
         NotifyAdminsOfReport(targetNames, ctx.Caller.Name, report, typename);
-        if (!ctx.LanguageInfo.IsDefault || ctx.IMGUI)
+        if (!T.ReportSuccessMessage.HasLanguage(ctx.LanguageInfo) || ctx.IMGUI)
         {
             ctx.Reply(T.ReportSuccessMessage1, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
             ctx.Reply(T.ReportSuccessMessage2);

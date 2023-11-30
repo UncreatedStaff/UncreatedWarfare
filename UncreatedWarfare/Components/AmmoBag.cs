@@ -2,12 +2,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Kits;
 using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs;
@@ -28,7 +27,7 @@ public class AmmoBagComponent : MonoBehaviour
         }
         //ResuppliedPlayers = new Dictionary<ulong, int>();
     }
-    public async Task ResupplyPlayer(UCPlayer player, SqlItem<Kit> kit, int ammoCost, CancellationToken token = default)
+    public async Task ResupplyPlayer(UCPlayer player, Kit kit, int ammoCost, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();

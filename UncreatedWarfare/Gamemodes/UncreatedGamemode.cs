@@ -14,7 +14,6 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
@@ -24,6 +23,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
@@ -555,7 +555,18 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         IsPendingCancel = true;
         
     }
-    protected abstract void EventLoopAction();
+
+    protected virtual void EventLoopAction()
+    {
+        ZoneList? list = Data.Singletons.GetSingleton<ZoneList>();
+        if (list != null)
+        {
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            {
+                list.TickZoneFlags(PlayerManager.OnlinePlayers[i]);
+            }
+        }
+    }
     private IEnumerator<WaitForSecondsRealtime> EventLoop()
     {
         while (!IsPendingCancel)

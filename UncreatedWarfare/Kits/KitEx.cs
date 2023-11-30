@@ -10,6 +10,11 @@ using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Models.Assets;
+using Uncreated.Warfare.Models.Factions;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
@@ -17,8 +22,8 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
 
-public delegate void KitAccessCallback(SqlItem<Kit> kit, ulong player, bool newAccess, KitAccessType newType);
-public delegate void KitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldKit);
+public delegate void KitAccessCallback(Kit kit, ulong player, bool newAccess, KitAccessType newType);
+public delegate void KitChanged(UCPlayer player, Kit? kit, Kit? oldKit);
 
 public static class KitEx
 {
@@ -48,8 +53,7 @@ public static class KitEx
             writer.WriteLine();
             for (int i = 0; i < manager.Items.Count; i++)
             {
-                SqlItem<Kit> proxy = manager.Items[i];
-                Kit? kit = proxy.Item;
+                Kit kit = manager.Items[i];
                 if (kit == null || kit.Type == KitType.Loadout || kit.Class <= Class.Unarmed)
                     continue;
                 if (WriteKitIntl(kit, language, writer, writeMising) && i != manager.Items.Count - 1)
@@ -65,38 +69,42 @@ public static class KitEx
     {
         bool isDefaultValue = false;
         string? value = null;
-        if (kit.SignText != null)
+        LanguageInfo def = Localization.GetDefaultLanguage();
+        if (kit.Translations != null)
         {
-            isDefaultValue = !kit.SignText.TryGetValue(language.LanguageCode, out value);
+            KitTranslation? translation = kit.Translations.FirstOrDefault(x => x.LanguageId == language.Key);
+            value = translation?.Value;
+            isDefaultValue = translation == null;
             if (isDefaultValue && !language.IsDefault && writeMising)
-                kit.SignText.TryGetValue(L.Default, out value);
+            {
+                value = kit.Translations.FirstOrDefault(x => x.LanguageId == def.Key)?.Value;
+            }
         }
         if (value == null)
         {
             if (!writeMising)
                 return false;
             isDefaultValue = true;
-            value = kit.Id;
+            value = kit.InternalName;
         }
 
-        string? @default = null;
-        kit.SignText?.TryGetValue(L.Default, out @default);
+        string? @default = kit.Translations?.FirstOrDefault(x => x.LanguageId == def.Key)?.Value;
         if (@default != null)
             @default = @default.Replace("\r", string.Empty).Replace("\n", "<br>");
         value = value.Replace("\r", string.Empty).Replace("\n", "<br>");
-        writer.WriteLine("# " + kit.GetDisplayName(Localization.GetDefaultLanguage()) + " (ID: " + kit.Id + ")");
+        writer.WriteLine("# " + kit.GetDisplayName(Localization.GetDefaultLanguage()) + " (ID: " + kit.InternalName + ")");
         if (kit.WeaponText != null)
             writer.WriteLine("#  Weapons: " + kit.WeaponText);
         writer.WriteLine("#  Class:   " + Localization.TranslateEnum(kit.Class, Localization.GetDefaultLanguage()));
         writer.WriteLine("#  Type:    " + Localization.TranslateEnum(kit.Type, Localization.GetDefaultLanguage()));
-        FactionInfo? factionInfo = kit.Faction;
+        FactionInfo? factionInfo = TeamManager.GetFactionInfo(kit.Faction);
         if (factionInfo != null)
             writer.WriteLine("#  Faction: " + factionInfo.GetName(Localization.GetDefaultLanguage()));
         if (!isDefaultValue && @default != null)
         {
             writer.WriteLine("# Default: \"" + @default + "\".");
         }
-        writer.WriteLine(kit.Id + ": " + value);
+        writer.WriteLine(kit.InternalName + ": " + value);
         return true;
     }
     public static void UpdateLastEdited(this Kit kit, ulong player)
@@ -113,17 +121,17 @@ public static class KitEx
         for (int i = 0; i < kit.Items.Length; ++i)
         {
             IKitItem itm = kit.Items[i];
-            if (itm is IItem item)
+            if (itm is ISpecificKitItem item)
             {
-                if (item.Item == guid)
+                if (item.Item.Equals(guid))
                     return true;
             }
-            else if (checkClothes && itm is IBaseItem clothing)
+            else if (checkClothes && itm is ISpecificKitItem clothing)
             {
-                if (clothing.Item == guid)
+                if (clothing.Item.Equals(guid))
                     return true;
             }
-            else if (itm is IAssetRedirect && (checkClothes || itm is not IClothingJar))
+            else if (itm is IAssetRedirectKitItem && (checkClothes || itm is not IClothingKitItem))
             {
                 ItemAsset? asset = itm.GetItem(kit, faction, out _, out _);
                 if (asset != null && asset.GUID == guid)
@@ -137,14 +145,14 @@ public static class KitEx
         int count = 0;
         for (int i = 0; i < kit.Items.Length; ++i)
         {
-            if (kit.Items[i] is IItem item)
+            if (kit.Items[i] is ISpecificKitItem item)
             {
-                if (item.Item == guid)
+                if (item.Item.Equals(guid))
                     count++;
             }
-            else if (checkClothes && kit.Items[i] is IBaseItem clothing)
+            else if (checkClothes && kit.Items[i] is ISpecificKitItem clothing)
             {
-                if (clothing.Item == guid)
+                if (clothing.Item.Equals(guid))
                     count++;
             }
         }
@@ -215,13 +223,13 @@ public static class KitEx
     }
     public static byte GetKitItemTypeId(IKitItem item)
     {
-        if (item is PageItem)
+        if (item is SpecificPageKitItem)
             return 1;
-        if (item is ClothingItem)
+        if (item is SpecificClothingKitItem)
             return 2;
-        if (item is AssetRedirectItem)
+        if (item is AssetRedirectPageKitItem)
             return 3;
-        if (item is AssetRedirectClothing)
+        if (item is AssetRedirectClothingKitItem)
             return 4;
 
         return 0;
@@ -234,15 +242,21 @@ public static class KitEx
         return (IKitItem)Activator.CreateInstance(id switch
 #pragma warning restore CS8509
         {
-            1 => typeof(PageItem),
-            2 => typeof(ClothingItem),
-            3 => typeof(AssetRedirectItem),
-            4 => typeof(AssetRedirectClothing),
+            1 => typeof(SpecificPageKitItem),
+            2 => typeof(SpecificClothingKitItem),
+            3 => typeof(AssetRedirectPageKitItem),
+            4 => typeof(AssetRedirectClothingKitItem),
         });
+    }
+    public static string GetFlagIcon(this Faction? faction)
+    {
+        if (faction is not { SpriteIndex: not null })
+            return "<sprite index=0/>";
+        return "<sprite index=" + faction.SpriteIndex.Value.ToString(Data.AdminLocale) + "/>";
     }
     public static string GetFlagIcon(this FactionInfo? faction)
     {
-        if (faction is not { TMProSpriteIndex: { } })
+        if (faction is not { TMProSpriteIndex: not null })
             return "<sprite index=0/>";
         return "<sprite index=" + faction.TMProSpriteIndex.Value.ToString(Data.AdminLocale) + "/>";
     }
@@ -281,6 +295,7 @@ public static class KitEx
             _ => '±'
         };
     }
+    public static float GetTeamLimit(this Kit kit) => kit.TeamLimit ?? KitManager.GetDefaultTeamLimit(kit.Class);
     public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {
 #if DEBUG
@@ -292,8 +307,8 @@ public static class KitEx
         if (!requireCounts && kit.TeamLimit >= 1f)
             return false;
         IEnumerable<UCPlayer> friendlyPlayers = t == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == t);
-        allowedPlayers = Mathf.CeilToInt(kit.TeamLimit * friendlyPlayers.Count());
-        currentPlayers = friendlyPlayers.Count(k => k.ActiveKit == kit);
+        allowedPlayers = Mathf.CeilToInt(kit.GetTeamLimit() * friendlyPlayers.Count());
+        currentPlayers = friendlyPlayers.Count(k => k.ActiveKit.HasValue && k.ActiveKit.Value == kit.PrimaryKey);
         if (kit.TeamLimit >= 1f)
             return false;
         return currentPlayers + 1 > allowedPlayers;
@@ -309,7 +324,7 @@ public static class KitEx
         if (!requireCounts && (kit.TeamLimit >= 1f))
             return false;
         IEnumerable<UCPlayer> friendlyPlayers = t == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == t);
-        allowedPlayers = Mathf.CeilToInt(kit.TeamLimit * friendlyPlayers.Count());
+        allowedPlayers = Mathf.CeilToInt(kit.GetTeamLimit() * friendlyPlayers.Count());
         currentPlayers = friendlyPlayers.Count(k => k.KitClass == kit.Class);
         if (kit.TeamLimit >= 1f)
             return false;
@@ -343,448 +358,448 @@ public static class KitEx
         List<IKitItem> items = new List<IKitItem>(32)
         {
             // do not reorder these
-            new AssetRedirectClothing(RedirectType.Shirt, ClothingType.Shirt),
-            new AssetRedirectClothing(RedirectType.Pants, ClothingType.Pants),
-            new AssetRedirectClothing(RedirectType.Vest, ClothingType.Vest),
-            new AssetRedirectClothing(RedirectType.Hat, ClothingType.Hat),
-            new AssetRedirectClothing(RedirectType.Mask, ClothingType.Mask),
-            new AssetRedirectClothing(RedirectType.Backpack, ClothingType.Backpack),
-            new AssetRedirectClothing(RedirectType.Glasses, ClothingType.Glasses)
+            new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, RedirectType.Shirt, ClothingType.Shirt, null),
+            new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, RedirectType.Pants, ClothingType.Pants, null),
+            new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, RedirectType.Vest, ClothingType.Vest, null),
+            new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, RedirectType.Hat, ClothingType.Hat, null),
+            new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, RedirectType.Mask, ClothingType.Mask, null),
+            new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, RedirectType.Backpack, ClothingType.Backpack, null),
+            new AssetRedirectClothingKitItem(PrimaryKey.NotAssigned, RedirectType.Glasses, ClothingType.Glasses, null)
         };
         switch (@class)
         {
             case Class.Squadleader:
-                items.Add(new AssetRedirectItem(RedirectType.LaserDesignator, 0, 0, 0, Page.Backpack));
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 6, 1, 0, Page.Backpack));
-                items.Add(new AssetRedirectItem(RedirectType.Radio, 0, 2, 0, Page.Backpack));
-                items.Add(new AssetRedirectItem(RedirectType.Radio, 3, 2, 0, Page.Backpack));
-                items.Add(new AssetRedirectItem(RedirectType.RallyPoint, 0, 0, 1, Page.Shirt));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 0, 0, Page.Backpack, RedirectType.LaserDesignator, null));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 6, 1, 0, Page.Backpack, RedirectType.EntrenchingTool, null));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 2, 0, Page.Backpack, RedirectType.Radio, null));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 3, 2, 0, Page.Backpack, RedirectType.Radio, null));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 0, 1, Page.Shirt, RedirectType.RallyPoint, null));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 5, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 5, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Frag Grenades
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 3, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 2, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 3, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Red Smokes
-                items.Add(new PageItem(new Guid("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 2, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 3, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 2, 1, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 3, 1, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Yellow Smoke
-                items.Add(new PageItem(new Guid("18713c6d9b8f4980bdee830ca9d667ef"), 4, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("18713c6d9b8f4980bdee830ca9d667ef"), 4, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.Rifleman:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 0, 2, 1, Page.Backpack));
-                items.Add(new AssetRedirectItem(RedirectType.AmmoBag, 2, 0, 0, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 2, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 2, 0, 0, Page.Backpack, RedirectType.AmmoBag, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 0, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Frag Grenades
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 1, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 1, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 1, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 1, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 5, 1, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 5, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 0, 4, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 0, 4, 4, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.Medic:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 0, 3, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 3, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 3, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 2, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 3, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Bloodbags
-                items.Add(new PageItem(new Guid("5e1d521ecb7f4075aaebd344e838c2ca"), 0, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("5e1d521ecb7f4075aaebd344e838c2ca"), 1, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("5e1d521ecb7f4075aaebd344e838c2ca"), 2, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("5e1d521ecb7f4075aaebd344e838c2ca"), 3, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("5e1d521ecb7f4075aaebd344e838c2ca"), 0, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("5e1d521ecb7f4075aaebd344e838c2ca"), 1, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("5e1d521ecb7f4075aaebd344e838c2ca"), 2, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("5e1d521ecb7f4075aaebd344e838c2ca"), 3, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 5, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 6, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 4, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 5, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 6, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Frag Grenades
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 4, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 5, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 4, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 5, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 4, 2, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 4, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 6, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 6, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.Breacher:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 3, 3, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 3, 3, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // 12ga 00 Buckshot
-                items.Add(new PageItem(new Guid("6089c30d75b247259673d9cdaa513cbb"), 0, 0, 0, Array.Empty<byte>(), 6, Page.Backpack));
-                items.Add(new PageItem(new Guid("6089c30d75b247259673d9cdaa513cbb"), 0, 1, 0, Array.Empty<byte>(), 6, Page.Backpack));
-                items.Add(new PageItem(new Guid("6089c30d75b247259673d9cdaa513cbb"), 1, 1, 0, Array.Empty<byte>(), 6, Page.Backpack));
-                items.Add(new PageItem(new Guid("6089c30d75b247259673d9cdaa513cbb"), 1, 0, 0, Array.Empty<byte>(), 6, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("6089c30d75b247259673d9cdaa513cbb"), 0, 0, 0, Page.Backpack, 6, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("6089c30d75b247259673d9cdaa513cbb"), 0, 1, 0, Page.Backpack, 6, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("6089c30d75b247259673d9cdaa513cbb"), 1, 1, 0, Page.Backpack, 6, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("6089c30d75b247259673d9cdaa513cbb"), 1, 0, 0, Page.Backpack, 6, Array.Empty<byte>()));
 
                 // 12ga Rifled Slugs
-                items.Add(new PageItem(new Guid("d053c04af59b4985b463d160a92af331"), 2, 1, 0, Array.Empty<byte>(), 6, Page.Backpack));
-                items.Add(new PageItem(new Guid("d053c04af59b4985b463d160a92af331"), 2, 0, 0, Array.Empty<byte>(), 6, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("d053c04af59b4985b463d160a92af331"), 2, 1, 0, Page.Backpack, 6, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("d053c04af59b4985b463d160a92af331"), 2, 0, 0, Page.Backpack, 6, Array.Empty<byte>()));
 
                 // C-4 4-Pack Charge
-                items.Add(new PageItem(new Guid("85bcbd5ee63d49c19c3c86b4e0d115d6"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("85bcbd5ee63d49c19c3c86b4e0d115d6"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("85bcbd5ee63d49c19c3c86b4e0d115d6"), 0, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("85bcbd5ee63d49c19c3c86b4e0d115d6"), 1, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Detonator
-                items.Add(new PageItem(new Guid("618d0402c0724f1582fffd69f4cc0868"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("618d0402c0724f1582fffd69f4cc0868"), 2, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Frag Grenades
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 4, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 3, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 4, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 5, 2, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 5, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 0, 4, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 0, 4, 4, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.AutomaticRifleman:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 0, 3, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 3, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 3, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 3, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Frag Grenades
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 1, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 2, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 1, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 2, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 0, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 0, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 0, 2, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 0, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.Grenadier:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 0, 2, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 2, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 4, 3, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 4, 3, 3, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.MachineGunner:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 0, 2, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 2, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 1, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 1, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 0, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 0, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 3, 1, 1, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 3, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
                 break;
             case Class.LAT:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 0, 3, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 3, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
                 break;
             case Class.HAT:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 4, 3, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 4, 3, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 5, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 5, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 0, 3, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 0, 3, 3, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.Marksman:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 0, 0, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 0, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 4, 0, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 4, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 6, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 6, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.Sniper:
                 // Backpack
                 items.RemoveAt(5);
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 0, 0, 0, Page.Vest));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 0, 0, Page.Vest, RedirectType.EntrenchingTool, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Red Smoke
-                items.Add(new PageItem(new Guid("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Violet Smoke
-                items.Add(new PageItem(new Guid("1344161ee08e4297b64b4dc068c5935e"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("1344161ee08e4297b64b4dc068c5935e"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 2, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 2, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Vest));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Page.Vest, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Vest));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 0, 2, 2, Page.Vest, 1, Array.Empty<byte>()));
 
                 // Laser Rangefinder
                 if (Assets.find(new Guid("010de9d7d1fd49d897dc41249a22d436")) is ItemAsset rgf)
-                    items.Add(new PageItem(rgf.GUID, 1, 0, 0, rgf.getState(EItemOrigin.ADMIN), 1, Page.Backpack));
+                    items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference(rgf.GUID), 1, 0, 0, Page.Hands, 1, rgf.getState(EItemOrigin.ADMIN)));
                 break;
             case Class.APRifleman:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 0, 3, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 0, 3, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Red Smoke
-                items.Add(new PageItem(new Guid("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Yellow Smoke
-                items.Add(new PageItem(new Guid("18713c6d9b8f4980bdee830ca9d667ef"), 4, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("18713c6d9b8f4980bdee830ca9d667ef"), 4, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Detonator
-                items.Add(new PageItem(new Guid("618d0402c0724f1582fffd69f4cc0868"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("618d0402c0724f1582fffd69f4cc0868"), 0, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Remote-Detonated Claymore
-                items.Add(new PageItem(new Guid("6d5980d658c9449c941928bcc738f210"), 1, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("6d5980d658c9449c941928bcc738f210"), 3, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("6d5980d658c9449c941928bcc738f210"), 1, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("6d5980d658c9449c941928bcc738f210"), 3, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("6d5980d658c9449c941928bcc738f210"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("6d5980d658c9449c941928bcc738f210"), 1, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("6d5980d658c9449c941928bcc738f210"), 3, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("6d5980d658c9449c941928bcc738f210"), 1, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("6d5980d658c9449c941928bcc738f210"), 3, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("6d5980d658c9449c941928bcc738f210"), 1, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 3, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 5, 2, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 5, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Frag Grenades
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 5, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 6, 1, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 5, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 6, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.CombatEngineer:
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 2, 2, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 2, 2, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Anti-Tank Mine
-                items.Add(new PageItem(new Guid("92df865d6d534bc1b20b7885fddb8af3"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("92df865d6d534bc1b20b7885fddb8af3"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("92df865d6d534bc1b20b7885fddb8af3"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("92df865d6d534bc1b20b7885fddb8af3"), 6, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("92df865d6d534bc1b20b7885fddb8af3"), 0, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("92df865d6d534bc1b20b7885fddb8af3"), 2, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("92df865d6d534bc1b20b7885fddb8af3"), 4, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("92df865d6d534bc1b20b7885fddb8af3"), 6, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Frag Grenades
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 0, 3, 0, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 1, 3, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 0, 3, 3, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 1, 3, 3, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 0, 4, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 0, 4, 4, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new PageItem(new Guid("47097f72d56c4bfb83bb8947e66396d5"), 2, 4, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 2, 4, 4, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Razorwire
-                items.Add(new PageItem(new Guid("a2a8a01a58454816a6c9a047df0558ad"), 6, 2, 1, Array.Empty<byte>(), 1, Page.Backpack));
-                items.Add(new PageItem(new Guid("a2a8a01a58454816a6c9a047df0558ad"), 7, 2, 1, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("a2a8a01a58454816a6c9a047df0558ad"), 6, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("a2a8a01a58454816a6c9a047df0558ad"), 7, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Sandbag Lines
-                items.Add(new PageItem(new Guid("15f674dcaf3f44e19a124c8bf7e19ca2"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Shirt));
-                items.Add(new PageItem(new Guid("15f674dcaf3f44e19a124c8bf7e19ca2"), 0, 1, 0, Array.Empty<byte>(), 1, Page.Shirt));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("15f674dcaf3f44e19a124c8bf7e19ca2"), 0, 0, 0, Page.Shirt, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("15f674dcaf3f44e19a124c8bf7e19ca2"), 0, 1, 1, Page.Shirt, 1, Array.Empty<byte>()));
 
                 // Sandbag Pillboxes
-                items.Add(new PageItem(new Guid("a9294335d8e84b76b1cbcb7d70f66aaa"), 3, 0, 0, Array.Empty<byte>(), 1, Page.Shirt));
-                items.Add(new PageItem(new Guid("a9294335d8e84b76b1cbcb7d70f66aaa"), 3, 1, 0, Array.Empty<byte>(), 1, Page.Shirt));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("a9294335d8e84b76b1cbcb7d70f66aaa"), 3, 0, 0, Page.Shirt, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("a9294335d8e84b76b1cbcb7d70f66aaa"), 3, 1, 1, Page.Shirt, 1, Array.Empty<byte>()));
                 break;
             case Class.Crewman:
                 items.RemoveAt(3); // hat
                 items.RemoveRange(5 - 1, 2); // backpack, glasses
 
                 // Crewman Helmet
-                items.Add(new ClothingItem(new Guid("3ee3c7292ce340489b9afacda209e138"), ClothingType.Hat, Array.Empty<byte>()));
+                items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("3ee3c7292ce340489b9afacda209e138"), ClothingType.Hat, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 2, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 4, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 2, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 2, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Portable Gas Can
-                items.Add(new PageItem(new Guid("d5b9f19e2f2a4ee2ab4dc666f32f7df3"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Vest));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("d5b9f19e2f2a4ee2ab4dc666f32f7df3"), 0, 0, 0, Page.Vest, 1, Array.Empty<byte>()));
 
                 // Carjack
-                items.Add(new PageItem(new Guid("1f80a9e0c86047d38b72e08e267885f6"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Vest));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("1f80a9e0c86047d38b72e08e267885f6"), 2, 0, 0, Page.Vest, 1, Array.Empty<byte>()));
                 break;
             case Class.Pilot:
                 items.RemoveRange(2, 2); // vest, hat
                 items.RemoveRange(5 - 2, 2); // backpack, glasses
 
                 // Pilot Helmet
-                items.Add(new ClothingItem(new Guid("78656047d47a4ff1ad7aa8a2e4d070a0"), ClothingType.Hat, Array.Empty<byte>()));
+                items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("78656047d47a4ff1ad7aa8a2e4d070a0"), ClothingType.Hat, Array.Empty<byte>()));
 
                 // Red Smoke
-                items.Add(new PageItem(new Guid("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("c9fadfc1008e477ebb9aeaaf0ad9afb9"), 2, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 3, 0, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 3, 0, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Portable Gas Can
-                items.Add(new PageItem(new Guid("d5b9f19e2f2a4ee2ab4dc666f32f7df3"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Shirt));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("d5b9f19e2f2a4ee2ab4dc666f32f7df3"), 0, 0, 0, Page.Shirt, 1, Array.Empty<byte>()));
 
                 // Carjack
-                items.Add(new PageItem(new Guid("1f80a9e0c86047d38b72e08e267885f6"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Shirt));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("1f80a9e0c86047d38b72e08e267885f6"), 2, 0, 0, Page.Shirt, 1, Array.Empty<byte>()));
                 break;
             case Class.SpecOps:
                 items.RemoveAt(6); // glasses
-                items.Add(new AssetRedirectItem(RedirectType.EntrenchingTool, 4, 0, 1, Page.Backpack));
+                items.Add(new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, 4, 0, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
 
                 // Military Nightvision
-                items.Add(new ClothingItem(new Guid("cca8301927e049149fcee2b157a59da1"), ClothingType.Glasses, new byte[1]));
+                items.Add(new SpecificClothingKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("cca8301927e049149fcee2b157a59da1"), ClothingType.Glasses, new byte[1]));
 
                 // Dressings
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 0, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("ae46254cfa3b437e9d74a5963e161da4"), 1, 1, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 1, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Frag Grenade
-                items.Add(new PageItem(new Guid("b01e414db03747509e87ebc515744216"), 2, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 2, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // White Smokes
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
-                items.Add(new PageItem(new Guid("7bf622df8cfe4d8c8b740fae3e95b957"), 4, 2, 0, Array.Empty<byte>(), 1, Page.Hands));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 4, 2, 2, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
-                items.Add(new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Detonator
-                items.Add(new PageItem(new Guid("618d0402c0724f1582fffd69f4cc0868"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("618d0402c0724f1582fffd69f4cc0868"), 0, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // C-4 4-Pack Charge
-                items.Add(new PageItem(new Guid("85bcbd5ee63d49c19c3c86b4e0d115d6"), 1, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("85bcbd5ee63d49c19c3c86b4e0d115d6"), 1, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new PageItem(new Guid("f260c581cf504098956f424d62345982"), 5, 2, 0, Array.Empty<byte>(), 1, Page.Backpack));
+                items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 5, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
 
         }
@@ -809,10 +824,7 @@ public static class KitEx
 
         public static readonly NetCall<ulong, ulong, string, KitAccessType, bool> RequestSetKitAccess = new NetCall<ulong, ulong, string, KitAccessType, bool>(ReceiveSetKitAccess);
         public static readonly NetCall<ulong, ulong, string[], KitAccessType, bool> RequestSetKitsAccess = new NetCall<ulong, ulong, string[], KitAccessType, bool>(ReceiveSetKitsAccess);
-        public static readonly NetCallRaw<Kit?> CreateKit = new NetCallRaw<Kit?>(ReceiveCreateKit, Util.ReadIReadWriteObjectNullable<Kit>, Util.WriteIReadWriteObjectNullable);
         public static readonly NetCall<string> RequestKitClass = new NetCall<string>(ReceiveRequestKitClass);
-        public static readonly NetCall<string> RequestKit = new NetCall<string>(ReceiveKitRequest);
-        public static readonly NetCallRaw<string[]> RequestKits = new NetCallRaw<string[]>(ReceiveKitsRequest, null, null);
         public static readonly NetCall<ulong, ulong, Class, string> RequestCreateLoadout = new NetCall<ulong, ulong, Class, string>(ReceiveCreateLoadoutRequest);
         public static readonly NetCall<ulong, ulong, Class, string> RequestUpgradeLoadout = new NetCall<ulong, ulong, Class, string>(ReceiveUpgradeLoadoutRequest);
         public static readonly NetCall<ulong, ulong, string> RequestUnlockLoadout = new NetCall<ulong, ulong, string>(ReceiveUnlockLoadoutRequest);
@@ -822,8 +834,6 @@ public static class KitEx
         public static readonly NetCall<ulong, int> RequestIsModifyLoadoutTicketOpen = new NetCall<ulong, int>(1038);
 
         public static readonly NetCall<string, Class, string> SendKitClass = new NetCall<string, Class, string>(1114);
-        public static readonly NetCallRaw<Kit?> SendKit = new NetCallRaw<Kit?>(1117, Util.ReadIReadWriteObjectNullable<Kit>, Util.WriteIReadWriteObjectNullable);
-        public static readonly NetCallRaw<Kit[]> SendKits = new NetCallRaw<Kit[]>(1118, Util.ReadIReadWriteArray<Kit>, Util.WriteIReadWriteArray);
         public static readonly NetCall<string, int> SendAckCreateLoadout = new NetCall<string, int>(1111);
         public static readonly NetCall<int[]> SendAckSetKitsAccess = new NetCall<int[]>(1133);
         public static readonly NetCall<byte, byte[]> SendKitsAccess = new NetCall<byte, byte[]>(1137);
@@ -832,34 +842,31 @@ public static class KitEx
 
 
         [NetCall(ENetCall.FROM_SERVER, 1100)]
-        internal static async Task<StandardErrorCode> ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kit, KitAccessType type, bool state)
+        internal static async Task<StandardErrorCode> ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kitId, KitAccessType type, bool state)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager == null)
                 return StandardErrorCode.GenericError;
 
-            SqlItem<Kit>? proxy = await manager.FindKit(kit).ConfigureAwait(false);
-            if (proxy?.Item != null)
+            Kit? kit = await manager.FindKit(kitId).ConfigureAwait(false);
+            if (kit != null)
             {
-                await proxy.Enter().ConfigureAwait(false);
+                await manager.WaitAsync().ConfigureAwait(false);
                 try
                 {
-                    if (proxy.Item != null)
-                    {
-                        await (state ? KitManager.GiveAccess(proxy, player, type) : KitManager.RemoveAccess(proxy, player)).ConfigureAwait(false);
-                        ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
-                                                                           (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) :
-                                                                           (" DENIED ACCESS TO " + kit + ".")), admin);
-                        KitSync.OnAccessChanged(player);
-                        UCPlayer? onlinePlayer = UCPlayer.FromID(player);
-                        if (onlinePlayer != null && onlinePlayer.IsOnline)
-                            KitManager.UpdateSigns(proxy.Item, onlinePlayer);
-                        return StandardErrorCode.Success;
-                    }
+                    await (state ? KitManager.GiveAccess(kit, player, type) : KitManager.RemoveAccess(kit, player)).ConfigureAwait(false);
+                    ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
+                                                                       (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
+                                                                       (" DENIED ACCESS TO " + kitId + ".")), admin);
+                    KitSync.OnAccessChanged(player);
+                    UCPlayer? onlinePlayer = UCPlayer.FromID(player);
+                    if (onlinePlayer != null && onlinePlayer.IsOnline)
+                        KitManager.UpdateSigns(kit, onlinePlayer);
+                    return StandardErrorCode.Success;
                 }
                 finally
                 {
-                    proxy.Release();
+                    manager.Release();
                 }
             }
 
@@ -883,18 +890,18 @@ public static class KitEx
             {
                 for (int i = 0; i < kits.Length; ++i)
                 {
-                    string kit = kits[i];
-                    SqlItem<Kit>? proxy = await manager.FindKit(kit).ConfigureAwait(false);
-                    if (proxy?.Item != null)
+                    string kitId = kits[i];
+                    Kit? kit = await manager.FindKit(kitId).ConfigureAwait(false);
+                    if (kit != null)
                     {
-                        await (state ? KitManager.GiveAccess(proxy, player, type) : KitManager.RemoveAccess(proxy, player)).ConfigureAwait(false);
+                        await (state ? KitManager.GiveAccess(kit, player, type) : KitManager.RemoveAccess(kit, player)).ConfigureAwait(false);
                         ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
-                            (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) :
-                                (" DENIED ACCESS TO " + kit + ".")), admin);
+                            (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
+                                (" DENIED ACCESS TO " + kitId + ".")), admin);
                         KitSync.OnAccessChanged(player);
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);
                         if (onlinePlayer != null && onlinePlayer.IsOnline)
-                            KitManager.UpdateSigns(proxy.Item, onlinePlayer);
+                            KitManager.UpdateSigns(kit, onlinePlayer);
                         successes[i] = (int)StandardErrorCode.Success;
                         continue;
                     }
@@ -911,17 +918,17 @@ public static class KitEx
         /// <returns><see cref="PlayerHasAccessCode"/> if the player has access to the kit, <see cref="PlayerHasNoAccessCode"/> if they don't,<br/>
         /// <see cref="KitNotFoundErrorCode"/> if the kit isn't found, and <see cref="MessageContext.CODE_GENERIC_FAILURE"/> if <see cref="KitManager"/> isn't loaded.</returns>
         [NetCall(ENetCall.FROM_SERVER, 1134)]
-        private static async Task<int> ReceiveKitAccessRequest(MessageContext context, string kit, ulong player)
+        private static async Task<int> ReceiveKitAccessRequest(MessageContext context, string kitId, ulong player)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
 
             if (manager == null)
                 return (int)StandardErrorCode.GenericError;
-            SqlItem<Kit>? proxy = await manager.FindKit(kit).ConfigureAwait(false);
-            if (proxy?.Item == null)
+            Kit? kit = await manager.FindKit(kitId).ConfigureAwait(false);
+            if (kit == null)
                 return (int)StandardErrorCode.NotFound;
 
-            return await KitManager.HasAccess(proxy.LastPrimaryKey, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode;
+            return await KitManager.HasAccess(kit, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode;
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1136)]
@@ -939,99 +946,37 @@ public static class KitEx
             }
             for (int i = 0; i < kits.Length; ++i)
             {
-                SqlItem<Kit>? proxy = await manager.FindKit(kits[i]).ConfigureAwait(false);
-                if (proxy?.Item == null)
+                Kit? kit = await manager.FindKit(kits[i]).ConfigureAwait(false);
+                if (kit == null)
                     outp[i] = (int)StandardErrorCode.NotFound;
-                else outp[i] = (byte)(await KitManager.HasAccess(proxy.LastPrimaryKey, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode);
+                else outp[i] = (byte)(await KitManager.HasAccess(kit, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode);
             }
             context.Reply(SendKitsAccess, (byte)StandardErrorCode.Success, outp);
         }
-
-        [NetCall(ENetCall.FROM_SERVER, 1109)]
-        internal static async Task<StandardErrorCode> ReceiveCreateKit(MessageContext context, Kit? kit)
-        {
-            KitManager? manager = KitManager.GetSingletonQuick();
-            if (manager == null || kit == null)
-                return StandardErrorCode.GenericError;
-            await manager.AddOrUpdate(kit);
-            return StandardErrorCode.Success;
-        }
+        
 
         [NetCall(ENetCall.FROM_SERVER, 1113)]
-        internal static async Task ReceiveRequestKitClass(MessageContext context, string kitID)
+        internal static async Task ReceiveRequestKitClass(MessageContext context, string kitId)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager == null)
                 goto bad;
-            SqlItem<Kit>? proxy = await manager.FindKit(kitID).ConfigureAwait(false);
-            if (proxy?.Item == null)
+            Kit? kit = await manager.FindKit(kitId).ConfigureAwait(false);
+            if (kit == null)
                 goto bad;
-            await proxy.Enter().ConfigureAwait(false);
+            await manager.WaitAsync().ConfigureAwait(false);
             try
             {
-                if (proxy.Item == null)
-                    goto bad;
-                string signtext = proxy.Item.GetDisplayName();
-                context.Reply(SendKitClass, kitID, proxy.Item.Class, signtext);
+                string signtext = kit.GetDisplayName();
+                context.Reply(SendKitClass, kitId, kit.Class, signtext);
                 return;
             }
             finally
             {
-                proxy.Release();
+                manager.Release();
             }
             bad:
-            context.Reply(SendKitClass, kitID, Class.None, kitID);
-        }
-
-        [NetCall(ENetCall.FROM_SERVER, 1115)]
-        internal static async Task ReceiveKitRequest(MessageContext context, string kitID)
-        {
-            KitManager? manager = KitManager.GetSingletonQuick();
-            if (manager == null)
-                goto bad;
-            SqlItem<Kit>? proxy = await manager.FindKit(kitID).ConfigureAwait(false);
-            if (proxy?.Item == null)
-                goto bad;
-            await proxy.Enter().ConfigureAwait(false);
-            try
-            {
-                if (proxy.Item == null)
-                    goto bad;
-                context.Reply(SendKit, proxy.Item);
-                return;
-            }
-            finally
-            {
-                proxy.Release();
-            }
-            bad:
-            context.Reply(SendKit, null);
-        }
-        [NetCall(ENetCall.FROM_SERVER, 1116)]
-        internal static async Task ReceiveKitsRequest(MessageContext context, string[] kitIDs)
-        {
-            List<Kit> kits = new List<Kit>(kitIDs.Length);
-            KitManager? manager = KitManager.GetSingletonQuick();
-            if (manager != null)
-            {
-                await manager.WaitAsync().ConfigureAwait(false);
-                try
-                {
-                    for (int i = 0; i < kitIDs.Length; i++)
-                    {
-                        SqlItem<Kit>? proxy = manager.FindKitNoLock(kitIDs[i]);
-                        if (proxy?.Item != null)
-                        {
-                            kits.Add(proxy.Item);
-                        }
-                    }
-                }
-                finally
-                {
-                    manager.Release();
-                }
-            }
-            context.Reply(SendKits, kits.ToArray());
+            context.Reply(SendKitClass, kitId, Class.None, kitId);
         }
         [NetCall(ENetCall.FROM_SERVER, 1110)]
         private static async Task ReceiveCreateLoadoutRequest(MessageContext context, ulong fromPlayer, ulong player, Class @class, string displayName)
@@ -1039,9 +984,9 @@ public static class KitEx
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                (SqlItem<Kit> kit, StandardErrorCode code) = await manager.CreateLoadout(fromPlayer, player, @class, displayName);
+                (Kit kit, StandardErrorCode code) = await manager.CreateLoadout(fromPlayer, player, @class, displayName);
 
-                context.Reply(SendAckCreateLoadout, kit.Item is null ? string.Empty : kit.Item.Id, (int)code);
+                context.Reply(SendAckCreateLoadout, kit.InternalName, (int)code);
             }
             else
             {

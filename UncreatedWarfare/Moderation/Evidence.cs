@@ -4,34 +4,34 @@ using Uncreated.Encoding;
 using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation;
-public readonly struct Evidence : IEquatable<Evidence>
+public struct Evidence : IEquatable<Evidence>
 {
     [JsonPropertyName("id")]
-    public PrimaryKey Id { get; }
+    public PrimaryKey Id { get; set; }
 
     [JsonPropertyName("url")]
-    public string URL { get; }
+    public string URL { get; set; }
 
     [JsonPropertyName("saved_location")]
-    public string? SavedLocation { get; }
+    public string? SavedLocation { get; set; }
 
     [JsonPropertyName("message")]
-    public string? Message { get; }
+    public string? Message { get; set; }
 
     [JsonPropertyName("image")]
-    public bool Image { get; }
+    public bool Image { get; set; }
 
     [JsonPropertyName("actor")]
     [JsonConverter(typeof(ActorConverter))]
-    public IModerationActor Actor { get; }
+    public IModerationActor Actor { get; set; }
 
     [JsonPropertyName("timestamp_utc")]
-    public DateTimeOffset Timestamp { get; }
+    public DateTimeOffset Timestamp { get; set; }
 
+    public Evidence() { }
     public Evidence(string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
         : this(PrimaryKey.NotAssigned, url, message, savedLocation, image, actor, timestamp) { }
-
-    [JsonConstructor]
+    
     public Evidence(PrimaryKey id, string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
     {
         Id = id;
@@ -44,7 +44,7 @@ public readonly struct Evidence : IEquatable<Evidence>
     }
     public Evidence(ByteReader reader, ushort version)
     {
-        Id = reader.ReadInt32();
+        Id = reader.ReadUInt32();
         URL = reader.ReadString();
         SavedLocation = reader.ReadNullableString();
         Message = reader.ReadNullableString();

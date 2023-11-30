@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Uncreated.Networking;
 using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Configuration;
@@ -15,103 +16,109 @@ public class SystemConfig : Config<SystemConfigData>
             Warfare.Data.DatabaseManager.DebugLogging = Data.Debug;
         if (Warfare.Data.RemoteSQL != null)
             Warfare.Data.RemoteSQL.DebugLogging = Data.Debug;
+
+        Logging.SemaphoreLogging = Data.SemaphoreDebug;
     }
 }
 
 public class SystemConfigData : JSONConfigData
 {
     [JsonPropertyName("moderation")]
-    public ModerationConfig ModerationSettings;
+    public ModerationConfig ModerationSettings { get; set; }
     [JsonPropertyName("tcpServer")]
-    public TCPConfig TCPSettings;
+    public TCPConfig TCPSettings { get; set; }
     [JsonPropertyName("mysql")]
-    public MySqlData SQL;
+    public MySqlData SQL { get; set; }
     [JsonPropertyName("mysqlRemote")]
-    public MySqlData? RemoteSQL;
+    public MySqlData? RemoteSQL { get; set; }
+    [JsonPropertyName("sqlConnectionString")]
+    public string? SqlConnectionString { get; set; }
     [JsonPropertyName("debugMode")]
-    public bool Debug;
+    public bool Debug { get; set; }
+    [JsonPropertyName("semaphoreDebugLogging")]
+    public bool SemaphoreDebug { get; set; }
     [JsonPropertyName("region")]
-    public string Region;
+    public string Region { get; set; }
     [JsonPropertyName("regionKey")]
-    public byte RegionKey;
+    public byte RegionKey { get; set; }
     [JsonPropertyName("localCurrency")]
-    public string Currency;
+    public string Currency { get; set; }
     [JsonPropertyName("allowCosmetics")]
-    public bool AllowCosmetics;
+    public bool AllowCosmetics { get; set; }
     [JsonPropertyName("modifySkills")]
-    public bool ModifySkillLevels;
+    public bool ModifySkillLevels { get; set; }
     [JsonPropertyName("allowBatteryTheft")]
-    public bool AllowBatteryStealing;
+    public bool AllowBatteryStealing { get; set; }
     [JsonPropertyName("discordInviteCode")]
-    public string DiscordInviteCode;
+    public string DiscordInviteCode { get; set; }
     [JsonPropertyName("injuredTimeSeconds")]
-    public float InjuredLifeTimeSeconds;
+    public float InjuredLifeTimeSeconds { get; set; }
     [JsonPropertyName("warnForFriendlyMortar")]
-    public bool EnableMortarWarning;
+    public bool EnableMortarWarning { get; set; }
     [JsonPropertyName("mortarWarningRadius")]
-    public float MortarWarningDistance;
+    public float MortarWarningDistance { get; set; }
     [JsonPropertyName("statCoroutineInterval")]
-    public int StatsInterval;
+    public int StatsInterval { get; set; }
     [JsonPropertyName("afkCheckInterval")]
-    public float AfkCheckInterval;
+    public float AfkCheckInterval { get; set; }
     [JsonPropertyName("amcDamageMultiplier")]
-    public float AMCDamageMultiplier;
+    public float AMCDamageMultiplier { get; set; }
     [JsonPropertyName("overrideKitRequirements")]
-    public bool OverrideKitRequirements;
+    public bool OverrideKitRequirements { get; set; }
     [JsonPropertyName("injuredPlayerDamageMultiplier")]
-    public float InjuredDamageMultiplier;
+    public float InjuredDamageMultiplier { get; set; }
     [JsonPropertyName("maxTimeInStorage")]
-    public float MaxTimeInStorages;
+    public float MaxTimeInStorages { get; set; }
     [JsonPropertyName("clearItemsOnRestock")]
-    public bool ClearItemsOnAmmoBoxUse;
+    public bool ClearItemsOnAmmoBoxUse { get; set; }
     [JsonPropertyName("relayMicsAfterGame")]
-    public bool RelayMicsDuringEndScreen;
+    public bool RelayMicsDuringEndScreen { get; set; }
     [JsonPropertyName("enableSquads")]
-    public bool EnableSquads;
+    public bool EnableSquads { get; set; }
     [JsonPropertyName("enableSync")]
-    public bool EnableSync;
+    public bool EnableSync { get; set; }
     [JsonPropertyName("enableActionMenu")]
-    public bool EnableActionMenu;
+    public bool EnableActionMenu { get; set; }
     [JsonPropertyName("loadoutPremiumCost")]
-    public decimal LoadoutCost;
+    public decimal LoadoutCost { get; set; }
     [JsonPropertyName("vehicleAbandonmentDistance")]
-    public float MaxVehicleAbandonmentDistance;
+    public float MaxVehicleAbandonmentDistance { get; set; }
     [JsonPropertyName("vehicleDismountMaxHeight")]
-    public float MaxVehicleHeightToLeave;
+    public float MaxVehicleHeightToLeave { get; set; }
     [JsonPropertyName("rotation")]
-    public string GamemodeRotation;
+    public string GamemodeRotation { get; set; }
     [JsonPropertyName("disableNameFilter")]
-    public bool DisableNameFilter;
+    public bool DisableNameFilter { get; set; }
     [JsonPropertyName("nameFilterAlnumLength")]
-    public int MinAlphanumericStringLength;
+    public int MinAlphanumericStringLength { get; set; }
     [JsonPropertyName("enableReporter")]
-    public bool EnableReporter;
+    public bool EnableReporter { get; set; }
     [JsonPropertyName("blockLandmineFriendlyFire")]
-    public bool BlockLandmineFriendlyFire;
+    public bool BlockLandmineFriendlyFire { get; set; }
     [JsonPropertyName("disableDailyQuests")]
-    public bool DisableDailyQuests;
+    public bool DisableDailyQuests { get; set; }
     [JsonPropertyName("playerJoinLeaveMessages")]
-    public bool EnablePlayerJoinLeaveMessages;
+    public bool EnablePlayerJoinLeaveMessages { get; set; }
     [JsonPropertyName("playerJoinLeaveTeamMessages")]
-    public bool EnablePlayerJoinLeaveTeamMessages;
+    public bool EnablePlayerJoinLeaveTeamMessages { get; set; }
     [JsonPropertyName("timeBetweenAnnouncements")]
-    public float SecondsBetweenAnnouncements;
+    public float SecondsBetweenAnnouncements { get; set; }
     [JsonPropertyName("sendActionLogs")]
-    public bool SendActionLogs;
+    public bool SendActionLogs { get; set; }
     [JsonPropertyName("disableMissingAssetKick")]
-    public bool DisableMissingAssetKick;
+    public bool DisableMissingAssetKick { get; set; }
     [JsonPropertyName("nerds")]
-    public List<ulong> Nerds;
+    public List<ulong> Nerds { get; set; }
     [JsonPropertyName("disableDailyRestart")]
-    public bool DisableDailyRestart;
+    public bool DisableDailyRestart { get; set; }
     [JsonPropertyName("disableAprilFools")]
-    public bool DisableAprilFools;
+    public bool DisableAprilFools { get; set; }
     [JsonPropertyName("disableKitMenu")]
-    public bool DisableKitMenu;
+    public bool DisableKitMenu { get; set; }
     [JsonPropertyName("steam_api_key")]
-    public string? SteamAPIKey;
+    public string? SteamAPIKey { get; set; }
     [JsonPropertyName("stripe_api_key")]
-    public string? StripeAPIKey;
+    public string? StripeAPIKey { get; set; }
     [JsonPropertyName("website_domain")]
     public string? WebsiteDomain
     {
@@ -127,6 +134,7 @@ public class SystemConfigData : JSONConfigData
         ModerationSettings = new ModerationConfig();
         TCPSettings = new TCPConfig();
         SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "root", CharSet = "utf8mb4" };
+        SqlConnectionString = SQL.GetConnectionString("UCWarfare", true, false);
         RemoteSQL = null;
         Debug = true;
         AllowCosmetics = false;
@@ -175,21 +183,21 @@ public class SystemConfigData : JSONConfigData
     public class ModerationConfig
     {
         [JsonPropertyName("adminOffDuty")]
-        public string AdminOffDutyGroup;
+        public string AdminOffDutyGroup { get; set; }
         [JsonPropertyName("adminOnDuty")]
-        public string AdminOnDutyGroup;
+        public string AdminOnDutyGroup { get; set; }
         [JsonPropertyName("internOffDuty")]
-        public string InternOffDutyGroup;
+        public string InternOffDutyGroup { get; set; }
         [JsonPropertyName("internOnDuty")]
-        public string InternOnDutyGroup;
+        public string InternOnDutyGroup { get; set; }
         [JsonPropertyName("helper")]
-        public string HelperGroup;
+        public string HelperGroup { get; set; }
         [JsonPropertyName("vehiclePlaceWhitelist")]
-        public List<ushort> AllowedBarricadesOnVehicles;
+        public List<ushort> AllowedBarricadesOnVehicles { get; set; }
         [JsonPropertyName("shutdownMessageInterval")]
-        public float TimeBetweenShutdownMessages;
+        public float TimeBetweenShutdownMessages { get; set; }
         [JsonPropertyName("battleyeMessageBlacklist")]
-        public string[] BattleyeExclusions;
+        public string[] BattleyeExclusions { get; set; }
         public ModerationConfig()
         {
             InternOnDutyGroup = "intern";
@@ -207,10 +215,10 @@ public class SystemConfigData : JSONConfigData
     }
     public class TCPConfig
     {
-        public bool EnableTCPServer;
-        public string TCPServerIP;
-        public ushort TCPServerPort;
-        public string TCPServerIdentity;
+        public bool EnableTCPServer { get; set; }
+        public string TCPServerIP { get; set; }
+        public ushort TCPServerPort { get; set; }
+        public string TCPServerIdentity { get; set; }
 
         public TCPConfig()
         {

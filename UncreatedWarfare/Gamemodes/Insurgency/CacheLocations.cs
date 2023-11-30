@@ -117,7 +117,6 @@ public class CacheLocations
 public class CacheLocation : IEquatable<CacheLocation>
 {
     [JsonPropertyName("name")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Name { get; set; }
 
     [JsonPropertyName("position")]
@@ -127,11 +126,9 @@ public class CacheLocation : IEquatable<CacheLocation>
     public Vector3 Rotation { get; set; }
 
     [JsonPropertyName("placer")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ulong Placer { get; set; }
 
     [JsonPropertyName("disabled")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsDisabled { get; set; }
 
     public Quaternion GetBarricadeAngle() => Quaternion.Euler(Rotation);

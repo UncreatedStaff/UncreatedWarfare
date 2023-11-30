@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,36 +6,46 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Debug = System.Diagnostics.Debug;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Permissions;
+
+#if DEBUG
+using HarmonyLib;
+using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Squads.Commander;
+using Uncreated.Warfare.Teams;
+#endif
 
 // ReSharper disable UnusedMember.Local
 // ReSharper disable InconsistentNaming
@@ -749,7 +758,7 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString("Permission: " + ctx.Caller.GetPermissions());
     }
 #if DEBUG
-    private static readonly InstanceSetter<InteractableVehicle, bool> SetEngineOn = Util.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly InstanceSetter<InteractableVehicle, bool>? SetEngineOn = Accessor.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField");
     private void drivetest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -786,7 +795,7 @@ public class DebugCommand : AsyncCommand
         Quaternion angle = ctx.Caller.Player.transform.rotation;
         InteractableVehicle veh = VehicleManager.spawnLockedVehicleForPlayerV2(asset.id, pos, angle, ctx.Caller.Player);
         //uint sim = 1;
-        SetEngineOn.Invoke(veh, true);
+        SetEngineOn?.Invoke(veh, true);
         RaycastHit[] results = new RaycastHit[16];
         yield return new WaitForSeconds(5f);
         //Array.ForEach(veh.transform.gameObject.GetComponentsInChildren<Collider>(), x => UnityEngine.Object.Destroy(x));
@@ -858,11 +867,6 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString("Reset debugger");
         }
         else throw ctx.ReplyString("Debugger is not active.");
-    }
-    private void translationtest(CommandInteraction ctx)
-    {
-        ctx.AssertRanByPlayer();
-        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.ActiveKit?.Item!);
     }
     private void quest(CommandInteraction ctx)
     {
@@ -1019,9 +1023,9 @@ public class DebugCommand : AsyncCommand
         ctx.AssertRanByPlayer();
         L.Log("Cooldowns for " + ctx.Caller.Name.PlayerName + ":");
         using IDisposable d = L.IndentLog(1);
-        foreach (Cooldown cooldown in CooldownManager.Singleton.Cooldowns.Where(x => x.player.Steam64 == ctx.Caller.Steam64))
+        foreach (Cooldown cooldown in CooldownManager.Singleton.Cooldowns.Where(x => x.Player.Steam64 == ctx.Caller.Steam64))
         {
-            L.Log($"{cooldown.type}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.data is null || cooldown.data.Length == 0 ? "NO DATA" : string.Join(";", cooldown.data))}");
+            L.Log($"{cooldown.CooldownType}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.Parameters is null || cooldown.Parameters.Length == 0 ? "NO DATA" : string.Join(";", cooldown.Parameters))}");
         }
     }
 #if DEBUG
@@ -1105,8 +1109,8 @@ public class DebugCommand : AsyncCommand
         ulong team = ctx.Caller.GetTeam();
         if (manager != null)
         {
-            SqlItem<Kit>? sql = await manager.GetRecommendedSquadleaderKit(team, token).ConfigureAwait(false);
-            if (sql?.Item == null)
+            Kit? sql = await manager.GetRecommendedSquadleaderKit(team, token).ConfigureAwait(false);
+            if (sql == null)
                 ctx.SendUnknownError();
             else
                 await manager.GiveKit(ctx.Caller, sql, false, token).ConfigureAwait(false);
@@ -1227,29 +1231,6 @@ public class DebugCommand : AsyncCommand
             }
         });
     }
-#if DEBUG
-    private void migrateoldkits(CommandInteraction ctx)
-    {
-        ctx.AssertRanByConsole();
-
-        KitManager? manager = Data.Singletons.GetSingleton<KitManager>();
-        if (manager is not { IsLoaded: true })
-            throw ctx.SendGamemodeError();
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                await manager.MigrateOldKits().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                L.LogError(ex);
-            }
-        });
-        ctx.Defer();
-    }
-#endif
 
 #if DEBUG
     private void runtests(CommandInteraction ctx)
@@ -1264,7 +1245,7 @@ public class DebugCommand : AsyncCommand
         {
             try
             {
-                foreach (Type type in Util.GetTypesSafe())
+                foreach (Type type in Accessor.GetTypesSafe())
                 {
                     if (!string.IsNullOrEmpty(typeName) && !type.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
                         continue;
@@ -1654,6 +1635,7 @@ public class DebugCommand : AsyncCommand
 
     private void zonespeedtest(CommandInteraction ctx)
     {
+        ctx.AssertRanByConsole();
         ZoneList zl = Data.Singletons.GetSingleton<ZoneList>()!;
         zl.WriteWait();
         try
@@ -1675,6 +1657,7 @@ public class DebugCommand : AsyncCommand
     }
     private async Task getpfp(CommandInteraction ctx)
     {
+        ctx.AssertRanByConsole();
         if (!ctx.TryGet(0, out ulong steam64, out _, true))
         {
             ctx.AssertRanByPlayer();
@@ -1730,37 +1713,157 @@ public class DebugCommand : AsyncCommand
 
     private async Task migratebans(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateBans(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratebe(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateBattlEyeKicks(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratekicks(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateKicks(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratemutes(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateMutes(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratetks(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateTeamkills(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
     private async Task migratewarns(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByConsole();
         await Migration.MigrateWarnings(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
 
     private void geticons(CommandInteraction ctx)
     {
+        ctx.AssertRanByConsole();
         ctx.ReplyString(string.Join(string.Empty, ItemIconProvider.Defaults.Select(x => x.Character).Where(x => x.HasValue).Select(x => x!.Value.ToString())));
+    }
+    private void fobcooldown(CommandInteraction ctx)
+    {
+        if (ctx.TryGet(0, out int playerCount))
+        {
+            ctx.ReplyString($"Cooldown: {Util.ToTimeString(TimeSpan.FromSeconds(CooldownManager.GetFOBDeployCooldown(playerCount)))} for {playerCount} player(s).");
+        }
+        else
+        {
+            playerCount = Provider.clients.Count(x => x.GetTeam() is 1 or 2);
+            ctx.ReplyString($"Current cooldown: {Util.ToTimeString(TimeSpan.FromSeconds(CooldownManager.GetFOBDeployCooldown(playerCount)))} for {playerCount} player(s)..");
+        }
+    }
+    private void amcdamage(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+
+        ctx.ReplyString($"Your multiplier is currently {ctx.Caller.GetAMCDamageMultiplier().ToString("F4", ctx.CultureInfo)}.");
+    }
+    private void nearpos(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.STAFF);
+
+        ZoneList? zl = Data.Singletons.GetSingleton<ZoneList>();
+        if (zl == null)
+            throw ctx.SendGamemodeError();
+
+        Zone? targetZone = null;
+        if (ctx.TryGetRange(0, out string str))
+        {
+            SqlItem<Zone>? proxy = zl.SearchZone(str);
+
+            zl.WriteWait();
+            try
+            {
+                if (proxy is { Item: { } zone })
+                {
+                    targetZone = zone;
+                }
+            }
+            finally
+            {
+                zl.WriteRelease();
+            }
+        }
+
+        zl.WriteWait();
+        try
+        {
+            if (targetZone == null)
+            {
+                Vector2 pos = new Vector2(ctx.Caller.Position.x, ctx.Caller.Position.z);
+                SqlItem<Zone>? closest = zl.Items.OrderBy(x => Util.SqrDistance2D(x.Item!.Center, pos)).FirstOrDefault();
+                targetZone = closest?.Item;
+
+                if (targetZone == null)
+                    throw ctx.ReplyString("No closest zone.");
+            }
+
+            Vector3 closestPosition = targetZone.GetClosestPointOnBorder(ctx.Caller.Position);
+            F.TriggerEffectReliable(Assets.find<EffectAsset>(new Guid("effb5901fc934c4eaaf0e80ba4c642e3")), ctx.Caller.Connection, closestPosition);
+            ctx.ReplyString($"Found nearest point to <b>{targetZone.Name}</b> at: {closestPosition.ToString("F2", ctx.CultureInfo)}.");
+        }
+        finally
+        {
+            zl.WriteRelease();
+        }
+    }
+
+    private async Task migrateusers(CommandInteraction ctx, CancellationToken token)
+    {
+        ctx.AssertRanByConsole();
+
+        await WarfareDatabases.WaitAsync(token);
+        try
+        {
+            HashSet<ulong> s64s = new HashSet<ulong>(8192);
+
+            foreach (WarfareUserData data in await Data.DbContext.UserData.ToListAsync(token))
+                s64s.Add(data.Steam64);
+
+            foreach (KitAccess access in await Data.DbContext.KitAccess.ToListAsync(token))
+            {
+                if (!s64s.Add(access.Steam64))
+                    continue;
+
+                PlayerNames username = await Data.AdminSql.GetUsernamesAsync(access.Steam64, token).ConfigureAwait(false);
+
+                WarfareUserData data = new WarfareUserData
+                {
+                    PermissionLevel = PermissionLevel.Member,
+                    FirstJoined = null,
+                    LastJoined = null,
+                    LastIPAddress = null,
+                    LastHWID = null,
+                    TotalSeconds = 0,
+                    Steam64 = access.Steam64,
+                    CharacterName = username.CharacterName.MaxLength(30)!,
+                    DisplayName = null,
+                    NickName = username.NickName.MaxLength(30)!,
+                    PlayerName = username.PlayerName.MaxLength(48)!
+                };
+
+                Data.DbContext.UserData.Add(data);
+            }
+
+            await Data.DbContext.SaveChangesAsync(token);
+        }
+        finally
+        {
+            WarfareDatabases.Release();
+        }
     }
 }

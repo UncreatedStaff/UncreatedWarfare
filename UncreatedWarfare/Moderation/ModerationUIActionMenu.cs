@@ -382,7 +382,7 @@ internal partial class ModerationUI
             if (hasSecondaryDuration)
             {
                 primaryName = Localization.TranslateEnum(editingExisting
-                    ? ModerationReflection.GetType(data.PrimaryEditingEntry!.GetType())
+                    ? ModerationReflection.GetType(data.PrimaryEditingEntry!.GetType()) ?? ModerationEntryType.None
                     : data.PendingPresetValue!.PrimaryModerationType, player.Locale.LanguageInfo) + " ";
             }
             else primaryName = string.Empty;
@@ -403,7 +403,7 @@ internal partial class ModerationUI
             if (hasPrimaryDuration)
             {
                 secondaryName = Localization.TranslateEnum(editingExisting
-                    ? ModerationReflection.GetType(data.SecondaryEditingEntry!.GetType())
+                    ? ModerationReflection.GetType(data.SecondaryEditingEntry!.GetType())!
                     : data.PendingPresetValue!.SecondaryModerationType!.Value, player.Locale.LanguageInfo) + " ";
             }
             else secondaryName = string.Empty;

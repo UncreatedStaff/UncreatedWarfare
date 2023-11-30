@@ -5,9 +5,8 @@ using System.Globalization;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Traits.Buffs;
 /// <summary>

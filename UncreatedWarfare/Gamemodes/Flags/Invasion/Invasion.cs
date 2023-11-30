@@ -401,10 +401,9 @@ public class Invasion :
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         CTFUI.ClearFlagList(e.Player);
-        if (OnFlagDict.TryGetValue(e.Player.Steam64, out int id))
+        if (OnFlagDict.TryGetValue(e.Player.Steam64, out int index))
         {
-            CaptureUIParameters p = InvasionUI.RefreshStaticUI(e.NewTeam, FlagRotation.FirstOrDefault(x => x.ID == id)
-                                                                          ?? FlagRotation[0], e.Player.Player.movement.getVehicle() != null, AttackingTeam);
+            CaptureUIParameters p = InvasionUI.RefreshStaticUI(e.NewTeam, FlagRotation[index], e.Player.Player.movement.getVehicle() != null, AttackingTeam);
             CTFUI.CaptureUI.Send(e.Player, in p);
         }
 

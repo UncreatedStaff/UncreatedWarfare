@@ -1,15 +1,13 @@
-﻿using SDG.Unturned;
+﻿//using SDG.NetPak;
+//using SDG.NetTransport;
+using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using SDG.NetPak;
-using SDG.NetTransport;
-using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Teams;
@@ -33,6 +31,7 @@ public static class ZoneDrawing
         bool drawIn = !ctx.MatchFlag("noFill", "noArea");
         bool drawAdjacencies = !ctx.MatchFlag("noAdj");
         bool chart = ctx.MatchFlag("chart");
+        bool amcDamageWeights = ctx.MatchFlag("dmgMult", "dmg");
         string msg = "Generating overlay with options: ";
         if (includeUnloadedZones)
             msg += "allZones";
@@ -63,6 +62,12 @@ public static class ZoneDrawing
             msg += ", chart";
         else
             msg += ", gps";
+
+        if (amcDamageWeights)
+            msg += ", dmgMult";
+        else
+            msg += ", noDmgMult";
+
         msg += ".";
         ctx.ReplyString(msg);
 
@@ -225,10 +230,10 @@ public static class ZoneDrawing
 
                     if (drawIn)
                         FillRectangle(img, x, y, x1 - x, y1 - y, color, false);
-                    x -= (x1 - x);
-                    y -= (y1 - y);
-                    x1 -= (x1 - x);
-                    y1 -= (y1 - y);
+                    x -= x1 - x;
+                    y -= y1 - y;
+                    x1 -= x1 - x;
+                    y1 -= y1 - y;
                     DrawLine(img, new Line(new Vector2(x, y), new Vector2(x1, y)), Color.red with { a = 0.33f });
                     DrawLine(img, new Line(new Vector2(x1, y), new Vector2(x1, y1)), Color.red with { a = 0.33f });
                     DrawLine(img, new Line(new Vector2(x1, y1), new Vector2(x, y1)), Color.red with { a = 0.33f });
@@ -274,32 +279,59 @@ public static class ZoneDrawing
 
             yield return null;
         }
+
+        if (amcDamageWeights)
+        {
+            for (int x = 0; x < img.width; x++)
+            {
+                for (int y = 0; y < img.width; y++)
+                {
+                    if (x % 2 == 0 && y % 2 == 0)
+                        continue;
+
+                    Vector3 coords3d = GridLocation.MapCoordsToWorldCoords(new Vector2(x, y));
+                    Vector2 coords = new Vector2(coords3d.x, coords3d.z);
+
+                    float amc = zones.Any(x => (x.Data.Flags & ZoneFlags.Safezone) != 0 && x.IsInside(coords))
+                        ? 0f
+                        : Mathf.Min(TeamManager.GetAMCDamageMultiplier(1ul, coords), TeamManager.GetAMCDamageMultiplier(2ul, coords));
+
+                    Color color = Color.Lerp(Color.red, Color.green, amc) with { a = 0.5f };
+                    img.SetPixelClamp(x, y, color);
+                }
+
+                if (x % 64 == 0)
+                    yield return null;
+            }
+        }
         img.Apply();
         if (fileName != null && !fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
             fileName += ".png";
         fileName ??= Path.Combine(Data.Paths.FlagStorage, "zonearea.png");
         yield return null;
         F.SavePhotoToDisk(fileName, img);
-        yield return null;
-        img.Resize(img.width / 8, img.height / 8);
-        if (!ctx.IsConsole && Data.SendScreenshotDestination != null)
-        {
-            byte[] jpeg = img.EncodeToJPG(75);
-            L.LogDebug(jpeg.Length.ToString());
-            if (jpeg.Length > 30000)
-            {
-                jpeg = img.EncodeToJPG(33);
-                L.LogDebug(jpeg.Length.ToString());
-            }
-            if (jpeg.Length <= 30000)
-            {
-                Data.SendScreenshotDestination.Invoke(ctx.Caller.Player.GetNetId(), ENetReliability.Reliable, ctx.Caller.Connection, writer =>
-                {
-                    writer.WriteUInt16((ushort)jpeg.Length);
-                    writer.WriteBytes(jpeg);
-                });
-            }
-        }
+
+        // this doesn't work for some reason
+
+        // if (!ctx.IsConsole && Data.SendScreenshotDestination != null)
+        // {
+        //     yield return null;
+        //     img.Reinitialize(img.width / 8, img.height / 8);
+        //     byte[] jpeg = img.EncodeToJPG(75);
+        //     if (jpeg.Length > 30000)
+        //     {
+        //         jpeg = img.EncodeToJPG(33);
+        //     }
+        //     if (jpeg.Length <= 30000)
+        //     {
+        //         Data.SendScreenshotDestination.Invoke(ctx.Caller.Player.GetNetId(), ENetReliability.Reliable, ctx.Caller.Connection, writer =>
+        //         {
+        //             writer.WriteUInt16((ushort)jpeg.Length);
+        //             writer.WriteBytes(jpeg);
+        //         });
+        //     }
+        // }
+
         yield return null;
         UnityEngine.Object.Destroy(img);
 #if DEBUG
@@ -401,7 +433,7 @@ public static class ZoneDrawing
             if (color.a < 1f)
             {
                 Color old = texture.GetPixel(x, y);
-                color = old * ((1f - color.a) * old.a) + color * color.a;
+                color = (old * ((1f - color.a) * old.a) + color * color.a) with { a = 1f };
             }
             texture.SetPixel(x, y, color);
         }

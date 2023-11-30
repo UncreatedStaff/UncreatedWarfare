@@ -13,6 +13,9 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
@@ -262,6 +265,15 @@ internal static class T
     
     [TranslationData(SectionPlayers, "Generic message sent when a player is placing something in a place they shouldn't.", "Item being placed")]
     public static readonly Translation<ItemAsset> ProhibitedPlacement = new Translation<ItemAsset>("<#fa9e9e>You're not allowed to place {0} here.", FormatRarityColor + FormatPlural);
+    
+    [TranslationData(SectionPlayers, "Generic message sent when a player is dropping an item where they shouldn't.", "Item being dropped", "Zone or flag the player is dropping their item in.")]
+    public static readonly Translation<ItemAsset, IZone> ProhibitedDropZone = new Translation<ItemAsset, IZone>("<#fa9e9e>You're not allowed to drop {0} in {1}.", FormatRarityColor + FormatPlural, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    
+    [TranslationData(SectionPlayers, "Generic message sent when a player is picking up an item where they shouldn't.", "Item being picked up", "Zone or flag the player is picking up their item in.")]
+    public static readonly Translation<ItemAsset, IZone> ProhibitedPickupZone = new Translation<ItemAsset, IZone>("<#fa9e9e>You're not allowed to pick up {0} in {1}.", FormatRarityColor + FormatPlural, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    
+    [TranslationData(SectionPlayers, "Generic message sent when a player is placing something in a zone they shouldn't be.", "Item being placed", "Zone or flag the player is placing their item in.")]
+    public static readonly Translation<ItemAsset, IZone> ProhibitedPlacementZone = new Translation<ItemAsset, IZone>("<#fa9e9e>You're not allowed to place {0} in {1}.", FormatRarityColor + FormatPlural, Flag.COLOR_NAME_DISCOVER_FORMAT);
     
     [TranslationData(SectionPlayers, "Sent when a player tries to steal a battery.")]
     public static readonly Translation NoStealingBatteries = new Translation("<#fa9e9e>Stealing batteries is not allowed.</color>");
@@ -835,6 +847,8 @@ internal static class T
     public static readonly Translation<Kit> KitLayoutSaved                     = new Translation<Kit>("<#a0ad8e>Custom layout for <#fff>{0}</color> saved.", Kit.DisplayNameFormat);
     [TranslationData(SectionKits)]
     public static readonly Translation<Kit> KitLayoutReset                     = new Translation<Kit>("<#a0ad8e>Custom layout for <#fff>{0}</color> reset.", Kit.DisplayNameFormat);
+    [TranslationData(SectionKits, IsPrioritizedTranslation = false)]
+    public static readonly Translation<string> KitLanguageNotFound             = new Translation<string>("<#ff8c69>Language not found: <#fff>{0}</color>.");
     [TranslationData(SectionKits, IsPrioritizedTranslation = false)]
     public static readonly Translation<string, Kit, string> KitPropertySet     = new Translation<string, Kit, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg1Fmt: Kit.IdFormat);
     [TranslationData(SectionKits, IsPrioritizedTranslation = false)]
@@ -1493,6 +1507,16 @@ internal static class T
     public static readonly Translation<IPlayer> DutyOffBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#ff8c4a>off duty</color>.");
     #endregion
 
+    #region Speed Command
+    private const string SectionSpeed = "Speed Command";
+    [TranslationData(SectionSpeed, IsPrioritizedTranslation = false)]
+    public static readonly Translation<string> SpeedMultiplierInvalidValue = new Translation<string>("<#b3a6a2>Speed multiplier <#fff>{0}</color> is invalid.");
+    [TranslationData(SectionSpeed, IsPrioritizedTranslation = false)]
+    public static readonly Translation<float> SpeedMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Speed multiplier is already <#fff>{0}</color>.");
+    [TranslationData(SectionSpeed, IsPrioritizedTranslation = false)]
+    public static readonly Translation<float, IPlayer> SetSpeedMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", "0.##", UCPlayer.FormatColoredCharacterName );
+    #endregion
+
     #region Request
     private const string SectionRequest = "Request Command";
     [TranslationData(SectionRequest)]
@@ -1507,8 +1531,10 @@ internal static class T
     public static readonly Translation<string> RequestUpgradeError = new Translation<string>("<#a4baa9>Error opening ticket: <#fff>{0}</color>.", FormatUppercase);
     [TranslationData(SectionRequest)]
     public static readonly Translation<Kit> DoesNotNeedUpgrade = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be upgraded.", Kit.DisplayNameFormat);
-    [TranslationData(SectionRequest)]
+    [TranslationData(SectionRequest, IsPrioritizedTranslation = false)]
     public static readonly Translation<Kit> DoesNotNeedUnlock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be unlocked.", Kit.DisplayNameFormat);
+    [TranslationData(SectionRequest, IsPrioritizedTranslation = false)]
+    public static readonly Translation<Kit> DoesNotNeedLock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be locked.", Kit.DisplayNameFormat);
     [TranslationData(SectionRequest)]
     public static readonly Translation<Kit> RequestUpgradeOnKit = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> can't be upgraded.", Kit.DisplayNameFormat);
     [TranslationData(SectionRequest)]
@@ -2653,9 +2679,16 @@ internal static class T
     // Zone > Edit > Use-Case
     private const string SectionZonesEditUseCase = SectionZonesEdit + " / Use Case";
     [TranslationData(SectionZonesEditUseCase, IsPrioritizedTranslation = false)]
-    public static readonly Translation ZoneEditUseCaseInvalid = new Translation("<#ff8c69>Use case requires one string argument: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".");
+    public static readonly Translation ZoneEditUseCaseInvalid = new Translation("<#ff8c69>Use case requires one string argument: \"other\", \"flag\", \"lobby\", \"team1main\", \"team2main\", \"team1maincampzone\", or \"team2maincampzone\".");
     [TranslationData(SectionZonesEditUseCase, IsPrioritizedTranslation = false)]
     public static readonly Translation<ZoneUseCase> ZoneEditUseCaseSuccess = new Translation<ZoneUseCase>("<#e6e3d5>Set use case to \"<#ff9999>{0}</color>\".");
+
+    // Zone > Edit > Flags
+    private const string SectionZonesEditFlags = SectionZonesEdit + " / Flags";
+    [TranslationData(SectionZonesEditFlags, IsPrioritizedTranslation = false)]
+    public static readonly Translation ZoneEditFlagsInvalid = new Translation("<#ff8c69>Use case requires one remainder string argument with comma separated values: \"none\", \"safezone\", \"nobuilding\", \"nofobbuilding\", \"noradios\", \"nobunkers\", \"norallies\", \"notraps\", \"nodropitems\", and/or \"nopickitems\".");
+    [TranslationData(SectionZonesEditFlags, IsPrioritizedTranslation = false)]
+    public static readonly Translation<ZoneFlags> ZoneEditFlagsSuccess = new Translation<ZoneFlags>("<#e6e3d5>Set use case to \"<#ff9999>{0}</color>\".");
 
     // Zone > Edit > Transactions
     private const string SectionZonesEditTransactions = SectionZonesEdit + " / Transactions";
@@ -2841,6 +2874,10 @@ internal static class T
     public static readonly Translation<string> TeleportLocationNotFound = new Translation<string>("<#8f9494>Failed to find a location similar to <#ddd>{0}</color>.");
     [TranslationData(SectionTeleport)]
     public static readonly Translation<string> TeleportSelfLocationSuccess = new Translation<string>("<#bfb9ac>You were teleported to <#ddd>{0}</color>.");
+    [TranslationData(SectionTeleport, IsPrioritizedTranslation = false)]
+    public static readonly Translation<string> TeleportStopJump = new Translation<string>("<#bfb9ac>You will no longer jump on right punch.");
+    [TranslationData(SectionTeleport, IsPrioritizedTranslation = false)]
+    public static readonly Translation<string> TeleportStartJump = new Translation<string>("<#bfb9ac>You will jump on right punch. Do <#ddd>/tp jump stop</color> to stop.");
     [TranslationData(SectionTeleport, IsPrioritizedTranslation = false)]
     public static readonly Translation<string> TeleportSelfLocationObstructed = new Translation<string>("<#8f9494>Failed to teleport you to <#ddd>{0}</color>, it's position is obstructed.");
     [TranslationData(SectionTeleport, IsPrioritizedTranslation = false)]
@@ -3347,7 +3384,7 @@ internal static class T
         }
 
         language ??= Localization.GetDefaultLanguage();
-        if (list.TryGetValue(language.LanguageCode, out local) || (!language.IsDefault && list.TryGetValue(L.Default, out local)))
+        if (list.TryGetValue(language.Code, out local) || (!language.IsDefault && list.TryGetValue(L.Default, out local)))
             return true;
         return (local = list.Values.FirstOrDefault()!) != null;
     }

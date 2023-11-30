@@ -119,6 +119,21 @@ public static class UCVehicleManager
             Patches.VehiclePatches.DesiredSeat = -1;
         }
     }
+    public static InteractableVehicle? FindVehicleFromTrunkStorage(Items? trunk)
+    {
+        if (trunk is null)
+            return null;
+        for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
+        {
+            InteractableVehicle vehicle = VehicleManager.vehicles[i];
+            if (vehicle.trunkItems != trunk)
+                continue;
+
+            return vehicle;
+        }
+
+        return null;
+    }
     public static bool TryMovePlayerToEmptySeat(Player player)
     {
         ThreadUtil.assertIsGameThread();
