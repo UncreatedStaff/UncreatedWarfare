@@ -132,8 +132,8 @@ public class SyncableArray<T> : INotifyValueUpdate, IEnumerable<T>, IReadWrite
     {
         writerCallback ??= !typeof(T).IsValueType ||
                            (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() != typeof(Nullable<>))
-            ? ByteWriter.NullableWriterHelper<T>.Writer!
-            : ByteWriter.WriterHelper<T>.Writer!;
+            ? ByteWriter.NullableWriterHelper<T>.Writer
+            : ByteWriter.WriterHelper<T>.Writer;
         writer.Write(Items.Length);
         for (int i = 0; i < Items.Length; ++i)
         {

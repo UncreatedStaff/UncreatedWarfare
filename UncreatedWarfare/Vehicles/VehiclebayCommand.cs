@@ -305,10 +305,10 @@ public class VehicleBayCommand : AsyncCommand
                     if (string.IsNullOrEmpty(gamemode) && type == DelayType.None)
                     {
                         gamemode = "<";
-                        foreach (KeyValuePair<string, Type> gm in Gamemode.Gamemodes)
+                        foreach (KeyValuePair<GamemodeType, Type> gm in Gamemode.Gamemodes)
                         {
                             if (gamemode.Length != 1) gamemode += "|";
-                            gamemode += gm.Key;
+                            gamemode += gm.Key.ToString();
                         }
                         gamemode += ">";
                         if (adding)
@@ -320,21 +320,21 @@ public class VehicleBayCommand : AsyncCommand
                     if (!string.IsNullOrEmpty(gamemode))
                     {
                         string? gm = null;
-                        foreach (KeyValuePair<string, Type> gm2 in Gamemode.Gamemodes)
+                        foreach (KeyValuePair<GamemodeType, Type> gm2 in Gamemode.Gamemodes)
                         {
-                            if (gm2.Key.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
+                            if (gm2.Key.ToString().Equals(gamemode, StringComparison.OrdinalIgnoreCase))
                             {
-                                gm = gm2.Key;
+                                gm = gm2.Key.ToString();
                                 break;
                             }
                         }
                         if (string.IsNullOrEmpty(gm))
                         {
                             gamemode = "<";
-                            foreach (KeyValuePair<string, Type> gm2 in Gamemode.Gamemodes)
+                            foreach (KeyValuePair<GamemodeType, Type> gm2 in Gamemode.Gamemodes)
                             {
                                 if (gamemode.Length != 1) gamemode += "|";
-                                gamemode += gm2.Key;
+                                gamemode += gm2.Key.ToString();
                             }
                             gamemode += ">";
                             if (adding)
@@ -364,11 +364,11 @@ public class VehicleBayCommand : AsyncCommand
                         foreach (SqlItem<VehicleSpawn> spawn in spawner.EnumerateSpawns(data))
                         {
                             VehicleBayComponent? svc = spawn.Item?.Structure?.Item?.Buildable?.Model.GetComponent<VehicleBayComponent>();
-                            if (svc != null) svc.UpdateTimeDelay();
+                            svc?.UpdateTimeDelay();
                         }
                         await data.SaveItem(token).ConfigureAwait(false);
                         await UCWarfare.ToUpdate(token);
-                        ctx.Reply(T.VehicleBayAddedDelay, type, val, string.IsNullOrEmpty(gamemode) ? "any" : gamemode!);
+                        ctx.Reply(T.VehicleBayAddedDelay, type, val, string.IsNullOrEmpty(gamemode) ? "any" : gamemode);
                     }
                     else
                     {
@@ -383,7 +383,7 @@ public class VehicleBayCommand : AsyncCommand
                             foreach (SqlItem<VehicleSpawn> spawn in spawner.EnumerateSpawns(data))
                             {
                                 VehicleBayComponent? svc = spawn.Item?.Structure?.Item?.Buildable?.Model.GetComponent<VehicleBayComponent>();
-                                if (svc != null) svc.UpdateTimeDelay();
+                                svc?.UpdateTimeDelay();
                             }
                             await data.SaveItem(token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
@@ -538,7 +538,7 @@ public class VehicleBayCommand : AsyncCommand
                         case SetPropertyResult.Success:
                             VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
                             ctx.LogAction(ActionLogType.SetVehicleDataProperty,
-                                $"{asset?.vehicleName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.VehicleID:N} - SET " +
+                                $"{asset?.vehicleName ?? "null"} / {asset?.id ?? 0} / {data.Item.VehicleID:N} - SET " +
                                 (info?.Name ?? property).ToUpper() + " >> " + value.ToUpper());
                             ctx.Reply(T.VehicleBaySetProperty!, property, asset, value);
                             Signs.UpdateVehicleBaySigns(null, data.Item);
@@ -759,7 +759,7 @@ public class VehicleBayCommand : AsyncCommand
             {
                 if (ctx.Caller.Player.TryGetPlayerData(out Components.UCPlayerData c))
                 {
-                    if (c.Currentlylinking is { Item: { } } proxy)
+                    if (c.Currentlylinking is { Item: not null } proxy)
                     {
                         await spawner.UnlinkSign(drop, token).ConfigureAwait(false);
                         if (await spawner.LinkSign(drop, proxy, token).ConfigureAwait(false))
@@ -768,7 +768,7 @@ public class VehicleBayCommand : AsyncCommand
                             ctx.LogAction(ActionLogType.LinkedVehicleBaySign,
                                 $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID} - " +
                                 $"LINKED TO SPAWN AT {drop.model.transform.position:N2} KEY: {c.Currentlylinking.PrimaryKey}");
-                            VehicleData? data = proxy?.Item?.Vehicle?.Item;
+                            VehicleData? data = proxy.Item?.Vehicle?.Item;
                             VehicleAsset? asset = data == null ? null : Assets.find<VehicleAsset>(data.VehicleID);
                             ctx.Reply(T.VehicleBayLinkFinished, asset!);
                             c.Currentlylinking = null;
@@ -824,7 +824,7 @@ public class VehicleBayCommand : AsyncCommand
             if (spawn is not null)
             {
                 VehicleAsset? asset = spawn.Item?.Vehicle?.Item is { } data ? Assets.find<VehicleAsset>(data.VehicleID) : null;
-                ctx.Reply(T.VehicleBayCheck, (uint)spawn.PrimaryKey.Key, asset!, asset == null ? (ushort)0 : asset.id);
+                ctx.Reply(T.VehicleBayCheck, spawn.PrimaryKey.Key, asset!, asset?.id ?? 0);
             }
             else
                 ctx.Reply(T.VehicleBaySpawnNotRegistered);

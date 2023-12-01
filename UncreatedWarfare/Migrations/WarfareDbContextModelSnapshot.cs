@@ -144,6 +144,10 @@ namespace Uncreated.Warfare.Migrations
                     b.Property<DateTime?>("EndTimestamp")
                         .HasColumnType("datetime");
 
+                    b.Property<string>("Gamemode")
+                        .IsRequired()
+                        .HasColumnType("enum('Undefined','TeamCTF','Invasion','Insurgency','Conquest','Hardpoint','Deathmatch')");
+
                     b.Property<int>("Map")
                         .HasColumnType("int");
 
@@ -234,6 +238,9 @@ namespace Uncreated.Warfare.Migrations
                     b.HasIndex("KitId");
 
                     b.HasIndex("MapId");
+
+                    b.HasIndex("NextSessionId")
+                        .IsUnique();
 
                     b.HasIndex("PlayerDataSteam64");
 
@@ -1189,18 +1196,15 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("varchar(30) CHARACTER SET utf8mb4")
                         .HasMaxLength(30);
 
+                    b.Property<ulong>("DiscordId")
+                        .HasColumnType("bigint unsigned");
+
                     b.Property<string>("DisplayName")
                         .HasColumnType("varchar(30) CHARACTER SET utf8mb4")
                         .HasMaxLength(30);
 
                     b.Property<DateTime?>("FirstJoined")
                         .HasColumnType("datetime");
-
-                    b.Property<byte[]>("LastHWID")
-                        .HasColumnType("binary(20)");
-
-                    b.Property<string>("LastIPAddress")
-                        .HasColumnType("varchar(45)");
 
                     b.Property<DateTime?>("LastJoined")
                         .HasColumnType("datetime");
@@ -1225,6 +1229,77 @@ namespace Uncreated.Warfare.Migrations
                     b.HasKey("Steam64");
 
                     b.ToTable("users");
+                });
+
+            modelBuilder.Entity("Uncreated.Warfare.Moderation.PlayerHWID", b =>
+                {
+                    b.Property<uint>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int unsigned");
+
+                    b.Property<DateTime?>("FirstLogin")
+                        .HasColumnType("datetime");
+
+                    b.Property<byte[]>("HWID")
+                        .IsRequired()
+                        .HasColumnType("binary(20)");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LastLogin")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("LoginCount")
+                        .HasColumnType("int");
+
+                    b.Property<ulong>("Steam64")
+                        .HasColumnName("Steam64")
+                        .HasColumnType("bigint unsigned");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HWID");
+
+                    b.HasIndex("Steam64");
+
+                    b.ToTable("hwids");
+                });
+
+            modelBuilder.Entity("Uncreated.Warfare.Moderation.PlayerIPAddress", b =>
+                {
+                    b.Property<uint>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int unsigned");
+
+                    b.Property<DateTime?>("FirstLogin")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("IPAddress")
+                        .HasColumnName("Unpacked")
+                        .HasColumnType("varchar(45)");
+
+                    b.Property<DateTime>("LastLogin")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("LoginCount")
+                        .HasColumnType("int");
+
+                    b.Property<uint>("PackedIP")
+                        .HasColumnName("Packed")
+                        .HasColumnType("int unsigned");
+
+                    b.Property<ulong>("Steam64")
+                        .HasColumnName("Steam64")
+                        .HasColumnType("bigint unsigned");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackedIP");
+
+                    b.HasIndex("Steam64");
+
+                    b.ToTable("ip_addresses");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Factions.FactionAsset", b =>
@@ -1280,14 +1355,19 @@ namespace Uncreated.Warfare.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Uncreated.Warfare.Models.GameData.SessionRecord", "NextSession")
+                        .WithOne()
+                        .HasForeignKey("Uncreated.Warfare.Models.GameData.SessionRecord", "NextSessionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "PlayerData")
                         .WithMany()
                         .HasForeignKey("PlayerDataSteam64")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Uncreated.Warfare.Models.GameData.SessionRecord", "NextSession")
-                        .WithOne("PreviousSession")
+                    b.HasOne("Uncreated.Warfare.Models.GameData.SessionRecord", "PreviousSession")
+                        .WithOne()
                         .HasForeignKey("Uncreated.Warfare.Models.GameData.SessionRecord", "PreviousSessionId")
                         .OnDelete(DeleteBehavior.SetNull);
 
@@ -1616,6 +1696,24 @@ namespace Uncreated.Warfare.Migrations
 
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "PlayerData")
                         .WithMany()
+                        .HasForeignKey("Steam64")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Uncreated.Warfare.Moderation.PlayerHWID", b =>
+                {
+                    b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "PlayerData")
+                        .WithMany("HWIDs")
+                        .HasForeignKey("Steam64")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Uncreated.Warfare.Moderation.PlayerIPAddress", b =>
+                {
+                    b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "PlayerData")
+                        .WithMany("IPAddresses")
                         .HasForeignKey("Steam64")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();

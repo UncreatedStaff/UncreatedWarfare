@@ -197,7 +197,7 @@ public class AmmoCommand : AsyncCommand
                 }
 
                 WipeDroppedItems(ctx.CallerID);
-                await req.KitManager.ResupplyKit(ctx.Caller, kit!, token: token).ConfigureAwait(false);
+                await req.KitManager.ResupplyKit(ctx.Caller, kit, token: token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
 
                 if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
@@ -234,7 +234,7 @@ public class AmmoCommand : AsyncCommand
                     if (ammobag.Ammo < ammoCost)
                         throw ctx.Reply(T.AmmoOutOfStock, ammobag.Ammo, ammoCost);
 
-                    await ammobag.ResupplyPlayer(ctx.Caller, kit!, ammoCost, token).ConfigureAwait(false);
+                    await ammobag.ResupplyPlayer(ctx.Caller, kit, ammoCost, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
 
                     if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))

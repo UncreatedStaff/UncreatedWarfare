@@ -159,7 +159,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     public static int GetLevelXP(int level)
     {
         if (level >= Levels.Length)
-            return Levels[Levels.Length - 1];
+            return Levels[^1];
 
         if (level > 0)
             return Levels[level - 1];
@@ -620,7 +620,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         
         return new string(PointsConfig.ProgressBlockCharacter, progress);
     }
-    public static void TryAwardDriverAssist(PlayerDied args, int amount, int rep)
+    public static void TryAwardDriverAssist(PlayerDied args, XPReward reward, int amount, int rep)
     {
         if (args.DriverAssist is null || !args.DriverAssist.IsOnline) return;
         if (amount == 0 && PointsConfig.XPData.TryGetValue(reward.ToString(), out PointsConfig.XPRewardData data))
@@ -739,7 +739,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             component.ResetAttackers();
         }
 
-        TryAwardDriverAssist(e, assistHighXp, assistHighRep);
+        TryAwardDriverAssist(e, XPReward.EnemyKilled, assistHighXp, assistHighRep);
     }
     private static void OnPlayerLeft(PlayerEvent e)
     {
@@ -1188,7 +1188,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                         false, Actors.GetActor(steamPlayer.playerID.steamID.m_SteamID));
                 }
 
-                actors[actors.Length - 1] = new RelatedActor("Owner", false, Actors.GetActor(e.OwnerId));
+                actors[^1] = new RelatedActor("Owner", false, Actors.GetActor(e.OwnerId));
 
                 VehicleTeamkill log = new VehicleTeamkill
                 {
@@ -1655,8 +1655,8 @@ public struct CreditsParameters
         IsPunishment = amount < 0 && isPunishment;
     }
 
-    public Task Award() => Points.AwardCreditsAsync(this);
-    public Task Award(CancellationToken token) => Points.AwardCreditsAsync(this, token);
+    public readonly Task Award() => Points.AwardCreditsAsync(this);
+    public readonly Task Award(CancellationToken token) => Points.AwardCreditsAsync(this, token);
 }
 public class XPParameters
 {

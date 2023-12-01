@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
@@ -136,24 +135,15 @@ public enum QuestType : byte
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
-public sealed class QuestDataAttribute : Attribute
+public sealed class QuestDataAttribute(QuestType type) : Attribute
 {
-    public QuestType Type { get; }
-    public QuestDataAttribute(QuestType type)
-    {
-        Type = type;
-    }
+    public QuestType Type { get; } = type;
 }
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
-public sealed class QuestRewardAttribute : Attribute
+public sealed class QuestRewardAttribute(QuestRewardType type, Type returnType) : Attribute
 {
-    public QuestRewardType Type { get; }
-    public Type ReturnType { get; }
-    public QuestRewardAttribute(QuestRewardType type, Type returnType)
-    {
-        Type = type;
-        ReturnType = returnType;
-    }
+    public QuestRewardType Type { get; } = type;
+    public Type ReturnType { get; } = returnType;
 }
 
 public static class QuestJsonEx
@@ -216,7 +206,7 @@ public static class QuestJsonEx
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
-            if (string.IsNullOrEmpty(str) || str!.Length < 3)
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
                 if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
@@ -240,7 +230,7 @@ public static class QuestJsonEx
             if (isInclusive || str[0] == '$')
             {
                 int endInd = str.IndexOf(')', 1);
-                bool hasRnd = str[str.Length - 1] == '}';
+                bool hasRnd = str[^1] == '}';
                 int stRndInd = endInd + 1;
                 if (str[1] == '(' && endInd != -1) // read range
                 {
@@ -285,7 +275,7 @@ public static class QuestJsonEx
                     return false;
                 }
 
-                if (str[1] == '[' && str[str.Length - 1] == ']')
+                if (str[1] == '[' && str[^1] == ']')
                 {
                     int arrLen = 1;
                     for (int i = 0; i < str.Length; i++)
@@ -334,7 +324,7 @@ public static class QuestJsonEx
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
-            if (string.IsNullOrEmpty(str) || str!.Length < 3)
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
                 if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
@@ -358,7 +348,7 @@ public static class QuestJsonEx
             if (isInclusive || str[0] == '$')
             {
                 int endInd = str.IndexOf(')', 1);
-                bool hasRnd = str[str.Length - 1] == '}';
+                bool hasRnd = str[^1] == '}';
                 int stRndInd = endInd + 1;
                 if (str[1] == '(' && endInd != -1) // read range
                 {
@@ -408,7 +398,7 @@ public static class QuestJsonEx
                 }
 
 
-                if (str[1] == '[' && str[str.Length - 1] == ']')
+                if (str[1] == '[' && str[^1] == ']')
                 {
                     int arrLen = 1;
                     for (int i = 0; i < str.Length; i++)
@@ -419,11 +409,11 @@ public static class QuestJsonEx
                     int lastInd = 1;
                     for (int i = 0; i < str.Length; i++)
                     {
-                        if (str[i] is ']' or ',')
-                        {
-                            res[++index] = float.Parse(str.Substring(lastInd + 1, i - lastInd - 1));
-                            lastInd = i;
-                        }
+                        if (str[i] is not ']' and not ',')
+                            continue;
+
+                        res[++index] = float.Parse(str.Substring(lastInd + 1, i - lastInd - 1));
+                        lastInd = i;
                     }
 
                     L.LogDebug($"[{string.Join("f,", res)}f]");
@@ -457,7 +447,7 @@ public static class QuestJsonEx
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
-            if (string.IsNullOrEmpty(str) || str!.Length < 3)
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
                 if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
@@ -472,7 +462,7 @@ public static class QuestJsonEx
 
             if (isInclusive || str[0] == '$')
             {
-                if (str[1] == '[' && str[str.Length - 1] == ']')
+                if (str[1] == '[' && str[^1] == ']')
                 {
                     int len = str.Length;
                     int arrLen = 1;
@@ -529,7 +519,7 @@ public static class QuestJsonEx
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
-            if (string.IsNullOrEmpty(str) || str!.Length < 3)
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
                 if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
@@ -544,7 +534,7 @@ public static class QuestJsonEx
 
             if (isInclusive || str[0] == '$')
             {
-                if (str[1] == '[' && str[str.Length - 1] == ']')
+                if (str[1] == '[' && str[^1] == ']')
                 {
                     int len = str.Length;
                     int arrLen = 1;
@@ -603,7 +593,7 @@ public static class QuestJsonEx
                     return true;
 
                 }
-                if (str[1] == '(' && str[str.Length - 1] == ')') // read range
+                if (str[1] == '(' && str[^1] == ')') // read range
                 {
                     int sep = str.IndexOf(':');
                     if (sep != -1)
@@ -675,7 +665,7 @@ public static class QuestJsonEx
         value = new DynamicEnumValue<TEnum>(default);
         return false;
     }
-    public static bool TryReadEnumValue<TEnum>(this ref Utf8JsonReader reader, out TEnum value) where TEnum : struct, Enum
+    public static bool TryReadEnumValue<TEnum>(this ref Utf8JsonReader reader, out TEnum value) where TEnum : unmanaged, Enum
     {
         if (reader.TokenType == JsonTokenType.String)
         {
@@ -711,7 +701,7 @@ public static class QuestJsonEx
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
-            if (string.IsNullOrEmpty(str) || str!.Length < 3)
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
                 if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
@@ -726,7 +716,7 @@ public static class QuestJsonEx
 
             if (isInclusive || str[0] == '$')
             {
-                if (str[1] == '[' && str[str.Length - 1] == ']')
+                if (str[1] == '[' && str[^1] == ']')
                 {
                     int len = str.Length;
                     int arrLen = 1;
@@ -861,9 +851,9 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
     private readonly IntegralSet _set;
     private readonly DynamicValueType _type;
     private readonly ChoiceBehavior _choiceBehavior = ChoiceBehavior.Selective;
-    public static readonly IDynamicValue<int>.IChoice Zero = new Choice(new DynamicIntegerValue(0, ChoiceBehavior.Selective));
-    public static readonly IDynamicValue<int>.IChoice One = new Choice(new DynamicIntegerValue(1, ChoiceBehavior.Selective));
-    public static readonly IDynamicValue<int>.IChoice Any = new Choice(new DynamicIntegerValue(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive));
+    public static readonly Choice Zero = new Choice(new DynamicIntegerValue(0, ChoiceBehavior.Selective));
+    public static readonly Choice One = new Choice(new DynamicIntegerValue(1, ChoiceBehavior.Selective));
+    public static readonly Choice Any = new Choice(new DynamicIntegerValue(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive));
     public int Constant => _constant;
     public IDynamicValue<int>.IRange Range => _range;
     public IDynamicValue<int>.ISet Set => _set;
@@ -919,29 +909,17 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
         _type = DynamicValueType.Set;
         _choiceBehavior = choiceBehavior;
     }
-    public static IDynamicValue<int>.IChoice ReadChoice(ref Utf8JsonReader reader)
+    public static Choice ReadChoice(ref Utf8JsonReader reader)
     {
         Choice choice = new Choice();
         choice.Read(ref reader);
         return choice;
     }
-    public IDynamicValue<int>.IChoice GetValue()
-    {
-        return new Choice(this);
-    }
-    public override bool Equals(object obj) => obj is DynamicIntegerValue c && Equals(in c);
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            int hashCode = _constant;
-            hashCode = (hashCode * 397) ^ _range.GetHashCode();
-            hashCode = (hashCode * 397) ^ _set.GetHashCode();
-            hashCode = (hashCode * 397) ^ (int)_type;
-            hashCode = (hashCode * 397) ^ (int)_choiceBehavior;
-            return hashCode;
-        }
-    }
+
+    public Choice GetValue() => new Choice(this);
+    IDynamicValue<int>.IChoice IDynamicValue<int>.GetValue() => GetValue();
+    public override bool Equals(object? obj) => obj is DynamicIntegerValue c && Equals(in c);
+    public override int GetHashCode() => HashCode.Combine(_constant, _range, _set, _type, _choiceBehavior);
     bool IEquatable<DynamicIntegerValue>.Equals(DynamicIntegerValue other) => Equals(in other);
     public bool Equals(in DynamicIntegerValue other)
     {
@@ -1031,7 +1009,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
             writer.WriteNumberValue(_constant);
         }
     }
-    private struct Choice : IDynamicValue<int>.IChoice
+    public struct Choice : IDynamicValue<int>.IChoice
     {
         private ChoiceBehavior _behavior;
         private DynamicValueType _type;
@@ -1039,8 +1017,8 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
         private int[] _values;
         private int _minVal;
         private int _maxVal;
-        public ChoiceBehavior Behavior => _behavior;
-        public DynamicValueType ValueType => _type;
+        public readonly ChoiceBehavior Behavior => _behavior;
+        public readonly DynamicValueType ValueType => _type;
         public Choice(DynamicIntegerValue value)
         {
             _value = default;
@@ -1051,22 +1029,9 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
             _behavior = default;
             FromValue(ref value);
         }
-        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = (int)_behavior;
-                hashCode = (hashCode * 397) ^ (int)_type;
-                hashCode = (hashCode * 397) ^ _value;
-                hashCode = (hashCode * 397) ^ _values.GetHashCode();
-                hashCode = (hashCode * 397) ^ _minVal;
-                hashCode = (hashCode * 397) ^ _maxVal;
-                return hashCode;
-            }
-        }
-
-        public bool Equals(in Choice other)
+        public readonly override bool Equals(object? obj) => obj is Choice c && Equals(ref c);
+        public readonly override int GetHashCode() => HashCode.Combine(_behavior, _type, _value, _values, _minVal, _maxVal);
+        public readonly bool Equals(ref Choice other)
         {
             if (other._behavior != _behavior || other._type != _type)
                 return false;
@@ -1137,8 +1102,8 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
             }
         }
         /// <summary>Will return <see langword="default"/> if <see cref="DynamicIntegerValue.SelectionBehavior"/> is <see cref=ChoiceBehavior.InclusiveL"/> and the value is not of type <see cref=DynamicValueType.ConstantT"/>.</summary>
-        public int InsistValue() => _value;
-        public bool IsMatch(int value)
+        public readonly int InsistValue() => _value;
+        public readonly bool IsMatch(int value)
         {
             if (_type == DynamicValueType.Wildcard) return true;
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
@@ -1199,7 +1164,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
             }
             return false;
         }
-        public void Write(Utf8JsonWriter writer)
+        public readonly void Write(Utf8JsonWriter writer)
         {
             if (_behavior == ChoiceBehavior.Selective || _type == DynamicValueType.Constant)
             {
@@ -1230,7 +1195,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
                 writer.WriteNumberValue(_value);
             }
         }
-        public override string ToString()
+        public readonly override string ToString()
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
                 return _value.ToString(Data.AdminLocale);
@@ -1323,31 +1288,17 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<Dyna
         _type = DynamicValueType.Set;
         _choiceBehavior = anyBehavior;
     }
-    public IDynamicValue<float>.IChoice GetValue()
-    {
-        return new Choice(this);
-    }
-    public static IDynamicValue<float>.IChoice ReadChoice(ref Utf8JsonReader reader)
+    public Choice GetValue() => new Choice(this);
+    IDynamicValue<float>.IChoice IDynamicValue<float>.GetValue() => GetValue();
+    public static Choice ReadChoice(ref Utf8JsonReader reader)
     {
         Choice choice = new Choice();
         choice.Read(ref reader);
         return choice;
     }
     bool IEquatable<DynamicFloatValue>.Equals(DynamicFloatValue other) => Equals(in other);
-    public override bool Equals(object obj) => obj is DynamicFloatValue c && Equals(in c);
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            int hashCode = _constant.GetHashCode();
-            hashCode = (hashCode * 397) ^ _range.GetHashCode();
-            hashCode = (hashCode * 397) ^ (int)_choiceBehavior;
-            hashCode = (hashCode * 397) ^ _set.GetHashCode();
-            hashCode = (hashCode * 397) ^ (int)_type;
-            return hashCode;
-        }
-    }
-
+    public override bool Equals(object? obj) => obj is DynamicFloatValue c && Equals(in c);
+    public override int GetHashCode() => HashCode.Combine(_constant, _range, _choiceBehavior, _set, _type);
     public bool Equals(in DynamicFloatValue other)
     {
         if (other._choiceBehavior != _choiceBehavior || other._type != _type)
@@ -1436,7 +1387,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<Dyna
             writer.WriteNumberValue(_constant);
         }
     }
-    private struct Choice : IDynamicValue<float>.IChoice
+    public struct Choice : IDynamicValue<float>.IChoice
     {
         private ChoiceBehavior _behavior;
         private DynamicValueType _type;
@@ -1444,8 +1395,8 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<Dyna
         private float[]? _values;
         private float _minVal;
         private float _maxVal;
-        public ChoiceBehavior Behavior => _behavior;
-        public DynamicValueType ValueType => _type;
+        public readonly ChoiceBehavior Behavior => _behavior;
+        public readonly DynamicValueType ValueType => _type;
         public Choice(DynamicFloatValue value)
         {
             _value = default;
@@ -1456,21 +1407,9 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<Dyna
             _behavior = default;
             FromValue(ref value);
         }
-        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = (int)_behavior;
-                hashCode = (hashCode * 397) ^ (int)_type;
-                hashCode = (hashCode * 397) ^ _value.GetHashCode();
-                hashCode = (hashCode * 397) ^ (_values != null ? _values.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ _minVal.GetHashCode();
-                hashCode = (hashCode * 397) ^ _maxVal.GetHashCode();
-                return hashCode;
-            }
-        }
-        public bool Equals(in Choice other)
+        public readonly override bool Equals(object? obj) => obj is Choice c && Equals(ref c);
+        public readonly override int GetHashCode() => HashCode.Combine(_behavior, _type, _value, _values, _minVal, _maxVal);
+        public readonly bool Equals(ref Choice other)
         {
             if (other._behavior != _behavior || other._type != _type)
                 return false;
@@ -1541,8 +1480,8 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<Dyna
             }
         }
         /// <summary>Will return <see langword="default"/> if <see cref="DynamicFloatValue.SelectionBehavior"/> is <see cref=ChoiceBehavior.InclusiveL"/> and the value is not of type <see cref=DynamicValueType.ConstantT"/>.</summary>
-        public float InsistValue() => _value;
-        public bool IsMatch(float value)
+        public readonly float InsistValue() => _value;
+        public readonly bool IsMatch(float value)
         {
             if (_type == DynamicValueType.Wildcard) return true;
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
@@ -1603,7 +1542,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<Dyna
             }
             return false;
         }
-        public void Write(Utf8JsonWriter writer)
+        public readonly void Write(Utf8JsonWriter writer)
         {
             if (_behavior == ChoiceBehavior.Selective || _type == DynamicValueType.Constant)
             {
@@ -1634,7 +1573,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<Dyna
                 writer.WriteNumberValue(_value);
             }
         }
-        public override string ToString()
+        public readonly override string ToString()
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
                 return _value.ToString(Data.AdminLocale);
@@ -1706,31 +1645,16 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
         IsKitSelector = isKitSelector;
     }
     IDynamicValue<string>.IChoice IDynamicValue<string>.GetValue() => GetValue();
-    internal Choice GetValue()
-    {
-        return new Choice(this);
-    }
-    public static IDynamicValue<string>.IChoice ReadChoice(ref Utf8JsonReader reader) => ReadChoiceIntl(ref reader);
-    internal static Choice ReadChoiceIntl(ref Utf8JsonReader reader)
+    public Choice GetValue() => new Choice(this);
+    internal static Choice ReadChoice(ref Utf8JsonReader reader)
     {
         Choice choice = new Choice();
         choice.Read(ref reader);
         return choice;
     }
     bool IEquatable<DynamicStringValue>.Equals(DynamicStringValue other) => Equals(in other);
-    public override bool Equals(object obj) => obj is DynamicStringValue c && Equals(in c);
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            int hashCode = (_constant != null ? _constant.GetHashCode() : 0);
-            hashCode = (hashCode * 397) ^ _set.GetHashCode();
-            hashCode = (hashCode * 397) ^ (int)_type;
-            hashCode = (hashCode * 397) ^ (int)_choiceBehavior;
-            hashCode = (hashCode * 397) ^ IsKitSelector.GetHashCode();
-            return hashCode;
-        }
-    }
+    public override bool Equals(object? obj) => obj is DynamicStringValue c && Equals(in c);
+    public override int GetHashCode() => HashCode.Combine(_constant, _set, _type, _choiceBehavior, IsKitSelector);
     public bool Equals(in DynamicStringValue other)
     {
         if (other._choiceBehavior != _choiceBehavior || other._type != _type || other.IsKitSelector != IsKitSelector)
@@ -1808,7 +1732,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
             writer.WriteStringValue(_constant);
         }
     }
-    internal struct Choice : IDynamicValue<string>.IChoice
+    public struct Choice : IDynamicValue<string>.IChoice
     {
         private ChoiceBehavior _behavior;
         private DynamicValueType _type;
@@ -1817,9 +1741,9 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
         private string? _kitName;
         private string[]? _kitNames;
         private bool _isKitSelector;
-        public bool IsKitSelector => _isKitSelector;
-        public ChoiceBehavior Behavior => _behavior;
-        public DynamicValueType ValueType => _type;
+        public readonly bool IsKitSelector => _isKitSelector;
+        public readonly ChoiceBehavior Behavior => _behavior;
+        public readonly DynamicValueType ValueType => _type;
         public Choice(DynamicStringValue value)
         {
             _value = default;
@@ -1831,20 +1755,9 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
             _kitNames = null;
             FromValue(ref value);
         }
-        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = (int)_behavior;
-                hashCode = (hashCode * 397) ^ (int)_type;
-                hashCode = (hashCode * 397) ^ (_value != null ? _value.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (_values != null ? _values.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ _isKitSelector.GetHashCode();
-                return hashCode;
-            }
-        }
-        public bool Equals(in Choice other)
+        public readonly override bool Equals(object? obj) => obj is Choice c && Equals(ref c);
+        public readonly override int GetHashCode() => HashCode.Combine(_behavior, _type, _value, _values, _isKitSelector);
+        public readonly bool Equals(ref Choice other)
         {
             if (other._behavior != _behavior || other._type != _type || _isKitSelector != other._isKitSelector)
                 return false;
@@ -1980,7 +1893,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
                 writer.WriteStringValue(_value);
             }
         }
-        public override string ToString()
+        public readonly override string ToString()
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
                 return _value!;
@@ -2131,19 +2044,8 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid>, IEquatab
         _choiceBehavior = choiceBehavior;
     }
     bool IEquatable<DynamicAssetValue<TAsset>>.Equals(DynamicAssetValue<TAsset> other) => Equals(in other);
-    public override bool Equals(object obj) => obj is DynamicAssetValue<TAsset> c && Equals(in c);
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            int hashCode = _constant.GetHashCode();
-            hashCode = (hashCode * 397) ^ _set.GetHashCode();
-            hashCode = (hashCode * 397) ^ (int)_type;
-            hashCode = (hashCode * 397) ^ (int)_assetType;
-            hashCode = (hashCode * 397) ^ (int)_choiceBehavior;
-            return hashCode;
-        }
-    }
+    public override bool Equals(object? obj) => obj is DynamicAssetValue<TAsset> c && Equals(in c);
+    public override int GetHashCode() => HashCode.Combine(_constant, _set, _type, _assetType, _choiceBehavior);
     public bool Equals(in DynamicAssetValue<TAsset> other)
     {
         if (other._choiceBehavior != _choiceBehavior || other._type != _type)
@@ -2239,8 +2141,8 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid>, IEquatab
         private Guid[]? _values;
         private TAsset[]? _valuesCache;
         private bool _areValuesCached;
-        public ChoiceBehavior Behavior => _behavior;
-        public DynamicValueType ValueType => _type;
+        public readonly ChoiceBehavior Behavior => _behavior;
+        public readonly DynamicValueType ValueType => _type;
         public Choice(DynamicAssetValue<TAsset> value)
         {
             _value = default;
@@ -2253,20 +2155,9 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid>, IEquatab
             _assetType = default;
             FromValue(ref value);
         }
-        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = (int)_behavior;
-                hashCode = (hashCode * 397) ^ (int)_type;
-                hashCode = (hashCode * 397) ^ (int)_assetType;
-                hashCode = (hashCode * 397) ^ _value.GetHashCode();
-                hashCode = (hashCode * 397) ^ (_values != null ? _values.GetHashCode() : 0);
-                return hashCode;
-            }
-        }
-        public bool Equals(in Choice other)
+        public readonly override bool Equals(object? obj) => obj is Choice c && Equals(ref c);
+        public readonly override int GetHashCode() => HashCode.Combine(_behavior, _type, _assetType, _values, _value);
+        public readonly bool Equals(ref Choice other)
         {
             if (other._behavior != _behavior || other._type != _type)
                 return false;
@@ -2643,19 +2534,8 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
     }
 
     bool IEquatable<DynamicEnumValue<TEnum>>.Equals(DynamicEnumValue<TEnum> other) => Equals(in other);
-    public override bool Equals(object obj) => obj is DynamicEnumValue<TEnum> c && Equals(in c);
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            int hashCode = _constant.GetHashCode();
-            hashCode = (hashCode * 397) ^ _set.GetHashCode();
-            hashCode = (hashCode * 397) ^ _range.GetHashCode();
-            hashCode = (hashCode * 397) ^ (int)_type;
-            hashCode = (hashCode * 397) ^ (int)_choiceBehavior;
-            return hashCode;
-        }
-    }
+    public override bool Equals(object? obj) => obj is DynamicEnumValue<TEnum> c && Equals(in c);
+    public override int GetHashCode() => HashCode.Combine(_constant, _set, _range, _type, _choiceBehavior);
     public bool Equals(in DynamicEnumValue<TEnum> other)
     {
         if (other._choiceBehavior != _choiceBehavior || other._type != _type)
@@ -2689,14 +2569,12 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
 
         return false;
     }
-    public IDynamicValue<TEnum>.IChoice GetValue() => GetValueIntl();
-    internal Choice GetValueIntl()
+    IDynamicValue<TEnum>.IChoice IDynamicValue<TEnum>.GetValue() => GetValue();
+    public Choice GetValue()
     {
         return new Choice(this);
     }
-
-    public static IDynamicValue<TEnum>.IChoice ReadChoice(ref Utf8JsonReader reader) => ReadChoiceIntl(ref reader);
-    internal static Choice ReadChoiceIntl(ref Utf8JsonReader reader)
+    public static Choice ReadChoice(ref Utf8JsonReader reader)
     {
         Choice choice = new Choice();
         choice.Read(ref reader);
@@ -2757,8 +2635,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
             writer.WriteStringValue(_constant.ToString());
         }
     }
-
-    internal struct Choice : IDynamicValue<TEnum>.IChoice
+    public struct Choice : IDynamicValue<TEnum>.IChoice
     {
         private ChoiceBehavior _behavior;
         private DynamicValueType _type;
@@ -2768,8 +2645,8 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
         private TEnum _maxVal;
         private int _minValUnderlying;
         private int _maxValUnderlying;
-        public ChoiceBehavior Behavior => _behavior;
-        public DynamicValueType ValueType => _type;
+        public readonly ChoiceBehavior Behavior => _behavior;
+        public readonly DynamicValueType ValueType => _type;
 
         public Choice(DynamicEnumValue<TEnum> value)
         {
@@ -2792,23 +2669,9 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
             _maxValUnderlying = default;
             FromValue(ref value);
         }
-        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = (int)_behavior;
-                hashCode = (hashCode * 397) ^ (int)_type;
-                hashCode = (hashCode * 397) ^ _value.GetHashCode();
-                hashCode = (hashCode * 397) ^ (_values != null ? _values.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ _minVal.GetHashCode();
-                hashCode = (hashCode * 397) ^ _maxVal.GetHashCode();
-                hashCode = (hashCode * 397) ^ _minValUnderlying;
-                hashCode = (hashCode * 397) ^ _maxValUnderlying;
-                return hashCode;
-            }
-        }
-        public bool Equals(in Choice other)
+        public readonly override bool Equals(object? obj) => obj is Choice c && Equals(ref c);
+        public readonly override int GetHashCode() => HashCode.Combine(_behavior, _type, _value, _values, _minVal, _maxVal);
+        public readonly bool Equals(ref Choice other)
         {
             if (other._behavior != _behavior || other._type != _type)
                 return false;
@@ -2885,7 +2748,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
             }
         }
         /// <summary>Will return <see langword="null"/> if <see cref="DynamicEnumValue{TEnum}.SelectionBehavior"/> is <see cref=ChoiceBehavior.InclusiveL"/> and the value is not of type <see cref=DynamicValueType.ConstantT"/>.</summary>
-        public TEnum InsistValue() => _value;
+        public readonly TEnum InsistValue() => _value;
         public readonly bool IsMatch(TEnum value)
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
@@ -2992,7 +2855,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
             }
             return _value.ToString();
         }
-        public string GetCommaList(LanguageInfo language)
+        public readonly string GetCommaList(LanguageInfo language)
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
             {
@@ -3143,7 +3006,7 @@ public readonly struct FloatRange : IDynamicValue<float>.IRange
 }
 /// <summary>Datatype storing a range of floats.
 /// <para>Formatted like this: </para><code>"$(3.2:182.1)"</code></summary>
-public readonly struct EnumRange<TEnum> : IDynamicValue<TEnum>.IRange where TEnum : struct, Enum
+public readonly struct EnumRange<TEnum> : IDynamicValue<TEnum>.IRange where TEnum : unmanaged, Enum
 {
     private readonly TEnum _min;
     private readonly TEnum _max;
@@ -3170,26 +3033,20 @@ public readonly struct EnumRange<TEnum> : IDynamicValue<TEnum>.IRange where TEnu
 }
 /// <summary>Datatype storing an array or set of integers.
 /// <para>Formatted like this: </para><code>"$[1,8,3,9123]"</code></summary>
-public readonly struct IntegralSet : IEnumerable<int>, IDynamicValue<int>.ISet
+public readonly struct IntegralSet(int[] set) : IEnumerable<int>, IDynamicValue<int>.ISet
 {
-    private readonly int[] _set;
-    public int[] Set => _set;
-    private readonly int _length;
+    private readonly int _length = set.Length;
+    public int[] Set => set;
     public int Length => _length;
-    public IntegralSet(int[] set)
-    {
-        _set = set;
-        _length = set.Length;
-    }
-    public IEnumerator<int> GetEnumerator() => ((IEnumerable<int>)_set).GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
+    public IEnumerator<int> GetEnumerator() => ((IEnumerable<int>)set).GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => set.GetEnumerator();
     public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)
         {
             if (i != 0) sb.Append(',');
-            sb.Append(_set[i].ToString(Data.AdminLocale));
+            sb.Append(set[i].ToString(Data.AdminLocale));
         }
         sb.Append(']');
         return sb.ToString();
@@ -3197,26 +3054,20 @@ public readonly struct IntegralSet : IEnumerable<int>, IDynamicValue<int>.ISet
 }
 /// <summary>Datatype storing an array or set of floats.
 /// <para>Formatted like this: </para><code>"$[1.2,8.1,3,9123.10]"</code></summary>
-public readonly struct FloatSet : IEnumerable<float>, IDynamicValue<float>.ISet
+public readonly struct FloatSet(float[] set) : IEnumerable<float>, IDynamicValue<float>.ISet
 {
-    private readonly float[] _set;
-    public float[] Set => _set;
-    private readonly int _length;
+    private readonly int _length = set.Length;
+    public float[] Set => set;
     public int Length => _length;
-    public FloatSet(float[] set)
-    {
-        _set = set;
-        _length = set.Length;
-    }
-    public IEnumerator<float> GetEnumerator() => ((IEnumerable<float>)_set).GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
+    public IEnumerator<float> GetEnumerator() => ((IEnumerable<float>)set).GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => set.GetEnumerator();
     public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)
         {
             if (i != 0) sb.Append(',');
-            sb.Append(_set[i].ToString(Data.AdminLocale));
+            sb.Append(set[i].ToString(Data.AdminLocale));
         }
         sb.Append(']');
         return sb.ToString();
@@ -3224,27 +3075,21 @@ public readonly struct FloatSet : IEnumerable<float>, IDynamicValue<float>.ISet
 }
 /// <summary>Datatype storing an array or set of strings.
 /// <para>Formatted like this: </para><code>"$[string1,ben smells,18,nice]"</code></summary>
-public readonly struct StringSet : IEnumerable<string>, IDynamicValue<string>.ISet
+public readonly struct StringSet(string[] set) : IEnumerable<string>, IDynamicValue<string>.ISet
 {
-    private readonly string[] _set;
-    public string[] Set => _set;
-    private readonly int _length;
+    private readonly int _length = set.Length;
+    public string[] Set => set;
     public int Length => _length;
-    public StringSet(string[] set)
-    {
-        _set = set;
-        _length = set.Length;
-    }
-    public IEnumerator<string> GetEnumerator() => ((IEnumerable<string>)_set).GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
+    public IEnumerator<string> GetEnumerator() => ((IEnumerable<string>)set).GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => set.GetEnumerator();
     public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)
         {
             if (i != 0) sb.Append(',');
-            if (_set[i] != null)
-                sb.Append(_set[i].Replace(',', '_'));
+            if (set[i] != null)
+                sb.Append(set[i].Replace(',', '_'));
         }
         sb.Append(']');
         return sb.ToString();
@@ -3252,26 +3097,20 @@ public readonly struct StringSet : IEnumerable<string>, IDynamicValue<string>.IS
 }
 /// <summary>Datatype storing an array or set of enums.
 /// <para>Formatted like this: </para><code>"$[string1,ben smells,18,nice]"</code></summary>
-public readonly struct EnumSet<TEnum> : IEnumerable<TEnum>, IDynamicValue<TEnum>.ISet where TEnum : struct, Enum
+public readonly struct EnumSet<TEnum>(TEnum[] set) : IEnumerable<TEnum>, IDynamicValue<TEnum>.ISet where TEnum : unmanaged, Enum
 {
-    private readonly TEnum[] _set;
-    public TEnum[] Set => _set;
-    private readonly int _length;
+    private readonly int _length = set.Length;
+    public TEnum[] Set => set;
     public int Length => _length;
-    public EnumSet(TEnum[] set)
-    {
-        _set = set;
-        _length = set.Length;
-    }
-    public IEnumerator<TEnum> GetEnumerator() => ((IEnumerable<TEnum>)_set).GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
+    public IEnumerator<TEnum> GetEnumerator() => ((IEnumerable<TEnum>)set).GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => set.GetEnumerator();
     public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)
         {
             if (i != 0) sb.Append(',');
-            sb.Append(_set[i].ToString());
+            sb.Append(set[i].ToString());
         }
         sb.Append(']');
         return sb.ToString();
@@ -3279,26 +3118,20 @@ public readonly struct EnumSet<TEnum> : IEnumerable<TEnum>, IDynamicValue<TEnum>
 }
 /// <summary>Datatype storing an array or set of guids that should reference Assets.
 /// <para>Formatted like this: </para><code>"$[6cba0660fac347b8a849157eac941411,7c58b04bd8b046ee982cef9880722d22]"</code></summary>
-public readonly struct GuidSet : IEnumerable<Guid>, IDynamicValue<Guid>.ISet
+public readonly struct GuidSet(Guid[] set) : IEnumerable<Guid>, IDynamicValue<Guid>.ISet
 {
-    private readonly Guid[] _set;
-    private readonly int _length;
-    public Guid[] Set => _set;
+    private readonly int _length = set.Length;
+    public Guid[] Set => set;
     public int Length => _length;
-    public GuidSet(Guid[] set)
-    {
-        _set = set;
-        _length = set.Length;
-    }
-    public IEnumerator<Guid> GetEnumerator() => ((IEnumerable<Guid>)_set).GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
+    public IEnumerator<Guid> GetEnumerator() => ((IEnumerable<Guid>)set).GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => set.GetEnumerator();
     public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)
         {
             if (i != 0) sb.Append(',');
-            sb.Append(_set[i].ToString("N"));
+            sb.Append(set[i].ToString("N"));
         }
         sb.Append(']');
         return sb.ToString();
@@ -3378,15 +3211,14 @@ public interface INotifyVehicleDistanceUpdates : INotifyTracker
 /// <summary>Stores information about the values of variations of <see cref="BaseQuestData"/>.</summary>
 public interface IQuestState
 {
-    public IDynamicValue<int>.IChoice FlagValue { get; }
+    public DynamicIntegerValue.Choice FlagValue { get; }
     public void WriteQuestState(Utf8JsonWriter writer);
     public void OnPropertyRead(ref Utf8JsonReader reader, string property);
 }
 /// <inheritdoc/>
-/// <typeparam name="TTracker">Class deriving from <see cref="BaseQuestTracker"/> used to track progress.</typeparam>
-/// <typeparam name="TDataNew">Class deriving from <see cref="BaseQuestData"/> used as a template for random variations to be created.</typeparam>
-public interface IQuestState<TTracker, in TDataNew> : IQuestState where TTracker : BaseQuestTracker where TDataNew : BaseQuestData
+/// <typeparam name="TQuestData">Class deriving from <see cref="BaseQuestData"/> used as a template for random variations to be created.</typeparam>
+public interface IQuestState<in TQuestData> : IQuestState where TQuestData : BaseQuestData
 {
-    public void Init(TDataNew data);
+    public void Init(TQuestData data);
     public bool IsEligable(UCPlayer player);
 }

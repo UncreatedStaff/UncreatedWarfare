@@ -91,7 +91,7 @@ public class DevCommand : AsyncCommand
 
             ctx.AssertHelpCheck(1, "/dev <checkvehicle|cv>. Logs information about the vehicle you're looking at or inside of.");
 
-            InteractableVehicle vehicle = ctx.Caller!.Player.movement.getVehicle();
+            InteractableVehicle vehicle = ctx.Caller.Player.movement.getVehicle();
             if (vehicle is null && !(ctx.TryGetTarget(out vehicle) && vehicle is not null))
                 throw ctx.ReplyString("You are not inside or looking at a vehicle.", "c7a29f");
             if (vehicle.transform.TryGetComponent(out VehicleComponent component))
@@ -133,7 +133,7 @@ public class DevCommand : AsyncCommand
 
             ctx.AssertHelpCheck(1, "/dev <getpos|cvc>. Gets your current rotation and position (like /test zone).");
 
-            ctx.ReplyString($"Your position: {ctx.Caller!.Position} - Your rotation: {ctx.Caller!.Player.transform.eulerAngles.y}", "ebd491");
+            ctx.ReplyString($"Your position: {ctx.Caller.Position} - Your rotation: {ctx.Caller.Player.transform.eulerAngles.y}", "ebd491");
         }
         else if (ctx.MatchParameter(0, "onfob", "fob"))
         {
@@ -144,7 +144,7 @@ public class DevCommand : AsyncCommand
 
             ctx.AssertHelpCheck(1, "/dev <onfob|fob>. Gets what FOB you're on, if any.");
 
-            FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(ctx.Caller!.Position, ctx.Caller!.GetTeam());
+            FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(ctx.Caller.Position, ctx.Caller.GetTeam());
             ctx.ReplyString((fob != null
                 ? $"Your nearest FOB is: {fob.Name.Colorize(fob.GetUIColor())} ({(ctx.Caller.Position - fob.transform.position).magnitude}m away)"
                 : "You are not near a FOB."), "ebd491");
@@ -162,7 +162,7 @@ public class DevCommand : AsyncCommand
 
             if (ctx.TryGet(1, out VehicleAsset asset, out _, true))
             {
-                InteractableVehicle? vehicle = await VehicleSpawner.SpawnLockedVehicle(asset.GUID, ctx.Caller!.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), token: token).ConfigureAwait(false);
+                InteractableVehicle? vehicle = await VehicleSpawner.SpawnLockedVehicle(asset.GUID, ctx.Caller.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), token: token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
                 ctx.ReplyString($"Successfully spawned AA target: {(vehicle == null ? asset.GUID.ToString("N") : vehicle.asset.vehicleName)}", "ebd491");
             }

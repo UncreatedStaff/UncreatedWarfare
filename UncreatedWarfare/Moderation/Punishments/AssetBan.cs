@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
@@ -30,7 +31,7 @@ public class AssetBan : DurationPunishment
         ThreadUtil.assertIsGameThread();
 
         if (string.IsNullOrWhiteSpace(text)
-            || text!.Equals("*", StringComparison.InvariantCultureIgnoreCase)
+            || text.Equals("*", StringComparison.InvariantCultureIgnoreCase)
             || text.Equals("all", StringComparison.InvariantCultureIgnoreCase))
         {
             VehicleTypeFilter = Array.Empty<VehicleType>();
@@ -38,7 +39,7 @@ public class AssetBan : DurationPunishment
         }
 
         _split ??= new char[] { ',' };
-        string[] splits = text!.Split(_split, StringSplitOptions.RemoveEmptyEntries);
+        string[] splits = text.Split(_split, StringSplitOptions.RemoveEmptyEntries);
         List<VehicleType>? vehicleTypes = null;
         
         for (int i = 0; i < splits.Length; ++i)

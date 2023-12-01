@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text.Json;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
@@ -10,7 +9,7 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
 {
     public DynamicIntegerValue ReviveCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state, IQuestPreset? preset) => new Tracker(this, player, ref state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("revives_required", StringComparison.Ordinal))
@@ -19,12 +18,13 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
                 ReviveCount = new DynamicIntegerValue(10);
         }
     }
-    public struct State : IQuestState<Tracker, RevivePlayersQuest>
+    public struct State : IQuestState<RevivePlayersQuest>
     {
-        public bool IsEligable(UCPlayer player) => true;
         [RewardField("a")]
-        public IDynamicValue<int>.IChoice ReviveCount;
-        public IDynamicValue<int>.IChoice FlagValue => ReviveCount;
+        public DynamicIntegerValue.Choice ReviveCount;
+
+        public readonly DynamicIntegerValue.Choice FlagValue => ReviveCount;
+        public readonly bool IsEligable(UCPlayer player) => true;
         public void Init(RevivePlayersQuest data)
         {
             ReviveCount = data.ReviveCount.GetValue();
@@ -34,22 +34,18 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
             if (prop.Equals("revives_required", StringComparison.Ordinal))
                 ReviveCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
-        public void WriteQuestState(Utf8JsonWriter writer)
+        public readonly void WriteQuestState(Utf8JsonWriter writer)
         {
             writer.WriteProperty("revives_required", ReviveCount);
         }
     }
-    public class Tracker : BaseQuestTracker, INotifyOnRevive
+    public class Tracker(BaseQuestData data, UCPlayer? target, ref State questState, IQuestPreset? preset) : BaseQuestTracker(data, target, questState, preset), INotifyOnRevive
     {
-        private readonly int ReviveCount = 0;
+        private readonly int _reviveCount = questState.ReviveCount.InsistValue();
         private int _revives;
         public override short FlagValue => (short)_revives;
-        protected override bool CompletedCheck => _revives >= ReviveCount;
+        protected override bool CompletedCheck => _revives >= _reviveCount;
 
-        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
-        {
-            ReviveCount = questState.ReviveCount.InsistValue();
-        }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
             if (reader.TokenType == JsonTokenType.Number && prop.Equals("revives", StringComparison.Ordinal))
@@ -62,21 +58,20 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
         public override void ResetToDefaults() => _revives = 0;
         public void OnPlayerRevived(UCPlayer reviver, UCPlayer revived)
         {
-            if (reviver.Steam64 == _player.Steam64)
+            if (reviver.Steam64 == Player!.Steam64)
             {
                 _revives++;
-                if (_revives >= ReviveCount)
+                if (_revives >= _reviveCount)
                     TellCompleted();
                 else
                     TellUpdated();
-                return;
             }
         }
 
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _revives, ReviveCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, Player!, _revives, _reviveCount);
         public override void ManualComplete()
         {
-            _revives = ReviveCount;
+            _revives = _reviveCount;
             base.ManualComplete();
         }
     }

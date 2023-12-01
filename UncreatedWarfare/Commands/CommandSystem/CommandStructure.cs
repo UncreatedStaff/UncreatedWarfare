@@ -194,14 +194,14 @@ public sealed class CommandStructure
                 string? flag = p.FlagName;
                 if (string.IsNullOrEmpty(flag) || p.Permission.HasValue && !ctx.HasPermission(p.Permission.Value))
                     continue;
-                bool has = ctx.MatchFlag(flag!);
+                bool has = ctx.MatchFlag(flag);
                 if (!has && p.Aliases is { Length: > 0 })
                     has = ctx.MatchFlag(p.Aliases);
                 if (anyFlags)
                     builder.Append(", ");
                 if (!has)
                     builder.Append('[');
-                if (flag![0] != '-')
+                if (flag[0] != '-')
                     builder.Append('-');
                 if (has)
                     desc = p.GetDescription(ctx.LanguageInfo);

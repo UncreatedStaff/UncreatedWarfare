@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Uncreated.Framework;
 using Uncreated.Warfare.Locations;
 using UnityEngine;
 

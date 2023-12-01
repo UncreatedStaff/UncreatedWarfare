@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;

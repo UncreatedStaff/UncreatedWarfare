@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Squads;
-using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;

@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using UnityEngine;
 

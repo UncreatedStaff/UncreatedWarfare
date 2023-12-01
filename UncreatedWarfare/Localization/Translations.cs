@@ -630,7 +630,7 @@ public class Translation
         {
             if (format is not null)
             {
-                if (format.Equals(BaseQuestData.COLOR_QUEST_ASSET_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(BaseQuestData.FormatColorQuestAsset, StringComparison.Ordinal))
                     return Pluralize(language, culture, asset.questName, flags);
             }
             return Pluralize(language, culture, (flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText ? F.RemoveColorTag(asset.questName) : asset.questName, flags);
@@ -1948,7 +1948,7 @@ Please leave in-game terms such as **FOB**, **Rally**, **Build**, **Ammo**, and 
     {
         if (!string.IsNullOrEmpty(fmt))
         {
-            int ind1 = fmt!.IndexOf(T.FormatPlural, StringComparison.Ordinal);
+            int ind1 = fmt.IndexOf(T.FormatPlural, StringComparison.Ordinal);
             if (ind1 != -1)
             {
                 if (fmt[fmt.Length - 1] == '}')

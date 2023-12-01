@@ -13,17 +13,6 @@ internal class MapScheduler : MonoBehaviour
 {
     internal static MapScheduler Instance;
 
-    // todo
-    internal static readonly Schema MapsTable = new Schema("map_data", new Schema.Column[]
-    {
-        new Schema.Column("MapId", SqlTypes.INT)
-        {
-            PrimaryKey = true
-        },
-        new Schema.Column("Display Name", SqlTypes.STRING_255),
-        new Schema.Column("Faction_1", "varchar(16)"),
-        new Schema.Column("Faction_2", "varchar(16)")
-    }, true, null);
                                  // intentional is
     public static int Current => Instance is null ? -1 : Instance._map;
     // active map

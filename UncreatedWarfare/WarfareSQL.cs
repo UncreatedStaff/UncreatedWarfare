@@ -69,8 +69,8 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     public const string TableMutes = "muted";
     public const string TableTeamkills = "teamkills";
     public const string TableLoginData = "logindata";
-    public const string TableIPAddresses = "ip_addresses";
     public const string TableHWIDs = "hwids";
+    public const string TableIPAddresses = "ip_addresses";
     public const string TableIPWhitelists = "ip_whitelists";
 
     public const string ColumnIPWhitelistsSteam64 = "Steam64";
@@ -464,64 +464,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
             {
                 Nullable = true
             }
-        }, true, null),
-        new Schema(TableIPAddresses, new Schema.Column[]
-        {
-            new Schema.Column(ColumnIPAddressesPrimaryKey, SqlTypes.UINT)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            },
-            new Schema.Column(ColumnIPAddressesSteam64, SqlTypes.STEAM_64)
-            {
-                Indexed = true
-            },
-            new Schema.Column(ColumnIPAddressesPackedIP, SqlTypes.UINT)
-            {
-                Indexed = true
-            },
-            new Schema.Column(ColumnIPAddressesUnpackedIP, "char(15)"),
-            new Schema.Column(ColumnIPAddressesLoginCount, SqlTypes.UINT)
-            {
-                Default = "'1'"
-            },
-            new Schema.Column(ColumnIPAddressesLastLogin, SqlTypes.DATETIME)
-            {
-                Default = "CURRENT_TIMESTAMP"
-            },
-            new Schema.Column(ColumnIPAddressesFirstLogin, SqlTypes.DATETIME)
-            {
-                Nullable = true
-            }
-        }, true, null),
-        new Schema(TableHWIDs, new Schema.Column[]
-        {
-            new Schema.Column(ColumnHWIDsPrimaryKey, SqlTypes.UINT)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            },
-            new Schema.Column(ColumnHWIDsIndex, SqlTypes.UINT),
-            new Schema.Column(ColumnHWIDsSteam64, SqlTypes.STEAM_64)
-            {
-                Indexed = true
-            },
-            new Schema.Column(ColumnHWIDsHWID, "binary(20)")
-            {
-                Indexed = true
-            },
-            new Schema.Column(ColumnHWIDsLoginCount, SqlTypes.UINT)
-            {
-                Default = "'1'"
-            },
-            new Schema.Column(ColumnHWIDsLastLogin, SqlTypes.DATETIME)
-            {
-                Default = "CURRENT_TIMESTAMP"
-            },
-            new Schema.Column(ColumnHWIDsFirstLogin, SqlTypes.DATETIME)
-            {
-                Nullable = true
-            },
         }, true, null),
         new Schema(TableIPWhitelists, new Schema.Column[]
         {

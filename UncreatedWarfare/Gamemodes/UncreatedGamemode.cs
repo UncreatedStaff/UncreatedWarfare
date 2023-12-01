@@ -49,16 +49,16 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public const float MatchPresentThreshold = 0.65f;
     public const string GamemodeReloadKey = "gamemode";
     protected static readonly Vector3 BlockerSpawnRotation = new Vector3(270f, 0f, 180f);
-    public static readonly List<KeyValuePair<Type, float>> GamemodeRotation = new List<KeyValuePair<Type, float>>();
-    public static readonly List<KeyValuePair<string, Type>> Gamemodes = new List<KeyValuePair<string, Type>>
-    {
-        new KeyValuePair<string, Type>("TeamCTF", typeof(TeamCTF)),
-        new KeyValuePair<string, Type>("Invasion", typeof(Invasion)),
-        new KeyValuePair<string, Type>("TDM", typeof(TeamDeathmatch.TeamDeathmatch)),
-        new KeyValuePair<string, Type>("Insurgency", typeof(Insurgency.Insurgency)),
-        new KeyValuePair<string, Type>("Conquest", typeof(Conquest)),
-        new KeyValuePair<string, Type>("Hardpoint", typeof(Hardpoint))
-    };
+    public static readonly List<KeyValuePair<Type, float>> GamemodeRotation = [];
+    public static readonly List<KeyValuePair<GamemodeType, Type>> Gamemodes =
+    [
+        new KeyValuePair<GamemodeType, Type>(GamemodeType.TeamCTF, typeof(TeamCTF)),
+        new KeyValuePair<GamemodeType, Type>(GamemodeType.Invasion, typeof(Invasion)),
+        new KeyValuePair<GamemodeType, Type>(GamemodeType.Deathmatch, typeof(TeamDeathmatch.TeamDeathmatch)),
+        new KeyValuePair<GamemodeType, Type>(GamemodeType.Insurgency, typeof(Insurgency.Insurgency)),
+        new KeyValuePair<GamemodeType, Type>(GamemodeType.Conquest, typeof(Conquest)),
+        new KeyValuePair<GamemodeType, Type>(GamemodeType.Hardpoint, typeof(Hardpoint))
+    ];
     internal static GamemodeConfig ConfigObj;
     public static Action? OnStateUpdated;
     public static WinToastUI WinToastUI;
@@ -111,7 +111,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual bool CustomSigns => true;
     public virtual GamemodeType GamemodeType => GamemodeType.Undefined;
     protected bool HasOnReadyRan => _hasOnReadyRan;
-    public CancellationToken UnloadToken => _tokenSrc == null ? CancellationToken.None : _tokenSrc.Token;
+    public CancellationToken UnloadToken => _tokenSrc?.Token ?? CancellationToken.None;
     protected Gamemode(string name, float eventLoopSpeed)
     {
         Name = name;
@@ -119,6 +119,12 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         _useEventLoop = eventLoopSpeed > 0;
         State = State.Loading;
         OnStateUpdated?.Invoke();
+    }
+    public static bool IsEnabled(GamemodeType gamemode)
+    {
+        Type? type = Gamemodes.Find(x => x.Key == gamemode).Value;
+
+        return type != null && GamemodeRotation.FirstOrDefault(x => x.Key == type).Value > 0f;
     }
     public void SetTiming(float newSpeed)
     {
@@ -587,7 +593,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     catch (NullReferenceException) { }
                 }
                 L.Log($"Kicking {pl.Name.PlayerName} ({pl.Steam64}) for null transform.", ConsoleColor.Cyan);
-                Provider.kick(pl.CSteamID, Localization.Translate(T.NullTransformKickMessage, pl, UCWarfare.Config.DiscordInviteCode));
+                Provider.kick(pl.CSteamID, T.NullTransformKickMessage.Translate(pl, UCWarfare.Config.DiscordInviteCode));
             }
             try
             {
@@ -970,7 +976,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #endif
         for (int i = 0; i < Gamemodes.Count; ++i)
         {
-            if (Gamemodes[i].Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+            if (Gamemodes[i].Key.ToString().Equals(name, StringComparison.OrdinalIgnoreCase))
             {
                 Type type = Gamemodes[i].Value;
                 if (type is null || !type.IsSubclassOf(typeof(Gamemode))) return null;
@@ -981,7 +987,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             for (int i = 0; i < Gamemodes.Count; ++i)
             {
-                if (Gamemodes[i].Key.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                if (Gamemodes[i].Key.ToString().IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
                 {
                     Type type = Gamemodes[i].Value;
                     if (type is null || !type.IsSubclassOf(typeof(Gamemode))) return null;
@@ -1224,7 +1230,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             for (int i = 0; i < Gamemodes.Count; ++i)
             {
-                if (Gamemodes[i].Key.Equals(gms[j].Key, StringComparison.OrdinalIgnoreCase))
+                if (Gamemodes[i].Key.ToString().Equals(gms[j].Key, StringComparison.OrdinalIgnoreCase))
                 {
                     GamemodeRotation.Add(new KeyValuePair<Type, float>(Gamemodes[i].Value, gms[j].Value));
                     break;
@@ -1259,23 +1265,23 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         return m;
     }
-    internal async Task OnQuestCompleted(QuestCompleted e, CancellationToken token)
+    internal Task OnQuestCompleted(QuestCompleted e, CancellationToken token)
     {
         token.CombineIfNeeded(UnloadToken, e.Player.DisconnectToken);
-        await InvokeSingletonEvent<IQuestCompletedListener, IQuestCompletedListenerAsync>
-            (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e)
-            .ConfigureAwait(false);
+        return InvokeSingletonEvent<IQuestCompletedListener, IQuestCompletedListenerAsync>
+            (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e);
     }
-    internal async Task HandleQuestCompleted(QuestCompleted e, CancellationToken token)
+    internal Task HandleQuestCompleted(QuestCompleted e, CancellationToken token)
     {
         if (!RankManager.OnQuestCompleted(e))
         {
             token.CombineIfNeeded(UnloadToken, e.Player.DisconnectToken);
-            await InvokeSingletonEvent<IQuestCompletedHandler, IQuestCompletedHandlerAsync>
-                (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e)
-                .ConfigureAwait(false);
+            return InvokeSingletonEvent<IQuestCompletedHandler, IQuestCompletedHandlerAsync>
+                (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e);
         }
-        else e.Break();
+        e.Break();
+
+        return Task.CompletedTask;
     }
     internal virtual bool CanRefillAmmoAt(ItemBarricadeAsset barricade)
     {
@@ -1304,7 +1310,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     return;
             }
         }
-        if (!tmFound && this is ITickets tickets && tickets.TicketManager.Provider is T t3)
+        if (!tmFound && this is ITickets { TicketManager.Provider: T t3 })
         {
             action(t3);
             if (e is { CanContinue: false })
@@ -1391,7 +1397,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 }
             }
         }
-        if (!tmFound && this is ITickets tickets && tickets.TicketManager.Provider != null)
+        if (!tmFound && this is ITickets { TicketManager.Provider: not null } tickets)
         {
             if (tickets.TicketManager.Provider is TSync t)
             {
@@ -1494,5 +1500,8 @@ public enum GamemodeType : byte
     [Translatable(Languages.ChineseSimplified, "征服")]
     Conquest,
     [Translatable(Languages.ChineseSimplified, "攻坚")]
-    Hardpoint
+    Hardpoint,
+    Deathmatch
+
+    // update WinGamemodeQuest.MaxGamemode when adding one
 }

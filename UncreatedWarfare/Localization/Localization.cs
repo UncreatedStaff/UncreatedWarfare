@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Json;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;

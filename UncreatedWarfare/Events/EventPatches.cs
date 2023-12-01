@@ -8,7 +8,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using SDG.NetTransport;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Gamemodes.Flags;

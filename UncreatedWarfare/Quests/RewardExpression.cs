@@ -1,4 +1,5 @@
 ﻿// #define LOG_OP_CODES
+using JetBrains.Annotations;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,22 +12,13 @@ namespace Uncreated.Warfare.Quests;
 
 public class RewardExpression
 {
-    private static readonly char[] TokenSplits = { '*', '/', '+', '-', '%', '(', ')', '[', ']', '{', '}', ',', '^' };
+    private static readonly char[] TokenSplits = [ '*', '/', '+', '-', '%', '(', ')', '[', ']', '{', '}', ',', '^' ];
     private readonly string _expression;
     private readonly string _expression2;
     private readonly EvaluateDelegate _method;
     private static MethodInfo[]? _mathMethods;
     public QuestType QuestType { get; internal set; }
     public QuestRewardType RewardType { get; }
-
-    private RewardExpression(QuestRewardType type, QuestType questType, EvaluateDelegate method)
-    {
-        RewardType = type;
-        QuestType = questType;
-        _method = method;
-        _expression = "0";
-        _expression2 = _expression;
-    }
     public RewardExpression(QuestRewardType type, QuestType questType, string expression)
     {
         RewardType = type;
@@ -90,7 +82,7 @@ public class RewardExpression
         }
         if (tknSt < _expression.Length)
             tokens.Add(_expression.Substring(tknSt));
-        int pLvl = 0;
+        int pLvl;
         for (int i = 0; i < tokens.Count; ++i)
         {
             if (tokens[i][0] is '*' or '/' or '^')
@@ -177,7 +169,7 @@ public class RewardExpression
             else if (tokens[i][0] is ')' or ']' or '}')
                 --pLvl;
         }
-        if (!was0Once && tokens[0][0] is '(' or '[' or '{' && tokens[tokens.Count - 1][0] is ')' or ']' or '}')
+        if (!was0Once && tokens[0][0] is '(' or '[' or '{' && tokens[^1][0] is ')' or ']' or '}')
         {
             tokens.RemoveAt(0);
             tokens.RemoveAt(tokens.Count - 1);
@@ -237,7 +229,7 @@ public class RewardExpression
                         vars.Add(i, new KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>(new KeyValuePair<FieldInfo, MethodInfo>(field, m2), lcl));
                         LogOpCode("ldarg.0");
                         il.Emit(OpCodes.Ldarg_0);
-                        if (field.DeclaringType != null && field.DeclaringType.IsValueType)
+                        if (field.DeclaringType is { IsValueType: true })
                         {
                             LogOpCode("unbox " + field.DeclaringType.FullName);
                             il.Emit(OpCodes.Unbox, field.DeclaringType);
@@ -508,7 +500,7 @@ public class RewardExpression
         if (index >= tokens.Count)
             return false;
         string tkn = tokens[index];
-        if (tkn[tkn.Length - 1] is 'f' or 'F' or 'd' or 'D')
+        if (tkn[^1] is 'f' or 'F' or 'd' or 'D')
             tkn = tkn.Substring(0, tkn.Length - 1);
         if (double.TryParse(tkn.Replace('_', '-'), NumberStyles.Number, CultureInfo.InvariantCulture, out double res))
         {
@@ -723,6 +715,7 @@ public class RewardExpression
         return f;
     }
     [Conditional("LOG_OP_CODES")]
+    [UsedImplicitly]
     private static void LogOpCode(string? str = null, ConsoleColor color = ConsoleColor.Gray)
     {
 #if LOG_OP_CODES
@@ -812,23 +805,19 @@ public class RewardExpression
     private delegate object EvaluateDelegate(IQuestState state);
 }
 
-[AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Field)]
 public sealed class RewardFieldAttribute : Attribute
 {
-    readonly string? _name;
-    readonly bool _dvu;
-
+    public string? Name { get; }
+    public bool DisallowVariableUsage { get; }
     public RewardFieldAttribute(string nameOverride)
     {
-        _name = nameOverride;
-        _dvu = false;
+        Name = nameOverride;
+        DisallowVariableUsage = false;
     }
     public RewardFieldAttribute(bool disableVariableUsage)
     {
-        _name = null;
-        _dvu = disableVariableUsage;
+        Name = null;
+        DisallowVariableUsage = disableVariableUsage;
     }
-
-    public string? Name => _name;
-    public bool DisallowVariableUsage => _dvu;
 }

@@ -111,7 +111,7 @@ public static class WarfareDatabaseReflection
             MemberInfo? member = (MemberInfo?)property.PropertyInfo ?? property.FieldInfo;
 
             ValueConverterAttribute? propertyAttribute = member?.GetAttributeSafe<ValueConverterAttribute>();
-            ValueConverterAttribute? typeAttribute = property.ClrType.GetAttributeSafe<ValueConverterAttribute>();
+            ValueConverterAttribute? typeAttribute = clrType.GetAttributeSafe<ValueConverterAttribute>();
 
             if (clrType == typeof(IPAddress) && (member == null || !member.IsDefinedSafe<DontAddPackedColumnAttribute>()))
             {
@@ -244,12 +244,19 @@ public static class WarfareDatabaseReflection
                 continue;
             }
 
-            Type? valConverterType;
+            Type? valConverterType = null;
             if (typeAttribute == null && propertyAttribute == null)
+            {
                 valueConverters.TryGetValue(clrType, out valConverterType);
+            }
             else if (propertyAttribute is not { Type: null })
-                valConverterType = propertyAttribute?.Type ?? propertyAttribute?.Type;
-            else continue;
+            {
+                valConverterType = propertyAttribute?.Type ?? typeAttribute?.Type;
+            }
+            else if (typeAttribute is not { Type: null })
+            {
+                valConverterType = typeAttribute?.Type ?? propertyAttribute.Type;
+            }
 
             if (valConverterType == null)
                 continue;

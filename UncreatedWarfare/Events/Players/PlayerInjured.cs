@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Threading;
 using SDG.Unturned;
 
 namespace Uncreated.Warfare.Events.Players;

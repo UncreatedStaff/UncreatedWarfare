@@ -1,6 +1,5 @@
 ﻿using SDG.NetTransport;
 using System;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;

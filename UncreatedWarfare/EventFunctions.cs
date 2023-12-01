@@ -292,7 +292,7 @@ public static class EventFunctions
 
     internal static void OnLandmineExploding(LandmineExploding e)
     {
-        if (UCWarfare.Config.BlockLandmineFriendlyFire && e.Triggerer.GetTeam() == e.TrapBarricade.GetServersideData().group.GetTeam())
+        if (UCWarfare.Config.BlockLandmineFriendlyFire && e.Triggerer.GetTeam() == e.TrapBarricade.GetServersideData().group.GetTeam() || e.Triggerer.VanishMode)
         {
             e.Break();
         }

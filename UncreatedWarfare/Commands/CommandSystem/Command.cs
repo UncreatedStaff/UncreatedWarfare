@@ -34,7 +34,7 @@ public abstract class Command : IExecutableCommand
     /// <returns><see langword="true"/> if the player has permission to run the command. Otherwise returns <see langword="false"/>.</returns>
     public virtual bool CheckPermission(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller!.Player.channel.owner.isAdmin) return true;
+        if (ctx.IsConsole || ctx.Caller.Player.channel.owner.isAdmin) return true;
         return ctx.Caller.PermissionCheck(_allowedUsers, PermissionComparison.AtLeast);
     }
     public abstract void Execute(CommandInteraction ctx);

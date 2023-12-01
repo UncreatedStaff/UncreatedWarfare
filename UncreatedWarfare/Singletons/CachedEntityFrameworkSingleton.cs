@@ -96,7 +96,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            UCWarfare.ToUpdate(token);
+            await UCWarfare.ToUpdate(token);
             WriteWait(token);
             try
             {
@@ -122,7 +122,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            UCWarfare.ToUpdate(token);
+            await UCWarfare.ToUpdate(token);
             WriteWait(token);
             try
             {

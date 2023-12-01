@@ -1,6 +1,4 @@
-﻿using System;
-using SDG.NetTransport;
-using SDG.Unturned;
+﻿using SDG.NetTransport;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Teams;

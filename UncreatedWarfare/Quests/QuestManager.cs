@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Json;
@@ -242,7 +241,7 @@ public static class QuestManager
         {
             if (RegisteredTrackers[i].Player!.Steam64 == player.Steam64)
             {
-                L.Log("    Tracker type " + RegisteredTrackers[i].QuestData!.QuestType + " - \"" + RegisteredTrackers[i].GetDisplayString() + "\".");
+                L.Log("    Tracker type " + RegisteredTrackers[i].QuestData.QuestType + " - \"" + RegisteredTrackers[i].GetDisplayString() + "\".");
                 L.Log("    Rewards: ");
                 for (int j = 0; j < RegisteredTrackers[i].Rewards.Length; ++j)
                 {

@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using Uncreated.SQL;
 using Uncreated.Warfare.Structures;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Structures;
 public sealed class SalvageStructureRequested : SalvageRequested

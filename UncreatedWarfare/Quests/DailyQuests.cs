@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Framework.Quests;
 using Uncreated.Json;
@@ -100,6 +101,8 @@ public static class DailyQuests
     {
         Provider.registerServerUsingWorkshopFileId(DailyQuestsWorkshopID);
     }
+
+    [UsedImplicitly]
     private static bool OnAbandonedRequestedQuest(Guid assetGuid)
     {
         return false;
@@ -245,7 +248,7 @@ public static class DailyQuests
             int rndPick;
             while (true)
             {
-            exists:;
+                exists:;
                 rndPick = UnityEngine.Random.Range(0, QuestManager.Quests.Count);
                 for (int p = 0; p < i; ++p)
                 {
@@ -261,7 +264,7 @@ public static class DailyQuests
             ref DailyQuestSave.Preset pset = ref save.Presets[i];
             IQuestPreset preset = data.CreateRandomPreset((ushort)(DailyQuest.DAILY_QUEST_START_ID + day * DailyQuest.DAILY_QUEST_CONDITION_LENGTH + i));
             IQuestState state = preset.State;
-            BaseQuestTracker? tempTracker = data.GetTracker(null, in state);
+            BaseQuestTracker? tempTracker = data.GetTracker(null, state);
             if (tempTracker != null)
             {
                 int val = preset.State.FlagValue.InsistValue();
@@ -304,7 +307,7 @@ public static class DailyQuests
         BaseQuestTracker[] trackers = new BaseQuestTracker[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
         for (int i = 0; i < DailyQuest.DAILY_QUEST_CONDITION_LENGTH; i++)
         {
-            BaseQuestTracker? tracker = DailyQuestDatas[i].GetTracker(player, in States[i]);
+            BaseQuestTracker? tracker = DailyQuestDatas[i].GetTracker(player, States[i]);
             if (tracker != null)
             {
                 QuestManager.RegisterTracker(tracker);
@@ -401,7 +404,7 @@ public static class DailyQuests
         }
         else
             L.LogWarning("Player " + tracker.Player.Steam64 + " is missing their entry in DailyTrackers dictionary!");
-        if (tracker.QuestData.QuestType is not QuestType.TransportPlayers or QuestType.DriveDistance or QuestType.XPInGamemode)
+        if (tracker.QuestData.QuestType is not QuestType.TransportPlayers and not QuestType.DriveDistance and not QuestType.XPInGamemode)
             tracker.Player.SendString("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>

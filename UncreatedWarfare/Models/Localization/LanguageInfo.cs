@@ -86,7 +86,7 @@ public class LanguageInfo : ITranslationArgument
             ? SteamLanguageName
             : (char.ToUpperInvariant(SteamLanguageName[0]) + SteamLanguageName.Substring(1)));
     public override string ToString() => $"{DisplayName} {{{Code}}}";
-    public bool Equals(LanguageInfo? other) => !ReferenceEquals(null, other) && (ReferenceEquals(this, other) || Code.Equals(other.Code, StringComparison.OrdinalIgnoreCase));
+    public bool Equals(LanguageInfo? other) => other is not null && (ReferenceEquals(this, other) || Code.Equals(other.Code, StringComparison.OrdinalIgnoreCase));
     public override bool Equals(object? obj) => obj is LanguageInfo info && Equals(info);
     // ReSharper disable once NonReadonlyMemberInGetHashCode
     public override int GetHashCode() => unchecked((int)Key);

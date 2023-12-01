@@ -1,11 +1,9 @@
 ﻿using SDG.Unturned;
-using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Singletons;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 

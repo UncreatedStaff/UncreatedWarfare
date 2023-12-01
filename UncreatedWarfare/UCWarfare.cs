@@ -3,7 +3,6 @@ using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
 using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore;
 using SDG.Framework.Modules;
 using SDG.Framework.Utilities;
 using SDG.Unturned;
@@ -17,6 +16,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
@@ -185,20 +185,20 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         L.Log("Migrating database changes...", ConsoleColor.Magenta);
 
-        // await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
-        // try
-        // {
-        //     await Data.DbContext.Database.MigrateAsync(token);
-        //     L.Log(" + Done", ConsoleColor.Gray);
-        // }
-        // catch (Exception ex)
-        // {
-        //     WarfareDatabases.Release();
-        //     L.LogError(" + Failed to migrate databse.");
-        //     L.LogError(ex);
-        //     Provider.shutdown(10);
-        //     return;
-        // }
+        await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            await Data.DbContext.Database.MigrateAsync(token);
+            L.Log(" + Done", ConsoleColor.Gray);
+        }
+        catch (Exception ex)
+        {
+            WarfareDatabases.Release();
+            L.LogError(" + Failed to migrate databse.");
+            L.LogError(ex);
+            Provider.shutdown(10);
+            return;
+        }
 
         Data.LanguageDataStore = new WarfareMySqlLanguageDataStore();
         await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);

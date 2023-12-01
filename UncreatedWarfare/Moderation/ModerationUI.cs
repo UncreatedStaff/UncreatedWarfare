@@ -1102,7 +1102,7 @@ internal partial class ModerationUI : UnturnedUI
         ModerationEntryType? type = ModerationReflection.GetType(entry.GetType());
         ui.Type.SetText(connection, type.HasValue ? type.Value.ToString() : entry.GetType().Name);
         string? msg = entry.GetDisplayMessage();
-        ui.Message.SetText(connection, string.IsNullOrWhiteSpace(msg) ? "== No Message ==" : msg!);
+        ui.Message.SetText(connection, string.IsNullOrWhiteSpace(msg) ? "== No Message ==" : msg);
         ui.Reputation.SetText(connection, FormatReputation(entry.Reputation, player.Locale.CultureInfo, false));
         ui.Timestamp.SetText(connection, (entry.ResolvedTimestamp ?? entry.StartedTimestamp).UtcDateTime.ToString(DateTimeFormat));
         if (entry.TryGetDisplayActor(out RelatedActor actor))

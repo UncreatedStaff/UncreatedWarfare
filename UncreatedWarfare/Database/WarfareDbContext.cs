@@ -15,8 +15,10 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Database;
+#pragma warning disable CS8644
 public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, ISeasonsDbContext, IGameDataDbContext
 {
     internal static string? ConnStringOverride = null;
@@ -24,6 +26,8 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
     public DbSet<LanguageInfo> Languages => Set<LanguageInfo>();
     public DbSet<LanguagePreferences> LanguagePreferences => Set<LanguagePreferences>();
     public DbSet<WarfareUserData> UserData => Set<WarfareUserData>();
+    public DbSet<PlayerIPAddress> IPAddresses => Set<PlayerIPAddress>();
+    public DbSet<PlayerHWID> HWIDs => Set<PlayerHWID>();
     public DbSet<Faction> Factions => Set<Faction>();
     public DbSet<Kit> Kits => Set<Kit>();
     public DbSet<KitAccess> KitAccess => Set<KitAccess>();
@@ -82,3 +86,4 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
     public void Wait(int timeoutMilliseconds, CancellationToken token = default) => WarfareDatabases.Wait(timeoutMilliseconds, token);
     public void Release(int amt = 1) => WarfareDatabases.Release(amt);
 }
+#pragma warning restore CS8644

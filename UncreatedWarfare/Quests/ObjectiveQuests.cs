@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Json;
-using Uncreated.Warfare.Configuration;
+using Uncreated.Json;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Squads;
-using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -14,7 +15,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
 {
     public DynamicIntegerValue ObjectiveCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state, IQuestPreset? preset) => new Tracker(this, player, ref state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("objective_count", StringComparison.Ordinal))
@@ -23,12 +24,13 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
                 ObjectiveCount = new DynamicIntegerValue(10);
         }
     }
-    public struct State : IQuestState<Tracker, CaptureObjectivesQuest>
+    public struct State : IQuestState<CaptureObjectivesQuest>
     {
         [RewardField("a")]
-        public IDynamicValue<int>.IChoice ObjectiveCount;
-        public IDynamicValue<int>.IChoice FlagValue => ObjectiveCount;
-        public bool IsEligable(UCPlayer player) => true;
+        public DynamicIntegerValue.Choice ObjectiveCount;
+
+        public readonly DynamicIntegerValue.Choice FlagValue => ObjectiveCount;
+        public readonly bool IsEligable(UCPlayer player) => true;
         public void Init(CaptureObjectivesQuest data)
         {
             ObjectiveCount = data.ObjectiveCount.GetValue();
@@ -38,21 +40,18 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
             if (prop.Equals("objective_count", StringComparison.Ordinal))
                 ObjectiveCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
-        public void WriteQuestState(Utf8JsonWriter writer)
+        public readonly void WriteQuestState(Utf8JsonWriter writer)
         {
             writer.WriteProperty("objective_count", ObjectiveCount);
         }
     }
-    public class Tracker : BaseQuestTracker, INotifyOnObjectiveCaptured
+    public class Tracker(BaseQuestData data, UCPlayer? target, ref State questState, IQuestPreset? preset) : BaseQuestTracker(data, target, questState, preset), INotifyOnObjectiveCaptured
     {
-        private readonly int ObjectiveCount = 0;
+        private readonly int _objectiveCount = questState.ObjectiveCount.InsistValue();
         private int _captures;
         public override short FlagValue => (short)_captures;
-        protected override bool CompletedCheck => _captures >= ObjectiveCount;
-        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
-        {
-            ObjectiveCount = questState.ObjectiveCount.InsistValue();
-        }
+        protected override bool CompletedCheck => _captures >= _objectiveCount;
+
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
             if (reader.TokenType == JsonTokenType.Number && prop.Equals("objectives_captured", StringComparison.Ordinal))
@@ -67,10 +66,10 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
         {
             for (int i = 0; i < participants.Length; i++)
             {
-                if (participants[i] == _player.Steam64)
+                if (participants[i] == Player!.Steam64)
                 {
                     _captures++;
-                    if (_captures >= ObjectiveCount)
+                    if (_captures >= _objectiveCount)
                         TellCompleted();
                     else
                         TellUpdated();
@@ -78,10 +77,10 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
                 }
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _captures, ObjectiveCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, Player!, _captures, _objectiveCount);
         public override void ManualComplete()
         {
-            _captures = ObjectiveCount;
+            _captures = _objectiveCount;
             base.ManualComplete();
         }
     }
@@ -94,7 +93,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
     public DynamicEnumValue<GamemodeType> Gamemode;
     public DynamicIntegerValue NumberOfGames;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state, IQuestPreset? preset) => new Tracker(this, player, ref state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("xp_goal", StringComparison.Ordinal))
@@ -113,19 +112,22 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
                 XPCount = new DynamicIntegerValue(1);
         }
     }
-    public struct State : IQuestState<Tracker, XPInGamemodeQuest>
+    public struct State : IQuestState<XPInGamemodeQuest>
     {
-        [RewardField("xp")]
-        public IDynamicValue<int>.IChoice XPCount;
         internal DynamicEnumValue<GamemodeType>.Choice Gamemode;
+
+        [RewardField("xp")]
+        public DynamicIntegerValue.Choice XPCount;
+
         [RewardField("games")]
-        public IDynamicValue<int>.IChoice GameCount;
-        public IDynamicValue<int>.IChoice FlagValue => GameCount;
-        public bool IsEligable(UCPlayer player) => true;
+        public DynamicIntegerValue.Choice GameCount;
+
+        public readonly DynamicIntegerValue.Choice FlagValue => GameCount;
+        public readonly bool IsEligable(UCPlayer player) => true;
         public void Init(XPInGamemodeQuest data)
         {
             XPCount = data.XPCount.GetValue();
-            Gamemode = data.Gamemode.GetValueIntl();
+            Gamemode = data.Gamemode.GetValue();
             GameCount = data.NumberOfGames.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
@@ -133,32 +135,26 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
             if (prop.Equals("xp_goal", StringComparison.Ordinal))
                 XPCount = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("gamemode", StringComparison.Ordinal))
-                Gamemode = DynamicEnumValue<GamemodeType>.ReadChoiceIntl(ref reader);
+                Gamemode = DynamicEnumValue<GamemodeType>.ReadChoice(ref reader);
             else if (prop.Equals("game_count", StringComparison.Ordinal))
                 GameCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
-        public void WriteQuestState(Utf8JsonWriter writer)
+        public readonly void WriteQuestState(Utf8JsonWriter writer)
         {
             writer.WriteProperty("xp_goal", XPCount);
             writer.WriteProperty("gamemode", Gamemode);
             writer.WriteProperty("game_count", GameCount);
         }
     }
-    public class Tracker : BaseQuestTracker, INotifyGameOver, INotifyGainedXP
+    public class Tracker(BaseQuestData data, UCPlayer? target, ref State questState, IQuestPreset? preset) : BaseQuestTracker(data, target, questState, preset), INotifyGameOver, INotifyGainedXP
     {
-        private readonly int XPCount = 0;
-        private readonly DynamicEnumValue<GamemodeType>.Choice Gamemode;
-        private readonly int GameCount = 0;
+        private readonly int _xpCount = questState.XPCount.InsistValue();
+        private readonly DynamicEnumValue<GamemodeType>.Choice _gamemode = questState.Gamemode;
+        private readonly int _gameCount = questState.GameCount.InsistValue();
         private int _currentXp;
         private int _gamesCompleted;
         public override short FlagValue => (short)_gamesCompleted;
-        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
-        {
-            XPCount = questState.XPCount.InsistValue();
-            Gamemode = questState.Gamemode;
-            GameCount = questState.GameCount.InsistValue();
-        }
-        protected override bool CompletedCheck => _gamesCompleted >= GameCount;
+        protected override bool CompletedCheck => _gamesCompleted >= _gameCount;
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
             if (reader.TokenType == JsonTokenType.Number && prop.Equals("games_met_goal", StringComparison.Ordinal))
@@ -175,23 +171,23 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         }
         public void OnGameOver(ulong winner)
         {
-            if (Gamemode.IsMatch(Data.Gamemode.GamemodeType))
+            if (_gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
                 if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2)
                 {
                     for (int i = 0; i < st2.stats.Count; i++)
                     {
-                        if (st2.stats[i].Steam64 == _player.Steam64 && st2.stats[i] is IExperienceStats exp4)
+                        if (st2.stats[i].Steam64 == Player!.Steam64 && st2.stats[i] is IExperienceStats exp4)
                         {
                             _currentXp = exp4.XPGained;
                             break;
                         }
                     }
                 }
-                if (_currentXp >= XPCount)
+                if (_currentXp >= _xpCount)
                 {
                     _gamesCompleted++;
-                    if (_gamesCompleted >= GameCount)
+                    if (_gamesCompleted >= _gameCount)
                         TellCompleted();
                     else
                         TellUpdated();
@@ -200,17 +196,17 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         }
         public void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal)
         {
-            if (Gamemode.IsMatch(Data.Gamemode.GamemodeType))
+            if (_gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
-                if (_player.Steam64 == player.Steam64)
+                if (Player!.Steam64 == player.Steam64)
                     _currentXp = gameTotal;
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _currentXp, XPCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, Player!, _currentXp, _xpCount);
         public override void ManualComplete()
         {
             _currentXp = 0;
-            _gamesCompleted = GameCount;
+            _gamesCompleted = _gameCount;
             base.ManualComplete();
         }
     }
@@ -220,7 +216,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
 {
     public DynamicIntegerValue UseCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state, IQuestPreset? preset) => new Tracker(this, player, ref state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("deployments", StringComparison.Ordinal))
@@ -229,37 +225,35 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
                 UseCount = new DynamicIntegerValue(10);
         }
     }
-    public struct State : IQuestState<Tracker, RallyUseQuest>
+    public struct State : IQuestState<RallyUseQuest>
     {
         [RewardField("a")]
-        public IDynamicValue<int>.IChoice UseCount;
-        public IDynamicValue<int>.IChoice FlagValue => UseCount;
+        public DynamicIntegerValue.Choice UseCount;
+
+        public readonly DynamicIntegerValue.Choice FlagValue => UseCount;
         public void Init(RallyUseQuest data)
         {
             UseCount = data.UseCount.GetValue();
         }
-        public bool IsEligable(UCPlayer player) => true;
+        public readonly bool IsEligable(UCPlayer player) => true;
 
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
             if (prop.Equals("deployments", StringComparison.Ordinal))
                 UseCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
-        public void WriteQuestState(Utf8JsonWriter writer)
+        public readonly void WriteQuestState(Utf8JsonWriter writer)
         {
             writer.WriteProperty("deployments", UseCount);
         }
     }
-    public class Tracker : BaseQuestTracker, INotifyRallyActive
+    public class Tracker(BaseQuestData data, UCPlayer? target, ref State questState, IQuestPreset? preset) : BaseQuestTracker(data, target, questState, preset), INotifyRallyActive
     {
-        private readonly int UseCount = 0;
+        private readonly int _useCount = questState.UseCount.InsistValue();
         private int _rallyUses;
-        protected override bool CompletedCheck => _rallyUses >= UseCount;
+        protected override bool CompletedCheck => _rallyUses >= _useCount;
         public override short FlagValue => (short)_rallyUses;
-        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
-        {
-            UseCount = questState.UseCount.InsistValue();
-        }
+
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
             if (reader.TokenType == JsonTokenType.Number && prop.Equals("deployments", StringComparison.Ordinal))
@@ -272,19 +266,19 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         public override void ResetToDefaults() => _rallyUses = 0;
         public void OnRallyActivated(RallyPoint rally)
         {
-            if (rally.Squad.Leader?.Steam64 == _player.Steam64)
+            if (rally.Squad.Leader?.Steam64 == Player!.Steam64)
             {
                 _rallyUses += rally.AwaitingPlayers.Count;
-                if (_rallyUses >= UseCount)
+                if (_rallyUses >= _useCount)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _rallyUses, UseCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, Player!, _rallyUses, _useCount);
         public override void ManualComplete()
         {
-            _rallyUses = UseCount;
+            _rallyUses = _useCount;
             base.ManualComplete();
         }
     }
@@ -292,17 +286,19 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
 [QuestData(QuestType.WinGamemode)]
 public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamemodeQuest.State, WinGamemodeQuest>
 {
-    private const GamemodeType MAX_GAMEMODE = GamemodeType.Insurgency;
+    private const GamemodeType MaxGamemode = GamemodeType.Deathmatch;
+
     public DynamicIntegerValue WinCount;
-    public DynamicEnumValue<GamemodeType> Gamemode = new DynamicEnumValue<GamemodeType>(new EnumRange<GamemodeType>(GamemodeType.TeamCTF, MAX_GAMEMODE), ChoiceBehavior.Selective);
+
+    public DynamicEnumValue<GamemodeType> Gamemode = new DynamicEnumValue<GamemodeType>(new EnumRange<GamemodeType>(GamemodeType.TeamCTF, MaxGamemode), ChoiceBehavior.Selective);
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state, IQuestPreset? preset) => new Tracker(this, player, ref state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("gamemode", StringComparison.Ordinal))
         {
             if (!reader.TryReadEnumValue(out Gamemode))
-                Gamemode = new DynamicEnumValue<GamemodeType>(new EnumRange<GamemodeType>(GamemodeType.TeamCTF, MAX_GAMEMODE), ChoiceBehavior.Selective);
+                Gamemode = new DynamicEnumValue<GamemodeType>(new EnumRange<GamemodeType>(GamemodeType.TeamCTF, MaxGamemode), ChoiceBehavior.Selective);
         }
         else if (propertyname.Equals("wins", StringComparison.Ordinal))
         {
@@ -310,44 +306,48 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
                 WinCount = new DynamicIntegerValue(10);
         }
     }
-    public struct State : IQuestState<Tracker, WinGamemodeQuest>
+    public struct State : IQuestState<WinGamemodeQuest>
     {
         [RewardField("w")]
-        public IDynamicValue<int>.IChoice Wins;
-        internal DynamicEnumValue<GamemodeType>.Choice Gamemode;
-        public IDynamicValue<int>.IChoice FlagValue => Wins;
+        public DynamicIntegerValue.Choice Wins;
+
+        public DynamicEnumValue<GamemodeType>.Choice Gamemode;
+        
+        public readonly DynamicIntegerValue.Choice FlagValue => Wins;
         public void Init(WinGamemodeQuest data)
         {
-            Gamemode = data.Gamemode.GetValueIntl();
+            // get enabled gamemode based on weight.
+            Type gamemodeType = Gamemodes.Gamemode.GetNextGamemode() ?? typeof(TeamCTF);
+            GamemodeType type = Gamemodes.Gamemode.Gamemodes.FirstOrDefault(x => x.Value == gamemodeType).Key;
+            if (type == GamemodeType.Undefined)
+                type = GamemodeType.TeamCTF;
+
+            Gamemode = new DynamicEnumValue<GamemodeType>.Choice(new DynamicEnumValue<GamemodeType>(type));
             Wins = data.WinCount.GetValue();
         }
-        public bool IsEligable(UCPlayer player) => true;
+        public readonly bool IsEligable(UCPlayer player) => true;
 
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
             if (prop.Equals("gamemode", StringComparison.Ordinal))
-                Gamemode = DynamicEnumValue<GamemodeType>.ReadChoiceIntl(ref reader);
+                Gamemode = DynamicEnumValue<GamemodeType>.ReadChoice(ref reader);
             else if (prop.Equals("wins", StringComparison.Ordinal))
                 Wins = DynamicIntegerValue.ReadChoice(ref reader);
         }
-        public void WriteQuestState(Utf8JsonWriter writer)
+        public readonly void WriteQuestState(Utf8JsonWriter writer)
         {
             writer.WriteProperty("gamemode", Gamemode);
             writer.WriteProperty("wins", Wins);
         }
     }
-    public class Tracker : BaseQuestTracker, INotifyGameOver
+    public class Tracker(BaseQuestData data, UCPlayer? target, ref State questState, IQuestPreset? preset) : BaseQuestTracker(data, target, questState, preset), INotifyGameOver
     {
-        internal readonly DynamicEnumValue<GamemodeType>.Choice Gamemode;
-        public readonly int WinCount;
+        internal readonly DynamicEnumValue<GamemodeType>.Choice Gamemode = questState.Gamemode;
+        public readonly int WinCount = questState.Wins.InsistValue();
         private int _wins;
         protected override bool CompletedCheck => _wins >= WinCount;
         public override short FlagValue => (short)_wins;
-        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
-        {
-            Gamemode = questState.Gamemode;
-            WinCount = questState.Wins.InsistValue();
-        }
+
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
             if (reader.TokenType == JsonTokenType.Number && prop.Equals("wins", StringComparison.Ordinal))
@@ -361,13 +361,13 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         public override void ResetToDefaults() => _wins = 0;
         public void OnGameOver(ulong winner)
         {
-            ulong team = _player.GetTeam();
+            ulong team = Player!.GetTeam();
             if ((winner == 0 || winner == team) && Gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
                 if (Data.Is(out IGameStats st) && st.GameStats != null)
                 {
                     bool award = false;
-                    object? stats = st.GameStats.GetPlayerStats(_player.Steam64);
+                    object? stats = st.GameStats.GetPlayerStats(Player!.Steam64);
                     if (winner != 0 && stats is ITeamPresenceStats tps)
                     {
                         if (st.GameStats.GetPresence(tps, winner) > Gamemodes.Gamemode.MatchPresentThreshold)
@@ -375,7 +375,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
                     }
                     else if (stats is IPresenceStats ps)
                     {
-                        if (st.GameStats.GetPresence(ps) > Gamemodes.Gamemode.MatchPresentThreshold && Data.Gamemode.IsWinner(_player))
+                        if (st.GameStats.GetPresence(ps) > Gamemodes.Gamemode.MatchPresentThreshold && Data.Gamemode.IsWinner(Player!))
                             award = true;
                     }
                     if (award)
@@ -389,7 +389,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
                 }
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _wins, WinCount, Gamemode.ToString());
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, Player!, _wins, WinCount, Gamemode.ToString());
         public override void ManualComplete()
         {
             _wins = WinCount;
@@ -403,7 +403,7 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
 {
     public DynamicIntegerValue Neutralizations;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state, IQuestPreset? preset) => new Tracker(this, player, ref state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("neutralizations", StringComparison.Ordinal))
@@ -412,37 +412,35 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
                 Neutralizations = new DynamicIntegerValue(10);
         }
     }
-    public struct State : IQuestState<Tracker, NeutralizeFlagsQuest>
+    public struct State : IQuestState<NeutralizeFlagsQuest>
     {
         [RewardField("n")]
-        public IDynamicValue<int>.IChoice Neutralizations;
-        public IDynamicValue<int>.IChoice FlagValue => Neutralizations;
+        public DynamicIntegerValue.Choice Neutralizations;
+
+        public readonly DynamicIntegerValue.Choice FlagValue => Neutralizations;
         public void Init(NeutralizeFlagsQuest data)
         {
             Neutralizations = data.Neutralizations.GetValue();
         }
-        public bool IsEligable(UCPlayer player) => true;
+        public readonly bool IsEligable(UCPlayer player) => true;
 
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
             if (prop.Equals("neutralizations", StringComparison.Ordinal))
                 Neutralizations = DynamicIntegerValue.ReadChoice(ref reader);
         }
-        public void WriteQuestState(Utf8JsonWriter writer)
+        public readonly void WriteQuestState(Utf8JsonWriter writer)
         {
             writer.WriteProperty("neutralizations", Neutralizations);
         }
     }
-    public class Tracker : BaseQuestTracker, INotifyOnFlagNeutralized
+    public class Tracker(BaseQuestData data, UCPlayer? target, ref State questState, IQuestPreset? preset) : BaseQuestTracker(data, target, questState, preset), INotifyOnFlagNeutralized
     {
-        public readonly int Neutralizations;
+        public readonly int Neutralizations = questState.Neutralizations.InsistValue();
         private int _neutralizations;
         protected override bool CompletedCheck => _neutralizations >= Neutralizations;
         public override short FlagValue => (short)_neutralizations;
-        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
-        {
-            Neutralizations = questState.Neutralizations.InsistValue();
-        }
+
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
             if (reader.TokenType == JsonTokenType.Number && prop.Equals("neutralizations", StringComparison.Ordinal))
@@ -456,23 +454,23 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
         public override void ResetToDefaults() => _neutralizations = 0;
         public void OnFlagNeutralized(ulong[] participants, ulong neutralizer)
         {
-            if (_player.GetTeam() == neutralizer)
+            if (Player!.GetTeam() != neutralizer)
+                return;
+            
+            for (int i = 0; i < participants.Length; i++)
             {
-                for (int i = 0; i < participants.Length; i++)
-                {
-                    if (participants[i] == _player.Steam64)
-                    {
-                        _neutralizations++;
-                        if (_neutralizations >= Neutralizations)
-                            TellCompleted();
-                        else
-                            TellUpdated();
-                        return;
-                    }
-                }
+                if (participants[i] != Player!.Steam64)
+                    continue;
+
+                _neutralizations++;
+                if (_neutralizations >= Neutralizations)
+                    TellCompleted();
+                else
+                    TellUpdated();
+                return;
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _neutralizations, Neutralizations);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, Player!, _neutralizations, Neutralizations);
         public override void ManualComplete()
         {
             _neutralizations = Neutralizations;

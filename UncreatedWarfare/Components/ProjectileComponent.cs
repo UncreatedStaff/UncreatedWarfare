@@ -3,8 +3,6 @@ using System;
 using System.Reflection;
 using JetBrains.Annotations;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Squads;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;

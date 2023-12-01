@@ -49,6 +49,15 @@ csharp_prefer_static_local_function = true:suggestion
 # IDE0002: Simplify Member Access
 dotnet_diagnostic.IDE0002.severity = silent
 
+# CS0162: Unreachable code detected
+dotnet_diagnostic.CS0162.severity = silent
+
+# IDE0070: Use 'System.HashCode'
+dotnet_diagnostic.IDE0070.severity = suggestion
+
+# IDE0251: Make member 'readonly'
+dotnet_diagnostic.IDE0251.severity = warning
+
 [*.{cs,vb}]
 #### Naming styles ####
 
@@ -121,3 +130,6 @@ dotnet_style_predefined_type_for_member_access = true:silent
 dotnet_style_require_accessibility_modifiers = for_non_interface_members:silent
 
 resharper_c_sharp_warnings_cs0693_highlighting=do_not_show
+
+# IDE0300: Simplify collection initialization
+dotnet_diagnostic.IDE0300.severity = suggestion

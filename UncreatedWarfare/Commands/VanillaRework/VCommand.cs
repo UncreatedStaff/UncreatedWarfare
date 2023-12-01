@@ -29,8 +29,8 @@ public class VCommand : AsyncCommand
         Structure = new CommandStructure
         {
             Description = "Spawns a vehicle in front of you.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Enter")
                 {
                     Permission = EAdminType.ADMIN_ON_DUTY,
@@ -44,10 +44,10 @@ public class VCommand : AsyncCommand
                 },
                 new CommandParameter("Kick")
                 {
-                    Aliases = new string[] { "Remove", "K" },
+                    Aliases = [ "Remove", "K" ],
                     Description = "Remove a player from your vehicle. Can not be done while moving unless they are the driver.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer), "Driver", "Pilot", "Turret", typeof(byte))
                         {
                             Description = "Player or seat to remove from your vehicle, optional if there is only one option."
@@ -55,27 +55,27 @@ public class VCommand : AsyncCommand
                         new CommandParameter("Force Remove")
                         {
                             FlagName = "r",
-                            Aliases = new string[] { "k" },
+                            Aliases = [ "k" ],
                             Description = "Force the player out of the vehicle instead of just finding a different seat."
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Give")
                 {
                     Aliases = new string[] { "Transfer", "G" },
                     Description = "Transfer ownerhip of your vehicle to someone else, they must also have the vehicle unlocked. Will not give credits when abandoned.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer))
-                    }
+                    ]
                 },
                 /*
                 new CommandParameter("Enter")
                 {
                     Aliases = new string[] { "Swap", "E" },
                     Description = "Swap seats with the player in the specified seat, moving them to the next available seat or kicking them.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Seat", "Driver", "Pilot", "Turret", typeof(byte)),
                         new CommandParameter("Accept")
                         {
@@ -87,9 +87,9 @@ public class VCommand : AsyncCommand
                             Aliases = new string[] { "No", "N" },
                             Description = "Deny a swap request from a fellow passenger, done automatically after a cooldown."
                         }
-                    }
+                    ]
                 }*/
-            }
+            ]
         };
     }
 
@@ -106,9 +106,7 @@ public class VCommand : AsyncCommand
             if (!ctx.HasArgs(2))
                 throw ctx.SendCorrectUsage(Syntax);
 
-            VehicleSpawner? spawner = VehicleSpawner.GetSingletonQuick();
-            if (spawner == null)
-                throw ctx.SendGamemodeError();
+            VehicleSpawner spawner = VehicleSpawner.GetSingletonQuick() ?? throw ctx.SendGamemodeError();
             if (!ctx.TryGetTarget(out InteractableVehicle? vehicleTarget))
             {
                 ulong callerTeam = ctx.Caller.GetTeam();
@@ -223,7 +221,7 @@ public class VCommand : AsyncCommand
                         break;
                     }
                 }
-                if (st >= 0 && int.TryParse(val.Substring(st), NumberStyles.Number, ctx.CultureInfo, out int seat))
+                if (st >= 0 && int.TryParse(val[st..], NumberStyles.Number, ctx.CultureInfo, out int seat))
                 {
                     if (seat > 0)
                         --seat;
@@ -479,19 +477,11 @@ public class VCommand : AsyncCommand
 }
 
 
-public struct VehicleSwapRequest
+public struct VehicleSwapRequest(float sendTime, InteractableVehicle vehicle, UCPlayer sender, CancellationTokenSource token)
 {
-    public readonly float SendTime;
-    public readonly InteractableVehicle Vehicle;
-    public readonly UCPlayer Sender;
-    public readonly CancellationTokenSource RespondToken;
-    public bool? IsDenied;
-    public VehicleSwapRequest(float sendTime, InteractableVehicle vehicle, UCPlayer sender, CancellationTokenSource token)
-    {
-        SendTime = sendTime;
-        Vehicle = vehicle;
-        Sender = sender;
-        RespondToken = token;
-        IsDenied = null;
-    }
+    public readonly float SendTime = sendTime;
+    public readonly InteractableVehicle Vehicle = vehicle;
+    public readonly UCPlayer Sender = sender;
+    public readonly CancellationTokenSource RespondToken = token;
+    public bool? IsDenied = null;
 }

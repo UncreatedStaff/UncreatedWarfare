@@ -171,24 +171,15 @@ public class CooldownConfig : JSONConfigData
         GlobalTraitCooldown = 0f;
     }
 }
-public class Cooldown : ITranslationArgument
+public class Cooldown(UCPlayer player, CooldownType cooldownType, float duration, params object[] parameters) : ITranslationArgument
 {
-    public UCPlayer Player { get; }
-    public CooldownType CooldownType { get; }
-    public double TimeAdded { get; set; }
-    public float Duration { get; set; }
-    public object[] Parameters { get; }
+    public UCPlayer Player { get; } = player;
+    public CooldownType CooldownType { get; } = cooldownType;
+    public double TimeAdded { get; set; } = Time.realtimeSinceStartupAsDouble;
+    public float Duration { get; set; } = duration;
+    public object[] Parameters { get; } = parameters;
     public TimeSpan Timeleft => TimeSpan.FromSeconds(Math.Max(0d, Duration - (Time.realtimeSinceStartupAsDouble - TimeAdded)));
     public float SecondsLeft => Mathf.Max(0f, Duration - (Time.realtimeSinceStartup - (float)TimeAdded));
-
-    public Cooldown(UCPlayer player, CooldownType cooldownType, float duration, params object[] parameters)
-    {
-        Player = player;
-        CooldownType = cooldownType;
-        TimeAdded = Time.realtimeSinceStartupAsDouble;
-        Duration = duration;
-        Parameters = parameters;
-    }
     public override string ToString()
     {
         double sec = Duration - (Time.realtimeSinceStartupAsDouble - TimeAdded);
@@ -229,7 +220,7 @@ public class Cooldown : ITranslationArgument
     {
         if (!string.IsNullOrEmpty(format))
         {
-            if (format!.Equals(FormatName, StringComparison.Ordinal))
+            if (format.Equals(FormatName, StringComparison.Ordinal))
                 return Localization.TranslateEnum(CooldownType, language);
             if (format.Equals(FormatTimeLong, StringComparison.Ordinal))
                 return Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language, culture);

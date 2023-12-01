@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Uncreated.Encoding;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Traits;

@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using Uncreated.Warfare.Kits.Items;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Items;
 public class ItemDropped : PlayerEvent

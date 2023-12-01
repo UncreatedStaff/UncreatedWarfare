@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
@@ -282,7 +283,12 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsTalking => !_lastMuted && _isTalking && IsOnline;
     public bool IsLeaving { get; internal set; }
     public bool IsOnline => _isOnline;
-    public bool VanishMode { get; set; }
+    public bool VanishMode
+    {
+        get => IsOnline && !Player.movement.canAddSimulationResultsToUpdates;
+        set => DutyCommand.SetVanishMode(Player, value);
+    }
+
     public bool IsActionMenuOpen { get; internal set; }
     public bool IsOtherDonator { get; set; }
     public bool GodMode { get; set; }
@@ -1212,16 +1218,10 @@ public interface IPlayer : ITranslationArgument
 {
     public ulong Steam64 { get; }
 }
-public readonly struct OfflinePlayerName : IPlayer
+public readonly struct OfflinePlayerName(ulong steam64, string name) : IPlayer
 {
-    public ulong Steam64 { get; }
-    public string Name { get; }
-    public OfflinePlayerName(ulong steam64, string name)
-    {
-        Steam64 = steam64;
-        Name = name;
-    }
-
+    public ulong Steam64 { get; } = steam64;
+    public string Name { get; } = name;
     public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
     {
         UCPlayer? pl = UCPlayer.FromID(Steam64);
@@ -1249,7 +1249,7 @@ public struct OfflinePlayer : IPlayer
 {
     private readonly ulong _s64;
     private PlayerNames? _names;
-    public ulong Steam64 => _s64;
+    public readonly ulong Steam64 => _s64;
     public OfflinePlayer(ulong steam64)
     {
         _s64 = steam64;
@@ -1272,7 +1272,7 @@ public struct OfflinePlayer : IPlayer
             _names = pl.Name;
         return _names.HasValue;
     }
-    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
+    public readonly string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         UCPlayer? pl = UCPlayer.FromID(Steam64);

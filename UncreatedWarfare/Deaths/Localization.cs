@@ -10,10 +10,10 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
-using Uncreated.Warfare.Moderation.Punishments.Preset;
-using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -908,13 +908,13 @@ public struct DeathMessageArgs
     public string? Item2Name;
     public DeathFlags Flags;
     public bool IsTeamkill;
-    internal string Translate(string template, LanguageInfo language, CultureInfo culture)
+    internal readonly string Translate(string template, LanguageInfo language, CultureInfo culture)
     {
         object[] format = new object[7];
         format[0] = DeadPlayerName.Colorize(TeamManager.GetTeamHexColor(DeadPlayerTeam));
         format[1] = KillerName is null ? string.Empty : KillerName.Colorize(TeamManager.GetTeamHexColor(KillerTeam));
         format[2] = Warfare.Localization.TranslateEnum(Limb, language);
-        format[3] = ItemName is null ? string.Empty : (ItemName.EndsWith(" Built", StringComparison.Ordinal) ? ItemName.Substring(0, ItemName.Length - 6) : ItemName);
+        format[3] = ItemName is not null ? ItemName.EndsWith(" Built", StringComparison.Ordinal) ? ItemName[..^6] : ItemName : string.Empty;
         format[4] = KillDistance.ToString("F0", culture);
         format[5] = Player3Name is null ? string.Empty : Player3Name.Colorize(TeamManager.GetTeamHexColor(Player3Team));
         format[6] = Item2Name ?? string.Empty;
@@ -1072,18 +1072,7 @@ public class DeathCause : IJsonReadWrite, IEquatable<DeathCause>, ICloneable
     public override bool Equals(object obj) => obj is DeathCause c && Equals(c);
 
     // ReSharper disable NonReadonlyMemberInGetHashCode
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            int hashCode = Cause.GetHashCode();
-            hashCode = (hashCode * 397) ^ ItemCause.GetHashCode();
-            hashCode = (hashCode * 397) ^ VehicleCause.GetHashCode();
-            hashCode = (hashCode * 397) ^ (CustomKey != null ? CustomKey.GetHashCode() : 0);
-            hashCode = (hashCode * 397) ^ Translations.GetHashCode();
-            return hashCode;
-        }
-    }
+    public override int GetHashCode() => HashCode.Combine(Cause, ItemCause, VehicleCause, CustomKey, Translations);
     // ReSharper restore NonReadonlyMemberInGetHashCode
 
     public static bool operator ==(DeathCause? left, DeathCause? right) => Equals(left, right);
@@ -1118,15 +1107,10 @@ public class DeathCause : IJsonReadWrite, IEquatable<DeathCause>, ICloneable
         return string.Equals(other.CustomKey, CustomKey, StringComparison.Ordinal);
     }
 }
-public readonly struct DeathTranslation
+public readonly struct DeathTranslation(DeathFlags flags, string value)
 {
-    public readonly DeathFlags Flags;
-    public readonly string Value;
-    public DeathTranslation(DeathFlags flags, string value)
-    {
-        Flags = flags;
-        Value = value;
-    }
+    public readonly DeathFlags Flags = flags;
+    public readonly string Value = value;
 }
 
 [Flags]

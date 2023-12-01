@@ -203,7 +203,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         bool noAmmo = gunner != null && gunner.Player.equipment.state[10] == 0;
 
         UseableGun? gun = gunner?.Player.equipment.useable as UseableGun;
-        bool reloading = gun != null && Data.GetUseableGunReloading(gun);
+        bool reloading = gun != null && Data.GetUseableGunReloading != null && Data.GetUseableGunReloading(gun);
         bool noActiveMissiles = MissilesInFlight.Count == 0;
 
         if (newTarget is null || (noActiveMissiles && (noAmmo || reloading))) // no target found
@@ -255,7 +255,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             }
         }
     }
-    private static short _lockOnEffectKey = UnturnedUIKeyPool.Claim();
+    private static readonly short LockOnEffectKey = UnturnedUIKeyPool.Claim();
     private void PlayLockOnSound(UCPlayer gunner)
     {
         if (_effect == null || gunner is not { IsOnline: true })
@@ -263,7 +263,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         L.LogDebug($"            tone: playing...");
 
-        EffectManager.sendUIEffect(_effect.id, _lockOnEffectKey, gunner.Connection, true);
+        EffectManager.sendUIEffect(_effect.id, LockOnEffectKey, gunner.Connection, true);
     }
     private void CancelLockOnSound(UCPlayer gunner)
     {

@@ -533,7 +533,7 @@ public static class L
             {
                 AddLine2(string.Empty, ConsoleColor.Red);
             }
-            AddLine2(ind + (inner ? "Inner Exception: " : ((string.IsNullOrEmpty(method) ? string.Empty : ("[" + method!.ToUpper() + "] ")) + "Exception: ")) + ex.GetType().Name, ConsoleColor.Red);
+            AddLine2(ind + (inner ? "Inner Exception: " : ((string.IsNullOrEmpty(method) ? string.Empty : ("[" + method.ToUpper() + "] ")) + "Exception: ")) + ex.GetType().Name, ConsoleColor.Red);
             AddLine2(ind + (ex.Message ?? "No message"), ConsoleColor.DarkRed);
             if (ex is TypeLoadException t)
             {

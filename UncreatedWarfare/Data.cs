@@ -156,7 +156,7 @@ public static class Data
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
-    internal static InstanceGetter<UseableGun, bool> GetUseableGunReloading;
+    internal static InstanceGetter<UseableGun, bool>? GetUseableGunReloading;
     internal static InstanceGetter<PlayerLife, CSteamID>? GetRecentKiller;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
@@ -396,7 +396,7 @@ public static class Data
 
         try
         {
-            GetRecentKiller = Util.GenerateInstanceGetter<PlayerLife, CSteamID>("recentKiller", BindingFlags.NonPublic | BindingFlags.Instance);
+            GetRecentKiller = Accessor.GenerateInstanceGetter<PlayerLife, CSteamID>("recentKiller");
         }
         catch (Exception ex)
         {

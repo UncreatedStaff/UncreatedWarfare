@@ -13,16 +13,19 @@ namespace Uncreated.Warfare.Quests;
 /// Rank and kit quests should overridden with a set <see cref="IQuestState{TTracker, TDataNew}"/>.</summary>
 public abstract class BaseQuestData : ITranslationArgument
 {
+    protected static readonly List<IQuestReward> RewardTempList = new List<IQuestReward>(3);
+    private static readonly List<RewardExpression> RewardExpressionTempList = new List<RewardExpression>(3);
+
     private QuestType _type;
-    private Dictionary<string, string> _translations;
     private RewardExpression[] _rewardExpressions;
+
     public bool CanBeDailyQuest = true;
+    public virtual bool ResetOnGameEnd => false;
     public abstract IEnumerable<IQuestPreset> Presets { get; }
     public abstract int TickFrequencySeconds { get; }
     public QuestType QuestType { get => _type; internal set => _type = value; }
-    public Dictionary<string, string> Translations { get => _translations; internal set => _translations = value; }
-    public virtual bool ResetOnGameEnd => false;
-    public IQuestReward[] EvaluateRewards(in IQuestState state)
+    public Dictionary<string, string> Translations { get; internal set; }
+    public IQuestReward[] EvaluateRewards(IQuestState state)
     {
         if (_rewardExpressions is null || _rewardExpressions.Length == 0)
             return Array.Empty<IQuestReward>();
@@ -43,13 +46,15 @@ public abstract class BaseQuestData : ITranslationArgument
         if (forAsset)
         {
             if (formatting is not null && formatting.Length > 0) formatting[0] = "{0}";
-            else formatting = new object[1] { "{0}" };
+            else formatting = [ "{0}" ];
         }
+
         if (Translations == null)
         {
             L.LogWarning("No translations for " + QuestType.ToString() + " quest.");
-            return QuestType.ToString() + " - " + string.Join("|", formatting);
+            return QuestType.ToString() + " - " + string.Join("|", formatting ?? Array.Empty<object>());
         }
+
         if (Translations.TryGetValue(language.Code, out string v) || (!language.IsDefault && Translations.TryGetValue(L.Default, out v)))
         {
             try
@@ -62,6 +67,7 @@ public abstract class BaseQuestData : ITranslationArgument
                 L.LogError(ex);
             }
         }
+
         return string.Join(", ", formatting ?? Array.Empty<object>());
     }
     public string Translate(bool forAsset, UCPlayer? player, params object[]? formatting) =>
@@ -69,18 +75,16 @@ public abstract class BaseQuestData : ITranslationArgument
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
-    protected static readonly List<IQuestReward> rewardTempList = new List<IQuestReward>(3);
-    public abstract BaseQuestTracker? GetTracker(UCPlayer? player, in IQuestState state);
-    public abstract BaseQuestTracker? GetTracker(UCPlayer? player, in IQuestPreset preset);
+    public abstract BaseQuestTracker? GetTracker(UCPlayer? player, IQuestState state);
+    public abstract BaseQuestTracker? GetTracker(UCPlayer? player, IQuestPreset preset);
     public abstract IQuestPreset ReadPreset(ref Utf8JsonReader reader);
     public abstract void ReadPresets(ref Utf8JsonReader reader);
-    private static readonly List<RewardExpression> _rewardTemp = new List<RewardExpression>(3);
     public void ReadRewards(ref Utf8JsonReader reader)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        lock (_rewardTemp)
+        lock (RewardExpressionTempList)
         {
             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
             {
@@ -88,27 +92,28 @@ public abstract class BaseQuestData : ITranslationArgument
                 {
                     RewardExpression? re = RewardExpression.ReadFromJson(ref reader, QuestType);
                     if (re is not null)
-                        _rewardTemp.Add(re);
+                        RewardExpressionTempList.Add(re);
                 }
             }
 
-            _rewardExpressions = _rewardTemp.ToArray();
-            _rewardTemp.Clear();
+            _rewardExpressions = RewardExpressionTempList.ToArray();
+            RewardExpressionTempList.Clear();
         }
     }
     public abstract IQuestPreset CreateRandomPreset(ushort flag = 0);
-    [FormatDisplay("Quest Type (" + nameof(Quests.QuestType) + ")")]
-    public const string TYPE_FORMAT = "t";
 
-    [FormatDisplay(typeof(QuestAsset), "Quest Name")]
+    [FormatDisplay("Quest Type (" + nameof(Quests.QuestType) + ")")]
+    public const string FormatType = "t";
+
     /// <summary>For <see cref="QuestAsset"/> formatting.</summary>
-    public const string COLOR_QUEST_ASSET_FORMAT = "c";
+    [FormatDisplay(typeof(QuestAsset), "Quest Name")]
+    public const string FormatColorQuestAsset = "c";
     public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null)
         {
-            if (format.Equals(TYPE_FORMAT, StringComparison.Ordinal))
+            if (format.Equals(FormatType, StringComparison.Ordinal))
                 return Localization.TranslateEnum(QuestType, language);
         }
 
@@ -116,90 +121,65 @@ public abstract class BaseQuestData : ITranslationArgument
     }
 }
 /// <inheritdoc/>
-public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestData where TTracker : BaseQuestTracker where TState : IQuestState<TTracker, TDataParent>, new() where TDataParent : BaseQuestData<TTracker, TState, TDataParent>
+public abstract class BaseQuestData<TTracker, TState, TQuestData> : BaseQuestData where TTracker : BaseQuestTracker where TState : struct, IQuestState<TQuestData> where TQuestData : BaseQuestData<TTracker, TState, TQuestData>
 {
-    public override IEnumerable<IQuestPreset> Presets => _presets.Cast<IQuestPreset>();
-    public Preset[] _presets;
-    public readonly struct Preset : IQuestPreset
-    {
-        public readonly Guid _key;
-        public readonly ulong _team;
-        public readonly ushort _flag;
-        public readonly TState _state;
-        public readonly IQuestReward[]? _rewards;
-        public Preset(Guid key, TState state, IQuestReward[]? rewards, ulong team, ushort flag)
-        {
-            _key = key;
-            _state = state;
-            _team = team;
-            _flag = flag;
-            _rewards = rewards;
-        }
-        public Guid Key => _key;
-        public IQuestState State => _state;
-        public IQuestReward[]? RewardOverrides => _rewards;
-        public ulong Team => _team;
-        public ushort Flag => _flag;
-
-        public override string ToString() =>
-            $"Preset {_key}. Team: {_team}, Flag: {_flag}, State: {_state}" + (_rewards is null ? ", No reward overrides" : (", " + _rewards.Length + " reward override(s)."));
-    }
-    public override sealed IQuestState GetState() => GetNewState();
+    private IQuestPreset[] _boxedPresets;
+    public Preset[] PresetItems;
+    public override IEnumerable<IQuestPreset> Presets => _boxedPresets;
+    public sealed override IQuestState GetState() => GetNewState();
     public TState GetNewState()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         TState state = new TState();
-        state.Init((TDataParent)this);
+        state.Init((TQuestData)this);
         return state;
     }
-    protected abstract TTracker CreateQuestTracker(UCPlayer? player, in TState state, in IQuestPreset? preset);
+    protected abstract TTracker CreateQuestTracker(UCPlayer? player, ref TState state, IQuestPreset? preset);
     public TTracker CreateQuestTracker(UCPlayer? player, in IQuestPreset? preset = null)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         TState state = GetNewState();
-        TTracker tracker = CreateQuestTracker(player, in state, in preset);
+        TTracker tracker = CreateQuestTracker(player, ref state, preset);
         return tracker;
     }
 
-    public override sealed string ToString() =>
-        $"{QuestType} quest data: {_presets?.Length ?? -1} presets, daily quest: {CanBeDailyQuest}, translations: {Translations?.FirstOrDefault().Value ?? "null"}.\n" +
-        $"    Presets: {(_presets == null ? "null array" : string.Join(", ", _presets.Select(x => x.ToString())))}";
-    public override sealed BaseQuestTracker? CreateTracker(UCPlayer player) => CreateQuestTracker(player);
-    public override sealed BaseQuestTracker? GetTracker(UCPlayer? player, in IQuestState state)
+    public sealed override string ToString() =>
+        $"{QuestType} quest data: {PresetItems?.Length ?? -1} presets, daily quest: {CanBeDailyQuest}, translations: {Translations?.FirstOrDefault().Value ?? "null"}.\n" +
+        $"    Presets: {(PresetItems == null ? "null array" : string.Join(", ", PresetItems.Select(x => x.ToString())))}";
+    public sealed override BaseQuestTracker CreateTracker(UCPlayer player) => CreateQuestTracker(player);
+    public sealed override BaseQuestTracker? GetTracker(UCPlayer? player, IQuestState state)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (state is TState st2)
-        {
-            TTracker tracker = CreateQuestTracker(player, in st2, null);
-            return tracker;
-        }
-        return null;
+        if (state is not TState st2)
+            return null;
+
+        TTracker tracker = CreateQuestTracker(player, ref st2, null);
+        return tracker;
     }
-    public override sealed BaseQuestTracker? GetTracker(UCPlayer? player, in IQuestPreset preset)
+    public sealed override BaseQuestTracker? GetTracker(UCPlayer? player, IQuestPreset preset)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (preset.State is TState st2)
-        {
-            TTracker tracker = CreateQuestTracker(player, in st2, in preset);
-            tracker.Flag = preset.Flag;
-            return tracker;
-        }
-        return null;
+        if (preset.State is not TState st2)
+            return null;
+
+        TTracker tracker = CreateQuestTracker(player, ref st2, preset);
+        tracker.Flag = preset.Flag;
+        return tracker;
     }
-    public override sealed IQuestPreset ReadPreset(ref Utf8JsonReader reader) => ReadPresetIntl(ref reader);
+    public sealed override IQuestPreset ReadPreset(ref Utf8JsonReader reader) => ReadPresetIntl(ref reader);
     public Preset ReadPresetIntl(ref Utf8JsonReader reader)
     {
         Guid key = default;
         ulong varTeam = default;
-        TState? state = default;
+        IQuestState<TQuestData>? state = default;
         IQuestReward[]? rewards = null;
         ushort flag = 0;
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
@@ -232,9 +212,9 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                 {
                     if (reader.TokenType == JsonTokenType.StartArray)
                     {
-                        lock (rewardTempList)
+                        lock (RewardTempList)
                         {
-                            rewardTempList.Clear();
+                            RewardTempList.Clear();
                             while (reader.Read())
                             {
                                 if (reader.TokenType == JsonTokenType.StartObject)
@@ -275,14 +255,14 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                                     }
 
                                     if (reward != null)
-                                        rewardTempList.Add(reward);
+                                        RewardTempList.Add(reward);
                                 }
                                 else break;
                             }
-                            if (rewardTempList.Count > 0)
+                            if (RewardTempList.Count > 0)
                             {
-                                rewards = rewardTempList.ToArray();
-                                rewardTempList.Clear();
+                                rewards = RewardTempList.ToArray();
+                                RewardTempList.Clear();
                             }
                         }
                     }
@@ -333,9 +313,16 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                     L.LogWarning("Failed to parse 'state' IQuestState object with key {" + key.ToString("N") + "} from " + QuestType + " presets.");
             }
         }
-        return new Preset(key, state!, rewards, varTeam, flag);
+
+        if (state == null)
+        {
+            L.LogWarning("Failed to find 'state' IQuestState object from " + QuestType + " presets.");
+            state = GetNewState();
+        }
+
+        return new Preset(key, (TState)state, rewards, varTeam, flag);
     }
-    public override sealed void ReadPresets(ref Utf8JsonReader reader)
+    public sealed override void ReadPresets(ref Utf8JsonReader reader)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -357,12 +344,33 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                 while (reader.TokenType != JsonTokenType.EndObject && reader.Read()) ;
             }
         }
-        _presets = presets.ToArray();
+        PresetItems = presets.ToArray();
         presets.Clear();
+
+        _boxedPresets = new IQuestPreset[PresetItems.Length];
+
+        for (int i = 0; i < PresetItems.Length; ++i)
+            _boxedPresets[i] = PresetItems[i];
     }
     public sealed override IQuestPreset CreateRandomPreset(ushort flag = 0)
     {
         return new Preset(Guid.NewGuid(), GetNewState(), null, 0, flag);
+    }
+    public readonly struct Preset(Guid key, TState state, IQuestReward[]? rewards, ulong team, ushort flag) : IQuestPreset
+    {
+        public readonly Guid Key = key;
+        public readonly ulong Team = team;
+        public readonly ushort Flag = flag;
+        public readonly TState State = state;
+        public readonly IQuestReward[]? Rewards = rewards;
+
+        Guid IQuestPreset.Key => Key;
+        IQuestState IQuestPreset.State => State;
+        IQuestReward[]? IQuestPreset.RewardOverrides => Rewards;
+        ulong IQuestPreset.Team => Team;
+        ushort IQuestPreset.Flag => Flag;
+        public override string ToString() => $"Preset {Key}. Team: {Team}, Flag: {Flag}, State: {State}" +
+                                             (Rewards is null ? ", No reward overrides" : (", " + Rewards.Length + " reward override(s)."));
     }
 }
 
@@ -370,31 +378,30 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
 /// <para>Implement children of <see cref="INotifyTracker"/> to listen to events. If <see cref="BaseQuestData.TickFrequencySeconds"/> is > 0, the tick function will run as often as specified.</para></summary>
 public abstract class BaseQuestTracker : IDisposable, INotifyTracker
 {
-    protected readonly UCPlayer _player;
     public readonly BaseQuestData QuestData;
     public readonly IQuestPreset? Preset;
     public readonly Guid PresetKey;
     public IQuestReward[] Rewards;
-    protected bool isDisposed;
+    protected bool IsDisposed;
     public bool IsDailyQuest = false;
-    public ushort Flag = 0;
+    public ushort Flag;
     protected abstract bool CompletedCheck { get; }
-    public UCPlayer? Player => _player;
-    public bool IsTemporary => _player == null;
+    public UCPlayer? Player { get; }
+    public bool IsTemporary => Player == null;
     public bool IsCompleted { get => CompletedCheck; }
     public virtual short FlagValue => 0;
-    public BaseQuestTracker(BaseQuestData data, UCPlayer? target, in IQuestState state, in IQuestPreset? preset)
+    protected BaseQuestTracker(BaseQuestData data, UCPlayer? target, IQuestState state, IQuestPreset? preset)
     {
         QuestData = data;
         Preset = preset;
         if (preset is not null)
         {
             PresetKey = preset.Key;
-            Rewards = preset.RewardOverrides ?? data.EvaluateRewards(in state);
+            Rewards = preset.RewardOverrides ?? data.EvaluateRewards(state);
         }
         else
-            Rewards = data.EvaluateRewards(in state);
-        _player = target!;
+            Rewards = data.EvaluateRewards(state);
+        Player = target;
     }
     public virtual void Tick() { }
     protected virtual void Cleanup() { }
@@ -424,11 +431,11 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     }
     public void OnGameEnd()
     {
-        if (QuestData != null && QuestData.ResetOnGameEnd)
-        {
-            ResetToDefaults();
-            TellUpdated();
-        }
+        if (QuestData is not { ResetOnGameEnd: true })
+            return;
+
+        ResetToDefaults();
+        TellUpdated();
     }
     public void TellCompleted()
     {
@@ -447,10 +454,10 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     }
     public void Dispose()
     {
-        if (!isDisposed)
+        if (!IsDisposed)
         {
             Cleanup();
-            isDisposed = true;
+            IsDisposed = true;
         }
         GC.SuppressFinalize(this);
     }
@@ -461,7 +468,7 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
 
         for (int i = 0; i < Rewards.Length; ++i)
         {
-            Rewards[i].GiveReward(_player, this);
+            Rewards[i].GiveReward(Player!, this);
         }
     }
 

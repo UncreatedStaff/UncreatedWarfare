@@ -1,5 +1,4 @@
 ﻿using SDG.Unturned;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Items;
 public class ItemDropRequested : BreakablePlayerEvent

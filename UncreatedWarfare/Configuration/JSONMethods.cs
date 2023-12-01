@@ -11,7 +11,6 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -380,7 +379,7 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
                     {
                         string? val = reader.GetString();
                         if (val is not null)
-                            list.Add(key!, val.Replace("\\n", "\n"));
+                            list.Add(key, val.Replace("\\n", "\n"));
                     }
                     else throw new JsonException("Invalid token type for TranslationList at key \"" + (key ?? "null") + "\".");
                 }

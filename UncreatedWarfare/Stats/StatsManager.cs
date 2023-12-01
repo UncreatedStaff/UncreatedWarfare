@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
-using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;

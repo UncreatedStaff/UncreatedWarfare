@@ -595,7 +595,7 @@ public abstract class DatabaseInterface
                 query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedAppealsAppeal)} FROM `{TableLinkedAppeals}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
                 await Sql.QueryAsync(query, null, reader =>
                 {
-                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
                 }, token).ConfigureAwait(false);
 
                 F.ApplyQueriedList(links, (key, arr) =>
@@ -611,7 +611,7 @@ public abstract class DatabaseInterface
                 query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedReportsReport)} FROM `{TableLinkedReports}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
                 await Sql.QueryAsync(query, null, reader =>
                 {
-                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
                 }, token).ConfigureAwait(false);
 
                 F.ApplyQueriedList(links, (key, arr) =>
@@ -1476,7 +1476,7 @@ public abstract class DatabaseInterface
             WarfareSQL.ColumnIPAddressesLastLogin, WarfareSQL.ColumnIPAddressesFirstLogin)} FROM `{WarfareSQL.TableIPAddresses}` WHERE `{WarfareSQL.ColumnIPAddressesSteam64}`=@0;",
             new object[] { player }, reader =>
             {
-                addresses.Add(new PlayerIPAddress(reader.GetInt32(0), reader.GetUInt64(1), reader.GetUInt32(2), reader.GetInt32(3),
+                addresses.Add(new PlayerIPAddress(reader.GetUInt32(0), reader.GetUInt64(1), reader.GetUInt32(2), reader.GetInt32(3),
                     reader.IsDBNull(5) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)),
                     new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(4), DateTimeKind.Utc))));
             }, token).ConfigureAwait(false);
@@ -1522,7 +1522,7 @@ public abstract class DatabaseInterface
             WarfareSQL.ColumnHWIDsLastLogin, WarfareSQL.ColumnHWIDsFirstLogin)} FROM `{WarfareSQL.TableHWIDs}` WHERE `{WarfareSQL.ColumnHWIDsSteam64}`=@0",
             new object[] { player }, reader =>
             {
-                hwids.Add(new PlayerHWID(reader.GetInt32(0), reader.GetInt32(1),
+                hwids.Add(new PlayerHWID(reader.GetUInt32(0), reader.GetInt32(1),
                     reader.GetUInt64(2), HWID.ReadFromDataReader(3, reader), reader.GetInt32(4),
                     reader.IsDBNull(6) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)),
                     new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc))));
@@ -1899,7 +1899,6 @@ public abstract class DatabaseInterface
             {
                 Nullable = true
             }
-
         }, false, typeof(Evidence)),
         new Schema(TableAssetBanTypeFilters, new Schema.Column[]
         {

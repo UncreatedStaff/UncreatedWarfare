@@ -3,7 +3,6 @@ using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;

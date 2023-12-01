@@ -9,8 +9,8 @@ namespace Uncreated.Warfare.Moderation;
 public static class ModerationReflection
 {
     private static bool _hasReflected;
-    private static Map<ModerationEntryType, Type> Types = new Map<ModerationEntryType, Type>(16);
-    private static Dictionary<Type, ModerationEntryType[]> TypeInheritance = new Dictionary<Type, ModerationEntryType[]>(20);
+    private static readonly Map<ModerationEntryType, Type> Types = new Map<ModerationEntryType, Type>(16);
+    private static readonly Dictionary<Type, ModerationEntryType[]> TypeInheritance = new Dictionary<Type, ModerationEntryType[]>(20);
     public static Type? GetType(ModerationEntryType type)
     {
         CheckReflect();
@@ -75,11 +75,7 @@ public static class ModerationReflection
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-internal sealed class ModerationEntryAttribute : Attribute
+internal sealed class ModerationEntryAttribute(ModerationEntryType type) : Attribute
 {
-    public ModerationEntryType Type { get; set; }
-    public ModerationEntryAttribute(ModerationEntryType type)
-    {
-        Type = type;
-    }
+    public ModerationEntryType Type { get; set; } = type;
 }

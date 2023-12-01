@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SDG.Unturned;
 using Uncreated.Framework;
 
 namespace Uncreated.Warfare.Commands.CommandSystem;
@@ -26,7 +25,7 @@ public sealed class VanillaCommand : IExecutableCommand, IComparable<VanillaComm
 
     bool IExecutableCommand.CheckPermission(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller!.Player.channel.owner.isAdmin) return true;
+        if (ctx.IsConsole || ctx.Caller.Player.channel.owner.isAdmin) return true;
 
         return ctx.Caller.PermissionCheck(_allowedUsers, PermissionComparison.AtLeast);
     }

@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Net;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Permissions;
 
@@ -40,8 +41,10 @@ public class WarfareUserData
     public DateTimeOffset? LastJoined { get; set; }
     
     public uint TotalSeconds { get; set; }
-    
-    public HWID? LastHWID { get; set; }
-    
-    public IPAddress? LastIPAddress { get; set; }
+
+    [DefaultValue(0ul)]
+    public ulong DiscordId { get; set; }
+
+    public IList<PlayerHWID> HWIDs { get; set; }
+    public IList<PlayerIPAddress> IPAddresses { get; set; }
 }

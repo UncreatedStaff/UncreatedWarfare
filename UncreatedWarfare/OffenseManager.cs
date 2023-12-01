@@ -18,6 +18,7 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Records;
@@ -238,8 +239,8 @@ public static class OffenseManager
         e.AsyncData.IPAddresses.AddRange(ipAddresses);
 
         Ban[] bans = await Data.ModerationSql.GetActiveEntries<Ban>(e.Steam64, ipAddresses, hwids, false, false, token: token).ConfigureAwait(false);
-        PlayerLanguagePreferences languageInfo = await Data.LanguageDataStore.GetLanguagePreferences(e.Steam64, token).ConfigureAwait(false);
-        LanguageInfo? language = Data.LanguageDataStore.GetInfoCached(languageInfo.Language);
+        LanguagePreferences languageInfo = await Data.LanguageDataStore.GetLanguagePreferences(e.Steam64, token).ConfigureAwait(false);
+        LanguageInfo language = languageInfo.Language;
         if (bans.Length > 0)
         {
             Ban ban = bans[0];

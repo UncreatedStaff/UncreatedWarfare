@@ -22,13 +22,13 @@ public interface IGameDataDbContext
 
         modelBuilder.Entity<SessionRecord>()
             .HasOne(x => x.PreviousSession)
-            .WithOne(x => x!.NextSession!)
+            .WithOne()
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<SessionRecord>()
             .HasOne(x => x.NextSession)
-            .WithOne(x => x!.PreviousSession!)
+            .WithOne()
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
     }
