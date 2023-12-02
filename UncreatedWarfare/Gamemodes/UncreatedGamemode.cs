@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
@@ -23,6 +24,8 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
@@ -69,6 +72,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public Coroutine EventLoopCoroutine;
     public bool IsPendingCancel;
     public event Action? StagingPhaseOver;
+    public static event Action? OnGamemodeChanged;
     internal string ShutdownMessage = string.Empty;
     internal bool ShouldShutdownAfterGame;
     internal ulong ShutdownPlayer;
@@ -91,7 +95,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public float StartTime { get; private set; }
     public float StagingSeconds { get; private set; }
     public float SecondsSinceStart => Time.realtimeSinceStartup - StartTime;
-    public long GameID { get; private set; }
+    public ulong GameId { get; private set; }
+    public GameRecord GameRecord { get; private set; }
     public static GamemodeConfigData Config => ConfigObj.Data;
     public string Name { get; }
     public float EventLoopSpeed => _eventLoopSpeed;
@@ -114,11 +119,20 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public CancellationToken UnloadToken => _tokenSrc?.Token ?? CancellationToken.None;
     protected Gamemode(string name, float eventLoopSpeed)
     {
+        // ReSharper disable VirtualMemberCallInConstructor
         Name = name;
         _eventLoopSpeed = eventLoopSpeed;
         _useEventLoop = eventLoopSpeed > 0;
         State = State.Loading;
         OnStateUpdated?.Invoke();
+        GameRecord = new GameRecord
+        {
+            Gamemode = GamemodeType,
+            Map = MapScheduler.Current,
+            StartTimestamp = DateTimeOffset.UtcNow,
+            Season = UCWarfare.Season
+        };
+        // ReSharper restore VirtualMemberCallInConstructor
     }
     public static bool IsEnabled(GamemodeType gamemode)
     {
@@ -357,9 +371,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
-        if (player.Save.LastGame != GameID)
+        if (player.Save.LastGame != GameId)
         {
-            player.Save.LastGame = GameID;
+            player.Save.LastGame = GameId;
             PlayerSave.WriteToSaveFile(player.Save);
         }
         player.HasInitedOnce = true;
@@ -656,15 +670,31 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         try
         {
+            GameRecord.EndTimestamp = DateTimeOffset.UtcNow;
+            GameRecord.WinnerFactionId = TeamManager.GetFaction(winner).PrimaryKey;
             token.CombineIfNeeded(UnloadToken);
             ThreadUtil.assertIsGameThread();
             State = State.Finished;
             OnStateUpdated?.Invoke();
             L.Log(TeamManager.TranslateName(winner) + " just won the game!", ConsoleColor.Cyan);
+
             await InvokeSingletonEvent<IDeclareWinListener, IDeclareWinListenerAsync>
                 (x => x.OnWinnerDeclared(winner), x => x.OnWinnerDeclared(winner, token), token)
                 .ConfigureAwait(false);
+
+            await WarfareDatabases.GameData.WaitAsync(CancellationToken.None);
+            try
+            {
+                WarfareDatabases.GameData.Games.Update(GameRecord);
+                await WarfareDatabases.GameData.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+                L.LogDebug($"Saved game info: # {GameRecord.GameId}");
+            }
+            finally
+            {
+                WarfareDatabases.GameData.Release();
+            }
             await UCWarfare.ToUpdate(token);
+
             ThreadUtil.assertIsGameThread();
 
             QuestManager.OnGameOver(winner);
@@ -730,7 +760,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     internal virtual bool IsWinner(UCPlayer player) =>
         throw new NotImplementedException("IsWinner is not overridden by a non-team gamemode.");
-    public static async Task<bool> TryLoadGamemode(Type type, CancellationToken token)
+    public static async Task<bool> TryLoadGamemode(Type type, bool auto, CancellationToken token)
     {
         if (type is not null && typeof(Gamemode).IsAssignableFrom(type))
         {
@@ -751,7 +781,19 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     goto error;
                 L.Log("Chosen new gamemode " + Data.Gamemode.DisplayName, ConsoleColor.DarkCyan);
                 await Data.Singletons.LoadSingletonAsync(Data.Gamemode, token: token).ConfigureAwait(false);
-                ActionLog.Add(ActionLogType.GamemodeChangedAuto, Data.Gamemode.DisplayName);
+                if (auto)
+                    ActionLog.Add(ActionLogType.GamemodeChangedAuto, Data.Gamemode.DisplayName);
+
+                try
+                {
+                    OnGamemodeChanged?.Invoke();
+                }
+                catch (Exception ex2)
+                {
+                    L.LogError("Failed to invoke Gamemode.OnGamemodeChanged.");
+                    L.LogError(ex2);
+                }
+
                 return true;
             }
             catch (SingletonLoadException ex2)
@@ -794,7 +836,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             await CommandHandler.LetCommandsFinish().ConfigureAwait(false);
             Type? nextMode = GetNextGamemode();
-            await TryLoadGamemode(nextMode!, token).ConfigureAwait(false);
+            await TryLoadGamemode(nextMode!, true, token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -842,10 +884,36 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             IconManager.OnGamemodeReloaded(onLoad);
             L.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
             State = State.Active;
-            GameID = DateTime.UtcNow.Ticks;
             StartTime = Time.realtimeSinceStartup;
+            if (GameRecord is not { GameId: 0ul })
+            {
+                GameRecord = new GameRecord
+                {
+                    Gamemode = GamemodeType,
+                    Map = MapScheduler.Current,
+                    Season = UCWarfare.Season
+                };
+            }
+
+            GameRecord.StartTimestamp = DateTimeOffset.UtcNow;
+
             PlayerManager.ApplyToOnline();
             OnStateUpdated?.Invoke();
+
+            await WarfareDatabases.GameData.WaitAsync(token);
+            try
+            {
+                await WarfareDatabases.GameData.Games.AddAsync(GameRecord, token);
+                await WarfareDatabases.GameData.SaveChangesAsync(token).ConfigureAwait(false);
+                L.LogDebug($"Added new game info: # {GameRecord.GameId}");
+            }
+            finally
+            {
+                WarfareDatabases.GameData.Release();
+            }
+            GameId = GameRecord.GameId;
+            await UCWarfare.ToUpdate(token);
+
             if (!onLoad)
             {
                 await InvokeSingletonEvent<ILevelStartListener, ILevelStartListenerAsync>
@@ -867,6 +935,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             {
                 CancellationToken tk2 = token;
                 tk2.CombineIfNeeded(pl.DisconnectToken);
+                pl.IsInitializing = true;
                 try
                 {
                     await pl.PurchaseSync.WaitAsync(tk2).ConfigureAwait(false);
@@ -881,6 +950,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     }
                 }
                 catch (TaskCanceledException) when (tk2.IsCancellationRequested) { }
+                finally
+                {
+                    pl.IsInitializing = false;
+                }
             }
 
             await UCWarfare.ToUpdate(token);
@@ -951,13 +1024,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (State is not State.Active and not State.Staging)
         {
             player.Save.ShouldRespawnOnJoin = true;
-            player.Save.LastGame = GameID;
+            player.Save.LastGame = GameId;
             PlayerSave.WriteToSaveFile(player.Save);
         }
 
-        if (player.Save.LastGame != GameID)
+        if (player.Save.LastGame != GameId)
         {
-            player.Save.LastGame = GameID;
+            player.Save.LastGame = GameId;
             PlayerSave.WriteToSaveFile(player.Save);
         }
         InvokeSingletonEvent<IPlayerDisconnectListener>(x => x.OnPlayerDisconnecting(player));

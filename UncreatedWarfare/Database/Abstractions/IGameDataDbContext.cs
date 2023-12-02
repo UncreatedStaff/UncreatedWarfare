@@ -3,7 +3,7 @@ using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Database.Abstractions;
-public interface IGameDataDbContext
+public interface IGameDataDbContext : IDbContext
 {
     DbSet<GameRecord> Games { get; }
     DbSet<SessionRecord> Sessions { get; }
@@ -11,8 +11,7 @@ public interface IGameDataDbContext
     {
         modelBuilder.Entity<WarfareUserData>()
             .HasMany<SessionRecord>()
-            .WithOne()
-            .HasForeignKey(x => x.Steam64)
+            .WithOne(x => x.PlayerData)
             .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<GameRecord>()

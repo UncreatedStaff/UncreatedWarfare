@@ -496,8 +496,9 @@ public class DebugCommand : AsyncCommand
                         await UCWarfare.ToUpdate();
                         ctx.ReplyString($"Successfully reloaded {newGamemode.Name}.");
                     }
-                    else if (await Gamemode.TryLoadGamemode(newGamemode, default))
+                    else if (await Gamemode.TryLoadGamemode(newGamemode, false, default))
                     {
+                        ctx.LogAction(ActionLogType.ChangeGamemodeCommand, Data.Gamemode!.DisplayName);
                         await UCWarfare.ToUpdate();
                         ctx.ReplyString($"Successfully loaded {newGamemode.Name}.");
                     }
@@ -1115,7 +1116,7 @@ public class DebugCommand : AsyncCommand
             if (sql == null)
                 ctx.SendUnknownError();
             else
-                await manager.GiveKit(ctx.Caller, sql, false, token).ConfigureAwait(false);
+                await manager.GiveKit(ctx.Caller, sql, true, false, token).ConfigureAwait(false);
         }
 
         if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)

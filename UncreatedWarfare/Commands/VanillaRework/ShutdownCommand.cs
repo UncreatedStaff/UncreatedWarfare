@@ -102,7 +102,7 @@ public class ShutdownCommand : Command
         {
             if (ctx.TryGetRange(1, out string reason))
             {
-                ctx.LogAction(ActionLogType.ShutdownServer, "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.AdminLocale)) + ": " + reason);
+                ctx.LogAction(ActionLogType.ShutdownServer, "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameId.ToString(Data.AdminLocale)) + ": " + reason);
                 Data.Gamemode?.ShutdownAfterGame(reason, ctx.CallerID);
                 Chat.Broadcast(T.ShutdownBroadcastAfterGame, reason);
                 L.Log(ctx.IsConsole
@@ -155,7 +155,7 @@ public class ShutdownCommand : Command
     public static void ShutdownAfterGameDaily() => ShutdownAfterGame("Daily Restart", true);
     public static void ShutdownAfterGame(string reason, bool isDaily)
     {
-        ActionLog.Add(ActionLogType.ShutdownServer, "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.AdminLocale)) + ": " + reason);
+        ActionLog.Add(ActionLogType.ShutdownServer, "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameId.ToString(Data.AdminLocale)) + ": " + reason);
         Chat.Broadcast(isDaily ? T.ShutdownBroadcastDaily : T.ShutdownBroadcastAfterGame, reason);
         L.Log($"A shutdown has been scheduled after this game because: {reason}.", ConsoleColor.Cyan);
         Data.Gamemode?.ShutdownAfterGame(reason, 0);

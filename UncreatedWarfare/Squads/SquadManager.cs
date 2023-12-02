@@ -257,7 +257,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (player.Save.LastGame == Data.Gamemode.GameID && player.Save.SquadLeader != 0ul && string.IsNullOrEmpty(player.Save.SquadName))
+        if (player.Save.LastGame == Data.Gamemode.GameId && player.Save.SquadLeader != 0ul && string.IsNullOrEmpty(player.Save.SquadName))
         {
             string sn = player.Save.SquadName;
             ulong pl = player.Save.SquadLeader;
@@ -549,7 +549,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 {
                     KitManager? manager = KitManager.GetSingletonQuick();
                     if (manager != null)
-                        UCWarfare.RunTask(manager.TryGiveUnarmedKit, squad.Leader, ctx: "Unequipping squadleader kit after leaving squad.");
+                        UCWarfare.RunTask(manager.TryGiveUnarmedKit, squad.Leader, true, ctx: "Unequipping squadleader kit after leaving squad.");
                 }
                 PlayerManager.ApplyTo(squad.Leader);
             }
@@ -670,7 +670,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         {
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
-                UCWarfare.RunTask(manager.TryGiveUnarmedKit, squad.Leader, ctx: "Unequipping squadleader kit after someone else was promoted to leader.");
+                UCWarfare.RunTask(manager.TryGiveUnarmedKit, squad.Leader, true, ctx: "Unequipping squadleader kit after someone else was promoted to leader.");
         }
 
         Traits.TraitManager.OnPlayerPromotedSquadleader(newLeader, squad);

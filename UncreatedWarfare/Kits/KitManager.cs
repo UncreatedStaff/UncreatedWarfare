@@ -47,6 +47,10 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
     public static KitMenuUI MenuUI => _menuUi ??= new KitMenuUI();
     private readonly List<Kit> _kitListTemp = new List<Kit>(64);
     public static event KitChanged? OnKitChanged;
+    /// <summary>
+    /// Doesn't include changes due to group change.
+    /// </summary>
+    public static event KitChanged? OnManualKitChanged;
     public static event KitAccessCallback? OnKitAccessChanged;
     public static event System.Action? OnFavoritesRefreshed;
     protected override DbSet<Kit> Set => Data.DbContext.Kits;
@@ -317,9 +321,9 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
             return;
         }
 
-        await GiveKit(player, kit, true, token).ConfigureAwait(false);
+        await GiveKit(player, kit, false, true, token).ConfigureAwait(false);
     }
-    public async Task<Kit?> TryGiveUnarmedKit(UCPlayer player, CancellationToken token = default)
+    public async Task<Kit?> TryGiveUnarmedKit(UCPlayer player, bool manual, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -327,12 +331,12 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         Kit? kit = await GetDefaultKit(player.GetTeam(), token).ConfigureAwait(false);
         if (kit != null)
         {
-            await GiveKit(player, kit, true, token).ConfigureAwait(false);
+            await GiveKit(player, kit, manual, true, token).ConfigureAwait(false);
             return kit;
         }
         return null;
     }
-    public async Task<Kit?> TryGiveRiflemanKit(UCPlayer player, bool tip = true, CancellationToken token = default)
+    public async Task<Kit?> TryGiveRiflemanKit(UCPlayer player, bool manual, bool tip, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -371,7 +375,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         }
 
         rifleman ??= await GetDefaultKit(t2, token).ConfigureAwait(false);
-        await GiveKit(player, rifleman, tip, token).ConfigureAwait(false);
+        await GiveKit(player, rifleman, manual, tip, token).ConfigureAwait(false);
         return rifleman;
     }
     public Kit? GetKit(uint primaryKey) => GetEntityNoLock(x => x.PrimaryKey == primaryKey);
@@ -551,13 +555,13 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         }
     }
     /// <remarks>Thread Safe</remarks>
-    public async Task GiveKit(UCPlayer player, Kit? kit, bool tip = true, CancellationToken token = default)
+    public async Task GiveKit(UCPlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));
         Kit? oldKit = null;
         if (kit is null)
         {
-            await RemoveKit(player, token).ConfigureAwait(false);
+            await RemoveKit(player, manual, token).ConfigureAwait(false);
             return;
         }
         await WaitAsync(token).ConfigureAwait(false);
@@ -595,6 +599,9 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         }
         if (OnKitChanged != null)
             UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, kit, oldKit), default);
+
+        if (manual && OnManualKitChanged != null)
+            UCWarfare.RunOnMainThread(() => OnManualKitChanged?.Invoke(player, kit, oldKit), default);
     }
     public async Task<Kit?> GetKitFromSign(BarricadeDrop drop, UCPlayer looker, CancellationToken token = default)
     {
@@ -608,13 +615,13 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
 
         return kit;
     }
-    internal async Task GiveKitNoLock(UCPlayer player, Kit? kit, bool tip = true, CancellationToken token = default, bool psLock = true)
+    internal async Task GiveKitNoLock(UCPlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default, bool psLock = true)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));
         Kit? oldKit = null;
         if (kit == null)
         {
-            await RemoveKit(player, token, psLock).ConfigureAwait(false);
+            await RemoveKit(player, manual, token, psLock).ConfigureAwait(false);
             return;
         }
         if (psLock)
@@ -644,9 +651,12 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
 
         if (OnKitChanged != null)
             UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, kit, oldKit), default);
+
+        if (manual && OnManualKitChanged != null)
+            UCWarfare.RunOnMainThread(() => OnManualKitChanged?.Invoke(player, kit, oldKit), default);
     }
     /// <remarks>Thread Safe</remarks>
-    private async Task RemoveKit(UCPlayer player, CancellationToken token = default, bool psLock = true)
+    private async Task RemoveKit(UCPlayer player, bool manual, CancellationToken token = default, bool psLock = true)
     {
         if (psLock)
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
@@ -668,6 +678,8 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
             }
             if (OnKitChanged != null)
                 UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, null, oldKit), default);
+            if (manual && OnManualKitChanged != null)
+                UCWarfare.RunOnMainThread(() => OnManualKitChanged?.Invoke(player, null, oldKit), default);
         }
         finally
         {
@@ -1404,7 +1416,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         }
     }
     /// <remarks>Thread Safe</remarks>
-    public async Task DequipKit(Kit kit, CancellationToken token = default)
+    public async Task DequipKit(Kit kit, bool manual, CancellationToken token = default)
     {
         Kit? t1def = null;
         Kit? t2def = null;
@@ -1417,30 +1429,30 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
             
             ulong team = pl.GetTeam();
             if (team == 1 && (t1def ??= await GetDefaultKit(1ul, token)) != null)
-                await GiveKit(pl, t1def == kit ? null : t1def, false, token);
+                await GiveKit(pl, t1def == kit ? null : t1def, manual, false, token);
             else if (team == 2 && (t2def ??= await GetDefaultKit(2ul, token)) != null)
-                await GiveKit(pl, t2def == kit ? null : t2def, false, token);
+                await GiveKit(pl, t2def == kit ? null : t2def, manual, false, token);
             else
-                await GiveKit(pl, null, false, token);
+                await GiveKit(pl, null, manual, false, token);
         }
     }
     /// <remarks>Thread Safe</remarks>
-    public async Task DequipKit(UCPlayer player, CancellationToken token = default)
+    public async Task DequipKit(UCPlayer player, bool manual, CancellationToken token = default)
     {
         ulong team = player.GetTeam();
         Kit? dkit = await GetDefaultKit(team, token);
         if (dkit != null)
-            await GiveKit(player, dkit, true, token);
+            await GiveKit(player, dkit, manual, true, token);
         else
-            await GiveKit(player, null, false, token);
+            await GiveKit(player, null, manual, false, token);
     }
     /// <remarks>Thread Safe</remarks>
-    public Task DequipKit(UCPlayer player, Kit kit, CancellationToken token = default)
+    public Task DequipKit(UCPlayer player, bool manual, Kit kit, CancellationToken token = default)
     {
         uint? activeKit = player.ActiveKit;
         if (activeKit is not null && activeKit == kit.PrimaryKey)
         {
-            return DequipKit(player, token);
+            return DequipKit(player, manual, token);
         }
 
         return Task.CompletedTask;
@@ -1453,14 +1465,14 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         {
             uint? activeKit = pl.ActiveKit;
             if (activeKit.HasValue && activeKit.Value == kit.PrimaryKey)
-                UCWarfare.RunTask(DequipKit, pl, kit, ctx: "Dequiping " + kit.InternalName + " from " + player + ".");
+                UCWarfare.RunTask(DequipKit, pl, true, kit, ctx: "Dequiping " + kit.InternalName + " from " + player + ".");
         }
     }
     private Task OnKitDeleted(Kit kit)
     {
         if (UCWarfare.Config.EnableSync)
             KitSync.OnKitDeleted(kit.PrimaryKey);
-        Task.Run(() => Util.TryWrap(DequipKit(kit), "Failed to dequip " + kit.InternalName + " from all."));
+        Task.Run(() => Util.TryWrap(DequipKit(kit, true), "Failed to dequip " + kit.InternalName + " from all."));
 
         return Task.CompletedTask;
     }
@@ -1705,7 +1717,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
 
         KitManager? manager = GetSingletonQuick();
         if (manager != null)
-            await manager.DequipKit(player, token);
+            await manager.DequipKit(player, true, token);
         return access;
     }
     /// <remarks>Thread Safe</remarks>
@@ -1930,7 +1942,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         if (UCPlayer.FromID(player) is { } pl)
             Signs.UpdateLoadoutSigns(pl);
 
-        await DequipKit(dequipKit, token).ConfigureAwait(false);
+        await DequipKit(dequipKit, true, token).ConfigureAwait(false);
 
         return (kit, StandardErrorCode.Success);
     }
@@ -1974,7 +1986,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
             pl.SendChat(T.DMLoadoutUnlocked, existing);
         }
 
-        await DequipKit(dequipKit, token).ConfigureAwait(false);
+        await DequipKit(dequipKit, true, token).ConfigureAwait(false);
 
         return (existing, StandardErrorCode.Success);
     }
@@ -2014,7 +2026,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
             Signs.UpdateLoadoutSigns(pl);
         }
 
-        await DequipKit(dequipKit, token).ConfigureAwait(false);
+        await DequipKit(dequipKit, true, token).ConfigureAwait(false);
 
         return (kit, StandardErrorCode.Success);
     }
@@ -2079,7 +2091,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         guns.Sort((a, b) => a.Key.Page.CompareTo(b.Key.Page));
         return string.Join(", ", guns.Select(x => x.Value.itemName.ToUpperInvariant()));
     }
-    internal void InvokeAfterMajorKitUpdate(Kit kit)
+    internal void InvokeAfterMajorKitUpdate(Kit kit, bool manual)
     {
         ThreadUtil.assertIsGameThread();
 
@@ -2091,27 +2103,42 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         {
             UCPlayer player = PlayerManager.OnlinePlayers[i];
             uint? activeKit = player.ActiveKit;
-            if (activeKit.HasValue && activeKit.Value == kit.PrimaryKey)
-            {
-                player.ChangeKit(kit);
-                mask[i] = true;
-            }
+
+            if (!activeKit.HasValue || activeKit.Value != kit.PrimaryKey)
+                continue;
+
+            player.ChangeKit(kit);
+            mask[i] = true;
         }
 
-        if (OnKitChanged == null)
-            return;
-
-        // waits a frame in case something tries to lock the kit and to ensure we are on main thread.
-        UCWarfare.RunOnMainThread(() =>
+        if (OnKitChanged != null)
         {
-            if (OnKitChanged == null)
-                return;
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            // waits a frame in case something tries to lock the kit and to ensure we are on main thread.
+            UCWarfare.RunOnMainThread(() =>
             {
-                if (mask[i])
-                    OnKitChanged.Invoke(PlayerManager.OnlinePlayers[i], kit, kit);
-            }
-        }, true);
+                if (OnKitChanged == null)
+                    return;
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                {
+                    if (mask[i])
+                        OnKitChanged.Invoke(PlayerManager.OnlinePlayers[i], kit, kit);
+                }
+            }, true);
+        }
+
+        if (manual && OnManualKitChanged != null)
+        {
+            UCWarfare.RunOnMainThread(() =>
+            {
+                if (OnManualKitChanged == null)
+                    return;
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                {
+                    if (mask[i])
+                        OnManualKitChanged.Invoke(PlayerManager.OnlinePlayers[i], kit, kit);
+                }
+            }, true);
+        }
     }
     public async Task RequestLoadout(int loadoutId, CommandInteraction ctx, CancellationToken token = default)
     {
@@ -2387,7 +2414,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         await UCWarfare.ToUpdate(token);
         ulong team = ctx.Caller.GetTeam();
         AmmoCommand.WipeDroppedItems(ctx.CallerID);
-        await GiveKitNoLock(ctx.Caller, kit, true, token).ConfigureAwait(false);
+        await GiveKitNoLock(ctx.Caller, kit, true, true, token).ConfigureAwait(false);
         string id = kit.InternalName;
         Stats.StatsManager.ModifyKit(id, k => k.TimesRequested++);
         Stats.StatsManager.ModifyStats(ctx.CallerID, s =>
@@ -2415,7 +2442,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         ulong team = player.GetTeam();
         Kit? kit = player.GetActiveKit();
         if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(out _, out _, team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out _, team)))
-            await TryGiveRiflemanKit(player, false, token).ConfigureAwait(false);
+            await TryGiveRiflemanKit(player, false, false, token).ConfigureAwait(false);
         else if (UCWarfare.Config.ModifySkillLevels)
         {
             if (kit.Skillsets is { Count: > 0 })
@@ -2436,6 +2463,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         player.EnsureDefaultSkillsets();
         _ = RefreshFavorites(player, false, token);
         _ = IsNitroBoosting(player.Steam64, token);
+        _ = RemoveKit(player, false, player.DisconnectToken);
     }
     Task IJoinedTeamListenerAsync.OnJoinTeamAsync(UCPlayer player, ulong team, CancellationToken token)
     {
@@ -2620,7 +2648,7 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
 
                 if (state == 0 && activeKit is { RequiresNitro: true })
                 {
-                    UCWarfare.RunTask(TryGiveRiflemanKit, pl, true, Data.Gamemode.UnloadToken,
+                    UCWarfare.RunTask(TryGiveRiflemanKit, pl, true, true, Data.Gamemode.UnloadToken,
                         ctx: "Giving rifleman kit to " + player + " after losing nitro boost.");
                 }
             }

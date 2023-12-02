@@ -240,7 +240,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
             ulong team = player.Save.Team;
             if (this is not IEndScreen { IsScreenUp: true } && !TeamManager.IsFriendly(player.Player, team))
             {
-                TeamManager.JoinTeam(player, player.Save.Team, player.Save.LastGame != GameID || player.Save.ShouldRespawnOnJoin, true);
+                TeamManager.JoinTeam(player, player.Save.Team, player.Save.LastGame != GameId || player.Save.ShouldRespawnOnJoin, true);
             }
             OnJoinTeam(player, player.Save.Team);
         }

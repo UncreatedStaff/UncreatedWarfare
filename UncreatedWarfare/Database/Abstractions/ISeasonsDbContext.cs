@@ -2,7 +2,7 @@
 using Uncreated.Warfare.Models.Seasons;
 
 namespace Uncreated.Warfare.Database.Abstractions;
-public interface ISeasonsDbContext
+public interface ISeasonsDbContext : IDbContext
 {
     DbSet<MapData> Maps { get; }
     DbSet<SeasonData> Seasons { get; }

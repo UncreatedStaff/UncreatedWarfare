@@ -26,6 +26,7 @@ using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
@@ -78,6 +79,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public volatile bool HasDownloadedXP;
     public volatile bool IsDownloadingXP;
     public volatile bool IsDownloadingKitData;
+    public volatile bool IsInitializing;
     public volatile bool Loading;
     public bool PendingCheaterDeathBan;
     public bool Loaded;
@@ -293,6 +295,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsOtherDonator { get; set; }
     public bool GodMode { get; set; }
     public CancellationToken DisconnectToken => _disconnectTokenSrc.Token;
+    public SessionRecord? CurrentSession { get; internal set; }
     public FactionInfo? Faction => Player.quests.groupID.m_SteamID switch
     {
         TeamManager.Team1ID => TeamManager.Team1Faction,
@@ -1463,7 +1466,7 @@ public class PlayerSave
     [CommandSettable]
     public bool HasQueueSkip;
     [CommandSettable]
-    public long LastGame;
+    public ulong LastGame;
     [CommandSettable]
     public bool ShouldRespawnOnJoin;
     [CommandSettable]
@@ -1496,7 +1499,7 @@ public class PlayerSave
             SquadLeader = player.Squad.Leader.Steam64;
             SquadWasLocked = player.Squad.IsLocked;
         }
-        LastGame = Data.Gamemode == null ? 0 : Data.Gamemode.GameID;
+        LastGame = Data.Gamemode == null ? 0 : Data.Gamemode.GameId;
     }
     /// <summary>Players / 76561198267927009_0 / Uncreated_S2 / PlayerSave.dat</summary>
     private static string GetPath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players",
@@ -1513,7 +1516,7 @@ public class PlayerSave
         block.writeUInt64(save.SquadLeader);
         block.writeBoolean(save.SquadWasLocked);
         block.writeBoolean(save.HasQueueSkip);
-        block.writeInt64(save.LastGame);
+        block.writeInt64((long)save.LastGame);
         block.writeBoolean(save.ShouldRespawnOnJoin);
         block.writeBoolean(save.IsOtherDonator);
         block.writeBoolean(save.IMGUI);
@@ -1559,7 +1562,7 @@ public class PlayerSave
                 save.SquadWasLocked = block.readBoolean();
             }
             save.HasQueueSkip = block.readBoolean();
-            save.LastGame = block.readInt64();
+            save.LastGame = (ulong)block.readInt64();
             save.ShouldRespawnOnJoin = block.readBoolean();
             save.IsOtherDonator = block.readBoolean();
             if (dv > 1)

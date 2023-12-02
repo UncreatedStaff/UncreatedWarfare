@@ -1,4 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Set this to false for migrations -->
+  <PropertyGroup>
+    <CopyToModule>True</CopyToModule>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyTitle>Uncreated.Warfare</AssemblyTitle>
@@ -49,11 +55,6 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>portable</DebugType>
     <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
-  </PropertyGroup>
-
-  <!-- Set this to false for migrations -->
-  <PropertyGroup>
-    <CopyToModule>True</CopyToModule>
   </PropertyGroup>
 
   <ItemGroup>

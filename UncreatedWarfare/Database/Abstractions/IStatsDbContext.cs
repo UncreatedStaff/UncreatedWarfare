@@ -3,7 +3,7 @@ using Uncreated.Warfare.Models.Stats.Base;
 using Uncreated.Warfare.Models.Stats.Records;
 
 namespace Uncreated.Warfare.Database.Abstractions;
-public interface IStatsDbContext
+public interface IStatsDbContext : IDbContext
 {
     DbSet<DeathRecord> DeathRecords { get; }
     DbSet<DamageRecord> DamageRecords { get; }

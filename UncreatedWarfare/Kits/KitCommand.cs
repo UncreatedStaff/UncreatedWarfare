@@ -754,7 +754,7 @@ public sealed class KitCommand : AsyncCommand
                     if (err != StandardErrorCode.Success)
                         throw ctx.SendUnknownError();
                     ctx.Reply(T.LoadoutUpgraded, kit, @class);
-                    await manager.GiveKit(ctx.Caller, kit, false, token).ConfigureAwait(false);
+                    await manager.GiveKit(ctx.Caller, kit, true, false, token).ConfigureAwait(false);
                 }
                 else
                     ctx.Reply(T.KitNotFound, kitName);
@@ -872,7 +872,7 @@ public sealed class KitCommand : AsyncCommand
                 if (kit != null)
                 {
                     Class @class = kit.Class;
-                    await manager.GiveKit(ctx.Caller, kit, true, token).ConfigureAwait(false);
+                    await manager.GiveKit(ctx.Caller, kit, true, true, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                     ctx.LogAction(ActionLogType.GiveKit, kitName);
                     ctx.Reply(T.RequestSignGiven, @class);
@@ -1025,7 +1025,7 @@ public sealed class KitCommand : AsyncCommand
                                     ctx.Reply(T.KitPropertySet, property, kit, newValue);
                                     ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
                                     if (oldbranch != kit.Branch || oldclass != kit.Class || prevType != kit.Type)
-                                        manager.InvokeAfterMajorKitUpdate(kit);
+                                        manager.InvokeAfterMajorKitUpdate(kit, true);
                                     return;
                             }
                         }

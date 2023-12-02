@@ -710,7 +710,7 @@ public static class EventFunctions
                 ucplayer.Player.quests.leaveGroup(true);
                 TeamManager.TeleportToMain(ucplayer, 0);
             }
-            else if (TeamManager.LobbyZone.IsInside(ucplayer.Position) || Data.Gamemode == null || ucplayer.Save.LastGame != Data.Gamemode.GameID || Data.Gamemode.State is not State.Active and not State.Staging)
+            else if (TeamManager.LobbyZone.IsInside(ucplayer.Position) || Data.Gamemode == null || ucplayer.Save.LastGame != Data.Gamemode.GameId || Data.Gamemode.State is not State.Active and not State.Staging)
             {
                 ucplayer.Player.life.sendRevive();
                 L.LogDebug("Player " + ucplayer + " did not play this game, leaving group.");
@@ -745,7 +745,7 @@ public static class EventFunctions
             }
             if (Data.Gamemode != null)
             {
-                ucplayer.Save.LastGame = Data.Gamemode.GameID;
+                ucplayer.Save.LastGame = Data.Gamemode.GameId;
                 PlayerSave.WriteToSaveFile(ucplayer.Save);
             }
 
@@ -1569,7 +1569,7 @@ public static class EventFunctions
         // leave the player where they logged off if they logged off in the same game.
         if (PlayerSave.TryReadSaveFile(playerID.steamID.m_SteamID, out PlayerSave save))
         {
-            if (Data.Gamemode is not null && Data.Gamemode.GameID == save.LastGame && !save.ShouldRespawnOnJoin)
+            if (Data.Gamemode is not null && Data.Gamemode.GameId == save.LastGame && !save.ShouldRespawnOnJoin)
                 return;
             if (save.ShouldRespawnOnJoin)
             {

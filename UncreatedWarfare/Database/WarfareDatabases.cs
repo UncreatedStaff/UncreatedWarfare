@@ -16,6 +16,9 @@ public static class WarfareDatabases
     public static ILanguageDbContext Languages { get; set; }
     public static IUserDataDbContext UserData { get; set; }
     public static IKitsDbContext Kits { get; set; }
+    public static IStatsDbContext Stats { get; set; }
+    public static IGameDataDbContext GameData { get; set; }
+    public static ISeasonsDbContext Seasons { get; set; }
 #nullable restore
     public static void LoadFromWarfareDbContext(WarfareDbContext context)
     {
@@ -23,6 +26,9 @@ public static class WarfareDatabases
         Languages = context;
         UserData = context;
         Kits = context;
+        Stats = context;
+        GameData = context;
+        Seasons = context;
 #if DEBUG
         Semaphore.WaitCallback    += () => L.LogDebug( "Semaphore waiting       in DbContext.");
         Semaphore.ReleaseCallback += n  => L.LogDebug($"Semaphore released x{n} in DbContext.");

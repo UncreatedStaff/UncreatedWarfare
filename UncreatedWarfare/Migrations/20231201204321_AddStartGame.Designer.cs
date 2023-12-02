@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231201204321_AddStartGame")]
+    partial class AddStartGame
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -204,6 +206,9 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnName("NextSession")
                         .HasColumnType("bigint unsigned");
 
+                    b.Property<ulong>("PlayerDataSteam64")
+                        .HasColumnType("bigint unsigned");
+
                     b.Property<ulong?>("PreviousSessionId")
                         .HasColumnName("PreviousSession")
                         .HasColumnType("bigint unsigned");
@@ -241,6 +246,8 @@ namespace Uncreated.Warfare.Migrations
 
                     b.HasIndex("NextSessionId")
                         .IsUnique();
+
+                    b.HasIndex("PlayerDataSteam64");
 
                     b.HasIndex("PreviousSessionId")
                         .IsUnique();
@@ -1358,6 +1365,12 @@ namespace Uncreated.Warfare.Migrations
                         .HasForeignKey("Uncreated.Warfare.Models.GameData.SessionRecord", "NextSessionId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "PlayerData")
+                        .WithMany()
+                        .HasForeignKey("PlayerDataSteam64")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Uncreated.Warfare.Models.GameData.SessionRecord", "PreviousSession")
                         .WithOne()
                         .HasForeignKey("Uncreated.Warfare.Models.GameData.SessionRecord", "PreviousSessionId")
@@ -1369,7 +1382,7 @@ namespace Uncreated.Warfare.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "PlayerData")
+                    b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", null)
                         .WithMany()
                         .HasForeignKey("Steam64")
                         .OnDelete(DeleteBehavior.NoAction)

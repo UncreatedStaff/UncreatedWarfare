@@ -37,6 +37,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.ReportSystem;
+using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
@@ -131,6 +132,7 @@ public static class Data
     public static Reporter? Reporter;
     public static DeathTracker DeathTracker;
     public static Points Points;
+    public static SessionManager Sessions;
 #if NETSTANDARD || NETFRAMEWORK
     public static WarfareStripeService WarfareStripeService;
 #endif
@@ -327,8 +329,9 @@ public static class Data
 
 
         DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(true, token: token);
-        GamemodeListeners = new IUncreatedSingleton[1];
+        GamemodeListeners = new IUncreatedSingleton[2];
         GamemodeListeners[0] = Points = await Singletons.LoadSingletonAsync<Points>(true, token: token);
+        GamemodeListeners[1] = Sessions = await Singletons.LoadSingletonAsync<SessionManager>(true, token: token);
         await Singletons.LoadSingletonAsync<PlayerList>(true, token: token);
         await UCWarfare.ToUpdate(token);
 
@@ -434,7 +437,7 @@ public static class Data
             StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
 
         L.Log("Loading first gamemode...", ConsoleColor.Magenta);
-        if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF), token))
+        if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF), true, token))
             throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Failed to load gamemode"));
 
         SteamPlayerID id = new SteamPlayerID(CSteamID.Nil, 0, "Nil", "Nil", "Nil", CSteamID.Nil);
