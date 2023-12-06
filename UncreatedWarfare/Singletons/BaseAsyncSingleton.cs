@@ -16,8 +16,8 @@ public abstract class BaseAsyncSingleton : IUncreatedSingleton
     public abstract bool AwaitLoad { get; }
     public void Load() => throw new NotImplementedException();
     public void Unload() => throw new NotImplementedException();
-    public abstract Task LoadAsync(CancellationToken token);
-    public abstract Task UnloadAsync(CancellationToken token);
+    protected abstract Task LoadAsync(CancellationToken token);
+    protected abstract Task UnloadAsync(CancellationToken token);
     async Task IUncreatedSingleton.LoadAsync(CancellationToken token)
     {
         _isLoading = true;

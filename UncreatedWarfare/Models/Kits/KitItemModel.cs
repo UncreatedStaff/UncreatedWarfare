@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using SDG.Unturned;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Teams;
@@ -8,7 +9,7 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Models.Kits;
 
 [Table("kits_items")]
-public class KitItemModel : ICloneable
+public class KitItemModel : ICloneable, IEquatable<KitItemModel>
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -119,9 +120,90 @@ public class KitItemModel : ICloneable
 
         return new AssetRedirectClothingKitItem(Id, redirectType, type, redirectVariant);
     }
+    public bool TryGetItemSize(out byte sizeX, out byte sizeY)
+    {
+        (sizeX, sizeY) = (1, 1);
 
+        ItemAsset? asset;
+        if (Item.HasValue)
+            asset = Item.Value.GetAsset<ItemAsset>();
+        else if (Redirect.HasValue)
+            asset = TeamManager.GetRedirectInfo(Redirect.Value, RedirectVariant ?? string.Empty, null, null, out _, out _);
+        else
+            return false;
+
+        if (asset == null)
+            return false;
+
+        (sizeX, sizeY) = (asset.size_x, asset.size_y);
+        return true;
+    }
     public object Clone()
     {
         return new KitItemModel(this);
     }
+
+    public bool Equals(KitItemModel? other)
+    {
+        if (other is null)
+            return false;
+
+        if (ReferenceEquals(this, other))
+            return true;
+
+        if (Id != other.Id
+            || KitId != other.KitId
+            || !(Item.HasValue ? other.Item.HasValue && other.Item.Value.Equals(Item.Value) : !other.Item.HasValue)
+            || !(X.HasValue ? other.X.HasValue && other.X.Value == X.Value : !other.X.HasValue)
+            || !(Y.HasValue ? other.Y.HasValue && other.Y.Value == Y.Value : !other.Y.HasValue)
+            || !(Rotation.HasValue ? other.Rotation.HasValue && other.Rotation.Value == Rotation.Value : !other.Rotation.HasValue)
+            || !(Page.HasValue ? other.Page.HasValue && other.Page.Value == Page.Value : !other.Page.HasValue)
+            || !(ClothingSlot.HasValue ? other.ClothingSlot.HasValue && other.ClothingSlot.Value == ClothingSlot.Value : !other.ClothingSlot.HasValue)
+            || !(Redirect.HasValue ? other.Redirect.HasValue && other.Redirect.Value == Redirect.Value : !other.Redirect.HasValue)
+            || !string.Equals(RedirectVariant, other.RedirectVariant, StringComparison.OrdinalIgnoreCase)
+            || !(Amount.HasValue ? other.Amount.HasValue && other.Amount.Value == Amount.Value : !other.Amount.HasValue))
+        {
+            return false;
+        }
+
+        byte[]? meta = other.Metadata;
+        if (meta is not { Length: > 0 })
+            return Metadata is not { Length: > 0 };
+        if (Metadata is not { Length: > 0 } || meta.Length != Metadata.Length)
+            return false;
+
+        for (int i = 0; i < meta.Length; ++i)
+        {
+            if (meta[i] != Metadata[i])
+                return false;
+        }
+
+        return true;
+
+    }
+
+    public override bool Equals(object? obj) => Equals(obj as KitItemModel);
+    public override int GetHashCode()
+    {
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        HashCode hashCode = new HashCode();
+        hashCode.Add(Id);
+        hashCode.Add(Kit);
+        hashCode.Add(KitId);
+        hashCode.Add(Item);
+        hashCode.Add(X);
+        hashCode.Add(Y);
+        hashCode.Add(Rotation);
+        hashCode.Add(Page);
+        hashCode.Add(ClothingSlot);
+        hashCode.Add(Redirect);
+        hashCode.Add(RedirectVariant);
+        hashCode.Add(Amount);
+        hashCode.Add(Metadata);
+        return hashCode.ToHashCode();
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+    }
+
+    public static bool operator ==(KitItemModel? left, KitItemModel? right) => Equals(left, right);
+    public static bool operator !=(KitItemModel? left, KitItemModel? right) => !Equals(left, right);
 }

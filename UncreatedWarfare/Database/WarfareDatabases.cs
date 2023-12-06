@@ -5,6 +5,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Database.Abstractions;
 
 namespace Uncreated.Warfare.Database;
+[Obsolete]
 public static class WarfareDatabases
 {
     /*
@@ -29,10 +30,6 @@ public static class WarfareDatabases
         Stats = context;
         GameData = context;
         Seasons = context;
-#if DEBUG
-        Semaphore.WaitCallback    += () => L.LogDebug( "Semaphore waiting       in DbContext.");
-        Semaphore.ReleaseCallback += n  => L.LogDebug($"Semaphore released x{n} in DbContext.");
-#endif
     }
 
     public static Task WaitAsync(CancellationToken token = default) => Semaphore.WaitAsync(token);

@@ -8,6 +8,7 @@ using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -162,7 +163,7 @@ public class AmmoCommand : AsyncCommand
 
             FOBManager? fobManager = Data.Singletons.GetSingleton<FOBManager>();
 
-            int ammoCost = KitManager.GetAmmoCost(kit.Class);
+            int ammoCost = KitDefaults<WarfareDbContext>.GetAmmoCost(kit.Class);
 
             if (Data.Gamemode.CanRefillAmmoAt(barricade.asset))
             {
@@ -197,7 +198,7 @@ public class AmmoCommand : AsyncCommand
                 }
 
                 WipeDroppedItems(ctx.CallerID);
-                await req.KitManager.ResupplyKit(ctx.Caller, kit, token: token).ConfigureAwait(false);
+                await req.KitManager.Requests.ResupplyKit(ctx.Caller, kit, token: token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
 
                 if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))

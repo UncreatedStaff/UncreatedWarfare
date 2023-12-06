@@ -123,6 +123,7 @@ public static class Data
     internal static DatabaseInterface ModerationSql;
     internal static WarfareMySqlLanguageDataStore LanguageDataStore;
     internal static PurchaseRecordsInterface PurchasingDataStore;
+    [Obsolete]
     internal static WarfareDbContext DbContext;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
@@ -260,8 +261,19 @@ public static class Data
     }
     internal static async Task LoadSQL(CancellationToken token)
     {
-        WarfareDatabases.Semaphore ??= new UCSemaphore();
-        await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
+#pragma warning disable CS0612 // Type or member is obsolete
+        if (WarfareDatabases.Semaphore == null)
+        {
+            WarfareDatabases.Semaphore = new UCSemaphore(0, 1);
+#if DEBUG
+            WarfareDatabases.Semaphore.WaitCallback    += () => L.LogDebug($"Semaphore waiting       in DbContext.");
+            WarfareDatabases.Semaphore.ReleaseCallback += n  => L.LogDebug($"Semaphore released x{n} in DbContext.");
+#endif
+        }
+        else
+        {
+            await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
+        }
         try
         {
             DbContext = new WarfareDbContext();
@@ -271,6 +283,7 @@ public static class Data
         {
             WarfareDatabases.Release();
         }
+#pragma warning restore CS0612 // Type or member is obsolete
 
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
         bool status = await DatabaseManager.OpenAsync(token);

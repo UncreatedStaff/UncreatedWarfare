@@ -72,7 +72,7 @@ public static class LeaderboardEx
 
             if (Data.Is(out IKitRequests req))
             {
-                UCWarfare.RunTask(req.KitManager.ResupplyKit(player), ctx: "Resupplying " + player + "'s kit for leaderboard.");
+                UCWarfare.RunTask(req.KitManager.Requests.ResupplyKit(player), ctx: "Resupplying " + player + "'s kit for leaderboard.");
             }
             if (Data.Is<IFlagRotation>())
                 CTFUI.ClearFlagList(player.Connection);

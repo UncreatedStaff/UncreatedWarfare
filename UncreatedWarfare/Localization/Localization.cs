@@ -248,7 +248,8 @@ public static class Localization
         {
             return "<#ff0000>INVALID LOADOUT</color>";
         }
-        Kit? kit = KitManager.GetSingletonQuick()?.GetLoadoutQuick(player, loadoutId);
+        Kit? kit = KitManager.GetSingletonQuick()?.Loadouts.GetLoadoutQuick(player.Steam64, loadoutId);
+        
         if (kit == null)
         {
             return "<b>" + T.LoadoutName.Translate(player, "#" + loadoutId) + "</b>\n\n\n\n" +
@@ -279,9 +280,12 @@ public static class Localization
             name = kit.InternalName + '\n' + "(" + (char)(loadoutId + 47) + ") " + kit.GetDisplayName(player.Locale.LanguageInfo, false);
             keepline = true;
         }
+
+        KitManager? manager = KitManager.GetSingletonQuick();
+
         name = "<b>" + name.ToUpper()
             .ColorizeTMPro(
-                UCWarfare.GetColorHex(KitManager.IsFavoritedQuick(kit.PrimaryKey, player) ? "kit_public_header_fav" : "kit_public_header")
+                UCWarfare.GetColorHex(manager != null && manager.IsFavoritedQuick(kit.PrimaryKey, player) ? "kit_public_header_fav" : "kit_public_header")
                 , true) + "</b>";
         string cost = "<sub>" + T.LoadoutName.Translate(player, KitEx.GetLoadoutLetter(KitEx.ParseStandardLoadoutId(kit.InternalName))) + "</sub>";
         if (!keepline) cost = "\n" + cost;
@@ -297,7 +301,7 @@ public static class Localization
         }
         else if (kit.RequiresNitro)
         {
-            if (KitManager.IsNitroBoostingQuick(player.Steam64))
+            if (manager != null && manager.Boosting.IsNitroBoostingQuick(player.Steam64))
                 playercount = T.KitNitroBoostOwned.Translate(player);
             else
                 playercount = T.KitNitroBoostNotOwned.Translate(player);
@@ -358,12 +362,13 @@ public static class Localization
             name = kit.InternalName + "\n" + kit.GetDisplayName(player.Locale.LanguageInfo, false);
             keepline = true;
         }
+
         name = "<b>" + name
             .ToUpper()
             .ColorizeTMPro(UCWarfare.GetColorHex(
                 kit.SquadLevel == SquadLevel.Commander
                     ? "kit_public_commander_header"
-                    : (KitManager.IsFavoritedQuick(kit.PrimaryKey, player)
+                    : (manager != null && manager.IsFavoritedQuick(kit.PrimaryKey, player)
                         ? "kit_public_header_fav"
                         : "kit_public_header")), true) + "</b>";
         string weapons = kit.WeaponText ?? string.Empty;
@@ -382,7 +387,7 @@ public static class Localization
         }
         if (kit.RequiresNitro)
         {
-            if (KitManager.IsNitroBoostingQuick(player.Steam64))
+            if (manager != null && manager.Boosting.IsNitroBoostingQuick(player.Steam64))
                 cost = T.KitNitroBoostOwned.Translate(player);
             else
                 cost = T.KitNitroBoostNotOwned.Translate(player);
@@ -390,7 +395,7 @@ public static class Localization
         }
         if (kit.Type is KitType.Elite or KitType.Special)
         {
-            if (manager != null && KitManager.HasAccessQuick(kit, player))
+            if (manager != null && manager.HasAccessQuick(kit, player))
                 cost = T.KitPremiumOwned.Translate(player);
             else if (kit.Type == KitType.Special)
                 cost = T.KitExclusive.Translate(player);
@@ -412,7 +417,7 @@ public static class Localization
         }
         if (kit.CreditCost > 0)
         {
-            cost = KitManager.HasAccessQuick(kit, player) ? T.KitPremiumOwned.Translate(player) : T.KitCreditCost.Translate(player, kit.CreditCost);
+            cost = manager != null && manager.HasAccessQuick(kit, player) ? T.KitPremiumOwned.Translate(player) : T.KitCreditCost.Translate(player, kit.CreditCost);
         }
         else cost = T.KitFree.Translate(player);
         n:
@@ -531,7 +536,7 @@ public static class Localization
 
         return EnumToStringDynamic(value);
     }
-    public static unsafe string TranslateEnum(object value, LanguageInfo? language)
+    public static string TranslateEnum(object value, LanguageInfo? language)
     {
         language ??= GetDefaultLanguage();
         if (value == null)

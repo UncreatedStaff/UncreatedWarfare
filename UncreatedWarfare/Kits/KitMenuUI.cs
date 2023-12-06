@@ -5,8 +5,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits.Items;
@@ -535,11 +539,13 @@ public class KitMenuUI : UnturnedUI
             ValStatsPlaytime.SetText(c, Localization.GetTimeFromMinutes(((int)kitStats.PlaytimeMinutes), player));
         }
 
+        KitManager? manager = KitManager.GetSingletonQuick();
+
         if (TeamManager.IsInMain(player) && Data.Is<IKitRequests>())
         {
             if (kit.IsRequestable(player.Faction))
             {
-                if (kit.IsPublicKit && kit.CreditCost <= 0 || KitManager.HasAccessQuick(kit, player))
+                if (kit is { IsPublicKit: true, CreditCost: <= 0 } || (manager != null && manager.HasAccessQuick(kit, player)))
                     LblActionsActionButton.SetText(c, DefaultLanguageCache![24]);
                 else
                     LblActionsActionButton.SetText(c, DefaultLanguageCache![30]);
@@ -598,7 +604,8 @@ public class KitMenuUI : UnturnedUI
     private void SendKit(UCPlayer player, int index, Kit kit, bool favorited)
     {
         ITransportConnection c = player.Connection;
-        bool hasAccess = KitManager.HasAccessQuick(kit, player);
+        KitManager? manager = KitManager.GetSingletonQuick();
+        bool hasAccess = manager != null && manager.HasAccessQuick(kit, player);
         if (kit.Type != KitType.Loadout)
             FavoriteLabels[index].SetText(c, favorited ? "<#fd0>¼" : "¼");
         WeaponLabels[index].SetText(c, kit.WeaponText ?? string.Empty);
@@ -713,12 +720,14 @@ public class KitMenuUI : UnturnedUI
         {
             CancellationToken tkn = pl.DisconnectToken;
             tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
-            UCWarfare.RunTask(async token =>
+            UCWarfare.RunTask(token =>
             {
                 KitManager? manager = KitManager.GetSingletonQuick();
+
                 if (manager == null)
-                    return;
-                await manager.RequestKit(proxy, CommandInteraction.CreateTemporary(pl), token);
+                    return Task.CompletedTask;
+
+                return manager.Requests.RequestKit(proxy, CommandInteraction.CreateTemporary(pl), token);
             }, tkn, ctx: "Request kit from kit UI.");
         }
     }
@@ -771,6 +780,7 @@ public sealed class KitMenuUIData : IPlayerComponent
     public List<uint>? FavoriteKits { get; set; }
     public bool[] Favorited { get; set; } = Array.Empty<bool>();
     private FactionInfo? _faction;
+    private KitManager? _manager;
     private UCPlayer? _viewLensPlayer;
     public void Init()
     {
@@ -784,52 +794,53 @@ public sealed class KitMenuUIData : IPlayerComponent
             Kits = Array.Empty<Kit>();
             return;
         }
-        manager.WriteWait();
-        try
+
+        _viewLensPlayer = Player;
+        UCPlayer.TryApplyViewLens(ref _viewLensPlayer);
+
+        _faction = _viewLensPlayer.Faction;
+        _manager = manager;
+
+        Func<Kit, bool> predicate = Tab switch
         {
-            _viewLensPlayer = Player;
-            UCPlayer.TryApplyViewLens(ref _viewLensPlayer);
-
-            _faction = _viewLensPlayer.Faction;
-
-            Func<Kit, bool> predicate = Tab switch
-            {
-                0 => KitListBasePredicate,
-                1 => KitListElitePredicate,
-                2 => KitListLoadoutPredicate,
-                3 => KitListSpecialPredicate,
-                _ => _ => true,
-            };
+            0 => KitListBasePredicate,
+            1 => KitListElitePredicate,
+            2 => KitListLoadoutPredicate,
+            3 => KitListSpecialPredicate,
+            _ => _ => true
+        };
 #if DEBUG
-            using IDisposable disp = L.IndentLog(1);
+        using IDisposable disp = L.IndentLog(1);
 #endif
-            L.LogDebug(manager.Items.Count + " searched... ");
-            Kits = manager.Items.Where(predicate)
-                .OrderByDescending(x => FavoriteKits?.Contains(x.PrimaryKey))
-                .ThenBy(x =>
-                {
-                    string dn = x.GetDisplayName(null);
-                    if (dn.Length <= 0 || char.IsDigit(dn[0]))
-                        dn = "ZZ" + dn;
-                    return dn;
-                }).ToArray();
-            L.LogDebug(Kits.Length + " selected for tab " + Tab + "... ");
-            if (Kits.Length > KitMenuUI.KitListCount)
+
+        L.LogDebug(manager.Cache.KitDataByKey.Count + " searched... ");
+        Kits = manager.Cache.KitDataByKey.Values.Where(predicate)
+            .OrderByDescending(x => FavoriteKits?.Contains(x.PrimaryKey))
+            .ThenBy(x =>
             {
-                Kit[] old = Kits;
-                Kits = new Kit[KitMenuUI.KitListCount];
-                Array.Copy(old, Kits, KitMenuUI.KitListCount);
-            }
-            if (Favorited.Length != Kits.Length)
-                Favorited = new bool[Kits.Length];
-            for (int i = 0; i < Kits.Length; ++i)
-                Favorited[i] = FavoriteKits != null && FavoriteKits.Contains(Kits[i].PrimaryKey);
-            _viewLensPlayer = null;
-        }
-        finally
+                string dn = x.GetDisplayName(null);
+                if (dn.Length <= 0 || char.IsDigit(dn[0]))
+                    dn = "ZZ" + dn;
+                return dn;
+            }).ToArray();
+
+        L.LogDebug(Kits.Length + " selected for tab " + Tab + "... ");
+
+        if (Kits.Length > KitMenuUI.KitListCount)
         {
-            manager.WriteRelease();
+            Kit[] old = Kits;
+            Kits = new Kit[KitMenuUI.KitListCount];
+            Array.Copy(old, Kits, KitMenuUI.KitListCount);
         }
+
+        if (Favorited.Length != Kits.Length)
+            Favorited = new bool[Kits.Length];
+        for (int i = 0; i < Kits.Length; ++i)
+            Favorited[i] = FavoriteKits != null && FavoriteKits.Contains(Kits[i].PrimaryKey);
+        _viewLensPlayer = null;
+
+        _manager = null;
+        _faction = null;
     }
 
     private bool KitListBasePredicate(Kit x)
@@ -838,8 +849,8 @@ public sealed class KitMenuUIData : IPlayerComponent
         => x is { Type: KitType.Elite } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction);
     private bool KitListLoadoutPredicate(Kit x)
         => x is { Type: KitType.Loadout } && (Filter == Class.None || x.Class == Filter) && x is { Class: > Class.Unarmed, Requestable: true } &&
-           (Player.OnDuty() && x.Creator == Player.Steam64 || KitManager.HasAccessQuick(x, _viewLensPlayer!));
+           (Player.OnDuty() && x.Creator == Player.Steam64 || _manager!.HasAccessQuick(x, _viewLensPlayer!));
     private bool KitListSpecialPredicate(Kit x)
         => x is { Type: KitType.Special } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction)
-           && (Player.OnDuty() || KitManager.HasAccessQuick(x, _viewLensPlayer!));
+           && (Player.OnDuty() || _manager!.HasAccessQuick(x, _viewLensPlayer!));
 }

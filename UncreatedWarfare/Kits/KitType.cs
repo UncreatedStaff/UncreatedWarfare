@@ -15,5 +15,7 @@ public enum KitType : byte
     Special,
     [Translatable("Loadout", Description = "Custom kits bought with real money.")]
     [Translatable(Languages.ChineseSimplified, "套装")]
-    Loadout
+    Loadout,
+    [Translatable("Template", Description = "Kits meant to act as templates for creating other kits.")]
+    Template
 }

@@ -10,15 +10,26 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Database.Abstractions;
 
 namespace Uncreated.Warfare.Singletons;
+
+[Obsolete]
 public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadSingleton where TEntity : class
 {
     protected internal readonly UCSemaphore WriteSemaphore;
     protected internal readonly UCSemaphore UpdateSemaphore;
     private List<TEntity> _entities;
-    public event Func<Task>? OnItemsRefreshed;
-    public event Func<TEntity, Task>? OnItemAdded;
-    public event Func<TEntity, Task>? OnItemUpdated;
-    public event Func<TEntity, Task>? OnItemDeleted;
+
+
+    /* These aren't events for a reason (async events don't really work). */
+
+    /// <remarks>Do not multicast.</remarks>
+    protected Func<Task>? OnItemsRefreshed;
+    /// <remarks>Do not multicast.</remarks>
+    protected Func<TEntity, Task>? OnItemAdded;
+    /// <remarks>Do not multicast.</remarks>
+    protected Func<TEntity, Task>? OnItemUpdated;
+    /// <remarks>Do not multicast.</remarks>
+    protected Func<TEntity, Task>? OnItemDeleted;
+
     public Type EntityType { get; set; }
     public override bool AwaitLoad => true;
     public IReadOnlyList<TEntity> Items { get; private set; }
@@ -46,14 +57,14 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
     public Task<bool> WriteWaitAsync(CancellationToken token = default) => WriteSemaphore.WaitAsync(token);
     public Task<bool> WriteWaitAsync(TimeSpan timeout, CancellationToken token = default) => WriteSemaphore.WaitAsync(timeout, token);
     public Task<bool> WriteWaitAsync(int millisecondsTimeout, CancellationToken token = default) => WriteSemaphore.WaitAsync(millisecondsTimeout, token);
-    
+
     public Task<bool> WaitAsync(CancellationToken token = default) => UpdateSemaphore.WaitAsync(token);
     public Task<bool> WaitAsync(TimeSpan timeout, CancellationToken token = default) => UpdateSemaphore.WaitAsync(timeout, token);
     public Task<bool> WaitAsync(int millisecondsTimeout, CancellationToken token = default) => UpdateSemaphore.WaitAsync(millisecondsTimeout, token);
 
     public void WriteRelease(int amt = 1) => WriteSemaphore.Release(amt);
     public void Release(int amt = 1) => UpdateSemaphore.Release(amt);
-    public override async Task LoadAsync(CancellationToken token)
+    protected override async Task LoadAsync(CancellationToken token)
     {
         try
         {
@@ -91,7 +102,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
             Release();
         }
     }
-    public override async Task UnloadAsync(CancellationToken token)
+    protected override async Task UnloadAsync(CancellationToken token)
     {
         await WaitAsync(token).ConfigureAwait(false);
         try
@@ -293,7 +304,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
 
     public async Task AddNoLock(TEntity entity, bool save = true, CancellationToken token = default)
     {
-        await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             if (_entities.Contains(entity))
@@ -327,7 +338,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
     {
         List<TEntity> list = entities.ToListFast(convertList);
 
-        await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             list.RemoveAll(x => _entities.Contains(x));
@@ -366,7 +377,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
     public async Task<TEntity?> RedownloadNoLock(Expression<Func<TEntity, bool>> selector, CancellationToken token = default)
     {
         TEntity? removed = null, updated = null, added = null;
-        await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             Func<TEntity, bool> v = selector.Compile();
@@ -436,7 +447,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
     }
     public async Task UpdateNoLock(TEntity entity, bool save = true, CancellationToken token = default)
     {
-        await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             if (!_entities.Contains(entity))
@@ -469,7 +480,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
     {
         List<TEntity> list = entities.ToListFast(convertList);
 
-        await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             list.RemoveAll(x => !_entities.Contains(x));
@@ -506,7 +517,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
     }
     public async Task RemoveNoLock(TEntity entity, bool save = true, CancellationToken token = default)
     {
-        await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             if (!_entities.Remove(entity))
@@ -539,7 +550,7 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
     {
         List<TEntity> list = entities.ToListFast(convertList);
         
-        await WriteSemaphore.WaitAsync(token).ConfigureAwait(false);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             list.RemoveAll(x => !_entities.Contains(x));
@@ -581,10 +592,24 @@ public abstract class CachedEntityFrameworkSingleton<TEntity> : BaseAsyncReloadS
     {
         token.ThrowIfCancellationRequested();
         (SetPropertyResult, MemberInfo?) rtn = (SettableUtil<TEntity>.SetProperty(entity, property, value, out MemberInfo? member), member);
-        if (save && rtn.Item1 == SetPropertyResult.Success)
-            await Update(entity, save, token: token).ConfigureAwait(false);
+
+        if (rtn.Item1 != SetPropertyResult.Success)
+            return rtn;
+
+        if (save)
+            await UpdateNoLock(entity, save, token: token).ConfigureAwait(false);
         else
-            DbContext.Update(entity);
+        {
+            await DbContext.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                DbContext.Update(entity);
+            }
+            finally
+            {
+                DbContext.Release();
+            }
+        }
         return rtn;
     }
 

@@ -6,11 +6,13 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
@@ -79,19 +81,6 @@ public sealed class KitCommand : AsyncCommand
                             IsOptional = true,
                             Aliases = new string[] { "delete", "cancel" },
                             Description = "Resets your layout for this kit."
-                        }
-                    }
-                },
-                new CommandParameter("Search")
-                {
-                    Aliases = new string[] { "find" },
-                    Permission = EAdminType.STAFF,
-                    Description = "Finds a kit Id from a localized name.",
-                    Parameters = new CommandParameter[]
-                    {
-                        new CommandParameter("Term", typeof(string))
-                        {
-                            IsRemainder = true
                         }
                     }
                 },
@@ -371,6 +360,7 @@ public sealed class KitCommand : AsyncCommand
                 ? "/kit <bind|layout> - Customize your experience with kits."
                 : (Syntax + " - " + Help));
 
+
         if (ctx.MatchParameter(0, "hotkey", "keybind", "bind"))
         {
             ctx.AssertRanByPlayer();
@@ -389,81 +379,65 @@ public sealed class KitCommand : AsyncCommand
                     if (add)
                     {
                         IPageKitItem? item = await manager.GetHeldItemFromKit(ctx.Caller, token).ConfigureAwait(false);
-                        await manager.WaitAsync(token).ConfigureAwait(false);
-                        try
+                        await UCWarfare.ToUpdate(token);
+
+                        if (item == null)
+                            throw ctx.Reply(T.KitHotkeyNotHoldingItem);
+
+                        ItemAsset? asset = item is ISpecificKitItem i2
+                            ? i2.Item.GetAsset<ItemAsset>()
+                            : item.GetItem(kit, TeamManager.GetFactionSafe(ctx.Caller.GetTeam()), out _, out _);
+                        if (asset == null)
+                            throw ctx.Reply(T.KitHotkeyNotHoldingItem);
+
+                        if (!KitEx.CanBindHotkeyTo(asset, item.Page))
+                            throw ctx.Reply(T.KitHotkeyNotHoldingValidItem, asset);
+
+                        await manager.AddHotkey(kit.PrimaryKey, ctx.CallerID, slot, item, token).ConfigureAwait(false);
+                        await UCWarfare.ToUpdate(token);
+                        if (ctx.Caller.HotkeyBindings != null)
                         {
-                            await UCWarfare.ToUpdate(token);
-
-                            if (item == null)
-                                throw ctx.Reply(T.KitHotkeyNotHoldingItem);
-
-                            ItemAsset? asset = item is ISpecificKitItem i2
-                                ? i2.Item.GetAsset<ItemAsset>()
-                                : item.GetItem(kit, TeamManager.GetFactionSafe(ctx.Caller.GetTeam()), out _, out _);
-                            if (asset == null)
-                                throw ctx.Reply(T.KitHotkeyNotHoldingItem);
-
-                            if (!KitEx.CanBindHotkeyTo(asset, item.Page))
-                                throw ctx.Reply(T.KitHotkeyNotHoldingValidItem, asset);
-
-                            await manager.AddHotkey(kit.PrimaryKey, ctx.CallerID, slot, item, token).ConfigureAwait(false);
-                            await UCWarfare.ToUpdate(token);
-                            if (ctx.Caller.HotkeyBindings != null)
-                            {
-                                // remove duplicates / conflicts
-                                ctx.Caller.HotkeyBindings.RemoveAll(x =>
-                                    x.Kit == kit.PrimaryKey && (x.Slot == slot ||
-                                                                              x.Item.X == item.X &&
-                                                                              x.Item.Y == item.Y &&
-                                                                              x.Item.Page == item.Page));
-                            }
-                            else ctx.Caller.HotkeyBindings = new List<HotkeyBinding>(32);
-
-                            ctx.Caller.HotkeyBindings.Add(new HotkeyBinding(kit.PrimaryKey, slot, item, new KitHotkey
-                            {
-                                Steam64 = ctx.CallerID,
-                                KitId = kit.PrimaryKey,
-                                Item = item is ISpecificKitItem item2 ? item2.Item : null,
-                                Redirect = item is IAssetRedirectKitItem redir ? redir.RedirectType : null,
-                                X = item.X,
-                                Y = item.Y,
-                                Page = item.Page,
-                                Slot = slot
-                            }));
-
-                            byte index = KitEx.GetHotkeyIndex(slot);
-
-                            if (KitEx.CanBindHotkeyTo(asset, (Page)equipment.equippedPage))
-                            {
-                                equipment.ServerBindItemHotkey(index, asset,
-                                    equipment.equippedPage, equipment.equipped_x,
-                                    equipment.equipped_y);
-                            }
-                            throw ctx.Reply(T.KitHotkeyBinded, asset, slot, kit);
+                            // remove duplicates / conflicts
+                            ctx.Caller.HotkeyBindings.RemoveAll(x =>
+                                x.Kit == kit.PrimaryKey && (x.Slot == slot ||
+                                                                          x.Item.X == item.X &&
+                                                                          x.Item.Y == item.Y &&
+                                                                          x.Item.Page == item.Page));
                         }
-                        finally
+                        else ctx.Caller.HotkeyBindings = new List<HotkeyBinding>(32);
+
+                        ctx.Caller.HotkeyBindings.Add(new HotkeyBinding(kit.PrimaryKey, slot, item, new KitHotkey
                         {
-                            manager.Release();
+                            Steam64 = ctx.CallerID,
+                            KitId = kit.PrimaryKey,
+                            Item = item is ISpecificKitItem item2 ? item2.Item : null,
+                            Redirect = item is IAssetRedirectKitItem redir ? redir.RedirectType : null,
+                            X = item.X,
+                            Y = item.Y,
+                            Page = item.Page,
+                            Slot = slot
+                        }));
+
+                        byte index = KitEx.GetHotkeyIndex(slot);
+
+                        if (KitEx.CanBindHotkeyTo(asset, (Page)equipment.equippedPage))
+                        {
+                            equipment.ServerBindItemHotkey(index, asset,
+                                equipment.equippedPage, equipment.equipped_x,
+                                equipment.equipped_y);
                         }
+                        throw ctx.Reply(T.KitHotkeyBinded, asset, slot, kit);
                     }
                     else
                     {
-                        await manager.WaitAsync(token).ConfigureAwait(false);
-                        try
-                        {
-                            bool removed = await manager.RemoveHotkey(kit.PrimaryKey, ctx.CallerID, slot, token).ConfigureAwait(false);
-                            await UCWarfare.ToUpdate(token);
-                            if (!removed)
-                                throw ctx.Reply(T.KitHotkeyNotFound, slot, kit);
+                        bool removed = await manager.RemoveHotkey(kit.PrimaryKey, ctx.CallerID, slot, token).ConfigureAwait(false);
+                        await UCWarfare.ToUpdate(token);
+                        if (!removed)
+                            throw ctx.Reply(T.KitHotkeyNotFound, slot, kit);
 
-                            byte index = KitEx.GetHotkeyIndex(slot);
-                            equipment.ServerClearItemHotkey(index);
-                            throw ctx.Reply(T.KitHotkeyUnbinded, slot, kit);
-                        }
-                        finally
-                        {
-                            manager.Release();
-                        }
+                        byte index = KitEx.GetHotkeyIndex(slot);
+                        equipment.ServerClearItemHotkey(index);
+                        throw ctx.Reply(T.KitHotkeyUnbinded, slot, kit);
                     }
                 }
                 finally
@@ -484,13 +458,11 @@ public sealed class KitCommand : AsyncCommand
                 try
                 {
                     Kit? kit = ctx.Caller.GetActiveKit();
+
                     if (kit == null)
-                    {
                         throw ctx.Reply(T.AmmoNoKit);
-                    }
-                    if (!KitManager.ShouldAllowLayouts(kit))
-                        throw ctx.Reply(T.KitLayoutsNotSupported, kit);
-                    await manager.SaveLayout(ctx.Caller, kit, false, true, token).ConfigureAwait(false);
+                    
+                    await manager.SaveLayout(ctx.Caller, kit, false, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                     throw ctx.Reply(T.KitLayoutSaved, kit);
                 }
@@ -509,13 +481,12 @@ public sealed class KitCommand : AsyncCommand
                     if (kit == null)
                         throw ctx.Reply(T.AmmoNoKit);
                     
-                    if (!KitManager.ShouldAllowLayouts(kit))
-                        throw ctx.Reply(T.KitLayoutsNotSupported, kit);
                     if (kit.Items != null)
                     {
                         await UCWarfare.ToUpdate(token);
-                        KitManager.TryReverseLayoutTransformations(ctx.Caller, kit.Items, kit.PrimaryKey);
+                        manager.Layouts.TryReverseLayoutTransformations(ctx.Caller, kit.Items, kit.PrimaryKey);
                     }
+
                     await manager.ResetLayout(ctx.Caller, kit.PrimaryKey, false, token);
                     await UCWarfare.ToUpdate(token);
                     throw ctx.Reply(T.KitLayoutReset, kit);
@@ -546,7 +517,7 @@ public sealed class KitCommand : AsyncCommand
                 kitName = drop.interactable is InteractableSign sign ? sign.text : null!;
                 kit = Signs.GetKitFromSign(drop, out int loadoutId);
                 if (loadoutId > 0)
-                    kit = await manager.GetLoadout(player, loadoutId, token).ConfigureAwait(false);
+                    kit = await manager.Loadouts.GetLoadout(player, loadoutId, token).ConfigureAwait(false);
             }
             else
                 throw ctx.SendCorrectUsage("/kit favorite (look at kit sign <b>or</b> [kit id]) - Favorite your kit or loadout.");
@@ -559,12 +530,12 @@ public sealed class KitCommand : AsyncCommand
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                if (fav && KitManager.IsFavoritedQuick(kit.PrimaryKey, player))
+                if (fav && manager.IsFavoritedQuick(kit.PrimaryKey, player))
                 {
                     await UCWarfare.ToUpdate(token);
                     throw ctx.Reply(T.KitFavoriteAlreadyFavorited, kit);
                 }
-                else if (!fav && !KitManager.IsFavoritedQuick(kit.PrimaryKey, player))
+                else if (!fav && !manager.IsFavoritedQuick(kit.PrimaryKey, player))
                 {
                     await UCWarfare.ToUpdate(token);
                     throw ctx.Reply(T.KitFavoriteAlreadyUnfavorited, kit);
@@ -595,21 +566,7 @@ public sealed class KitCommand : AsyncCommand
         ctx.AssertOnDuty();
         ctx.AssertPermissions(EAdminType.STAFF);
 
-        if (ctx.MatchParameter(0, "search", "find"))
-        {
-            ctx.AssertHelpCheck(1, "/kit search <term> - Searches for the search term within display names of all kits and tells you the id of all results.");
-
-            if (ctx.TryGetRange(1, out string searchTerm))
-            {
-                IReadOnlyList<Kit> res = await manager.FindKits(searchTerm, token, false);
-                if (res.Count <= 0)
-                    throw ctx.Reply(T.KitSearchResults, "--");
-                ctx.Reply(T.KitSearchResults, string.Join(", ", res.Select(x => x.InternalName + " [" + x.GetDisplayName(ctx.LanguageInfo) + "]")));
-            }
-            else
-                ctx.SendCorrectUsage("/kit <search|find> <term>");
-        }
-        else if (ctx.MatchParameter(0, "create", "c", "override"))
+        if (ctx.MatchParameter(0, "create", "c", "override"))
         {
             ctx.AssertRanByPlayer();
 
@@ -629,24 +586,20 @@ public sealed class KitCommand : AsyncCommand
                         await UCWarfare.ToUpdate(token);
                         throw ctx.Reply(T.KitCancelOverride);
                     }
-                    await manager.WaitAsync(token).ConfigureAwait(false);
-                    try
-                    {
-                        IKitItem[] oldItems = kit.Items;
-                        kit.Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true);
-                        kit.WeaponText = KitManager.DetectWeaponText(kit);
-                        kit.UpdateLastEdited(ctx.CallerID);
-                        ctx.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.InternalName + ".");
-                        await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
-                        UCWarfare.RunTask(KitManager.OnItemsChangedLayoutHandler, oldItems, kit, token, ctx: "Update layouts after changing items.");
-                        await UCWarfare.ToUpdate();
-                        KitManager.UpdateSigns(kit);
-                        ctx.Reply(T.KitOverwrote, kit);
-                    }
-                    finally
-                    {
-                        manager.Release();
-                    }
+
+                    await using IKitsDbContext dbContext = new WarfareDbContext();
+
+                    IKitItem[] oldItems = kit.Items;
+                    kit.SetItemArray(UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true), dbContext);
+                    kit.WeaponText = manager.GetWeaponText(kit);
+                    kit.UpdateLastEdited(ctx.CallerID);
+                    ctx.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.InternalName + ".");
+                    dbContext.Update(kit);
+                    await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+                    UCWarfare.RunTask(manager.OnItemsChangedLayoutHandler, oldItems, kit, token, ctx: "Update layouts after changing items.");
+                    manager.Signs.UpdateSigns(kit);
+                    ctx.Reply(T.KitOverwrote, kit);
                     return;
                 }
                 
@@ -673,17 +626,20 @@ public sealed class KitCommand : AsyncCommand
                 else if (ctx.HasArg(2))
                     throw ctx.Reply(T.ClassNotFoundCreateKit, ctx.Get(2)!);
 
+                await using IKitsDbContext dbContext2 = new WarfareDbContext();
+
                 if (@class == Class.None) @class = Class.Unarmed;
-                kit = new Kit(kitName, @class, KitManager.GetDefaultBranch(@class), type, SquadLevel.Member, faction)
-                {
-                    Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true)
-                };
+                kit = new Kit(kitName, @class, KitDefaults<WarfareDbContext>.GetDefaultBranch(@class), type, SquadLevel.Member, faction);
+                kit.SetItemArray(UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true), dbContext2);
+
                 kit.Creator = kit.LastEditor = ctx.CallerID;
-                kit.WeaponText = KitManager.DetectWeaponText(kit);
-                await manager.Add(kit, token: token).ConfigureAwait(false);
+                kit.WeaponText = manager.GetWeaponText(kit);
+                dbContext2.Update(kit);
+                await dbContext2.SaveChangesAsync(token).ConfigureAwait(false);
                 ctx.LogAction(ActionLogType.CreateKit, kitName);
+
                 await UCWarfare.ToUpdate(token);
-                KitManager.UpdateSigns(kit);
+                manager.Signs.UpdateSigns(kit);
                 ctx.Reply(T.KitCreated, kit);
             }
             else
@@ -709,10 +665,16 @@ public sealed class KitCommand : AsyncCommand
                     }
                     
                     kit.UpdateLastEdited(ctx.CallerID);
-                    await manager.Remove(kit, token: token).ConfigureAwait(false);
+
+                    await using IKitsDbContext dbContext = new WarfareDbContext();
+                    dbContext.Remove(kit);
+                    await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
                     ctx.LogAction(ActionLogType.DeleteKit, kitName);
+
                     await UCWarfare.ToUpdate();
                     ctx.Reply(T.KitDeleted, kit);
+
                     if (!ld)
                         Signs.UpdateKitSigns(null, kitName);
                     else
@@ -740,21 +702,23 @@ public sealed class KitCommand : AsyncCommand
                     {
                         if (kit.Season != UCWarfare.Season)
                         {
+                            await using IKitsDbContext dbContext = new WarfareDbContext();
+
                             kit.Season = UCWarfare.Season;
-                            await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
-                            await UCWarfare.ToUpdate(token);
+                            dbContext.Update(kit);
+                            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                             throw ctx.Reply(T.KitUpgraded, kit);
                         }
                         await UCWarfare.ToUpdate(token);
                         throw ctx.Reply(T.DoesNotNeedUpgrade, kit);
                     }
 
-                    (_, StandardErrorCode err) = await manager.UpgradeLoadout(ctx.CallerID, playerId, @class, kitName, token).ConfigureAwait(false);
+                    (_, StandardErrorCode err) = await manager.Loadouts.UpgradeLoadout(ctx.CallerID, playerId, @class, kitName, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate();
                     if (err != StandardErrorCode.Success)
                         throw ctx.SendUnknownError();
                     ctx.Reply(T.LoadoutUpgraded, kit, @class);
-                    await manager.GiveKit(ctx.Caller, kit, true, false, token).ConfigureAwait(false);
+                    await manager.Requests.GiveKit(ctx.Caller, kit, true, false, token).ConfigureAwait(false);
                 }
                 else
                     ctx.Reply(T.KitNotFound, kitName);
@@ -771,33 +735,28 @@ public sealed class KitCommand : AsyncCommand
                 Kit? kit = await manager.FindKit(kitName, token, true);
                 if (kit is null)
                     throw ctx.Reply(T.KitNotFound);
-                await manager.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    if (kit != null)
-                    {
-                        if (!kit.NeedsSetup)
-                        {
-                            if (kit.Disabled)
-                            {
-                                kit.Disabled = false;
-                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
-                                await UCWarfare.ToUpdate(token);
-                                throw ctx.Reply(T.KitUnlocked, kit);
-                            }
-                            await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.DoesNotNeedUnlock, kit);
-                        }
-                    }
-                    else
-                        throw ctx.Reply(T.KitNotFound, kitName);
-                }
-                finally
-                {
-                    manager.Release();
-                }
 
-                (_, StandardErrorCode err) = await manager.UnlockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
+                if (kit != null)
+                {
+                    if (!kit.NeedsSetup)
+                    {
+                        if (kit.Disabled)
+                        {
+                            await using IKitsDbContext dbContext = new WarfareDbContext();
+
+                            kit.Disabled = false;
+                            dbContext.Update(kit);
+                            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                            throw ctx.Reply(T.KitUnlocked, kit);
+                        }
+                        await UCWarfare.ToUpdate(token);
+                        throw ctx.Reply(T.DoesNotNeedUnlock, kit);
+                    }
+                }
+                else
+                    throw ctx.Reply(T.KitNotFound, kitName);
+
+                (_, StandardErrorCode err) = await manager.Loadouts.UnlockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
                 if (err != StandardErrorCode.Success)
                     throw ctx.SendUnknownError();
                 ctx.Reply(T.KitUnlocked, kit);
@@ -814,33 +773,29 @@ public sealed class KitCommand : AsyncCommand
                 Kit? kit = await manager.FindKit(kitName, token, true);
                 if (kit is null)
                     throw ctx.Reply(T.KitNotFound);
-                await manager.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    if (kit != null)
-                    {
-                        if (kit.Type != KitType.Loadout || !kit.Disabled)
-                        {
-                            if (!kit.Disabled)
-                            {
-                                kit.Disabled = true;
-                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
-                                await UCWarfare.ToUpdate(token);
-                                throw ctx.Reply(T.KitLocked, kit);
-                            }
-                            await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.DoesNotNeedLock, kit);
-                        }
-                    }
-                    else
-                        throw ctx.Reply(T.KitNotFound, kitName);
-                }
-                finally
-                {
-                    manager.Release();
-                }
 
-                (_, StandardErrorCode err) = await manager.LockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
+                if (kit != null)
+                {
+                    if (kit.Type != KitType.Loadout || !kit.Disabled)
+                    {
+                        if (!kit.Disabled)
+                        {
+                            await using IKitsDbContext dbContext = new WarfareDbContext();
+
+                            kit.Disabled = true;
+                            dbContext.Update(kit);
+                            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                            throw ctx.Reply(T.KitLocked, kit);
+                        }
+
+                        await UCWarfare.ToUpdate(token);
+                        throw ctx.Reply(T.DoesNotNeedLock, kit);
+                    }
+                }
+                else
+                    throw ctx.Reply(T.KitNotFound, kitName);
+
+                (_, StandardErrorCode err) = await manager.Loadouts.LockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate();
                 if (err != StandardErrorCode.Success)
                     throw ctx.SendUnknownError();
@@ -865,14 +820,14 @@ public sealed class KitCommand : AsyncCommand
                     {
                         UCPlayer pl = ctx.Caller;
                         UCPlayer.TryApplyViewLens(ref pl);
-                        kit = await manager.GetLoadout(pl, loadout, token).ConfigureAwait(false);
+                        kit = await manager.Loadouts.GetLoadout(pl, loadout, token).ConfigureAwait(false);
                     }
                 }
                 
                 if (kit != null)
                 {
                     Class @class = kit.Class;
-                    await manager.GiveKit(ctx.Caller, kit, true, true, token).ConfigureAwait(false);
+                    await manager.Requests.GiveKit(ctx.Caller, kit, true, true, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                     ctx.LogAction(ActionLogType.GiveKit, kitName);
                     ctx.Reply(T.RequestSignGiven, @class);
@@ -889,150 +844,161 @@ public sealed class KitCommand : AsyncCommand
 
             if (ctx.TryGet(3, out string newValue) && ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out string property))
             {
-                Kit? kit = await manager.FindKit(kitName, token, true);
+                Kit? kit = await manager.FindKit(kitName, token, true, x => x.Kits
+                    .Include(y => y.UnlockRequirementsModels)
+                    .Include(y => y.Translations)
+                );
                 if (kit != null)
                 {
-                    await manager.WaitAsync(token).ConfigureAwait(false);
-                    try
+                    if (kit == null)
+                        throw ctx.Reply(T.KitNotFound, kitName);
+
+                    await using IKitsDbContext dbContext = new WarfareDbContext();
+
+                    if (ctx.MatchParameter(1, "level", "lvl"))
                     {
-                        if (kit == null)
-                            throw ctx.Reply(T.KitNotFound, kitName);
-                        if (ctx.MatchParameter(1, "level", "lvl"))
+                        if (ctx.TryGet(3, out int level))
                         {
-                            if (ctx.TryGet(3, out int level))
+                            if (level == 0)
                             {
-                                if (level == 0)
+                                UnlockRequirement[] ulr = kit.UnlockRequirements;
+                                while (true)
                                 {
-                                    UnlockRequirement[] ulr = kit.UnlockRequirements;
-                                    do
-                                    {
-                                        int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
-                                        if (index == -1)
-                                            break;
-                                        Util.RemoveFromArray(ref ulr, index);
-                                        kit.UnlockRequirements = ulr;
-                                    } while (true);
+                                    int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
+                                    if (index == -1)
+                                        break;
+                                    Util.RemoveFromArray(ref ulr, index);
+                                }
+                                kit.SetUnlockRequirementArray(ulr, dbContext);
+                            }
+                            else
+                            {
+                                UnlockRequirement[] ulr = kit.UnlockRequirements;
+                                int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
+                                UnlockRequirement req = new LevelUnlockRequirement { UnlockLevel = level };
+                                if (index == -1)
+                                {
+                                    Util.AddToArray(ref ulr!, req);
+                                    kit.SetUnlockRequirementArray(ulr, dbContext);
                                 }
                                 else
                                 {
-                                    UnlockRequirement[] ulr = kit.UnlockRequirements;
-                                    int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
-                                    UnlockRequirement req = new LevelUnlockRequirement { UnlockLevel = level };
-                                    if (index == -1)
-                                    {
-                                        Util.AddToArray(ref ulr!, req);
-                                        kit.UnlockRequirements = ulr;
-                                    }
-                                    else ((LevelUnlockRequirement)ulr[index]).UnlockLevel = level;
+                                    ((LevelUnlockRequirement)ulr[index]).UnlockLevel = level;
+                                    kit.MarkLocalUnlockRequirementsDirty(dbContext);
                                 }
-                                kit.UpdateLastEdited(ctx.CallerID);
-                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
-                                await UCWarfare.ToUpdate(token);
-                                ctx.Reply(T.KitPropertySet, property, kit, newValue);
-                                ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": LEVEL >> " + newValue.ToUpper());
-                                KitManager.UpdateSigns(kit);
-                                ctx.Defer();
                             }
-                            else
-                                ctx.SendCorrectUsage("/kit <set|s> <level|lvl> <kitname> <value: integer>");
-                        }
-                        else if (ctx.MatchParameter(1, "sign", "text"))
-                        {
-                            ctx.AssertHelpCheck(2, "/kit <set|s> <sign> <language (default: " + L.Default + "> <text> - Sets the display text for the kit's kit sign.");
 
-                            LanguageInfo? language = Data.LanguageDataStore.GetInfoCached(newValue, false);
-                            if (language == null)
-                                throw ctx.Reply(T.KitLanguageNotFound, newValue);
-                            if (ctx.TryGetRange(4, out newValue))
-                            {
-                                newValue = newValue.Replace("\\n", "\n");
-                                manager.SetTextNoLock(ctx.CallerID, kit, newValue, language);
-                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
-                                await UCWarfare.ToUpdate(token);
-                                newValue = newValue.Replace('\n', '\\');
-                                ctx.Reply(T.KitPropertySet, "sign text", kit, language + " : " + newValue);
-                                ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
-                                KitManager.UpdateSigns(kit);
-                            }
-                            else
-                                ctx.SendCorrectUsage("/kit set sign <kitname> <language> <sign text>");
+                            kit.UpdateLastEdited(ctx.CallerID);
+                            dbContext.Update(kit);
+                            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+                            await UCWarfare.ToUpdate(token);
+
+                            ctx.Reply(T.KitPropertySet, property, kit, newValue);
+                            ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": LEVEL >> " + newValue.ToUpper());
+                            manager.Signs.UpdateSigns(kit);
+                            ctx.Defer();
                         }
-                        else if (ctx.MatchParameter(1, "faction", "team", "group"))
+                        else
+                            ctx.SendCorrectUsage("/kit <set|s> <level|lvl> <kitname> <value: integer>");
+                    }
+                    else if (ctx.MatchParameter(1, "sign", "text"))
+                    {
+                        ctx.AssertHelpCheck(2, "/kit <set|s> <sign> <language (default: " + L.Default + "> <text> - Sets the display text for the kit's kit sign.");
+
+                        LanguageInfo? language = Data.LanguageDataStore.GetInfoCached(newValue, false);
+                        if (language == null)
+                            throw ctx.Reply(T.KitLanguageNotFound, newValue);
+                        if (ctx.TryGetRange(4, out newValue))
                         {
-                            bool isNull = ctx.MatchParameter(3, "null", "none", "blank");
-                            FactionInfo? faction = isNull ? null : TeamManager.FindFactionInfo(newValue);
-                            if (faction != null || isNull)
-                            {
-                                kit.Faction = faction?.CreateModel();
-                                kit.FactionId = faction?.PrimaryKey;
-                                kit.UpdateLastEdited(ctx.CallerID);
-                                await manager.UpdateNoLock(kit, token: token).ConfigureAwait(false);
-                                await UCWarfare.ToUpdate(token);
-                                ctx.Reply(T.KitPropertySet, "faction", kit, faction?.GetName(Localization.GetDefaultLanguage())!);
-                                ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": FACTION >> " +
-                                                                               (faction?.Name.ToUpper() ?? Translation.Null(TranslationFlags.NoRichText)));
-                                KitManager.UpdateSigns(kit);
-                            }
-                            else
-                            {
-                                ctx.SendCorrectUsage("/kit set faction <faction id or search>");
-                                ctx.ReplyString("Factions: <#aaa>" + string.Join(", ", TeamManager.Factions
-                                    .OrderBy(x => x.PrimaryKey.Key)
-                                    .Select(x => x.FactionId)) + "</color>.");
-                            }
+                            newValue = newValue.Replace("\\n", "\n").Replace("/n", "\n");
+                            kit.SetSignText(dbContext, ctx.CallerID, kit, newValue, language);
+                            await dbContext.SaveChangesAsync(token);
+                            await UCWarfare.ToUpdate(token);
+                            newValue = newValue.Replace('\n', '\\');
+                            ctx.Reply(T.KitPropertySet, "sign text", kit, language + " : " + newValue);
+                            ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
+                            manager.Signs.UpdateSigns(kit);
+                        }
+                        else
+                            ctx.SendCorrectUsage("/kit set sign <kitname> <language> <sign text>");
+                    }
+                    else if (ctx.MatchParameter(1, "faction", "team", "group"))
+                    {
+                        bool isNull = ctx.MatchParameter(3, "null", "none", "blank");
+                        FactionInfo? faction = isNull ? null : TeamManager.FindFactionInfo(newValue);
+                        if (faction != null || isNull)
+                        {
+                            kit.Faction = faction?.CreateModel();
+                            kit.FactionId = faction?.PrimaryKey;
+                            kit.UpdateLastEdited(ctx.CallerID);
+                            dbContext.Update(kit);
+                            await dbContext.SaveChangesAsync(token);
+                            await UCWarfare.ToUpdate(token);
+                            ctx.Reply(T.KitPropertySet, "faction", kit, faction?.GetName(Localization.GetDefaultLanguage())!);
+                            ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": FACTION >> " +
+                                                                           (faction?.Name.ToUpper() ?? Translation.Null(TranslationFlags.NoRichText)));
+                            manager.Signs.UpdateSigns(kit);
                         }
                         else
                         {
-                            KitType prevType = kit.Type;
-                            Class oldclass = kit.Class;
-                            Branch oldbranch = kit.Branch;
-                            float oldReqCooldown = kit.RequestCooldown;
-                            float? oldTeamLimit = kit.TeamLimit;
-                            (SetPropertyResult result, MemberInfo? info) = await manager.SetProperty(kit, property, newValue, false, token).ConfigureAwait(false);
-                            if (info != null)
-                                property = info.Name;
-                            switch (result)
-                            {
-                                default:
-                                    ctx.Reply(T.KitInvalidPropertyValue, newValue,
-                                        info switch { FieldInfo i => i.FieldType, PropertyInfo i => i.PropertyType, _ => null! },
-                                            property);
-                                    return;
-                                case SetPropertyResult.PropertyProtected:
-                                    ctx.Reply(T.KitPropertyProtected, property);
-                                    return;
-                                case SetPropertyResult.PropertyNotFound:
-                                case SetPropertyResult.TypeNotSettable:
-                                    ctx.Reply(T.KitPropertyNotFound, property);
-                                    return;
-                                case SetPropertyResult.ObjectNotFound:
-                                    ctx.Reply(T.KitNotFound, kitName);
-                                    return;
-                                case SetPropertyResult.Success:
-                                    if (kit.Class != oldclass)
-                                    {
-                                        if (oldTeamLimit.HasValue && Mathf.Abs(KitManager.GetDefaultTeamLimit(oldclass) - oldTeamLimit.Value) < 0.005f)
-                                            kit.TeamLimit = null;
-                                        if (KitManager.GetDefaultBranch(oldclass) == oldbranch)
-                                            kit.Branch = KitManager.GetDefaultBranch(kit.Class);
-                                        if (Mathf.Abs(KitManager.GetDefaultRequestCooldown(oldclass) - oldReqCooldown) < 0.25f)
-                                            kit.RequestCooldown = KitManager.GetDefaultRequestCooldown(kit.Class);
-                                    }
-                                    kit.UpdateLastEdited(ctx.CallerID);
-                                    await manager.Update(kit, token: token).ConfigureAwait(false);
-                                    await UCWarfare.ToUpdate(token);
-                                    KitManager.UpdateSigns(kit);
-                                    ctx.Reply(T.KitPropertySet, property, kit, newValue);
-                                    ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
-                                    if (oldbranch != kit.Branch || oldclass != kit.Class || prevType != kit.Type)
-                                        manager.InvokeAfterMajorKitUpdate(kit, true);
-                                    return;
-                            }
+                            ctx.SendCorrectUsage("/kit set faction <faction id or search>");
+                            ctx.ReplyString("Factions: <#aaa>" + string.Join(", ", TeamManager.Factions
+                                .OrderBy(x => x.PrimaryKey.Key)
+                                .Select(x => x.FactionId)) + "</color>.");
                         }
                     }
-                    finally
+                    else
                     {
-                        manager.Release();
+                        KitType prevType = kit.Type;
+                        Class oldclass = kit.Class;
+                        Branch oldbranch = kit.Branch;
+                        float oldReqCooldown = kit.RequestCooldown;
+                        float? oldTeamLimit = kit.TeamLimit;
+                        SetPropertyResult result = SettableUtil<Kit>.SetProperty(kit, property, newValue, out MemberInfo? info);
+                        if (info != null)
+                            property = info.Name;
+                        
+                        switch (result)
+                        {
+                            case SetPropertyResult.ParseFailure:
+                            default:
+                                ctx.Reply(T.KitInvalidPropertyValue, newValue,
+                                    info switch { FieldInfo i => i.FieldType, PropertyInfo i => i.PropertyType, _ => null! },
+                                        property);
+                                return;
+                            case SetPropertyResult.PropertyProtected:
+                                ctx.Reply(T.KitPropertyProtected, property);
+                                return;
+                            case SetPropertyResult.PropertyNotFound:
+                            case SetPropertyResult.TypeNotSettable:
+                                ctx.Reply(T.KitPropertyNotFound, property);
+                                return;
+                            case SetPropertyResult.ObjectNotFound:
+                                ctx.Reply(T.KitNotFound, kitName);
+                                return;
+                            case SetPropertyResult.Success:
+                                if (kit.Class != oldclass)
+                                {
+                                    if (oldTeamLimit.HasValue && Mathf.Abs(KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(oldclass) - oldTeamLimit.Value) < 0.005f)
+                                        kit.TeamLimit = null;
+                                    if (KitDefaults<WarfareDbContext>.GetDefaultBranch(oldclass) == oldbranch)
+                                        kit.Branch = KitDefaults<WarfareDbContext>.GetDefaultBranch(kit.Class);
+                                    if (Mathf.Abs(KitDefaults<WarfareDbContext>.GetDefaultRequestCooldown(oldclass) - oldReqCooldown) < 0.25f)
+                                        kit.RequestCooldown = KitDefaults<WarfareDbContext>.GetDefaultRequestCooldown(kit.Class);
+                                }
+
+                                kit.UpdateLastEdited(ctx.CallerID);
+                                dbContext.Update(kit);
+                                await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                                await UCWarfare.ToUpdate(token);
+                                manager.Signs.UpdateSigns(kit);
+                                ctx.Reply(T.KitPropertySet, property, kit, newValue);
+                                ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                                if (oldbranch != kit.Branch || oldclass != kit.Class || prevType != kit.Type)
+                                    manager.InvokeAfterMajorKitUpdate(kit, true);
+                                return;
+                        }
                     }
                 }
                 else
@@ -1053,7 +1019,7 @@ public sealed class KitCommand : AsyncCommand
                     if (!ctx.TryGet(3, out KitAccessType type) || type == KitAccessType.Unknown)
                         type = KitAccessType.Purchase;
 
-                    bool hasAccess = await KitManager.HasAccess(kit, playerId, token).ConfigureAwait(false);
+                    bool hasAccess = await manager.HasAccess(kit, playerId, token).ConfigureAwait(false);
                     PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
                     if (hasAccess)
                     {
@@ -1061,7 +1027,7 @@ public sealed class KitCommand : AsyncCommand
                         ctx.Reply(T.KitAlreadyHasAccess, onlinePlayer as IPlayer ?? names, kit);
                         return;
                     }
-                    await KitManager.GiveAccess(kit, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
+                    await manager.GiveAccess(kit, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
                     KitSync.OnAccessChanged(playerId);
                     ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + kitName + ", REASON: " + type);
 
@@ -1070,7 +1036,7 @@ public sealed class KitCommand : AsyncCommand
                     if (onlinePlayer is not null)
                     {
                         onlinePlayer.SendChat(T.KitAccessGivenDm, kit);
-                        KitManager.UpdateSigns(kit, onlinePlayer);
+                        manager.Signs.UpdateSigns(kit, onlinePlayer);
                     }
                 }
                 else
@@ -1088,7 +1054,7 @@ public sealed class KitCommand : AsyncCommand
                 Kit? kit = await manager.FindKit(kitName, token, true);
                 if (kit != null)
                 {
-                    bool hasAccess = await KitManager.HasAccess(kit, playerId, token).ConfigureAwait(false);
+                    bool hasAccess = await manager.HasAccess(kit, playerId, token).ConfigureAwait(false);
                     PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
                     if (!hasAccess)
                     {
@@ -1096,7 +1062,7 @@ public sealed class KitCommand : AsyncCommand
                         ctx.Reply(T.KitAlreadyMissingAccess, onlinePlayer as IPlayer ?? names, kit);
                         return;
                     }
-                    await KitManager.RemoveAccess(kit, playerId, token).ConfigureAwait(false);
+                    await manager.RemoveAccess(kit, playerId, token).ConfigureAwait(false);
                     ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " DENIED ACCESS TO " + kitName);
                     KitSync.OnAccessChanged(playerId);
 
@@ -1105,7 +1071,7 @@ public sealed class KitCommand : AsyncCommand
                     if (onlinePlayer is not null)
                     {
                         onlinePlayer.SendChat(T.KitAccessRevokedDm, kit);
-                        KitManager.UpdateSigns(kit, onlinePlayer);
+                        manager.Signs.UpdateSigns(kit, onlinePlayer);
                     }
                 }
                 else
@@ -1120,61 +1086,47 @@ public sealed class KitCommand : AsyncCommand
 
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out string existingName))
             {
-                Kit? existing = await manager.FindKit(existingName, token).ConfigureAwait(false);
+                Kit? existing = await manager.FindKit(existingName, token, set: KitManager.FullSet).ConfigureAwait(false);
                 if (existing == null)
                     throw ctx.Reply(T.KitNotFound, existingName);
-                await manager.WaitAsync(token).ConfigureAwait(false);
-                Kit kit;
-                try
-                {
-                    if (existing == null)
-                        throw ctx.Reply(T.KitNotFound, existingName);
-                    Kit? newKitProxy = await manager.FindKit(kitName, token).ConfigureAwait(false);
-                    if (newKitProxy != null)
-                        throw ctx.Reply(T.KitNameTaken, kitName);
-                    kit = new Kit(kitName.ToLowerInvariant(), existing)
-                    {
-                        Season = UCWarfare.Season,
-                        Disabled = false,
-                        Creator = ctx.CallerID
-                    };
-                }
-                finally
-                {
-                    manager.Release();
-                }
 
-                await manager.Add(kit, token: token).ConfigureAwait(false);
+                Kit? kit = await manager.FindKit(kitName, token, set: x => x.Kits).ConfigureAwait(false);
+                if (kit != null)
+                    throw ctx.Reply(T.KitNameTaken, kitName);
 
-                await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
-                try
+                kit = new Kit(kitName.ToLowerInvariant().Replace(' ', '_'), existing)
                 {
+                    Season = UCWarfare.Season,
+                    Disabled = false,
+                    Creator = ctx.CallerID
+                };
+
+                await using (IKitsDbContext dbContext = new WarfareDbContext())
+                {
+                    dbContext.Add(kit);
+
                     foreach (KitSkillset skillset in kit.Skillsets)
-                        WarfareDatabases.Kits.Add(skillset);
+                        dbContext.Add(skillset);
 
                     foreach (KitFilteredFaction faction in kit.FactionFilter)
-                        WarfareDatabases.Kits.Add(faction);
+                        dbContext.Add(faction);
 
                     foreach (KitFilteredMap map in kit.MapFilter)
-                        WarfareDatabases.Kits.Add(map);
+                        dbContext.Add(map);
 
                     foreach (KitItemModel item in kit.ItemModels)
-                        WarfareDatabases.Kits.Add(item);
+                        dbContext.Add(item);
 
                     foreach (KitTranslation translation in kit.Translations)
-                        WarfareDatabases.Kits.Add(translation);
+                        dbContext.Add(translation);
 
                     foreach (KitUnlockRequirement unlockRequirement in kit.UnlockRequirementsModels)
-                        WarfareDatabases.Kits.Add(unlockRequirement);
-                }
-                finally
-                {
-                    WarfareDatabases.Kits.Release();
+                        dbContext.Add(unlockRequirement);
                 }
                 
                 ctx.LogAction(ActionLogType.CreateKit, kitName + " COPIED FROM " + existingName);
                 await UCWarfare.ToUpdate();
-                KitManager.UpdateSigns(kit);
+                manager.Signs.UpdateSigns(kit);
                 ctx.Reply(T.KitCopied, existing, kit);
             }
             else
@@ -1191,33 +1143,36 @@ public sealed class KitCommand : AsyncCommand
                     throw ctx.Reply(T.PlayerNotFound);
 
                 PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
-                string loadoutId = await KitManager.GetFreeLoadoutName(playerId).ConfigureAwait(false);
+                string loadoutId = await manager.Loadouts.GetFreeLoadoutName(playerId).ConfigureAwait(false);
                 if (!ctx.TryGetRange(3, out string? signText) || string.IsNullOrWhiteSpace(signText))
                     signText = null;
                 await UCWarfare.ToUpdate(token);
                 Kit loadout = new Kit(loadoutId, @class, signText, null)
                 {
-                    Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true),
                     Creator = ctx.CallerID,
                     LastEditor = ctx.CallerID
                 };
-                Kit? oldKit = await manager.FindKit(loadout.InternalName, token).ConfigureAwait(false);
-                if (oldKit == null)
-                {
-                    await UCWarfare.ToUpdate();
-                    await manager.Add(loadout, token: token).ConfigureAwait(false);
-                    await KitManager.GiveAccess(loadout, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
-                    KitSync.OnAccessChanged(playerId);
-                    ctx.LogAction(ActionLogType.CreateKit, loadout.InternalName);
-                    await UCWarfare.ToUpdate();
-                    KitManager.UpdateSigns(loadout);
-                    ctx.Reply(T.LoadoutCreated, @class, onlinePlayer as IPlayer ?? names, playerId, loadout);
-                }
-                else
-                {
-                    await UCWarfare.ToUpdate();
-                    ctx.Reply(T.KitNameTaken, loadout.InternalName);
-                }
+
+                await using IKitsDbContext dbContext = new WarfareDbContext();
+
+                loadout.SetItemArray(UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true), dbContext);
+
+                Kit? oldKit = await manager.FindKit(loadout.InternalName, token, set: x => x.Kits).ConfigureAwait(false);
+                if (oldKit != null)
+                    throw ctx.Reply(T.KitNameTaken, loadout.InternalName);
+                
+                dbContext.Add(loadout);
+
+                await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                await manager.GiveAccess(loadout, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
+
+                await UCWarfare.ToUpdate();
+
+                KitSync.OnAccessChanged(playerId);
+
+                ctx.LogAction(ActionLogType.CreateKit, loadout.InternalName);
+                manager.Signs.UpdateSigns(loadout);
+                ctx.Reply(T.LoadoutCreated, @class, onlinePlayer as IPlayer ?? names, playerId, loadout);
             }
             else
                 throw ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <class> [sign text...]");
@@ -1225,104 +1180,103 @@ public sealed class KitCommand : AsyncCommand
         else if (ctx.MatchParameter(0, "skills", "skillset", "skillsets"))
         {
             ctx.AssertHelpCheck(1, "/kit skills <kit> <add|remove> <skill> [level]");
+
             bool add = ctx.MatchParameter(2, "add", "set");
-            if (add || ctx.MatchParameter(2, "delete", "remove", "clear"))
+
+            if (!add && !ctx.MatchParameter(2, "delete", "remove", "clear"))
+                throw ctx.SendCorrectUsage("/kit skills <kit> <add|remove> <skill> [level]");
+
+            if (!ctx.TryGet(3, out string skillsetStr))
+                throw ctx.SendCorrectUsage("/kit skills <kit> <add|remove> <skill> [level]");
+
+            int skillset = Skillset.GetSkillsetFromEnglishName(skillsetStr, out EPlayerSpeciality specialty);
+            if (skillset < 0)
+                throw ctx.Reply(T.KitInvalidSkillset, skillsetStr);
+
+            byte level = 0;
+            if (add && !ctx.TryGet(4, out level))
             {
-                if (ctx.TryGet(3, out string skillsetStr))
+                throw ctx.Reply(T.KitInvalidSkillsetLevel, specialty switch
                 {
-                    int skillset = Skillset.GetSkillsetFromEnglishName(skillsetStr, out EPlayerSpeciality specialty);
-                    if (skillset < 0)
-                        throw ctx.Reply(T.KitInvalidSkillset, skillsetStr);
-                    byte level = 0;
-                    if (!add || ctx.TryGet(4, out level))
-                    {
-                        Skill skill = ctx.Caller.Player.skills.skills[(int)specialty][skillset];
-                        int max = skill.GetClampedMaxUnlockableLevel();
-                        if (!add || max >= level)
-                        {
-                            Skillset set = new Skillset(specialty, (byte)skillset, level);
-                            string kitName = ctx.Get(1)!;
-                            Kit? kit = await manager.FindKit(kitName, token, true);
-                            if (kit is null)
-                                throw ctx.Reply(T.KitNotFound, kitName);
-                            await manager.WaitAsync(token).ConfigureAwait(false);
-                            try
-                            {
-                                await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
-                                try
-                                {
-                                    List<KitSkillset> skillsets = kit.Skillsets;
-                                    for (int i = 0; i < skillsets.Count; ++i)
-                                    {
-                                        if (skillsets[i].Skillset.SkillIndex != set.SkillIndex || skillsets[i].Skillset.SpecialityIndex != set.SpecialityIndex)
-                                            continue;
-
-                                        if (add)
-                                        {
-                                            skillsets[i].Skillset = set;
-                                            WarfareDatabases.Kits.Update(skillsets[i]);
-                                        }
-                                        else
-                                        {
-                                            WarfareDatabases.Kits.Remove(skillsets[i]);
-                                        }
-
-                                        goto reply;
-                                    }
-
-                                    if (!add)
-                                        throw ctx.Reply(T.KitSkillsetNotFound, set, kit);
-
-                                    KitSkillset skillsetModel = new KitSkillset
-                                    {
-                                        Skillset = set,
-                                        Kit = kit,
-                                        KitId = kit.PrimaryKey
-                                    };
-                                    skillsets.Add(skillsetModel);
-                                    WarfareDatabases.Kits.Add(skillsetModel);
-                                }
-                                finally
-                                {
-                                    WarfareDatabases.Kits.Release();
-                                }
-
-                                reply:
-                                await manager.Update(kit, token: token);
-                                ctx.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.InternalName);
-                                await UCWarfare.ToUpdate(token);
-                                ctx.Reply(add ? T.KitSkillsetAdded : T.KitSkillsetRemoved, set, kit);
-                                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                                {
-                                    UCPlayer player = PlayerManager.OnlinePlayers[i];
-                                    Kit? activeKit = player.GetActiveKit();
-                                    if (activeKit != null && activeKit.PrimaryKey == kit.PrimaryKey)
-                                    {
-                                        if (add)
-                                            player.EnsureSkillset(set);
-                                        else
-                                            player.RemoveSkillset(set.Speciality, set.SkillIndex);
-                                    }
-                                }
-
-                                return;
-                            }
-                            finally
-                            {
-                                manager.Release();
-                            }
-                        }
-                    }
-                    throw ctx.Reply(T.KitInvalidSkillsetLevel, specialty switch
-                    {
-                        EPlayerSpeciality.DEFENSE => Localization.TranslateEnum((EPlayerDefense)skillset, ctx.LanguageInfo),
-                        EPlayerSpeciality.OFFENSE => Localization.TranslateEnum((EPlayerOffense)skillset, ctx.LanguageInfo),
-                        EPlayerSpeciality.SUPPORT => Localization.TranslateEnum((EPlayerSupport)skillset, ctx.LanguageInfo),
-                        _ => skillset.ToString()
-                    }, level);
-                }
+                    EPlayerSpeciality.DEFENSE => Localization.TranslateEnum((EPlayerDefense)skillset, ctx.LanguageInfo),
+                    EPlayerSpeciality.OFFENSE => Localization.TranslateEnum((EPlayerOffense)skillset, ctx.LanguageInfo),
+                    EPlayerSpeciality.SUPPORT => Localization.TranslateEnum((EPlayerSupport)skillset, ctx.LanguageInfo),
+                    _ => skillset.ToString()
+                }, level);
             }
-            throw ctx.SendCorrectUsage("/kit skills <kit> <add|remove> <skill> [level]");
+
+            Skill skill = ctx.Caller.Player.skills.skills[(int)specialty][skillset];
+            int max = skill.GetClampedMaxUnlockableLevel();
+            if (!add || max >= level)
+            {
+                Skillset set = new Skillset(specialty, (byte)skillset, level);
+                string kitName = ctx.Get(1)!;
+                Kit? kit = await manager.FindKit(kitName, token, true, set => set.Kits.Include(x => x.Skillsets));
+
+                if (kit is null)
+                    throw ctx.Reply(T.KitNotFound, kitName);
+
+                await using IKitsDbContext dbContext = new WarfareDbContext();
+
+                List<KitSkillset> skillsets = kit.Skillsets;
+                for (int i = 0; i < skillsets.Count; ++i)
+                {
+                    if (skillsets[i].Skillset.SkillIndex != set.SkillIndex || skillsets[i].Skillset.SpecialityIndex != set.SpecialityIndex)
+                        continue;
+
+                    if (add)
+                    {
+                        skillsets[i].Skillset = set;
+                        dbContext.Update(skillsets[i]);
+                    }
+                    else
+                    {
+                        dbContext.Remove(skillsets[i]);
+                    }
+
+                    goto reply;
+                }
+
+                if (!add)
+                    throw ctx.Reply(T.KitSkillsetNotFound, set, kit);
+
+                KitSkillset skillsetModel = new KitSkillset
+                {
+                    Skillset = set,
+                    Kit = kit,
+                    KitId = kit.PrimaryKey
+                };
+                skillsets.Add(skillsetModel);
+                dbContext.Add(skillsetModel);
+
+                reply:
+                dbContext.Update(kit);
+                await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                ctx.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.InternalName);
+                await UCWarfare.ToUpdate(token);
+                ctx.Reply(add ? T.KitSkillsetAdded : T.KitSkillsetRemoved, set, kit);
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                {
+                    UCPlayer player = PlayerManager.OnlinePlayers[i];
+                    Kit? activeKit = player.GetActiveKit();
+                    if (activeKit != null && activeKit.PrimaryKey == kit.PrimaryKey)
+                    {
+                        if (add)
+                            player.EnsureSkillset(set);
+                        else
+                            player.RemoveSkillset(set.Speciality, set.SkillIndex);
+                    }
+                }
+
+                return;
+            }
+            throw ctx.Reply(T.KitInvalidSkillsetLevel, specialty switch
+            {
+                EPlayerSpeciality.DEFENSE => Localization.TranslateEnum((EPlayerDefense)skillset, ctx.LanguageInfo),
+                EPlayerSpeciality.OFFENSE => Localization.TranslateEnum((EPlayerOffense)skillset, ctx.LanguageInfo),
+                EPlayerSpeciality.SUPPORT => Localization.TranslateEnum((EPlayerSupport)skillset, ctx.LanguageInfo),
+                _ => skillset.ToString()
+            }, level);
         }
         else ctx.SendCorrectUsage(Syntax);
     }

@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using Microsoft.EntityFrameworkCore;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +8,8 @@ using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -716,19 +719,11 @@ public static class StatsManager
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                Kit? kit2 = await manager.FindKit(kitId).ConfigureAwait(false);
+                Kit? kit2 = await manager.FindKit(kitId, set: x => x.Kits.Include(y => y.Translations)).ConfigureAwait(false);
                 if (kit2 is not null)
                 {
-                    await manager.WaitAsync().ConfigureAwait(false);
-                    try
-                    {
-                        @class = kit2.Class;
-                        sname = kit2.GetDisplayName();
-                    }
-                    finally
-                    {
-                        manager.Release();
-                    }
+                    @class = kit2.Class;
+                    sname = kit2.GetDisplayName();
                 }
             }
             string dir = Path.Combine(KitsDirectory, kitId + ".dat");
@@ -750,6 +745,8 @@ public static class StatsManager
         [NetCall(ENetCall.FROM_SERVER, 2006)]
         internal static async Task ReceiveRequestWeaponData(MessageContext context, ushort weaponid, string kitId)
         {
+            await UCWarfare.ToUpdate();
+
             string dir = WeaponsDirectory + GetWeaponName(weaponid, kitId);
             if (WarfareWeapon.IO.ReadFrom(dir, out WarfareWeapon weapon))
             {
@@ -758,21 +755,10 @@ public static class StatsManager
                 KitManager? manager = KitManager.GetSingletonQuick();
                 if (manager != null)
                 {
-                    Kit? kit2 = await manager.FindKit(kitId).ConfigureAwait(false);
+                    Kit? kit2 = await manager.FindKit(kitId, set: x => x.Kits.Include(y => y.Translations)).ConfigureAwait(false);
                     if (kit2 is not null)
                     {
-                        await manager.WaitAsync().ConfigureAwait(false);
-                        try
-                        {
-                            if (kit2 != null)
-                            {
-                                kitname = kit2.GetDisplayName();
-                            }
-                        }
-                        finally
-                        {
-                            manager.Release();
-                        }
+                        kitname = kit2.GetDisplayName();
                     }
                 }
                 context.Reply(SendWeaponData, weapon, name, kitname);
@@ -798,31 +784,13 @@ public static class StatsManager
                 return;
             }
 
-            await manager.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                await manager.WriteWaitAsync().ConfigureAwait(false);
-                List<string> kits = new List<string>();
-                try
-                {
-                    for (int i = 0; i < manager.Items.Count; ++i)
-                    {
-                        Kit kit = manager.Items[i];
-                        if (kit != null && kit.Type != KitType.Loadout)
-                            kits.Add(kit.InternalName);
-                    }
+            await using IKitsDbContext dbContext = new WarfareDbContext();
 
-                    context.Reply(SendKitList, kits.ToArray());
-                }
-                finally
-                {
-                    manager.WriteRelease();
-                }
-            }
-            finally
-            {
-                manager.Release();
-            }
+            List<string> kits = await dbContext.Kits
+                .Where(x => x.Type != KitType.Loadout)
+                .Select(x => x.InternalName).ToListAsync();
+
+            context.Reply(SendKitList, kits.ToArray());
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2012)]
@@ -837,26 +805,22 @@ public static class StatsManager
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                await manager.WaitAsync().ConfigureAwait(false);
-                try
+                await using IKitsDbContext dbContext = new WarfareDbContext();
+
+                List<Kit> kits = await dbContext.Kits.Include(x => x.Translations).ToListAsync().ConfigureAwait(false);
+
+                List<string> kitnames = new List<string>();
+                List<WarfareWeapon> weapons = new List<WarfareWeapon>();
+                for (int i = 0; i < files.Length; i++)
                 {
-                    List<string> kitnames = new List<string>();
-                    List<WarfareWeapon> weapons = new List<WarfareWeapon>();
-                    for (int i = 0; i < files.Length; i++)
-                    {
-                        if (WarfareWeapon.IO.ReadFrom(files[i], out WarfareWeapon w))
-                        {
-                            weapons.Add(w);
-                            Kit? kit2 = await manager.FindKit(w.KitID).ConfigureAwait(false);
-                            kitnames.Add(kit2?.GetDisplayName() ?? w.KitID);
-                        }
-                    }
-                    context.Reply(SendWeapons, weapons.ToArray(), itemName, kitnames.ToArray());
+                    if (!WarfareWeapon.IO.ReadFrom(files[i], out WarfareWeapon w))
+                        continue;
+
+                    weapons.Add(w);
+                    Kit? kit2 = kits.FirstOrDefault(x => x.InternalName.Equals(w.KitID, StringComparison.OrdinalIgnoreCase));
+                    kitnames.Add(kit2?.GetDisplayName() ?? w.KitID);
                 }
-                finally
-                {
-                    manager.Release();
-                }
+                context.Reply(SendWeapons, weapons.ToArray(), itemName, kitnames.ToArray());
             }
             else
             {
@@ -909,26 +873,15 @@ public static class StatsManager
             WarfareKit[] allkits = Kits.ToArray();
             string[] kitnames = new string[allkits.Length];
             byte[] classes = new byte[kitnames.Length];
-            KitManager? manager = KitManager.GetSingletonQuick();
-            if (manager != null)
+
+            await using IKitsDbContext dbContext = new WarfareDbContext();
+
+            List<Kit> kits = await dbContext.Kits.Include(x => x.Translations).ToListAsync().ConfigureAwait(false);
+            for (int i = 0; i < kits.Count; i++)
             {
-                await manager.WaitAsync().ConfigureAwait(false);
-                try
-                {
-                    for (int i = 0; i < allkits.Length; i++)
-                    {
-                        Kit? k = manager.FindKitNoLock(allkits[i].KitID, true);
-                        if (k != null)
-                        {
-                            classes[i] = (byte)k.Class;
-                            kitnames[i] = k.GetDisplayName();
-                        }
-                    }
-                }
-                finally
-                {
-                    manager.Release();
-                }
+                Kit kit = kits[i];
+                classes[i] = (byte)kit.Class;
+                kitnames[i] = kit.GetDisplayName();
             }
 
             context.Reply(SendEveryKit, allkits, kitnames, classes);

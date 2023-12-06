@@ -1116,7 +1116,7 @@ public class DebugCommand : AsyncCommand
             if (sql == null)
                 ctx.SendUnknownError();
             else
-                await manager.GiveKit(ctx.Caller, sql, true, false, token).ConfigureAwait(false);
+                await manager.Requests.GiveKit(ctx.Caller, sql, true, false, token).ConfigureAwait(false);
         }
 
         if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)
@@ -1829,82 +1829,76 @@ public class DebugCommand : AsyncCommand
     {
         ctx.AssertRanByConsole();
 
-        await WarfareDatabases.WaitAsync(token);
-        try
+        await using WarfareDbContext dbContext = new WarfareDbContext();
+
+        HashSet<ulong> s64s = new HashSet<ulong>(8192);
+
+        foreach (PlayerIPAddress data in await dbContext.IPAddresses.ToListAsync(token))
+            s64s.Add(data.Steam64);
+
+        foreach (PlayerHWID data in await dbContext.HWIDs.ToListAsync(token))
+            s64s.Add(data.Steam64);
+
+        await Data.AdminSql.QueryAsync($"SELECT `{WarfareSQL.ColumnUsernamesSteam64}` FROM `{WarfareSQL.TableUsernames}` GROUP BY `{WarfareSQL.ColumnUsernamesSteam64}`;", null,
+            reader =>
+            {
+                s64s.Add(reader.GetUInt64(0));
+            }, token);
+
+        foreach (KitAccess access in await dbContext.KitAccess.ToListAsync(token))
+            s64s.Add(access.Steam64);
+
+        foreach (WarfareUserData data in await dbContext.UserData.ToListAsync(token))
+            s64s.Remove(data.Steam64);
+
+        int c = 0;
+        foreach (ulong steam64 in s64s)
         {
-            HashSet<ulong> s64s = new HashSet<ulong>(8192);
-
-            foreach (PlayerIPAddress data in await Data.DbContext.IPAddresses.ToListAsync(token))
-                s64s.Add(data.Steam64);
-
-            foreach (PlayerHWID data in await Data.DbContext.HWIDs.ToListAsync(token))
-                s64s.Add(data.Steam64);
-
-            await Data.AdminSql.QueryAsync($"SELECT `{WarfareSQL.ColumnUsernamesSteam64}` FROM `{WarfareSQL.TableUsernames}` GROUP BY `{WarfareSQL.ColumnUsernamesSteam64}`;", null,
+            ++c;
+            if (c % 50 == 0 || c == s64s.Count || c == 1)
+                L.LogDebug($"{c} / {s64s.Count}.");
+            PlayerNames username = await Data.AdminSql.GetUsernamesAsync(steam64, token).ConfigureAwait(false);
+            DateTimeOffset? firstJoined = null;
+            DateTimeOffset? lastJoined = null;
+            await Data.AdminSql.QueryAsync($"SELECT `{WarfareSQL.ColumnLoginDataFirstLoggedIn}`, `{WarfareSQL.ColumnLoginDataLastLoggedIn}` FROM" +
+                                           $"`{WarfareSQL.TableLoginData}` WHERE `{WarfareSQL.ColumnLoginDataSteam64}` = {steam64};", null,
                 reader =>
                 {
-                    s64s.Add(reader.GetUInt64(0));
+                    firstJoined = reader.IsDBNull(0) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Utc));
+                    lastJoined = reader.IsDBNull(1) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc));
                 }, token);
 
-            foreach (KitAccess access in await Data.DbContext.KitAccess.ToListAsync(token))
-                s64s.Add(access.Steam64);
+            EAdminType adminType = Permissions.PermissionSaver.Instance.GetPlayerPermissionLevel(steam64);
 
-            foreach (WarfareUserData data in await Data.DbContext.UserData.ToListAsync(token))
-                s64s.Remove(data.Steam64);
+            PermissionLevel level = PermissionLevel.Member;
+            if ((adminType & EAdminType.ADMIN) != 0)
+                level = PermissionLevel.Admin;
+            if ((adminType & EAdminType.TRIAL_ADMIN) != 0)
+                level = PermissionLevel.TrialAdmin;
+            if ((adminType & EAdminType.HELPER) != 0)
+                level = PermissionLevel.Helper;
+            if ((adminType & (EAdminType.VANILLA_ADMIN | EAdminType.CONSOLE)) != 0)
+                level = PermissionLevel.Superuser;
 
-            int c = 0;
-            foreach (ulong steam64 in s64s)
+            string dir = Path.Combine(StatsManager.StatsDirectory, steam64.ToString(Data.AdminLocale) + ".dat");
+            WarfareStats.IO.ReadFrom(dir, out WarfareStats? stats);
+
+            WarfareUserData data = new WarfareUserData
             {
-                ++c;
-                if (c % 50 == 0 || c == s64s.Count || c == 1)
-                    L.LogDebug($"{c} / {s64s.Count}.");
-                PlayerNames username = await Data.AdminSql.GetUsernamesAsync(steam64, token).ConfigureAwait(false);
-                DateTimeOffset? firstJoined = null;
-                DateTimeOffset? lastJoined = null;
-                await Data.AdminSql.QueryAsync($"SELECT `{WarfareSQL.ColumnLoginDataFirstLoggedIn}`, `{WarfareSQL.ColumnLoginDataLastLoggedIn}` FROM" +
-                                               $"`{WarfareSQL.TableLoginData}` WHERE `{WarfareSQL.ColumnLoginDataSteam64}` = {steam64};", null,
-                    reader =>
-                    {
-                        firstJoined = reader.IsDBNull(0) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Utc));
-                        lastJoined = reader.IsDBNull(1) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc));
-                    }, token);
+                PermissionLevel = level,
+                FirstJoined = firstJoined,
+                LastJoined = lastJoined,
+                TotalSeconds = stats?.PlaytimeMinutes ?? 0u,
+                Steam64 = steam64,
+                CharacterName = username.CharacterName.MaxLength(30)!,
+                DisplayName = null,
+                NickName = username.NickName.MaxLength(30)!,
+                PlayerName = username.PlayerName.MaxLength(48)!
+            };
 
-                EAdminType adminType = Permissions.PermissionSaver.Instance.GetPlayerPermissionLevel(steam64);
-
-                PermissionLevel level = PermissionLevel.Member;
-                if ((adminType & EAdminType.ADMIN) != 0)
-                    level = PermissionLevel.Admin;
-                if ((adminType & EAdminType.TRIAL_ADMIN) != 0)
-                    level = PermissionLevel.TrialAdmin;
-                if ((adminType & EAdminType.HELPER) != 0)
-                    level = PermissionLevel.Helper;
-                if ((adminType & (EAdminType.VANILLA_ADMIN | EAdminType.CONSOLE)) != 0)
-                    level = PermissionLevel.Superuser;
-
-                string dir = Path.Combine(StatsManager.StatsDirectory, steam64.ToString(Data.AdminLocale) + ".dat");
-                WarfareStats.IO.ReadFrom(dir, out WarfareStats? stats);
-
-                WarfareUserData data = new WarfareUserData
-                {
-                    PermissionLevel = level,
-                    FirstJoined = firstJoined,
-                    LastJoined = lastJoined,
-                    TotalSeconds = stats?.PlaytimeMinutes ?? 0u,
-                    Steam64 = steam64,
-                    CharacterName = username.CharacterName.MaxLength(30)!,
-                    DisplayName = null,
-                    NickName = username.NickName.MaxLength(30)!,
-                    PlayerName = username.PlayerName.MaxLength(48)!
-                };
-
-                Data.DbContext.UserData.Add(data);
-            }
-
-            await Data.DbContext.SaveChangesAsync(token);
+            dbContext.UserData.Add(data);
         }
-        finally
-        {
-            WarfareDatabases.Release();
-        }
+
+        await dbContext.SaveChangesAsync(token);
     }
 }

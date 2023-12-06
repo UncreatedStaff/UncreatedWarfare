@@ -933,10 +933,10 @@ public class Signs : BaseSingleton, ILevelStartListener
                     return null;
                 if (_kit != null && _lastManager is { IsLoaded: true })
                     return _kit;
-                _lastManager = KitManager.GetSingletonQuick()!;
+                _lastManager = Data.Singletons.GetSingleton<KitManager>();
                 if (_lastManager == null)
                     return _kit = null;
-                return _kit = _lastManager.FindKitNoLock(KitName, true);
+                return _kit = _lastManager.Cache.GetKit(KitName);
             }
         }
         public override bool CheckStillValid() => Sign != null &&

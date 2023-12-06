@@ -12,6 +12,7 @@ using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Maps;
@@ -117,10 +118,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
 
             return _items!;
         }
-        set
-        {
-            SetItemArray(value);
-        }
     }
 
     [NotMapped]
@@ -136,10 +133,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
             }
 
             return _unlockRequirements!;
-        }
-        set
-        {
-            SetUnlockRequirementArray(value);
         }
     }
 
@@ -213,12 +206,13 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
                                                                                IsCurrentMapAllowed() &&
                                                                                IsFactionAllowed(faction));
 
-    public List<KitFilteredFaction> FactionFilter { get; set; } = new List<KitFilteredFaction>(0);
-    public List<KitFilteredMap> MapFilter { get; set; } = new List<KitFilteredMap>(0);
-    public List<KitSkillset> Skillsets { get; set; } = new List<KitSkillset>(0);
-    public List<KitTranslation> Translations { get; set; } = new List<KitTranslation>(0);
-    public List<KitItemModel> ItemModels { get; set; } = new List<KitItemModel>(0);
-    public List<KitUnlockRequirement> UnlockRequirementsModels { get; set; } = new List<KitUnlockRequirement>(0);
+    public List<KitFilteredFaction> FactionFilter { get; set; } = [];
+    public List<KitFilteredMap> MapFilter { get; set; } = [];
+    public List<KitSkillset> Skillsets { get; set; } = [];
+    public List<KitTranslation> Translations { get; set; } = [];
+    public List<KitItemModel> ItemModels { get; set; } = [];
+    public List<KitUnlockRequirement> UnlockRequirementsModels { get; set; } = [];
+    public IReadOnlyCollection<KitAccess> Access { get; set; } = new List<KitAccess>(0);
     public IReadOnlyCollection<KitEliteBundle> Bundles { get; set; } = new List<KitEliteBundle>(0);
 
     public Kit(string internalName, Class @class, Branch branch, KitType type, SquadLevel squadLevel, FactionInfo? faction)
@@ -230,10 +224,9 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
         Branch = branch;
         Type = type;
         SquadLevel = squadLevel;
-        UnlockRequirements = Array.Empty<UnlockRequirement>();
         Season = UCWarfare.Season;
-        TeamLimit = KitManager.GetDefaultTeamLimit(@class);
-        RequestCooldown = KitManager.GetDefaultRequestCooldown(@class);
+        TeamLimit = KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(@class);
+        RequestCooldown = KitDefaults<WarfareDbContext>.GetDefaultRequestCooldown(@class);
         CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
     }
     public Kit(string internalName, Kit copy)
@@ -245,12 +238,12 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
         Branch = copy.Branch;
         Type = copy.Type;
         SquadLevel = copy.SquadLevel;
-        Skillsets = new List<KitSkillset>(F.CloneList(copy.Skillsets));
-        FactionFilter = new List<KitFilteredFaction>(F.CloneList(copy.FactionFilter));
-        MapFilter = new List<KitFilteredMap>(F.CloneList(copy.MapFilter));
-        ItemModels = new List<KitItemModel>(F.CloneList(copy.ItemModels));
-        Translations = new List<KitTranslation>(F.CloneList(copy.Translations));
-        UnlockRequirementsModels = new List<KitUnlockRequirement>(F.CloneList(copy.UnlockRequirementsModels));
+        Skillsets = [..F.CloneList(copy.Skillsets)];
+        FactionFilter = [..F.CloneList(copy.FactionFilter)];
+        MapFilter = [..F.CloneList(copy.MapFilter)];
+        ItemModels = [..F.CloneList(copy.ItemModels)];
+        Translations = [..F.CloneList(copy.Translations)];
+        UnlockRequirementsModels = [..F.CloneList(copy.UnlockRequirementsModels)];
 
         foreach (KitSkillset skillset in Skillsets)
         {
@@ -304,13 +297,12 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
         FactionId = faction?.PrimaryKey;
         InternalName = loadout;
         Class = @class;
-        Branch = KitManager.GetDefaultBranch(@class);
+        Branch = KitDefaults<WarfareDbContext>.GetDefaultBranch(@class);
         Type = KitType.Loadout;
         SquadLevel = SquadLevel.Member;
-        UnlockRequirements = Array.Empty<UnlockRequirement>();
         Season = UCWarfare.Season;
-        TeamLimit = KitManager.GetDefaultTeamLimit(@class);
-        RequestCooldown = KitManager.GetDefaultRequestCooldown(@class);
+        TeamLimit = KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(@class);
+        RequestCooldown = KitDefaults<WarfareDbContext>.GetDefaultRequestCooldown(@class);
         PremiumCost = UCWarfare.Config.LoadoutCost;
         CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
         if (displayName != null)
@@ -326,10 +318,7 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
             });
         }
     }
-    public Kit()
-    {
-        UnlockRequirements = Array.Empty<UnlockRequirement>();
-    }
+    public Kit() { }
     public void MarkRemoteItemsDirty()
     {
         _items = null;
@@ -339,13 +328,13 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     {
         _unlockRequirements = null;
     }
-    public void MarkLocalItemsDirty()
+    public void MarkLocalItemsDirty(IKitsDbContext dbContext)
     {
-        SetItemArray(Items);
+        SetItemArray(Items, dbContext);
     }
-    public void MarkLocalUnlockRequirementsDirty()
+    public void MarkLocalUnlockRequirementsDirty(IKitsDbContext dbContext)
     {
-        SetUnlockRequirementArray(UnlockRequirements);
+        SetUnlockRequirementArray(UnlockRequirements, dbContext);
     }
 
     public bool IsFactionAllowed(FactionInfo? faction)
@@ -438,222 +427,228 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     }
 
     public object Clone() => new Kit(InternalName, this);
-    private void SetItemArray(IKitItem[] items)
+    public void SetItemArray(IKitItem[] items, IKitsDbContext dbContext)
     {
-        WarfareDatabases.Kits.Wait(UCWarfare.UnloadCancel);
-        try
+        List<KitItemModel> models = ItemModels;
+        BitArray workingArray = new BitArray(items.Length);
+        for (int i = 0; i < items.Length; ++i)
         {
-            List<KitItemModel> models = ItemModels;
-            BitArray workingArray = new BitArray(items.Length);
-            for (int i = 0; i < items.Length; ++i)
+            IKitItem item = items[i];
+            if (item.PrimaryKey == 0)
+                continue;
+
+            for (int j = 0; j < models.Count; ++j)
             {
-                IKitItem item = items[i];
-                if (item.PrimaryKey == 0)
+                KitItemModel model = models[j];
+                if (model.Id != item.PrimaryKey)
                     continue;
 
-                for (int j = 0; j < models.Count; ++j)
-                {
-                    KitItemModel model = models[j];
-                    if (model.Id != item.PrimaryKey)
-                        continue;
-
-                    item.WriteToModel(model);
-                    WarfareDatabases.Kits.Update(model);
-                    workingArray[i] = true;
-                }
+                item.WriteToModel(model);
+                dbContext.Update(model);
+                workingArray[i] = true;
             }
+        }
 
-            for (int i = models.Count - 1; i >= 0; --i)
+        for (int i = models.Count - 1; i >= 0; --i)
+        {
+            KitItemModel model = models[i];
+            bool found = false;
+            for (int j = 0; j < items.Length; ++j)
             {
-                KitItemModel model = models[i];
-                bool found = false;
-                for (int j = 0; j < items.Length; ++j)
-                {
-                    if (items[j].PrimaryKey == model.Id)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                    models.RemoveAt(i);
-                WarfareDatabases.Kits.Remove(model);
-            }
-
-            for (int i = 0; i < items.Length; ++i)
-            {
-                if (workingArray[i])
+                if (items[j].PrimaryKey != model.Id)
                     continue;
 
-                IKitItem item = items[i];
-                item.PrimaryKey = 0;
-                KitItemModel model = item.CreateModel(this);
-                models.Add(model);
-                WarfareDatabases.Kits.Add(model);
+                found = true;
+                break;
             }
 
-            _listItemArrayVersion = models.GetListVersion();
-            _items = items;
+            if (!found)
+                models.RemoveAt(i);
+            dbContext.Remove(model);
         }
-        finally
+
+        for (int i = 0; i < items.Length; ++i)
         {
-            WarfareDatabases.Kits.Release();
+            if (workingArray[i])
+                continue;
+
+            IKitItem item = items[i];
+            item.PrimaryKey = 0;
+            KitItemModel model = item.CreateModel(this);
+            models.Add(model);
+            dbContext.Add(model);
         }
+
+        _listItemArrayVersion = models.GetListVersion();
+        _items = items;
     }
     private void UpdateItemArray()
     {
-        WarfareDatabases.Kits.Wait(UCWarfare.UnloadCancel);
+        List<KitItemModel> models = ItemModels;
+        if (models is not { Count: > 0 })
+        {
+            _items = Array.Empty<IKitItem>();
+            return;
+        }
+
+        L.LogDebug($"Buidling item array for {GetDisplayName()}...");
+        bool pooled = UCWarfare.IsLoaded && UCWarfare.IsMainThread;
+        List<IKitItem> tempList = pooled ? ListPool<IKitItem>.claim() : new List<IKitItem>(models.Count);
         try
         {
-            List<KitItemModel> models = ItemModels;
-            if (models is not { Count: > 0 })
+            foreach (KitItemModel model in models)
             {
-                _items = Array.Empty<IKitItem>();
-                return;
-            }
-
-            L.LogDebug($"Buidling item array for {GetDisplayName()}...");
-            bool pooled = UCWarfare.IsLoaded && UCWarfare.IsMainThread;
-            List<IKitItem> tempList = pooled ? ListPool<IKitItem>.claim() : new List<IKitItem>(models.Count);
-            try
-            {
-                foreach (KitItemModel model in models)
+                try
                 {
-                    try
-                    {
-                        tempList.Add(model.CreateRuntimeItem());
-                    }
-                    catch (FormatException ex)
-                    {
-                        L.LogWarning($"Skipped item {model.Id} in kit {model.Kit.InternalName}:");
-                        L.LogWarning(ex.Message);
-                    }
+                    tempList.Add(model.CreateRuntimeItem());
                 }
+                catch (FormatException ex)
+                {
+                    L.LogWarning($"Skipped item {model.Id} in kit {model.Kit.InternalName}:");
+                    L.LogWarning(ex.Message);
+                }
+            }
 
-                _items = tempList.ToArray();
-            }
-            finally
-            {
-                if (pooled)
-                    ListPool<IKitItem>.release(tempList);
-            }
+            _items = tempList.ToArray();
         }
         finally
         {
-            WarfareDatabases.Kits.Release();
+            if (pooled)
+                ListPool<IKitItem>.release(tempList);
         }
     }
-    private void SetUnlockRequirementArray(UnlockRequirement[] items)
+    public void SetUnlockRequirementArray(UnlockRequirement[] items, IKitsDbContext dbContext)
     {
-        WarfareDatabases.Kits.Wait(UCWarfare.UnloadCancel);
-        try
+        List<KitUnlockRequirement> models = UnlockRequirementsModels;
+        BitArray workingArray = new BitArray(items.Length);
+        for (int i = 0; i < items.Length; ++i)
         {
-            List<KitUnlockRequirement> models = UnlockRequirementsModels;
-            BitArray workingArray = new BitArray(items.Length);
-            for (int i = 0; i < items.Length; ++i)
+            UnlockRequirement item = items[i];
+            if (item.PrimaryKey == 0)
+                continue;
+
+            for (int j = 0; j < models.Count; ++j)
             {
-                UnlockRequirement item = items[i];
-                if (item.PrimaryKey == 0)
+                KitUnlockRequirement model = models[j];
+                if (model.Id != item.PrimaryKey)
                     continue;
 
-                for (int j = 0; j < models.Count; ++j)
-                {
-                    KitUnlockRequirement model = models[j];
-                    if (model.Id != item.PrimaryKey)
-                        continue;
-
-                    model.Json = item.ToJson();
-                    WarfareDatabases.Kits.Update(model);
-                    workingArray[i] = true;
-                }
+                model.Json = item.ToJson();
+                dbContext.Update(model);
+                workingArray[i] = true;
             }
-
-            for (int i = models.Count - 1; i >= 0; --i)
-            {
-                KitUnlockRequirement model = models[i];
-                bool found = false;
-                for (int j = 0; j < items.Length; ++j)
-                {
-                    if (items[j].PrimaryKey == model.Id)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                    models.RemoveAt(i);
-                WarfareDatabases.Kits.Remove(model);
-            }
-
-            for (int i = 0; i < items.Length; ++i)
-            {
-                if (workingArray[i])
-                    continue;
-
-                UnlockRequirement item = items[i];
-                item.PrimaryKey = 0;
-                KitUnlockRequirement model = new KitUnlockRequirement
-                {
-                    KitId = PrimaryKey,
-                    Kit = this,
-                    Json = item.ToJson()
-                };
-                WarfareDatabases.Kits.Add(model);
-                models.Add(model);
-            }
-
-            _listUnlockRequirementsArrayVersion = models.GetListVersion();
-            _unlockRequirements = items;
         }
-        finally
+
+        for (int i = models.Count - 1; i >= 0; --i)
         {
-            WarfareDatabases.Kits.Release();
+            KitUnlockRequirement model = models[i];
+            bool found = false;
+            for (int j = 0; j < items.Length; ++j)
+            {
+                if (items[j].PrimaryKey != model.Id)
+                    continue;
+                
+                found = true;
+                break;
+            }
+
+            if (!found)
+                models.RemoveAt(i);
+            dbContext.Remove(model);
         }
+
+        for (int i = 0; i < items.Length; ++i)
+        {
+            if (workingArray[i])
+                continue;
+
+            UnlockRequirement item = items[i];
+            item.PrimaryKey = 0;
+            KitUnlockRequirement model = new KitUnlockRequirement
+            {
+                KitId = PrimaryKey,
+                Kit = this,
+                Json = item.ToJson()
+            };
+            dbContext.Add(model);
+            models.Add(model);
+        }
+
+        _listUnlockRequirementsArrayVersion = models.GetListVersion();
+        _unlockRequirements = items;
     }
     private void UpdateUnlockRequirementArray()
     {
-        WarfareDatabases.Kits.Wait(UCWarfare.UnloadCancel);
+        List<KitUnlockRequirement> models = UnlockRequirementsModels;
+        if (models is not { Count: > 0 })
+        {
+            _unlockRequirements = Array.Empty<UnlockRequirement>();
+            return;
+        }
+
+        bool pooled = UCWarfare.IsLoaded && UCWarfare.IsMainThread;
+        List<UnlockRequirement> tempList = pooled ? ListPool<UnlockRequirement>.claim() : new List<UnlockRequirement>(models.Count);
         try
         {
-            List<KitUnlockRequirement> models = UnlockRequirementsModels;
-            if (models is not { Count: > 0 })
+            foreach (KitUnlockRequirement model in models)
             {
-                _unlockRequirements = Array.Empty<UnlockRequirement>();
-                return;
-            }
-
-            bool pooled = UCWarfare.IsLoaded && UCWarfare.IsMainThread;
-            List<UnlockRequirement> tempList = pooled ? ListPool<UnlockRequirement>.claim() : new List<UnlockRequirement>(models.Count);
-            try
-            {
-                foreach (KitUnlockRequirement model in models)
+                try
                 {
-                    try
-                    {
-                        UnlockRequirement? requirement = model.CreateRuntimeRequirement();
-                        if (requirement != null)
-                            tempList.Add(requirement);
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogWarning($"Skipped unlock requirement {model.Id} in kit {model.Kit.InternalName}:");
-                        L.LogWarning(ex.GetType().Name + " - " + ex.Message);
-                    }
+                    UnlockRequirement? requirement = model.CreateRuntimeRequirement();
+                    if (requirement != null)
+                        tempList.Add(requirement);
                 }
+                catch (Exception ex)
+                {
+                    L.LogWarning($"Skipped unlock requirement {model.Id} in kit {model.Kit.InternalName}:");
+                    L.LogWarning(ex.GetType().Name + " - " + ex.Message);
+                }
+            }
 
-                _unlockRequirements = tempList.ToArray();
-            }
-            finally
-            {
-                if (pooled)
-                    ListPool<UnlockRequirement>.release(tempList);
-            }
+            _unlockRequirements = tempList.ToArray();
         }
         finally
         {
-            WarfareDatabases.Kits.Release();
+            if (pooled)
+                ListPool<UnlockRequirement>.release(tempList);
         }
+    }
+    /// <summary>Will not update signs.</summary>
+    public void SetSignText(IKitsDbContext dbContext, ulong setter, Kit kit, string? text, LanguageInfo? language = null)
+    {
+        if (kit is null) throw new ArgumentNullException(nameof(kit));
+
+        language ??= Warfare.Localization.GetDefaultLanguage();
+
+        int index = kit.Translations.FindIndex(x => x.LanguageId == language.Key);
+        if (index != -1)
+        {
+            KitTranslation translation = kit.Translations[index];
+            if (string.IsNullOrEmpty(text))
+            {
+                dbContext.Remove(translation);
+                kit.Translations.RemoveAt(index);
+            }
+            else
+            {
+                dbContext.Update(translation);
+                translation.Value = text;
+            }
+        }
+        else if (!string.IsNullOrEmpty(text))
+        {
+            KitTranslation translation = new KitTranslation
+            {
+                Kit = kit,
+                KitId = kit.PrimaryKey,
+                Value = text,
+                Language = language,
+                LanguageId = language.Key
+            };
+            dbContext.Add(translation);
+            kit.Translations.Add(translation);
+        }
+        kit.UpdateLastEdited(setter);
+        dbContext.Update(kit);
     }
 }

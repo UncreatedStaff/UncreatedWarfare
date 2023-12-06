@@ -20,6 +20,7 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Harmony;
@@ -482,15 +483,14 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             KitMenuData = null!;
         }
     }
-    public Kit? GetActiveKit()
+    public async Task<Kit?> GetActiveKit(CancellationToken token = default, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
     {
         uint? activeKit = ActiveKit;
-        return !activeKit.HasValue ? null : KitManager.GetSingletonQuick()?.GetKit(activeKit.Value);
-    }
-    public Kit? GetActiveKitNoWriteLock()
-    {
-        uint? activeKit = ActiveKit;
-        return !activeKit.HasValue ? null : KitManager.GetSingletonQuick()?.GetKitNoWriteLock(activeKit.Value);
+
+        if (KitManager.GetSingletonQuick() is not { } kitManager)
+            return null;
+
+        return activeKit.HasValue ? await kitManager.GetKit(activeKit.Value, token, set) : null;
     }
     public static UCPlayer? FromID(ulong steamID) => steamID == 0 ? null : PlayerManager.FromID(steamID);
     public static UCPlayer? FromCSteamID(CSteamID steamID) => steamID.m_SteamID == 0 ? null : FromID(steamID.m_SteamID);
