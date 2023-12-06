@@ -114,6 +114,11 @@ public class LoadCommand : AsyncCommand
                                     amount /= 2;
                             }
 
+                            if (amount > vehicle.trunkItems != null ? vehicle.trunkItems.width * vehicle.trunkItems.height : 100)
+                            {
+                                throw ctx.Reply(T.LoadInvalidAmount, ctx.Get(1)!);
+                            }
+
                             if (amount > 0)
                             {
                                 if (!vehicle.transform.TryGetComponent(out VehicleComponent c))
