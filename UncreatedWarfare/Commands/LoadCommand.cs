@@ -114,7 +114,8 @@ public class LoadCommand : AsyncCommand
                                     amount /= 2;
                             }
 
-                            if (amount > (vehicle.trunkItems.width * vehicle.trunkItems.height)) {
+                            if (amount > vehicle.trunkItems != null ? vehicle.trunkItems.width * vehicle.trunkItems.height : 100)
+                            {
                                 throw ctx.Reply(T.LoadInvalidAmount, ctx.Get(1)!);
                             }
 
