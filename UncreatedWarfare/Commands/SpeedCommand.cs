@@ -13,7 +13,7 @@ public class SpeedCommand : Command
     {
         Structure = new CommandStructure
         {
-            Description = Help,
+            Description = "Set admin movement speed.",
             Parameters = new CommandParameter[]
             {
                 new CommandParameter("player", typeof(IPlayer))
@@ -53,8 +53,8 @@ public class SpeedCommand : Command
         ctx.AssertOnDuty();
 
         UCPlayer? target = ctx.Caller;
-        
-        if (ctx.HasArgs(2) && (!ctx.TryGet(0, out ulong Id, out target) || target == null))
+
+        if (ctx.HasArgs(2) && (!ctx.TryGet(0, out _, out target) || target == null))
             throw ctx.Reply(T.PlayerNotFound);
 
         if (target == null) // ran by console

@@ -460,19 +460,19 @@ public class VehicleComponent : MonoBehaviour
         {
             if (!TeamManager.IsInAnyMain(Vehicle.transform.position))
                 break;
-            if (Vehicle.trunkItems.tryAddItem(new Item(supplyAsset.id, true)))
-            {
-                addedNewCount++;
-                loaderBreak++;
-                if (loaderBreak >= 3)
-                {
-                    loaderBreak = 0;
-                    F.TryTriggerSupplyEffect(type, Vehicle.transform.position);
-                    yield return new WaitForSeconds(1);
+            if (!Vehicle.trunkItems.tryAddItem(new Item(supplyAsset.id, true)))
+                break;
 
-                    while (!(Vehicle.speed >= -1 && Vehicle.speed <= 1))
-                        yield return new WaitForSeconds(1);
-                }
+            addedNewCount++;
+            loaderBreak++;
+            if (loaderBreak >= 3)
+            {
+                loaderBreak = 0;
+                F.TryTriggerSupplyEffect(type, Vehicle.transform.position);
+                yield return new WaitForSeconds(1);
+
+                while (!(Vehicle.speed >= -1 && Vehicle.speed <= 1))
+                    yield return new WaitForSeconds(1);
             }
         }
 
