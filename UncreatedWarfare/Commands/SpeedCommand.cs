@@ -1,12 +1,6 @@
-﻿using SDG.Unturned;
-using Steamworks;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Players;
+﻿using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
@@ -15,11 +9,11 @@ public class SpeedCommand : Command
     private const string Syntax = "/speed [player] <multiplier>";
     private const string Help = "Sets a player's speed modifier.";
 
-    public SetSpeedCommand() : base("speed", EAdminType.MODERATOR)
+    public SpeedCommand() : base("speed", EAdminType.MODERATOR)
     {
         Structure = new CommandStructure
         {
-            Description = HELP,
+            Description = "Set admin movement speed.",
             Parameters = new CommandParameter[]
             {
                 new CommandParameter("player", typeof(IPlayer))
@@ -60,7 +54,7 @@ public class SpeedCommand : Command
 
         UCPlayer? target = ctx.Caller;
         
-        if (ctx.HasArgs(2) && (!ctx.TryGet(0, out ulong Id, out target) || target == null))
+        if (ctx.HasArgs(2) && (!ctx.TryGet(0, out _, out target) || target == null))
             throw ctx.Reply(T.PlayerNotFound);
 
         if (target == null) // ran by console

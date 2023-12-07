@@ -3,7 +3,7 @@
     <TargetFramework>net481</TargetFramework>
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
-	<Version>3.2.6</Version>
+	  <Version>3.5.2</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
@@ -23,8 +23,8 @@
     <PackageTags>Plugin</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
     <RootNamespace>Uncreated.Warfare</RootNamespace>
-    <AssemblyVersion>3.2.6.0</AssemblyVersion>
-    <FileVersion>3.2.6.0</FileVersion>
+    <AssemblyVersion>3.5.2.0</AssemblyVersion>
+    <FileVersion>3.5.2.0</FileVersion>
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
@@ -71,10 +71,10 @@
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\SDG.NetTransport.dll</HintPath>
     </Reference>
     <Reference Include="StackCleaner">
-      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\StackCleaner.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Libraries\Old\StackCleaner.dll</HintPath>
     </Reference>
     <Reference Include="Stripe.net">
-      <HintPath>..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\Stripe.net.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Libraries\Old\Stripe.net.dll</HintPath>
     </Reference>
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -83,13 +83,13 @@
     </Reference>
     <Reference Include="System.Net.Http" />
     <Reference Include="Uncreated.UI">
-      <HintPath>..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\Uncreated.UI.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Libraries\Old\Uncreated.UI.dll</HintPath>
     </Reference>
     <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UncreatedNetworking.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Libraries\Old\UncreatedNetworking.dll</HintPath>
     </Reference>
     <Reference Include="UniTask">
-      <HintPath>..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UniTask.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Libraries\Old\UniTask.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.dll</HintPath>

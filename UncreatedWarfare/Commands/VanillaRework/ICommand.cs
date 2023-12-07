@@ -7,6 +7,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
+using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
@@ -223,6 +224,9 @@ public class ICommand : Command
             throw ctx.ReplyString("No item found.", "8f9494");
 
         foundItem:
+
+        amount = Mathf.Clamp(amount, 1, 255);
+
         Item itemFromID = new Item(asset!.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));
         for (int i = 0; i < amount; i++)
         {
