@@ -49,7 +49,7 @@ public interface IKitsDbContext : IDbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Kit>()
-            .HasMany<KitAccess>()
+            .HasMany(x => x.Access)
             .WithOne(x => x.Kit)
             .OnDelete(DeleteBehavior.Cascade);
 

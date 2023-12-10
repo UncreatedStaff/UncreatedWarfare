@@ -271,28 +271,12 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
         {
             if (!forceNotUseKitManager && UCWarfare.IsLoaded && Data.Singletons != null && Data.Gamemode != null && KitManager.GetSingletonQuick() is { } kitManager)
             {
-                await kitManager.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    await kitManager.WriteWaitAsync(token).ConfigureAwait(false);
-                    try
-                    {
-                        _kits = new Kit[kitManager.Items.Count];
-                        for (int i = 0; i < kitManager.Items.Count; ++i)
-                        {
-                            Kit kit = kitManager.Items[i];
-                            _kits[i] = kit;
-                        }
-                    }
-                    finally
-                    {
-                        kitManager.WriteRelease();
-                    }
-                }
-                finally
-                {
-                    kitManager.Release();
-                }
+                //_kits = new Kit[kitManager.Items.Count];
+                //for (int i = 0; i < kitManager.Items.Count; ++i)
+                //{
+                //    Kit kit = kitManager.Items[i];
+                //    _kits[i] = kit; todo
+                //}
             }
             else
             {

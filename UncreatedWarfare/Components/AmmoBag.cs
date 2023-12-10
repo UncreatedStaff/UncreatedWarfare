@@ -35,7 +35,7 @@ public class AmmoBagComponent : MonoBehaviour
         Ammo -= ammoCost;
         if (Data.Is(out IKitRequests req))
         {
-            await req.KitManager.ResupplyKit(player, kit, true, token).ConfigureAwait(false);
+            await req.KitManager.Requests.ResupplyKit(player, kit, true, token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
         }
         else

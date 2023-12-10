@@ -391,12 +391,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!wasAlreadyOnline)
         {
             Task t2 = Points.UpdatePointsAsync(player, false, token);
-            Task t3 = KitManager.DownloadPlayerKitData(player, false, token);
+            Task? t3 = KitManager.GetSingletonQuick()?.DownloadPlayerKitData(player, false, token);
             Task t4 = OffenseManager.ApplyMuteSettings(player, token);
             await Data.DatabaseManager.RegisterLogin(player.Player, token).ConfigureAwait(false);
             await t2.ConfigureAwait(false);
-            await t3.ConfigureAwait(false);
             await t4.ConfigureAwait(false);
+            if (t3 != null)
+                await t3.ConfigureAwait(false);
         }
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
@@ -929,8 +930,11 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             ThreadUtil.assertIsGameThread();
             await Points.UpdateAllPointsAsync(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
-            await KitManager.DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            if (KitManager.GetSingletonQuick() is { IsLoaded: true } manager)
+            {
+                await manager.DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
+            }
             foreach (UCPlayer pl in PlayerManager.OnlinePlayers.ToList())
             {
                 CancellationToken tk2 = token;
@@ -993,13 +997,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         await UCWarfare.ToUpdate(token);
         await InternalPlayerInit(player, false, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
-        if (player.IsOnline)
-        {
-            if (UCPlayer.LoadingUI.IsValid)
-                UCPlayer.LoadingUI.ClearFromPlayer(player.Connection);
-            if (!player.ModalNeeded)
-                player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-        }
+        if (player is { IsOnline: true, ModalNeeded: false })
+            player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
         player.Save.Apply(player);
     }
     public virtual void OnGroupChanged(GroupChanged e) { }

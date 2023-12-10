@@ -28,84 +28,76 @@ public class StripeEliteKit
         KitManager? manager = UCWarfare.IsLoaded ? KitManager.GetSingletonQuick() : null;
 
         List<(string id, Kit kit)> needsStripeKits = new List<(string, Kit)>();
-        if (manager != null)
-            await manager.WaitAsync(token).ConfigureAwait(false);
+
+        await stripeService.Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await stripeService.Semaphore.WaitAsync(token).ConfigureAwait(false);
-            try
+            for (int i = 0; i < purchaseRecord.Kits.Count; i++)
             {
-                for (int i = 0; i < purchaseRecord.Kits.Count; i++)
-                {
-                    Kit kit = purchaseRecord.Kits[i];
-                    if (kit is not { Type: KitType.Elite, EliteKitInfo: null })
-                        continue;
+                Kit kit = purchaseRecord.Kits[i];
+                if (kit is not { Type: KitType.Elite, EliteKitInfo: null })
+                    continue;
 
-                    needsStripeKits.Add((kit.InternalName, kit));
+                needsStripeKits.Add((kit.InternalName, kit));
+            }
+
+            if (needsStripeKits.Count == 0)
+                return;
+            StringBuilder query = new StringBuilder(256);
+            int index = 0;
+            do
+            {
+                int max = Math.Min(needsStripeKits.Count, index + 10);
+                for (int i = index; i < max; i++)
+                {
+                    if (i != index) query.Append(" OR ");
+
+                    query.Append("metadata[\"" + PurchaseRecordsInterface.BundleIdMetadataKey + "\"]:\"")
+                        .Append(needsStripeKits[i].id)
+                        .Append('\"');
                 }
 
-                if (needsStripeKits.Count == 0)
-                    return;
-                StringBuilder query = new StringBuilder(256);
-                int index = 0;
-                do
+                index = max;
+
+                string q = query.ToString();
+                query.Clear();
+
+                StripeSearchResult<Product> existing = await stripeService.ProductService.SearchAsync(new ProductSearchOptions
                 {
-                    int max = Math.Min(needsStripeKits.Count, index + 10);
-                    for (int i = index; i < max; i++)
-                    {
-                        if (i != index) query.Append(" OR ");
+                    Query = q,
+                    Limit = 100,
+                    Expand = StripeService.ProductExpandOptions
+                }, cancellationToken: token).ConfigureAwait(false);
 
-                        query.Append("metadata[\"" + PurchaseRecordsInterface.BundleIdMetadataKey + "\"]:\"")
-                            .Append(needsStripeKits[i].id)
-                            .Append('\"');
+                foreach (Product product in existing.Data)
+                {
+                    if (product.Metadata == null || !product.Metadata.TryGetValue(PurchaseRecordsInterface.BundleIdMetadataKey, out string kitId))
+                    {
+                        L.LogWarning($"Unknown product id key from searched product: {product.Name}.");
+                        continue;
                     }
 
-                    index = max;
-
-                    string q = query.ToString();
-                    query.Clear();
-
-                    StripeSearchResult<Product> existing = await stripeService.ProductService.SearchAsync(new ProductSearchOptions
+                    (_, Kit kit) = needsStripeKits.Find(x => x.id.Equals(kitId, StringComparison.Ordinal));
+                    kit.EliteKitInfo = new StripeEliteKit
                     {
-                        Query = q,
-                        Limit = 100,
-                        Expand = StripeService.ProductExpandOptions
-                    }, cancellationToken: token).ConfigureAwait(false);
-
-                    foreach (Product product in existing.Data)
+                        KitId = kit.InternalName,
+                        PrimaryKey = kit.PrimaryKey,
+                        Product = product
+                    };
+                    if (product is { DefaultPrice.UnitAmountDecimal: { } price })
                     {
-                        if (product.Metadata == null || !product.Metadata.TryGetValue(PurchaseRecordsInterface.BundleIdMetadataKey, out string kitId))
-                        {
-                            L.LogWarning($"Unknown product id key from searched product: {product.Name}.");
-                            continue;
-                        }
-
-                        (_, Kit kit) = needsStripeKits.Find(x => x.id.Equals(kitId, StringComparison.Ordinal));
-                        kit.EliteKitInfo = new StripeEliteKit
-                        {
-                            KitId = kit.InternalName,
-                            PrimaryKey = kit.PrimaryKey,
-                            Product = product
-                        };
-                        if (product is { DefaultPrice.UnitAmountDecimal: { } price })
-                        {
-                            price = decimal.Round(decimal.Divide(price, 100m), 2);
-                            decimal oldPrice = kit.PremiumCost;
-                            kit.PremiumCost = price;
-                            if (manager != null && manager.IsLoading && oldPrice != price)
-                                kit.IsLoadDirty = true;
-                        }
+                        price = decimal.Round(decimal.Divide(price, 100m), 2);
+                        decimal oldPrice = kit.PremiumCost;
+                        kit.PremiumCost = price;
+                        if (manager is { IsLoading: true } && oldPrice != price)
+                            kit.IsLoadDirty = true;
                     }
-                } while (index < needsStripeKits.Count);
-            }
-            finally
-            {
-                stripeService.Semaphore.Release();
-            }
+                }
+            } while (index < needsStripeKits.Count);
         }
         finally
         {
-            manager?.Release();
+            stripeService.Semaphore.Release();
         }
     }
     internal static async Task<StripeEliteKit?> GetOrAddProduct(IStripeService stripeService, Kit kit, bool create = false, CancellationToken token = default)

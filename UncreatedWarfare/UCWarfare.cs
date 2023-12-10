@@ -185,7 +185,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         L.Log("Migrating database changes...", ConsoleColor.Magenta);
 
-        await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
+        await Data.DbContext.WaitAsync(token).ConfigureAwait(false);
         try
         {
             await Data.DbContext.Database.MigrateAsync(token);
@@ -193,11 +193,14 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         }
         catch (Exception ex)
         {
-            WarfareDatabases.Release();
             L.LogError(" + Failed to migrate databse.");
             L.LogError(ex);
             Provider.shutdown(10);
             return;
+        }
+        finally
+        {
+            Data.DbContext.Release();
         }
 
         Data.LanguageDataStore = new WarfareMySqlLanguageDataStore();
@@ -212,7 +215,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
 #if NETSTANDARD || NETFRAMEWORK
         Data.WarfareStripeService = new WarfareStripeService();
-        Data.PurchasingDataStore = await PurchaseRecordsInterface.Create<WarfarePurchaseRecordsInterface>(false, token).ConfigureAwait(false);
+        Data.PurchasingDataStore = new WarfarePurchaseRecordsInterface(); //await PurchaseRecordsInterface.Create<WarfarePurchaseRecordsInterface>(false, token).ConfigureAwait(false);
 #endif
 
 

@@ -38,7 +38,7 @@ public class BuyCommand : AsyncCommand
         {
             if (Signs.GetKitFromSign(drop, out int ld) is { } kit)
             {
-                await manager.BuyKit(ctx, kit, drop.model.position, token).ConfigureAwait(false);
+                await manager.Requests.BuyKit(ctx, kit, drop.model.position, token).ConfigureAwait(false);
                 return;
             }
             if (ld > -1)

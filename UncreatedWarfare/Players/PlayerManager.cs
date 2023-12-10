@@ -42,6 +42,20 @@ public static class PlayerManager
         Provider.onRejectingPlayer += OnRejectingPlayer;
         EventDispatcher.PlayerPending += OnPlayerPending;
     }
+
+    public static ulong[] GetOnlinePlayersArray()
+    {
+        lock (_dict)
+        {
+            ulong[] output = new ulong[_dict.Count];
+
+            int i = -1;
+            foreach (ulong player in _dict.Keys)
+                output[++i] = player;
+
+            return output;
+        }
+    }
     internal static List<UCSemaphore> GetAllSemaphores()
     {
         lock (_semaphores)

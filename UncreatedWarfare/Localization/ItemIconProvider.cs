@@ -418,7 +418,14 @@ internal static class ItemIconProvider
         }
 
         builder.Append(';');
+
+        // disable debug logging because it's a lot
+        bool debug = Data.AdminSql.DebugLogging;
+        Data.AdminSql.DebugLogging = false;
+
         await Data.AdminSql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
+
+        Data.AdminSql.DebugLogging = debug;
     }
 
     public static void UseDefaults() => AddDefaultsToData();

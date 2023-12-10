@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using Microsoft.EntityFrameworkCore;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -10,6 +11,8 @@ using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Factions;
@@ -37,32 +40,30 @@ public static class KitEx
     public static readonly int WeaponTextMaxCharLimit = 128;
     public static readonly int SignTextMaxCharLimit = 50;
     public static readonly int MaxStateArrayLimit = 18;
-    public static void WriteKitLocalization(LanguageInfo language, string path, bool writeMising)
+    public static async Task WriteKitLocalization(LanguageInfo language, string path, bool writeMising, CancellationToken token = default)
     {
         KitManager? manager = KitManager.GetSingletonQuick();
         if (manager == null)
             return;
 
-        manager.WriteWait();
-        try
+        List<Kit> kits;
+        await using (IKitsDbContext context = new WarfareDbContext())
         {
-            using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
-            using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
-            writer.WriteLine("# Kit Name Translations");
-            writer.WriteLine("#  <br> = new line on signs");
-            writer.WriteLine();
-            for (int i = 0; i < manager.Items.Count; i++)
-            {
-                Kit kit = manager.Items[i];
-                if (kit == null || kit.Type == KitType.Loadout || kit.Class <= Class.Unarmed)
-                    continue;
-                if (WriteKitIntl(kit, language, writer, writeMising) && i != manager.Items.Count - 1)
-                    writer.WriteLine();
-            }
+            kits = await context.Kits.Where(x => x.Type != KitType.Loadout).ToListAsync(token);
         }
-        finally
+
+        await using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        await using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
+        writer.WriteLine("# Kit Name Translations");
+        writer.WriteLine("#  <br> = new line on signs");
+        writer.WriteLine();
+        for (int i = 0; i < kits.Count; i++)
         {
-            manager.WriteRelease();
+            Kit kit = kits[i];
+            if (kit is not { Class: > Class.Unarmed })
+                continue;
+            if (WriteKitIntl(kit, language, writer, writeMising) && i != kits.Count - 1)
+                writer.WriteLine();
         }
     }
     private static bool WriteKitIntl(Kit kit, LanguageInfo language, TextWriter writer, bool writeMising)
@@ -295,7 +296,7 @@ public static class KitEx
             _ => '±'
         };
     }
-    public static float GetTeamLimit(this Kit kit) => kit.TeamLimit ?? KitManager.GetDefaultTeamLimit(kit.Class);
+    public static float GetTeamLimit(this Kit kit) => kit.TeamLimit ?? KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(kit.Class);
     public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {
 #if DEBUG
@@ -848,29 +849,25 @@ public static class KitEx
             if (manager == null)
                 return StandardErrorCode.GenericError;
 
-            Kit? kit = await manager.FindKit(kitId).ConfigureAwait(false);
-            if (kit != null)
-            {
-                await manager.WaitAsync().ConfigureAwait(false);
-                try
-                {
-                    await (state ? KitManager.GiveAccess(kit, player, type) : KitManager.RemoveAccess(kit, player)).ConfigureAwait(false);
-                    ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
-                                                                       (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
-                                                                       (" DENIED ACCESS TO " + kitId + ".")), admin);
-                    KitSync.OnAccessChanged(player);
-                    UCPlayer? onlinePlayer = UCPlayer.FromID(player);
-                    if (onlinePlayer != null && onlinePlayer.IsOnline)
-                        KitManager.UpdateSigns(kit, onlinePlayer);
-                    return StandardErrorCode.Success;
-                }
-                finally
-                {
-                    manager.Release();
-                }
-            }
+            Kit? kit = await manager.FindKit(kitId, set: x => x.Kits.Include(y => y.Translations)).ConfigureAwait(false);
+            if (kit == null)
+                return StandardErrorCode.NotFound;
 
-            return StandardErrorCode.NotFound;
+            await (state ? manager.GiveAccess(kit, player, type) : manager.RemoveAccess(kit, player)).ConfigureAwait(false);
+
+            ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
+                                                         (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
+                                                             (" DENIED ACCESS TO " + kitId + ".")), admin);
+
+            KitSync.OnAccessChanged(player);
+
+            UCPlayer? onlinePlayer = UCPlayer.FromID(player);
+
+            if (onlinePlayer != null && onlinePlayer.IsOnline)
+                manager.Signs.UpdateSigns(kit, onlinePlayer);
+
+            return StandardErrorCode.Success;
+
         }
         [NetCall(ENetCall.FROM_SERVER, 1132)]
         internal static async Task ReceiveSetKitsAccess(MessageContext context, ulong admin, ulong player, string[] kits, KitAccessType type, bool state)
@@ -885,34 +882,28 @@ public static class KitEx
                 return;
             }
 
-            await manager.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                for (int i = 0; i < kits.Length; ++i)
-                {
-                    string kitId = kits[i];
-                    Kit? kit = await manager.FindKit(kitId).ConfigureAwait(false);
-                    if (kit != null)
-                    {
-                        await (state ? KitManager.GiveAccess(kit, player, type) : KitManager.RemoveAccess(kit, player)).ConfigureAwait(false);
-                        ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
-                            (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
-                                (" DENIED ACCESS TO " + kitId + ".")), admin);
-                        KitSync.OnAccessChanged(player);
-                        UCPlayer? onlinePlayer = UCPlayer.FromID(player);
-                        if (onlinePlayer != null && onlinePlayer.IsOnline)
-                            KitManager.UpdateSigns(kit, onlinePlayer);
-                        successes[i] = (int)StandardErrorCode.Success;
-                        continue;
-                    }
 
-                    successes[i] = (int)StandardErrorCode.NotFound;
-                }
-            }
-            finally
+            for (int i = 0; i < kits.Length; ++i)
             {
-                manager.Release();
+                string kitId = kits[i];
+                Kit? kit = await manager.FindKit(kitId, set: x => x.Kits.Include(y => y.Translations)).ConfigureAwait(false);
+                if (kit != null)
+                {
+                    await (state ? manager.GiveAccess(kit, player, type) : manager.RemoveAccess(kit, player)).ConfigureAwait(false);
+                    ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
+                        (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
+                            (" DENIED ACCESS TO " + kitId + ".")), admin);
+                    KitSync.OnAccessChanged(player);
+                    UCPlayer? onlinePlayer = UCPlayer.FromID(player);
+                    if (onlinePlayer != null && onlinePlayer.IsOnline)
+                        manager.Signs.UpdateSigns(kit, onlinePlayer);
+                    successes[i] = (int)StandardErrorCode.Success;
+                    continue;
+                }
+
+                successes[i] = (int)StandardErrorCode.NotFound;
             }
+
             context.Reply(SendAckSetKitsAccess, successes);
         }
         /// <returns><see cref="PlayerHasAccessCode"/> if the player has access to the kit, <see cref="PlayerHasNoAccessCode"/> if they don't,<br/>
@@ -924,11 +915,11 @@ public static class KitEx
 
             if (manager == null)
                 return (int)StandardErrorCode.GenericError;
-            Kit? kit = await manager.FindKit(kitId).ConfigureAwait(false);
+            Kit? kit = await manager.FindKit(kitId, set: x => x.Kits).ConfigureAwait(false);
             if (kit == null)
                 return (int)StandardErrorCode.NotFound;
 
-            return await KitManager.HasAccess(kit, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode;
+            return await manager.HasAccess(kit, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode;
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1136)]
@@ -946,10 +937,10 @@ public static class KitEx
             }
             for (int i = 0; i < kits.Length; ++i)
             {
-                Kit? kit = await manager.FindKit(kits[i]).ConfigureAwait(false);
+                Kit? kit = await manager.FindKit(kits[i], set: x => x.Kits).ConfigureAwait(false);
                 if (kit == null)
                     outp[i] = (int)StandardErrorCode.NotFound;
-                else outp[i] = (byte)(await KitManager.HasAccess(kit, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode);
+                else outp[i] = (byte)(await manager.HasAccess(kit, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode);
             }
             context.Reply(SendKitsAccess, (byte)StandardErrorCode.Success, outp);
         }
@@ -959,23 +950,18 @@ public static class KitEx
         internal static async Task ReceiveRequestKitClass(MessageContext context, string kitId)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
-            if (manager == null)
-                goto bad;
-            Kit? kit = await manager.FindKit(kitId).ConfigureAwait(false);
-            if (kit == null)
-                goto bad;
-            await manager.WaitAsync().ConfigureAwait(false);
-            try
+            if (manager != null)
             {
-                string signtext = kit.GetDisplayName();
-                context.Reply(SendKitClass, kitId, kit.Class, signtext);
-                return;
+                Kit? kit = await manager.FindKit(kitId, set: x => x.Kits.Include(y => y.Translations)).ConfigureAwait(false);
+                await UCWarfare.ToUpdate();
+                if (kit != null)
+                {
+                    string signtext = kit.GetDisplayName();
+                    context.Reply(SendKitClass, kitId, kit.Class, signtext);
+                    return;
+                }
             }
-            finally
-            {
-                manager.Release();
-            }
-            bad:
+
             context.Reply(SendKitClass, kitId, Class.None, kitId);
         }
         [NetCall(ENetCall.FROM_SERVER, 1110)]
@@ -984,7 +970,7 @@ public static class KitEx
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                (Kit kit, StandardErrorCode code) = await manager.CreateLoadout(fromPlayer, player, @class, displayName);
+                (Kit kit, StandardErrorCode code) = await manager.Loadouts.CreateLoadout(fromPlayer, player, @class, displayName);
 
                 context.Reply(SendAckCreateLoadout, kit.InternalName, (int)code);
             }
@@ -999,7 +985,7 @@ public static class KitEx
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                (_, StandardErrorCode code) = await manager.UpgradeLoadout(fromPlayer, player, @class, loadoutId).ConfigureAwait(false);
+                (_, StandardErrorCode code) = await manager.Loadouts.UpgradeLoadout(fromPlayer, player, @class, loadoutId).ConfigureAwait(false);
 
                 context.Acknowledge(code);
             }
@@ -1014,7 +1000,7 @@ public static class KitEx
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                (_, StandardErrorCode code) = await manager.UnlockLoadout(fromPlayer, displayName).ConfigureAwait(false);
+                (_, StandardErrorCode code) = await manager.Loadouts.UnlockLoadout(fromPlayer, displayName).ConfigureAwait(false);
 
                 context.Acknowledge(code);
             }
@@ -1035,7 +1021,7 @@ public static class KitEx
                     int len = Math.Min(players.Length, codes.Length);
                     for (int i = 0; i < len; ++i)
                     {
-                        manager.OnNitroBoostingUpdated(players[i], codes[i]);
+                        manager.Boosting.OnNitroBoostingUpdated(players[i], codes[i]);
                     }
                     context.Acknowledge(StandardErrorCode.Success);
                     return;

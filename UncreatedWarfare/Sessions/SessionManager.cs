@@ -22,11 +22,12 @@ namespace Uncreated.Warfare.Sessions;
 public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, IPlayerDisconnectListener, IPlayerPostInitListenerAsync
 {
     private readonly ConcurrentDictionary<ulong, SessionRecord> _sessions = new ConcurrentDictionary<ulong, SessionRecord>();
-    private readonly UCSemaphore _semaphore = new UCSemaphore(1, 0);
+    private readonly UCSemaphore _semaphore = new UCSemaphore(0, 1);
 
     public override bool AwaitLoad => true;
-    public override async Task LoadAsync(CancellationToken token)
+    protected override async Task LoadAsync(CancellationToken token)
     {
+        _semaphore.Release();
 #if DEBUG
         using IDisposable disposable = ProfilingUtils.StartTracking();
 #endif
@@ -35,9 +36,8 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
         KitManager.OnManualKitChanged += OnKitChanged;
         EventDispatcher.GroupChanged += OnGroupChanged;
         Gamemode.OnGamemodeChanged += OnGamemodeChanged;
-        _semaphore.Release();
     }
-    public override async Task UnloadAsync(CancellationToken token)
+    protected override async Task UnloadAsync(CancellationToken token)
     {
 #if DEBUG
         using IDisposable disposable = ProfilingUtils.StartTracking();

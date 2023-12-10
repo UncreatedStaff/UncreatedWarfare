@@ -14,8 +14,8 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
@@ -112,15 +112,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                         await UCWarfare.ToUpdate(token);
                         if (sign != null)
                         {
-                            kit = Signs.GetKitFromSign(drop, out int loadoutId);
-                            if (loadoutId > 0)
-                            {
-                                UCPlayer pl = ctx.Caller;
-                                UCPlayer.TryApplyViewLens(ref pl);
-                                kit = manager.GetLoadoutQuick(pl, loadoutId);
-                                if (kit == null)
-                                    throw ctx.Reply(T.KitNotFound, "#" + loadoutId.ToString(ctx.CultureInfo));
-                            }
+                            kit = await manager.GetKitFromSign(drop, ctx.Caller, token);
                         }
                         else throw ctx.Reply(T.RequestNoTarget);
                     }
@@ -129,9 +121,9 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                         kit = await manager.FindKit(kitId, token, false);
                     }
                     else throw ctx.SendUnknownError();
-                    
+
                     if (kit == null)
-                        throw ctx.Reply(T.KitNotFound, kitId!);
+                        throw ctx.Reply(T.KitNotFound, kitId ?? "???");
 
                     if (kit.Type != KitType.Loadout)
                         throw ctx.Reply(T.RequestUpgradeOnKit, kit);
@@ -209,6 +201,8 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
 
             throw ctx.SendCorrectUsage(Syntax + " - " + Help);
         }
+
+        InteractableVehicle vehicle;
         ctx.AssertRanByPlayer();
         if (ctx.TryGetTarget(out drop))
         {
@@ -229,9 +223,9 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                     KitManager manager = gm.KitManager;
 
                     if (loadoutId > 0)
-                        await manager.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
+                        await manager.Requests.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
                     else
-                        await manager.RequestKit(kit!, ctx, token).ConfigureAwait(false);
+                        await manager.Requests.RequestKit(kit!, ctx, token).ConfigureAwait(false);
                     return;
                 }
                 if (TraitManager.Loaded && sign.text.StartsWith(Signs.Prefix + Signs.TraitPrefix, StringComparison.OrdinalIgnoreCase))
@@ -250,48 +244,48 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                 }
             }
 
-            if (Data.Is(out IVehicles vgm) && vgm.VehicleSpawner.TryGetSpawn(drop, out SqlItem<VehicleSpawn> vbsign))
-            {
-                VehicleSpawn? spawn = vbsign.Item;
-                if (spawn == null)
-                    throw ctx.Reply(T.RequestNoTarget);
+            if (!Data.Is(out IVehicles vgm) || !vgm.VehicleSpawner.TryGetSpawn(drop, out SqlItem<VehicleSpawn> vbsign))
+                throw ctx.Reply(T.RequestNoTarget);
+            
+            VehicleSpawn? spawn = vbsign.Item;
+            if (spawn == null)
+                throw ctx.Reply(T.RequestNoTarget);
                 
-                ctx.AssertNotOnPortionCooldown();
-                if (!spawn.HasLinkedVehicle(out InteractableVehicle vehicle))
-                {
-                    ctx.PortionCommandCooldownTime = 5f;
-                    throw ctx.Reply(T.RequestVehicleDead, spawn.Vehicle?.Item!);
-                }
-
-                VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-                if (bay != null && bay.IsLoaded)
-                {
-                    SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate();
-                    if (data?.Item != null)
-                    {
-                        await data.Enter(token).ConfigureAwait(false);
-                        try
-                        {
-                            await RequestVehicle(ctx, vehicle, data.Item, token);
-                            ctx.Defer();
-                        }
-                        finally
-                        {
-                            data.Release();
-                        }
-                        return;
-                    }
-                }
-                else throw ctx.SendGamemodeError();
+            ctx.AssertNotOnPortionCooldown();
+            if (!spawn.HasLinkedVehicle(out vehicle))
+            {
+                ctx.PortionCommandCooldownTime = 5f;
+                throw ctx.Reply(T.RequestVehicleDead, spawn.Vehicle?.Item!);
             }
-            throw ctx.Reply(T.RequestNoTarget);
+
+            VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+            if (bay is not { IsLoaded: true })
+                throw ctx.SendGamemodeError();
+
+            SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate();
+            if (data?.Item == null)
+                throw ctx.Reply(T.RequestNoTarget);
+
+            await data.Enter(token).ConfigureAwait(false);
+            try
+            {
+                await RequestVehicle(ctx, vehicle, data.Item, token);
+                ctx.Defer();
+            }
+            finally
+            {
+                data.Release();
+            }
+            return;
+
         }
-        else if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+
+        if (ctx.TryGetTarget(out vehicle))
         {
             await UCWarfare.ToUpdate();
             VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-            if (bay != null && bay.IsLoaded)
+            if (bay is { IsLoaded: true })
             {
                 SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate();
@@ -329,7 +323,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                 }
 
                 VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-                if (bay != null && bay.IsLoaded)
+                if (bay is { IsLoaded: true })
                 {
                     SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate();
