@@ -64,7 +64,12 @@ public class DutyCommand : Command
             }
 
             if (player.Player.movement != null)
-                player.Player.movement.sendPluginSpeedMultiplier(1f);
+            {
+                if (player.Player.movement.pluginSpeedMultiplier != 1f)
+                    player.Player.movement.sendPluginSpeedMultiplier(1f);
+                if (player.Player.movement.pluginJumpMultiplier != 1f)
+                    player.Player.movement.sendPluginJumpMultiplier(1f);
+            }
         }
 
         player.JumpOnPunch = false;
