@@ -1512,9 +1512,19 @@ internal static class T
     [TranslationData(SectionSpeed, IsPrioritizedTranslation = false)]
     public static readonly Translation<string> SpeedMultiplierInvalidValue = new Translation<string>("<#b3a6a2>Speed multiplier <#fff>{0}</color> is invalid.");
     [TranslationData(SectionSpeed, IsPrioritizedTranslation = false)]
-    public static readonly Translation<float> SpeedMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Speed multiplier is already <#fff>{0}</color>.");
+    public static readonly Translation<float> SpeedMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Speed multiplier is already set to <#fff>{0}</color>.");
     [TranslationData(SectionSpeed, IsPrioritizedTranslation = false)]
-    public static readonly Translation<float, IPlayer> SetSpeedMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {1}'s speed multiplier to <#fff>{0}</color>.", "0.##", UCPlayer.FormatColoredCharacterName );
+    public static readonly Translation<float, IPlayer> SetSpeedMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", "0.##", UCPlayer.FormatColoredCharacterName);
+    #endregion
+
+    #region Jump Command
+    private const string SectionJump = "Speed Command";
+    [TranslationData(SectionJump, IsPrioritizedTranslation = false)]
+    public static readonly Translation<string> JumpMultiplierInvalidValue = new Translation<string>("<#b3a6a2>Jump multiplier <#fff>{0}</color> is invalid.");
+    [TranslationData(SectionJump, IsPrioritizedTranslation = false)]
+    public static readonly Translation<float> JumpMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Jump multiplier is already set to <#fff>{0}</color>.");
+    [TranslationData(SectionJump, IsPrioritizedTranslation = false)]
+    public static readonly Translation<float, IPlayer> SetJumpMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", "0.##", UCPlayer.FormatColoredCharacterName);
     #endregion
 
     #region Request
