@@ -1649,26 +1649,26 @@ public static class EventFunctions
             bool kick = false;
             string? cn = null;
             string? nn = null;
-            Match match = Data.ChatFilter.Match(e.PendingPlayer.playerID.playerName);
-            if (match.Success && match.Length > 0)
+            string? match = Data.GetChatFilterViolation(e.PendingPlayer.playerID.playerName);
+            if (match != null)
             {
                 LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
                 ActionLog.Add(ActionLogType.ChatFilterViolation, "PLAYER NAME: " + e.PendingPlayer.playerID.playerName, e.PendingPlayer.playerID.steamID.m_SteamID);
-                throw e.Reject(T.NameProfanityPlayerNameKickMessage.Translate(langInfo, match.Value));
+                throw e.Reject(T.NameProfanityPlayerNameKickMessage.Translate(langInfo, match));
             }
-            match = Data.ChatFilter.Match(e.PendingPlayer.playerID.characterName);
-            if (match.Success && match.Length > 0)
+            match = Data.GetChatFilterViolation(e.PendingPlayer.playerID.characterName);
+            if (match != null)
             {
                 LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
                 ActionLog.Add(ActionLogType.ChatFilterViolation, "CHARACTER NAME: " + e.PendingPlayer.playerID.characterName, e.PendingPlayer.playerID.steamID.m_SteamID);
-                throw e.Reject(T.NameProfanityCharacterNameKickMessage.Translate(langInfo, match.Value));
+                throw e.Reject(T.NameProfanityCharacterNameKickMessage.Translate(langInfo, match));
             }
-            match = Data.ChatFilter.Match(e.PendingPlayer.playerID.nickName);
-            if (match.Success && match.Length > 0)
+            match = Data.GetChatFilterViolation(e.PendingPlayer.playerID.nickName);
+            if (match != null)
             {
                 LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
                 ActionLog.Add(ActionLogType.ChatFilterViolation, "NICK NAME: " + e.PendingPlayer.playerID.nickName, e.PendingPlayer.playerID.steamID.m_SteamID);
-                throw e.Reject(T.NameProfanityNickNameKickMessage.Translate(langInfo, match.Value));
+                throw e.Reject(T.NameProfanityNickNameKickMessage.Translate(langInfo, match));
             }
             if (string.IsNullOrWhiteSpace(e.PendingPlayer.playerID.characterName))
             {

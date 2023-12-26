@@ -233,10 +233,10 @@ public static partial class Patches
                 }
                 if (!duty)
                 {
-                    Match match = Data.ChatFilter.Match(text);
-                    if (match.Success && match.Length > 0)
+                    string? match = Data.GetChatFilterViolation(text);
+                    if (match != null)
                     {
-                        caller.SendChat(T.ChatFilterFeedback, match.Value);
+                        caller.SendChat(T.ChatFilterFeedback, match);
                         ActionLog.Add(ActionLogType.ChatFilterViolation, mode switch { EChatMode.LOCAL => "AREA/SQUAD: ", EChatMode.GLOBAL => "GLOBAL: ", _ => "TEAM: " } + text, caller);
                         return false;
                     }
