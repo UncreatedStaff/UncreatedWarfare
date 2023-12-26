@@ -485,7 +485,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             ushort health;
             if (ActiveStructure == null || ActiveStructure.Drop is not BarricadeDrop and not StructureDrop)
             {
-                if (ActiveVehicle == null)
+                if (ActiveVehicle == null || ActiveVehicle.isDead)
                     return false;
 
                 health = ActiveVehicle.health;
