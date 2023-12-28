@@ -34,7 +34,6 @@ using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Sessions;
@@ -44,6 +43,9 @@ using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using UnityEngine.Assertions;
+#if NETSTANDARD || NETFRAMEWORK
+using Uncreated.Warfare.Networking.Purchasing;
+#endif
 
 namespace Uncreated.Warfare;
 
@@ -122,9 +124,7 @@ public static class Data
     internal static WarfareSQL? RemoteSQL;
     internal static DatabaseInterface ModerationSql;
     internal static WarfareMySqlLanguageDataStore LanguageDataStore;
-    internal static PurchaseRecordsInterface PurchasingDataStore;
-    [Obsolete]
-    internal static WarfareDbContext DbContext;
+    internal static PurchaseRecordsInterface<WarfareDbContext> PurchasingDataStore;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     public static bool UseFastKits;
@@ -163,6 +163,7 @@ public static class Data
     internal static InstanceGetter<PlayerLife, CSteamID>? GetRecentKiller;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
+    internal static Action<PlayerInventory, SteamPlayer> SendInitialInventoryState;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
     internal static SteamPlayer NilSteamPlayer;
@@ -261,30 +262,6 @@ public static class Data
     }
     internal static async Task LoadSQL(CancellationToken token)
     {
-#pragma warning disable CS0612 // Type or member is obsolete
-        if (WarfareDatabases.Semaphore == null)
-        {
-            WarfareDatabases.Semaphore = new UCSemaphore(0, 1);
-#if DEBUG
-            WarfareDatabases.Semaphore.WaitCallback    += () => L.LogDebug($"Semaphore waiting       in DbContext.");
-            WarfareDatabases.Semaphore.ReleaseCallback += n  => L.LogDebug($"Semaphore released x{n} in DbContext.");
-#endif
-        }
-        else
-        {
-            await WarfareDatabases.WaitAsync(token).ConfigureAwait(false);
-        }
-        try
-        {
-            DbContext = new WarfareDbContext();
-            WarfareDatabases.LoadFromWarfareDbContext(DbContext);
-        }
-        finally
-        {
-            WarfareDatabases.Release();
-        }
-#pragma warning restore CS0612 // Type or member is obsolete
-
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
         bool status = await DatabaseManager.OpenAsync(token);
         L.Log("Local MySql database status: " + status + ".", ConsoleColor.Magenta);
@@ -378,6 +355,8 @@ public static class Data
         SetStorageInventory = Accessor.GenerateInstanceSetter<InteractableStorage, Items>("_items");
         RefreshIsConnectedToPower = (Action<InteractablePower>?)Accessor.GenerateInstanceCaller<InteractablePower>("RefreshIsConnectedToPower");
         GetUseableGunReloading = Accessor.GenerateInstanceGetter<UseableGun, bool>("isReloading");
+
+        SendInitialInventoryState = Accessor.GenerateInstanceCaller<PlayerInventory, Action<PlayerInventory, SteamPlayer>>("SendInitialPlayerState", throwOnError: true)!;
         try
         {
             GetItemsSlots = Accessor.GenerateInstanceGetter<Items, bool[,]>("slots", throwOnError: true)!;
@@ -423,7 +402,7 @@ public static class Data
         try
         {
             MethodInfo? method = typeof(Provider).Assembly
-                .GetType("SDG.Unturned.TransportConnectionListPool", true, false).GetMethod("Get",
+                .GetType("SDG.Unturned.TransportConnectionListPool", true, false)?.GetMethod("Get",
                     BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             if (method != null)
             {
@@ -492,7 +471,7 @@ public static class Data
                 capacity = Provider.clients.Count;
             try
             {
-                rtn = (PooledTransportConnectionList)Activator.CreateInstance(typeof(PooledTransportConnectionList),
+                rtn = (PooledTransportConnectionList?)Activator.CreateInstance(typeof(PooledTransportConnectionList),
                     BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance, null, new object[] { capacity }, CultureInfo.InvariantCulture, null);
             }
             catch (Exception ex)
@@ -503,6 +482,9 @@ public static class Data
 
                 throw new Exception("Unable to create pooled transport connection!", ex);
             }
+
+            if (rtn == null)
+                throw new Exception("Unable to create pooled transport connection, returned null!");
         }
 
         return rtn;

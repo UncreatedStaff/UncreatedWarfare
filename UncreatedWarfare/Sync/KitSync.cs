@@ -305,7 +305,7 @@ public static class KitSync
                     KitManager? manager = KitManager.GetSingletonQuick();
                     if (manager == null) return;
                     _updating = pk;
-                    Kit? kit = await manager.Redownload(x => x.PrimaryKey == _deleting);
+                    Kit? kit = await manager.Cache.ReloadCache(_updating, UCWarfare.UnloadCancel);
                     L.Log("Received update notification for kit: \"" + (kit == null ? "<null>" : kit.InternalName) + "\" " + pk
                           + " and redownloaded it from admin database.");
                     ctx.Acknowledge();
@@ -333,8 +333,9 @@ public static class KitSync
                     KitManager? manager = KitManager.GetSingletonQuick();
                     if (manager == null) return;
                     _deleting = pk;
-                    await manager.Redownload(x => x.PrimaryKey == _deleting);
-                    L.Log("Received delete notification for kit: \"" + pk + "\" and removed it from the cache.", ConsoleColor.DarkGray);
+                    Kit? kit = await manager.Cache.ReloadCache(_deleting, UCWarfare.UnloadCancel);
+                    L.Log("Received delete notification for kit: \"" + (kit == null ? "<null>" : kit.InternalName) + "\" " + pk
+                          + " and removed it from the cache.", ConsoleColor.DarkGray);
                     ctx.Acknowledge();
                 }
                 finally
@@ -354,10 +355,13 @@ public static class KitSync
         {
             try
             {
+                KitManager? manager = KitManager.GetSingletonQuick();
+                if (manager == null)
+                    return;
                 UCPlayer? player = UCPlayer.FromID(steamId);
                 if (player == null)
                     return;
-                await KitManager.DownloadPlayerKitData(player, true);
+                await manager.DownloadPlayerKitData(player, true);
                 L.Log("Received access update notification for player: \"" + player.Name.PlayerName + "\" and redownloaded their kits.", ConsoleColor.DarkGray);
                 ctx.Acknowledge();
             }

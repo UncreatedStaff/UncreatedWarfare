@@ -1832,7 +1832,10 @@ Please leave in-game terms such as **FOB**, **Rally**, **Build**, **Ammo**, and 
         WriteLanguage(language, file.FullName, true, missingOnly, excludeNonPrioritized);
         Deaths.Localization.Write(Path.Combine(dir.FullName, "deaths.json"), language, true);
         Localization.WriteEnums(language, Path.Combine(dir.FullName, "Enums"), true, true);
-        KitEx.WriteKitLocalization(language, Path.Combine(dir.FullName, "kits.properties"), true);
+
+        await KitEx.WriteKitLocalization(language, Path.Combine(dir.FullName, "kits.properties"), true, token);
+        await UCWarfare.ToUpdate(token);
+
         TeamManager.WriteFactionLocalization(language, Path.Combine(dir.FullName, "factions.properties"), true);
         TraitManager.WriteTraitLocalization(language, Path.Combine(dir.FullName, "traits.properties"), true);
         using FileStream str = new FileStream(Path.Combine(dir.FullName, "README.md"), FileMode.Create, FileAccess.Write, FileShare.Read);

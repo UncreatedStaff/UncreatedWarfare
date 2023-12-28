@@ -98,7 +98,7 @@ public static class KitEx
             writer.WriteLine("#  Weapons: " + kit.WeaponText);
         writer.WriteLine("#  Class:   " + Localization.TranslateEnum(kit.Class, Localization.GetDefaultLanguage()));
         writer.WriteLine("#  Type:    " + Localization.TranslateEnum(kit.Type, Localization.GetDefaultLanguage()));
-        FactionInfo? factionInfo = TeamManager.GetFactionInfo(kit.Faction);
+        FactionInfo? factionInfo = kit.FactionInfo;
         if (factionInfo != null)
             writer.WriteLine("#  Faction: " + factionInfo.GetName(Localization.GetDefaultLanguage()));
         if (!isDefaultValue && @default != null)
@@ -159,40 +159,42 @@ public static class KitEx
         }
         return count;
     }
-    public static int ParseStandardLoadoutId(string kitId)
+
+    /// <summary>Indexed from 1.</summary>
+    /// <returns>-1 if operation results in an overflow, the string is too short, or invalid characters are found, otherwise, the id of the loadout.</returns>
+    public static int ParseStandardLoadoutId(ReadOnlySpan<char> kitId)
     {
         if (kitId.Length > 18)
         {
-            return GetLoadoutId(kitId, 18);
+            return GetLoadoutId(kitId[18..]);
         }
 
         return -1;
     }
-    public static int ParseStandardLoadoutId(string kitId, out ulong player)
+
+    /// <summary>Indexed from 1.</summary>
+    /// <returns>-1 if operation results in an overflow, the string is too short, or invalid characters are found, otherwise, the id of the loadout.</returns>
+    public static int ParseStandardLoadoutId(ReadOnlySpan<char> kitId, out ulong player)
     {
         int ld = ParseStandardLoadoutId(kitId);
         player = 0;
-        if (kitId.Length <= 17 || !ulong.TryParse(kitId.Substring(0, 17), NumberStyles.Number, Data.AdminLocale, out player))
+        if (kitId.Length <= 17 || !ulong.TryParse(kitId[..17], NumberStyles.Number, Data.AdminLocale, out player))
             return -1;
 
         return ld;
     }
     /// <summary>Indexed from 1.</summary>
     /// <returns>-1 if operation results in an overflow or invalid characters are found, otherwise, the id of the loadout.</returns>
-    public static int GetLoadoutId(string chars, int start = 0, int len = -1)
+    public static int GetLoadoutId(ReadOnlySpan<char> chars)
     {
-        if (len == -1)
-            len = chars.Length - start;
-        if (len > 9) // overflow
-            return -1;
         int id = 0;
-        for (int i = len - 1; i >= 0; --i)
+        for (int i = chars.Length - 1; i >= 0; --i)
         {
-            int c = chars[start + i];
+            int c = chars[i];
             if (c is > 96 and < 123)
-                id += (c - 96) * (int)Math.Pow(26, len - i - 1);
+                id += (c - 96) * (int)Math.Pow(26, chars.Length - i - 1);
             else if (c is > 64 and < 91)
-                id += (c - 64) * (int)Math.Pow(26, len - i - 1);
+                id += (c - 64) * (int)Math.Pow(26, chars.Length - i - 1);
             else return -1;
         }
 
@@ -302,7 +304,7 @@ public static class KitEx
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.Faction);
+        ulong t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;
         if (!requireCounts && kit.TeamLimit >= 1f)
@@ -319,7 +321,7 @@ public static class KitEx
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.Faction);
+        ulong t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;
         if (!requireCounts && (kit.TeamLimit >= 1f))

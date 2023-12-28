@@ -28,7 +28,7 @@ public interface IPurchaseRecordsInterface
     Task RefreshKits(CancellationToken token = default);
 }
 
-public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
+public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInterface, IDisposable where TDbContext : IKitsDbContext, new()
 {
     public const string LoadoutId = "loadout";
 
@@ -68,11 +68,10 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
     public IReadOnlyList<EliteBundle> Bundles { get; private set; }
     public IReadOnlyList<Kit> Kits { get; set; }
     public Product LoadoutProduct { get; set; }
-    public abstract IKitsDbContext Sql { get; }
     public abstract IStripeService StripeService { get; }
     public bool FilterLoadouts { get; set; } = true;
     public UCSemaphore Semaphore { get; } = new UCSemaphore();
-    public static async Task<T> Create<T>(bool createMissingProducts, CancellationToken token = default) where T : PurchaseRecordsInterface, new()
+    public static async Task<T> Create<T>(bool createMissingProducts, CancellationToken token = default) where T : PurchaseRecordsInterface<TDbContext>, new()
     {
         T pri = new T();
         await pri.RefreshAll(createMissingProducts, token).ConfigureAwait(false);
@@ -175,7 +174,8 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            _bundles = await OnInclude(Sql.EliteBundles)
+            await using IKitsDbContext dbContext = new TDbContext();
+            _bundles = await OnInclude(dbContext.EliteBundles)
                 .ToArrayAsync(token).ConfigureAwait(false);
 
             CleanupReferences();
@@ -269,6 +269,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
+            await using IKitsDbContext dbContext = new TDbContext();
             if (!forceNotUseKitManager && UCWarfare.IsLoaded && Data.Singletons != null && Data.Gamemode != null && KitManager.GetSingletonQuick() is { } kitManager)
             {
                 //_kits = new Kit[kitManager.Items.Count];
@@ -280,7 +281,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
             }
             else
             {
-                _kits = await OnInclude(Sql.Kits).ToArrayAsync(token).ConfigureAwait(false);
+                _kits = await OnInclude(dbContext.Kits).ToArrayAsync(token).ConfigureAwait(false);
             }
 
             CleanupReferences();
@@ -504,9 +505,8 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
     }
 }
 #if NETSTANDARD || NETFRAMEWORK
-internal class WarfarePurchaseRecordsInterface : PurchaseRecordsInterface
+internal class WarfarePurchaseRecordsInterface : PurchaseRecordsInterface<WarfareDbContext>
 {
-    public override IKitsDbContext Sql => WarfareDatabases.Kits;
     public override IStripeService StripeService => Data.WarfareStripeService;
 }
 #endif

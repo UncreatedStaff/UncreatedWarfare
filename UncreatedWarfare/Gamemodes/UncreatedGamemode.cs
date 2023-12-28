@@ -12,6 +12,7 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
@@ -130,7 +131,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             Gamemode = GamemodeType,
             Map = MapScheduler.Current,
             StartTimestamp = DateTimeOffset.UtcNow,
-            Season = UCWarfare.Season
+            Season = UCWarfare.Season,
+            Region = UCWarfare.Config.RegionKey
         };
         // ReSharper restore VirtualMemberCallInConstructor
     }
@@ -683,17 +685,12 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 (x => x.OnWinnerDeclared(winner), x => x.OnWinnerDeclared(winner, token), token)
                 .ConfigureAwait(false);
 
-            await WarfareDatabases.GameData.WaitAsync(CancellationToken.None);
-            try
+            await using (IGameDataDbContext dbContext = new WarfareDbContext())
             {
-                WarfareDatabases.GameData.Games.Update(GameRecord);
-                await WarfareDatabases.GameData.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
-                L.LogDebug($"Saved game info: # {GameRecord.GameId}");
+                dbContext.Games.Update(GameRecord);
+                await dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
             }
-            finally
-            {
-                WarfareDatabases.GameData.Release();
-            }
+
             await UCWarfare.ToUpdate(token);
 
             ThreadUtil.assertIsGameThread();
@@ -843,7 +840,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             L.LogError("Error ending game: " + DisplayName + ".");
             L.LogError(ex);
-            UCWarfare.RunTask(FailToLoadGame(ex, default), ctx: "Unloading game after error.");
+            _ = UCWarfare.RunTask(FailToLoadGame(ex, default), ctx: "Unloading game after error.");
         }
     }
     public async Task StartNextGame(CancellationToken token, bool onLoad = false)
@@ -892,7 +889,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 {
                     Gamemode = GamemodeType,
                     Map = MapScheduler.Current,
-                    Season = UCWarfare.Season
+                    Season = UCWarfare.Season,
+                    Region = UCWarfare.Config.RegionKey
                 };
             }
 
@@ -901,17 +899,14 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             PlayerManager.ApplyToOnline();
             OnStateUpdated?.Invoke();
 
-            await WarfareDatabases.GameData.WaitAsync(token);
-            try
+
+            await using (IGameDataDbContext dbContext = new WarfareDbContext())
             {
-                await WarfareDatabases.GameData.Games.AddAsync(GameRecord, token);
-                await WarfareDatabases.GameData.SaveChangesAsync(token).ConfigureAwait(false);
+                await dbContext.Games.AddAsync(GameRecord, token);
+                await dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
                 L.LogDebug($"Added new game info: # {GameRecord.GameId}");
             }
-            finally
-            {
-                WarfareDatabases.GameData.Release();
-            }
+
             GameId = GameRecord.GameId;
             await UCWarfare.ToUpdate(token);
 
@@ -935,29 +930,44 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 await manager.DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
             }
+
+            List<Task> initTasks = new List<Task>();
             foreach (UCPlayer pl in PlayerManager.OnlinePlayers.ToList())
             {
                 CancellationToken tk2 = token;
                 tk2.CombineIfNeeded(pl.DisconnectToken);
                 pl.IsInitializing = true;
-                try
+                initTasks.Add(UCWarfare.RunTask(async (player, tkn) =>
                 {
-                    await pl.PurchaseSync.WaitAsync(tk2).ConfigureAwait(false);
                     try
                     {
-                        await UCWarfare.ToUpdate(tk2);
-                        await Data.Gamemode.InternalPlayerInit(pl, pl.HasInitedOnce, tk2).ConfigureAwait(false);
+                        await player.PurchaseSync.WaitAsync(tkn).ConfigureAwait(false);
+                        try
+                        {
+                            await UCWarfare.ToUpdate(tkn);
+                            await Data.Gamemode.InternalPlayerInit(player, player.HasInitedOnce, tkn).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            player.PurchaseSync.Release();
+                        }
                     }
+                    catch (TaskCanceledException) when (tkn.IsCancellationRequested) { }
                     finally
                     {
-                        pl.PurchaseSync.Release();
+                        player.IsInitializing = false;
                     }
-                }
-                catch (TaskCanceledException) when (tk2.IsCancellationRequested) { }
-                finally
-                {
-                    pl.IsInitializing = false;
-                }
+                }, pl, tk2));
+            }
+
+            try
+            {
+                await Task.WhenAll(initTasks).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error initing all players.");
+                L.LogError(ex);
             }
 
             await UCWarfare.ToUpdate(token);

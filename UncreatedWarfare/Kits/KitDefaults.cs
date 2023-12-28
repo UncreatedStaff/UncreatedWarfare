@@ -31,6 +31,7 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
     {
         _ => 0f
     };
+    public static bool ShouldDequipOnExitVehicle(Class @class) => @class is Class.LAT or Class.HAT;
     public static Branch GetDefaultBranch(Class @class)
         => @class switch
         {
@@ -74,19 +75,19 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
             return existing;
         if (faction != null)
         {
-            if (faction.DefaultShirt.ValidReference(out ItemShirtAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Shirt }))
+            if (faction.Shirts.ValidReference("jacket", out ItemShirtAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Shirt }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Shirt, ClothingType.Shirt, null));
-            if (faction.DefaultPants.ValidReference(out ItemPantsAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Pants }))
+            if (faction.Pants.ValidReference("pants", out ItemPantsAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Pants }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Pants, ClothingType.Pants, null));
-            if (faction.DefaultVest.ValidReference(out ItemVestAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Vest }))
+            if (faction.Vests.ValidReference("tact_rig", out ItemVestAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Vest }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Vest, ClothingType.Vest, null));
-            if (faction.DefaultHat.ValidReference(out ItemHatAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Hat }))
+            if (faction.Hats.ValidReference("base", out ItemHatAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Hat }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Hat, ClothingType.Hat, null));
-            if (faction.DefaultMask.ValidReference(out ItemMaskAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Mask }))
+            if (faction.Masks.ValidReference(null, out ItemMaskAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Mask }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Mask, ClothingType.Mask, null));
-            if (faction.DefaultBackpack.ValidReference(out ItemBackpackAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Backpack }))
+            if (faction.Backpacks.ValidReference("ruggedpack", out ItemBackpackAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Backpack }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Backpack, ClothingType.Backpack, null));
-            if (faction.DefaultGlasses.ValidReference(out ItemGlassesAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Glasses }))
+            if (faction.Glasses.ValidReference(null, out ItemGlassesAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Glasses }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Glasses, ClothingType.Glasses, null));
             
             existing = new Kit(name, Class.Unarmed, GetDefaultBranch(Class.Unarmed), KitType.Special, SquadLevel.Member, faction)

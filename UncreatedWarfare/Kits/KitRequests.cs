@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
@@ -22,10 +23,19 @@ namespace Uncreated.Warfare.Kits;
 public class KitRequests(KitManager manager)
 {
     public KitManager Manager { get; } = manager;
+
+    /// <exception cref="CommandInteraction"/>
     public async Task RequestLoadout(int loadoutId, CommandInteraction ctx, CancellationToken token = default)
     {
-        ulong team = ctx.Caller.GetTeam();
         Kit? loadout = await Manager.Loadouts.GetLoadout(ctx.Caller, loadoutId, token).ConfigureAwait(false);
+
+        if (loadout != null)
+            loadout = await Manager.GetKit(loadout.PrimaryKey, token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
+
+        await RequestLoadoutIntl(loadout, ctx, token).ConfigureAwait(false);
+    }
+    private async Task RequestLoadoutIntl(Kit? loadout, CommandInteraction ctx, CancellationToken token = default)
+    {
         await UCWarfare.ToUpdate(token);
         if (loadout == null)
             throw ctx.Reply(T.RequestLoadoutNotOwned);
@@ -37,6 +47,9 @@ public class KitRequests(KitManager manager)
             throw ctx.Reply(T.RequestKitDisabled);
         if (!loadout.IsCurrentMapAllowed())
             throw ctx.Reply(T.RequestKitMapBlacklisted);
+
+        ulong team = ctx.Caller.GetTeam();
+
         if (!loadout.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
             throw ctx.Reply(T.RequestKitFactionBlacklisted);
         if (loadout.IsClassLimited(out _, out int allowedPlayers, team))
@@ -44,7 +57,7 @@ public class KitRequests(KitManager manager)
             ctx.Reply(T.RequestKitLimited, allowedPlayers);
             return;
         }
-        ctx.LogAction(ActionLogType.RequestKit, $"Loadout #{loadoutId}: {loadout.InternalName}, Team {team}, Class: {Localization.TranslateEnum(loadout.Class)}");
+        ctx.LogAction(ActionLogType.RequestKit, $"Loadout {KitEx.GetLoadoutLetter(KitEx.ParseStandardLoadoutId(loadout.InternalName))}: {loadout.InternalName}, Team {team}, Class: {Localization.TranslateEnum(loadout.Class)}");
 
         if (!await GrantKitRequest(ctx, loadout, token).ConfigureAwait(false))
         {
@@ -62,8 +75,16 @@ public class KitRequests(KitManager manager)
                 Manager.TryCreateSquadOnRequestSquadleaderKit(ctx);
         }
     }
+
+    /// <exception cref="CommandInteraction"/>
     public async Task RequestKit(Kit kit, CommandInteraction ctx, CancellationToken token = default)
     {
+        if (kit.Type == KitType.Loadout)
+        {
+            await RequestLoadoutIntl(kit, ctx, token).ConfigureAwait(false);
+            return;
+        }
+
         await UCWarfare.ToUpdate(token);
         ulong team = ctx.Caller.GetTeam();
 
@@ -89,12 +110,12 @@ public class KitRequests(KitManager manager)
         {
             if (ctx.Caller.CachedCredits >= kit.CreditCost)
                 throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
-            else
-                throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
+            
+            throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
         }
         
         // elite access
-        if (!kit.RequiresNitro && !Manager.HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
+        if (kit is { IsPublicKit: false, RequiresNitro: false } && !Manager.HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
             throw ctx.Reply(T.RequestKitMissingAccess);
 
         // team limits
@@ -182,7 +203,11 @@ public class KitRequests(KitManager manager)
             else if (SquadManager.AreSquadLimited(team, out int requiredTeammatesForMoreSquads))
                 ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
             else
-                Manager.TryCreateSquadOnRequestSquadleaderKit(ctx);
+            {
+                await UCWarfare.ToUpdate(token);
+                if (Manager.IsLoaded)
+                    Manager.TryCreateSquadOnRequestSquadleaderKit(ctx);
+            }
         }
     }
     internal async Task GiveKit(UCPlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default, bool psLock = true)
@@ -199,8 +224,8 @@ public class KitRequests(KitManager manager)
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
+            oldKit = await player.GetActiveKit(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
-            oldKit = player.GetActiveKitNoWriteLock();
             GrantKit(player, kit, tip);
             Manager.Signs.UpdateSigns(kit);
             if (oldKit != null)
@@ -300,8 +325,8 @@ public class KitRequests(KitManager manager)
         Kit? oldKit;
         try
         {
+            oldKit = await player.GetActiveKit(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
-            oldKit = player.GetActiveKitNoWriteLock();
             GrantKit(player, null, false);
             if (oldKit != null)
                 Manager.Signs.UpdateSigns(oldKit);
@@ -380,14 +405,15 @@ public class KitRequests(KitManager manager)
         ctx.Reply(T.RequestKitBought, kit.CreditCost);
     }
 
-    public Task ResupplyKit(UCPlayer player, bool ignoreAmmoBags = false, CancellationToken token = default)
+    public async Task ResupplyKit(UCPlayer player, bool ignoreAmmoBags = false, CancellationToken token = default)
     {
         if (!player.HasKit)
-            return Task.CompletedTask;
+            return;
 
-        Kit? kit = player.GetActiveKit();
+        Kit? kit = await player.GetActiveKit(token).ConfigureAwait(false);
 
-        return kit == null ? Task.CompletedTask : ResupplyKit(player, kit, ignoreAmmoBags, token);
+        if (kit != null)
+            await ResupplyKit(player, kit, ignoreAmmoBags, token).ConfigureAwait(false);
     }
     public async Task ResupplyKit(UCPlayer player, Kit kit, bool ignoreAmmoBags = false, CancellationToken token = default)
     {

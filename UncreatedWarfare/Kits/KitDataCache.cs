@@ -64,6 +64,23 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
             KitDataByKey[kit.PrimaryKey] = kit;
         }
     }
+    public async Task<Kit?> ReloadCache(uint pk, CancellationToken token)
+    {
+        await using WarfareDbContext dbContext = new WarfareDbContext();
+
+        Kit? kit = await IncludeCachedKitData(dbContext.Kits)
+            .FirstOrDefaultAsync(x => x.PrimaryKey == pk, token);
+
+        if (kit != null)
+        {
+            KitDataById[kit.InternalName] = kit;
+            KitDataByKey[kit.PrimaryKey] = kit;
+        }
+        else if (KitDataByKey.TryRemove(pk, out kit) && kit != null)
+            KitDataById.TryRemove(kit.InternalName, out _);
+
+        return kit;
+    }
 
     async void IPlayerConnectListener.OnPlayerConnecting(UCPlayer player)
     {
@@ -160,8 +177,8 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
             if (kit.Type != KitType.Loadout || !player.AccessibleKits.Contains(kit.PrimaryKey))
                 continue;
 
-            KitDataById.Remove(kit.InternalName, out _);
-            KitDataByKey.Remove(kit.PrimaryKey, out _);
+            KitDataById.TryRemove(kit.InternalName, out _);
+            KitDataByKey.TryRemove(kit.PrimaryKey, out _);
         }
     }
 
@@ -173,12 +190,17 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
                 Signs.UpdateKitSigns(player, kit.InternalName);
         }
 
-        Kit? activeKit = player.GetActiveKitNoWriteLock();
-
-        if (state == 0 && activeKit is { RequiresNitro: true })
+        if (state == 0)
         {
-            UCWarfare.RunTask(Manager.TryGiveRiflemanKit, player, true, true, Data.Gamemode.UnloadToken,
-                ctx: "Giving rifleman kit to " + player + " after losing nitro boost.");
+            UCWarfare.RunTask(static async (mngr, player, tkn) =>
+            {
+                Kit? activeKit = await player.GetActiveKit(tkn).ConfigureAwait(false);
+
+                if (activeKit is { RequiresNitro: true })
+                {
+                    await mngr.TryGiveRiflemanKit(player, true, true, player.DisconnectToken);
+                }
+            }, Manager, player, player.DisconnectToken, ctx: $"Checking for removing kit from {player} after losing nitro boost.");
         }
     }
 }

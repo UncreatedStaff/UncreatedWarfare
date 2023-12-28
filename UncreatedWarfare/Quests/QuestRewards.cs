@@ -196,8 +196,14 @@ public class KitAccessReward : IQuestReward
     public string KitId { get; private set; }
     public async Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
+        if (KitManager.GetSingletonQuick() is not { } kitManager)
+        {
+            L.LogWarning($"Failed to give kit reward to {player}.");
+            return;
+        }
+
         if (!string.IsNullOrEmpty(KitId))
-            await KitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token).ConfigureAwait(false);
+            await kitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token).ConfigureAwait(false);
 
         KitSync.OnAccessChanged(player.Steam64);
     }

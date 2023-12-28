@@ -82,7 +82,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             return;
         }
 
-        Kit? kit = player.GetActiveKit();
+        Kit? kit = player.CachedActiveKitInfo;
         if (kit != null)
         {
             int itemCount = UCInventoryManager.CountItems(player.Player, a.GUID);
@@ -136,7 +136,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
 #endif
         if (!(e.Player.OnDuty() || IsWhitelisted(e.Barricade.asset.GUID, out _) || e.Player.IsSquadLeader() && RallyManager.IsRally(e.Barricade.asset)))
         {
-            Kit? kit = e.Player.GetActiveKit();
+            Kit? kit = e.Player.CachedActiveKitInfo;
             if (e.ServersideData.owner != e.Player.Steam64 || kit == null || !kit.ContainsItem(e.Barricade.asset.GUID, e.ServersideData.group.GetTeam()))
             {
                 e.Player.SendChat(T.WhitelistProhibitedSalvage, e.Barricade.asset);
@@ -152,7 +152,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         if (e.Player.OnDuty() || IsWhitelisted(e.Structure.asset.GUID, out _))
             return;
 
-        Kit? kit = e.Player.GetActiveKit();
+        Kit? kit = e.Player.CachedActiveKitInfo;
         if (e.ServersideData.owner != e.Player.Steam64 || kit == null || !kit.ContainsItem(e.Structure.asset.GUID, e.ServersideData.group.GetTeam()))
         {
             e.Player.SendChat(T.WhitelistProhibitedSalvage, e.Structure.asset);
@@ -204,7 +204,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 return;
             
 
-            Kit? kit = player.GetActiveKit();
+            Kit? kit = player.CachedActiveKitInfo;
             if (wh || kit != null)
             {
                 int allowedCount = wh ? item.Amount : kit!.CountItems(barricade.asset.GUID);
@@ -279,7 +279,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 player.SendChat(T.WhitelistProhibitedPlace, asset);
                 return;
             }
-            Kit? kit = player.GetActiveKit();
+            Kit? kit = player.CachedActiveKitInfo;
             if (kit != null)
             {
                 if (IsWhitelisted(structure.asset.GUID, out _))

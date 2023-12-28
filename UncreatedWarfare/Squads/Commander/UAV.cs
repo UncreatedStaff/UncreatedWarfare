@@ -1,14 +1,18 @@
-﻿using JetBrains.Annotations;
-using SDG.Unturned;
+﻿#if DEBUG
 using System;
+using Uncreated.Warfare.Gamemodes.Flags;
+#endif
+using JetBrains.Annotations;
+using SDG.Unturned;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Kits;
@@ -63,7 +67,7 @@ public class UAV : MonoBehaviour, IBuff
     string IBuff.Icon => Gamemode.Config.UIIconUAV;
     UCPlayer IBuff.Player => _requester;
     bool IBuff.Reserved => true;
-    public static void RequestUAV(UCPlayer requester)
+    public static async Task RequestUAV(UCPlayer requester, CancellationToken token = default)
     {
         ulong team = requester.GetTeam();
         if ((team == 1 && _isRequestActiveT1) || (team == 2 && _isRequestActiveT2) || (team == 1 && _team1UAV != null) || (team == 2 && _team1UAV != null))
@@ -78,12 +82,14 @@ public class UAV : MonoBehaviour, IBuff
             return;
         }
 
-        Kit? reqKit = requester.GetActiveKit();
+        Kit? reqKit = await requester.GetActiveKit(token).ConfigureAwait(false);
         if (reqKit == null)
         {
             requester.SendChat(T.RequestUAVNoKit);
             return;
         }
+
+        await UCWarfare.ToUpdate(token);
 
         if (reqKit.Class != Class.Squadleader || !requester.IsSquadLeader())
             requester.SendChat(T.RequestUAVNotSquadleader);

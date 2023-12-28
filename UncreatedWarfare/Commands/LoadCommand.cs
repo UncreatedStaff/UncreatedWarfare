@@ -1,4 +1,7 @@
-﻿using SDG.Unturned;
+﻿#if DEBUG
+using System;
+#endif
+using SDG.Unturned;
 using Steamworks;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,7 +36,7 @@ public class LoadCommand : AsyncCommand
                         },
                         new CommandParameter("Half")
                         {
-                            Aliases = new string[] { "1/2" },
+                            Aliases = new string[] { "1/2", ".5", "0.5", ",5", "0,5" },
                             IsOptional = true,
                             Description = "Loads half of the empty space in your vehicle's trunk."
                         }

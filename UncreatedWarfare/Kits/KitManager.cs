@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Query;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -85,6 +86,22 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             .Include(x => x.MapFilter)
             .Include(x => x.ItemModels)
             .Include(x => x.Skillsets);
+    public static IQueryable<Kit> RequestableSet(IKitsDbContext dbContext, bool isVerified)
+    {
+        IQueryable<Kit> set = dbContext.Kits
+            .Include(x => x.Translations)
+            .Include(x => x.ItemModels)
+            .Include(x => x.Skillsets);
+
+        if (isVerified)
+        {
+            set.Include(x => x.FactionFilter)
+               .Include(x => x.UnlockRequirementsModels)
+               .Include(x => x.MapFilter);
+        }
+
+        return set;
+    }
 
     protected override async Task LoadAsync(CancellationToken token)
     {
@@ -253,6 +270,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             .Include(x => x.ItemModels)
             .Include(x => x.UnlockRequirementsModels)
             .Include(x => x.Skillsets)
+            .Include(x => x.Faction)
             .Where(x => !x.Disabled).ToListAsync(token);
 
         bool any = false;
@@ -278,7 +296,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         GetItemFromKit(player, jar.x, jar.y, jar.item, page, token);
     public async Task<IPageKitItem?> GetItemFromKit(UCPlayer player, byte x, byte y, Item item, Page page, CancellationToken token = default)
     {
-        Kit? kit = player.GetActiveKit();
+        Kit? kit = await player.GetActiveKit(token).ConfigureAwait(false);
 
         if (kit is null)
             return null;
@@ -350,7 +368,11 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? player = UCPlayer.FromPlayer(life.player);
-        Kit? active = player?.GetActiveKit();
+        
+        if (player == null || !player.ActiveKit.HasValue)
+            return;
+
+        Kit? active = Cache.GetKit(player.ActiveKit.Value);
         if (active == null)
             return;
         
@@ -372,7 +394,6 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
                         ItemManager.dropItem(jar.item, life.player.transform.position, false, true, true);
 
                     life.player.inventory.removeItem(page, (byte)index);
-                    index--;
                 }
             }
         }
@@ -393,20 +414,27 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             return;
 
         // move hotkey to a different item of the same type
-        UCWarfare.RunTask(async token =>
+        UCWarfare.RunTask(static async (mngr, ev, token) =>
         {
-            IPageKitItem? jar2 = await GetItemFromKit(e.Player, e.OldX, e.OldY, e.Item, e.OldPage, token).ConfigureAwait(false);
-            if (jar2 == null || !e.Player.IsOnline) return;
-            await e.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            IPageKitItem? jar2 = await mngr.GetItemFromKit(ev.Player, ev.OldX, ev.OldY, ev.Item!, ev.OldPage, token).ConfigureAwait(false);
+            if (jar2 == null || !ev.Player.IsOnline)
+                return;
+
+            await ev.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                if (!e.Player.IsOnline || e.Player.HotkeyBindings is not { Count: > 0 }) return;
+                if (!ev.Player.IsOnline || ev.Player.HotkeyBindings is not { Count: > 0 })
+                    return;
+
+                Kit? activeKit = await ev.Player.GetActiveKit(token).ConfigureAwait(false);
+
                 await UCWarfare.ToUpdate(token);
-                Kit? activeKit = e.Player.GetActiveKit();
-                if (!e.Player.IsOnline || e.Player.HotkeyBindings is not { Count: > 0 }) return;
-                for (int i = 0; i < e.Player.HotkeyBindings.Count; ++i)
+                if (!ev.Player.IsOnline || ev.Player.HotkeyBindings is not { Count: > 0 })
+                    return;
+
+                for (int i = 0; i < ev.Player.HotkeyBindings.Count; ++i)
                 {
-                    HotkeyBinding b = e.Player.HotkeyBindings[i];
+                    HotkeyBinding b = ev.Player.HotkeyBindings[i];
 
                     if ((b.Item is not ISpecificKitItem item || jar2 is not ISpecificKitItem item2 || item.Item != item2.Item) &&
                         (b.Item is not IAssetRedirectKitItem redir || jar2 is not IAssetRedirectKitItem redir2 || redir.RedirectType != redir2.RedirectType))
@@ -420,7 +448,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
                     ItemAsset? asset = b.Item switch
                     {
                         ISpecificKitItem item3 => item3.Item.GetAsset<ItemAsset>(),
-                        IKitItem ki => ki.GetItem(activeKit, TeamManager.GetFactionSafe(e.Player.GetTeam()), out _, out _),
+                        IKitItem ki => ki.GetItem(activeKit, TeamManager.GetFactionSafe(ev.Player.GetTeam()), out _, out _),
                         _ => null
                     };
                     if (asset == null)
@@ -428,7 +456,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
                     int hotkeyIndex = KitEx.GetHotkeyIndex(b.Slot);
                     if (hotkeyIndex == byte.MaxValue)
                         return;
-                    PlayerInventory inv = e.Player.Player.inventory;
+                    PlayerInventory inv = ev.Player.Player.inventory;
                     // find new item to bind the item to
                     for (int p = PlayerInventory.SLOTS; p < PlayerInventory.STORAGE; ++p)
                     {
@@ -443,7 +471,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
                             if (jar.GetAsset() is not { } asset2 || asset2.GUID != asset.GUID || !KitEx.CanBindHotkeyTo(asset2, (Page)p))
                                 continue;
 
-                            e.Player.Player.equipment.ServerBindItemHotkey((byte)hotkeyIndex, asset, (byte)p, jar.x, jar.y);
+                            ev.Player.Player.equipment.ServerBindItemHotkey((byte)hotkeyIndex, asset, (byte)p, jar.x, jar.y);
                             return;
                         }
                     }
@@ -453,9 +481,9 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             }
             finally
             {
-                e.Player.PurchaseSync.Release();
+                ev.Player.PurchaseSync.Release();
             }
-        }, tkn, ctx: "Set keybind to new item after it's dropped.");
+        }, this, e, tkn, ctx: "Set keybind to new item after it's dropped.");
     }
     private void OnItemPickedUp(ItemPickedUp e)
     {
@@ -510,8 +538,12 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
                 if (e.Player.HotkeyBindings == null)
                     return;
 
-                Kit? activeKit = e.Player.GetActiveKit();
-                if (activeKit == null) return;
+                Kit? activeKit = await e.Player.GetActiveKit(token).ConfigureAwait(false);
+                if (activeKit == null)
+                    return;
+
+                await UCWarfare.ToUpdate(token);
+
                 foreach (HotkeyBinding binding in e.Player.HotkeyBindings)
                 {
                     if (binding.Kit != activeKit.PrimaryKey || binding.Item.X != origX || binding.Item.Y != origY || binding.Item.Page != origPage)
@@ -606,9 +638,11 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
                 if (e.Player.HotkeyBindings == null)
                     return;
 
-                Kit? kit = e.Player.GetActiveKit();
+                Kit? kit = await e.Player.GetActiveKit(token).ConfigureAwait(false);
                 if (kit is null)
                     return;
+
+                await UCWarfare.ToUpdate(token);
 
                 foreach (HotkeyBinding binding in e.Player.HotkeyBindings)
                 {
@@ -929,7 +963,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     private async Task SetupPlayer(UCPlayer player, CancellationToken token = default)
     {
         ulong team = player.GetTeam();
-        Kit? kit = player.GetActiveKit();
+        Kit? kit = await player.GetActiveKit(token).ConfigureAwait(false);
         if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(out _, out _, team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out _, team)))
             await TryGiveRiflemanKit(player, false, false, token).ConfigureAwait(false);
         else if (UCWarfare.Config.ModifySkillLevels)
@@ -1437,7 +1471,6 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
 
     public Kit? GetKit(uint primaryKey) => GetEntityNoLock(x => x.PrimaryKey == primaryKey);
     public Kit? GetKitNoWriteLock(uint primaryKey) => GetEntityNoWriteLock(x => x.PrimaryKey == primaryKey);
-    public static bool ShouldDequipOnExitVehicle(Class @class) => @class is Class.LAT or Class.HAT;
     
 
     /// <remarks>Thread Safe</remarks>

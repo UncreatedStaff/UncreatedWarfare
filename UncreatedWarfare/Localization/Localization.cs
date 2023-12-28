@@ -1380,8 +1380,8 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     private int _index;
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
     public UCPlayer Next;
-    UCPlayer IEnumerator<UCPlayer>.Current => Next;
-    object IEnumerator.Current => Next;
+    readonly UCPlayer IEnumerator<UCPlayer>.Current => Next;
+    readonly object IEnumerator.Current => Next;
     public LanguageSet(UCPlayer player)
     {
         Language = player.Locale.LanguageInfo;
@@ -1414,19 +1414,19 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         IMGUI = first.Save.IMGUI;
     }
 
-    public bool Equals(in LanguageSet other) => other.IMGUI == IMGUI &&
+    public readonly bool Equals(in LanguageSet other) => other.IMGUI == IMGUI &&
                                                 other.Language.Code.Equals(other.Language.Code, StringComparison.OrdinalIgnoreCase) &&
                                                 other.CultureInfo.Name.Equals(CultureInfo.Name, StringComparison.Ordinal);
 
-    public bool MatchesPlayer(UCPlayer player) => player.Save.IMGUI == IMGUI &&
-                                                  player.Locale.LanguageInfo.Code.Equals(Language.Code, StringComparison.OrdinalIgnoreCase) &&
-                                                  player.Locale.CultureInfo.Name.Equals(CultureInfo.Name);
+    public readonly bool MatchesPlayer(UCPlayer player) => player.Save.IMGUI == IMGUI &&
+                                                           player.Locale.LanguageInfo.Code.Equals(Language.Code, StringComparison.OrdinalIgnoreCase) &&
+                                                           player.Locale.CultureInfo.Name.Equals(CultureInfo.Name);
 
-    public bool MatchesPlayer(UCPlayer player, ulong team) => team == Team &&
-                                                              player.Save.IMGUI == IMGUI &&
-                                                              player.Locale.LanguageInfo.Code.Equals(Language.Code, StringComparison.OrdinalIgnoreCase) &&
-                                                              player.Locale.CultureInfo.Name.Equals(CultureInfo.Name);
-    public void Add(UCPlayer pl) => Players.Add(pl);
+    public readonly bool MatchesPlayer(UCPlayer player, ulong team) => team == Team &&
+                                                                       player.Save.IMGUI == IMGUI &&
+                                                                       player.Locale.LanguageInfo.Code.Equals(Language.Code, StringComparison.OrdinalIgnoreCase) &&
+                                                                       player.Locale.CultureInfo.Name.Equals(CultureInfo.Name);
+    public readonly void Add(UCPlayer pl) => Players.Add(pl);
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
     public bool MoveNext()
     {
@@ -1444,8 +1444,8 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         Next = null!;
         _index = -1;
     }
-    void IDisposable.Dispose() { }
-    public override string ToString()
+    readonly void IDisposable.Dispose() { }
+    public readonly override string ToString()
     {
         return _index.ToString(Data.AdminLocale) + "   " + string.Join(", ", Players.Select(x => x == null ? "null" : x.CharacterName)) + "   Current: " + (Next == null ? "null" : Next.CharacterName);
     }
@@ -1473,15 +1473,15 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 }
             }
         }
-        public LanguageSetEnumerator GetEnumerator() => new LanguageSetEnumerator(Sets, -1);
-        public LanguageSet Current => Sets[_index];
+        public readonly LanguageSetEnumerator GetEnumerator() => new LanguageSetEnumerator(Sets, -1);
+        public readonly LanguageSet Current => Sets[_index];
         public bool MoveNext() => ++_index < Sets.Length;
         public void Reset() => _index = -1;
-        IEnumerator<LanguageSet> IEnumerable<LanguageSet>.GetEnumerator() => new LanguageSetEnumerator(Sets, -1);
-        IEnumerator IEnumerable.GetEnumerator() => new LanguageSetEnumerator(Sets, -1);
-        void IDisposable.Dispose() { }
-        LanguageSet IEnumerator<LanguageSet>.Current => Sets[_index];
-        object IEnumerator.Current => Sets[_index];
+        readonly IEnumerator<LanguageSet> IEnumerable<LanguageSet>.GetEnumerator() => new LanguageSetEnumerator(Sets, -1);
+        readonly IEnumerator IEnumerable.GetEnumerator() => new LanguageSetEnumerator(Sets, -1);
+        readonly void IDisposable.Dispose() { }
+        readonly LanguageSet IEnumerator<LanguageSet>.Current => Sets[_index];
+        readonly object IEnumerator.Current => Sets[_index];
     }
 
     [ThreadStatic]

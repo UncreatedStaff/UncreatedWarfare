@@ -12,6 +12,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKitsDbContext, new()
@@ -54,7 +55,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
         IEnumerable<Kit> kits = Manager.Cache.KitDataByKey.Values
             .Where(x => x.Type == KitType.Loadout &&
                         x.InternalName.Length >= 17 &&
-                        KitEx.ParseStandardLoadoutId(x.InternalName, out ulong player) != byte.MaxValue &&
+                        KitEx.ParseStandardLoadoutId(x.InternalName, out ulong player) != -1 &&
                         player == steam64);
 
         if (UCPlayer.FromID(steam64) is { } player)
@@ -109,7 +110,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
         {
             if (kit.InternalName.Length < 19)
                 continue;
-            int id = KitEx.GetLoadoutId(kit.InternalName, 18);
+            int id = KitEx.ParseStandardLoadoutId(kit.InternalName);
             if (id > 0)
                 taken.Add(id);
         }
@@ -146,10 +147,12 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
         await using IKitsDbContext dbContext = new WarfareDbContext();
 
         Class oldClass = kit.Class;
+        FactionInfo? oldFaction = kit.FactionInfo;
         kit.FactionFilterIsWhitelist = false;
         kit.FactionFilter.Clear();
         kit.Class = @class;
         kit.Faction = null;
+        kit.FactionId = null;
         kit.UpdateLastEdited(fromPlayer);
         kit.SetItemArray(KitEx.GetDefaultLoadoutItems(@class), dbContext);
         kit.SetUnlockRequirementArray(Array.Empty<UnlockRequirement>(), dbContext);
@@ -169,7 +172,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         dbContext.Update(kit);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutName} (#{kit.PrimaryKey}). Class: {oldClass} -> {@class}. Old Faction: {kit.Faction?.Key ?? 0}", fromPlayer);
+        ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutName} (#{kit.PrimaryKey}). Class: {oldClass} -> {@class}. Old Faction: {oldFaction?.FactionId ?? "none"}", fromPlayer);
 
         if (!await Manager.HasAccess(kit, player, token))
         {

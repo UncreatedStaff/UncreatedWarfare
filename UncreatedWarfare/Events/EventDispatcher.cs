@@ -19,6 +19,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
@@ -407,6 +408,7 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(PlayerJoined));
         }
+
         return;
     error:
         Provider.kick(steamID, "There was a fatal error connecting you to the server.");

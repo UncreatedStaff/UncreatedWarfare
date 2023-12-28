@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Uncreated.Warfare.Configuration;
+
 public class AssetVariantDictionary<TAsset> : Dictionary<string, JsonAssetReference<TAsset>>, ICloneable where TAsset : Asset
 {
     public JsonAssetReference<TAsset>? Default
@@ -25,7 +26,26 @@ public class AssetVariantDictionary<TAsset> : Dictionary<string, JsonAssetRefere
         int randomValue = UCWarfare.IsLoaded ? UnityEngine.Random.Range(0, Count) : new Random().Next(0, Count);
         return Values.ElementAt(randomValue);
     }
-    public JsonAssetReference<TAsset> Resolve(string? variant = null)
+    public bool TryMatchVariant(Guid item, out string? variant)
+    {
+        foreach (KeyValuePair<string, JsonAssetReference<TAsset>> reference in this)
+        {
+            if (!reference.Value.ValidReference(out Guid guid) || item != guid)
+                continue;
+
+            variant = reference.Key;
+            return true;
+        }
+
+        variant = null;
+        return false;
+    }
+    public bool TryResolve(string? variant, out JsonAssetReference<TAsset> reference)
+    {
+        reference = Resolve(variant)!;
+        return reference is not null;
+    }
+    public JsonAssetReference<TAsset>? Resolve(string? variant = null)
     {
         variant ??= string.Empty;
         if (TryGetValue(variant, out JsonAssetReference<TAsset> asset))
@@ -34,7 +54,7 @@ public class AssetVariantDictionary<TAsset> : Dictionary<string, JsonAssetRefere
         if (variant.Length > 0 && TryGetValue(string.Empty, out asset))
             return asset;
 
-        return null!;
+        return Values.FirstOrDefault();
     }
     object ICloneable.Clone() => Clone();
     public AssetVariantDictionary<TAsset> Clone()

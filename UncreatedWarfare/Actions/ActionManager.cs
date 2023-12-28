@@ -717,8 +717,8 @@ public class ActionManager : BaseSingleton
     {
         UCPlayer caller = UCPlayer.FromPlayer(player)!;
 
-        Squads.Commander.UAV.RequestUAV(caller);
-
         CloseUI(caller);
+
+        UCWarfare.RunTask(Squads.Commander.UAV.RequestUAV, caller, caller.DisconnectToken);
     }
 }

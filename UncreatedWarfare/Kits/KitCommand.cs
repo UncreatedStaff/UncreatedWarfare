@@ -372,7 +372,7 @@ public sealed class KitCommand : AsyncCommand
                 try
                 {
                     PlayerEquipment equipment = ctx.Caller.Player.equipment;
-                    Kit? kit = ctx.Caller.GetActiveKit();
+                    Kit? kit = await ctx.Caller.GetActiveKit(token).ConfigureAwait(false);
                     if (kit is null)
                         throw ctx.Reply(T.AmmoNoKit);
                     
@@ -457,7 +457,7 @@ public sealed class KitCommand : AsyncCommand
                 await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    Kit? kit = ctx.Caller.GetActiveKit();
+                    Kit? kit = await ctx.Caller.GetActiveKit(token).ConfigureAwait(false);
 
                     if (kit == null)
                         throw ctx.Reply(T.AmmoNoKit);
@@ -477,7 +477,7 @@ public sealed class KitCommand : AsyncCommand
                 await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    Kit? kit = ctx.Caller.GetActiveKit();
+                    Kit? kit = await ctx.Caller.GetActiveKit(token).ConfigureAwait(false);
                     if (kit == null)
                         throw ctx.Reply(T.AmmoNoKit);
                     
@@ -597,7 +597,7 @@ public sealed class KitCommand : AsyncCommand
                     dbContext.Update(kit);
                     await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
-                    UCWarfare.RunTask(manager.OnItemsChangedLayoutHandler, oldItems, kit, token, ctx: "Update layouts after changing items.");
+                    _ = UCWarfare.RunTask(manager.OnItemsChangedLayoutHandler, oldItems, kit, token, ctx: "Update layouts after changing items.");
                     manager.Signs.UpdateSigns(kit);
                     ctx.Reply(T.KitOverwrote, kit);
                     return;
@@ -1258,14 +1258,14 @@ public sealed class KitCommand : AsyncCommand
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 {
                     UCPlayer player = PlayerManager.OnlinePlayers[i];
-                    Kit? activeKit = player.GetActiveKit();
-                    if (activeKit != null && activeKit.PrimaryKey == kit.PrimaryKey)
-                    {
-                        if (add)
-                            player.EnsureSkillset(set);
-                        else
-                            player.RemoveSkillset(set.Speciality, set.SkillIndex);
-                    }
+                    uint? activeKit = player.ActiveKit;
+                    if (!activeKit.HasValue || activeKit.Value != kit.PrimaryKey)
+                        continue;
+
+                    if (add)
+                        player.EnsureSkillset(set);
+                    else
+                        player.RemoveSkillset(set.Speciality, set.SkillIndex);
                 }
 
                 return;

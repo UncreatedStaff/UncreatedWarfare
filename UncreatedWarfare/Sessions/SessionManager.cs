@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
@@ -15,11 +16,12 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Teams;
 
 // ReSharper disable InconsistentlySynchronizedField
 
 namespace Uncreated.Warfare.Sessions;
-public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, IPlayerDisconnectListener, IPlayerPostInitListenerAsync
+public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPlayerPostInitListenerAsync
 {
     private readonly ConcurrentDictionary<ulong, SessionRecord> _sessions = new ConcurrentDictionary<ulong, SessionRecord>();
     private readonly UCSemaphore _semaphore = new UCSemaphore(0, 1);
@@ -31,7 +33,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
 #if DEBUG
         using IDisposable disposable = ProfilingUtils.StartTracking();
 #endif
-        await RestartSessionsForAll(false, token);
+        await RestartSessionsForAll(false, true, token);
 
         KitManager.OnManualKitChanged += OnKitChanged;
         EventDispatcher.GroupChanged += OnGroupChanged;
@@ -52,52 +54,41 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
             sessions = _sessions.ToArray();
             _sessions.Clear();
         }
+
+        await using IGameDataDbContext dbContext = new WarfareDbContext();
+
         foreach (KeyValuePair<ulong, SessionRecord> session in sessions)
-        {
-            EndSession(session.Value, true);
-        }
+            EndSession(dbContext, session.Value, true);
 
         L.Log($"[SESSIONS] Finalizing session(s): {sessions.Length}.", ConsoleColor.Magenta);
-        await WarfareDatabases.GameData.WaitAsync(token);
-        try
-        {
-            await WarfareDatabases.GameData.SaveChangesAsync(token).ConfigureAwait(false);
-        }
-        finally
-        {
-            WarfareDatabases.GameData.Release();
-        }
+        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
     }
-    public async Task<SessionRecord> RestartSession(UCPlayer player, bool startedGame, CancellationToken token = default)
+    public async Task<SessionRecord> RestartSession(UCPlayer player, bool lockpSync, bool startedGame, CancellationToken token = default)
     {
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            if (lockpSync)
+                lockpSync &= await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
             {
 #if DEBUG
                 using IDisposable disposable = ProfilingUtils.StartTracking();
 #endif
                 await UCWarfare.ToUpdate(token);
-                SessionRecord record = StartCreatingSession(player, startedGame, out SessionRecord? previousSession);
+                await using IGameDataDbContext dbContext = new WarfareDbContext();
+                SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
                 player.CurrentSession = record;
-                await WarfareDatabases.GameData.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    await WarfareDatabases.GameData.AddAsync(record, token).ConfigureAwait(false);
-                    await WarfareDatabases.GameData.SaveChangesAsync(token).ConfigureAwait(false);
 
-                    if (previousSession != null)
-                    {
-                        previousSession.NextSessionId = record.SessionId;
-                        WarfareDatabases.GameData.Update(record);
-                        await WarfareDatabases.GameData.SaveChangesAsync(token).ConfigureAwait(false);
-                    }
-                }
-                finally
+                await dbContext.AddAsync(record, token).ConfigureAwait(false);
+                FixupSession(dbContext, record);
+                await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+                if (previousSession != null)
                 {
-                    WarfareDatabases.GameData.Release();
+                    previousSession.NextSessionId = record.SessionId;
+                    dbContext.Update(previousSession);
+                    await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                 }
 
                 L.LogDebug($"[SESSIONS] Created session {record.SessionId} for: {player}.");
@@ -105,7 +96,8 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
             }
             finally
             {
-                player.PurchaseSync.Release();
+                if (lockpSync)
+                    player.PurchaseSync.Release();
             }
         }
         finally
@@ -113,7 +105,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
             _semaphore.Release();
         }
     }
-    public async Task RestartSessionsForAll(bool startedGame, CancellationToken token = default)
+    public async Task RestartSessionsForAll(bool startedGame, bool lockpSync, CancellationToken token = default)
     {
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
@@ -128,66 +120,64 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
 
             try
             {
-                List<(SessionRecord, SessionRecord?)> records =
-                    new List<(SessionRecord, SessionRecord?)>(onlinePlayers.Length);
-                List<Task> tasks = new List<Task>();
+                List<(SessionRecord, SessionRecord?)> records = new List<(SessionRecord, SessionRecord?)>(onlinePlayers.Length);
+                List<Task> tasks = new List<Task>(onlinePlayers.Length);
                 bool anyPrev = false;
+
+                await using IGameDataDbContext dbContext = new WarfareDbContext();
 
                 for (int i = 0; i < onlinePlayers.Length; ++i)
                 {
                     UCPlayer player = onlinePlayers[i];
 
-                    SessionRecord record =
-                        StartCreatingSession(player, startedGame, out SessionRecord? previousSession);
+                    SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
                     player.CurrentSession = record;
                     records.Add((record, previousSession));
                     anyPrev |= previousSession != null;
 
-                    Task task = player.PurchaseSync.WaitAsync(token);
+                    if (!lockpSync)
+                        continue;
+
+                    Task<bool> task = player.PurchaseSync.WaitAsync(token);
                     if (task.IsCompleted)
                     {
-                        waitMask[i] = true;
+                        waitMask[i] = task.Result;
                         continue;
                     }
 
                     int index = i; // i will increment
                     tasks.Add(Task.Run(async () =>
                     {
-                        await task.ConfigureAwait(false);
-                        waitMask[index] = true;
+                        waitMask[index] = await task.ConfigureAwait(false);
                         L.LogDebug($"[SESSIONS]   Done waiting for purchase sync for player {player.Steam64}.");
                     }, token));
 
                     L.LogDebug($"[SESSIONS] Waiting for purchase sync for player {player.Steam64}.");
                 }
 
-                if (tasks.Count > 0)
+                if (tasks.Count > 0 && lockpSync)
                     await Task.WhenAll(tasks).ConfigureAwait(false);
 
-                await WarfareDatabases.GameData.WaitAsync(token).ConfigureAwait(false);
-                try
+                foreach ((SessionRecord record, SessionRecord? _) in records)
                 {
-                    foreach ((SessionRecord record, SessionRecord? _) in records)
-                        await WarfareDatabases.GameData.AddAsync(record, token).ConfigureAwait(false);
-
-                    await WarfareDatabases.GameData.SaveChangesAsync(token).ConfigureAwait(false);
-
-                    if (anyPrev)
-                    {
-                        foreach ((SessionRecord record, SessionRecord? previous) in records)
-                        {
-                            if (previous == null)
-                                continue;
-                            previous.NextSessionId = record.SessionId;
-                            WarfareDatabases.GameData.Update(previous);
-                        }
-
-                        await WarfareDatabases.GameData.SaveChangesAsync(token).ConfigureAwait(false);
-                    }
+                    await dbContext.AddAsync(record, token).ConfigureAwait(false);
+                    if (record.Kit != null)
+                        dbContext.Remove(record.Kit);
                 }
-                finally
+
+                await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+                if (anyPrev)
                 {
-                    WarfareDatabases.GameData.Release();
+                    foreach ((SessionRecord record, SessionRecord? previous) in records)
+                    {
+                        if (previous == null)
+                            continue;
+                        previous.NextSessionId = record.SessionId;
+                        dbContext.Update(previous);
+                    }
+
+                    await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                 }
             }
             finally
@@ -206,7 +196,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
             _semaphore.Release();
         }
     }
-    private SessionRecord StartCreatingSession(UCPlayer player, bool startedGame, out SessionRecord? previous)
+    private SessionRecord StartCreatingSession(IGameDataDbContext dbContext, UCPlayer player, bool startedGame, out SessionRecord? previous)
     {
         ThreadUtil.assertIsGameThread();
         SessionRecord record;
@@ -219,7 +209,6 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
                 StartedTimestamp = DateTimeOffset.UtcNow,
                 FactionId = player.Faction?.PrimaryKey,
                 PreviousSessionId = previous?.SessionId,
-                PreviousSession = previous,
                 NextSessionId = null,
                 GameId = Data.Gamemode.GameId,
                 StartedGame = startedGame,
@@ -232,14 +221,14 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
             };
 
             if (previous is { UnexpectedTermination: true })
-                EndSession(previous, startedGame, false);
+                EndSession(dbContext, previous, startedGame, false);
 
             _sessions[player.Steam64] = record;
         }
 
         return record;
     }
-    private static void EndSession(SessionRecord record, bool endGame, bool update = true)
+    private static void EndSession(IGameDataDbContext dbContext, SessionRecord record, bool endGame, bool update = true)
     {
 #if DEBUG
         using IDisposable disposable = ProfilingUtils.StartTracking();
@@ -251,55 +240,76 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
         if (!update)
             return;
 
-        WarfareDatabases.GameData.Wait();
-        try
-        {
-            WarfareDatabases.GameData.Update(record);
-        }
-        finally
-        {
-            WarfareDatabases.GameData.Release();
-        }
+        dbContext.Update(record);
+        FixupSession(dbContext, record);
 
         L.LogDebug($"[SESSIONS] Ended session {record.SessionId} for {record.Steam64}.");
     }
     private void OnKitChanged(UCPlayer player, Kit? kit, Kit? oldkit)
     {
-        if (Data.Gamemode.State is not (State.Staging or State.Active) || player.IsInitializing)
+        if (!player.HasInitedOnce)
+            return;
+
+        if (Data.Gamemode.State is not State.Staging and not State.Active || player.IsInitializing)
         {
             L.LogDebug($"[SESSIONS] Skipped creating session for {player.Steam64}. (gamemode initializing)");
             return;
         }
-        
-        UCWarfare.RunTask(RestartSession, player, false, CancellationToken.None);
-        L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (kit changed)");
+
+        if (IsSessionExpired(player))
+        {
+            UCWarfare.RunTask(RestartSession, player, true, false, CancellationToken.None);
+            L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (kit changed)");
+        }
+        else
+        {
+            L.LogDebug($"[SESSIONS] Skipping creating session for {player.Steam64}. (kit changed)");
+        }
     }
     private void OnGroupChanged(GroupChanged e)
     {
-        if (Data.Gamemode.State is not (State.Staging or State.Active) || e.Player.IsInitializing)
+        if (!e.Player.HasInitedOnce)
+            return;
+
+        if (Data.Gamemode.State is not State.Staging and not State.Active || e.Player.IsInitializing)
         {
             L.LogDebug($"[SESSIONS] Skipped creating session for {e.Steam64}. (gamemode initializing)");
             return;
         }
 
-        UCWarfare.RunTask(RestartSession, e.Player, false, CancellationToken.None);
-        L.LogDebug($"[SESSIONS] Creating session for {e.Steam64}. (group changed)");
+        if (IsSessionExpired(e.Player))
+        {
+            UCWarfare.RunTask(RestartSession, e.Player, true, false, CancellationToken.None);
+            L.LogDebug($"[SESSIONS] Creating session for {e.Steam64}. (group changed)");
+        }
+        else
+        {
+            L.LogDebug($"[SESSIONS] Skipping creating session for {e.Player.Steam64}. (group changed)");
+        }
     }
     private void OnGamemodeChanged()
     {
-        UCWarfare.RunTask(RestartSessionsForAll, true, CancellationToken.None);
+        UCWarfare.RunTask(RestartSessionsForAll, true, true, CancellationToken.None);
         L.LogDebug("[SESSIONS] Creating session for all players. (gamemode changed)");
     }
-
-    async Task IPlayerConnectListenerAsync.OnPlayerConnecting(UCPlayer player, CancellationToken token)
+    private static bool IsSessionExpired(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable disposable = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Gamemode is null)
-            return;
+        SessionRecord? currentSession = player.CurrentSession;
+        if (currentSession == null)
+            return player.IsOnline;
 
-        await RestartSession(player, false, token);
+        if (player.ActiveKit != currentSession.KitId)
+            return false;
+
+        FactionInfo? faction = player.Faction;
+
+        if (faction == null != !currentSession.FactionId.HasValue || faction != null && currentSession.FactionId.HasValue && faction.PrimaryKey.Key != currentSession.FactionId!.Value)
+            return false;
+
+        if (Data.Gamemode is not null && Data.Gamemode.GameId != currentSession.GameId)
+            return false;
+
+        return true;
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
     {
@@ -312,9 +322,15 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
             if (!_sessions.TryRemove(player.Steam64, out record))
                 return;
         }
-        
-        EndSession(record, Data.Gamemode != null && Data.Gamemode.State is State.Finished or State.Discarded, false);
-        UCWarfare.RunTask(SaveSession, record, CancellationToken.None, ctx: "Save session after player disconnects.");
+
+        UCWarfare.RunTask(async token =>
+        {
+            await using IGameDataDbContext dbContext = new WarfareDbContext();
+
+            EndSession(dbContext, record, Data.Gamemode != null && Data.Gamemode.State is State.Finished or State.Discarded, false);
+            await SaveSession(dbContext, record, token);
+
+        }, CancellationToken.None, ctx: "Save session after player disconnects.");
     }
     async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player, CancellationToken token)
     {
@@ -324,20 +340,26 @@ public class SessionManager : BaseAsyncSingleton, IPlayerConnectListenerAsync, I
         if (Data.Gamemode is null)
             return;
 
-        await RestartSession(player, false, token);
+        if (IsSessionExpired(player))
+        {
+            L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (initing)");
+            await RestartSession(player, false, false, token);
+        }
     }
-    private static async Task SaveSession(SessionRecord session, CancellationToken token = default)
+    private static void FixupSession(IGameDataDbContext dbContext, SessionRecord session)
     {
-        await WarfareDatabases.GameData.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            WarfareDatabases.GameData.Update(session);
-            await WarfareDatabases.GameData.SaveChangesAsync(token).ConfigureAwait(false);
-        }
-        finally
-        {
-            WarfareDatabases.GameData.Release();
-        }
+        if (session.Kit != null)
+            dbContext.Remove(session.Kit);
+        if (session.Game != null)
+            dbContext.Remove(session.Game);
+        if (session.Map != null)
+            dbContext.Remove(session.Map);
+    }
+    private static async Task SaveSession(IGameDataDbContext dbContext, SessionRecord session, CancellationToken token = default)
+    {
+        dbContext.Update(session);
+        FixupSession(dbContext, session);
+        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
     }
 
 }

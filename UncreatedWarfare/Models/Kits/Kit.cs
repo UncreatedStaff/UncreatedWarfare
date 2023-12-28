@@ -21,6 +21,7 @@ using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Models.Kits;
@@ -48,6 +49,21 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     public uint PrimaryKey { get; set; }
 
     public Faction? Faction { get; set; }
+    
+    public FactionInfo? FactionInfo
+    {
+        get
+        {
+            if (!UCWarfare.IsLoaded)
+                throw new SingletonUnloadedException(typeof(UCWarfare));
+
+            uint? factionId = FactionId ?? Faction?.Key;
+            if (!factionId.HasValue)
+                return null;
+
+            return TeamManager.GetFactionInfo(factionId.Value);
+        }
+    }
 
     [ForeignKey(nameof(Faction))]
     [Column("Faction")]
@@ -60,14 +76,17 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     
     [CommandSettable]
     [Required]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public Class Class { get; set; }
     
     [CommandSettable]
     [Required]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public Branch Branch { get; set; }
     
     [CommandSettable]
     [Required]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public KitType Type { get; set; }
     
     [CommandSettable("IsDisabled")]
@@ -102,6 +121,7 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
 
     [CommandSettable]
     [DefaultValue(SquadLevel.Member)]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public SquadLevel SquadLevel { get; set; }
 
     [NotMapped]
@@ -210,7 +230,11 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     public List<KitFilteredMap> MapFilter { get; set; } = [];
     public List<KitSkillset> Skillsets { get; set; } = [];
     public List<KitTranslation> Translations { get; set; } = [];
+
+    [JsonIgnore]
     public List<KitItemModel> ItemModels { get; set; } = [];
+
+    [JsonIgnore]
     public List<KitUnlockRequirement> UnlockRequirementsModels { get; set; } = [];
     public IReadOnlyCollection<KitAccess> Access { get; set; } = new List<KitAccess>(0);
     public IReadOnlyCollection<KitEliteBundle> Bundles { get; set; } = new List<KitEliteBundle>(0);
@@ -339,11 +363,12 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
 
     public bool IsFactionAllowed(FactionInfo? faction)
     {
+        FactionInfo? factionInfo = FactionInfo;
         if (Type == KitType.Public)
-            return faction != TeamManager.Team1Faction && faction != TeamManager.Team2Faction || string.Equals(faction?.FactionId, Faction?.InternalName, StringComparison.Ordinal);
+            return faction != TeamManager.Team1Faction && faction != TeamManager.Team2Faction || string.Equals(faction?.FactionId, factionInfo?.FactionId, StringComparison.Ordinal);
 
-        if (faction == TeamManager.Team1Faction && string.Equals(Faction?.InternalName, TeamManager.Team2Faction?.FactionId, StringComparison.Ordinal) ||
-            faction == TeamManager.Team2Faction && string.Equals(Faction?.InternalName, TeamManager.Team1Faction?.FactionId, StringComparison.Ordinal))
+        if (faction == TeamManager.Team1Faction && string.Equals(factionInfo?.FactionId, TeamManager.Team2Faction?.FactionId, StringComparison.Ordinal) ||
+            faction == TeamManager.Team2Faction && string.Equals(factionInfo?.FactionId, TeamManager.Team1Faction?.FactionId, StringComparison.Ordinal))
             return false;
 
         if (FactionFilter.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid)
@@ -429,6 +454,9 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     public object Clone() => new Kit(InternalName, this);
     public void SetItemArray(IKitItem[] items, IKitsDbContext dbContext)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         List<KitItemModel> models = ItemModels;
         BitArray workingArray = new BitArray(items.Length);
         for (int i = 0; i < items.Length; ++i)
@@ -484,6 +512,9 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     }
     private void UpdateItemArray()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         List<KitItemModel> models = ItemModels;
         if (models is not { Count: > 0 })
         {
@@ -519,6 +550,9 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     }
     public void SetUnlockRequirementArray(UnlockRequirement[] items, IKitsDbContext dbContext)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         List<KitUnlockRequirement> models = UnlockRequirementsModels;
         BitArray workingArray = new BitArray(items.Length);
         for (int i = 0; i < items.Length; ++i)
@@ -579,6 +613,9 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     }
     private void UpdateUnlockRequirementArray()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         List<KitUnlockRequirement> models = UnlockRequirementsModels;
         if (models is not { Count: > 0 })
         {
@@ -616,6 +653,9 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     /// <summary>Will not update signs.</summary>
     public void SetSignText(IKitsDbContext dbContext, ulong setter, Kit kit, string? text, LanguageInfo? language = null)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (kit is null) throw new ArgumentNullException(nameof(kit));
 
         language ??= Warfare.Localization.GetDefaultLanguage();

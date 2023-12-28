@@ -70,19 +70,19 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     public JsonAssetReference<ItemBarricadeAsset>? RallyPoint { get; set; }
     [JsonPropertyName("radio")]
     public JsonAssetReference<ItemBarricadeAsset>? FOBRadio { get; set; }
-    [JsonPropertyName("defaultBackpacks")]
+    [JsonPropertyName("backpacks")]
     public AssetVariantDictionary<ItemBackpackAsset> Backpacks { get; set; }
-    [JsonPropertyName("defaultShirts")]
+    [JsonPropertyName("shirts")]
     public AssetVariantDictionary<ItemShirtAsset> Shirts { get; set; }
-    [JsonPropertyName("defaultPants")]
+    [JsonPropertyName("pants")]
     public AssetVariantDictionary<ItemPantsAsset> Pants { get; set; }
-    [JsonPropertyName("defaultVests")]
+    [JsonPropertyName("vests")]
     public AssetVariantDictionary<ItemVestAsset> Vests { get; set; }
-    [JsonPropertyName("defaultHats")]
+    [JsonPropertyName("hats")]
     public AssetVariantDictionary<ItemHatAsset> Hats { get; set; }
-    [JsonPropertyName("defaultGlasses")]
+    [JsonPropertyName("glasses")]
     public AssetVariantDictionary<ItemGlassesAsset> Glasses { get; set; }
-    [JsonPropertyName("defaultMasks")]
+    [JsonPropertyName("masks")]
     public AssetVariantDictionary<ItemMaskAsset> Masks { get; set; }
     [JsonPropertyName("tmProSpriteIndex")]
     public int? TMProSpriteIndex { get; set; }
@@ -133,6 +133,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
 
     public FactionInfo(Faction model)
     {
+        PrimaryKey = model.Key;
         FactionId = model.InternalName;
         Name = model.Name;
         Abbreviation = model.Abbreviation;
@@ -459,49 +460,6 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         return factionInfo.Assets?.FirstOrDefault(x => x.Redirect == redirect);
     }
 
-    [JsonIgnore]
-    public JsonAssetReference<ItemBackpackAsset>? DefaultBackpack
-    {
-        get => Backpacks.Default;
-        set => Backpacks.Default = value;
-    }
-    [JsonIgnore]
-    public JsonAssetReference<ItemShirtAsset>? DefaultShirt
-    {
-        get => Shirts.Default;
-        set => Shirts.Default = value;
-    }
-    [JsonIgnore]
-    public JsonAssetReference<ItemPantsAsset>? DefaultPants
-    {
-        get => Pants.Default;
-        set => Pants.Default = value;
-    }
-    [JsonIgnore]
-    public JsonAssetReference<ItemVestAsset>? DefaultVest
-    {
-        get => Vests.Default;
-        set => Vests.Default = value;
-    }
-    [JsonIgnore]
-    public JsonAssetReference<ItemHatAsset>? DefaultHat
-    {
-        get => Hats.Default;
-        set => Hats.Default = value;
-    }
-    [JsonIgnore]
-    public JsonAssetReference<ItemGlassesAsset>? DefaultGlasses
-    {
-        get => Glasses.Default;
-        set => Glasses.Default = value;
-    }
-    [JsonIgnore]
-    public JsonAssetReference<ItemMaskAsset>? DefaultMask
-    {
-        get => Masks.Default;
-        set => Masks.Default = value;
-    }
-
     [FormatDisplay("ID")]
     public const string FormatId = "i";
     [FormatDisplay("Colored ID")]
@@ -584,13 +542,13 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             Build = Build?.Clone() as JsonAssetReference<ItemAsset>,
             RallyPoint = RallyPoint?.Clone() as JsonAssetReference<ItemBarricadeAsset>,
             FOBRadio = FOBRadio?.Clone() as JsonAssetReference<ItemBarricadeAsset>,
-            DefaultBackpack = DefaultBackpack?.Clone() as JsonAssetReference<ItemBackpackAsset>,
-            DefaultShirt = DefaultShirt?.Clone() as JsonAssetReference<ItemShirtAsset>,
-            DefaultPants = DefaultPants?.Clone() as JsonAssetReference<ItemPantsAsset>,
-            DefaultVest = DefaultVest?.Clone() as JsonAssetReference<ItemVestAsset>,
-            DefaultGlasses = DefaultGlasses?.Clone() as JsonAssetReference<ItemGlassesAsset>,
-            DefaultMask = DefaultMask?.Clone() as JsonAssetReference<ItemMaskAsset>,
-            DefaultHat = DefaultHat?.Clone() as JsonAssetReference<ItemHatAsset>
+            Backpacks = Backpacks.Clone(),
+            Shirts = Shirts.Clone(),
+            Pants = Pants.Clone(),
+            Vests = Vests.Clone(),
+            Glasses = Glasses.Clone(),
+            Masks = Masks.Clone(),
+            Hats = Hats.Clone()
         };
     }
     public static async Task DownloadFactions(IFactionDbContext db, List<FactionInfo> list, bool uploadDefaultIfMissing, CancellationToken token = default)
@@ -600,10 +558,11 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
 
         List<Faction> factions = await db.Factions
             .Include(x => x.Assets)
-            .Include(x => x.Translations).ThenInclude(x => x.Language)
+            .Include(x => x.Translations)
+                .ThenInclude(x => x.Language)
             .ToListAsync(token).ConfigureAwait(false);
 
-        if (factions.Count == 0 && uploadDefaultIfMissing)
+        if (factions.Count == 0)
         {
             for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
             {
@@ -612,9 +571,19 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                 factions.Add(faction);
             }
 
-            L.LogDebug($"Adding {factions.Count} factions...");
-            await db.Factions.AddRangeAsync(factions, token).ConfigureAwait(false);
-            await db.SaveChangesAsync(token).ConfigureAwait(false);
+            if (uploadDefaultIfMissing)
+            {
+                L.LogDebug($"Adding {factions.Count} factions...");
+                await db.Factions.AddRangeAsync(factions, token).ConfigureAwait(false);
+                await db.SaveChangesAsync(token).ConfigureAwait(false);
+            }
+        }
+
+        for (int i = list.Count - 1; i >= 0; --i)
+        {
+            FactionInfo existing = list[i];
+            if (!factions.Any(x => x.InternalName.Equals(existing.FactionId, StringComparison.Ordinal)))
+                list.RemoveAt(i);
         }
 
         foreach (Faction faction in factions)
@@ -639,9 +608,13 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             }
         }
 
+        list.Sort((a, b) => a.PrimaryKey.Key.CompareTo(b.PrimaryKey.Key));
+
         if (UCWarfare.IsLoaded)
         {
             Localization.IncrementSection(TranslationSection.Factions, list.Count * 3);
         }
+
+        L.LogDebug($"Loaded {list.Count} faction(s).");
     }
 }

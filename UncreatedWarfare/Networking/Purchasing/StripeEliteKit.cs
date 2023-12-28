@@ -1,15 +1,19 @@
 ﻿using Stripe;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.SQL;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 
 namespace Uncreated.Warfare.Networking.Purchasing;
+
+[NotMapped]
 public class StripeEliteKit
 {
     private static readonly List<ProductFeatureOptions> Features = new List<ProductFeatureOptions>
@@ -52,7 +56,7 @@ public class StripeEliteKit
                 {
                     if (i != index) query.Append(" OR ");
 
-                    query.Append("metadata[\"" + PurchaseRecordsInterface.BundleIdMetadataKey + "\"]:\"")
+                    query.Append("metadata[\"" + PurchaseRecordsInterface<WarfareDbContext>.BundleIdMetadataKey + "\"]:\"")
                         .Append(needsStripeKits[i].id)
                         .Append('\"');
                 }
@@ -71,7 +75,7 @@ public class StripeEliteKit
 
                 foreach (Product product in existing.Data)
                 {
-                    if (product.Metadata == null || !product.Metadata.TryGetValue(PurchaseRecordsInterface.BundleIdMetadataKey, out string kitId))
+                    if (product.Metadata == null || !product.Metadata.TryGetValue(PurchaseRecordsInterface<WarfareDbContext>.BundleIdMetadataKey, out string kitId))
                     {
                         L.LogWarning($"Unknown product id key from searched product: {product.Name}.");
                         continue;
@@ -124,7 +128,7 @@ public class StripeEliteKit
         {
             StripeSearchResult<Product> existing = await stripeService.ProductService.SearchAsync(new ProductSearchOptions
             {
-                Query = $"metadata[\"{PurchaseRecordsInterface.BundleIdMetadataKey}\"]:\"{id}\"",
+                Query = $"metadata[\"{PurchaseRecordsInterface<WarfareDbContext>.BundleIdMetadataKey}\"]:\"{id}\"",
                 Limit = 1
             }, cancellationToken: token).ConfigureAwait(false);
             
@@ -157,7 +161,7 @@ public class StripeEliteKit
                 Features = Features,
                 Metadata = new Dictionary<string, string>
                 {
-                    { PurchaseRecordsInterface.BundleIdMetadataKey, id }
+                    { PurchaseRecordsInterface<WarfareDbContext>.BundleIdMetadataKey, id }
                 }
             };
 

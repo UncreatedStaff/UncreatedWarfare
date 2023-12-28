@@ -16,6 +16,7 @@ public class GameRecord
     public ulong GameId { get; set; }
     public int Season { get; set; }
     public int Map { get; set; }
+    public byte Region { get; set; }
     public DateTimeOffset StartTimestamp { get; set; }
     public DateTimeOffset? EndTimestamp { get; set; }
 

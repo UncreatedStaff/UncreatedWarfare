@@ -34,12 +34,11 @@ public interface ICachableLanguageDataStore : ILanguageDataStore
     Task ReloadCache(CancellationToken token = default);
 }
 
-public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
+public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore where TDbContext : ILanguageDbContext, new()
 {
     private List<LanguageInfo>? _langs;
     private Dictionary<string, LanguageInfo>? _codes;
     private readonly UCSemaphore _semaphore = new UCSemaphore();
-    public abstract ILanguageDbContext Sql { get; }
     public IReadOnlyList<LanguageInfo> Languages { get; private set; }
     public Task Initialize(CancellationToken token = default) => Task.CompletedTask;
     public Task<bool> WriteWaitAsync(CancellationToken token = default) => _semaphore.WaitAsync(token);
@@ -127,11 +126,12 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
+            await using ILanguageDbContext dbContext = new TDbContext();
             if (info.Key == 0)
-                await Sql.Languages.AddAsync(info, token);
+                await dbContext.Languages.AddAsync(info, token);
             else
-                Sql.Update(info);
-            await Sql.SaveChangesAsync(token).ConfigureAwait(false);
+                dbContext.Update(info);
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
             lock (this)
             {
@@ -158,11 +158,12 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (!await Sql.LanguagePreferences.AnyAsync(x => x.Steam64 == preferences.Steam64, token).ConfigureAwait(false))
-                await Sql.LanguagePreferences.AddAsync(preferences, token);
+            await using ILanguageDbContext dbContext = new TDbContext();
+            if (!await dbContext.LanguagePreferences.AnyAsync(x => x.Steam64 == preferences.Steam64, token).ConfigureAwait(false))
+                await dbContext.LanguagePreferences.AddAsync(preferences, token);
             else
-                Sql.Update(preferences);
-            await Sql.SaveChangesAsync(token).ConfigureAwait(false);
+                dbContext.Update(preferences);
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
         }
         finally
         {
@@ -184,7 +185,8 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            LanguagePreferences? pref = await Sql.LanguagePreferences.FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
+            await using ILanguageDbContext dbContext = new TDbContext();
+            LanguagePreferences? pref = await dbContext.LanguagePreferences.FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
             return pref ?? new LanguagePreferences
             {
                 Steam64 = steam64
@@ -220,7 +222,8 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
     }
     public async Task GetLanguages(IList<LanguageInfo> outputList, CancellationToken token = default)
     {
-        List<LanguageInfo> info = await Include(Sql.Languages).ToListAsync(token).ConfigureAwait(false);
+        await using ILanguageDbContext dbContext = new TDbContext();
+        List<LanguageInfo> info = await Include(dbContext.Languages).ToListAsync(token).ConfigureAwait(false);
         if (outputList is List<LanguageInfo> list)
             list.AddRange(info);
         else
@@ -231,9 +234,8 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
     }
 }
 
-public sealed class WarfareMySqlLanguageDataStore : MySqlLanguageDataStore
+public sealed class WarfareMySqlLanguageDataStore : MySqlLanguageDataStore<WarfareDbContext>
 {
-    public override ILanguageDbContext Sql => WarfareDatabases.Languages;
     public void Subscribe()
     {
         EventDispatcher.PlayerPendingAsync += OnPlayerPending;

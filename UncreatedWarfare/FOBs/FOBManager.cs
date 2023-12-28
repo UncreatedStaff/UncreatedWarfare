@@ -368,7 +368,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             return false;
         }
 
-        Kit? kit = player.GetActiveKit();
+        Kit? kit = player.CachedActiveKitInfo;
         if (kit == null || !kit.ContainsItem(buildable.Foundation.Value.Guid, player.GetTeam()) || _floatingItems == null)
         {
             player.SendChat(T.BuildNoRadio, buildable.Type == BuildableType.Bunker ? Config.FOBBuildPickupRadiusNoBunker : Config.FOBBuildPickupRadius);
@@ -386,11 +386,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (b != null && item.Team == team && item.Owner == player.Steam64 && b.Foundation == buildable.Foundation && (item is not ShovelableComponent sh || sh.ActiveVehicle == null || !sh.ActiveVehicle.isDead))
             {
                 ++count;
-                if (count >= limit)
-                {
-                    player.SendChat(T.RegionalBuildLimitReached, limit, buildable);
-                    return false;
-                }
+                if (count < limit)
+                    continue;
+
+                player.SendChat(T.RegionalBuildLimitReached, limit, buildable);
+                return false;
             }
         }
 

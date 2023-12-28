@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Storage;
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Factions;
@@ -77,19 +75,5 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
 
         Console.WriteLine("Model created.");
     }
-    [Obsolete]
-    public Task WaitAsync(CancellationToken token = default) => WarfareDatabases.WaitAsync(token);
-    [Obsolete]
-    public Task WaitAsync(TimeSpan timeout, CancellationToken token = default) => WarfareDatabases.WaitAsync(timeout, token);
-    [Obsolete]
-    public Task WaitAsync(int timeoutMilliseconds, CancellationToken token = default) => WarfareDatabases.WaitAsync(timeoutMilliseconds, token);
-    [Obsolete]
-    public void Wait(CancellationToken token = default) => WarfareDatabases.Wait(token);
-    [Obsolete]
-    public void Wait(TimeSpan timeout, CancellationToken token = default) => WarfareDatabases.Wait(timeout, token);
-    [Obsolete]
-    public void Wait(int timeoutMilliseconds, CancellationToken token = default) => WarfareDatabases.Wait(timeoutMilliseconds, token);
-    [Obsolete]
-    public void Release(int amt = 1) => WarfareDatabases.Release(amt);
 }
 #pragma warning restore CS8644

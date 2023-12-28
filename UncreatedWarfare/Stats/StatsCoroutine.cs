@@ -32,7 +32,7 @@ internal static class StatsCoroutine
                     UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(Provider.clients[i]);
                     if (ucplayer == null) continue;
                     byte team = ucplayer.Player.channel.owner.GetTeamByte();
-                    string? id = ucplayer.GetActiveKit()?.InternalName;
+                    string? id = ucplayer.ActiveKitName;
                     if (id != null)
                     {
                         StatsManager.ModifyStats(ucplayer.Steam64, s =>

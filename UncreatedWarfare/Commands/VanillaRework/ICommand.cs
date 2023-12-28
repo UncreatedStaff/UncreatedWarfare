@@ -3,14 +3,15 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Teams;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
 // ReSharper disable once InconsistentNaming
-public class ICommand : Command
+public class ICommand : AsyncCommand
 {
     private const string Syntax = "/i <item ...> [count = 1]";
     private const string Help = "Gives the player [count] amount of an item.";
@@ -31,7 +32,7 @@ public class ICommand : Command
             }
         };
     }
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -113,7 +114,10 @@ public class ICommand : Command
         {
             if (ctx.TryGet(0, out RedirectType type))
             {
-                FactionInfo? kitFaction = TeamManager.GetFactionInfo(ctx.Caller.GetActiveKit()?.Faction);
+                FactionInfo? kitFaction = (await ctx.Caller.GetActiveKit(token))?.FactionInfo;
+
+                await UCWarfare.ToUpdate(token);
+
                 asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                 if (asset != null)
                 {
@@ -152,7 +156,10 @@ public class ICommand : Command
                 }
                 if (ctx.TryGet(0, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = TeamManager.GetFactionInfo(ctx.Caller.GetActiveKit()?.Faction);
+                    FactionInfo? kitFaction = (await ctx.Caller.GetActiveKit(token))?.FactionInfo;
+
+                    await UCWarfare.ToUpdate(token);
+
                     asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                     if (asset != null)
                     {
@@ -169,11 +176,6 @@ public class ICommand : Command
                 }
                 if (Guid.TryParse(ctx.Get(0)!, out Guid guid))
                 {
-#if DEBUG
-#pragma warning disable CS0612 // checks for legacy id
-                    guid = TeamManager.CheckAssetRedirect(guid, ctx.Caller.GetTeam());
-#pragma warning restore CS0612
-#endif
                     asset = Assets.find<ItemAsset>(guid);
                     if (asset is not null)
                         goto foundItem;
@@ -185,7 +187,10 @@ public class ICommand : Command
                 itemName = ctx.GetRange(0, ctx.ArgumentCount - 1)!;
                 if (Enum.TryParse(itemName, true, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = TeamManager.GetFactionInfo(ctx.Caller.GetActiveKit()?.Faction);
+                    FactionInfo? kitFaction = (await ctx.Caller.GetActiveKit(token))?.FactionInfo;
+
+                    await UCWarfare.ToUpdate(token);
+
                     asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                     if (asset != null)
                     {
@@ -204,7 +209,10 @@ public class ICommand : Command
                 itemName = ctx.GetRange(0)!;
                 if (Enum.TryParse(itemName, true, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = TeamManager.GetFactionInfo(ctx.Caller.GetActiveKit()?.Faction);
+                    FactionInfo? kitFaction = (await ctx.Caller.GetActiveKit(token))?.FactionInfo;
+
+                    await UCWarfare.ToUpdate(token);
+
                     asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                     if (asset != null)
                     {

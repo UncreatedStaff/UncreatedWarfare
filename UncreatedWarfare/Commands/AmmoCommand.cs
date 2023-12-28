@@ -157,9 +157,11 @@ public class AmmoCommand : AsyncCommand
             if (!ctx.Caller.IsOnTeam)
                 throw ctx.Reply(T.NotOnCaptureTeam);
 
-            Kit? kit = ctx.Caller.GetActiveKit();
+            Kit? kit = await ctx.Caller.GetActiveKit(token).ConfigureAwait(false);
             if (kit == null)
                 throw ctx.Reply(T.AmmoNoKit);
+
+            await UCWarfare.ToUpdate(token);
 
             FOBManager? fobManager = Data.Singletons.GetSingleton<FOBManager>();
 

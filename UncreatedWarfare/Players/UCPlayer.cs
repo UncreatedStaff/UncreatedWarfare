@@ -92,6 +92,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public string CharacterName;
     public string NickName;
     public uint? ActiveKit;
+    public string? ActiveKitName;
+    private Kit? _cachedActiveKitInfo;
     public string? MuteReason;
     public MuteType MuteType;
     public EChatMode LastChatMode = EChatMode.GLOBAL;
@@ -139,11 +141,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         CSteamID = steamID;
         AccountId = steamID.GetAccountID().m_AccountID;
         Save = save;
-        ActiveKit = Save.KitId;
         Locale = new UCPlayerLocale(this, data.LanguagePreferences);
-        if (!Data.OriginalPlayerNames.TryGetValue(Steam64, out _cachedName))
+        if (!Data.OriginalPlayerNames.Remove(Steam64, out _cachedName))
             _cachedName = new PlayerNames(player);
-        else Data.OriginalPlayerNames.Remove(Steam64);
         NickName = nickName;
         CharacterName = characterName;
         _isOnline = true;
@@ -467,6 +467,22 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             _pLvl = value;
         }
     }
+    public Kit? CachedActiveKitInfo
+    {
+        get
+        {
+            uint? activeKit = ActiveKit;
+            if (!activeKit.HasValue)
+                return null;
+            KitDataCache? cache = KitManager.GetSingletonQuick()?.Cache;
+            if (cache == null || !cache.TryGetKit(activeKit.Value, out Kit kit))
+                return _cachedActiveKitInfo;
+
+            _cachedActiveKitInfo = kit;
+            return kit;
+
+        }
+    }
     public static explicit operator ulong(UCPlayer player) => player.Steam64;
     public static explicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
     public static implicit operator Player(UCPlayer player) => player.Player;
@@ -487,10 +503,10 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         uint? activeKit = ActiveKit;
 
-        if (KitManager.GetSingletonQuick() is not { } kitManager)
+        if (!activeKit.HasValue || KitManager.GetSingletonQuick() is not { } kitManager)
             return null;
 
-        return activeKit.HasValue ? await kitManager.GetKit(activeKit.Value, token, set) : null;
+        return await kitManager.GetKit(activeKit.Value, token, set);
     }
     public static UCPlayer? FromID(ulong steamID) => steamID == 0 ? null : PlayerManager.FromID(steamID);
     public static UCPlayer? FromCSteamID(CSteamID steamID) => steamID.m_SteamID == 0 ? null : FromID(steamID.m_SteamID);
@@ -824,14 +840,18 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         if (kit == null)
         {
             ActiveKit = null;
+            ActiveKitName = null;
+            _cachedActiveKitInfo = null;
             KitClass = Class.None;
             KitBranch = Branch.Default;
         }
         else
         {
             ActiveKit = kit.PrimaryKey;
+            ActiveKitName = kit.InternalName;
             KitClass = kit.Class;
             KitBranch = kit.Branch;
+            _cachedActiveKitInfo = kit;
         }
 
         Apply();
@@ -928,7 +948,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         UCWarfare.RunOnMainThread(ApplyIntl);
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
     private void ApplyIntl() => PlayerManager.ApplyTo(this);
     public bool IsOnFOB(out IFOB fob) => FOBManager.IsOnFOB(this, out fob);
     public bool IsOnFOB<TFOB>(out TFOB fob) where TFOB : class, IRadiusFOB => FOBManager.IsOnFOB(this, out fob);

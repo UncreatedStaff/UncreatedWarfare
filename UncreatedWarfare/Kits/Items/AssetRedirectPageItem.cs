@@ -62,7 +62,7 @@ public class AssetRedirectPageKitItem : IAssetRedirectKitItem, IPageKitItem
     public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
         if (!UCWarfare.IsLoaded) throw new SingletonUnloadedException(typeof(UCWarfare));
-        return TeamManager.GetRedirectInfo(RedirectType, RedirectVariant ?? string.Empty, TeamManager.GetFactionInfo(kit?.Faction), targetTeam, out state, out amount);
+        return TeamManager.GetRedirectInfo(RedirectType, RedirectVariant ?? string.Empty, kit?.FactionInfo, targetTeam, out state, out amount);
     }
     public KitItemModel CreateModel(Kit kit)
     {
@@ -88,5 +88,5 @@ public class AssetRedirectPageKitItem : IAssetRedirectKitItem, IPageKitItem
         model.RedirectVariant = RedirectVariant;
         model.Redirect = RedirectType;
     }
-    public override string ToString() => $"AssetRedirectPageKitItem:      {RedirectType}, Pos: {X}, {Y}, Page: {Page}, Rot: {Rotation}";
+    public override string ToString() => $"AssetRedirectPageKitItem:      {RedirectType} ({RedirectVariant}), Pos: {X}, {Y}, Page: {Page}, Rot: {Rotation}";
 }

@@ -3,12 +3,14 @@ using Steamworks;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -225,7 +227,14 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                     if (loadoutId > 0)
                         await manager.Requests.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
                     else
-                        await manager.Requests.RequestKit(kit!, ctx, token).ConfigureAwait(false);
+                    {
+                        kit = await manager.GetKit(kit!.PrimaryKey, token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
+
+                        if (kit == null)
+                            throw ctx.Reply(T.RequestNoTarget);
+
+                        await manager.Requests.RequestKit(kit, ctx, token).ConfigureAwait(false);
+                    }
                     return;
                 }
                 if (TraitManager.Loaded && sign.text.StartsWith(Signs.Prefix + Signs.TraitPrefix, StringComparison.OrdinalIgnoreCase))
@@ -374,9 +383,11 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
         if (data.RequiresSL && ctx.Caller.Squad == null)
             throw ctx.Reply(T.RequestVehicleNotSquadLeader);
 
-        Kit? kit = ctx.Caller.GetActiveKit();
+        Kit? kit = await ctx.Caller.GetActiveKit(token).ConfigureAwait(false);
         if (kit == null)
             throw ctx.Reply(T.RequestVehicleNoKit);
+
+        await UCWarfare.ToUpdate(token);
 
         if (ctx.Caller.Level.Level < data.UnlockLevel)
             throw ctx.Reply(T.RequestVehicleMissingLevels, new LevelData(Points.GetLevelXP(data.UnlockLevel)));

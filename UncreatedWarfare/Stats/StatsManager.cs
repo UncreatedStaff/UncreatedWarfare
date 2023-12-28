@@ -538,26 +538,24 @@ public static class StatsManager
                 }
                 if (e.Killer.HasKit || !string.IsNullOrEmpty(e.KillerKitName))
                 {
-                    Kit? kit = e.KillerKitName != null ? KitManager.GetSingletonQuick()?.FindKitNoLock(e.KillerKitName, true) : e.Killer.GetActiveKit();
-                    if (kit != null)
+                    string? kitName = e.KillerKitName ?? e.Killer.ActiveKitName;
+                    if (kitName != null)
                     {
                         ModifyStats(e.Killer.Steam64, s =>
                         {
                             s.Kills++;
-                            WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID.Equals(kit.InternalName, StringComparison.OrdinalIgnoreCase) && k.Team == e.KillerTeam);
+                            WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID.Equals(kitName, StringComparison.OrdinalIgnoreCase) && k.Team == e.KillerTeam);
                             if (kitData == default)
                             {
-                                kitData = new WarfareStats.KitData { KitID = kit.InternalName, Team = (byte)e.KillerTeam, Kills = 1 };
-                                if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
-                                    kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
+                                kitData = new WarfareStats.KitData { KitID = kitName, Team = (byte)e.KillerTeam, Kills = 1 };
                                 s.Kits.Add(kitData);
                             }
                             else
-                            {
                                 kitData.Kills++;
-                                if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
-                                    kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
-                            }
+
+                            if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
+                                kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
+
                             if (atk)
                             {
                                 s.KillsWhileAttackingFlags++;
@@ -569,7 +567,7 @@ public static class StatsManager
                         }, false);
                         if (!e.PrimaryAssetIsVehicle && Assets.find(e.PrimaryAsset) is ItemAsset asset)
                         {
-                            ModifyWeapon(asset.id, kit.InternalName, x =>
+                            ModifyWeapon(asset.id, kitName, x =>
                             {
                                 x.Kills++;
                                 switch (e.Limb)
@@ -589,7 +587,7 @@ public static class StatsManager
                                 }
                                 x.AverageKillDistance = (x.AverageKillDistance * x.AverageKillDistanceCounter + e.KillDistance) / ++x.AverageKillDistanceCounter;
                             }, true);
-                            ModifyKit(kit.InternalName, k =>
+                            ModifyKit(kitName, k =>
                             {
                                 k.Kills++;
                                 if (e.Cause == EDeathCause.GUN)
@@ -612,16 +610,16 @@ public static class StatsManager
 
         Task.Run(() => Data.DatabaseManager.AddDeath(e.Player.Steam64, e.DeadTeam));
         ModifyTeam(e.DeadTeam, t => t.Deaths++, false);
-        Kit? kit2 = e.PlayerKitName != null ? KitManager.GetSingletonQuick()?.FindKitNoLock(e.PlayerKitName, true) : e.Player.GetActiveKit();
-        if (kit2 != null)
+        string? playerKitName = e.KillerKitName ?? e.Player.ActiveKitName;
+        if (playerKitName != null)
         {
             ModifyStats(e.Player.Steam64, s =>
             {
                 s.Deaths++;
-                WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit2.InternalName && k.Team == e.DeadTeam);
+                WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == playerKitName && k.Team == e.DeadTeam);
                 if (kitData == default)
                 {
-                    kitData = new WarfareStats.KitData { KitID = kit2.InternalName, Team = (byte)e.DeadTeam, Deaths = 1 };
+                    kitData = new WarfareStats.KitData { KitID = playerKitName, Team = (byte)e.DeadTeam, Deaths = 1 };
                     s.Kits.Add(kitData);
                 }
                 else kitData.Deaths++;
@@ -629,10 +627,10 @@ public static class StatsManager
             ItemJar? primary = e.Player.Player.inventory.items[0].items.FirstOrDefault();
             ItemJar? secondary = e.Player.Player.inventory.items[1].items.FirstOrDefault();
             if (primary != null)
-                ModifyWeapon(primary.item.id, kit2.InternalName, x => x.Deaths++, true);
+                ModifyWeapon(primary.item.id, playerKitName, x => x.Deaths++, true);
             if (secondary != null && (primary == null || primary.item.id != secondary.item.id)) // prevents 2 of the same gun from counting twice
-                ModifyWeapon(secondary.item.id, kit2.InternalName, x => x.Deaths++, true);
-            ModifyKit(kit2.InternalName, k => k.Deaths++, true);
+                ModifyWeapon(secondary.item.id, playerKitName, x => x.Deaths++, true);
+            ModifyKit(playerKitName, k => k.Deaths++, true);
         }
         else
             ModifyStats(e.Player.Steam64, s => s.Deaths++, false);
@@ -649,17 +647,15 @@ public static class StatsManager
         {
             UCPlayer pl = c[p];
             ModifyStats(pl.Steam64, s => s.FlagsCaptured++, false);
-            Kit? kit = pl.GetActiveKit();
-            if (kit != null && !kits.Contains(kit.PrimaryKey))
+            string? kit = pl.ActiveKitName;
+            uint? pk = pl.ActiveKit;
+            if (kit != null && pk.HasValue && !kits.Contains(pk.Value))
             {
-                string? name = kit.InternalName;
-                if (name != null)
-                {
-                    ModifyKit(name, k => k.FlagsCaptured++, true);
-                    kits.Add(kit.PrimaryKey);
-                }
+                ModifyKit(kit, k => k.FlagsCaptured++, true);
+                kits.Add(pk.Value);
             }
         }
+
         if (flag.IsObj(TeamManager.Other(capturedTeam)))
             for (int p = 0; p < l.Count; p++)
                 ModifyStats(l[p].Steam64, s => s.FlagsLost++, false);

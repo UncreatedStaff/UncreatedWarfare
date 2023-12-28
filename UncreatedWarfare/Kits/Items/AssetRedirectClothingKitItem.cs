@@ -44,7 +44,7 @@ public class AssetRedirectClothingKitItem : IClothingKitItem, IAssetRedirectKitI
     public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
         if (!UCWarfare.IsLoaded) throw new SingletonUnloadedException(typeof(UCWarfare));
-        return TeamManager.GetRedirectInfo(RedirectType, RedirectVariant ?? string.Empty, TeamManager.GetFactionInfo(kit?.Faction), targetTeam, out state, out amount);
+        return TeamManager.GetRedirectInfo(RedirectType, RedirectVariant ?? string.Empty, kit?.FactionInfo, targetTeam, out state, out amount);
     }
 
     public KitItemModel CreateModel(Kit kit)
@@ -71,5 +71,5 @@ public class AssetRedirectClothingKitItem : IClothingKitItem, IAssetRedirectKitI
     {
         return HashCode.Combine(Type, RedirectType, RedirectVariant);
     }
-    public override string ToString() => $"AssetRedirectClothing:         {RedirectType}, Type: {Type}";
+    public override string ToString() => $"AssetRedirectClothingKitItem:  {RedirectType} ({RedirectVariant}), Type: {Type}";
 }

@@ -80,8 +80,7 @@ partial class KitManager
                     (kitOutput[index] ??= new List<uint>(16)).Add(access.KitId);
                 }
             }
-
-            // todo make sure this doesn't take too long
+            
             List<KitHotkey> kitHotkeys = await dbContext.KitHotkeys
                 .Include(x => x.Kit)
                 .ThenInclude(x => x.ItemModels)
@@ -131,7 +130,6 @@ partial class KitManager
                     (bindingsToDelete ??= new List<KitHotkey>(2)).Add(hotkey);
             }
 
-            // todo make sure this doesn't take too long
             List<KitLayoutTransformation> kitLayouts = await dbContext.KitLayoutTransformations
                 .Include(x => x.Kit)
                 .ThenInclude(x => x.ItemModels)

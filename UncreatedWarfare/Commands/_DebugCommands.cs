@@ -7,11 +7,13 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.SQL;
@@ -41,6 +43,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Permissions;
 using Uncreated.Warfare.Stats;
+using Debug = System.Diagnostics.Debug;
 
 #if DEBUG
 using HarmonyLib;
@@ -1042,12 +1045,12 @@ public class DebugCommand : AsyncCommand
         UAV.GiveUAV(ctx.Caller.GetTeam(), ctx.Caller, ctx.Caller, isMarker, pos);
         ctx.Defer();
     }
-    private void requestuav(CommandInteraction ctx)
+    private async Task requestuav(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
 
-        UAV.RequestUAV(ctx.Caller);
+        await UAV.RequestUAV(ctx.Caller, token);
         ctx.Defer();
     }
     private async Task testfield(CommandInteraction ctx, CancellationToken token)
@@ -1900,5 +1903,39 @@ public class DebugCommand : AsyncCommand
         }
 
         await dbContext.SaveChangesAsync(token);
+    }
+
+    private async Task dumpkit(CommandInteraction ctx, CancellationToken token)
+    {
+        ctx.AssertRanByConsole();
+
+        KitManager? km = KitManager.GetSingletonQuick();
+        if (km == null)
+            throw ctx.SendGamemodeError();
+
+        ctx.AssertArgs(1, "/test dumpkit <name or id ...>");
+
+        Kit? kit;
+        if (ctx.TryGet(0, out uint id))
+            kit = await km.GetKit(id, token, KitManager.FullSet);
+        else
+        {
+            kit = await km.FindKit(ctx.Get(0)!, token, false);
+            if (kit != null)
+                kit = await km.GetKit(kit.PrimaryKey, token, KitManager.FullSet);
+        }
+
+        if (kit == null)
+            throw ctx.ReplyString($"Kit not found: {ctx.Get(0)}.");
+
+        ctx.ReplyString(Environment.NewLine + JsonSerializer.Serialize(kit, JsonEx.serializerSettings));
+    }
+
+
+    private void dumpfactions(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+
+        ctx.ReplyString(Environment.NewLine + JsonSerializer.Serialize(TeamManager.Factions, JsonEx.serializerSettings));
     }
 }

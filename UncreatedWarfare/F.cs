@@ -19,6 +19,7 @@ using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -965,6 +966,34 @@ public static class F
             id = reference.Id;
             return true;
         }
+
+        id = default;
+        return false;
+    }
+    public static bool ValidReference<TAsset>(this AssetVariantDictionary<TAsset>? reference, string? variant, out Guid guid) where TAsset : Asset
+    {
+        JsonAssetReference<TAsset>? ref2 = reference?.Resolve(variant);
+        if (ref2 is not null)
+            return ref2.ValidReference(out guid);
+
+        guid = default;
+        return false;
+    }
+
+    public static bool ValidReference<TAsset>(this AssetVariantDictionary<TAsset>? reference, string? variant, out TAsset asset) where TAsset : Asset
+    {
+        JsonAssetReference<TAsset>? ref2 = reference?.Resolve(variant);
+        if (ref2 is not null)
+            return ref2.ValidReference(out asset);
+
+        asset = default!;
+        return false;
+    }
+    public static bool ValidReference<TAsset>(this AssetVariantDictionary<TAsset>? reference, string? variant, out ushort id) where TAsset : Asset
+    {
+        JsonAssetReference<TAsset>? ref2 = reference?.Resolve(variant);
+        if (ref2 is not null)
+            return ref2.ValidReference(out id);
 
         id = default;
         return false;

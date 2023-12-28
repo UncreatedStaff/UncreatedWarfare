@@ -613,7 +613,7 @@ public class KitMenuUI : UnturnedUI
         NameLabels[index].SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
         StatusLabels[index].SetText(c, hasAccess ? Gamemode.Config.UIIconPlayer.ToString() : string.Empty);
         ClassLabels[index].SetText(c, kit.Class.GetIcon().ToString());
-        FlagLabels[index].SetText(c, kit.Faction.GetFlagIcon());
+        FlagLabels[index].SetText(c, kit.FactionInfo.GetFlagIcon());
         FavoriteButtons[index].SetVisibility(c, kit.Type != KitType.Loadout);
         
         Kits[index].SetVisibility(c, true);
@@ -720,14 +720,18 @@ public class KitMenuUI : UnturnedUI
         {
             CancellationToken tkn = pl.DisconnectToken;
             tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
-            UCWarfare.RunTask(token =>
+            UCWarfare.RunTask(async token =>
             {
                 KitManager? manager = KitManager.GetSingletonQuick();
 
                 if (manager == null)
-                    return Task.CompletedTask;
+                    return;
 
-                return manager.Requests.RequestKit(proxy, CommandInteraction.CreateTemporary(pl), token);
+                proxy = await manager.GetKit(proxy.PrimaryKey, token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
+                if (proxy == null)
+                    return;
+
+                await manager.Requests.RequestKit(proxy, CommandInteraction.CreateTemporary(pl), token);
             }, tkn, ctx: "Request kit from kit UI.");
         }
     }

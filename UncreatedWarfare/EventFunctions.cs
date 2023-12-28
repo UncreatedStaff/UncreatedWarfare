@@ -4,7 +4,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -31,9 +30,10 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Records;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
@@ -693,6 +693,7 @@ public static class EventFunctions
             // reset the player to spawn if they have joined in a different game as they last played in.
             UCPlayer ucplayer = e.Player;
             ucplayer.Loading = true;
+            bool shouldApplyLastKit = false, forceLastKitRemoval = false;
 
             if (UCPlayer.LoadingUI.IsValid)
                 UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
@@ -709,6 +710,7 @@ public static class EventFunctions
                 lb.OnPlayerJoined(ucplayer);
                 ucplayer.Player.quests.leaveGroup(true);
                 TeamManager.TeleportToMain(ucplayer, 0);
+                forceLastKitRemoval = true;
             }
             else if (TeamManager.LobbyZone.IsInside(ucplayer.Position) || Data.Gamemode == null || ucplayer.Save.LastGame != Data.Gamemode.GameId || Data.Gamemode.State is not State.Active and not State.Staging)
             {
@@ -718,9 +720,11 @@ public static class EventFunctions
                     teams.TeamSelector.JoinSelectionMenu(ucplayer);
                 else
                     ucplayer.Player.quests.leaveGroup(true);
+                forceLastKitRemoval = true;
             }
             else if (ucplayer.Save.Team is 1 or 2 && TeamManager.CanJoinTeam(ucplayer, ucplayer.Save.Team))
             {
+                shouldApplyLastKit = true;
                 L.LogDebug("Player " + ucplayer + " played this game and can rejoin their team, joining back to " + ucplayer.Save.Team + ".");
                 ulong other = TeamManager.Other(ucplayer.Save.Team);
                 Vector3 pos = ucplayer.Position;
@@ -734,12 +738,14 @@ public static class EventFunctions
             }
             else if (Data.Gamemode is ITeams teams && teams.UseTeamSelector && teams.TeamSelector is { IsLoaded: true })
             {
+                forceLastKitRemoval = true;
                 ucplayer.Player.life.sendRevive();
                 L.LogDebug("Player " + ucplayer + " played this game but can't join " + ucplayer.Save.Team + ", joining lobby.");
                 teams.TeamSelector.JoinSelectionMenu(ucplayer);
             }
             else
             {
+                forceLastKitRemoval = true;
                 L.LogDebug("Player " + ucplayer + " played this game but can't join " + ucplayer.Save.Team + ", leaving group.");
                 ucplayer.Player.quests.leaveGroup(true);
             }
@@ -773,10 +779,37 @@ public static class EventFunctions
                 if (Data.Gamemode != null)
                 {
                     await ucplayer.PurchaseSync.WaitAsync(tkn).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(tkn);
                     try
                     {
+                        if (shouldApplyLastKit && ucplayer.Save.KitId != 0)
+                        {
+                            Task<Kit?>? kitTask = KitManager.GetSingletonQuick()?.GetKit(ucplayer.Save.KitId, token);
+                            if (kitTask != null)
+                            {
+                                Kit? kit = await kitTask.ConfigureAwait(false);
+
+                                await UCWarfare.ToUpdate(token);
+                                ucplayer.ChangeKit(kit);
+                            }
+                            else
+                                await UCWarfare.ToUpdate(token);
+                        }
+                        else if (forceLastKitRemoval || ucplayer.Save.KitId != 0)
+                        {
+                            KitManager? manager = KitManager.GetSingletonQuick();
+
+                            if (manager != null)
+                            {
+                                await manager.Requests.GiveKit(ucplayer, kit: null, manual: false, tip: false, token, psLock: false).ConfigureAwait(false);
+                            }
+
+                            await UCWarfare.ToUpdate(token);
+                        }
+
                         await Data.Gamemode.OnPlayerJoined(ucplayer, tkn).ConfigureAwait(false);
+
+                        // This kicks the player out of the vanilla loading screen. It's first call is cancelled.
+                        ThreadQueue.Queue.RunOnMainThread(() => Patches.SendInitialPlayerStateForce(ucplayer.Player.inventory, ucplayer.SteamPlayer));
                     }
                     catch (OperationCanceledException)
                     {
@@ -787,6 +820,8 @@ public static class EventFunctions
                         L.LogError("Error initializing player: " + ucplayer);
                         L.LogError(ex);
                         L.LogError(ex.ToString());
+
+                        ThreadQueue.Queue.RunOnMainThread(() => Provider.kick(ucplayer.CSteamID, $"Error connecting: {ex.GetType().Name} - {ex.Message}. Join 'discord.gg/{UCWarfare.Config.DiscordInviteCode}' for help."));
                     }
                     finally
                     {
@@ -800,7 +835,7 @@ public static class EventFunctions
                     if (UCPlayer.LoadingUI.IsValid)
                         UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
                 }
-            }, token);
+            }, token, ctx: $"Player connecting: {ucplayer.Steam64}.");
             ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
             ActionLog.Add(ActionLogType.Connect, $"Players online: {Provider.clients.Count}", ucplayer);
             if (UCWarfare.Config.EnablePlayerJoinLeaveMessages)

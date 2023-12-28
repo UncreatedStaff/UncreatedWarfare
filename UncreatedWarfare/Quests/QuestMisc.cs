@@ -1923,12 +1923,12 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
                 {
                     if (_kitName == null && !string.IsNullOrEmpty(_value))
                     {
-                        Kit? kit = KitManager.GetSingletonQuick()?.FindKitNoLock(_value!, true);
+                        Kit? kit = KitManager.GetSingletonQuick()?.Cache.GetKit(_value!);
                         if (kit != null)
                         {
                             _kitName = kit.GetDisplayName(language);
                             // adds the faction name so kits named 'Rifleman #1', etc show the right team
-                            if (kit.Type == KitType.Public && kit.Faction is { } faction)
+                            if (kit is { Type: KitType.Public, FactionInfo: { } faction })
                                 _kitName = faction.ShortName + " " + _kitName;
                         }
                         else _kitName = _value;
@@ -1946,16 +1946,16 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
                     if (_kitNames == null)
                     {
                         _kitNames = new string[_values!.Length];
-                        KitManager? m = KitManager.GetSingletonQuick();
+                        KitDataCache? m = KitManager.GetSingletonQuick()?.Cache;
                         if (m != null)
                         {
                             for (int i = 0; i < _values.Length; ++i)
                             {
-                                Kit? item = m.FindKitNoLock(_value!, true);
+                                Kit? item = m.GetKit(_value!);
                                 if (item != null)
                                 {
                                     _kitNames[i] = item.GetDisplayName(language);
-                                    if (item.Type == KitType.Public && item.Faction is { } faction)
+                                    if (item is { Type: KitType.Public, FactionInfo: { } faction })
                                         _kitNames[i] = faction.ShortName + " " + _kitNames[i];
                                 }
                                 else _kitNames[i] = _values[i];

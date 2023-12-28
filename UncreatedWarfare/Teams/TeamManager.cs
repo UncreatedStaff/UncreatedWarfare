@@ -33,7 +33,6 @@ public delegate void PlayerTeamDelegate(UCPlayer player, ulong team);
 public static class TeamManager
 {
     private static TeamConfig _data;
-    private static List<FactionInfo> _factions;
     public const ulong ZombieTeamID = ulong.MaxValue;
     internal static readonly FactionInfo[] DefaultFactions =
     {
@@ -58,13 +57,6 @@ public static class TeamManager
             Ammo = "51e1e372bf5341e1b4b16a0eacce37eb",
             FOBRadio = "7715ad81f1e24f60bb8f196dd09bd4ef",
             RallyPoint = "5e1db525179341d3b0c7576876212a81",
-            DefaultHat = "0cd25f11b5864c0e99c1ad7ca4f8ad7d",
-            DefaultShirt = "ee5ecff41ebd4ee082bea183db01193c",
-            DefaultBackpack = "83075cc3512f4f209a0b32d309c22f56",
-            DefaultVest = "b5c9c2284ac547b59bad4bf7ad23b602",
-            DefaultPants = "ad3740ed150040edafef80594b89357d",
-            DefaultGlasses = "588933b9da0043d6896d3f6d3f2105b4",
-            DefaultMask = "3a7ff1898393450187e970abfc3efbf1",
             NameTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "США" },
@@ -91,12 +83,6 @@ public static class TeamManager
             Ammo = "8dd66da5affa480ba324e270e52a46d7",
             FOBRadio = "fb910102ad954169abd4b0cb06a112c8",
             RallyPoint = "0d7895360c80440fbe4a45eba28b2007",
-            DefaultHat = "e495734ebe274a0085d8b299b5897cb4",
-            DefaultShirt = "f5c88106d5324175815e730b3b1b897e",
-            DefaultBackpack = "21f6dd73c756470d9be43aaf694a3632",
-            DefaultVest = "8bcb7b352fe841d88cf421f2d7aa760e",
-            DefaultPants = "cede4da725eb4749b66b9d138b0e557d",
-            DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             NameTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "РОССИЯ" },
@@ -127,11 +113,6 @@ public static class TeamManager
             Ammo = "bfc9aed75a3245acbfd01bc78fcfc875",
             FOBRadio = "c7754ac78083421da73006b12a56811a",
             RallyPoint = "c03352d9e6bb4e2993917924b604ee76",
-            DefaultHat = "f10b4420b7c74fa49e09c69ec27709f6",
-            DefaultShirt = "16d972440c704ad284155369cd5f1e13",
-            DefaultBackpack = "2f077bfd25074bad9d8e24d5af29fab4",
-            DefaultVest = "b9b61f2d8b1d472d8430991e08e9450e",
-            DefaultPants = "3c0e787a6f034545800023ac3aa589e4",
             TMProSpriteIndex = 3,
             Emoji = "938653900913901598|938654469518950410",
             NameTranslations = new TranslationList(4)
@@ -158,11 +139,6 @@ public static class TeamManager
             Ammo = "15857c3f693b4209b7b92a0b8438be34",
             FOBRadio = "439c32cced234f358e101294ea0ce3e4",
             RallyPoint = "49663078b594410b98b8a51e8eff3609",
-            DefaultHat = "835dc9e72f46431a9bed591bcbbfb081",
-            DefaultShirt = "fc4a2a49f335489a84e294ca03031a82",
-            DefaultBackpack = "d77a232ad1fb4cf78dde280fd7c14a0b",
-            DefaultVest = "2499cebdfc6646c59103a48f06c4838a",
-            DefaultPants = "31ed5cd8918e4693bc7431483b130e05",
             TMProSpriteIndex = 4,
             Emoji = "🇩🇪",
             NameTranslations = new TranslationList(4)
@@ -190,12 +166,6 @@ public static class TeamManager
             Ammo = "2f3cfa9c6bb645fbab8f49ce556d1a1a",
             FOBRadio = "7bde55f70c494418bdd81926fb7d6359",
             RallyPoint = "7720ced42dba4c1eac16d14453cd8bc4",
-            DefaultHat = "4dbefaaad6fd4e728912bd929c16c2c6",
-            DefaultShirt = "2c1a9c62b30a49e7bda2ef6a2727eb8c",
-            DefaultBackpack = "5ac771b71bb7496bb2042d3e8cc2015c",
-            DefaultVest = "b74265e7af1c4d52866907e489206f86",
-            DefaultPants = "f3a1a4f1f333486480716c42cd5471e9",
-            DefaultMask = "5df6ed112bb7430e86f19c30403ebacb",
             TMProSpriteIndex = 5,
             Emoji = "🇨🇳",
             NameTranslations = new TranslationList(4)
@@ -217,13 +187,6 @@ public static class TeamManager
         new FactionInfo(FactionInfo.USMC, "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, @"https://i.imgur.com/MO9nPmf.png")
         {
             PrimaryKey = 7,
-            DefaultHat = "9b14747d30c94b168898b14b3b03cbdd",
-            DefaultShirt = "1d8c612e186b4f1588099c663d9d7a44",
-            DefaultBackpack = "7971e03a140149f5bbad7d1c51bc7731",
-            DefaultVest = "5a7753b4801948c6b875d6589a2c4398",
-            DefaultPants = "1a1c1a0065f64543b069e3784f58d5a7",
-            DefaultGlasses = "588933b9da0043d6896d3f6d3f2105b4",
-            DefaultMask = "3a7ff1898393450187e970abfc3efbf1",
             TMProSpriteIndex = 6,
             Emoji = "989069549817171978|989032657834885150",
             NameTranslations = new TranslationList(4)
@@ -245,11 +208,6 @@ public static class TeamManager
         new FactionInfo(FactionInfo.Soviet, "Soviet", "SOV", "Soviet", "cc0000", null, @"https://i.imgur.com/vk8gBBm.png")
         {
             PrimaryKey = 8,
-            DefaultHat = "d8c9b02f6ad74216ae25ddd4a98d721c",
-            DefaultShirt = "157148a3ebfb447e948b04cdd83d9335",
-            DefaultBackpack = "118c5783814847e7bfe6eac1caa11568",
-            DefaultVest = "b9b61f2d8b1d472d8430991e08e9450e",
-            DefaultPants = "ef9852b99d9e4591904fb42ab9f46134",
             TMProSpriteIndex = 7,
             Emoji = "989037438972334091|989037438972334091",
             NameTranslations = new TranslationList(4)
@@ -273,12 +231,6 @@ public static class TeamManager
         new FactionInfo(FactionInfo.Poland, "Poland", "PL", "Poland", "dc143c", null, @"https://i.imgur.com/fu3nCS3.png")
         {
             PrimaryKey = 9,
-            DefaultHat = "ece14052a9d64994a3ef2ab1dc27a073",
-            DefaultShirt = "71d35bb681f34b7196bb0e6685106ec4",
-            DefaultBackpack = "90f7aa3817834edd82c6458fffbc2780",
-            DefaultVest = "44bc4c4333564c61a2e86bd4c2809203",
-            DefaultPants = "bf302a8dda994fc08897ed372d8c8cd7",
-            DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             TMProSpriteIndex = 8,
             Emoji = "🇵🇱",
             NameTranslations = new TranslationList(4)
@@ -323,12 +275,6 @@ public static class TeamManager
         new FactionInfo(FactionInfo.Israel, "Israel Defense Forces", "IDF", "IDF", "005eb8", null, @"https://i.imgur.com/Wzdspd3.png")
         {
             PrimaryKey = 11,
-            DefaultHat = "6fa1828a5db147bca1c598e5b41fa319",
-            DefaultShirt = "77dc77768d8f4d6b921bbe9a876432d0",
-            DefaultBackpack = "67e14c9892b4459bb0d5b7f394f7f91d",
-            DefaultVest = "5fbd2fdc5b454606993afff708244e20",
-            DefaultPants = "bc16600f78d248c7b108c912ee6a759f",
-            DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             TMProSpriteIndex = 10,
             Emoji = "🇮🇱",
             NameTranslations = new TranslationList(4)
@@ -352,11 +298,6 @@ public static class TeamManager
         new FactionInfo(FactionInfo.France, "France", "FR", "France", "002654", null, @"https://i.imgur.com/TYY0kwp.png")
         {
             PrimaryKey = 12,
-            DefaultHat = "b53b694277184045a01ce82c55f81029",
-            DefaultShirt = "e301b323c52d4feba57fe31e8dea2bca",
-            DefaultBackpack = "a5d911ba6c464f89a9913cf198316c53",
-            DefaultVest = "5ead83aa50984bc085e1dcf34afc606c",
-            DefaultPants = "af4625a9a5e04aa8b9105e08c869998f",
             TMProSpriteIndex = 11,
             Emoji = "🇫🇷",
             NameTranslations = new TranslationList(4)
@@ -380,12 +321,6 @@ public static class TeamManager
         new FactionInfo(FactionInfo.Canada, "Canadian Armed Forces", "CAF", "Canada", "d80621", null, @"https://i.imgur.com/zs81UMe.png")
         {
             PrimaryKey = 13,
-            DefaultHat = "6e25bcbc24f047698a26d1da3831068f",
-            DefaultShirt = "ae976b9a82ba48a488ae71e4ca3cee55",
-            DefaultBackpack = "efb51b45aca34676a5d45ce8f28b7ed7",
-            DefaultVest = "4626fb373ab648d0b2a67d3fe58017cc",
-            DefaultPants = "573275f5925c452c96805e9fc5e52d37",
-            DefaultGlasses = "588933b9da0043d6896d3f6d3f2105b4",
             TMProSpriteIndex = 12,
             Emoji = "🇨🇦",
             NameTranslations = new TranslationList(4)
@@ -409,12 +344,6 @@ public static class TeamManager
         new FactionInfo(FactionInfo.SouthAfrica, "South Africa", "ZA", "S. Africa", "007749", null, @"https://i.imgur.com/2orfzTh.png")
         {
             PrimaryKey = 14,
-            DefaultHat = "1fb9ad79c8d14168bdbcdcb33ed50064",
-            DefaultShirt = "760f1e854d904bcf902b42c22015aa2a",
-            DefaultBackpack = "0cd247d2c01643e49945ab37b16a6a0a",
-            DefaultVest = "060cc097e5a642ff85bedaca7a46c188",
-            DefaultPants = "b1ca137776964c1f9bb2cd4f19b4d7b5",
-            DefaultMask = "9c2b4e15517e434fac0cf0f4bdf0c278",
             TMProSpriteIndex = 13,
             Emoji = "🇿🇦",
             NameTranslations = new TranslationList(4)
@@ -437,11 +366,6 @@ public static class TeamManager
         new FactionInfo(FactionInfo.Mozambique, "Mozambique", "MZ", "Mozambique", "ffd100", null, @"https://i.imgur.com/9nXhlMH.png")
         {
             PrimaryKey = 15,
-            DefaultHat = "8f30d92410f94318912b8a09f3ccdb9d",
-            DefaultShirt = "b9d5f63ed6f84a5c8c339a86828e0642",
-            DefaultBackpack = "68170172cf2a4dff8ecbd83964a0c13f",
-            DefaultVest = "5ead83aa50984bc085e1dcf34afc606c",
-            DefaultPants = "3f0ad0fd305f4deea96a84d4c9ebaae0",
             TMProSpriteIndex = 14,
             Emoji = "🇲🇿",
             NameTranslations = new TranslationList(4)
@@ -483,9 +407,8 @@ public static class TeamManager
     public const ulong Team1ID = 1;
     public const ulong Team2ID = 2;
     public const ulong AdminID = 3;
-    private static IReadOnlyList<FactionInfo> _factionsReadonly;
-    public static IReadOnlyList<FactionInfo> Factions => _factionsReadonly ?? throw new NullReferenceException("Factions have not been loaded yet.");
-    public static bool FactionsLoaded => _factionsReadonly != null;
+    private static readonly List<FactionInfo> FactionsIntl = [.. DefaultFactions];
+    public static IReadOnlyList<FactionInfo> Factions { get; } = FactionsIntl.AsReadOnly();
     public static TeamConfigData Config => _data.Data;
     public static string Team1Name => Team1Faction.Name;
     public static string Team2Name => Team2Faction.Name;
@@ -530,12 +453,15 @@ public static class TeamManager
         {
             if (_t1Faction is not null)
                 return _t1Faction;
-            for (int i = 0; i < _factions.Count; ++i)
+            lock (FactionsIntl)
             {
-                if (_factions[i].FactionId.Equals(_data.Data.Team1FactionId.Value))
+                for (int i = 0; i < FactionsIntl.Count; ++i)
                 {
-                    _t1Faction = _factions[i];
-                    return _t1Faction;
+                    if (FactionsIntl[i].FactionId.Equals(_data.Data.Team1FactionId.Value))
+                    {
+                        _t1Faction = FactionsIntl[i];
+                        return _t1Faction;
+                    }
                 }
             }
 
@@ -548,12 +474,16 @@ public static class TeamManager
         {
             if (_t2Faction is not null)
                 return _t2Faction;
-            for (int i = 0; i < _factions.Count; ++i)
+
+            lock (FactionsIntl)
             {
-                if (_factions[i].FactionId.Equals(_data.Data.Team2FactionId.Value))
+                for (int i = 0; i < FactionsIntl.Count; ++i)
                 {
-                    _t2Faction = _factions[i];
-                    return _t2Faction;
+                    if (FactionsIntl[i].FactionId.Equals(_data.Data.Team2FactionId.Value))
+                    {
+                        _t2Faction = FactionsIntl[i];
+                        return _t2Faction;
+                    }
                 }
             }
 
@@ -566,12 +496,16 @@ public static class TeamManager
         {
             if (_t3Faction is not null)
                 return _t3Faction;
-            for (int i = 0; i < _factions.Count; ++i)
+
+            lock (FactionsIntl)
             {
-                if (_factions[i].FactionId.Equals(_data.Data.AdminFactionId.Value))
+                for (int i = 0; i < FactionsIntl.Count; ++i)
                 {
-                    _t3Faction = _factions[i];
-                    return _t3Faction;
+                    if (FactionsIntl[i].FactionId.Equals(_data.Data.AdminFactionId.Value))
+                    {
+                        _t3Faction = FactionsIntl[i];
+                        return _t3Faction;
+                    }
                 }
             }
 
@@ -770,24 +704,30 @@ public static class TeamManager
     public static FactionInfo? GetFactionInfo(uint? id) => id.HasValue ? GetFactionInfo(id.Value) : null;
     public static FactionInfo? GetFactionInfo(PrimaryKey id)
     {
-        uint pk = id.Key;
-        if (pk == 0) return null;
-        if (_factions.Count > pk && _factions[(int)pk].PrimaryKey.Key == pk)
-            return _factions[(int)pk];
-        for (int i = 0; i < _factions.Count; ++i)
+        lock (FactionsIntl)
         {
-            if (_factions[i].PrimaryKey.Key == pk)
-                return _factions[i];
+            uint pk = id.Key;
+            if (pk == 0) return null;
+            if (FactionsIntl.Count >= pk && FactionsIntl[(int)pk - 1].PrimaryKey.Key == pk)
+                return FactionsIntl[(int)pk - 1];
+            for (int i = 0; i < FactionsIntl.Count; ++i)
+            {
+                if (FactionsIntl[i].PrimaryKey.Key == pk)
+                    return FactionsIntl[i];
+            }
         }
 
         return null;
     }
     public static FactionInfo? GetFactionInfo(string id)
     {
-        for (int i = 0; i < _factions.Count; ++i)
+        lock (FactionsIntl)
         {
-            if (_factions[i].FactionId.Equals(id, StringComparison.OrdinalIgnoreCase))
-                return _factions[i];
+            for (int i = 0; i < FactionsIntl.Count; ++i)
+            {
+                if (FactionsIntl[i].FactionId.Equals(id, StringComparison.OrdinalIgnoreCase))
+                    return FactionsIntl[i];
+            }
         }
 
         return null;
@@ -811,12 +751,15 @@ public static class TeamManager
     {
         FactionInfo? faction = GetFactionInfo(search);
         if (faction != null) return faction;
-        int index = F.StringIndexOf(_factions, x => x.Name, search);
-        if (index != -1) return _factions[index];
-        index = F.StringIndexOf(_factions, x => x.Abbreviation, search);
-        if (index != -1) return _factions[index];
-        index = F.StringIndexOf(_factions, x => x.ShortName, search);
-        return index != -1 ? _factions[index] : null;
+        lock (FactionsIntl)
+        {
+            int index = F.StringIndexOf(FactionsIntl, x => x.Name, search);
+            if (index != -1) return FactionsIntl[index];
+            index = F.StringIndexOf(FactionsIntl, x => x.Abbreviation, search);
+            if (index != -1) return FactionsIntl[index];
+            index = F.StringIndexOf(FactionsIntl, x => x.ShortName, search);
+            return index != -1 ? FactionsIntl[index] : null;
+        }
     }
     public static Zone? TryGetLobbyZone()
     {
@@ -1484,34 +1427,37 @@ public static class TeamManager
         FactionInfo team1 = Team1Faction;
         FactionInfo team2 = Team2Faction;
         variant = null;
-        for (int i = -2; i < _factions.Count; ++i)
+        lock (FactionsIntl)
         {
-            faction = i == -2 ? team2 : (i == -1 ? team1 : _factions[i]);
-            if (i > -1 && (faction == team1 || faction == team2))
-                continue;
-            if (faction.DefaultBackpack.ValidReference(out Guid guid) && guid == input)
-                return RedirectType.Backpack;
-            if (faction.DefaultVest.ValidReference(out guid) && guid == input)
-                return RedirectType.Vest;
-            if (faction.DefaultShirt.ValidReference(out guid) && guid == input)
-                return RedirectType.Shirt;
-            if (faction.DefaultPants.ValidReference(out guid) && guid == input)
-                return RedirectType.Pants;
-            if (faction.DefaultHat.ValidReference(out guid) && guid == input)
-                return RedirectType.Hat;
-            if (faction.DefaultMask.ValidReference(out guid) && guid == input)
-                return RedirectType.Mask;
-            if (faction.DefaultGlasses.ValidReference(out guid) && guid == input)
-                return RedirectType.Glasses;
-            if (clothingOnly) continue;
-            if (faction.RallyPoint.ValidReference(out guid) && guid == input)
-                return RedirectType.RallyPoint;
-            if (faction.FOBRadio.ValidReference(out guid) && guid == input)
-                return RedirectType.Radio;
-            if (faction.Build.ValidReference(out guid) && guid == input)
-                return RedirectType.BuildSupply;
-            if (faction.Ammo.ValidReference(out guid) && guid == input)
-                return RedirectType.AmmoSupply;
+            for (int i = -2; i < FactionsIntl.Count; ++i)
+            {
+                faction = i == -2 ? team2 : (i == -1 ? team1 : FactionsIntl[i]);
+                if (i > -1 && (faction == team1 || faction == team2))
+                    continue;
+                if (faction.Backpacks.TryMatchVariant(input, out variant))
+                    return RedirectType.Backpack;
+                if (faction.Vests.TryMatchVariant(input, out variant))
+                    return RedirectType.Vest;
+                if (faction.Shirts.TryMatchVariant(input, out variant))
+                    return RedirectType.Shirt;
+                if (faction.Pants.TryMatchVariant(input, out variant))
+                    return RedirectType.Pants;
+                if (faction.Hats.TryMatchVariant(input, out variant))
+                    return RedirectType.Hat;
+                if (faction.Masks.TryMatchVariant(input, out variant))
+                    return RedirectType.Mask;
+                if (faction.Glasses.TryMatchVariant(input, out variant))
+                    return RedirectType.Glasses;
+                if (clothingOnly) continue;
+                if (faction.RallyPoint.ValidReference(out Guid guid) && guid == input)
+                    return RedirectType.RallyPoint;
+                if (faction.FOBRadio.ValidReference(out guid) && guid == input)
+                    return RedirectType.Radio;
+                if (faction.Build.ValidReference(out guid) && guid == input)
+                    return RedirectType.BuildSupply;
+                if (faction.Ammo.ValidReference(out guid) && guid == input)
+                    return RedirectType.AmmoSupply;
+            }
         }
         faction = null;
         if (!clothingOnly)
@@ -1560,9 +1506,9 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    kitFaction.DefaultShirt.ValidReference(out ItemShirtAsset sasset);
+                    ItemShirtAsset sasset = kitFaction.Shirts.Resolve(variant);
                     if (sasset == null && requesterTeam != null && requesterTeam != kitFaction)
-                        requesterTeam.DefaultShirt.ValidReference(out sasset);
+                        requesterTeam.Shirts.Resolve(variant);
                     rtn = sasset;
                 }
                 break;
@@ -1571,9 +1517,9 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    kitFaction.DefaultPants.ValidReference(out ItemPantsAsset passet);
+                    ItemPantsAsset passet = kitFaction.Pants.Resolve(variant);
                     if (passet == null && requesterTeam != null && requesterTeam != kitFaction)
-                        requesterTeam.DefaultPants.ValidReference(out passet);
+                        requesterTeam.Pants.Resolve(variant);
                     rtn = passet;
                 }
                 break;
@@ -1582,9 +1528,9 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    kitFaction.DefaultVest.ValidReference(out ItemVestAsset vasset);
+                    ItemVestAsset vasset = kitFaction.Vests.Resolve(variant);
                     if (vasset == null && requesterTeam != null && requesterTeam != kitFaction)
-                        requesterTeam.DefaultVest.ValidReference(out vasset);
+                        requesterTeam.Vests.Resolve(variant);
                     rtn = vasset;
                 }
                 break;
@@ -1593,9 +1539,9 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    kitFaction.DefaultBackpack.ValidReference(out ItemBackpackAsset bkasset);
+                    ItemBackpackAsset bkasset = kitFaction.Backpacks.Resolve(variant);
                     if (bkasset == null && requesterTeam != null && requesterTeam != kitFaction)
-                        requesterTeam.DefaultBackpack.ValidReference(out bkasset);
+                        requesterTeam.Backpacks.Resolve(variant);
                     rtn = bkasset;
                 }
                 break;
@@ -1604,9 +1550,9 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    kitFaction.DefaultGlasses.ValidReference(out ItemGlassesAsset gasset);
+                    ItemGlassesAsset gasset = kitFaction.Glasses.Resolve(variant);
                     if (gasset == null && requesterTeam != null && requesterTeam != kitFaction)
-                        requesterTeam.DefaultGlasses.ValidReference(out gasset);
+                        requesterTeam.Glasses.Resolve(variant);
                     rtn = gasset;
                 }
                 break;
@@ -1615,9 +1561,9 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    kitFaction.DefaultMask.ValidReference(out ItemMaskAsset masset);
+                    ItemMaskAsset masset = kitFaction.Masks.Resolve(variant);
                     if (masset == null && requesterTeam != null && requesterTeam != kitFaction)
-                        requesterTeam.DefaultMask.ValidReference(out masset);
+                        requesterTeam.Masks.Resolve(variant);
                     rtn = masset;
                 }
                 break;
@@ -1626,9 +1572,9 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    kitFaction.DefaultHat.ValidReference(out ItemHatAsset hasset);
+                    ItemHatAsset hasset = kitFaction.Hats.Resolve(variant);
                     if (hasset == null && requesterTeam != null && requesterTeam != kitFaction)
-                        requesterTeam.DefaultHat.ValidReference(out hasset);
+                        requesterTeam.Hats.Resolve(variant);
                     rtn = hasset;
                 }
                 break;
@@ -1737,101 +1683,17 @@ public static class TeamManager
     }
 
     internal static RedirectType GetItemRedirect(Guid input) => GetRedirectInfo(input, out _, out _, false);
-#if DEBUG
-    [Obsolete]
-    internal static Guid CheckClothingAssetRedirect(Guid input, ulong team)
-    {
-        if (team is not 1 and not 2) return input;
-        if (input == BackpackRedirect)
-            GetFaction(team).DefaultBackpack.ValidReference(out input);
-        else if (input == ShirtRedirect)
-            GetFaction(team).DefaultShirt.ValidReference(out input);
-        else if (input == PantsRedirect)
-            GetFaction(team).DefaultPants.ValidReference(out input);
-        else if (input == VestRedirect)
-            GetFaction(team).DefaultVest.ValidReference(out input);
-
-        return input;
-    }
-    [Obsolete]
-    internal static Guid CheckAssetRedirect(Guid input, ulong team)
-    {
-        if (team is < 1 or > 2) return input;
-        if (input == RadioRedirect)
-            GetFaction(team).FOBRadio.ValidReference(out input);
-        else if (input == RallyPointRedirect)
-            GetFaction(team).RallyPoint.ValidReference(out input);
-        else if (input == BuildingSuppliesRedirect)
-            GetFaction(team).Build.ValidReference(out input);
-        else if (input == AmmoSuppliesRedirect)
-            GetFaction(team).Ammo.ValidReference(out input);
-        return input;
-    }
-    [Obsolete]
-    public static bool GetLegacyRedirect(Guid input, out RedirectType type)
-    {
-        type = RedirectType.None;
-        if (input == RadioRedirect)
-            type = RedirectType.Radio;
-        else if (input == RallyPointRedirect)
-            type = RedirectType.RallyPoint;
-        else if (input == BuildingSuppliesRedirect)
-            type = RedirectType.BuildSupply;
-        else if (input == AmmoSuppliesRedirect)
-            type = RedirectType.AmmoSupply;
-        else if (input == BackpackRedirect)
-            type = RedirectType.Backpack;
-        else if (input == ShirtRedirect)
-            type = RedirectType.Shirt;
-        else if (input == PantsRedirect)
-            type = RedirectType.Pants;
-        else if (input == VestRedirect)
-            type = RedirectType.Vest;
-        else return false;
-
-        return true;
-    }
-    // items
-    [Obsolete]
-    private static readonly Guid RadioRedirect              = new Guid("dea738f0e4894bd4862fd0c850185a6d");
-    [Obsolete]
-    private static readonly Guid RallyPointRedirect         = new Guid("60240b23b1604ffbbc1bb3771ea5081f");
-    [Obsolete]
-    private static readonly Guid BuildingSuppliesRedirect   = new Guid("96e27895c1b34e128121296c14dd9bf5");
-    [Obsolete]
-    private static readonly Guid AmmoSuppliesRedirect       = new Guid("c4cee82e290b4b26b7a6e2be9cd70df7");
-
-    // clothes
-    [Obsolete]
-    private static readonly Guid BackpackRedirect           = new Guid("bfc294a392294438b29194abfa9792f9");
-    [Obsolete]
-    private static readonly Guid ShirtRedirect              = new Guid("bc84a3c778884f38a4804da8ab1ca925");
-    [Obsolete]
-    private static readonly Guid PantsRedirect              = new Guid("dacac5a5628a44d7b40b16f14be681f4");
-    [Obsolete]
-    private static readonly Guid VestRedirect               = new Guid("2b22ac1b5de74755a24c2f05219c5e1f");
-#endif
     public static async Task ReloadFactions(CancellationToken token)
     {
-        await WarfareDatabases.Kits.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            await ReloadFactions(WarfareDatabases.Factions, UCWarfare.IsLoaded, token).ConfigureAwait(false);
-        }
-        finally
-        {
-            WarfareDatabases.Kits.Release();
-        }
+        await using IFactionDbContext dbContext = new WarfareDbContext();
+
+        await ReloadFactions(dbContext, UCWarfare.IsLoaded, token).ConfigureAwait(false);
     }
 
     public static Task ReloadFactions(IFactionDbContext db, bool uploadDefaultIfMissing, CancellationToken token)
     {
-        if (_factions == null)
-        {
-            _factions = new List<FactionInfo>(DefaultFactions);
-            _factionsReadonly = _factions.AsReadOnly();
-        }
-        return FactionInfo.DownloadFactions(db, _factions, uploadDefaultIfMissing, token);
+        lock (FactionsIntl)
+            return FactionInfo.DownloadFactions(db, FactionsIntl, uploadDefaultIfMissing, token);
     }
     public static void WriteFactionLocalization(LanguageInfo language, string path, bool writeMising)
     {
@@ -1840,10 +1702,13 @@ public static class TeamManager
         writer.WriteLine("# Kit Name Translations");
         writer.WriteLine("#  <br> = new line on signs");
         writer.WriteLine();
-        for (int i = 0; i < _factions.Count; i++)
+        lock (FactionsIntl)
         {
-            if (WriteFactionIntl(_factions[i], language, writer, writeMising) && i != _factions.Count - 1)
-                writer.WriteLine();
+            for (int i = 0; i < FactionsIntl.Count; i++)
+            {
+                if (WriteFactionIntl(FactionsIntl[i], language, writer, writeMising) && i != FactionsIntl.Count - 1)
+                    writer.WriteLine();
+            }
         }
     }
     private static bool WriteFactionIntl(FactionInfo faction, LanguageInfo language, StreamWriter writer, bool writeMising)

@@ -17,6 +17,7 @@ using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Structures;
@@ -829,7 +830,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         ThreadUtil.assertIsGameThread();
         if (e.OldPassengerIndex == 0 && e.Vehicle.transform.TryGetComponent(out VehicleComponent comp))
             comp.LastDriverTime = Time.realtimeSinceStartup;
-        if (KitManager.ShouldDequipOnExitVehicle(e.Player.KitClass))
+        if (KitDefaults<WarfareDbContext>.ShouldDequipOnExitVehicle(e.Player.KitClass))
             e.Player.Player.equipment.dequip();
     }
     private static void OnVehicleExitRequested(ExitVehicleRequested e)

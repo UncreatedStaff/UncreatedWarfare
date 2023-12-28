@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore;
 using SDG.Framework.Modules;
 using SDG.Framework.Utilities;
 using SDG.Unturned;
@@ -16,7 +17,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
@@ -26,12 +26,11 @@ using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
@@ -40,6 +39,10 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using MainThreadTask = Uncreated.Framework.MainThreadTask;
+#if NETSTANDARD || NETFRAMEWORK
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Networking.Purchasing;
+#endif
 
 namespace Uncreated.Warfare;
 
@@ -185,22 +188,20 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         L.Log("Migrating database changes...", ConsoleColor.Magenta);
 
-        await Data.DbContext.WaitAsync(token).ConfigureAwait(false);
-        try
+        await using (IDbContext dbContext = new WarfareDbContext())
         {
-            await Data.DbContext.Database.MigrateAsync(token);
-            L.Log(" + Done", ConsoleColor.Gray);
-        }
-        catch (Exception ex)
-        {
-            L.LogError(" + Failed to migrate databse.");
-            L.LogError(ex);
-            Provider.shutdown(10);
-            return;
-        }
-        finally
-        {
-            Data.DbContext.Release();
+            try
+            {
+                await dbContext.Database.MigrateAsync(token);
+                L.Log(" + Done", ConsoleColor.Gray);
+            }
+            catch (Exception ex)
+            {
+                L.LogError(" + Failed to migrate databse.");
+                L.LogError(ex);
+                Provider.shutdown(10);
+                return;
+            }
         }
 
         Data.LanguageDataStore = new WarfareMySqlLanguageDataStore();
@@ -351,15 +352,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             await ToUpdate(token);
         }
 
-#if NETFRAMEWORK
-        if (Config.Debug && System.IO.File.Exists(@"C:\orb.wav"))
-        {
-            System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"C:\orb.wav");
-            player.Load();
-            player.Play();
-        }
-#endif
-
         Debugger.Reset();
 
         ToastManager.ReloadToastIds();
@@ -384,7 +376,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         PlayerJoinLock.Release();
 
         L.IsBufferingLogs = false;
-        RunTask(async token =>
+        _ = RunTask(async token =>
         {
             await Task.Delay(500, token).ConfigureAwait(false);
             await ToUpdate(token);
@@ -524,7 +516,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     // 'fire and forget' functions that will report errors once the task completes.
 
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, CancellationToken, Task> task, T1 arg1, T2 arg2, T3 arg3, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    public static Task RunTask<T1, T2, T3>(Func<T1, T2, T3, CancellationToken, Task> task, T1 arg1, T2 arg2, T3 arg3, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
@@ -542,9 +534,11 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 ctx += " Member: " + member;
             RegisterErroredTask(t, ctx);
         }
+
+        return t;
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, Task> task, T1 arg1, T2 arg2, T3 arg3, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    public static Task RunTask<T1, T2, T3>(Func<T1, T2, T3, Task> task, T1 arg1, T2 arg2, T3 arg3, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
@@ -562,9 +556,11 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 ctx += " Member: " + member;
             RegisterErroredTask(t, ctx);
         }
+
+        return t;
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T1, T2>(Func<T1, T2, CancellationToken, Task> task, T1 arg1, T2 arg2, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    public static Task RunTask<T1, T2>(Func<T1, T2, CancellationToken, Task> task, T1 arg1, T2 arg2, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
@@ -582,9 +578,11 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 ctx += " Member: " + member;
             RegisterErroredTask(t, ctx);
         }
+
+        return t;
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T1, T2>(Func<T1, T2, Task> task, T1 arg1, T2 arg2, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    public static Task RunTask<T1, T2>(Func<T1, T2, Task> task, T1 arg1, T2 arg2, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
@@ -602,9 +600,11 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 ctx += " Member: " + member;
             RegisterErroredTask(t, ctx);
         }
+
+        return t;
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T>(Func<T, CancellationToken, Task> task, T arg1, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    public static Task RunTask<T>(Func<T, CancellationToken, Task> task, T arg1, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
@@ -622,9 +622,11 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 ctx += " Member: " + member;
             RegisterErroredTask(t, ctx);
         }
+
+        return t;
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T>(Func<T, Task> task, T arg1, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    public static Task RunTask<T>(Func<T, Task> task, T arg1, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
@@ -642,9 +644,11 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 ctx += " Member: " + member;
             RegisterErroredTask(t, ctx);
         }
+
+        return t;
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask(Func<CancellationToken, Task> task, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    public static Task RunTask(Func<CancellationToken, Task> task, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
@@ -662,9 +666,11 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 ctx += " Member: " + member;
             RegisterErroredTask(t, ctx);
         }
+
+        return t;
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask(Func<Task> task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    public static Task RunTask(Func<Task> task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
@@ -682,9 +688,11 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 ctx += " Member: " + member;
             RegisterErroredTask(t, ctx);
         }
+
+        return t;
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask(Task task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    public static Task RunTask(Task task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         if (!IsLoaded)
             throw new SingletonUnloadedException(typeof(UCWarfare));
@@ -698,17 +706,17 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         if (task.IsCanceled)
         {
             L.LogDebug("Task cancelled: \"" + ctx + "\".");
-            return;
+            return task;
         }
         if (task.IsFaulted)
         {
             RegisterErroredTask(task, ctx);
-            return;
+            return task;
         }
         if (task.IsCompleted)
         {
             L.LogDebug("Task completed without awaiting: \"" + ctx + "\".");
-            return;
+            return task;
         }
         L.LogDebug("Adding task \"" + ctx + "\".");
         I._tasks.Add(new UCTask(task, ctx, awaitOnUnload
@@ -716,6 +724,8 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             , timeout
 #endif
         ));
+
+        return task;
     }
     private static void RegisterErroredTask(Task task, string? ctx)
     {
@@ -1021,7 +1031,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                     Data.RemoteSQL = null!;
                 }
             }
-            WarfareDatabases.Semaphore?.Dispose();
 #if DEBUG
             profiler2.Dispose();
 #endif

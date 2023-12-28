@@ -406,7 +406,7 @@ internal partial class ModerationUI : UnturnedUI
                     return;
             }
 
-            UCWarfare.RunTask(RefreshModerationHistory, ucPlayer, ucPlayer.DisconnectToken);
+            _ = UCWarfare.RunTask(RefreshModerationHistory, ucPlayer, ucPlayer.DisconnectToken);
         });
     }
     private void OnModerationHistorySortModeUpdated(UnturnedEnumButtonTracker<ModerationHistorySortMode> button, Player player, ModerationHistorySortMode value)
@@ -1298,7 +1298,7 @@ internal partial class ModerationUI : UnturnedUI
                 usernamesAndPicturesToCache.Add(actor.Actor);
         }
 
-        UCWarfare.RunTask(async token =>
+        _ = UCWarfare.RunTask(async token =>
         {
             ulong[] steam64Ids = await Data.ModerationSql.GetActorSteam64IDs(usernamesAndPicturesToCache, token);
 

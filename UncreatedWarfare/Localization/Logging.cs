@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
@@ -410,12 +411,28 @@ public static class L
             LogAsLibrary("[DEBUG] " + info, color);
         else if (UCWarfare.Config.Debug)
         {
-            AddLine("[DEBUG] " + info, color);
-            if (_outputToConsoleMethod is not null)
+            if (UCWarfare.IsMainThread)
             {
+                AddLine("[DEBUG] " + info, color);
+                if (_outputToConsoleMethod is null)
+                    return;
+
                 _inL = true;
                 UnturnedLog.info($"[DB] {info}");
                 _inL = false;
+            }
+            else
+            {
+                ThreadQueue.Queue.RunOnMainThread(() =>
+                {
+                    AddLine("[DEBUG] " + info, color);
+                    if (_outputToConsoleMethod is null)
+                        return;
+
+                    _inL = true;
+                    UnturnedLog.info($"[DB] {info}");
+                    _inL = false;
+                });
             }
         }
     }
@@ -432,12 +449,28 @@ public static class L
             LogAsLibrary("[INFO]  " + info, color);
         else
         {
-            AddLine("[INFO]  " + info, color);
-            if (_outputToConsoleMethod is not null)
+            if (UCWarfare.IsMainThread)
             {
+                AddLine("[INFO]  " + info, color);
+                if (_outputToConsoleMethod is null)
+                    return;
+
                 _inL = true;
                 UnturnedLog.info($"[IN] {info}");
                 _inL = false;
+            }
+            else
+            {
+                ThreadQueue.Queue.RunOnMainThread(() =>
+                {
+                    AddLine("[INFO]  " + info, color);
+                    if (_outputToConsoleMethod is null)
+                        return;
+
+                    _inL = true;
+                    UnturnedLog.info($"[IN] {info}");
+                    _inL = false;
+                });
             }
         }
     }
@@ -465,12 +498,28 @@ public static class L
             LogAsLibrary(msg, color);
         else
         {
-            AddLine(msg, color);
-            if (_outputToConsoleMethod is not null)
+            if (UCWarfare.IsMainThread)
             {
+                AddLine(msg, color);
+                if (_outputToConsoleMethod is null)
+                    return;
+
                 _inL = true;
                 UnturnedLog.warn($"[WA] {warning}");
                 _inL = false;
+            }
+            else
+            {
+                ThreadQueue.Queue.RunOnMainThread(() =>
+                {
+                    AddLine(msg, color);
+                    if (_outputToConsoleMethod is null)
+                        return;
+
+                    _inL = true;
+                    UnturnedLog.warn($"[WA] {warning}");
+                    _inL = false;
+                });
             }
         }
     }
@@ -486,12 +535,28 @@ public static class L
             LogAsLibrary(msg, color);
         else
         {
-            AddLine(msg, color);
-            if (_outputToConsoleMethod is not null)
+            if (UCWarfare.IsMainThread)
             {
+                AddLine(msg, color);
+                if (_outputToConsoleMethod is null)
+                    return;
+
                 _inL = true;
                 UnturnedLog.warn($"[ER] {error}");
                 _inL = false;
+            }
+            else
+            {
+                ThreadQueue.Queue.RunOnMainThread(() =>
+                {
+                    AddLine(msg, color);
+                    if (_outputToConsoleMethod is null)
+                        return;
+
+                    _inL = true;
+                    UnturnedLog.warn($"[ER] {error}");
+                    _inL = false;
+                });
             }
         }
     }
@@ -508,7 +573,10 @@ public static class L
         }
         else
         {
-            WriteExceptionIntl(ex, cleanStack, _indention, method);
+            if (UCWarfare.IsMainThread)
+                WriteExceptionIntl(ex, cleanStack, _indention, method);
+            else
+                ThreadQueue.Queue.RunOnMainThread(() => WriteExceptionIntl(ex, cleanStack, _indention, method));
         }
     }
 
