@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Uncreated.Warfare.Models.Kits;
 
 namespace Uncreated.Warfare.Models.Factions;
 
@@ -21,6 +22,10 @@ public class Faction
     [Required]
     public string Name { get; set; }
 
+    [MaxLength(8)]
+    [Required]
+    public string KitPrefix { get; set; }
+
     [MaxLength(24)]
     public string? ShortName { get; set; }
 
@@ -32,8 +37,11 @@ public class Faction
     [Required]
     public string HexColor { get; set; }
 
-    [MaxLength(25)]
-    public string? UnarmedKit { get; set; }
+    public Kit? UnarmedKit { get; set; }
+
+    [ForeignKey(nameof(UnarmedKit))]
+    [Column("UnarmedKitId")]
+    public uint? UnarmedKitId { get; set; }
 
     [MaxLength(128)]
     [Required]

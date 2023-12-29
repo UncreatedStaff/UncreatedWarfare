@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Models.Base;
 
 namespace Uncreated.Warfare.Models.Kits;
@@ -8,6 +9,7 @@ namespace Uncreated.Warfare.Models.Kits;
 public class KitSkillset : BaseSkillset
 {
     [Required]
+    [JsonIgnore]
     public Kit Kit { get; set; }
 
     [Required]

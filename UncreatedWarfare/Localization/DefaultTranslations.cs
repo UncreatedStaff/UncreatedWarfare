@@ -853,8 +853,14 @@ internal static class T
     public static readonly Translation<string, Kit, string> KitPropertySet     = new Translation<string, Kit, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg1Fmt: Kit.IdFormat);
     [TranslationData(SectionKits, IsPrioritizedTranslation = false)]
     public static readonly Translation<string> KitNameTaken                    = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> already exists.");
-    [TranslationData(SectionKits, IsPrioritizedTranslation = false)]
+    [TranslationData(SectionKits)]
     public static readonly Translation<string> KitNotFound                     = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> doesn't exist.");
+    [TranslationData(SectionKits)]
+    public static readonly Translation<Kit> KitRenameNotLoadout                = new Translation<Kit>("<#ff8c69><#fff>{0}</color> isn't a loadout.", Kit.DisplayNameFormat);
+    [TranslationData(SectionKits)]
+    public static readonly Translation<string> KitRenameFilterVoilation        = new Translation<string>("<#ff8c69>Your name violates our chat filter near: <#fff>'{0}'</color>.");
+    [TranslationData(SectionKits)]
+    public static readonly Translation<string, string, string> KitRenamed      = new Translation<string, string, string>("<#a0ad8e>Renamed loadout <#fff>{0}</color> from <#ddd>\"{1}\"</color> to <#ddd>\"{2}\"</color>.");
     [TranslationData(SectionKits, IsPrioritizedTranslation = false)]
     public static readonly Translation<string> KitPropertyNotFound             = new Translation<string>("<#ff8c69>Kits don't have a <#eee>{0}</color> property.");
     [TranslationData(SectionKits, IsPrioritizedTranslation = false)]

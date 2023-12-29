@@ -213,6 +213,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
                 GameId = Data.Gamemode.GameId,
                 StartedGame = startedGame,
                 KitId = player.ActiveKit,
+                KitName = player.ActiveKitName,
                 MapId = MapScheduler.Current,
                 SeasonId = UCWarfare.Season,
                 FinishedGame = false,
@@ -299,17 +300,17 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
             return player.IsOnline;
 
         if (player.ActiveKit != currentSession.KitId)
-            return false;
+            return true;
 
         FactionInfo? faction = player.Faction;
 
         if (faction == null != !currentSession.FactionId.HasValue || faction != null && currentSession.FactionId.HasValue && faction.PrimaryKey.Key != currentSession.FactionId!.Value)
-            return false;
+            return true;
 
         if (Data.Gamemode is not null && Data.Gamemode.GameId != currentSession.GameId)
-            return false;
+            return true;
 
-        return true;
+        return false;
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
     {
@@ -332,18 +333,22 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
 
         }, CancellationToken.None, ctx: "Save session after player disconnects.");
     }
-    async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player, CancellationToken token)
+    async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token)
     {
+        if (Data.Gamemode is null)
+            return;
 #if DEBUG
         using IDisposable disposable = ProfilingUtils.StartTracking();
 #endif
-        if (Data.Gamemode is null)
-            return;
 
-        if (IsSessionExpired(player))
+        if (!wasAlreadyOnline && IsSessionExpired(player))
         {
             L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (initing)");
             await RestartSession(player, false, false, token);
+        }
+        else
+        {
+            L.LogDebug($"[SESSIONS] Skipping creating session for {player.Steam64}. (initing)");
         }
     }
     private static void FixupSession(IGameDataDbContext dbContext, SessionRecord session)

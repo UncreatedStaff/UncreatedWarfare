@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Uncreated.Warfare.Models.Kits;
 
@@ -8,6 +9,7 @@ namespace Uncreated.Warfare.Models.Kits;
 public class KitFilteredMap : ICloneable
 {
     [Required]
+    [JsonIgnore]
     public Kit Kit { get; set; }
 
     [Required]

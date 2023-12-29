@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore.Query;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -17,6 +16,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Singletons;
@@ -28,7 +28,7 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 
-public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandler, IPlayerConnectListener, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync, IGameTickListener, IPlayerDisconnectListener, ITCPConnectedListener
+public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandler, IPlayerConnectListener, IPlayerPostInitListenerAsync, IGameTickListener, IPlayerDisconnectListener, ITCPConnectedListener
 {
     private static KitMenuUI? _menuUi;
     public static readonly Guid[] BlacklistedWeaponsTextItems =
@@ -102,9 +102,10 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
 
         return set;
     }
-
     protected override async Task LoadAsync(CancellationToken token)
     {
+        await CreateMissingDefaultKits(token).ConfigureAwait(false);
+
         await ValidateKits(token).ConfigureAwait(false);
 
         PlayerLife.OnPreDeath += OnPreDeath;
@@ -115,6 +116,8 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         EventDispatcher.ItemDropped += OnItemDropped;
         EventDispatcher.ItemPickedUp += OnItemPickedUp;
         EventDispatcher.SwapClothingRequested += OnSwapClothingRequested;
+
+        await CountTranslations(token).ConfigureAwait(false);
 
         await Cache.ReloadCache(token).ConfigureAwait(false);
     }
@@ -282,6 +285,118 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
 
         if (any)
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+    }
+    private async Task CountTranslations(CancellationToken token = default)
+    {
+        await using IKitsDbContext dbContext = new WarfareDbContext();
+
+        List<Kit> allKits = await dbContext.Kits
+            .Include(x => x.Translations)
+            .Include(x => x.FactionFilter)
+            .Include(x => x.MapFilter)
+            .Where(x => x.Type == KitType.Public || x.Type == KitType.Elite)
+            .ToListAsync(token).ConfigureAwait(false);
+
+        await UCWarfare.ToUpdate(token);
+
+        Localization.ClearSection(TranslationSection.Kits);
+        int ct = 0;
+
+        foreach (Kit kit in allKits)
+        {
+            if (kit is not { Type: KitType.Public or KitType.Elite, Requestable: true })
+                continue;
+
+            ++ct;
+            foreach (KitTranslation language in kit.Translations)
+            {
+                if (Data.LanguageDataStore.GetInfoCached(language.LanguageId) is { } langInfo)
+                    langInfo.IncrementSection(TranslationSection.Kits, 1);
+            }
+        }
+
+        Localization.IncrementSection(TranslationSection.Kits, ct);
+    }
+    private async Task CreateMissingDefaultKits(CancellationToken token = default)
+    {
+        bool needsT1Unarmed = false, needsT2Unarmed = false, needsDefault = false;
+
+        Kit? kit = !TeamManager.Team1UnarmedKit.HasValue ? null : await GetKit(TeamManager.Team1UnarmedKit.Value, token).ConfigureAwait(false);
+        if (kit == null)
+        {
+            needsT1Unarmed = true;
+            L.LogWarning("Team 1's unarmed kit was not found, an attempt will be made to auto-generate one.");
+        }
+
+        kit = !TeamManager.Team2UnarmedKit.HasValue ? null : await GetKit(TeamManager.Team2UnarmedKit.Value, token).ConfigureAwait(false);
+        if (kit == null)
+        {
+            needsT2Unarmed = true;
+            L.LogWarning("Team 2's unarmed kit was not found, an attempt will be made to auto-generate one.");
+        }
+
+        kit = string.IsNullOrEmpty(TeamManager.DefaultKit) ? null : await FindKit(TeamManager.DefaultKit, token).ConfigureAwait(false);
+        if (kit == null)
+        {
+            needsDefault = true;
+            L.LogWarning("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, an attempt will be made to auto-generate one.");
+        }
+
+        if (!needsDefault && !needsT1Unarmed && !needsT2Unarmed)
+            return;
+
+        if (needsT1Unarmed || needsT2Unarmed)
+        {
+            await using IFactionDbContext factionDbContext = new WarfareDbContext();
+            FactionInfo team1Faction = TeamManager.Team1Faction;
+            FactionInfo team2Faction = TeamManager.Team2Faction;
+            uint k1 = team1Faction.PrimaryKey.Key, k2 = team2Faction.PrimaryKey.Key;
+
+            Faction? t1Faction = needsT1Unarmed ? await factionDbContext.Factions.FirstOrDefaultAsync(x => x.Key == k1, token).ConfigureAwait(false) : null;
+            Faction? t2Faction = needsT2Unarmed ? await factionDbContext.Factions.FirstOrDefaultAsync(x => x.Key == k2, token).ConfigureAwait(false) : null;
+
+            L.LogDebug("Found factions: " + t1Faction?.Name);
+            L.LogDebug("Found factions: " + t2Faction?.Name);
+            if (needsT1Unarmed)
+            {
+                Kit newKit = await Defaults.CreateDefaultKit(team1Faction, team1Faction.KitPrefix + "unarmed", token).ConfigureAwait(false);
+                L.Log("New kit: \"" + newKit.PrimaryKey + "\".");
+
+                team1Faction.UnarmedKit = newKit.PrimaryKey;
+                if (t1Faction != null)
+                {
+                    t1Faction.UnarmedKitId = newKit.PrimaryKey;
+                    factionDbContext.Update(t1Faction);
+                }
+                else L.LogError("Failed to find faction for team 1.");
+
+                L.Log("Created default kit for team 1: \"" + newKit.GetDisplayName() + "\".");
+            }
+
+            if (needsT2Unarmed)
+            {
+                Kit newKit = await Defaults.CreateDefaultKit(team2Faction, team2Faction.KitPrefix + "unarmed", token).ConfigureAwait(false);
+                L.Log("New kit: \"" + newKit.PrimaryKey + "\".");
+
+                team2Faction.UnarmedKit = newKit.PrimaryKey;
+                if (t2Faction != null)
+                {
+                    t2Faction.UnarmedKitId = newKit.PrimaryKey;
+                    factionDbContext.Update(t2Faction);
+                }
+                else L.LogError("Failed to find faction for team 2.");
+
+                L.Log("Created default kit for team 2: \"" + newKit.GetDisplayName() + "\".");
+            }
+
+            await factionDbContext.SaveChangesAsync(token).ConfigureAwait(false);
+        }
+
+        if (needsDefault && !string.IsNullOrEmpty(TeamManager.DefaultKit))
+        {
+            Kit newKit = await Defaults.CreateDefaultKit(null, TeamManager.DefaultKit, token);
+            L.Log("Created default kit: \"" + newKit.GetDisplayName() + "\".");
+        }
     }
     public Task<IPageKitItem?> GetHeldItemFromKit(UCPlayer player, CancellationToken token = default)
     {
@@ -692,19 +807,24 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             e.Break();
         }
     }
+
     /// <remarks>Thread Safe</remarks>
-    public async Task TryGiveKitOnJoinTeam(UCPlayer player, CancellationToken token = default)
+    public Task TryGiveKitOnJoinTeam(UCPlayer player, CancellationToken token = default)
+        => TryGiveKitOnJoinTeam(player, player.GetTeam(), token);
+
+    /// <remarks>Thread Safe</remarks>
+    public async Task TryGiveKitOnJoinTeam(UCPlayer player, ulong team, CancellationToken token = default)
     {
-        Kit? kit = await GetDefaultKit(player.GetTeam(), token).ConfigureAwait(false);
+        Kit? kit = await GetDefaultKit(team, token).ConfigureAwait(false);
         if (kit == null)
         {
             L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
             await UCWarfare.ToUpdate(token);
-            UCInventoryManager.ClearInventory(player);
+            UCInventoryManager.ClearInventoryAndSlots(player);
             return;
         }
 
-        await Requests.GiveKit(player, kit, false, true, token).ConfigureAwait(false);
+        await Requests.GiveKit(player, kit, false, false, token).ConfigureAwait(false);
     }
     public async Task<Kit?> TryGiveUnarmedKit(UCPlayer player, bool manual, CancellationToken token = default)
     {
@@ -757,9 +877,12 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     public async Task<Kit?> GetDefaultKit(ulong team, CancellationToken token = default, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
     {
-        string? kitname = team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit;
+        uint? kitname = team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit;
 
-        Kit? kit = team is 1 or 2 && kitname != null ? await FindKit(kitname, token).ConfigureAwait(false) : null;
+        Kit? kit = team is 1 or 2 && kitname.HasValue ? await GetKit(kitname.Value, token, set: set).ConfigureAwait(false) : null;
+
+        if (kit is { Disabled: true })
+            kit = null;
 
         kit ??= await FindKit(TeamManager.DefaultKit, token, set: set).ConfigureAwait(false);
 
@@ -974,7 +1097,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
                 player.EnsureDefaultSkillsets();
         }
     }
-    async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player, CancellationToken token)
+    async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token)
     {
         if (Data.Gamemode is not TeamGamemode { UseTeamSelector: true })
         {
@@ -987,10 +1110,6 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         _ = RefreshFavorites(player, false, token);
         _ = Boosting.IsNitroBoosting(player.Steam64, token);
         _ = Requests.RemoveKit(player, false, player.DisconnectToken);
-    }
-    Task IJoinedTeamListenerAsync.OnJoinTeamAsync(UCPlayer player, ulong team, CancellationToken token)
-    {
-        return TryGiveKitOnJoinTeam(player, token);
     }
 
     /// <remarks>Thread Safe</remarks>
@@ -1391,82 +1510,6 @@ public partial class KitManager : CachedEntityFrameworkSingleton<Kit>, IQuestCom
         EventDispatcher.GroupChanged -= OnGroupChanged;
         PlayerLife.OnPreDeath -= OnPreDeath;
         return SaveAllPlayerFavorites(token);
-    }
-    private Task OnItemsRefreshedIntl()
-    {
-        Localization.ClearSection(TranslationSection.Kits);
-        WriteWait();
-        try
-        {
-            int ct = 0;
-            foreach (Kit kit in Items)
-            {
-                if (kit is { Type: KitType.Public or KitType.Elite, Requestable: true })
-                {
-                    ++ct;
-                    foreach (KitTranslation language in kit.Translations)
-                    {
-                        if (Data.LanguageDataStore.GetInfoCached(language.KitId) is { } langInfo)
-                            langInfo.IncrementSection(TranslationSection.Kits, 1);
-                    }
-                }
-            }
-            Localization.IncrementSection(TranslationSection.Kits, ct);
-        }
-        finally
-        {
-            WriteRelease();
-        }
-        UCWarfare.RunTask(async () =>
-        {
-            bool needsT1Unarmed = false, needsT2Unarmed = false, needsDefault = false;
-            await WaitAsync().ConfigureAwait(false);
-            try
-            {
-                Kit? kit = string.IsNullOrEmpty(TeamManager.Team1UnarmedKit) ? null : FindKitNoLock(TeamManager.Team1UnarmedKit);
-                if (kit == null)
-                {
-                    needsT1Unarmed = true;
-                    L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, an attempt will be made to auto-generate one.");
-                }
-                kit = string.IsNullOrEmpty(TeamManager.Team2UnarmedKit) ? null : FindKitNoLock(TeamManager.Team2UnarmedKit);
-                if (kit == null)
-                {
-                    needsT2Unarmed = true;
-                    L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, an attempt will be made to auto-generate one.");
-                }
-                kit = string.IsNullOrEmpty(TeamManager.DefaultKit) ? null : FindKitNoLock(TeamManager.DefaultKit);
-                if (kit == null)
-                {
-                    needsDefault = true;
-                    L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, an attempt will be made to auto-generate one.");
-                }
-            }
-            finally
-            {
-                Release();
-            }
-
-            if (!needsDefault && !needsT1Unarmed && !needsT2Unarmed)
-                return;
-            if (needsT1Unarmed && !string.IsNullOrEmpty(TeamManager.Team1UnarmedKit))
-            {
-                Kit kit = await CreateDefaultKit(TeamManager.Team1Faction, TeamManager.Team1UnarmedKit);
-                L.Log("Created default kit for team 1: \"" + kit.InternalName + "\".");
-            }
-            if (needsT2Unarmed && !string.IsNullOrEmpty(TeamManager.Team2UnarmedKit))
-            {
-                Kit kit = await CreateDefaultKit(TeamManager.Team2Faction, TeamManager.Team2UnarmedKit);
-                L.Log("Created default kit for team 2: \"" + kit.InternalName + "\".");
-            }
-            if (needsDefault && !string.IsNullOrEmpty(TeamManager.DefaultKit))
-            {
-                Kit kit = await CreateDefaultKit(null, TeamManager.DefaultKit);
-                L.Log("Created default kit: \"" + kit.InternalName + "\".");
-            }
-        });
-
-        return Task.CompletedTask;
     }
 
     public Kit? GetKit(uint primaryKey) => GetEntityNoLock(x => x.PrimaryKey == primaryKey);

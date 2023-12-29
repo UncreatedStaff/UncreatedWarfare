@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
+using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
 
@@ -72,7 +73,10 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
         await using IKitsDbContext dbContext = new TDbContext();
         Kit? existing = await dbContext.Kits.FirstOrDefaultAsync(x => x.InternalName == name, token).ConfigureAwait(false);
         if (existing != null)
+        {
+            L.LogDebug($"Found existing default kit: {existing.InternalName}.");
             return existing;
+        }
         if (faction != null)
         {
             if (faction.Shirts.ValidReference("jacket", out ItemShirtAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Shirt }))
@@ -95,9 +99,20 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
                 FactionFilterIsWhitelist = true
             };
 
-            dbContext.Add(existing);
+            await dbContext.AddAsync(existing, token).ConfigureAwait(false);
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
             existing.SetItemArray(items.ToArray(), dbContext);
-            existing.FactionFilter.Add(new KitFilteredFaction { FactionId = faction.PrimaryKey, Kit = existing });
+
+            KitFilteredFaction kitFilteredFaction = new KitFilteredFaction { FactionId = faction.PrimaryKey, KitId = existing.PrimaryKey };
+            existing.FactionFilter.Add(kitFilteredFaction);
+            existing.FactionFilterIsWhitelist = true;
+
+            existing.SetSignText(dbContext, 0ul, existing, "Unarmed Kit");
+
+            dbContext.Update(existing);
+
+            await dbContext.AddAsync(kitFilteredFaction, token).ConfigureAwait(false);
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
         }
         else
@@ -112,7 +127,11 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
 
             existing = new Kit(name, Class.Unarmed, GetDefaultBranch(Class.Unarmed), KitType.Special, SquadLevel.Member, null);
 
-            dbContext.Add(existing);
+            await dbContext.AddAsync(existing, token).ConfigureAwait(false);
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+            existing.SetSignText(dbContext, 0ul, existing, "Default Kit");
+
             existing.SetItemArray(items.ToArray(), dbContext);
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
         }

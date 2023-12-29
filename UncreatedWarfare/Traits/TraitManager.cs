@@ -605,7 +605,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
             player.SendChat(T.UnknownError);
     }
 
-    public void OnPostPlayerInit(UCPlayer player)
+    void IPlayerPostInitListener.OnPostPlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
         Signs.UpdateTraitSigns(player, null);
     }

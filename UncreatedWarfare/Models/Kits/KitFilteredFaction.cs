@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Models.Factions;
 
 namespace Uncreated.Warfare.Models.Kits;
@@ -9,6 +10,7 @@ namespace Uncreated.Warfare.Models.Kits;
 public class KitFilteredFaction : ICloneable
 {
     [Required]
+    [JsonIgnore]
     public Kit Kit { get; set; }
 
     [Required]
@@ -17,6 +19,7 @@ public class KitFilteredFaction : ICloneable
     public uint KitId { get; set; }
 
     [Required]
+    [JsonIgnore]
     public Faction Faction { get; set; }
 
     [ForeignKey(nameof(Faction))]

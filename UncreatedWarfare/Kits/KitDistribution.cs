@@ -80,7 +80,10 @@ public class KitDistribution(KitManager manager)
         player.ItemDropTransformations.Clear();
         player.Player.equipment.dequip();
         if (kit == null)
+        {
+            UCInventoryManager.UpdateSlots(player);
             return;
+        }
 
         LayoutTransformation[] layout = player.LayoutTransformations == null || !player.HasDownloadedKitData || kit.PrimaryKey == 0
             ? Array.Empty<LayoutTransformation>()
@@ -415,6 +418,8 @@ public class KitDistribution(KitManager manager)
             }
         }
 
+        UCInventoryManager.UpdateSlots(player);
+
         // send action menu tip
         if (kit.Class != Class.Unarmed && sendActionTip)
         {
@@ -425,9 +430,9 @@ public class KitDistribution(KitManager manager)
         }
 
         // equip primary or secondary
-        if (player.Player.inventory.items[(int)Page.Primary].getItemCount() > 0)
+        if (player.Player.inventory.getItemCount((byte)Page.Primary) > 0)
             player.Player.equipment.ServerEquip((byte)Page.Primary, 0, 0);
-        else if (player.Player.inventory.items[(int)Page.Secondary].getItemCount() > 0)
+        else if (player.Player.inventory.getItemCount((byte)Page.Secondary) > 0)
             player.Player.equipment.ServerEquip((byte)Page.Secondary, 0, 0);
     }
 

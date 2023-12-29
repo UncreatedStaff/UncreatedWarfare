@@ -36,7 +36,7 @@ public static class TeamManager
     public const ulong ZombieTeamID = ulong.MaxValue;
     internal static readonly FactionInfo[] DefaultFactions =
     {
-        new FactionInfo(FactionInfo.Admins, "Admins", "ADMIN", "Admins", "0099ff", "default")
+        new FactionInfo(FactionInfo.Admins, "Admins", "ADMIN", "Admins", "0099ff", null, string.Empty)
         {
             PrimaryKey = 1,
             NameTranslations = new TranslationList(4)
@@ -50,7 +50,7 @@ public static class TeamManager
             },
             TMProSpriteIndex = 0
         },
-        new FactionInfo(FactionInfo.USA, "United States", "USA", "USA", "78b2ff", "usunarmed", @"https://i.imgur.com/P4JgkHB.png")
+        new FactionInfo(FactionInfo.USA, "United States", "USA", "USA", "78b2ff", null, "us", "https://i.imgur.com/P4JgkHB.png")
         {
             PrimaryKey = 2,
             Build = "a70978a0b47e4017a0261e676af57042",
@@ -76,7 +76,7 @@ public static class TeamManager
             TMProSpriteIndex = 1,
             Emoji = "🇺🇸"
         },
-        new FactionInfo(FactionInfo.Russia, "Russia", "RU", "Russia", "f53b3b", "ruunarmed", @"https://i.imgur.com/YMWSUZC.png")
+        new FactionInfo(FactionInfo.Russia, "Russia", "RU", "Russia", "f53b3b", null, "ru", "https://i.imgur.com/YMWSUZC.png")
         {
             PrimaryKey = 3,
             Build = "6a8b8b3c79604aeea97f53c235947a1f",
@@ -106,7 +106,7 @@ public static class TeamManager
             TMProSpriteIndex = 2,
             Emoji = "🇷🇺"
         },
-        new FactionInfo(FactionInfo.MEC, "Middle Eastern Coalition", "MEC", "MEC", "ffcd8c", "meunarmed", @"https://i.imgur.com/rPmpNzz.png")
+        new FactionInfo(FactionInfo.MEC, "Middle Eastern Coalition", "MEC", "MEC", "ffcd8c", null, "me", "https://i.imgur.com/rPmpNzz.png")
         {
             PrimaryKey = 4,
             Build = "9c7122f7e70e4a4da26a49b871087f9f",
@@ -132,7 +132,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "中东" }
             },
         },
-        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/91Apxc5.png")
+        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", null, "ge", "https://i.imgur.com/91Apxc5.png")
         {
             PrimaryKey = 5,
             Build = "35eabf178e4e4d82aac34fcbf8e690e3",
@@ -159,7 +159,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "德国" }
             }
         },
-        new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "chunarmed", @"https://i.imgur.com/Yns89Yk.png")
+        new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", null, "ch", "https://i.imgur.com/Yns89Yk.png")
         {
             PrimaryKey = 6,
             Build = "de7c4cafd0304848a7141e3860b2248a",
@@ -184,7 +184,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "中国" }
             }
         },
-        new FactionInfo(FactionInfo.USMC, "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, @"https://i.imgur.com/MO9nPmf.png")
+        new FactionInfo(FactionInfo.USMC, "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, "usmc", "https://i.imgur.com/MO9nPmf.png")
         {
             PrimaryKey = 7,
             TMProSpriteIndex = 6,
@@ -205,7 +205,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "海军陆战队" }
             }
         },
-        new FactionInfo(FactionInfo.Soviet, "Soviet", "SOV", "Soviet", "cc0000", null, @"https://i.imgur.com/vk8gBBm.png")
+        new FactionInfo(FactionInfo.Soviet, "Soviet", "SOV", "Soviet", "cc0000", null, "sov", "https://i.imgur.com/vk8gBBm.png")
         {
             PrimaryKey = 8,
             TMProSpriteIndex = 7,
@@ -228,7 +228,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "苏联" }
             }
         },
-        new FactionInfo(FactionInfo.Poland, "Poland", "PL", "Poland", "dc143c", null, @"https://i.imgur.com/fu3nCS3.png")
+        new FactionInfo(FactionInfo.Poland, "Poland", "PL", "Poland", "dc143c", null, "pl", "https://i.imgur.com/fu3nCS3.png")
         {
             PrimaryKey = 9,
             TMProSpriteIndex = 8,
@@ -251,7 +251,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "波兰" }
             }
         },
-        new FactionInfo(FactionInfo.Militia, "Militia", "MIL", "Militia", "526257", null)
+        new FactionInfo(FactionInfo.Militia, "Militia", "MIL", "Militia", "526257", null, "mi")
         {
             PrimaryKey = 10,
             TMProSpriteIndex = 9,
@@ -272,7 +272,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "民兵" }
             }
         },
-        new FactionInfo(FactionInfo.Israel, "Israel Defense Forces", "IDF", "IDF", "005eb8", null, @"https://i.imgur.com/Wzdspd3.png")
+        new FactionInfo(FactionInfo.Israel, "Israel Defense Forces", "IDF", "IDF", "005eb8", null, "idf", "https://i.imgur.com/Wzdspd3.png")
         {
             PrimaryKey = 11,
             TMProSpriteIndex = 10,
@@ -295,7 +295,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "以色列" }
             }
         },
-        new FactionInfo(FactionInfo.France, "France", "FR", "France", "002654", null, @"https://i.imgur.com/TYY0kwp.png")
+        new FactionInfo(FactionInfo.France, "France", "FR", "France", "002654", null, "fr", "https://i.imgur.com/TYY0kwp.png")
         {
             PrimaryKey = 12,
             TMProSpriteIndex = 11,
@@ -318,7 +318,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "法国" }
             }
         },
-        new FactionInfo(FactionInfo.Canada, "Canadian Armed Forces", "CAF", "Canada", "d80621", null, @"https://i.imgur.com/zs81UMe.png")
+        new FactionInfo(FactionInfo.Canada, "Canadian Armed Forces", "CAF", "Canada", "d80621", null, "caf", "https://i.imgur.com/zs81UMe.png")
         {
             PrimaryKey = 13,
             TMProSpriteIndex = 12,
@@ -341,7 +341,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "加拿大" }
             }
         },
-        new FactionInfo(FactionInfo.SouthAfrica, "South Africa", "ZA", "S. Africa", "007749", null, @"https://i.imgur.com/2orfzTh.png")
+        new FactionInfo(FactionInfo.SouthAfrica, "South Africa", "ZA", "S. Africa", "007749", null, "sa", "https://i.imgur.com/2orfzTh.png")
         {
             PrimaryKey = 14,
             TMProSpriteIndex = 13,
@@ -363,7 +363,7 @@ public static class TeamManager
                 { Languages.ChineseSimplified, "南非" }
             }
         },
-        new FactionInfo(FactionInfo.Mozambique, "Mozambique", "MZ", "Mozambique", "ffd100", null, @"https://i.imgur.com/9nXhlMH.png")
+        new FactionInfo(FactionInfo.Mozambique, "Mozambique", "MZ", "Mozambique", "ffd100", null, "mz", "https://i.imgur.com/9nXhlMH.png")
         {
             PrimaryKey = 15,
             TMProSpriteIndex = 14,
@@ -524,8 +524,8 @@ public static class TeamManager
             else return "ffffff";
         }
     }
-    public static string? Team1UnarmedKit => Team1Faction.UnarmedKit;
-    public static string? Team2UnarmedKit => Team2Faction.UnarmedKit;
+    public static uint? Team1UnarmedKit => Team1Faction.UnarmedKit;
+    public static uint? Team2UnarmedKit => Team2Faction.UnarmedKit;
     public static float Team1SpawnAngle => _data.Data.Team1SpawnYaw;
     public static float Team2SpawnAngle => _data.Data.Team2SpawnYaw;
     public static float LobbySpawnAngle => _data.Data.LobbySpawnpointYaw;
@@ -1506,7 +1506,7 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    ItemShirtAsset sasset = kitFaction.Shirts.Resolve(variant);
+                    ItemShirtAsset? sasset = kitFaction.Shirts.Resolve(variant)!;
                     if (sasset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Shirts.Resolve(variant);
                     rtn = sasset;
@@ -1517,7 +1517,7 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    ItemPantsAsset passet = kitFaction.Pants.Resolve(variant);
+                    ItemPantsAsset? passet = kitFaction.Pants.Resolve(variant)!;
                     if (passet == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Pants.Resolve(variant);
                     rtn = passet;
@@ -1528,7 +1528,7 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    ItemVestAsset vasset = kitFaction.Vests.Resolve(variant);
+                    ItemVestAsset? vasset = kitFaction.Vests.Resolve(variant)!;
                     if (vasset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Vests.Resolve(variant);
                     rtn = vasset;
@@ -1539,7 +1539,7 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    ItemBackpackAsset bkasset = kitFaction.Backpacks.Resolve(variant);
+                    ItemBackpackAsset? bkasset = kitFaction.Backpacks.Resolve(variant)!;
                     if (bkasset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Backpacks.Resolve(variant);
                     rtn = bkasset;
@@ -1550,7 +1550,7 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    ItemGlassesAsset gasset = kitFaction.Glasses.Resolve(variant);
+                    ItemGlassesAsset? gasset = kitFaction.Glasses.Resolve(variant)!;
                     if (gasset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Glasses.Resolve(variant);
                     rtn = gasset;
@@ -1561,7 +1561,7 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    ItemMaskAsset masset = kitFaction.Masks.Resolve(variant);
+                    ItemMaskAsset? masset = kitFaction.Masks.Resolve(variant)!;
                     if (masset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Masks.Resolve(variant);
                     rtn = masset;
@@ -1572,7 +1572,7 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    ItemHatAsset hasset = kitFaction.Hats.Resolve(variant);
+                    ItemHatAsset? hasset = kitFaction.Hats.Resolve(variant)!;
                     if (hasset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Hats.Resolve(variant);
                     rtn = hasset;

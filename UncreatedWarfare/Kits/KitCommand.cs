@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using Microsoft.EntityFrameworkCore;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,7 +7,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -35,311 +35,348 @@ public sealed class KitCommand : AsyncCommand
         Structure = new CommandStructure
         {
             Description = Help,
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Keybind")
                 {
-                    Aliases = new string[] { "hotkey", "bind" },
+                    Aliases = [ "hotkey", "bind" ],
                     Description = "Add or remove default keybinds for this kit.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Add")
                         {
-                            Aliases = new string[] { "create", "new" },
+                            Aliases = [ "create", "new" ],
                             Description = "Add held item as a default keybind at [slot].",
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Slot", typeof(byte))
-                            }
+                            ]
                         },
                         new CommandParameter("Remove")
                         {
-                            Aliases = new string[] { "delete", "cancel" },
+                            Aliases = [ "delete", "cancel" ],
                             Description = "Remove held item as a default keybind at [slot].",
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Slot", typeof(byte))
-                            }
+                            ]
                         },
                         new CommandParameter("Slot", typeof(byte))
-                    }
+                    ]
                 },
                 new CommandParameter("Layout")
                 {
-                    Aliases = new string[] { "loadout", "customize" },
+                    Aliases = [ "loadout", "customize" ],
                     Description = "Set how you want your items organized when you receive your kit.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Save")
                         {
                             IsOptional = true,
-                            Aliases = new string[] { "confirm", "keep" },
+                            Aliases = [ "confirm", "keep" ],
                             Description = "Saves your current inventory as your layout for this kit."
                         },
                         new CommandParameter("Reset")
                         {
                             IsOptional = true,
-                            Aliases = new string[] { "delete", "cancel" },
+                            Aliases = [ "delete", "cancel" ],
                             Description = "Resets your layout for this kit."
                         }
-                    }
+                    ]
+                },
+                new CommandParameter("Rename")
+                {
+                    Aliases = [ "name", "setname" ],
+                    Description = "Rename the loadout on the sign you are looking at.",
+                    Parameters =
+                    [
+                        new CommandParameter("New Name", typeof(string))
+                        {
+                            Description = "The new name to give your loadout.",
+                            IsRemainder = true
+                        }
+                    ]
                 },
                 new CommandParameter("Create")
                 {
-                    Aliases = new string[] { "c", "override" },
+                    Aliases = [ "c", "override" ],
                     Permission = EAdminType.STAFF,
                     Description = "Creates or overwrites a kit. Class is not required to overwrite a kit.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Id", typeof(Kit))
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Class", typeof(Class))
                                 {
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("Type", "Public", "Elite", "Loadout", "Special")
                                         {
                                             IsOptional = true,
-                                            Parameters = new CommandParameter[]
-                                            {
+                                            Parameters =
+                                            [
                                                 new CommandParameter("Faction", typeof(FactionInfo))
                                                 {
                                                     IsOptional = true
                                                 }
-                                            }
+                                            ]
                                         }
-                                    }
+                                    ]
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Delete")
                 {
-                    Aliases = new string[] { "d", "remove" },
+                    Aliases = [ "d", "remove" ],
                     Permission = EAdminType.STAFF,
                     Description = "Delete a kit.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Kit", typeof(Kit))
-                    }
+                    ]
                 },
                 new CommandParameter("Give")
                 {
-                    Aliases = new string[] { "g" },
+                    Aliases = [ "g" ],
                     Permission = EAdminType.STAFF,
                     Description = "Gives the caller a kit.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Kit", typeof(Kit))
                         {
                             IsOptional = true
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Set")
                 {
-                    Aliases = new string[] { "s" },
+                    Aliases = [ "s" ],
                     Permission = EAdminType.STAFF,
                     Description = "Sets a property of a kit.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Sign")
                         {
-                            Aliases = new string[] { "text" },
+                            Aliases = [ "text" ],
                             Description = "Sets the sign text of a kit for a language. Default language is " + L.Default + ".",
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Kit", typeof(Kit))
                                 {
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("Language", typeof(string))
                                         {
-                                            Parameters = new CommandParameter[]
-                                            {
+                                            Parameters =
+                                            [
                                                 new CommandParameter("Text", typeof(string))
                                                 {
                                                     IsRemainder = true
                                                 }
-                                            }
+                                            ]
                                         }
-                                    }
+                                    ]
                                 }
-                            }
+                            ]
                         },
                         new CommandParameter("Property", typeof(string))
                         {
-                            Aliases = new string[] { "level", "lvl", "faction", "team", "group" },
-                            Parameters = new CommandParameter[]
-                            {
+                            Aliases = [ "level", "lvl", "faction", "team", "group" ],
+                            Parameters =
+                            [
                                 new CommandParameter("Kit", typeof(Kit))
                                 {
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("Value", typeof(object))
                                         {
                                             IsRemainder = true
                                         }
-                                    }
+                                    ]
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("GiveAccess")
                 {
-                    Aliases = new string[] { "givea", "ga" },
+                    Aliases = [ "givea", "ga" ],
                     Permission = EAdminType.STAFF,
                     Description = "Give a player access to a non-public kit.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer))
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Kit", typeof(Kit))
                                 {
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("AccessType", typeof(KitAccessType))
                                         {
                                             IsOptional = true
                                         }
-                                    }
+                                    ]
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("RemoveAccess")
                 {
-                    Aliases = new string[] { "remvoea", "ra" },
+                    Aliases = [ "remvoea", "ra" ],
                     Permission = EAdminType.STAFF,
                     Description = "Remove a player's access to a non-public kit.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer))
                         {
                             ChainDisplayCount = 2,
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Kit", typeof(Kit))
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("CopyFrom")
                 {
-                    Aliases = new string[] { "cf", "copy" },
+                    Aliases = [ "cf", "copy" ],
                     Permission = EAdminType.STAFF,
                     Description = "Create a copy of a kit with a different id.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Kit", typeof(Kit))
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Id", typeof(string))
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("CreateLoadout")
                 {
-                    Aliases = new string[] { "cloadout", "cl" },
+                    Aliases = [ "cloadout", "cl" ],
                     Permission = EAdminType.STAFF,
                     Description = "Create a loadout with some default parameters.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer))
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Class", typeof(Class))
                                 {
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("SignText", typeof(string))
                                         {
                                             IsOptional = false,
                                             IsRemainder = true
                                         }
-                                    }
+                                    ]
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Skills")
                 {
-                    Aliases = new string[] { "skillset", "skillsets" },
+                    Aliases = [ "skillset", "skillsets" ],
                     Permission = EAdminType.STAFF,
                     Description = "Modify the skillset overrides on a kit.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Add")
                         {
-                            Aliases = new string[] { "set" },
-                            Parameters = new CommandParameter[]
-                            {
+                            Aliases = [ "set" ],
+                            Parameters =
+                            [
                                 new CommandParameter("Skill", typeof(string))
                                 {
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("Level", typeof(byte))
-                                    }
+                                    ]
                                 }
-                            }
+                            ]
                         },
                         new CommandParameter("Remove")
                         {
-                            Aliases = new string[] { "delete", "clear" },
+                            Aliases = [ "delete", "clear" ],
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Skill", typeof(string))
                             }
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Upgrade")
                 {
-                    Aliases = new string[] { "update", "upg" },
+                    Aliases = [ "update", "upg" ],
                     Permission = EAdminType.STAFF,
                     Description = "Upgrade an old loadout.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Kit", typeof(Kit))
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Class", typeof(Class))
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Unlock")
                 {
-                    Aliases = new string[] { "unl", "ul" },
+                    Aliases = [ "unl", "ul" ],
                     Permission = EAdminType.STAFF,
                     Description = "Unlock a completed loadout.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Kit", typeof(Kit))
-                    }
+                    ]
                 },
                 new CommandParameter("Lock")
                 {
                     Permission = EAdminType.STAFF,
                     Description = "Lock a setup loadout.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Kit", typeof(Kit))
-                    }
+                    ]
+                },
+                new CommandParameter("Favorite")
+                {
+                    Aliases = [ "favourite", "favour", "favor", "fav", "star" ],
+                    Description = "Favorite your kit or loadout.",
+                    Parameters =
+                    [
+                        new CommandParameter("Kit", typeof(Kit))
+                        {
+                            IsOptional = true
+                        }
+                    ]
+                },
+                new CommandParameter("Unfavorite")
+                {
+                    Aliases = [ "unfavourite", "unfavour", "unfavor", "unfav", "unstar" ],
+                    Description = "Unfavorite your kit or loadout.",
+                    Parameters =
+                    [
+                        new CommandParameter("Kit", typeof(Kit))
+                        {
+                            IsOptional = true
+                        }
+                    ]
                 }
-            }
+            ]
         };
     }
 
@@ -499,6 +536,67 @@ public sealed class KitCommand : AsyncCommand
             throw ctx.SendCorrectUsage("/kit layout <save|reset>");
         }
 
+        if (ctx.MatchParameter(0, "rename", "name", "setname"))
+        {
+            ctx.AssertRanByPlayer();
+
+            ctx.AssertHelpCheck(1, "/kit <rename> <new name ...> - Rename the loadout on the sign you are looking at.");
+            Kit? kit = null;
+            UCPlayer player = ctx.Caller;
+            UCPlayer.TryApplyViewLens(ref player);
+            if (ctx.TryGetTarget(out BarricadeDrop drop))
+            {
+                string kitName = drop.interactable is InteractableSign sign ? sign.text : null!;
+                kit = Signs.GetKitFromSign(drop, out int loadoutId);
+                if (loadoutId > 0)
+                    kit = await manager.Loadouts.GetLoadout(player, loadoutId, token).ConfigureAwait(false);
+
+                if (kit == null)
+                    throw ctx.Reply(T.KitNotFound, kitName.Replace(Signs.Prefix, string.Empty));
+            }
+            
+            if (kit == null || !ctx.TryGetRange(0, out string newName))
+                throw ctx.SendCorrectUsage("/kit <rename> <new name ...> - Rename the loadout on the sign you are looking at.");
+
+            if (kit.Type != KitType.Loadout)
+                throw ctx.Reply(T.KitRenameNotLoadout, kit);
+
+            if (Data.GetChatFilterViolation(newName) is { } chatFilterViolation)
+                throw ctx.Reply(T.KitRenameFilterVoilation, chatFilterViolation);
+
+            await using IKitsDbContext dbContext = new WarfareDbContext();
+
+            LanguageInfo defaultLanguage = Localization.GetDefaultLanguage();
+
+            string oldName = kit.GetDisplayName(defaultLanguage, removeNewLine: false);
+
+            newName = KitEx.ReplaceNewLineSubstrings(newName);
+
+            kit.SetSignText(dbContext, 0ul, kit, newName, defaultLanguage);
+            if (kit.Translations.Count > 1)
+            {
+                for (int i = kit.Translations.Count - 1; i >= 0; i--)
+                {
+                    KitTranslation t = kit.Translations[i];
+                    if (t.LanguageId == defaultLanguage.Key)
+                        continue;
+
+                    dbContext.Remove(t);
+                    kit.Translations.RemoveAt(i);
+                }
+            }
+
+            oldName = oldName.Replace("\n", "<br>");
+            newName = newName.Replace("\n", "<br>");
+
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            int ldId = KitEx.ParseStandardLoadoutId(kit.InternalName);
+            string ldIdStr = ldId == -1 ? "???" : KitEx.GetLoadoutLetter(ldId).ToUpperInvariant();
+            ctx.LogAction(ActionLogType.SetKitProperty, kit.FactionId + ": SIGN TEXT >> \"" + newName + "\" (using /kit rename)");
+            manager.Signs.UpdateSigns(kit);
+            throw ctx.Reply(T.KitRenamed, ldIdStr, oldName, newName);
+        }
+
         bool fav = ctx.MatchParameter(0, "favorite", "favourite", "favour", "favor", "fav", "star");
         if (fav || ctx.MatchParameter(0, "unfavorite", "unfavourite", "unfavour", "unfavor", "unfav", "unstar"))
         {
@@ -520,7 +618,7 @@ public sealed class KitCommand : AsyncCommand
                     kit = await manager.Loadouts.GetLoadout(player, loadoutId, token).ConfigureAwait(false);
             }
             else
-                throw ctx.SendCorrectUsage("/kit favorite (look at kit sign <b>or</b> [kit id]) - Favorite your kit or loadout.");
+                throw ctx.SendCorrectUsage("/kit <fav|unfav> (look at kit sign <b>or</b> [kit id]) - Favorite or unfavorite your kit or loadout.");
             
             if (kit == null)
             {
@@ -630,6 +728,12 @@ public sealed class KitCommand : AsyncCommand
 
                 if (@class == Class.None) @class = Class.Unarmed;
                 kit = new Kit(kitName, @class, KitDefaults<WarfareDbContext>.GetDefaultBranch(@class), type, SquadLevel.Member, faction);
+
+                await dbContext2.AddAsync(kit, token).ConfigureAwait(false);
+                await dbContext2.SaveChangesAsync(token).ConfigureAwait(false);
+
+                await UCWarfare.ToUpdate(token);
+
                 kit.SetItemArray(UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true), dbContext2);
 
                 kit.Creator = kit.LastEditor = ctx.CallerID;
@@ -911,11 +1015,11 @@ public sealed class KitCommand : AsyncCommand
                             throw ctx.Reply(T.KitLanguageNotFound, newValue);
                         if (ctx.TryGetRange(4, out newValue))
                         {
-                            newValue = newValue.Replace("\\n", "\n").Replace("/n", "\n");
+                            newValue = KitEx.ReplaceNewLineSubstrings(newValue);
                             kit.SetSignText(dbContext, ctx.CallerID, kit, newValue, language);
                             await dbContext.SaveChangesAsync(token);
                             await UCWarfare.ToUpdate(token);
-                            newValue = newValue.Replace('\n', '\\');
+                            newValue = newValue.Replace("\n", "<br>");
                             ctx.Reply(T.KitPropertySet, "sign text", kit, language + " : " + newValue);
                             ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
                             manager.Signs.UpdateSigns(kit);
@@ -1103,7 +1207,10 @@ public sealed class KitCommand : AsyncCommand
 
                 await using (IKitsDbContext dbContext = new WarfareDbContext())
                 {
-                    dbContext.Add(kit);
+                    await dbContext.AddAsync(kit, token).ConfigureAwait(false);
+                    await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+                    kit.ReapplyPrimaryKey();
 
                     foreach (KitSkillset skillset in kit.Skillsets)
                         dbContext.Add(skillset);
@@ -1122,6 +1229,8 @@ public sealed class KitCommand : AsyncCommand
 
                     foreach (KitUnlockRequirement unlockRequirement in kit.UnlockRequirementsModels)
                         dbContext.Add(unlockRequirement);
+
+                    await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                 }
                 
                 ctx.LogAction(ActionLogType.CreateKit, kitName + " COPIED FROM " + existingName);
@@ -1153,19 +1262,23 @@ public sealed class KitCommand : AsyncCommand
                     LastEditor = ctx.CallerID
                 };
 
-                await using IKitsDbContext dbContext = new WarfareDbContext();
-
-                loadout.SetItemArray(UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true), dbContext);
-
                 Kit? oldKit = await manager.FindKit(loadout.InternalName, token, set: x => x.Kits).ConfigureAwait(false);
                 if (oldKit != null)
                     throw ctx.Reply(T.KitNameTaken, loadout.InternalName);
-                
-                dbContext.Add(loadout);
 
-                await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                await using (IKitsDbContext dbContext = new WarfareDbContext())
+                {
+                    await dbContext.AddAsync(loadout, token).ConfigureAwait(false);
+
+                    await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+                    await UCWarfare.ToUpdate(token);
+                    loadout.SetItemArray(UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true), dbContext);
+
+                    await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                }
+
                 await manager.GiveAccess(loadout, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
-
                 await UCWarfare.ToUpdate();
 
                 KitSync.OnAccessChanged(playerId);

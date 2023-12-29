@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Uncreated.Warfare.Models.Kits.Bundles;
 
@@ -7,6 +8,7 @@ namespace Uncreated.Warfare.Models.Kits.Bundles;
 public class KitEliteBundle
 {
     [Required]
+    [JsonIgnore]
     public EliteBundle Bundle { get; set; }
 
     [Required]
@@ -15,6 +17,7 @@ public class KitEliteBundle
     public uint BundleId { get; set; }
 
     [Required]
+    [JsonIgnore]
     public Kit Kit { get; set; }
 
     [Required]

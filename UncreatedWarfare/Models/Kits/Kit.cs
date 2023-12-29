@@ -48,6 +48,7 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     [Column("pk")]
     public uint PrimaryKey { get; set; }
 
+    [JsonIgnore]
     public Faction? Faction { get; set; }
     
     public FactionInfo? FactionInfo
@@ -241,7 +242,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
 
     public Kit(string internalName, Class @class, Branch branch, KitType type, SquadLevel squadLevel, FactionInfo? faction)
     {
-        Faction = faction?.CreateModel();
         FactionId = faction?.PrimaryKey;
         InternalName = internalName;
         Class = @class;
@@ -268,7 +268,24 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
         ItemModels = [..F.CloneList(copy.ItemModels)];
         Translations = [..F.CloneList(copy.Translations)];
         UnlockRequirementsModels = [..F.CloneList(copy.UnlockRequirementsModels)];
+        Season = copy.Season;
+        TeamLimit = copy.TeamLimit;
+        RequestCooldown = copy.RequestCooldown;
+        FactionFilterIsWhitelist = copy.FactionFilterIsWhitelist;
+        MapFilterIsWhitelist = copy.MapFilterIsWhitelist;
+        Disabled = copy.Disabled;
+        CreditCost = copy.CreditCost;
+        PremiumCost = copy.PremiumCost;
+        WeaponText = copy.WeaponText;
+        CreatedTimestamp = DateTime.UtcNow;
+        LastEditedTimestamp = copy.LastEditedTimestamp;
+        LastEditor = copy.LastEditor;
+        RequiresNitro = copy.RequiresNitro;
 
+        ReapplyPrimaryKey();
+    }
+    internal void ReapplyPrimaryKey()
+    {
         foreach (KitSkillset skillset in Skillsets)
         {
             skillset.Kit = this;
@@ -299,20 +316,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
             unlockRequirement.Kit = this;
             unlockRequirement.KitId = PrimaryKey;
         }
-
-        Season = copy.Season;
-        TeamLimit = copy.TeamLimit;
-        RequestCooldown = copy.RequestCooldown;
-        FactionFilterIsWhitelist = copy.FactionFilterIsWhitelist;
-        MapFilterIsWhitelist = copy.MapFilterIsWhitelist;
-        Disabled = copy.Disabled;
-        CreditCost = copy.CreditCost;
-        PremiumCost = copy.PremiumCost;
-        WeaponText = copy.WeaponText;
-        CreatedTimestamp = DateTime.UtcNow;
-        LastEditedTimestamp = copy.LastEditedTimestamp;
-        LastEditor = copy.LastEditor;
-        RequiresNitro = copy.RequiresNitro;
     }
     /// <summary>For loadout.</summary>
     public Kit(string loadout, Class @class, string? displayName, FactionInfo? faction)
@@ -679,16 +682,15 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
         {
             KitTranslation translation = new KitTranslation
             {
-                Kit = kit,
                 KitId = kit.PrimaryKey,
                 Value = text,
-                Language = language,
                 LanguageId = language.Key
             };
             dbContext.Add(translation);
             kit.Translations.Add(translation);
         }
-        kit.UpdateLastEdited(setter);
+        if (setter != 0ul)
+            kit.UpdateLastEdited(setter);
         dbContext.Update(kit);
     }
 }

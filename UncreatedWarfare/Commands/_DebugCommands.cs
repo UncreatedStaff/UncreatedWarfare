@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using DanielWillett.ReflectionTools;
@@ -800,17 +801,15 @@ public class DebugCommand : AsyncCommand
         pos += (forward * 4);
         Quaternion angle = ctx.Caller.Player.transform.rotation;
         InteractableVehicle veh = VehicleManager.spawnLockedVehicleForPlayerV2(asset.id, pos, angle, ctx.Caller.Player);
-        //uint sim = 1;
         SetEngineOn?.Invoke(veh, true);
         RaycastHit[] results = new RaycastHit[16];
         yield return new WaitForSeconds(5f);
-        //Array.ForEach(veh.transform.gameObject.GetComponentsInChildren<Collider>(), x => UnityEngine.Object.Destroy(x));
+
         while (veh.isActiveAndEnabled)
         {
             const float TIME = 0.1f;
             yield return new WaitForSeconds(TIME);
             if (veh == null) yield break;
-            //L.Log("\nSimulation #" + ++sim);
             Vector3 origin = veh.transform.position;
             Vector3 angle2 = veh.transform.forward;
             RaycastHit hit;
@@ -825,14 +824,11 @@ public class DebugCommand : AsyncCommand
                     break;
                 }
 
-                //L.Log("Hits: " + ct + ", selected: " + (hit.transform == null ? "null" : hit.transform.name));
                 if (hit.transform != null && hit.transform != veh.transform && hit.transform.name != asset.id.ToString())
                 {
-                    //L.Log("Normal: " + hit.normal.ToString("F3"));
                     if (hit.normal.y < 0.1)
                     {
                         // hit a wall
-                        //L.Log("Hitwal: " + (hit.transform == null ? "null" : hit.transform.name));
                         yield return new WaitForSeconds(3f);
                         continue;
                     }
@@ -840,8 +836,6 @@ public class DebugCommand : AsyncCommand
                 }
             }
             Rigidbody body = veh.GetComponent<Rigidbody>();
-            //L.Log("Origin: " + origin.ToString("F3"));
-            //L.Log("Angle : " + angle2.ToString("F3"));
             Vector3 vel = angle2 * 30f;
             if (veh.asset.engine is EEngine.PLANE or EEngine.HELICOPTER)
             {
@@ -855,12 +849,8 @@ public class DebugCommand : AsyncCommand
                 body.useGravity = true;
             }
             body.velocity = vel;
-            //veh.simulate(sim, 100, false, origin += angle2, veh.transform.rotation, 10000f, 10000f, 0, TIME); 
-            //veh.simulate(sim, -1, 0, 1, 0, Mathf.Clamp(Level.HEIGHT / origin.y, -1, 1), false, false, TIME);
             veh.updatePhysics();
             veh.updateVehicle();
-            //for (int j = 0; j < veh.tires.Length; ++j)
-            //    veh.tires[j].simulate(0, 1, false, TIME);*/
         }
     }
 #endif

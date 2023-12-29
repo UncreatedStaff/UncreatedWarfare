@@ -7,12 +7,14 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Players;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
@@ -184,24 +186,38 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             return;
         
         JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, false);
-        player.TeamSelectorData.JoiningCoroutine = StartCoroutine(JoinCoroutine(player, player.TeamSelectorData.SelectedTeam));
+        player.TeamSelectorData.JoiningCoroutine = StartCoroutine(JoinCoroutine(player, player.TeamSelectorData.SelectedTeam).ToCoroutine());
     }
-    private IEnumerator JoinCoroutine(UCPlayer player, ulong targetTeam)
+    private async UniTask JoinCoroutine(UCPlayer player, ulong targetTeam)
     {
+        CancellationToken token = player.DisconnectToken;
+        token.CombineIfNeeded(UCWarfare.UnloadCancel);
+
         ITransportConnection c = player.Connection;
         JoinUI.LabelConfirm.SetText(c, T.TeamsUIJoining.Translate(player));
-        yield return new WaitForSeconds(1f);
+
+        await UniTask.Delay(TimeSpan.FromSeconds(1d), ignoreTimeScale: true, cancellationToken: token);
+
         if (player.TeamSelectorData is not null)
             player.TeamSelectorData.JoiningCoroutine = null;
 
-        if (!player.IsOnline) yield break;
+        if (!player.IsOnline)
+            return;
+
         if (player.Player.life.isDead)
         {
             JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, true);
-            yield break;
+            return;
         }
 
-        JoinTeam(player, targetTeam);
+        if (KitManager.GetSingletonQuick() is { } kit)
+        {
+            await kit.TryGiveKitOnJoinTeam(player, targetTeam, token);
+            await UniTask.SwitchToMainThread(token);
+        }
+
+        if (player.IsOnline)
+            JoinTeam(player, targetTeam);
     }
 
     public enum JoinTeamBehavior
@@ -281,6 +297,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
 
         if (player.TeamSelectorData is not null)
             player.TeamSelectorData.IsSelecting = false;
+
         if (TeamManager.JoinTeam(player, team, announce: true, teleport: true))
         {
             JoinUI.ClearFromPlayer(player.Connection);
@@ -289,7 +306,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
             player.ModalNeeded = false;
             player.HasUIHidden = false;
-            TeamManager.TeleportToMain(player);
             CooldownManager.StartCooldown(player, CooldownType.ChangeTeams, TeamManager.TeamSwitchCooldown);
             ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, new string[] { string.Empty, Data.Gamemode.DisplayName, string.Empty }));
 

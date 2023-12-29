@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231229010143_FactionKitPrefix")]
+    partial class FactionKitPrefix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -202,10 +204,6 @@ namespace Uncreated.Warfare.Migrations
                     b.Property<uint?>("KitId")
                         .HasColumnName("Kit")
                         .HasColumnType("int unsigned");
-
-                    b.Property<string>("KitName")
-                        .HasColumnType("varchar(25) CHARACTER SET utf8mb4")
-                        .HasMaxLength(25);
 
                     b.Property<double>("LengthSeconds")
                         .HasColumnType("double");
@@ -1357,24 +1355,22 @@ namespace Uncreated.Warfare.Migrations
                 {
                     b.HasOne("Uncreated.Warfare.Models.Factions.Faction", "Faction")
                         .WithMany()
-                        .HasForeignKey("FactionId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("FactionId");
 
                     b.HasOne("Uncreated.Warfare.Models.GameData.GameRecord", "Game")
                         .WithMany("Sessions")
                         .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
                         .WithMany()
-                        .HasForeignKey("KitId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("KitId");
 
                     b.HasOne("Uncreated.Warfare.Models.Seasons.MapData", "Map")
                         .WithMany()
                         .HasForeignKey("MapId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Uncreated.Warfare.Models.GameData.SessionRecord", "NextSession")
@@ -1390,13 +1386,13 @@ namespace Uncreated.Warfare.Migrations
                     b.HasOne("Uncreated.Warfare.Models.Seasons.SeasonData", "Season")
                         .WithMany()
                         .HasForeignKey("SeasonId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "PlayerData")
                         .WithMany()
                         .HasForeignKey("Steam64")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });
 

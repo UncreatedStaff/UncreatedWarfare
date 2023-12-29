@@ -56,10 +56,12 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     public TranslationList AbbreviationTranslations { get; set; }
     [JsonPropertyName("abbreviation")]
     public string Abbreviation { get; set; }
+    [JsonPropertyName("kitPrefix")]
+    public string KitPrefix { get; set; }
     [JsonPropertyName("color")]
     public string HexColor { get; set; }
     [JsonPropertyName("unarmed")]
-    public string? UnarmedKit { get; set; }
+    public uint? UnarmedKit { get; set; }
     [JsonPropertyName("flagImg")]
     public string FlagImageURL { get; set; }
     [JsonPropertyName("ammoSupplies")]
@@ -119,7 +121,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         AbbreviationTranslations = new TranslationList(4);
     }
 
-    public FactionInfo(string factionId, string name, string abbreviation, string? shortName, string hexColor, string? unarmedKit, string flagImage = UnknownTeamImgURL)
+    public FactionInfo(string factionId, string name, string abbreviation, string? shortName, string hexColor, uint? unarmedKit, string kitPrefix, string flagImage = UnknownTeamImgURL)
         : this()
     {
         FactionId = factionId;
@@ -129,6 +131,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         HexColor = hexColor;
         UnarmedKit = unarmedKit;
         FlagImageURL = flagImage;
+        KitPrefix = kitPrefix;
     }
 
     public FactionInfo(Faction model)
@@ -139,9 +142,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         Abbreviation = model.Abbreviation;
         ShortName = model.ShortName;
         HexColor = model.HexColor;
-        UnarmedKit = model.UnarmedKit;
+        UnarmedKit = model.UnarmedKitId;
         FlagImageURL = model.FlagImageUrl;
         Emoji = model.Emoji;
+        KitPrefix = model.KitPrefix;
         TMProSpriteIndex = model.SpriteIndex is < 0 ? null : model.SpriteIndex;
         Backpacks = new AssetVariantDictionary<ItemBackpackAsset>(1);
         Shirts = new AssetVariantDictionary<ItemShirtAsset>(1);
@@ -168,6 +172,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         UnarmedKit = model.UnarmedKit;
         FlagImageURL = model.FlagImageURL;
         Emoji = model.Emoji;
+        KitPrefix = model.KitPrefix;
         TMProSpriteIndex = model.TMProSpriteIndex;
         Backpacks = model.Backpacks.Clone();
         Shirts = model.Shirts.Clone();
@@ -191,65 +196,84 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             ShortName = ShortName,
             Abbreviation = Abbreviation,
             HexColor = HexColor,
-            UnarmedKit = UnarmedKit,
+            UnarmedKitId = UnarmedKit,
             FlagImageUrl = FlagImageURL,
             Emoji = Emoji,
+            KitPrefix = KitPrefix,
             SpriteIndex = TMProSpriteIndex,
-            Translations = new List<FactionLocalization>(Math.Max(NameTranslations.Count, Math.Max(ShortNameTranslations.Count, AbbreviationTranslations.Count))),
-            Assets = new List<FactionAsset>(32)
+            Translations = new List<FactionLocalization>(Math.Max(NameTranslations?.Count ?? 0, Math.Max(ShortNameTranslations?.Count ?? 0, AbbreviationTranslations?.Count ?? 0))),
+            Assets = new List<FactionAsset>(8)
         };
 
-        foreach (KeyValuePair<string, string> kvp in NameTranslations)
+        if (NameTranslations != null)
         {
-            FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
-                continue;
-            if (loc == null)
+            foreach (KeyValuePair<string, string> kvp in NameTranslations)
             {
-                loc = new FactionLocalization
+                FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
+                if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
+                    continue;
+                if (loc == null)
                 {
-                    Name = kvp.Value,
-                    Faction = faction,
-                    LanguageId = lang.Key
-                };
-                faction.Translations.Add(loc);
+                    loc = new FactionLocalization
+                    {
+                        Name = kvp.Value,
+                        Faction = faction,
+                        FactionId = faction.Key,
+                        LanguageId = lang.Key,
+                        Language = lang
+                    };
+                    faction.Translations.Add(loc);
+                }
+                else loc.Name = kvp.Value;
             }
-            else loc.Name = kvp.Value;
         }
-        foreach (KeyValuePair<string, string> kvp in ShortNameTranslations)
+        if (ShortNameTranslations != null)
         {
-            FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
-                continue;
-            if (loc == null)
+            foreach (KeyValuePair<string, string> kvp in ShortNameTranslations)
             {
-                loc = new FactionLocalization
+                FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
+                if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
+                    continue;
+                if (loc == null)
                 {
-                    ShortName = kvp.Value,
-                    Faction = faction,
-                    LanguageId = lang.Key
-                };
-                faction.Translations.Add(loc);
+                    loc = new FactionLocalization
+                    {
+                        ShortName = kvp.Value,
+                        Faction = faction,
+                        FactionId = faction.Key,
+                        LanguageId = lang.Key,
+                        Language = lang
+                    };
+                    faction.Translations.Add(loc);
+                }
+                else loc.ShortName = kvp.Value;
             }
-            else loc.ShortName = kvp.Value;
         }
-        foreach (KeyValuePair<string, string> kvp in AbbreviationTranslations)
+        if (AbbreviationTranslations != null)
         {
-            FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-            if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
-                continue;
-            if (loc == null)
+            foreach (KeyValuePair<string, string> kvp in AbbreviationTranslations)
             {
-                loc = new FactionLocalization
+                FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
+                if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
+                    continue;
+                if (loc == null)
                 {
-                    Abbreviation = kvp.Value,
-                    Faction = faction,
-                    LanguageId = lang.Key
-                };
-                faction.Translations.Add(loc);
+                    loc = new FactionLocalization
+                    {
+                        Abbreviation = kvp.Value,
+                        Faction = faction,
+                        FactionId = faction.Key,
+                        LanguageId = lang.Key,
+                        Language = lang
+                    };
+                    faction.Translations.Add(loc);
+                }
+                else loc.Abbreviation = kvp.Value;
             }
-            else loc.Abbreviation = kvp.Value;
         }
+
+        foreach (FactionLocalization loc in faction.Translations)
+            loc.Language = null!;
 
         if (Ammo is not null)
         {
@@ -257,6 +281,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             {
                 Asset = UnturnedAssetReference.FromJsonAssetReference(Ammo),
                 Faction = faction,
+                FactionId = faction.Key,
                 Redirect = RedirectType.AmmoSupply
             });
         }
@@ -266,6 +291,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             {
                 Asset = UnturnedAssetReference.FromJsonAssetReference(Build),
                 Faction = faction,
+                FactionId = faction.Key,
                 Redirect = RedirectType.BuildSupply
             });
         }
@@ -275,6 +301,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             {
                 Asset = UnturnedAssetReference.FromJsonAssetReference(RallyPoint),
                 Faction = faction,
+                FactionId = faction.Key,
                 Redirect = RedirectType.RallyPoint
             });
         }
@@ -284,99 +311,128 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             {
                 Asset = UnturnedAssetReference.FromJsonAssetReference(FOBRadio),
                 Faction = faction,
+                FactionId = faction.Key,
                 Redirect = RedirectType.Radio
             });
         }
-        foreach (KeyValuePair<string, JsonAssetReference<ItemBackpackAsset>> backpack in Backpacks)
+        if (Backpacks != null)
         {
-            if (faction.Assets.Any(x => x.Redirect == RedirectType.Backpack && string.Equals(backpack.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
-                continue;
-
-            faction.Assets.Add(new FactionAsset
+            foreach (KeyValuePair<string, JsonAssetReference<ItemBackpackAsset>> backpack in Backpacks)
             {
-                Asset = UnturnedAssetReference.FromJsonAssetReference(backpack.Value),
-                Faction = faction,
-                Redirect = RedirectType.Backpack,
-                VariantKey = backpack.Key.Length == 0 ? null : backpack.Key
-            });
+                if (faction.Assets.Any(x => x.Redirect == RedirectType.Backpack && string.Equals(backpack.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
+                    continue;
+
+                faction.Assets.Add(new FactionAsset
+                {
+                    Asset = UnturnedAssetReference.FromJsonAssetReference(backpack.Value),
+                    Faction = faction,
+                    FactionId = faction.Key,
+                    Redirect = RedirectType.Backpack,
+                    VariantKey = backpack.Key.Length == 0 ? null : backpack.Key
+                });
+            }
         }
-        foreach (KeyValuePair<string, JsonAssetReference<ItemShirtAsset>> shirt in Shirts)
+        if (Shirts != null)
         {
-            if (faction.Assets.Any(x => x.Redirect == RedirectType.Shirt && string.Equals(shirt.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
-                continue;
-
-            faction.Assets.Add(new FactionAsset
+            foreach (KeyValuePair<string, JsonAssetReference<ItemShirtAsset>> shirt in Shirts)
             {
-                Asset = UnturnedAssetReference.FromJsonAssetReference(shirt.Value),
-                Faction = faction,
-                Redirect = RedirectType.Shirt,
-                VariantKey = shirt.Key.Length == 0 ? null : shirt.Key
-            });
+                if (faction.Assets.Any(x => x.Redirect == RedirectType.Shirt && string.Equals(shirt.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
+                    continue;
+
+                faction.Assets.Add(new FactionAsset
+                {
+                    Asset = UnturnedAssetReference.FromJsonAssetReference(shirt.Value),
+                    Faction = faction,
+                    FactionId = faction.Key,
+                    Redirect = RedirectType.Shirt,
+                    VariantKey = shirt.Key.Length == 0 ? null : shirt.Key
+                });
+            }
         }
-        foreach (KeyValuePair<string, JsonAssetReference<ItemPantsAsset>> pants in Pants)
+        if (Pants != null)
         {
-            if (faction.Assets.Any(x => x.Redirect == RedirectType.Pants && string.Equals(pants.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
-                continue;
-
-            faction.Assets.Add(new FactionAsset
+            foreach (KeyValuePair<string, JsonAssetReference<ItemPantsAsset>> pants in Pants)
             {
-                Asset = UnturnedAssetReference.FromJsonAssetReference(pants.Value),
-                Faction = faction,
-                Redirect = RedirectType.Pants,
-                VariantKey = pants.Key.Length == 0 ? null : pants.Key
-            });
+                if (faction.Assets.Any(x => x.Redirect == RedirectType.Pants && string.Equals(pants.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
+                    continue;
+
+                faction.Assets.Add(new FactionAsset
+                {
+                    Asset = UnturnedAssetReference.FromJsonAssetReference(pants.Value),
+                    Faction = faction,
+                    FactionId = faction.Key,
+                    Redirect = RedirectType.Pants,
+                    VariantKey = pants.Key.Length == 0 ? null : pants.Key
+                });
+            }
         }
-        foreach (KeyValuePair<string, JsonAssetReference<ItemVestAsset>> vest in Vests)
+        if (Vests != null)
         {
-            if (faction.Assets.Any(x => x.Redirect == RedirectType.Vest && string.Equals(vest.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
-                continue;
-
-            faction.Assets.Add(new FactionAsset
+            foreach (KeyValuePair<string, JsonAssetReference<ItemVestAsset>> vest in Vests)
             {
-                Asset = UnturnedAssetReference.FromJsonAssetReference(vest.Value),
-                Faction = faction,
-                Redirect = RedirectType.Vest,
-                VariantKey = vest.Key.Length == 0 ? null : vest.Key
-            });
+                if (faction.Assets.Any(x => x.Redirect == RedirectType.Vest && string.Equals(vest.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
+                    continue;
+
+                faction.Assets.Add(new FactionAsset
+                {
+                    Asset = UnturnedAssetReference.FromJsonAssetReference(vest.Value),
+                    Faction = faction,
+                    FactionId = faction.Key,
+                    Redirect = RedirectType.Vest,
+                    VariantKey = vest.Key.Length == 0 ? null : vest.Key
+                });
+            }
         }
-        foreach (KeyValuePair<string, JsonAssetReference<ItemHatAsset>> hat in Hats)
+        if (Hats != null)
         {
-            if (faction.Assets.Any(x => x.Redirect == RedirectType.Hat && string.Equals(hat.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
-                continue;
-
-            faction.Assets.Add(new FactionAsset
+            foreach (KeyValuePair<string, JsonAssetReference<ItemHatAsset>> hat in Hats)
             {
-                Asset = UnturnedAssetReference.FromJsonAssetReference(hat.Value),
-                Faction = faction,
-                Redirect = RedirectType.Hat,
-                VariantKey = hat.Key.Length == 0 ? null : hat.Key
-            });
+                if (faction.Assets.Any(x => x.Redirect == RedirectType.Hat && string.Equals(hat.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
+                    continue;
+
+                faction.Assets.Add(new FactionAsset
+                {
+                    Asset = UnturnedAssetReference.FromJsonAssetReference(hat.Value),
+                    Faction = faction,
+                    FactionId = faction.Key,
+                    Redirect = RedirectType.Hat,
+                    VariantKey = hat.Key.Length == 0 ? null : hat.Key
+                });
+            }
         }
-        foreach (KeyValuePair<string, JsonAssetReference<ItemGlassesAsset>> glasses in Glasses)
+        if (Glasses != null)
         {
-            if (faction.Assets.Any(x => x.Redirect == RedirectType.Glasses && string.Equals(glasses.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
-                continue;
-
-            faction.Assets.Add(new FactionAsset
+            foreach (KeyValuePair<string, JsonAssetReference<ItemGlassesAsset>> glasses in Glasses)
             {
-                Asset = UnturnedAssetReference.FromJsonAssetReference(glasses.Value),
-                Faction = faction,
-                Redirect = RedirectType.Glasses,
-                VariantKey = glasses.Key.Length == 0 ? null : glasses.Key
-            });
+                if (faction.Assets.Any(x => x.Redirect == RedirectType.Glasses && string.Equals(glasses.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
+                    continue;
+
+                faction.Assets.Add(new FactionAsset
+                {
+                    Asset = UnturnedAssetReference.FromJsonAssetReference(glasses.Value),
+                    Faction = faction,
+                    FactionId = faction.Key,
+                    Redirect = RedirectType.Glasses,
+                    VariantKey = glasses.Key.Length == 0 ? null : glasses.Key
+                });
+            }
         }
-        foreach (KeyValuePair<string, JsonAssetReference<ItemMaskAsset>> mask in Masks)
+        if (Masks != null)
         {
-            if (faction.Assets.Any(x => x.Redirect == RedirectType.Mask && string.Equals(mask.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
-                continue;
-
-            faction.Assets.Add(new FactionAsset
+            foreach (KeyValuePair<string, JsonAssetReference<ItemMaskAsset>> mask in Masks)
             {
-                Asset = UnturnedAssetReference.FromJsonAssetReference(mask.Value),
-                Faction = faction,
-                Redirect = RedirectType.Mask,
-                VariantKey = mask.Key.Length == 0 ? null : mask.Key
-            });
+                if (faction.Assets.Any(x => x.Redirect == RedirectType.Mask && string.Equals(mask.Key, x.VariantKey, StringComparison.InvariantCultureIgnoreCase)))
+                    continue;
+
+                faction.Assets.Add(new FactionAsset
+                {
+                    Asset = UnturnedAssetReference.FromJsonAssetReference(mask.Value),
+                    Faction = faction,
+                    FactionId = faction.Key,
+                    Redirect = RedirectType.Mask,
+                    VariantKey = mask.Key.Length == 0 ? null : mask.Key
+                });
+            }
         }
 
         return faction;
@@ -535,7 +591,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     }
     public object Clone()
     {
-        return new FactionInfo(FactionId, Name, Abbreviation, ShortName, HexColor, UnarmedKit, FlagImageURL)
+        return new FactionInfo(FactionId, Name, Abbreviation, ShortName, HexColor, UnarmedKit, KitPrefix, FlagImageURL)
         {
             PrimaryKey = PrimaryKey,
             Ammo = Ammo?.Clone() as JsonAssetReference<ItemAsset>,

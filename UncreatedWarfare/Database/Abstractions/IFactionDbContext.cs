@@ -23,5 +23,10 @@ public interface IFactionDbContext : IDbContext
             .HasMany<FactionLocalization>()
             .WithOne(x => x.Language)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Faction>()
+            .HasOne(x => x.UnarmedKit!)
+            .WithMany()
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

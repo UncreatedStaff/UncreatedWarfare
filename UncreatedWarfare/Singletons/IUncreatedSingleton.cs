@@ -110,11 +110,11 @@ public interface IPlayerConnectListenerAsync
 }
 public interface IPlayerPostInitListener
 {
-    void OnPostPlayerInit(UCPlayer player);
+    void OnPostPlayerInit(UCPlayer player, bool wasAlreadyOnline);
 }
 public interface IPlayerPostInitListenerAsync
 {
-    Task OnPostPlayerInit(UCPlayer player, CancellationToken token);
+    Task OnPostPlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token);
 }
 public interface IJoinedTeamListener
 {

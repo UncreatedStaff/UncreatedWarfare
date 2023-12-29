@@ -486,7 +486,7 @@ public static class EventFunctions
         if (e.Item.GetAsset() is not { } itemAsset)
             return;
 
-        if (e.Page == PlayerInventory.STORAGE && e.Player.Player.inventory.isStorageTrunk)
+        if (e.Page == PlayerInventory.STORAGE && e.Player.Player.inventory.isStorageTrunk && !e.Player.Keys.IsKeyDown(Data.Keys.DropSupplyOverride))
         {
             Items? trunk = e.Player.Player.inventory.items[PlayerInventory.STORAGE];
             InteractableVehicle? vehicle = UCVehicleManager.FindVehicleFromTrunkStorage(trunk);
@@ -504,7 +504,7 @@ public static class EventFunctions
                         if (build || ammoAsset is not null && ammoAsset.GUID == itemAsset.GUID)
                         {
                             trunk.removeItem(e.Index);
-                            Item it2 = new Item(build ? buildAsset : ammoAsset, EItemOrigin.WORLD);
+                            Item it2 = new Item(build ? ammoAsset : buildAsset, EItemOrigin.WORLD);
                             trunk.addItem(e.X, e.Y, e.ItemJar.rot, it2);
                             e.Break();
                             return;

@@ -100,6 +100,17 @@ public static class UCInventoryManager
 
         return items.ToArray();
     }
+    public static void ClearInventoryAndSlots(UCPlayer player, bool clothes = true)
+    {
+        ClearInventory(player, clothes);
+        UpdateSlots(player);
+    }
+    public static void UpdateSlots(UCPlayer player)
+    {
+        // removes the primaries/secondaries from the third person model
+        player.Player.equipment.sendSlot(0);
+        player.Player.equipment.sendSlot(1);
+    }
     public static void ClearInventory(UCPlayer player, bool clothes = true)
     {
         ThreadUtil.assertIsGameThread();

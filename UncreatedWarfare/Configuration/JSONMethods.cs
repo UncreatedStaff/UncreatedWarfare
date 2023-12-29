@@ -1,6 +1,7 @@
 ﻿using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -244,8 +245,10 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable, IR
             throw new NotSupportedException("One-to-one only rn");
         return F.GetTranslationListSchema(tableName, fkColumn, mainTable, mainPkColumn, DefaultCharLength);
     }
-    public string Translate(LanguageInfo language, string @default) => Translate(language) ?? @default;
-    public string? Translate(LanguageInfo language)
+
+    [return: NotNullIfNotNull(nameof(@default))]
+    public string? Translate(LanguageInfo? language, string? @default) => Translate(language) ?? @default;
+    public string? Translate(LanguageInfo? language)
     {
         language ??= Localization.GetDefaultLanguage();
         if (TryGetValue(language.Code, out string value))

@@ -77,7 +77,8 @@ public class ClearCommand : Command
             {
                 if (pl is not null)
                 {
-                    Kits.UCInventoryManager.ClearInventory(pl);
+                    Kits.UCInventoryManager.ClearInventoryAndSlots(pl);
+
                     ctx.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.AdminLocale));
                     ctx.Reply(T.ClearInventoryOther, pl);
                 }
@@ -87,7 +88,7 @@ public class ClearCommand : Command
                 throw ctx.Reply(T.ClearNoPlayerConsole);
             else
             {
-                Kits.UCInventoryManager.ClearInventory(ctx.Caller);
+                Kits.UCInventoryManager.ClearInventoryAndSlots(ctx.Caller);
                 ctx.LogAction(ActionLogType.ClearInventory, "CLEARED PERSONAL INVENTORY");
                 ctx.Reply(T.ClearInventorySelf);
             }

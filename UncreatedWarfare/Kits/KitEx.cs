@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -355,6 +356,14 @@ public static class KitEx
         }
 
         return true;
+    }
+    /// <summary>
+    /// Replaces newline constants like '/n', '\n', '&lt;br&gt;', etc with the actual newline character.
+    /// </summary>
+    [return: NotNullIfNotNull("str")]
+    public static string? ReplaceNewLineSubstrings(string? str)
+    {
+        return str?.Replace("\\n", "\n").Replace("/n", "\n").Replace("<br>", "\n").Replace("<br/>", "\n").Replace("<br />", "\n");
     }
     public static IKitItem[] GetDefaultLoadoutItems(Class @class)
     {
@@ -804,7 +813,6 @@ public static class KitEx
                 // Binoculars
                 items.Add(new SpecificPageKitItem(PrimaryKey.NotAssigned, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 5, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
-
         }
         return items.ToArray();
     }

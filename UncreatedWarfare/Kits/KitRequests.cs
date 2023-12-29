@@ -225,6 +225,7 @@ public class KitRequests(KitManager manager)
         try
         {
             oldKit = await player.GetActiveKit(token).ConfigureAwait(false);
+            _ = kit.Items; // run off main thread preferrably, not that it's usually that expensive
             await UCWarfare.ToUpdate(token);
             GrantKit(player, kit, tip);
             Manager.Signs.UpdateSigns(kit);

@@ -354,12 +354,6 @@ public sealed class CommandParameter
     }
     public string? GetDescription(LanguageInfo? language)
     {
-        if (DescriptionTranslations == null)
-            return Description;
-
-        if (language != null && DescriptionTranslations.TryGetValue(language.Code, out string desc))
-            return desc;
-
-        return Description;
+        return DescriptionTranslations == null ? Description : DescriptionTranslations.Translate(language, Description);
     }
 }

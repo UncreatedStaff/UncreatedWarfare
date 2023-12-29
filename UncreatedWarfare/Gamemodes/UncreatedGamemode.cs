@@ -411,7 +411,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await task.ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         await InvokeSingletonEvent<IPlayerPostInitListener, IPlayerPostInitListenerAsync>
-                (x => x.OnPostPlayerInit(player), x => x.OnPostPlayerInit(player, token), token, onlineCheck: player)
+                (x => x.OnPostPlayerInit(player, wasAlreadyOnline), x => x.OnPostPlayerInit(player, wasAlreadyOnline, token), token, onlineCheck: player)
             .ConfigureAwait(false);
     }
     private void PlayerInitIntl(UCPlayer player, bool wasAlreadyOnline)

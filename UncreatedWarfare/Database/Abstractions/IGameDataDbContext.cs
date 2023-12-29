@@ -12,12 +12,12 @@ public interface IGameDataDbContext : IDbContext
         modelBuilder.Entity<WarfareUserData>()
             .HasMany<SessionRecord>()
             .WithOne(x => x.PlayerData)
-            .OnDelete(DeleteBehavior.NoAction);
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<GameRecord>()
             .HasMany(x => x.Sessions)
             .WithOne(x => x.Game)
-            .OnDelete(DeleteBehavior.NoAction);
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<SessionRecord>()
             .HasOne(x => x.PreviousSession)
@@ -30,5 +30,25 @@ public interface IGameDataDbContext : IDbContext
             .WithOne()
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<SessionRecord>()
+            .HasOne(x => x.Map)
+            .WithMany()
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SessionRecord>()
+            .HasOne(x => x.Kit)
+            .WithMany()
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<SessionRecord>()
+            .HasOne(x => x.Season)
+            .WithMany()
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SessionRecord>()
+            .HasOne(x => x.Faction)
+            .WithMany()
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

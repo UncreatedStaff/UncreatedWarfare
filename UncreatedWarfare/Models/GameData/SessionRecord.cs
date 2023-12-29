@@ -81,6 +81,9 @@ public class SessionRecord
     public uint? KitId { get; set; }
     public Kit? Kit { get; set; }
 
+    [StringLength(25)]
+    public string? KitName { get; set; }
+
     public bool StartedGame { get; set; }
     public bool FinishedGame { get; set; }
     public bool UnexpectedTermination { get; set; }
