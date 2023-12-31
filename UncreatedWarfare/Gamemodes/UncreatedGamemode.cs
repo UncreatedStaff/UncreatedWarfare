@@ -241,7 +241,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         IDisposable profiler1 = ProfilingUtils.StartTracking(Name + " Unsubscribe");
 #endif
-        L.LogDebug("Unsub:");
         Unsubscribe();
         InternalUnsubscribe();
 #if DEBUG
@@ -250,7 +249,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         IDisposable profiler2 = ProfilingUtils.StartTracking(Name + " Pre Dispose");
 #endif
-        L.LogDebug("PreDispose:");
         Task task = PreDispose(token);
         if (!task.IsCompleted)
         {
@@ -265,7 +263,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         IDisposable profiler3 = ProfilingUtils.StartTracking(Name + " Dispose");
 #endif
-        L.LogDebug("Unload singletons:");
         await Data.Singletons.UnloadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
@@ -275,9 +272,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         IDisposable profiler4 = ProfilingUtils.StartTracking(Name + " Post Dispose");
 #endif
-        L.LogDebug("PostDsposeIntl:");
         InternalPostDispose();
-        L.LogDebug("PostDspose:");
         task = PostDispose(token);
         if (!task.IsCompleted)
         {
@@ -292,10 +287,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         UCWarfare.I.ProcessTasks = false;
         try
         {
-            L.LogDebug("Let Tasks Unload:");
             await UCWarfare.I.LetTasksUnload(token);
             _tokenSrc.Cancel();
-            L.LogDebug("Done:");
         }
         finally
         {

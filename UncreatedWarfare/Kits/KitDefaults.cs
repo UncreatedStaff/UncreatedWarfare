@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.SQL;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
@@ -198,7 +197,7 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
 
                 // Frag Grenades
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 1, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
-                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 1, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 1, 1, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Military Knife
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 5, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
@@ -239,14 +238,14 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 6, 0, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Frag Grenades
-                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 4, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
-                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 5, 1, 1, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 4, 1, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 5, 1, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Military Knife
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 4, 2, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 6, 2, 2, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 6, 2, 0, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.Breacher:
                 items.Add(new AssetRedirectPageKitItem(0u, 3, 0, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
@@ -284,7 +283,7 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 4, 2, 0, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 5, 2, 0, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 5, 2, 1, Page.Backpack, 1, Array.Empty<byte>()));
 
                 // Binoculars
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 0, 4, 0, Page.Backpack, 1, Array.Empty<byte>()));
@@ -304,8 +303,8 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 3, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Frag Grenades
-                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 1, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
-                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 2, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 1, 1, 0, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("b01e414db03747509e87ebc515744216"), 2, 1, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 0, 1, 0, Page.Hands, 1, Array.Empty<byte>()));
@@ -328,7 +327,7 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("7bf622df8cfe4d8c8b740fae3e95b957"), 3, 2, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Military Knife
-                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 4, 3, 3, Page.Backpack, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("47097f72d56c4bfb83bb8947e66396d5"), 4, 3, 1, Page.Backpack, 1, Array.Empty<byte>()));
                 break;
             case Class.MachineGunner:
                 items.Add(new AssetRedirectPageKitItem(0u, 0, 2, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
@@ -407,7 +406,7 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
             case Class.Sniper:
                 // Backpack
                 items.RemoveAt(5);
-                items.Add(new AssetRedirectPageKitItem(0u, 0, 0, 0, Page.Vest, RedirectType.EntrenchingTool, null));
+                items.Add(new AssetRedirectPageKitItem(0u, 1, 0, 0, Page.Vest, RedirectType.EntrenchingTool, null));
 
                 // Dressings
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("ae46254cfa3b437e9d74a5963e161da4"), 0, 2, 0, Page.Hands, 1, Array.Empty<byte>()));
@@ -420,7 +419,7 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("1344161ee08e4297b64b4dc068c5935e"), 3, 2, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // Binoculars
-                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 2, 1, 1, Page.Hands, 1, Array.Empty<byte>()));
+                items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("f260c581cf504098956f424d62345982"), 1, 1, 0, Page.Hands, 1, Array.Empty<byte>()));
 
                 // MRE
                 items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Page.Vest, 1, Array.Empty<byte>()));
@@ -430,7 +429,7 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
 
                 // Laser Rangefinder
                 if (Assets.find(new Guid("010de9d7d1fd49d897dc41249a22d436")) is ItemAsset rgf)
-                    items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference(rgf.GUID), 1, 0, 0, Page.Hands, 1, rgf.getState(EItemOrigin.ADMIN)));
+                    items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference(rgf.GUID), 3, 0, 0, Page.Vest, 1, rgf.getState(EItemOrigin.ADMIN)));
                 break;
             case Class.APRifleman:
                 items.Add(new AssetRedirectPageKitItem(0u, 0, 3, 1, Page.Backpack, RedirectType.EntrenchingTool, null));
