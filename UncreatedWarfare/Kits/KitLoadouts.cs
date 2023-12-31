@@ -154,7 +154,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
         kit.Faction = null;
         kit.FactionId = null;
         kit.UpdateLastEdited(fromPlayer);
-        kit.SetItemArray(KitEx.GetDefaultLoadoutItems(@class), dbContext);
+        kit.SetItemArray(KitDefaults<WarfareDbContext>.GetDefaultLoadoutItems(@class), dbContext);
         kit.SetUnlockRequirementArray(Array.Empty<UnlockRequirement>(), dbContext);
         kit.RequiresNitro = false;
         kit.WeaponText = string.Empty;
@@ -266,7 +266,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         await using IKitsDbContext dbContext = new WarfareDbContext();
 
-        IKitItem[] items = KitEx.GetDefaultLoadoutItems(@class);
+        IKitItem[] items = KitDefaults<WarfareDbContext>.GetDefaultLoadoutItems(@class);
         kit = new Kit(loadoutName, @class, KitDefaults<WarfareDbContext>.GetDefaultBranch(@class), KitType.Loadout, SquadLevel.Member, null)
         {
             Creator = fromPlayer,

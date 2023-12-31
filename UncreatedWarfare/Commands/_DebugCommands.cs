@@ -45,6 +45,8 @@ using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Permissions;
 using Uncreated.Warfare.Stats;
 using Debug = System.Diagnostics.Debug;
+using Cysharp.Threading.Tasks.Triggers;
+
 
 #if DEBUG
 using HarmonyLib;
@@ -1109,7 +1111,10 @@ public class DebugCommand : AsyncCommand
             if (sql == null)
                 ctx.SendUnknownError();
             else
+            {
+                sql = await manager.GetKit(sql.PrimaryKey, token, x => KitManager.RequestableSet(x, false));
                 await manager.Requests.GiveKit(ctx.Caller, sql, true, false, token).ConfigureAwait(false);
+            }
         }
 
         if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)
@@ -1550,12 +1555,12 @@ public class DebugCommand : AsyncCommand
         if (!ctx.TryGet(0, out Class @class))
             throw ctx.SendCorrectUsage("/test startloadout <class>");
 
-        IKitItem[] items = KitEx.GetDefaultLoadoutItems(@class);
+        IKitItem[] items = KitDefaults<WarfareDbContext>.GetDefaultLoadoutItems(@class);
         L.LogDebug("Found " + items.Length + " item" + items.Length.S() + ".");
         
         UCInventoryManager.GiveItems(ctx.Caller, items, true);
 
-        ctx.ReplyString("Given " + items.Length + " default item" + items.Length.S() + " for a " + Localization.TranslateEnum(@class, ctx.LanguageInfo) + " loadout.");
+        ctx.ReplyString($"Given {items.Length} default item{items.Length.S()} for a {Localization.TranslateEnum(@class, ctx.LanguageInfo)} loadout.");
     }
 
     private async Task viewlens(CommandInteraction ctx, CancellationToken token)

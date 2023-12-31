@@ -799,7 +799,7 @@ public sealed class KitCommand : AsyncCommand
                 if (KitEx.ParseStandardLoadoutId(kitName) < 1 || kitName.Length < 18 || !ulong.TryParse(kitName.Substring(0, 17), NumberStyles.Number, Data.AdminLocale, out ulong playerId))
                     throw ctx.Reply(T.KitLoadoutIdBadFormat);
                 
-                Kit? kit = await manager.FindKit(kitName, token, true);
+                Kit? kit = await manager.FindKit(kitName, token, true, KitManager.FullSet);
                 if (kit != null)
                 {
                     if (!kit.NeedsUpgrade)
@@ -916,7 +916,7 @@ public sealed class KitCommand : AsyncCommand
             BarricadeDrop? drop = null;
             if (ctx.TryGet(1, out string kitName) || ctx.TryGetTarget(out drop))
             {
-                Kit? kit = await manager.FindKit(kitName, token, true);
+                Kit? kit = await manager.FindKit(kitName, token, true, x => KitManager.RequestableSet(x, false));
                 if (kit == null && drop != null)
                 {
                     kit = Signs.GetKitFromSign(drop, out int loadout);
@@ -926,6 +926,9 @@ public sealed class KitCommand : AsyncCommand
                         UCPlayer.TryApplyViewLens(ref pl);
                         kit = await manager.Loadouts.GetLoadout(pl, loadout, token).ConfigureAwait(false);
                     }
+
+                    if (kit != null)
+                        kit = await manager.GetKit(kit.PrimaryKey, token, x => KitManager.RequestableSet(x, false));
                 }
                 
                 if (kit != null)
@@ -1256,7 +1259,7 @@ public sealed class KitCommand : AsyncCommand
                 if (!ctx.TryGetRange(3, out string? signText) || string.IsNullOrWhiteSpace(signText))
                     signText = null;
                 await UCWarfare.ToUpdate(token);
-                Kit loadout = new Kit(loadoutId, @class, signText, null)
+                Kit loadout = new Kit(loadoutId, @class, signText)
                 {
                     Creator = ctx.CallerID,
                     LastEditor = ctx.CallerID

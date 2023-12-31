@@ -318,10 +318,10 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
         }
     }
     /// <summary>For loadout.</summary>
-    public Kit(string loadout, Class @class, string? displayName, FactionInfo? faction)
+    public Kit(string loadout, Class @class, string? displayName)
     {
-        Faction = faction?.CreateModel();
-        FactionId = faction?.PrimaryKey;
+        Faction = null;
+        FactionId = null;
         InternalName = loadout;
         Class = @class;
         Branch = KitDefaults<WarfareDbContext>.GetDefaultBranch(@class);
@@ -340,7 +340,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
                 Kit = this,
                 KitId = PrimaryKey,
                 Value = displayName,
-                Language = defaultLanguage,
                 LanguageId = defaultLanguage.Key
             });
         }
@@ -518,8 +517,8 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<KitItemModel> models = ItemModels;
-        if (models is not { Count: > 0 })
+        KitItemModel[] models = ItemModels.ToArray();
+        if (models is not { Length: > 0 })
         {
             _items = Array.Empty<IKitItem>();
             return;
@@ -527,7 +526,7 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
 
         L.LogDebug($"Buidling item array for {GetDisplayName()}...");
         bool pooled = UCWarfare.IsLoaded && UCWarfare.IsMainThread;
-        List<IKitItem> tempList = pooled ? ListPool<IKitItem>.claim() : new List<IKitItem>(models.Count);
+        List<IKitItem> tempList = pooled ? ListPool<IKitItem>.claim() : new List<IKitItem>(models.Length);
         try
         {
             foreach (KitItemModel model in models)
@@ -619,15 +618,15 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<KitUnlockRequirement> models = UnlockRequirementsModels;
-        if (models is not { Count: > 0 })
+        KitUnlockRequirement[] models = UnlockRequirementsModels.ToArray();
+        if (models is not { Length: > 0 })
         {
             _unlockRequirements = Array.Empty<UnlockRequirement>();
             return;
         }
 
         bool pooled = UCWarfare.IsLoaded && UCWarfare.IsMainThread;
-        List<UnlockRequirement> tempList = pooled ? ListPool<UnlockRequirement>.claim() : new List<UnlockRequirement>(models.Count);
+        List<UnlockRequirement> tempList = pooled ? ListPool<UnlockRequirement>.claim() : new List<UnlockRequirement>(models.Length);
         try
         {
             foreach (KitUnlockRequirement model in models)

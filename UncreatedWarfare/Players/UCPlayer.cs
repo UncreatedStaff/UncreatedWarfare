@@ -1482,7 +1482,7 @@ public class PlayerSave
     public uint KitId = 0;
     public string SquadName = string.Empty;
     public ulong SquadLeader;
-    public bool SquadWasLocked;
+    public byte SquadLockedId;
     [CommandSettable]
     public bool HasQueueSkip;
     [CommandSettable]
@@ -1517,7 +1517,7 @@ public class PlayerSave
         {
             SquadName = player.Squad.Name;
             SquadLeader = player.Squad.Leader.Steam64;
-            SquadWasLocked = player.Squad.IsLocked;
+            SquadLockedId = player.Squad.LockedId;
         }
         LastGame = Data.Gamemode == null ? 0 : Data.Gamemode.GameId;
     }
@@ -1534,7 +1534,7 @@ public class PlayerSave
         block.writeUInt32(save.KitId);
         block.writeString(save.SquadName);
         block.writeUInt64(save.SquadLeader);
-        block.writeBoolean(save.SquadWasLocked);
+        block.writeByte(save.SquadLockedId);
         block.writeBoolean(save.HasQueueSkip);
         block.writeInt64((long)save.LastGame);
         block.writeBoolean(save.ShouldRespawnOnJoin);
@@ -1579,7 +1579,7 @@ public class PlayerSave
             if (dv > 2)
             {
                 save.SquadLeader = block.readUInt64();
-                save.SquadWasLocked = block.readBoolean();
+                save.SquadLockedId = block.readByte();
             }
             save.HasQueueSkip = block.readBoolean();
             save.LastGame = (ulong)block.readInt64();

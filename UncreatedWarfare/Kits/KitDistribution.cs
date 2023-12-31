@@ -34,7 +34,7 @@ public class KitDistribution(KitManager manager)
                 continue;
 
             ulong team = pl.GetTeam();
-            if (team == 1 && (t1def ??= await Manager.GetDefaultKit(1ul, token)) != null)
+            if (team == 1 && (t1def ??= await Manager.GetDefaultKit(1ul, token, x => KitManager.RequestableSet(x, false))) != null)
                 await Manager.Requests.GiveKit(pl, t1def == kit ? null : t1def, manual, false, token);
             else if (team == 2 && (t2def ??= await Manager.GetDefaultKit(2ul, token)) != null)
                 await Manager.Requests.GiveKit(pl, t2def == kit ? null : t2def, manual, false, token);
@@ -46,7 +46,7 @@ public class KitDistribution(KitManager manager)
     public async Task DequipKit(UCPlayer player, bool manual, CancellationToken token = default)
     {
         ulong team = player.GetTeam();
-        Kit? dkit = await Manager.GetDefaultKit(team, token);
+        Kit? dkit = await Manager.GetDefaultKit(team, token, x => KitManager.RequestableSet(x, false));
         if (dkit != null)
             await Manager.Requests.GiveKit(player, dkit, manual, true, token);
         else

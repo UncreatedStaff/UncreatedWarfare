@@ -167,7 +167,7 @@ public class SquadCommand : Command
                 {
                     save.SquadName = string.Empty;
                     save.SquadLeader = 0;
-                    save.SquadWasLocked = false;
+                    save.SquadLockedId = 0;
                     PlayerSave.WriteToSaveFile(save);
                     throw ctx.Reply(T.SquadPlayerKicked, member);
                 }

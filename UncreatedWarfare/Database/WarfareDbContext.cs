@@ -50,12 +50,13 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
             .CharSet(CharSet.Utf8Mb4)
             .CharSetBehavior(CharSetBehavior.AppendToAllColumns));
 
-        optionsBuilder.EnableSensitiveDataLogging();
+        // optionsBuilder.EnableSensitiveDataLogging();
 
         IDbContextOptionsBuilderInfrastructure settings = optionsBuilder;
         
         // for some reason default logging completely crashes the server
-        CoreOptionsExtension extension = (optionsBuilder.Options.FindExtension<CoreOptionsExtension>() ?? new CoreOptionsExtension()).WithLoggerFactory(new L.UCLoggerFactory());
+        CoreOptionsExtension extension = (optionsBuilder.Options.FindExtension<CoreOptionsExtension>() ?? new CoreOptionsExtension())
+            .WithLoggerFactory(new L.UCLoggerFactory() { DebugLogging = false });
         settings.AddOrUpdateExtension(extension);
     }
 

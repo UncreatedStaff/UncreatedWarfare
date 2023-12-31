@@ -774,6 +774,7 @@ public static class L
 
     public sealed class UCLogger : ILogger
     {
+        public bool DebugLogging { get; set; }
         private readonly string? _categoryName;
         internal UCLogger() { }
         internal UCLogger(string categoryName)
@@ -808,19 +809,19 @@ public static class L
         }
         public bool IsEnabled(LogLevel logLevel)
         {
-#if DEBUG
-            return true;
-#else
+            if (DebugLogging)
+                return true;
+
             return logLevel > LogLevel.Debug;
-#endif
         }
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => default;
     }
     public sealed class UCLoggerFactory : ILoggerFactory, ILoggerProvider
     {
+        public bool DebugLogging { get; set; }
         public void Dispose() { }
-        public ILogger CreateLogger(string categoryName) => new UCLogger(categoryName);
+        public ILogger CreateLogger(string categoryName) => new UCLogger(categoryName) { DebugLogging = DebugLogging };
         public void AddProvider(ILoggerProvider provider) { }
     }
     private class UCUnityLogger : UnityEngine.ILogger

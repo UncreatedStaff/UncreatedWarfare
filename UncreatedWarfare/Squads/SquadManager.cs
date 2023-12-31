@@ -257,13 +257,13 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (player.Save.LastGame == Data.Gamemode.GameId && player.Save.SquadLeader != 0ul && string.IsNullOrEmpty(player.Save.SquadName))
+        if (player.Save.LastGame == Data.Gamemode.GameId && player.Save.SquadLeader != 0ul && !string.IsNullOrEmpty(player.Save.SquadName))
         {
             string sn = player.Save.SquadName;
             ulong pl = player.Save.SquadLeader;
             Squad squad = Squads.Find(s => s.Team == team && s.Name.Equals(sn, StringComparison.Ordinal) && s.Leader.Steam64 == pl);
 
-            if (squad is not null && !squad.IsFull() && (!squad.IsLocked || player.Save.SquadWasLocked))
+            if (squad is not null && !squad.IsFull() && (!squad.IsLocked || player.Save.SquadLockedId == squad.LockedId))
             {
                 JoinSquad(player, squad);
             }
@@ -726,7 +726,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ActionLog.Add(value ? ActionLogType.LockedSquad : ActionLogType.UnlockedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team), squad.Leader);
-        squad.IsLocked = value;
+        squad.LockOrUnlock(value);
         ReplicateLockSquad(squad);
     }
     public static bool MaxSquadsReached(ulong team)
@@ -819,6 +819,10 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     public bool Disbanded;
     public RallyPoint? RallyPoint;
     public int DisbandStrikes;
+    /// <summary>
+    /// Increments every time the squad is locked or unlocked to differentiate between locks if a player leaves.
+    /// </summary>
+    public byte LockedId;
     public bool HasRally => RallyPoint != null;
     /// <summary><see langword="true"/> if this <see cref="Squad"/>'s <seealso cref="Leader"/> is a commander.</summary>
     public bool IsCommandingSquad
@@ -842,10 +846,12 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
         Branch = branch;
         Leader = leader;
         IsLocked = false;
+        LockedId = 1;
         Members = new List<UCPlayer>(6) { leader };
         DisbandStrikes = 0;
     }
-
+    public void Lock() => LockOrUnlock(true);
+    public void Unlock() => LockOrUnlock(false);
     public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
     public bool IsFull() => Members.Count >= SquadManager.SQUAD_MAX_MEMBERS;
     public bool IsNotSolo() => Members.Count > 1;
@@ -858,6 +864,17 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
         }
 
         return false;
+    }
+    public void LockOrUnlock(bool isLocked)
+    {
+        if (isLocked == IsLocked)
+            return;
+
+        if (LockedId == byte.MaxValue)
+            LockedId = 1;
+        else
+            ++LockedId;
+        IsLocked = isLocked;
     }
     IEnumerator IEnumerable.GetEnumerator() => Members.GetEnumerator();
     public IEnumerator<ITransportConnection> EnumerateMembers()

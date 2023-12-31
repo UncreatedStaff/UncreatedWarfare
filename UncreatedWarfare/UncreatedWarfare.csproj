@@ -95,10 +95,9 @@
   <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->
   <ItemGroup>
     <PackageReference Include="DanielWillett.StackCleaner" Version="[1.4.2,)" />
-    <PackageReference Include="DanielWillett.ReflectionTools" Version="[2.0.2,)" />
+    <PackageReference Include="DanielWillett.ReflectionTools" Version="2.0.3" />
     <PackageReference Include="Uncreated.Networking.Warfare" Version="[3.0.0,)" />
     <PackageReference Include="Uncreated.UI" Version="[1.0.0,)" />
-    <PackageReference Include="UniTask" Version="[2.5.0,)" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
 
     <!-- for the love of god do not touch these version numbers -->
@@ -106,6 +105,7 @@
     <PackageReference Include="System.Data.Common" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Caching" Version="4.5.0" />
     <PackageReference Include="System.Text.Json" Version="4.7.1" NoWarn="NU1605" />
+    <PackageReference Include="UniTask" Version="2.5.0" />
     <PackageReference Update="OpenMod.Unturned.Redist" NoWarn="NU1701" />
     <PackageReference Update="Lib.Harmony" NoWarn="NU1701" />
 

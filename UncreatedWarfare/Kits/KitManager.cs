@@ -815,7 +815,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     /// <remarks>Thread Safe</remarks>
     public async Task TryGiveKitOnJoinTeam(UCPlayer player, ulong team, CancellationToken token = default)
     {
-        Kit? kit = await GetDefaultKit(team, token).ConfigureAwait(false);
+        Kit? kit = await GetDefaultKit(team, token, x => RequestableSet(x, false)).ConfigureAwait(false);
         if (kit == null)
         {
             L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
@@ -823,7 +823,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             UCInventoryManager.ClearInventoryAndSlots(player);
             return;
         }
-
+        L.LogDebug($"Giving kit: {kit.InternalName} ({kit.PrimaryKey}).");
         await Requests.GiveKit(player, kit, false, false, token).ConfigureAwait(false);
     }
     public async Task<Kit?> TryGiveUnarmedKit(UCPlayer player, bool manual, CancellationToken token = default)
@@ -831,7 +831,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Kit? kit = await GetDefaultKit(player.GetTeam(), token).ConfigureAwait(false);
+        Kit? kit = await GetDefaultKit(player.GetTeam(), token, x => RequestableSet(x, false)).ConfigureAwait(false);
         if (kit == null)
             return null;
 
@@ -862,16 +862,14 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             !k.IsClassLimited(out _, out _, t2, false) &&
             k.MeetsUnlockRequirements(player)
         );
+
+        rifleman ??= await GetDefaultKit(t2, token).ConfigureAwait(false);
         if (rifleman != null)
         {
             uint id = rifleman.PrimaryKey;
-            rifleman = await dbContext.Kits
-                .Include(x => x.ItemModels)
-                .Include(x => x.Translations)
+            rifleman = await RequestableSet(dbContext, false)
                 .FirstOrDefaultAsync(x => x.PrimaryKey == id, token).ConfigureAwait(false);
         }
-
-        rifleman ??= await GetDefaultKit(t2, token).ConfigureAwait(false);
         await Requests.GiveKit(player, rifleman, manual, tip, token).ConfigureAwait(false);
         return rifleman;
     }

@@ -311,7 +311,7 @@ public static class OffenseManager
                         {
                             if (c != 1)
                                 sbq.Append(',');
-                            sbq.Append("(@0, @1, @").Append(c * 2).Append(", @").Append(c * 2 + 1).Append(')');
+                            sbq.Append("(@0, @1, @").Append(c * 2).Append(", @").Append(c * 2 + 1).Append(",1,@1)");
                             objs[c * 2] = i;
                             objs[c * 2 + 1] = bytes[i];
                             ++c;
@@ -322,7 +322,7 @@ public static class OffenseManager
                     if (c > 1)
                     {
                         sbq.Insert(0, $"INSERT INTO `{WarfareSQL.TableHWIDs}` (`{WarfareSQL.ColumnHWIDsSteam64}`, `{WarfareSQL.ColumnHWIDsFirstLogin}`, " +
-                                      $"`{WarfareSQL.ColumnHWIDsIndex}`, `{WarfareSQL.ColumnHWIDsHWID}`) VALUES ");
+                                      $"`{WarfareSQL.ColumnHWIDsIndex}`, `{WarfareSQL.ColumnHWIDsHWID}`, `{WarfareSQL.ColumnHWIDsLoginCount}`, `{WarfareSQL.ColumnHWIDsLastLogin}`) VALUES ");
                         sbq.Append(';');
                         string query = sbq.ToString();
 
@@ -347,8 +347,9 @@ public static class OffenseManager
                     await Data.DatabaseManager.NonQueryAsync(
                         $"INSERT INTO `{WarfareSQL.TableIPAddresses}` (`{WarfareSQL.ColumnIPAddressesSteam64}`, " +
                         $"`{WarfareSQL.ColumnIPAddressesPackedIP}`, `{WarfareSQL.ColumnIPAddressesUnpackedIP}`, " +
-                        $"`{WarfareSQL.ColumnIPAddressesFirstLogin}`) VALUES (@0, @1, @2, @3);",
-                        new object[] { s64, packed, Parser.getIPFromUInt32(packed), DateTime.UtcNow });
+                        $"`{WarfareSQL.ColumnIPAddressesFirstLogin}`, `{WarfareSQL.ColumnIPAddressesLoginCount}`, " +
+                        $"`{WarfareSQL.ColumnIPAddressesLastLogin}`) VALUES (@0, @1, @2, @3, 1, @4);",
+                        new object[] { s64, packed, Parser.getIPFromUInt32(packed), DateTime.UtcNow, DateTime.UtcNow });
             }
             catch (Exception ex)
             {
