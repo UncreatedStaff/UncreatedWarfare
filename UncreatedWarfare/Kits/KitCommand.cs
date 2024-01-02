@@ -916,7 +916,7 @@ public sealed class KitCommand : AsyncCommand
             BarricadeDrop? drop = null;
             if (ctx.TryGet(1, out string kitName) || ctx.TryGetTarget(out drop))
             {
-                Kit? kit = await manager.FindKit(kitName, token, true, x => KitManager.RequestableSet(x, false));
+                Kit? kit = kitName == null ? null : await manager.FindKit(kitName, token, true, x => KitManager.RequestableSet(x, false));
                 if (kit == null && drop != null)
                 {
                     kit = Signs.GetKitFromSign(drop, out int loadout);
@@ -1103,7 +1103,11 @@ public sealed class KitCommand : AsyncCommand
                                 ctx.Reply(T.KitPropertySet, property, kit, newValue);
                                 ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
                                 if (oldbranch != kit.Branch || oldclass != kit.Class || prevType != kit.Type)
+                                {
+                                    kit = await manager.GetKit(kit.PrimaryKey, token, x => KitManager.RequestableSet(x, false));
+                                    await UCWarfare.ToUpdate(token);
                                     manager.InvokeAfterMajorKitUpdate(kit, true);
+                                }
                                 return;
                         }
                     }

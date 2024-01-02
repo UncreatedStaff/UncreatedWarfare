@@ -565,13 +565,11 @@ public static class Data
         if (LanguageDataStore.GetInfoCached(L.Default) is { } defaultLang)
             FallbackLanguageInfo = defaultLang;
     }
-    internal static void RegisterInitialSyncs()
+    internal static void RegisterInitialConfig()
     {
         Gamemode.ConfigObj = new GamemodeConfig();
         Gamemode.WinToastUI = new Gamemodes.UI.WinToastUI();
         IsInitialSyncRegistering = false;
-        if (UCWarfare.IsLoaded && UCWarfare.Config.EnableSync)
-            ConfigSync.OnInitialSyncRegisteringComplete();
     }
     private static void OnSingletonReloaded(IReloadableSingleton singleton, bool success)
     {
@@ -648,7 +646,6 @@ public static class Data
                 Quests.DailyQuests.OnConnectedToServer();
             if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)
                 ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
-            ConfigSync.OnConnected(connection);
             tkn.ThrowIfCancellationRequested();
             IUncreatedSingleton[] singletons = Singletons.GetSingletons();
             for (int i = 0; i < singletons.Length; ++i)

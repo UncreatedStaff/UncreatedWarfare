@@ -781,15 +781,36 @@ public static class EventFunctions
                     await ucplayer.PurchaseSync.WaitAsync(tkn).ConfigureAwait(false);
                     try
                     {
+                        L.LogDebug($"Initing player with settings: kit id: {ucplayer.Save.KitId}, shouldApplyLastKit: {shouldApplyLastKit}, forceLastKitRemoval: {forceLastKitRemoval}.");
                         if (shouldApplyLastKit && ucplayer.Save.KitId != 0)
                         {
-                            Task<Kit?>? kitTask = KitManager.GetSingletonQuick()?.GetKit(ucplayer.Save.KitId, token);
+                            Task<Kit?>? kitTask = KitManager.GetSingletonQuick()?.GetKit(ucplayer.Save.KitId, token, x => KitManager.RequestableSet(x, false));
                             if (kitTask != null)
                             {
                                 Kit? kit = await kitTask.ConfigureAwait(false);
 
                                 await UCWarfare.ToUpdate(token);
                                 ucplayer.ChangeKit(kit);
+                                // create a squad or give unarmed kit
+                                if (kit.Class == Class.Squadleader && SquadManager.Loaded)
+                                {
+                                    L.LogDebug("Player joining with squad leader kit..");
+                                    if (SquadManager.MaxSquadsReached(team) || SquadManager.AreSquadLimited(team, out _))
+                                    {
+                                        KitManager? manager = KitManager.GetSingletonQuick();
+                                        if (manager != null)
+                                        {
+                                            await manager.TryGiveUnarmedKit(ucplayer, manual: false, token);
+                                            await UCWarfare.ToUpdate(token);
+                                        }
+                                        L.LogDebug("  Tried to give unarmed kit.");
+                                    }
+                                    else
+                                    {
+                                        SquadManager.CreateSquad(ucplayer, ucplayer.GetTeam());
+                                        L.LogDebug("  Created squad.");
+                                    }
+                                }
                             }
                             else
                                 await UCWarfare.ToUpdate(token);

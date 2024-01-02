@@ -175,13 +175,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         }
         else _nextRestartTime = DateTime.MaxValue;
 
-        if (Config.EnableSync)
-            gameObject.AddComponent<ConfigSync>();
-
-        if (Config.EnableSync)
-            ConfigSync.Reflect();
-
-        Data.RegisterInitialSyncs();
+        Data.RegisterInitialConfig();
 
         new PermissionSaver();
         await Data.LoadSQL(token).ConfigureAwait(false);
@@ -1070,7 +1064,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 #if DEBUG
             profiler2 = ProfilingUtils.StartTracking("Harmony Cleanup.");
 #endif
-            ConfigSync.UnpatchAll();
             try
             {
                 LoadingQueueBlockerPatches.Unpatch();

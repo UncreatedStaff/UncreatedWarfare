@@ -337,7 +337,8 @@ public static class EventDispatcher
     {
         UCPlayer? player = UCPlayer.FromCSteamID(steamID);
         if (player is null) return;
-        player.IsLeaving = true;
+        lock (player)
+            player.IsLeaving = true;
         PlayerEvent args = new PlayerEvent(player);
         if (PlayerLeaving != null)
         {
@@ -364,7 +365,7 @@ public static class EventDispatcher
             TryInvoke(inv, args, nameof(PlayerLeft));
         }
 
-        GC.Collect(2, GCCollectionMode.Forced, false, false);
+        GC.Collect(2, GCCollectionMode.Optimized, false, false);
     }
 
     private static List<PendingAsyncData> _pendingAsyncData = new InspectableList<PendingAsyncData>(4);

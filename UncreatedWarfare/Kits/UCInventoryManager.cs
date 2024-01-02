@@ -107,6 +107,9 @@ public static class UCInventoryManager
     }
     public static void UpdateSlots(UCPlayer player)
     {
+        ThreadUtil.assertIsGameThread();
+        if (!player.IsOnline)
+            return;
         // removes the primaries/secondaries from the third person model
         player.Player.equipment.sendSlot(0);
         player.Player.equipment.sendSlot(1);
@@ -114,6 +117,8 @@ public static class UCInventoryManager
     public static void ClearInventory(UCPlayer player, bool clothes = true)
     {
         ThreadUtil.assertIsGameThread();
+        if (!player.IsOnline)
+            return;
         player.ItemTransformations.Clear();
         player.ItemDropTransformations.Clear();
         if (Data.UseFastKits)
@@ -212,6 +217,8 @@ public static class UCInventoryManager
     public static void GiveItems(UCPlayer player, IKitItem[] items, bool clear)
     {
         ThreadUtil.assertIsGameThread();
+        if (!player.IsOnline)
+            return;
 
         if (clear)
             ClearInventory(player, true);
@@ -439,6 +446,9 @@ public static class UCInventoryManager
     }
     public static void SendPages(UCPlayer player)
     {
+        ThreadUtil.assertIsGameThread();
+        if (!player.IsOnline)
+            return;
         SDG.Unturned.Items[] il = player.Player.inventory.items;
         Data.SendInventory!.Invoke(player.Player.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
             writer =>
@@ -467,6 +477,7 @@ public static class UCInventoryManager
     }
     public static ItemJar? GetHeldItem(this UCPlayer player, out byte page)
     {
+        ThreadUtil.assertIsGameThread();
         if (player.IsOnline)
         {
             PlayerEquipment eq = player.Player.equipment;
@@ -515,26 +526,7 @@ public static class UCInventoryManager
 
         return posX + sizeX > pageSizeX || posY + sizeY > pageSizeY;
     }
-    public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort itemID, int amount)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        int counter = 0;
-
-        for (byte i = (byte)(storage.items.getItemCount() - 1); i >= 0; i--)
-        {
-            if (storage.items.getItem(i).item.id == itemID)
-            {
-                counter++;
-                storage.items.removeItem(i);
-
-                if (counter == amount)
-                    return;
-            }
-        }
-    }
-    [Obsolete]
+    [Obsolete("Use GUID instead.")]
     public static int CountItems(Player player, ushort itemID)
     {
 #if DEBUG
@@ -562,24 +554,5 @@ public static class UCInventoryManager
 #pragma warning disable CS0612
         return Assets.find(item) is not ItemAsset asset ? 0 : CountItems(player, asset.id);
 #pragma warning restore CS0612
-    }
-    public static void RemoveSingleItem(UCPlayer player, ushort itemID)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
-        {
-            byte pageCount = player.Player.inventory.getItemCount(page);
-
-            for (byte index = 0; index < pageCount; index++)
-            {
-                if (player.Player.inventory.getItem(page, index).item.id == itemID)
-                {
-                    player.Player.inventory.removeItem(page, index);
-                    return;
-                }
-            }
-        }
     }
 }

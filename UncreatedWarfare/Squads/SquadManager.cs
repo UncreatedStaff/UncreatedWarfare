@@ -439,10 +439,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             {
                 if (Squads[i].Team == team)
                 {
-                    if (name == Squads[i].Name)
-                    {
+                    if (name.Equals(Squads[i].Name, StringComparison.Ordinal))
                         goto next;
-                    }
                 }
             }
             return name;
@@ -452,6 +450,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     }
     public static Squad CreateSquad(UCPlayer leader, ulong team)
     {
+        ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -519,7 +518,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         squad.Members.Sort((a, b) => b.CachedXP.CompareTo(a.CachedXP));
-        if (squad.Leader != null)
+        if (squad.Leader is { IsOnline: true, IsLeaving: false })
         {
             squad.Members.RemoveAll(x => x.Steam64 == squad.Leader.Steam64);
             squad.Members.Insert(0, squad.Leader);
@@ -542,7 +541,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         {
             Squads.Remove(squad);
             squad.Disbanded = true;
-            if (squad.Leader != null)
+            if (squad.Leader is { IsOnline: true, IsLeaving: false })
             {
                 squad.Leader.SendChat(T.SquadDisbanded, squad);
                 if (squad.Leader.KitClass == Class.Squadleader)
@@ -563,8 +562,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 squad.RallyPoint!.Destroy();
             }
 
-
-            SendSquadList(player);
+            if (player is { IsOnline: true, IsLeaving: false })
+                SendSquadList(player);
 
             return;
         }
@@ -585,16 +584,19 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         for (int i = 0; i < squad.Members.Count; i++)
         {
             UCPlayer p = squad.Members[i];
-            if (p.Steam64 != player.Steam64)
+            if (p.Steam64 != player.Steam64 && p is { IsOnline: true, IsLeaving: false })
                 p.SendChat(T.SquadPlayerLeft, player);
         }
         UpdateMemberList(squad);
         UpdateUIMemberCount(squad.Team);
 
-        if (squad.HasRally)
-            squad.RallyPoint!.ClearUIForPlayer(player);
+        if (player is { IsOnline: true, IsLeaving: false })
+        {
+            if (squad.HasRally)
+                squad.RallyPoint!.ClearUIForPlayer(player);
 
-        SendSquadList(player);
+            SendSquadList(player);
+        }
 
         PlayerManager.ApplyTo(player);
     }

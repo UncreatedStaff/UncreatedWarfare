@@ -75,8 +75,6 @@ public class SystemConfigData : JSONConfigData
     public bool RelayMicsDuringEndScreen { get; set; }
     [JsonPropertyName("enableSquads")]
     public bool EnableSquads { get; set; }
-    [JsonPropertyName("enableSync")]
-    public bool EnableSync { get; set; }
     [JsonPropertyName("enableActionMenu")]
     public bool EnableActionMenu { get; set; }
     [JsonPropertyName("loadoutPremiumCost")]
@@ -168,7 +166,6 @@ public class SystemConfigData : JSONConfigData
         Region = "eus";
         Currency = "USD";
         RegionKey = 255;
-        EnableSync = true;
         SecondsBetweenAnnouncements = 60f;
         SendActionLogs = true;
         DisableMissingAssetKick = false;

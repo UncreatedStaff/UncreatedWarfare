@@ -46,7 +46,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return await GetLoadouts(dbContext, steam64, token).ConfigureAwait(false);
     }
-    /// <summary>Indexed from 1.</summary>
+    /// <summary>Indexed from 1. Use with purchase sync.</summary>
     public Kit? GetLoadoutQuick(ulong steam64, int loadoutId)
     {
         if (loadoutId <= 0)

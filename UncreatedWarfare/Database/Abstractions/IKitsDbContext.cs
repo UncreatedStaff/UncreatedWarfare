@@ -107,6 +107,12 @@ public interface IKitsDbContext : IDbContext
             .WithOne(x => x.Kit)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<Kit>()
+            .HasOne(x => x.Faction)
+            .WithMany()
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<EliteBundle>()
             .HasMany(x => x.Kits)
             .WithOne(x => x.Bundle)

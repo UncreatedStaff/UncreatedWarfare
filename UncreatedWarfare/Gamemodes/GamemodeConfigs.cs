@@ -13,710 +13,571 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Sync;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 
 namespace Uncreated.Warfare.Gamemodes;
 
-public sealed class GamemodeConfig : SyncConfig<GamemodeConfigData>
+public sealed class GamemodeConfig : Config<GamemodeConfigData>
 {
-    public GamemodeConfig() : base(Path.Combine(Warfare.Data.Paths.BaseDirectory, "gamemode_settings.json"), "gameconfig") { }
+    public GamemodeConfig() : base(Warfare.Data.Paths.BaseDirectory, "gamemode_settings.json", "gameconfig") { }
+
+    /// <inheritdoc />
+    protected override void OnReload()
+    {
+        ToastManager.ReloadToastIds();
+        KitManager.MenuUI.LoadFromConfig(Data.UIKitMenu);
+        VehicleComponent.VehicleHUD.LoadFromConfig(Data.UIVehicleHUD);
+        Gamemode.WinToastUI.LoadFromConfig(Data.UIToastWin);
+        ActionManager.ActionMenuUI.LoadFromConfig(Data.UIActionMenu);
+        UCPlayer.LoadingUI.LoadFromConfig(Data.UILoading);
+        UCPlayer.MutedUI.LoadFromConfig(Data.UIMuted);
+        TicketManager.TicketUI.LoadFromConfig(Data.UITickets);
+        TeamSelector.JoinUI.LoadFromConfig(Data.UITeamSelector);
+        SquadManager.MenuUI.LoadFromConfig(Data.UISquadMenu);
+        SquadManager.ListUI.LoadFromConfig(Data.UISquadList);
+        SquadManager.RallyUI.LoadFromConfig(Data.UIRally);
+        FOBManager.ResourceUI.LoadFromConfig(Data.UINearbyResources);
+        FOBManager.ListUI.LoadFromConfig(Data.UIFOBList);
+        CTFUI.CaptureUI.LoadFromConfig(Data.UICapture);
+        CTFUI.ListUI.LoadFromConfig(Data.UIFlagList);
+        Points.XPUI.LoadFromConfig(Data.UIXPPanel);
+        Points.CreditsUI.LoadFromConfig(Data.UICreditsPanel);
+        ModerationUI.Instance.LoadFromConfig(Data.UICreditsPanel);
+        if (Warfare.Data.Is<Flags.Conquest>())
+            Warfare.Data.Gamemode.SetTiming(Data.ConquestEvaluateTime);
+        if (Warfare.Data.Is<TeamCTF>() || Warfare.Data.Is<Invasion>())
+            Warfare.Data.Gamemode.SetTiming(Data.AASEvaluateTime);
+    }
 }
-[Sync(ConfigSyncId.GamemodeConfig)]
+
 public sealed class GamemodeConfigData : JSONConfigData
 {
-    #region Barricades and Structures (1 to 200)
-    [Sync(1)]
+    #region Barricades and Structures
     [JsonPropertyName("barricade_insurgency_cache")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeInsurgencyCache { get; set; }
 
-    [Sync(2)]
     [JsonPropertyName("barricade_fob_radio_damaged")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeFOBRadioDamaged { get; set; }
 
-    [Sync(3)]
     [JsonPropertyName("barricade_fob_bunker")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeFOBBunker { get; set; }
 
-    [Sync(4)]
     [JsonPropertyName("barricade_fob_bunker_base")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeFOBBunkerBase { get; set; }
 
-    [Sync(5)]
     [JsonPropertyName("barricade_fob_ammo_crate")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeAmmoCrate { get; set; }
 
-    [Sync(6)]
     [JsonPropertyName("barricade_fob_ammo_crate_base")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeAmmoCrateBase { get; set; }
-
-    [Sync(7)]
+    
     [JsonPropertyName("barricade_fob_repair_station")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeRepairStation { get; set; }
 
-    [Sync(8)]
     [JsonPropertyName("barricade_fob_repair_station_base")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeRepairStationBase { get; set; }
 
-    [Sync(9)]
     [JsonPropertyName("barricade_ammo_bag")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeAmmoBag { get; set; }
 
-    [Sync(10)]
     [JsonPropertyName("barricade_uav")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeUAV { get; set; }
 
-    [Sync(11)]
     [JsonPropertyName("barricade_time_restricted_storages")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> TimeLimitedStorages { get; set; }
 
-    [Sync(12)]
     [JsonPropertyName("barricade_fob_radios")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> FOBRadios { get; set; }
 
-    [Sync(13)]
     [JsonPropertyName("barricade_rallypoints")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> RallyPoints { get; set; }
 
-    [Sync(101)]
     [JsonPropertyName("structure_vehicle_bay")]
     public RotatableConfig<JsonAssetReference<ItemAsset>> StructureVehicleBay { get; set; }
     #endregion
 
-    #region Items (201 to 400)
-    [Sync(201)]
+    #region Items
     [JsonPropertyName("item_entrenching_tool")]
     public RotatableConfig<JsonAssetReference<ItemMeleeAsset>> ItemEntrenchingTool { get; set; }
 
-    [Sync(202)]
     [JsonPropertyName("item_laser_designator")]
     public RotatableConfig<JsonAssetReference<ItemGunAsset>> ItemLaserDesignator { get; set; }
     #endregion
 
-    #region UI and Effects (401 to 600)
-    [Sync(401, OnPullMethod = nameof(OnUICaptureUpdated))]
+    #region UI and Effects
     [JsonPropertyName("ui_capture")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UICapture { get; set; }
 
-    [Sync(402, OnPullMethod = nameof(OnUIFlagListUpdated))]
     [JsonPropertyName("ui_flag_list")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIFlagList { get; set; }
 
-    [Sync(403)]
     [JsonPropertyName("ui_header")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIHeader { get; set; }
 
-    [Sync(404, OnPullMethod = nameof(OnUIFOBListUpdated))]
     [JsonPropertyName("ui_fob_list")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIFOBList { get; set; }
 
-    [Sync(405, OnPullMethod = nameof(OnUISquadListUpdated))]
     [JsonPropertyName("ui_squad_list")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UISquadList { get; set; }
 
-    [Sync(406, OnPullMethod = nameof(OnUISquadMenuUpdated))]
     [JsonPropertyName("ui_squad_menu")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UISquadMenu { get; set; }
 
-    [Sync(407, OnPullMethod = nameof(OnUIRallyUpdated))]
     [JsonPropertyName("ui_rally")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIRally { get; set; }
 
-    [Sync(410, OnPullMethod = nameof(OnUIMutedUpdated))]
     [JsonPropertyName("ui_muted")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIMuted { get; set; }
 
-    [Sync(411)]
     [JsonPropertyName("ui_injured")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIInjured { get; set; }
 
-    [Sync(412, OnPullMethod = nameof(OnUIXPUpdated))]
     [JsonPropertyName("ui_xp_panel")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIXPPanel { get; set; }
 
-    [Sync(413, OnPullMethod = nameof(OnUICreditsUpdated))]
     [JsonPropertyName("ui_xp_officer")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UICreditsPanel { get; set; }
 
-    [Sync(414)]
     [JsonPropertyName("ui_leaderboard_conventional")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIConventionalLeaderboard { get; set; }
 
-    [Sync(415, OnPullMethod = nameof(OnUINearbyResourcesUpdated))]
     [JsonPropertyName("ui_nearby_resources")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UINearbyResources { get; set; }
 
-    [Sync(416, OnPullMethod = nameof(OnUITeamSelectorUpdated))]
     [JsonPropertyName("ui_team_selector")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UITeamSelector { get; set; }
 
-    [Sync(417, OnPullMethod = nameof(OnUITicketsUpdated))]
     [JsonPropertyName("ui_tickets")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UITickets { get; set; }
 
-    [Sync(418)]
     [JsonPropertyName("ui_buffs")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIBuffs { get; set; }
 
-    [Sync(419, OnPullMethod = nameof(OnUIKitMenuUpdated))]
     [JsonPropertyName("ui_kit_menu")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIKitMenu { get; set; }
 
-    [Sync(420, OnPullMethod = nameof(OnUIVehicleHUDUpdated))]
     [JsonPropertyName("ui_vehicle_hud")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIVehicleHUD { get; set; }
 
-    [Sync(453, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_xp")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastXP { get; set; }
 
-    [Sync(454, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_medium")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastMedium { get; set; }
 
-    [Sync(455, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_large")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastLarge { get; set; }
 
-    [Sync(456, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_progress")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastProgress { get; set; }
 
-    [Sync(457, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_tip")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastTip { get; set; }
 
-    [Sync(458, OnPullMethod = nameof(OnUIToastWinUpdated))]
     [JsonPropertyName("ui_toast_win")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastWin { get; set; }
 
-    [Sync(459, OnPullMethod = nameof(OnUIActionMenuUpdated))]
     [JsonPropertyName("ui_action_menu")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIActionMenu { get; set; }
 
-    [Sync(459, OnPullMethod = nameof(OnUILoadingUpdated))]
     [JsonPropertyName("ui_loading")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UILoading { get; set; }
 
-    [Sync(460, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_incoming_mortar_warning")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIFlashingWarning { get; set; }
 
-    [Sync(461, OnPullMethod = nameof(OnUIModerationMenuUpdated))]
     [JsonPropertyName("ui_moderation_menu")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIModerationMenu { get; set; }
 
-    [Sync(462, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_popup")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIPopup { get; set; }
 
-    [Sync(475)]
     [JsonPropertyName("effect_spotted_marker_infantry")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerInfantry { get; set; }
 
-    [Sync(476)]
     [JsonPropertyName("effect_spotted_marker_fob")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerFOB { get; set; }
 
-    [Sync(477)]
     [JsonPropertyName("effect_spotted_marker_aa")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerAA { get; set; }
 
-    [Sync(478)]
     [JsonPropertyName("effect_spotted_marker_apc")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerAPC { get; set; }
 
-    [Sync(479)]
     [JsonPropertyName("effect_spotted_marker_atgm")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerATGM { get; set; }
 
-    [Sync(480)]
     [JsonPropertyName("effect_spotted_marker_attack_heli")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerAttackHeli { get; set; }
 
-    [Sync(481)]
     [JsonPropertyName("effect_spotted_marker_hmg")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerHMG { get; set; }
 
-    [Sync(482)]
     [JsonPropertyName("effect_spotted_marker_humvee")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerHumvee { get; set; }
 
-    [Sync(483)]
     [JsonPropertyName("effect_spotted_marker_ifv")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerIFV { get; set; }
 
-    [Sync(484)]
     [JsonPropertyName("effect_spotted_marker_jet")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerJet { get; set; }
 
-    [Sync(485)]
     [JsonPropertyName("effect_spotted_marker_mbt")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerMBT { get; set; }
 
-    [Sync(486)]
     [JsonPropertyName("effect_spotted_marker_mortar")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerMortar { get; set; }
 
-    [Sync(487)]
     [JsonPropertyName("effect_spotted_marker_scout_car")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerScoutCar { get; set; }
 
-    [Sync(488)]
     [JsonPropertyName("effect_spotted_marker_transport_air")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerTransportAir { get; set; }
 
-    [Sync(489)]
     [JsonPropertyName("effect_spotted_marker_logistics_ground")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerLogisticsGround { get; set; }
 
-    [Sync(490)]
     [JsonPropertyName("effect_spotted_marker_transport_ground")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerTransportGround { get; set; }
 
-    [Sync(500)]
     [JsonPropertyName("effect_marker_ammo")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerAmmo { get; set; }
 
-    [Sync(501)]
     [JsonPropertyName("effect_marker_repair")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerRepair { get; set; }
 
-    [Sync(502)]
     [JsonPropertyName("effect_marker_radio")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerRadio { get; set; }
 
-    [Sync(503)]
     [JsonPropertyName("effect_marker_radio_damaged")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerRadioDamaged { get; set; }
 
-    [Sync(504)]
     [JsonPropertyName("effect_marker_bunker")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerBunker { get; set; }
 
-    [Sync(505)]
     [JsonPropertyName("effect_marker_cache_attack")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerCacheAttack { get; set; }
 
-    [Sync(506)]
     [JsonPropertyName("effect_marker_cache_defend")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerCacheDefend { get; set; }
 
-    [Sync(507)]
     [JsonPropertyName("effect_marker_buildable")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerBuildable { get; set; }
 
-    [Sync(508)]
     [JsonPropertyName("effect_action_need_medic")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNeedMedic { get; set; }
 
-    [Sync(509)]
     [JsonPropertyName("effect_action_nearby_medic")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNearbyMedic { get; set; }
 
-    [Sync(510)]
     [JsonPropertyName("effect_action_need_ammo")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNeedAmmo { get; set; }
 
-    [Sync(511)]
     [JsonPropertyName("effect_action_nearby_ammo")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNearbyAmmo { get; set; }
 
-    [Sync(512)]
     [JsonPropertyName("effect_action_need_ride")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNeedRide { get; set; }
 
-    [Sync(513)]
     [JsonPropertyName("effect_action_need_support")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNeedSupport { get; set; }
 
-    [Sync(514)]
     [JsonPropertyName("effect_action_heli_pickup")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionHeliPickup { get; set; }
 
-    [Sync(515)]
     [JsonPropertyName("effect_action_heli_dropoff")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionHeliDropoff { get; set; }
 
-    [Sync(516)]
     [JsonPropertyName("effect_action_supplies_build")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionSuppliesBuild { get; set; }
 
-    [Sync(517)]
     [JsonPropertyName("effect_action_supplies_ammo")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionSuppliesAmmo { get; set; }
 
-    [Sync(518)]
     [JsonPropertyName("effect_action_air_support")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionAirSupport { get; set; }
 
-    [Sync(519)]
     [JsonPropertyName("effect_action_armor_support")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionArmorSupport { get; set; }
 
-    [Sync(520)]
     [JsonPropertyName("effect_action_attack")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionAttack { get; set; }
 
-    [Sync(521)]
     [JsonPropertyName("effect_action_defend")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionDefend { get; set; }
 
-    [Sync(522)]
     [JsonPropertyName("effect_action_move")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionMove { get; set; }
 
-    [Sync(523)]
     [JsonPropertyName("effect_action_build")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionBuild { get; set; }
 
-    [Sync(524)]
     [JsonPropertyName("effect_unload_ammo")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectUnloadAmmo { get; set; }
 
-    [Sync(525)]
     [JsonPropertyName("effect_unload_build")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectUnloadBuild { get; set; }
 
-    [Sync(526)]
     [JsonPropertyName("effect_unlock_vehicle")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectUnlockVehicle { get; set; }
 
-    [Sync(527)]
     [JsonPropertyName("effect_dig")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectDig { get; set; }
 
-    [Sync(528)]
     [JsonPropertyName("effect_repair")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectRepair { get; set; }
 
-    [Sync(529)]
     [JsonPropertyName("effect_refuel")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectRefuel { get; set; }
 
-    [Sync(530)]
     [JsonPropertyName("effect_laser_guided_no_sound")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectLaserGuidedNoSound { get; set; }
 
-    [Sync(531)]
     [JsonPropertyName("effect_laser_guided_sound")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectLaserGuidedSound { get; set; }
 
-    [Sync(532)]
     [JsonPropertyName("effect_guided_missile_no_sound")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectGuidedMissileNoSound { get; set; }
 
-    [Sync(533)]
     [JsonPropertyName("effect_guided_missile_sound")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectGuidedMissileSound { get; set; }
 
-    [Sync(534)]
     [JsonPropertyName("effect_heat_seeking_missile_no_sound")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectHeatSeekingMissileNoSound { get; set; }
 
-    [Sync(535)]
     [JsonPropertyName("effect_heat_seeking_missile_sound")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectHeatSeekingMissileSound { get; set; }
 
-    [Sync(536)]
     [JsonPropertyName("effect_purchase")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectPurchase { get; set; }
 
-    [Sync(537)]
     [JsonPropertyName("effect_ammo")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectAmmo { get; set; }
 
-    [Sync(538)]
     [JsonPropertyName("effect_build_success")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectBuildSuccess { get; set; }
 
-    [Sync(550)]
     [JsonPropertyName("ui_capture_enable_player_count")]
     public bool UICaptureEnablePlayerCount { get; set; }
 
-    [Sync(551)]
     [JsonPropertyName("ui_capture_show_point_count")]
     public bool UICaptureShowPointCount { get; set; }
 
-    [Sync(552)]
     [JsonPropertyName("ui_circle_font_characters")]
     public string UICircleFontCharacters { get; set; }
 
-    [Sync(553)]
     [JsonPropertyName("ui_icon_spotted")]
     public string UIIconSpotted { get; set; }
 
-    [Sync(554)]
     [JsonPropertyName("ui_icon_vehicle_spotted")]
     public string UIIconVehicleSpotted { get; set; }
 
-    [Sync(555)]
     [JsonPropertyName("ui_icon_uav")]
     public string UIIconUAV { get; set; }
 
-    [Sync(556)]
     [JsonPropertyName("ui_icon_player")]
     public char UIIconPlayer { get; set; }
 
-    [Sync(557)]
     [JsonPropertyName("ui_icon_attack")]
     public char UIIconAttack { get; set; }
 
-    [Sync(558)]
     [JsonPropertyName("ui_icon_defend")]
     public char UIIconDefend { get; set; }
 
-    [Sync(559)]
     [JsonPropertyName("ui_icon_locked")]
     public char UIIconLocked { get; set; }
 
-    [Sync(560)]
     [JsonPropertyName("effect_lock_on_1")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectLockOn1 { get; set; }
-    [Sync(561)]
+
     [JsonPropertyName("effect_lock_on_2")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectLockOn2 { get; set; }
     #endregion
 
-    #region General Gamemode Config (601 to 900)
-    [Sync(601)]
+    #region General Gamemode Config
     [JsonPropertyName("general_amc_kill_time")]
     public RotatableConfig<float> GeneralAMCKillTime { get; set; }
 
-    [Sync(602)]
     [JsonPropertyName("general_leaderboard_delay")]
     public RotatableConfig<float> GeneralLeaderboardDelay { get; set; }
 
-    [Sync(603)]
     [JsonPropertyName("general_leaderboard_open_time")]
     public RotatableConfig<float> GeneralLeaderboardTime { get; set; }
 
-    [Sync(604)]
     [JsonPropertyName("general_uav_start_delay")]
     public RotatableConfig<float> GeneralUAVStartDelay { get; set; }
 
-    [Sync(605)]
     [JsonPropertyName("general_uav_radius")]
     public RotatableConfig<float> GeneralUAVRadius { get; set; }
 
     /// <summary>In sq m per second.</summary>
-    [Sync(606)]
     [JsonPropertyName("general_uav_scan_speed")]
     public RotatableConfig<float> GeneralUAVScanSpeed { get; set; }
 
-    [Sync(607)]
     [JsonPropertyName("general_uav_alive_time")]
     public RotatableConfig<float> GeneralUAVAliveTime { get; set; }
 
-    [Sync(608)]
     [JsonPropertyName("general_allow_crafting_ammo")]
     public RotatableConfig<bool> GeneralAllowCraftingAmmo { get; set; }
 
-    [Sync(609)]
     [JsonPropertyName("general_allow_crafting_repair")]
     public RotatableConfig<bool> GeneralAllowCraftingRepair { get; set; }
 
-    [Sync(610)]
     [JsonPropertyName("general_allow_crafting_others")]
     public RotatableConfig<bool> GeneralAllowCraftingOthers { get; set; }
 
-    [Sync(611)]
     [JsonPropertyName("general_main_check_seconds")]
     public RotatableConfig<float> GeneralMainCheckSeconds { get; set; }
 
-    [Sync(612)]
     [JsonPropertyName("general_amc_dmg_power")]
     public RotatableConfig<double> GeneralAMCDamageMultiplierPower { get; set; }
     #endregion
 
-    #region Advance and Secure (1001 to 1100)
-    [Sync(1001)]
+    #region Advance and Secure
     [JsonPropertyName("aas_staging_time")]
     public RotatableConfig<int> AASStagingTime { get; set; }
 
-    [Sync(1002)]
     [JsonPropertyName("aas_starting_tickets")]
     public RotatableConfig<int> AASStartingTickets { get; set; }
 
-    [Sync(1003, OnPullMethod = nameof(OnAASEvaluateTimeUpdated))]
     [JsonPropertyName("aas_evaluate_time")]
     public RotatableConfig<float> AASEvaluateTime { get; set; }
 
-    [Sync(1004)]
     [JsonPropertyName("aas_ticket_xp_interval")]
     public RotatableConfig<int> AASTicketXPInterval { get; set; }
 
-    [Sync(1005)]
     [JsonPropertyName("aas_required_capturing_player_difference")]
     public RotatableConfig<int> AASRequiredCapturingPlayerDifference { get; set; }
 
-    [Sync(1006)]
     [JsonPropertyName("aas_override_contest_difference")]
     public RotatableConfig<int> AASOverrideContestDifference { get; set; }
 
-    [Sync(1007)]
     [JsonPropertyName("aas_allow_vehicle_capture")]
     public RotatableConfig<bool> AASAllowVehicleCapture { get; set; }
 
-    [Sync(1008)]
     [JsonPropertyName("aas_discovery_foresight")]
     public RotatableConfig<int> AASDiscoveryForesight { get; set; }
 
-    [Sync(1009)]
     [JsonPropertyName("aas_flag_tick_interval")]
     public RotatableConfig<float> AASFlagTickSeconds { get; set; }
 
-    [Sync(1010)]
     [JsonPropertyName("aas_tickets_flag_captured")]
     public RotatableConfig<int> AASTicketsFlagCaptured { get; set; }
 
-    [Sync(1011)]
     [JsonPropertyName("aas_tickets_flag_lost")]
     public RotatableConfig<int> AASTicketsFlagLost { get; set; }
 
-    [Sync(1012)]
     [JsonPropertyName("aas_capture_scale")]
     public RotatableConfig<float> AASCaptureScale { get; set; }
     #endregion
 
-    #region Conquest (1101 to 1200)
-    [Sync(1101, OnPullMethod = nameof(OnConquestEvaluateTimeUpdated))]
+    #region Conquest
     [JsonPropertyName("conquest_evaluate_time")]
     public RotatableConfig<float> ConquestEvaluateTime { get; set; }
 
-    [Sync(1102)]
     [JsonPropertyName("conquest_capture_scale")]
     public RotatableConfig<float> ConquestCaptureScale { get; set; }
 
-    [Sync(1103)]
     [JsonPropertyName("conquest_point_count_low_pop")]
     public RotatableConfig<int> ConquestPointCountLowPop { get; set; }
-    [Sync(1104)]
+    
     [JsonPropertyName("conquest_point_count_medium_pop")]
     public RotatableConfig<int> ConquestPointCountMediumPop { get; set; }
-    [Sync(1105)]
+    
     [JsonPropertyName("conquest_point_count_high_pop")]
     public RotatableConfig<int> ConquestPointCountHighPop { get; set; }
 
-    [Sync(1106)]
     [JsonPropertyName("conquest_flag_tick_seconds")]
     public RotatableConfig<float> ConquestFlagTickSeconds { get; set; }
 
-    [Sync(1107)]
     [JsonPropertyName("conquest_ticket_bleed_interval_per_point")]
     public RotatableConfig<float> ConquestTicketBleedIntervalPerPoint { get; set; }
 
-    [Sync(1108)]
     [JsonPropertyName("conquest_staging_phase_seconds")]
     public RotatableConfig<int> ConquestStagingPhaseSeconds { get; set; }
 
-    [Sync(1109)]
     [JsonPropertyName("conquest_starting_tickets")]
     public RotatableConfig<int> ConquestStartingTickets { get; set; }
     #endregion
 
-    #region Invasion (1201 to 1300)
-    [Sync(1201)]
+    #region Invasion
     [JsonPropertyName("invasion_staging_time")]
     public RotatableConfig<int> InvasionStagingTime { get; set; }
 
-    [Sync(1202)]
     [JsonPropertyName("invasion_discovery_foresight")]
     public RotatableConfig<int> InvasionDiscoveryForesight { get; set; }
 
-    [Sync(1203)]
     [JsonPropertyName("invasion_special_fob_name")]
     public RotatableConfig<string> InvasionSpecialFOBName { get; set; }
 
-    [Sync(1204)]
     [JsonPropertyName("invasion_tickets_flag_captured")]
     public RotatableConfig<int> InvasionTicketsFlagCaptured { get; set; }
 
-    [Sync(1205)]
     [JsonPropertyName("invasion_starting_tickets_attack")]
     public RotatableConfig<int> InvasionAttackStartingTickets { get; set; }
 
-    [Sync(1206)]
     [JsonPropertyName("invasion_ticket_xp_interval")]
     public RotatableConfig<int> InvasionTicketXPInterval { get; set; }
 
-    [Sync(1207)]
     [JsonPropertyName("invasion_capture_scale")]
     public RotatableConfig<float> InvasionCaptureScale { get; set; }
     #endregion
 
-    #region Insurgency (1301 to 1400)
-    [Sync(1301)]
+    #region Insurgency
     [JsonPropertyName("insurgency_starting_caches_min")]
     public RotatableConfig<int> InsurgencyMinStartingCaches { get; set; }
 
-    [Sync(1302)]
     [JsonPropertyName("insurgency_starting_caches_max")]
     public RotatableConfig<int> InsurgencyMaxStartingCaches { get; set; }
 
-    [Sync(1303)]
     [JsonPropertyName("insurgency_staging_time")]
     public RotatableConfig<int> InsurgencyStagingTime { get; set; }
 
-    [Sync(1304)]
     [JsonPropertyName("insurgency_first_cache_spawn_time")]
     public RotatableConfig<int> InsurgencyFirstCacheSpawnTime { get; set; }
 
-    [Sync(1305)]
     [JsonPropertyName("insurgency_starting_tickets_attack")]
     public RotatableConfig<int> InsurgencyAttackStartingTickets { get; set; }
 
-    [Sync(1306)]
     [JsonPropertyName("insurgency_discover_range")]
     public RotatableConfig<int> InsurgencyCacheDiscoverRange { get; set; }
 
-    [Sync(1307)]
     [JsonPropertyName("insurgency_intel_to_spawn")]
     public RotatableConfig<int> InsurgencyIntelPointsToSpawn { get; set; }
 
-    [Sync(1308)]
     [JsonPropertyName("insurgency_intel_to_discover")]
     public RotatableConfig<int> InsurgencyIntelPointsToDiscovery { get; set; }
 
-    [Sync(1309)]
     [JsonPropertyName("insurgency_tickets_cache")]
     public RotatableConfig<int> InsurgencyTicketsCache { get; set; }
 
-    [Sync(1310)]
     [JsonPropertyName("insurgency_starting_build")]
     public RotatableConfig<int> InsurgencyCacheStartingBuild { get; set; }
     #endregion
 
-    #region Hardpoint (1401 to 1500)
-    [Sync(1401)]
+    #region Hardpoint
     [JsonPropertyName("hardpoint_flag_tick_interval")]
     public RotatableConfig<float> HardpointFlagTickSeconds { get; set; }
-
-    [Sync(1402)]
+    
     [JsonPropertyName("hardpoint_flag_amount")]
     public RotatableConfig<int> HardpointFlagAmount { get; set; }
 
-    [Sync(1403)]
     [JsonPropertyName("hardpoint_flag_tolerance")]
     public RotatableConfig<int> HardpointFlagTolerance { get; set; }
 
-    [Sync(1404)]
     [JsonPropertyName("hardpoint_objective_change_time_seconds")]
     public RotatableConfig<float> HardpointObjectiveChangeTime { get; set; }
 
-    [Sync(1405)]
     [JsonPropertyName("hardpoint_objective_change_time_tolerance")]
     public RotatableConfig<float> HardpointObjectiveChangeTimeTolerance { get; set; }
 
-    [Sync(1406)]
     [JsonPropertyName("hardpoint_ticket_tick_seconds")]
     public RotatableConfig<float> HardpointTicketTickSeconds { get; set; }
 
-    [Sync(1407)]
     [JsonPropertyName("hardpoint_starting_tickets")]
     public RotatableConfig<int> HardpointStartingTickets { get; set; }
-
-    [Sync(1408)]
+    
     [JsonPropertyName("hardpoint_staging_phase_seconds")]
     public RotatableConfig<float> HardpointStagingPhaseSeconds { get; set; }
     #endregion
@@ -938,34 +799,5 @@ public sealed class GamemodeConfigData : JSONConfigData
         HardpointStartingTickets = 300;
         HardpointStagingPhaseSeconds = 60;
         #endregion
-    }
-    private void OnUIToastUpdated() => ToastManager.ReloadToastIds();
-    private void OnUIKitMenuUpdated() => KitManager.MenuUI.LoadFromConfig(UIKitMenu);
-    private void OnUIVehicleHUDUpdated() => VehicleComponent.VehicleHUD.LoadFromConfig(UIVehicleHUD);
-    private void OnUIToastWinUpdated() => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
-    private void OnUIActionMenuUpdated() => ActionManager.ActionMenuUI.LoadFromConfig(UIActionMenu);
-    private void OnUILoadingUpdated() => UCPlayer.LoadingUI.LoadFromConfig(UILoading);
-    private void OnUIMutedUpdated() => UCPlayer.MutedUI.LoadFromConfig(UIMuted);
-    private void OnUITicketsUpdated() => TicketManager.TicketUI.LoadFromConfig(UITickets);
-    private void OnUITeamSelectorUpdated() => Teams.TeamSelector.JoinUI.LoadFromConfig(UITeamSelector);
-    private void OnUISquadMenuUpdated() => SquadManager.MenuUI.LoadFromConfig(UISquadMenu);
-    private void OnUISquadListUpdated() => SquadManager.ListUI.LoadFromConfig(UISquadList);
-    private void OnUIRallyUpdated() => SquadManager.RallyUI.LoadFromConfig(UIRally);
-    private void OnUINearbyResourcesUpdated() => FOBManager.ResourceUI.LoadFromConfig(UINearbyResources);
-    private void OnUIFOBListUpdated() => FOBManager.ListUI.LoadFromConfig(UIFOBList);
-    private void OnUICaptureUpdated() => CTFUI.CaptureUI.LoadFromConfig(UICapture);
-    private void OnUIFlagListUpdated() => CTFUI.ListUI.LoadFromConfig(UIFlagList);
-    private void OnUIXPUpdated() => Points.XPUI.LoadFromConfig(UIXPPanel);
-    private void OnUICreditsUpdated() => Points.CreditsUI.LoadFromConfig(UICreditsPanel);
-    private void OnUIModerationMenuUpdated() => ModerationUI.Instance.LoadFromConfig(UICreditsPanel);
-    private void OnConquestEvaluateTimeUpdated()
-    {
-        if (Data.Is<Flags.Conquest>())
-            Data.Gamemode.SetTiming(ConquestEvaluateTime);
-    }
-    private void OnAASEvaluateTimeUpdated()
-    {
-        if (Data.Is<TeamCTF>() || Data.Is<Invasion>())
-            Data.Gamemode.SetTiming(AASEvaluateTime);
     }
 }

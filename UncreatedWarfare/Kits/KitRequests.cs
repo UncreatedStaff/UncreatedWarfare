@@ -214,6 +214,8 @@ public class KitRequests(KitManager manager)
     }
     internal async Task GiveKit(UCPlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default, bool psLock = true)
     {
+        if (!player.IsOnline)
+            return;
         if (player == null) throw new ArgumentNullException(nameof(player));
         if (kit == null)
         {
@@ -226,9 +228,15 @@ public class KitRequests(KitManager manager)
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
+            if (!player.IsOnline)
+                return;
             oldKit = await player.GetActiveKit(token).ConfigureAwait(false);
+            if (!player.IsOnline)
+                return;
             _ = kit.Items; // run off main thread preferrably, not that it's usually that expensive
             await UCWarfare.ToUpdate(token);
+            if (!player.IsOnline)
+                return;
             GrantKit(player, kit, tip);
             Manager.Signs.UpdateSigns(kit);
             if (oldKit != null)
@@ -275,16 +283,18 @@ public class KitRequests(KitManager manager)
     private void GrantKit(UCPlayer player, Kit? kit, bool tip = true)
     {
         ThreadUtil.assertIsGameThread();
+        if (!player.IsOnline)
+            return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (UCWarfare.Config.ModifySkillLevels)
             player.EnsureSkillsets(kit?.Skillsets.Select(x => x.Skillset) ?? Array.Empty<Skillset>());
         player.ChangeKit(kit);
-
+        player.Apply();
         if (kit == null)
         {
-            UCInventoryManager.ClearInventory(player, true);
+            UCInventoryManager.ClearInventoryAndSlots(player, true);
             return;
         }
 

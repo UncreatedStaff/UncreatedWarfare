@@ -165,7 +165,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     {
         Kit? kit = await (set?.Invoke(dbContext) ?? Set(dbContext)).FirstOrDefaultAsync(x => x.PrimaryKey == pk, token).ConfigureAwait(false);
         if (kit != null)
-            Cache.OnKitUpdated(kit);
+            Cache.OnKitUpdated(kit, dbContext);
 
         return kit;
     }
@@ -188,7 +188,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         kit = await queryable.FirstOrDefaultAsync(x => x.InternalName == id, token).ConfigureAwait(false);
         if (kit != null)
         {
-            Cache.OnKitUpdated(kit);
+            Cache.OnKitUpdated(kit, dbContext);
             return kit;
         }
 
@@ -206,7 +206,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         id = kit.InternalName;
         kit = await queryable.FirstOrDefaultAsync(x => x.InternalName == id, token).ConfigureAwait(false);
         if (kit != null)
-            Cache.OnKitUpdated(kit);
+            Cache.OnKitUpdated(kit, dbContext);
 
         return kit;
     }
@@ -355,12 +355,9 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             Faction? t1Faction = needsT1Unarmed ? await factionDbContext.Factions.FirstOrDefaultAsync(x => x.Key == k1, token).ConfigureAwait(false) : null;
             Faction? t2Faction = needsT2Unarmed ? await factionDbContext.Factions.FirstOrDefaultAsync(x => x.Key == k2, token).ConfigureAwait(false) : null;
 
-            L.LogDebug("Found factions: " + t1Faction?.Name);
-            L.LogDebug("Found factions: " + t2Faction?.Name);
             if (needsT1Unarmed)
             {
                 Kit newKit = await Defaults.CreateDefaultKit(team1Faction, team1Faction.KitPrefix + "unarmed", token).ConfigureAwait(false);
-                L.Log("New kit: \"" + newKit.PrimaryKey + "\".");
 
                 team1Faction.UnarmedKit = newKit.PrimaryKey;
                 if (t1Faction != null)
@@ -376,7 +373,6 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             if (needsT2Unarmed)
             {
                 Kit newKit = await Defaults.CreateDefaultKit(team2Faction, team2Faction.KitPrefix + "unarmed", token).ConfigureAwait(false);
-                L.Log("New kit: \"" + newKit.PrimaryKey + "\".");
 
                 team2Faction.UnarmedKit = newKit.PrimaryKey;
                 if (t2Faction != null)
@@ -395,7 +391,6 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         if (needsDefault && !string.IsNullOrEmpty(TeamManager.DefaultKit))
         {
             Kit newKit = await Defaults.CreateDefaultKit(null, TeamManager.DefaultKit, token);
-            L.Log("Created default kit: \"" + newKit.GetDisplayName() + "\".");
         }
     }
     public Task<IPageKitItem?> GetHeldItemFromKit(UCPlayer player, CancellationToken token = default)
@@ -409,15 +404,31 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     /// <summary>Gets the exact <see cref="IKitItem"/> and <see cref="IPageKitItem"/> that the player is holding from their kit (accounts for the item being moved).</summary>
     public Task<IPageKitItem?> GetItemFromKit(UCPlayer player, ItemJar jar, Page page, CancellationToken token = default) =>
         GetItemFromKit(player, jar.x, jar.y, jar.item, page, token);
+    /// <summary>Gets the exact <see cref="IKitItem"/> and <see cref="IPageKitItem"/> that the player is holding from their kit (accounts for the item being moved).</summary>
     public async Task<IPageKitItem?> GetItemFromKit(UCPlayer player, byte x, byte y, Item item, Page page, CancellationToken token = default)
     {
-        Kit? kit = await player.GetActiveKit(token).ConfigureAwait(false);
+        if (player.CachedActiveKitInfo is { ItemModels.Count: > 0 })
+        {
+            await UCWarfare.ToUpdate(token);
+            if (player.CachedActiveKitInfo is { ItemModels.Count: > 0 })
+                return GetItemFromKit(player, player.CachedActiveKitInfo, x, y, item, page);
+        }
+
+        Kit? kit = await player.GetActiveKit(token, x => x.Kits.Include(y => y.ItemModels)).ConfigureAwait(false);
 
         if (kit is null)
             return null;
 
         await UCWarfare.ToUpdate(token);
 
+        return GetItemFromKit(player, kit, x, y, item, page);
+    }
+    /// <summary>Gets the exact <see cref="IKitItem"/> and <see cref="IPageKitItem"/> that the player is holding from their kit (accounts for the item being moved).</summary>
+    public IPageKitItem? GetItemFromKit(UCPlayer player, Kit kit, ItemJar jar, Page page)
+        => GetItemFromKit(player, kit, jar.x, jar.y, jar.item, page);
+    /// <summary>Gets the exact <see cref="IKitItem"/> and <see cref="IPageKitItem"/> that the player is holding from their kit (accounts for the item being moved).</summary>
+    public IPageKitItem? GetItemFromKit(UCPlayer player, Kit kit, byte x, byte y, Item item, Page page)
+    {
         L.LogDebug("Looking for kit item: " + (item.GetAsset()?.itemName ?? "null") + $" at {page}, ({x}, {y}).");
         for (int i = 0; i < player.ItemTransformations.Count; ++i)
         {
@@ -831,8 +842,10 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (!player.IsOnline)
+            return null;
         Kit? kit = await GetDefaultKit(player.GetTeam(), token, x => RequestableSet(x, false)).ConfigureAwait(false);
-        if (kit == null)
+        if (kit == null || !player.IsOnline)
             return null;
 
         await Requests.GiveKit(player, kit, manual, true, token).ConfigureAwait(false);
@@ -1350,16 +1363,14 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     internal Task OnKitDeleted(Kit kit)
     {
-        if (UCWarfare.Config.EnableSync)
-            KitSync.OnKitDeleted(kit.PrimaryKey);
+        KitSync.OnKitDeleted(kit.PrimaryKey);
         UCWarfare.RunTask(Distribution.DequipKit, kit, true, ctx: "Dequiping " + kit.InternalName + " from all (deleted).");
 
         return Task.CompletedTask;
     }
     internal Task OnKitUpdated(Kit kit)
     {
-        if (UCWarfare.Config.EnableSync)
-            KitSync.OnKitUpdated(kit);
+        KitSync.OnKitUpdated(kit);
 
         return Task.CompletedTask;
     }

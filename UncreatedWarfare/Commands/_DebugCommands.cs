@@ -1117,6 +1117,7 @@ public class DebugCommand : AsyncCommand
             }
         }
 
+        await UCWarfare.ToUpdate(token);
         if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)
         {
             SquadManager.CreateSquad(ctx.Caller, team);
@@ -1139,7 +1140,6 @@ public class DebugCommand : AsyncCommand
                 SqlItem<VehicleData>? data = vehicle.Item.Vehicle;
                 if (data?.Item == null)
                 {
-                    await UCWarfare.ToUpdate();
                     ctx.ReplyString("Failed to get a logistics vehicle.", Color.red);
                 }
                 else

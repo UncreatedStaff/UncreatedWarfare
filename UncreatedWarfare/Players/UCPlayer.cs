@@ -467,6 +467,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             _pLvl = value;
         }
     }
+    // this must have at least items and translations included
     public Kit? CachedActiveKitInfo
     {
         get
@@ -832,6 +833,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         CurrentMarkers.Insert(0, marker);
     }
     public void DeactivateMarker(SpottedComponent marker) => CurrentMarkers.Remove(marker);
+    /// <summary><paramref name="kit"/> must have at least items and translations included.</summary>
     /// <remarks>Thread Safe</remarks>
     public void ChangeKit(Kit? kit)
     {

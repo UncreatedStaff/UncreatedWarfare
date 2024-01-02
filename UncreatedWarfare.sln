@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8062F4B6-CF10-4BFC-AAE1-F633B0AD45CE}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		netcalls.xlsx = netcalls.xlsx
 	EndProjectSection
 EndProject
 Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned.exe", "{9701D4BC-4033-469E-B9B6-E00D2B4AF150}"

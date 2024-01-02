@@ -195,10 +195,16 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     [NotMapped]
     public StripeEliteKit EliteKitInfo { get; set; }
 
+    /// <summary>
+    /// Loadout is expired.
+    /// </summary>
     [JsonIgnore]
     [NotMapped]
     public bool NeedsUpgrade => Type == KitType.Loadout && Season < UCWarfare.Season;
 
+    /// <summary>
+    /// Loadout is in the process of being created or updated.
+    /// </summary>
     [JsonIgnore]
     [NotMapped]
     public bool NeedsSetup => Type == KitType.Loadout && Disabled;
@@ -255,19 +261,43 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     }
     public Kit(string internalName, Kit copy)
     {
+        CopyFrom(copy, true, true);
+        InternalName = internalName;
+    }
+    public void CopyFrom(Kit copy, bool clone, bool copyCachedLists)
+    {
         Faction = copy.Faction;
         FactionId = copy.FactionId;
-        InternalName = internalName;
+        InternalName = copy.InternalName;
         Class = copy.Class;
         Branch = copy.Branch;
         Type = copy.Type;
         SquadLevel = copy.SquadLevel;
-        Skillsets = [..F.CloneList(copy.Skillsets)];
-        FactionFilter = [..F.CloneList(copy.FactionFilter)];
-        MapFilter = [..F.CloneList(copy.MapFilter)];
-        ItemModels = [..F.CloneList(copy.ItemModels)];
-        Translations = [..F.CloneList(copy.Translations)];
-        UnlockRequirementsModels = [..F.CloneList(copy.UnlockRequirementsModels)];
+        if (clone)
+        {
+            Skillsets = [.. F.CloneList(copy.Skillsets)];
+            ItemModels = [.. F.CloneList(copy.ItemModels)];
+            if (copyCachedLists)
+            {
+                UnlockRequirementsModels = [.. F.CloneList(copy.UnlockRequirementsModels)];
+                FactionFilter = [.. F.CloneList(copy.FactionFilter)];
+                MapFilter = [.. F.CloneList(copy.MapFilter)];
+                Translations = [.. F.CloneList(copy.Translations)];
+            }
+        }
+        else
+        {
+            Skillsets = copy.Skillsets;
+            ItemModels = copy.ItemModels;
+            if (copyCachedLists)
+            {
+                UnlockRequirementsModels = copy.UnlockRequirementsModels;
+                FactionFilter = copy.FactionFilter;
+                MapFilter = copy.MapFilter;
+                Translations = copy.Translations;
+            }
+        }
+
         Season = copy.Season;
         TeamLimit = copy.TeamLimit;
         RequestCooldown = copy.RequestCooldown;
@@ -282,7 +312,8 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
         LastEditor = copy.LastEditor;
         RequiresNitro = copy.RequiresNitro;
 
-        ReapplyPrimaryKey();
+        if (clone)
+            ReapplyPrimaryKey();
     }
     internal void ReapplyPrimaryKey()
     {

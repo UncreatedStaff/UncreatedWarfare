@@ -5,8 +5,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SDG.Unturned;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Unlocks;
@@ -23,7 +25,7 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
     public KitManager Manager { get; } = manager;
     internal ConcurrentDictionary<string, Kit> KitDataById { get; } = new ConcurrentDictionary<string, Kit>(StringComparer.OrdinalIgnoreCase);
     internal ConcurrentDictionary<uint, Kit> KitDataByKey { get; } = [];
-    public Kit? GetKit(string id) => KitDataById.GetValueOrDefault(id);
+    public Kit? GetKit(string id) => id == null ? null : KitDataById.GetValueOrDefault(id);
     public Kit? GetKit(uint pk) => KitDataByKey.GetValueOrDefault(pk);
     public bool TryGetKit(string id, out Kit kit) => KitDataById.TryGetValue(id, out kit);
     public bool TryGetKit(uint pk, out Kit kit) => KitDataByKey.TryGetValue(pk, out kit);
@@ -36,10 +38,33 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
             .Include(x => x.Translations);
     }
 
-    public void OnKitUpdated(Kit kit)
+    public void OnKitUpdated(Kit kit, IKitsDbContext dbContext)
     {
-        KitDataByKey[kit.PrimaryKey] = kit;
-        KitDataById[kit.InternalName] = kit;
+        EntityEntry<Kit> kitEntry = dbContext.Entry(kit);
+
+        bool ur = kitEntry.Collection(x => x.UnlockRequirementsModels).IsLoaded,
+             ff = kitEntry.Collection(x => x.FactionFilter).IsLoaded,
+             mf = kitEntry.Collection(x => x.MapFilter).IsLoaded,
+             tr = kitEntry.Collection(x => x.Translations).IsLoaded;
+
+        if (ur && ff && mf && tr)
+        {
+            KitDataByKey[kit.PrimaryKey] = kit;
+            KitDataById[kit.InternalName] = kit;
+        }
+        else if (KitDataByKey.TryRemove(kit.PrimaryKey, out Kit existing))
+        {
+            existing.CopyFrom(kit, false, false);
+            if (ur)
+                existing.UnlockRequirementsModels = kit.UnlockRequirementsModels;
+            if (ff)
+                existing.FactionFilter = kit.FactionFilter;
+            if (mf)
+                existing.MapFilter = kit.MapFilter;
+            if (tr)
+                existing.Translations = kit.Translations;
+            _ = KitDataByKey.GetOrAdd(kit.PrimaryKey, existing);
+        }
     }
     public void Clear()
     {

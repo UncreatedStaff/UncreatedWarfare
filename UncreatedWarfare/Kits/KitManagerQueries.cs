@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -340,7 +341,7 @@ partial class KitManager
     {
         await using IKitsDbContext dbContext = new WarfareDbContext();
 
-        List<KitAccess> access = await dbContext.KitAccess.Where(x => x.Kit.InternalName == kit && x.Steam64 == player)
+        List<KitAccess> access = await dbContext.KitAccess.Include(x => x.Kit).Where(x => x.Kit.InternalName == kit && x.Steam64 == player)
             .ToListAsync(token).ConfigureAwait(false);
 
         if (access is not { Count: > 0 })
@@ -359,7 +360,7 @@ partial class KitManager
 
         await using IKitsDbContext dbContext = new WarfareDbContext();
 
-        List<KitHotkey> hotkeys = await dbContext.KitHotkeys.Where(x => x.Kit.PrimaryKey == kit && x.Steam64 == player && x.Slot == slot)
+        List<KitHotkey> hotkeys = await dbContext.KitHotkeys.Where(x => x.KitId == kit && x.Steam64 == player && x.Slot == slot)
             .ToListAsync(token).ConfigureAwait(false);
 
         if (hotkeys is not { Count: > 0 })
@@ -367,6 +368,10 @@ partial class KitManager
 
         dbContext.KitHotkeys.RemoveRange(hotkeys);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+        if (UCWarfare.IsLoaded && UCPlayer.FromID(player) is { IsOnline: true } ucPlayer)
+        {
+            ucPlayer.HotkeyBindings?.RemoveAll(x => x.Slot == slot && x.Kit == kit);
+        }
         return true;
     }
     /// <remarks>Thread Safe</remarks>
@@ -374,7 +379,7 @@ partial class KitManager
     {
         await using IKitsDbContext dbContext = new WarfareDbContext();
 
-        List<KitHotkey> hotkeys = await dbContext.KitHotkeys.Where(h => h.Kit.PrimaryKey == kit && h.Steam64 == player && h.X == x && h.Y == y && h.Page == page)
+        List<KitHotkey> hotkeys = await dbContext.KitHotkeys.Where(h => h.KitId == kit && h.Steam64 == player && h.X == x && h.Y == y && h.Page == page)
             .ToListAsync(token).ConfigureAwait(false);
 
         if (hotkeys is not { Count: > 0 })
@@ -382,6 +387,10 @@ partial class KitManager
 
         dbContext.KitHotkeys.RemoveRange(hotkeys);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+        if (UCWarfare.IsLoaded && UCPlayer.FromID(player) is { IsOnline: true } ucPlayer)
+        {
+            ucPlayer.HotkeyBindings?.RemoveAll(x => x.Kit == kit && hotkeys.Any(y => y.Slot == x.Slot));
+        }
         return true;
     }
     /// <remarks>Thread Safe</remarks>

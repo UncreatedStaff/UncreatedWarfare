@@ -25,7 +25,6 @@ using UnityEngine.Assertions;
 
 namespace Uncreated.Warfare.Structures;
 
-[Sync((int)WarfareSyncTypes.StructureSaver)]
 [SingletonDependency(typeof(Level))]
 [SingletonDependency(typeof(MapScheduler))]
 public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelStartListenerAsync

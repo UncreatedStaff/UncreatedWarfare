@@ -277,7 +277,7 @@ public static class Localization
         }
         else
         {
-            name = kit.InternalName + '\n' + "(" + (char)(loadoutId + 47) + ") " + kit.GetDisplayName(player.Locale.LanguageInfo, false);
+            name = kit.InternalName + '\n' + "(" + KitEx.GetLoadoutLetter(loadoutId) + ") " + kit.GetDisplayName(player.Locale.LanguageInfo, false);
             keepline = true;
         }
 
