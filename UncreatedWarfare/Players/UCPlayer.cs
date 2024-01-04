@@ -120,7 +120,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private LevelData? _level;
     private PlayerNames _cachedName;
     private int _pendingReputation;
-    internal VehicleSwapRequest PendingVehicleSwapRequest;
+    internal VehicleRequest PendingGiveVehicleRequest;
     internal int CacheLocationIndex = -1;
     internal UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore, PendingAsyncData data)
     {

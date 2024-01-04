@@ -501,7 +501,7 @@ public static class EventFunctions
                         if (build || ammoAsset is not null && ammoAsset.GUID == itemAsset.GUID)
                         {
                             trunk.removeItem(e.Index);
-                            Item it2 = new Item(build ? buildAsset : ammoAsset, EItemOrigin.WORLD);
+                            Item it2 = new Item(build ? ammoAsset : buildAsset, EItemOrigin.WORLD);
                             trunk.addItem(e.X, e.Y, e.ItemJar.rot, it2);
                             e.Break();
                             return;
@@ -1044,6 +1044,17 @@ public static class EventFunctions
                     weapon = pl.player.equipment.asset.GUID;
                 }
                 else weapon = Guid.Empty;
+                
+                // ignore cache damage
+                if (Data.Gamemode is Insurgency
+                    && Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out guid) && guid == drop.asset.GUID
+                    && Gamemode.Config.IgnoredCacheDamageOrigins?.Value is { } arr && Array.IndexOf(arr, damageOrigin) != -1
+                    && !Gamemode.Config.AllowedCacheWeapons.HasGuid(weapon))
+                {
+                    shouldAllow = false;
+                    return;
+                }
+
                 Data.Reporter?.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
                 {
                     broke = false,

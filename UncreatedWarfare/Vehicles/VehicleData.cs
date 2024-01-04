@@ -689,6 +689,88 @@ public struct Delay : IJsonReadWrite
         }
         return false;
     }
+    public static bool IsDelayed(ref Delay delay, ulong team)
+    {
+        string? gm = Data.Gamemode?.Name;
+        bool anyVal = false;
+        bool isNoneYet = false;
+        Delay d2 = default;
+        return IsDelayed(ref delay, team, ref d2, ref isNoneYet, ref anyVal, gm);
+    }
+    private static bool IsDelayed(ref Delay del, ulong team, ref Delay delay, ref bool isNoneYet, ref bool anyVal, string? gm)
+    {
+        bool universal = string.IsNullOrEmpty(del.Gamemode);
+        if (!universal)
+        {
+            string gamemode = del.Gamemode!; // !TeamCTF
+            bool blacklist = false;
+            if (gamemode[0] == '!') // true
+            {
+                blacklist = true;
+                gamemode = gamemode.Substring(1); // TeamCTF
+            }
+
+            if (gm is not null && gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
+            {
+                if (blacklist) return false;
+            }
+            else if (!blacklist) return false; // false
+            universal = true;
+        }
+        if (universal && anyVal) return false;
+        switch (del.Type)
+        {
+            case DelayType.None:
+                if (!universal)
+                {
+                    delay = del;
+                    isNoneYet = true;
+                }
+                break;
+            case DelayType.Time:
+                if ((!universal || !isNoneYet) && TimeDelayed(ref del))
+                {
+                    delay = del;
+                    if (!universal) return true;
+                    anyVal = true;
+                }
+                break;
+            case DelayType.Flag:
+                if ((!universal || !isNoneYet) && FlagDelayed(ref del, team))
+                {
+                    delay = del;
+                    if (!universal) return true;
+                    anyVal = true;
+                }
+                break;
+            case DelayType.FlagPercentage:
+                if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del, team))
+                {
+                    delay = del;
+                    if (!universal) return true;
+                    anyVal = true;
+                }
+                break;
+            case DelayType.OutOfStaging:
+                if ((!universal || !isNoneYet) && StagingDelayed(ref del))
+                {
+                    delay = del;
+                    if (!universal) return true;
+                    anyVal = true;
+                }
+                break;
+            case DelayType.Teammates:
+                if ((!universal || !isNoneYet) && TeammatesDelayed(ref del))
+                {
+                    delay = del;
+                    if (!universal) return true;
+                    anyVal = true;
+                }
+                break;
+        }
+
+        return false;
+    }
     // TODO: gamemode blacklist not working
     public static bool IsDelayed(Delay[] delays, out Delay delay, ulong team)
     {
@@ -703,85 +785,18 @@ public struct Delay : IJsonReadWrite
         for (int i = delays.Length - 1; i >= 0; i--)
         {
             ref Delay del = ref delays[i];
-            bool universal = string.IsNullOrEmpty(del.Gamemode);
-            if (!universal)
-            {
-                string gamemode = del.Gamemode!; // !TeamCTF
-                bool blacklist = false;
-                if (gamemode[0] == '!') // true
-                {
-                    blacklist = true;
-                    gamemode = gamemode.Substring(1); // TeamCTF
-                }
-
-                if (gm is not null && gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
-                {
-                    if (blacklist) continue;
-                }
-                else if (!blacklist) continue; // false
-                universal = true;
-            }
-            if (universal && anyVal) continue;
-            switch (del.Type)
-            {
-                case DelayType.None:
-                    if (!universal)
-                    {
-                        delay = del;
-                        isNoneYet = true;
-                    }
-                    break;
-                case DelayType.Time:
-                    if ((!universal || !isNoneYet) && TimeDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case DelayType.Flag:
-                    if ((!universal || !isNoneYet) && FlagDelayed(ref del, team))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case DelayType.FlagPercentage:
-                    if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del, team))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case DelayType.OutOfStaging:
-                    if ((!universal || !isNoneYet) && StagingDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case DelayType.Teammates:
-                    if ((!universal || !isNoneYet) && TeammatesDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-            }
+            if (IsDelayed(ref del, team, ref delay, ref isNoneYet, ref anyVal, gm))
+                return true;
         }
+
         return anyVal;
     }
     private static bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.Value > Data.Gamemode.SecondsSinceStart;
-    private static bool TeammatesDelayed(ref Delay delay) => Data.Gamemode != null &&
-        delay.Value > 0 && 
-        Mathf.Min(
-            PlayerManager.OnlinePlayers.Where(p => p.IsTeam1).Count(), 
-            PlayerManager.OnlinePlayers.Where(p => p.IsTeam2).Count()
-            ) < Mathf.FloorToInt(delay.Value);
+    private static bool TeammatesDelayed(ref Delay delay) => delay.Value > 0 && 
+                                                             Mathf.Min(
+                                                                 PlayerManager.OnlinePlayers.Count(p => p.IsTeam1), 
+                                                                 PlayerManager.OnlinePlayers.Count(p => p.IsTeam2)
+                                                             ) < Mathf.FloorToInt(delay.Value);
     private static bool FlagDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, false, team);
     private static bool FlagPercentDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, true, team);
     private static bool FlagDelayed(ref Delay delay, bool percent, ulong team)

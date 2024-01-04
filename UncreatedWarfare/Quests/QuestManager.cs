@@ -303,7 +303,7 @@ public static class QuestManager
             UCWarfare.RunTask(async () =>
             {
                 await UCWarfare.ToUpdate();
-                if (tracker.PresetKey != default)
+                if (tracker.PresetKey != default && Data.Gamemode != null)
                 {
                     if (tracker.Player!.CompletedQuests == null)
                         GetCompletedQuests(tracker.Player);
@@ -314,7 +314,8 @@ public static class QuestManager
 
                 if (args.GiveRewards)
                     tracker.TryGiveRewards();
-                await Data.Gamemode.OnQuestCompleted(args, default);
+                if (Data.Gamemode != null)
+                    await Data.Gamemode.OnQuestCompleted(args, default).ConfigureAwait(false);
 #if DEBUG
             }, ctx: "Calling quest completed for " + tracker + "."); // translation takes a bit of time for these so only do this on debug
 #else

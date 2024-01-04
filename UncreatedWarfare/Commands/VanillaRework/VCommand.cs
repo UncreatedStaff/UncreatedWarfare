@@ -16,9 +16,10 @@ using UnityEngine;
 namespace Uncreated.Warfare.Commands.VanillaRework;
 public class VCommand : AsyncCommand
 {
-    private const float SwapRequestDuration = 15f;
+    // private const float SwapRequestDuration = 15f;
+    private const float GiveRequestDuration = 15f;
     private const string AdminSyntax = "/v <vehicle|kick|give> [player]";
-    private const string Syntax = "/v <kick|give> [player]";
+    private const string Syntax = "/v <kick|give|accept|deny> [player]";
     private const string AdminHelp = "Spawn a vehicle in front of you or manage your requested vehicle.";
     private const string Help = "Manage your requested vehicle.";
 
@@ -29,8 +30,8 @@ public class VCommand : AsyncCommand
         Structure = new CommandStructure
         {
             Description = "Spawns a vehicle in front of you.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Enter")
                 {
                     Permission = EAdminType.ADMIN_ON_DUTY,
@@ -44,52 +45,68 @@ public class VCommand : AsyncCommand
                 },
                 new CommandParameter("Kick")
                 {
-                    Aliases = new string[] { "Remove", "K" },
+                    Aliases = [ "Remove", "K" ],
                     Description = "Remove a player from your vehicle. Can not be done while moving unless they are the driver.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer), "Driver", "Pilot", "Turret", typeof(byte))
                         {
                             Description = "Player or seat to remove from your vehicle, optional if there is only one option."
                         },
                         new CommandParameter("Force Remove")
                         {
-                            FlagName = "r",
-                            Aliases = new string[] { "k" },
+                            FlagName = "k",
+                            Aliases = [ "r" ],
                             Description = "Force the player out of the vehicle instead of just finding a different seat."
                         }
-                    }
+                    ]
+                },
+                new CommandParameter("Accept")
+                {
+                    Aliases = [ "A", "Acc" ],
+                    Description = "Accept a vehicle-related request."
+                },
+                new CommandParameter("Deny")
+                {
+                    Aliases = [ "D", "Dn" ],
+                    Description = "Deny a vehicle-related request."
                 },
                 new CommandParameter("Give")
                 {
-                    Aliases = new string[] { "Transfer", "G" },
+                    Aliases = [ "Transfer", "G" ],
                     Description = "Transfer ownerhip of your vehicle to someone else, they must also have the vehicle unlocked. Will not give credits when abandoned.",
-                    Parameters = new CommandParameter[]
-                    {
-                        new CommandParameter("Player", typeof(IPlayer))
-                    }
+                    Parameters =
+                    [
+                        new CommandParameter("Player", typeof(IPlayer)),
+                        new CommandParameter("Force Send Request")
+                        {
+                            FlagName = "r",
+                            Aliases = [ "req" ],
+                            Description = "Sends a request to give instead of just forcing it over (this behavior is forced when the recepient is in main)."
+                        }
+                    ]
                 },
                 /*
                 new CommandParameter("Enter")
                 {
-                    Aliases = new string[] { "Swap", "E" },
+                    Aliases = [ "Swap", "E" ],
                     Description = "Swap seats with the player in the specified seat, moving them to the next available seat or kicking them.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Seat", "Driver", "Pilot", "Turret", typeof(byte)),
                         new CommandParameter("Accept")
                         {
-                            Aliases = new string[] { "Yes", "Y" },
+                            Aliases = [ "Yes", "Y" ],
                             Description = "Accept a swap request from a fellow passenger."
                         },
                         new CommandParameter("Deny")
                         {
-                            Aliases = new string[] { "No", "N" },
+                            Aliases = [ "No", "N" ],
                             Description = "Deny a swap request from a fellow passenger, done automatically after a cooldown."
                         }
                     }
                 }*/
-            }
+            ]
         };
     }
 
@@ -176,18 +193,75 @@ public class VCommand : AsyncCommand
                 owned = ctx.Caller.OnDuty();
             }
 
+            UCPlayer? target;
+
             // vehicle give <player>
             if (!enter && !kick)
             {
-                if (!ctx.TryGet(1, out _, out UCPlayer? onlinePlayer, TeamManager.EnumerateTeam(team), true, UCPlayer.NameSearch.NickName) || onlinePlayer == null)
+                if (!ctx.TryGet(1, out _, out target, TeamManager.EnumerateTeam(team), true, UCPlayer.NameSearch.NickName) || target == null)
                     throw ctx.SendPlayerNotFound();
 
-                VehicleManager.ServerSetVehicleLock(vehicleTarget, onlinePlayer.CSteamID, new CSteamID(TeamManager.GetGroupID(team)), true);
-                VehicleComponent.TryAddOwnerToHistory(vehicleTarget, onlinePlayer.Steam64);
-                if (Gamemode.Config.EffectUnlockVehicle.ValidReference(out EffectAsset effect))
-                    F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicleTarget.transform.position);
-                onlinePlayer.SendChat(T.VehicleGivenDm, vehicleTarget.asset, ctx.Caller);
-                throw ctx.Reply(T.VehicleGiven, vehicleTarget.asset, onlinePlayer);
+                // send a request to make sure the player wants the vehicle.
+                // 
+                // players were causing people to be unable to request vehicles
+                // by giving them a vehicle at the last second
+                if (TeamManager.IsInMain(target) && !ctx.Caller.OnDuty() || ctx.MatchFlag("r", "req"))
+                {
+                    CancellationTokenSource src = new CancellationTokenSource();
+
+                    if (target.PendingGiveVehicleRequest.RespondToken != null)
+                    {
+                        try
+                        {
+                            target.PendingGiveVehicleRequest.RespondToken.Cancel();
+                        }
+                        catch { /* ignored */ }
+                        target.PendingGiveVehicleRequest.RespondToken.Dispose();
+                    }
+
+                    // Delays with a cancellation token that will cancel when they respond.
+
+                    target.PendingGiveVehicleRequest = new VehicleRequest(Time.realtimeSinceStartup, vehicleTarget, ctx.Caller, src);
+                    target.SendChat(T.VehicleSentGiveRequestDm, ctx.Caller, vehicleTarget.asset, "/v <accept|deny>", Mathf.CeilToInt(GiveRequestDuration));
+                    ctx.Reply(T.VehicleGiveRequestSent, target, vehicleTarget.asset, Mathf.CeilToInt(GiveRequestDuration));
+                    CancellationToken token2 = token;
+                    token2.CombineIfNeeded(src.Token, target.DisconnectToken);
+                    try
+                    {
+                        await Task.Delay(Mathf.RoundToInt(GiveRequestDuration * 1000f), token2).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (token2.IsCancellationRequested) { }
+                    await UCWarfare.ToUpdate(token);
+                    
+                    // anything past here is after the other player responded, left, or the request timed out.
+
+                    if (target.PendingGiveVehicleRequest.Vehicle != vehicleTarget)
+                        throw ctx.Reply(T.VehicleGiveRequestTimedOutByTarget, target, vehicleTarget.asset);
+
+                    bool? state = target.PendingGiveVehicleRequest.IsDenied;
+                    target.PendingGiveVehicleRequest.RespondToken.Dispose();
+                    target.PendingGiveVehicleRequest = default;
+
+                    switch (state)
+                    {
+                        case true:
+                            throw ctx.Reply(T.VehicleGiveRequestDeniedByTarget, target, vehicleTarget.asset);
+
+                        // null
+                        default:
+                            throw ctx.Reply(T.VehicleGiveRequestTimedOutByTarget, target, vehicleTarget.asset);
+
+                        case false:
+                            ctx.Reply(T.VehicleGiveRequestAcceptedByTarget, target, vehicleTarget.asset);
+                            await Task.Delay(500, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
+                            break;
+                    }
+                }
+
+                GiveVehicle(vehicleTarget, team, ctx.Caller, target);
+                ctx.Defer();
+                return;
             }
 
             // find seat reference
@@ -199,15 +273,15 @@ public class VCommand : AsyncCommand
                 for (int i = 0; i < vehicleTarget.turrets.Length; ++i)
                 {
                     Passenger turret = vehicleTarget.turrets[i];
-                    if (turret.player != null)
+                    if (turret.player == null)
+                        continue;
+
+                    if (seatIndex == -1)
+                        seatIndex = turret.turret.seatIndex;
+                    else
                     {
-                        if (seatIndex == -1)
-                            seatIndex = turret.turret.seatIndex;
-                        else
-                        {
-                            seatIndex = -1;
-                            break;
-                        }
+                        seatIndex = -1;
+                        break;
                     }
                 }
             }
@@ -254,7 +328,7 @@ public class VCommand : AsyncCommand
                 throw ctx.Reply(T.VehicleSeatNotValidText, ctx.Get(1)!);
 
             Passenger targetSeat = vehicleTarget.passengers[seatIndex];
-            UCPlayer? target = targetSeat.player == null ? null : UCPlayer.FromSteamPlayer(targetSeat.player);
+            target = targetSeat.player == null ? null : UCPlayer.FromSteamPlayer(targetSeat.player);
 
             float time = Time.realtimeSinceStartup;
             // vehicle kick <player or seat>
@@ -263,11 +337,10 @@ public class VCommand : AsyncCommand
                 if (target is not { IsOnline: true })
                     throw ctx.Reply(T.VehicleSeatNotOccupied, seatIndex + 1);
                 
-                bool wantsFullKick = ctx.MatchFlag("r", "k") && (vehicleTarget.asset.engine is not EEngine.PLANE and not EEngine.HELICOPTER ||
+                bool wantsFullKick = ctx.MatchFlag("k", "r") && (vehicleTarget.asset.engine is not EEngine.PLANE and not EEngine.HELICOPTER ||
                                                             Mathf.Abs(vehicleTarget.speed) <= 0.15f || TeamManager.IsInMain(team, vehicleTarget.transform.position));
                 if (wantsFullKick || !UCVehicleManager.TryMovePlayerToEmptySeat(target.Player))
                 {
-                    L.LogDebug("Removing target instead of moving.");
                     VehicleManager.forceRemovePlayer(vehicleTarget, target.CSteamID);
                 }
                 vehicleTarget.lastSeat = time;
@@ -278,6 +351,7 @@ public class VCommand : AsyncCommand
             }
 
             throw ctx.SendNotImplemented();
+            /*  (v swap, waiting for the ability to swap players)
             // vehicle enter
             if (time - vehicleTarget.lastSeat < 1f)
             {
@@ -399,18 +473,19 @@ public class VCommand : AsyncCommand
 
                 throw ctx.Reply(T.VehicleSwapRequestTimedOutByTarget, target);
             }
+        */
         }
-
         bool deny = ctx.MatchParameter(0, "deny", "no", "n");
         if (deny || ctx.MatchParameter(0, "accept", "yes", "y"))
         {
-            throw ctx.SendNotImplemented();
-            if (ctx.Caller.PendingVehicleSwapRequest.Vehicle == null || ctx.Caller.PendingVehicleSwapRequest.IsDenied.HasValue)
-                throw ctx.Reply(T.VehicleSwapRequestNotSent);
+            if (ctx.Caller.PendingGiveVehicleRequest.Vehicle == null || ctx.Caller.PendingGiveVehicleRequest.IsDenied.HasValue)
+                throw ctx.Reply(T.VehicleRequestNotSent);
 
-            ctx.Caller.PendingVehicleSwapRequest.IsDenied = deny;
-            ctx.Caller.PendingVehicleSwapRequest.RespondToken.Cancel();
-            throw ctx.Reply(deny ? T.VehicleSwapRequestDenied : T.VehicleSwapRequestAccepted, ctx.Caller.PendingVehicleSwapRequest.Sender);
+            // can add more pending requests here if needed, just compare send times for the oldest or something
+
+            ctx.Caller.PendingGiveVehicleRequest.IsDenied = deny;
+            ctx.Caller.PendingGiveVehicleRequest.RespondToken.Cancel();
+            throw ctx.Reply(deny ? T.VehicleRequestDenied : T.VehicleRequestAccepted, ctx.Caller.PendingGiveVehicleRequest.Sender);
         }
 
         ctx.AssertPermissions(EAdminType.ADMIN_ON_DUTY);
@@ -476,17 +551,28 @@ public class VCommand : AsyncCommand
             VehicleManager.ServerForcePassengerIntoVehicle(ctx.Caller.Player, vehicle);
         ctx.ReplyString($"Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).", "bfb9ac");
     }
+
+    private static void GiveVehicle(InteractableVehicle vehicleTarget, ulong team, UCPlayer caller, UCPlayer recepient)
+    {
+        VehicleManager.ServerSetVehicleLock(vehicleTarget, recepient.CSteamID, new CSteamID(TeamManager.GetGroupID(team)), true);
+        VehicleComponent.TryAddOwnerToHistory(vehicleTarget, recepient.Steam64);
+
+        if (Gamemode.Config.EffectUnlockVehicle.ValidReference(out EffectAsset effect))
+            F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicleTarget.transform.position);
+
+        recepient.SendChat(T.VehicleGivenDm, vehicleTarget.asset, caller);
+        caller.SendChat(T.VehicleGiven, vehicleTarget.asset, recepient);
+    }
 }
 
-
-public struct VehicleSwapRequest
+public struct VehicleRequest
 {
     public readonly float SendTime;
     public readonly InteractableVehicle Vehicle;
     public readonly UCPlayer Sender;
     public readonly CancellationTokenSource RespondToken;
     public bool? IsDenied;
-    public VehicleSwapRequest(float sendTime, InteractableVehicle vehicle, UCPlayer sender, CancellationTokenSource token)
+    public VehicleRequest(float sendTime, InteractableVehicle vehicle, UCPlayer sender, CancellationTokenSource token)
     {
         SendTime = sendTime;
         Vehicle = vehicle;

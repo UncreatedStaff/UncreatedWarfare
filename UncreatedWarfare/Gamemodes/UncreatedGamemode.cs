@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
@@ -363,8 +364,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         await UCWarfare.ToUpdate(token);
 
-        if (player.PendingVehicleSwapRequest.RespondToken is { IsCancellationRequested: false })
-            player.PendingVehicleSwapRequest.RespondToken.Cancel();
+        if (player.PendingGiveVehicleRequest.RespondToken is { IsCancellationRequested: false })
+            player.PendingGiveVehicleRequest.RespondToken.Cancel();
 
         ThreadUtil.assertIsGameThread();
         if (!wasAlreadyOnline)
@@ -1252,29 +1253,29 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     internal virtual string DumpState()
     {
-        string m = "Mode: " + DisplayName;
+        TimeSpan duration = TimeSpan.FromSeconds(Time.realtimeSinceStartup - StartTime);
+        string m = $"Mode: {DisplayName}. Dur: {(int)Math.Ceiling(duration.TotalHours)}:{duration.Minutes:00}:{duration.Seconds:00} (%h:mm:ss)";
         if (this is ITickets tickets)
             m += Environment.NewLine + "Tickets 1: " + tickets.TicketManager.Team1Tickets + ", 2: " + tickets.TicketManager.Team2Tickets + ".";
 
         return m;
     }
-    internal async Task OnQuestCompleted(QuestCompleted e, CancellationToken token)
+    internal Task OnQuestCompleted(QuestCompleted e, CancellationToken token)
     {
         token.CombineIfNeeded(UnloadToken, e.Player.DisconnectToken);
-        await InvokeSingletonEvent<IQuestCompletedListener, IQuestCompletedListenerAsync>
-            (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e)
-            .ConfigureAwait(false);
+        return InvokeSingletonEvent<IQuestCompletedListener, IQuestCompletedListenerAsync>
+            (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e);
     }
-    internal async Task HandleQuestCompleted(QuestCompleted e, CancellationToken token)
+    internal Task HandleQuestCompleted(QuestCompleted e, CancellationToken token)
     {
         if (!RankManager.OnQuestCompleted(e))
         {
             token.CombineIfNeeded(UnloadToken, e.Player.DisconnectToken);
-            await InvokeSingletonEvent<IQuestCompletedHandler, IQuestCompletedHandlerAsync>
-                (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e)
-                .ConfigureAwait(false);
+            return InvokeSingletonEvent<IQuestCompletedHandler, IQuestCompletedHandlerAsync>
+                (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e);
         }
-        else e.Break();
+        e.Break();
+        return Task.CompletedTask;
     }
     internal virtual bool CanRefillAmmoAt(ItemBarricadeAsset barricade)
     {

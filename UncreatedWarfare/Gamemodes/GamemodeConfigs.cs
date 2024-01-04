@@ -82,6 +82,14 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(101)]
     [JsonPropertyName("structure_vehicle_bay")]
     public RotatableConfig<JsonAssetReference<ItemAsset>> StructureVehicleBay { get; set; }
+
+    [Sync(102)]
+    [JsonPropertyName("allowed_cache_weapons")]
+    public RotatableConfig<JsonAssetReference<ItemAsset>[]> AllowedCacheWeapons { get; set; }
+
+    [Sync(103)]
+    [JsonPropertyName("ignored_damage_types")]
+    public RotatableConfig<EDamageOrigin[]> IgnoredCacheDamageOrigins { get; set; }
     #endregion
 
     #region Items (201 to 400)
@@ -738,8 +746,6 @@ public sealed class GamemodeConfigData : JSONConfigData
         BarricadeUAV = new JsonAssetReference<ItemBarricadeAsset>("fb8f84e2617b480aadfd77bbf4a6c3ec");
         TimeLimitedStorages = new JsonAssetReference<ItemBarricadeAsset>[]
         {
-            BarricadeAmmoCrate,
-            BarricadeRepairStation,
             "a2eb76590cf74401aeb7ff4b4b79fd86", // supply crate
             "2193aa0b272f4cc1938f719c8e8badb1"  // supply roll
         };
@@ -749,7 +755,7 @@ public sealed class GamemodeConfigData : JSONConfigData
             "fb910102ad954169abd4b0cb06a112c8", // Russia
             "c7754ac78083421da73006b12a56811a", // MEC
             "439c32cced234f358e101294ea0ce3e4", // Germany
-            "7bde55f70c494418bdd81926fb7d6359"  //China
+            "7bde55f70c494418bdd81926fb7d6359"  // China
         };
         RallyPoints = new JsonAssetReference<ItemBarricadeAsset>[]
         {
@@ -757,7 +763,29 @@ public sealed class GamemodeConfigData : JSONConfigData
             "0d7895360c80440fbe4a45eba28b2007", // Russia
             "c03352d9e6bb4e2993917924b604ee76", // MEC
             "49663078b594410b98b8a51e8eff3609", // Germany
-            "7720ced42dba4c1eac16d14453cd8bc4" //China
+            "7720ced42dba4c1eac16d14453cd8bc4"  // China
+        };
+        AllowedCacheWeapons = new JsonAssetReference<ItemAsset>[]
+        {
+            "3ac5dee6ea2a4cc198396facc482ea50", // RPG-26
+            "1fb0d8134b524c25abf1a4c41d75ec49", // RPG-28
+            "04cf59190c0d4b2184d201631786c174", // RPG-7V2
+            "1477d875bedb476daa6ffb2bb5d75c74", // M3_MAAWS
+            "46eb642a829f44d0ac1ebfd16d739aad", // Panzerfaust_3
+            "4e51ad861de844688d5634258fec758d", // M72_LAW
+            "4177c638f6a54e288f977f854757c844", // M1A2
+            "5f8fb4ffce8c4868a300db53df7dbb24", // T-90
+        };
+        IgnoredCacheDamageOrigins = new EDamageOrigin[]
+        {
+            EDamageOrigin.Bullet_Explosion,
+            EDamageOrigin.Trap_Explosion,
+            EDamageOrigin.Vehicle_Bumper,
+            EDamageOrigin.Food_Explosion,
+            EDamageOrigin.Vehicle_Explosion,
+            EDamageOrigin.Useable_Gun,
+            EDamageOrigin.Useable_Melee,
+            EDamageOrigin.Rocket_Explosion
         };
         #endregion
 

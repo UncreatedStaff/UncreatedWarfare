@@ -340,10 +340,20 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 
         _injuredPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, new DownedPlayerData(parameters));
         PlayerDied? died = DeathTracker.OnInjured(in parameters);
-        Guid item = died != null ? died.PrimaryAsset : Guid.Empty;
+        Guid item = died?.PrimaryAsset ?? Guid.Empty;
 
         if (parameters.player.transform.TryGetComponent(out Reviver reviver))
             reviver.TellProneDelayed();
+
+        if (player != null)
+        {
+            const float notifyDistSqr = 215f * 215f;
+            Vector3 downedPlayerPos = player.Position;
+            foreach (UCPlayer nearbyMedic in PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == team && x.KitClass == Class.Medic && (x.Position - downedPlayerPos).sqrMagnitude < notifyDistSqr))
+            {
+                Tips.TryGiveTip(nearbyMedic, 0, T.TipInjuredNearby, player);
+            }
+        }
 
         if (killer != null)
         {

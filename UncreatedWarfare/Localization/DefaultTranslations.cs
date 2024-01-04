@@ -1121,6 +1121,8 @@ internal static class T
     public static readonly Translation CacheDiscoveredDefense  = new Translation("<#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT", TranslationFlags.TMProUI);
     [TranslationData(SectionFOBs)]
     public static readonly Translation CacheSpawnedDefense     = new Translation("<#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE", TranslationFlags.TMProUI);
+    [TranslationData(SectionFOBs)]
+    public static readonly Translation RepairVehicleDead       = new Translation("<#ffa238>You can't repair dead vehicles.");
     #endregion
 
     #region Deploy
@@ -1770,6 +1772,16 @@ internal static class T
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset, IPlayer> VehicleGivenDm = new Translation<VehicleAsset, IPlayer>("<#d1bda7>{1} gave you their <#a0ad8e>{0}</color>.", arg1Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer, VehicleAsset, string, int> VehicleSentGiveRequestDm = new Translation<IPlayer, VehicleAsset, string, int>("<#d1bda7>{0} wants to give you their <#ddd>#{1}</color>. Do <#fff>{2}</color> to respond within <#ccc>{3}</color> ${p:2:second}.", UCPlayer.FormatColoredNickName);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer, VehicleAsset, int> VehicleGiveRequestSent = new Translation<IPlayer, VehicleAsset, int>("<#d1bda7>Sent {0} a give request for your <#ddd>#{1}</color>. They have <#ccc>{2}</color> ${p:2:second} to respond.", UCPlayer.FormatColoredNickName);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer, VehicleAsset> VehicleGiveRequestDeniedByTarget = new Translation<IPlayer, VehicleAsset>("<#d1a8a8>{0} denied your give request for <#ddd>#{1}</color>.", UCPlayer.FormatColoredNickName);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer, VehicleAsset> VehicleGiveRequestTimedOutByTarget = new Translation<IPlayer, VehicleAsset>("<#d1a8a8>{0} didn't respond to your give request for <#ddd>#{1}</color>.", UCPlayer.FormatColoredNickName);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer, VehicleAsset> VehicleGiveRequestAcceptedByTarget = new Translation<IPlayer, VehicleAsset>("<#d1bda7>{0} accepted your give request for <#ddd>#{1}</color>.", UCPlayer.FormatColoredNickName);
+    [TranslationData(SectionVehicles)]
     public static readonly Translation<IPlayer> VehicleTargetNotInVehicle = new Translation<IPlayer>("<#ff8c69>{0} is not in a vehicle.", UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<int> VehicleSeatNotValidOutOfRange = new Translation<int>("<#ff8c69>That vehicle doesn't have <#ddd>{0}</color> ${p:0:seat}.");
@@ -1783,32 +1795,32 @@ internal static class T
     public static readonly Translation<VehicleAsset, IPlayer, int> VehicleOwnerTookSeatDM = new Translation<VehicleAsset, IPlayer, int>("<#d1a8a8>The owner of the <#ccc>{0}</color>, {1}, took seat <#ddd>#{2}</color> from you.", arg1Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset, IPlayer, int> VehicleKickedPlayer = new Translation<VehicleAsset, IPlayer, int>("<#d1bda7>Kicked {1} out of seat <#ddd>#{2}</color> in your <#ccc>{0}</color>.", arg1Fmt: UCPlayer.FormatColoredNickName);
-    [TranslationData(SectionVehicles)]
+    [TranslationData(SectionVehicles, IsPrioritizedTranslation = false)]
     public static readonly Translation<IPlayer> VehicleSwappedSeats = new Translation<IPlayer>("<#d1bda7>Swapped seats with {0}.", UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset, int> VehicleEnterFailed = new Translation<VehicleAsset, int>("<#ff8c69>Unable to put you in seat <#ddd>#{1}</color> of your <#ccc>{0}</color>.");
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset, int> VehicleEnterForceSwapped = new Translation<VehicleAsset, int>("<#d1bda7>Put you in seat <#ddd>#{1}</color> of your <#ccc>{0}</color>.");
-    [TranslationData(SectionVehicles)]
+    [TranslationData(SectionVehicles, IsPrioritizedTranslation = false)]
     public static readonly Translation<VehicleAsset, IPlayer> VehicleSwapRequestNotInSameVehicle = new Translation<VehicleAsset, IPlayer>("<#ff8c69>You must be in the same <#ccc>{0}</color> as {1}.", arg1Fmt: UCPlayer.FormatColoredNickName);
-    [TranslationData(SectionVehicles)]
+    [TranslationData(SectionVehicles, IsPrioritizedTranslation = false)]
     public static readonly Translation<IPlayer, int, IPlayer> VehicleSwapRequestAlreadySent = new Translation<IPlayer, int, IPlayer>("<#ff8c69>{0} already has a pending swap request from {2}, try again in <#ccc>{1}</color> ${p:1:second}.", UCPlayer.FormatColoredNickName, arg2Fmt: UCPlayer.FormatColoredNickName);
-    [TranslationData(SectionVehicles)]
+    [TranslationData(SectionVehicles, IsPrioritizedTranslation = false)]
     public static readonly Translation<IPlayer, int, string> VehicleSentSwapRequestDm = new Translation<IPlayer, int, string>("<#d1bda7>{0} wants to swap from seat <#ddd>#{1}</color> with you. Do <#fff>{2}</color> to respond.", UCPlayer.FormatColoredNickName);
-    [TranslationData(SectionVehicles)]
+    [TranslationData(SectionVehicles, IsPrioritizedTranslation = false)]
     public static readonly Translation<IPlayer, int, int> VehicleSwapRequestSent = new Translation<IPlayer, int, int>("<#d1bda7>Sent {0} a swap request for seat <#ddd>#{1}</color>. They have <#ccc>{2}</color> ${p:2:second} to respond.", UCPlayer.FormatColoredNickName);
-    [TranslationData(SectionVehicles)]
+    [TranslationData(SectionVehicles, IsPrioritizedTranslation = false)]
     public static readonly Translation<IPlayer> VehicleSwapRequestDeniedByTarget = new Translation<IPlayer>("<#d1a8a8>{0} denied your swap request.", UCPlayer.FormatColoredNickName);
-    [TranslationData(SectionVehicles)]
+    [TranslationData(SectionVehicles, IsPrioritizedTranslation = false)]
     public static readonly Translation<IPlayer> VehicleSwapRequestTimedOutByTarget = new Translation<IPlayer>("<#d1a8a8>{0} didn't respond to your swap request.", UCPlayer.FormatColoredNickName);
-    [TranslationData(SectionVehicles)]
+    [TranslationData(SectionVehicles, IsPrioritizedTranslation = false)]
     public static readonly Translation<IPlayer> VehicleSwapRequestAcceptedByTarget = new Translation<IPlayer>("<#d1bda7>{0} accepted your swap request.", UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation VehicleSwapRequestNotSent = new Translation("<#d1a8a8>You do not have any pending swap requests.");
+    public static readonly Translation VehicleRequestNotSent = new Translation("<#d1a8a8>You do not have any pending vehicle requests.");
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleSwapRequestDenied = new Translation<IPlayer>("<#d1a8a8>Denied {0}'s swap request.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleRequestDenied = new Translation<IPlayer>("<#d1a8a8>Denied {0}'s vehicle request.", UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleSwapRequestAccepted = new Translation<IPlayer>("<#d1bda7>Accepted {0}'s swap request.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleRequestAccepted = new Translation<IPlayer>("<#d1bda7>Accepted {0}'s vehicle request.", UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset> VehicleTooFarAway = new Translation<VehicleAsset>("<#ff8c69>Your {0} is too far away.");
 
@@ -2407,6 +2419,8 @@ internal static class T
     public static readonly Translation TipActionMenuSl = new Translation("Press <#a5c3d9><plugin_1/></color> for <#85c996>squad actions</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionTips)]
     public static readonly Translation TipCallMedic = new Translation("You are hurt. Press <#d9a5bb><plugin_1/></color> to call for a medic.", TranslationFlags.TMProUI);
+    [TranslationData(SectionTips)]
+    public static readonly Translation<IPlayer> TipInjuredNearby = new Translation<IPlayer>("{0} is injured! Revive them by healing them.", TranslationFlags.TMProUI, UCPlayer.FormatColoredNickName);
     #endregion
 
     #region Zone Command

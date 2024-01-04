@@ -55,7 +55,7 @@ public class Tips : BaseSingleton
             _singleton._tips.Add(tip);
             GiveTip(player, text);
         }
-        else if ((DateTime.UtcNow - tip.LastSent).TotalSeconds > tip.Cooldown)
+        else if (tip.Cooldown <= 0 || (DateTime.UtcNow - tip.LastSent).TotalSeconds > tip.Cooldown)
         {
             tip.LastSent = DateTime.UtcNow;
             GiveTip(player, text);
@@ -71,18 +71,10 @@ public class Tips : BaseSingleton
         ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Tip, translation) { Resend = Data.PluginKeyMatch.IsMatch(translation) });
     }
 }
-public class Tip
+public class Tip(ulong steam64, float cooldown, Translation translation)
 {
-    public readonly ulong Steam64;
-    public DateTime LastSent;
-    public readonly float Cooldown;
-    public readonly Translation Translation;
-
-    public Tip(ulong steam64, float cooldown, Translation translation)
-    {
-        Steam64 = steam64;
-        LastSent = DateTime.UtcNow;
-        Translation = translation;
-        Cooldown = cooldown;
-    }
+    public readonly ulong Steam64 = steam64;
+    public DateTime LastSent = DateTime.UtcNow;
+    public readonly float Cooldown = cooldown;
+    public readonly Translation Translation = translation;
 }

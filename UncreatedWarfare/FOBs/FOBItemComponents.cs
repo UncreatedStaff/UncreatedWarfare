@@ -628,6 +628,12 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 if (ActiveVehicle == null)
                     return;
 
+                if (ActiveVehicle.isDead)
+                {
+                    Chat.SendSingleMessage(T.RepairVehicleDead.Translate(shoveler, out Color color, true), color, EChatMode.SAY, "https://i.imgur.com/aMmj4YQ.jpg", true, shoveler.SteamPlayer);
+                    return;
+                }
+
                 health = ActiveVehicle.health;
                 maxHealth = ActiveVehicle.asset.health;
             }

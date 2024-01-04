@@ -149,12 +149,15 @@ public static class IconManager
 #endif
         if (!Icons.Contains(icon))
             return;
-        EffectManager.ClearEffectByGuid_AllPlayers(icon.EffectGUID);
+
+        if (UCWarfare.IsLoaded)
+            EffectManager.ClearEffectByGuid_AllPlayers(icon.EffectGUID);
         Icons.Remove(icon);
         if (destroy)
             icon.Destroy();
 
-        SpawnNewIconsOfType(icon.EffectGUID);
+        if (UCWarfare.IsLoaded)
+            SpawnNewIconsOfType(icon.EffectGUID);
         L.LogDebug($"[ICONS] [{icon.Effect?.name}] Icon deleted.");
     }
     public static void DrawNewIconsOfType(Guid effectGUID)
