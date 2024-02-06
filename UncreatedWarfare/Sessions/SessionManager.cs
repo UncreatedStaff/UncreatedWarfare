@@ -3,8 +3,10 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -16,6 +18,7 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 
 // ReSharper disable InconsistentlySynchronizedField
@@ -366,5 +369,37 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
         FixupSession(dbContext, session);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
     }
+    /// <summary>
+    /// Fixes the dates on any sessions that didn't get terminated properly (server crashed, etc). Accurate to +/- 10 seconds.
+    /// </summary>
+    public static async Task CheckForTerminatedSessions(CancellationToken token = default)
+    {
+        DateTimeOffset? lastHeartbeat = ServerHeartbeatTimer.GetLastBeat();
+        if (lastHeartbeat.HasValue)
+        {
+            L.Log($"Server last online: {lastHeartbeat.Value} ({(DateTime.UtcNow - lastHeartbeat.Value.UtcDateTime):g} ago). Checking for sessions that were terminated unexpectedly.", ConsoleColor.Magenta);
 
+            int ct;
+            await using (IGameDataDbContext dbContext = new WarfareDbContext())
+            {
+                byte region = UCWarfare.Config.RegionKey;
+                List<SessionRecord> records = await dbContext.Sessions.Where(x => x.UnexpectedTermination && x.EndedTimestamp == null && x.Game.Region == region).ToListAsync(token);
+
+                ct = records.Count;
+
+                foreach (SessionRecord record in records)
+                {
+                    record.EndedTimestamp = lastHeartbeat.Value;
+                    record.LengthSeconds = (lastHeartbeat.Value.UtcDateTime - record.StartedTimestamp.UtcDateTime).TotalSeconds;
+                }
+
+                dbContext.UpdateRange(records);
+                await dbContext.SaveChangesAsync(token);
+            }
+
+            L.Log($"Migrated {ct} session(s) after server didn't shut down cleanly.", ConsoleColor.Magenta);
+        }
+        else
+            L.Log("Unknown last server heartbeat.", ConsoleColor.Magenta);
+    }
 }

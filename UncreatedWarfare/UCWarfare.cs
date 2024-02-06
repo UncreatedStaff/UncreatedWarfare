@@ -925,6 +925,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
 
             L.Log("Unloading Uncreated Warfare", ConsoleColor.Magenta);
+
+            ServerHeartbeatTimer.Beat();
+
             await LetTasksUnload(token).ConfigureAwait(false);
             if (Data.Singletons is not null)
             {

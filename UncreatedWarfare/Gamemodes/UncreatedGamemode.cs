@@ -627,6 +627,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             }
             
             QuestManager.OnGameTick();
+            if (Every10Seconds)
+                ServerHeartbeatTimer.Beat();
 #if DEBUG
             profiler.Dispose();
             if (EveryXSeconds(150))

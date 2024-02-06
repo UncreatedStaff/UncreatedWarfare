@@ -11,11 +11,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Homebase.Unturned;
 using Uncreated.Homebase.Unturned.Warfare;
@@ -24,6 +26,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -32,6 +35,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
@@ -86,6 +90,8 @@ public static class Data
         public static readonly string KitSync = Path.Combine(Sync, "kits.json");
         public static readonly string CurrentLog = Path.Combine(Logs, "current.txt");
         public static readonly string FunctionLog = Path.Combine(Logs, "funclog.txt");
+        public static readonly string Heartbeat = Path.Combine(BaseDirectory, "Stats", "heartbeat.dat");
+        public static readonly string HeartbeatBackup = Path.Combine(BaseDirectory, "Stats", "heartbeat_last.dat");
         public static string FlagStorage => _flagCache ??= Path.Combine(MapStorage, "Flags") + Path.DirectorySeparatorChar;
         public static string StructureStorage => _structureCache ??= Path.Combine(MapStorage, "Structures") + Path.DirectorySeparatorChar;
         public static string VehicleStorage => _vehicleCache ??= Path.Combine(MapStorage, "Vehicles") + Path.DirectorySeparatorChar;
@@ -428,8 +434,11 @@ public static class Data
         for (int i = 0; i < Provider.clients.Count; i++)
             StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
 
+        await SessionManager.CheckForTerminatedSessions(token).ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
+
         L.Log("Loading first gamemode...", ConsoleColor.Magenta);
-        if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF), true, token))
+        if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF), true, token).ConfigureAwait(false))
             throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Failed to load gamemode"));
 
         SteamPlayerID id = new SteamPlayerID(CSteamID.Nil, 0, "Nil", "Nil", "Nil", CSteamID.Nil);

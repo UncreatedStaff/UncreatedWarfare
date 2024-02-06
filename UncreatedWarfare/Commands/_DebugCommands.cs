@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using DanielWillett.ReflectionTools;
@@ -44,15 +43,11 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Permissions;
 using Uncreated.Warfare.Stats;
-using Debug = System.Diagnostics.Debug;
-using Cysharp.Threading.Tasks.Triggers;
-
-
+using Uncreated.Warfare.Teams;
 #if DEBUG
 using HarmonyLib;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads.Commander;
-using Uncreated.Warfare.Teams;
 #endif
 
 // ReSharper disable UnusedMember.Local

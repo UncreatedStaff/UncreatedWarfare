@@ -3,14 +3,12 @@ using Steamworks;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -357,9 +355,14 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
         }
         else
         {
-            if (Gamemode.Config.StructureVehicleBay.ValidReference(out Guid guid) && UCBarricadeManager.IsStructureNearby(guid, 20f, ctx.Caller.Position, out _) && UCBarricadeManager.CountNearbyBarricades(KitSign, 8f, ctx.Caller.Position) > 5)
+            // checks for spamming /req where the vehicle will be once it spawns
+            if (Gamemode.Config.StructureVehicleBay.ValidReference(out Guid guid) &&
+                UCBarricadeManager.IsStructureNearby(guid, 20f, ctx.Caller.Position, out _) &&
+                UCBarricadeManager.CountNearbyBarricades(KitSign, 8f, ctx.Caller.Position) < 5)
+            {
                 ctx.PortionCommandCooldownTime = 5f;
-            
+            }
+
             await UCWarfare.ToUpdate(token);
             throw ctx.Reply(T.RequestNoTarget);
         }
