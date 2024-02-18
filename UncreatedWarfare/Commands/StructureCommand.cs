@@ -354,8 +354,7 @@ public class StructureCommand : AsyncCommand
                     if (args == null)
                     {
                         StructureSaver? saver = StructureSaver.GetSingletonQuick();
-                        args = new SalvageBarricadeRequested(player, bdrop, bdrop.GetServersideData(), region, x, y,
-                            plant, saver?.GetSaveItemSync(bdrop.instanceID, StructType.Barricade));
+                        args = new SalvageBarricadeRequested(player, bdrop, bdrop.GetServersideData(), region, x, y, plant, saver?.GetSaveItemSync(bdrop.instanceID, StructType.Barricade), default, default);
                     }
 
                     ISalvageInfo salvage = WorkingSalvageInfo[i];
@@ -409,7 +408,7 @@ public class StructureCommand : AsyncCommand
                     if (args == null)
                     {
                         StructureSaver? saver = StructureSaver.GetSingletonQuick();
-                        args = new SalvageStructureRequested(player, sdrop, sdrop.GetServersideData(), region, x, y, saver?.GetSaveItemSync(sdrop.instanceID, StructType.Structure));
+                        args = new SalvageStructureRequested(player, sdrop, sdrop.GetServersideData(), region, x, y, saver?.GetSaveItemSync(sdrop.instanceID, StructType.Structure), default, default);
                     }
                     
                     ISalvageInfo salvage = WorkingSalvageInfo[i];

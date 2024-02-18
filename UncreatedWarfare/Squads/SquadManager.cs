@@ -46,6 +46,11 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static bool Loaded => _singleton.IsLoaded();
     public static SquadManager Singleton => _singleton;
     public Commanders Commanders;
+
+    /// <summary>
+    /// Called when the player joins, leaves, or is promoted to leader in a squad.
+    /// </summary>
+    public static event SquadUpdated? SquadStatusUpdated;
     public override void Load()
     {
         base.Load();
@@ -459,6 +464,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         Squad squad = new Squad(name, leader, team, leader.KitBranch);
         Squads.Add(squad);
         SortSquadNames();
+        Squad? oldSquad = leader.Squad;
         leader.Squad = squad;
         Traits.TraitManager.OnPlayerJoinSquad(leader, squad);
 
@@ -469,6 +475,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         ActionLog.Add(ActionLogType.CreatedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(team), leader);
 
+        SquadStatusUpdated?.Invoke(leader, oldSquad, squad, false, true);
         return squad;
     }
     private static void SortSquadNames()
@@ -495,7 +502,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         Traits.TraitManager.OnPlayerJoinSquad(player, squad);
         squad.Members.Add(player);
         SortMembers(squad);
-
+        Squad? oldSquad = player.Squad;
         player.Squad = squad;
 
         ClearList(player.Player);
@@ -511,6 +518,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             squad.RallyPoint!.ShowUIForSquad();
 
         PlayerManager.ApplyTo(player);
+        SquadStatusUpdated?.Invoke(player, oldSquad, squad, false, false);
     }
     private static void SortMembers(Squad squad)
     {
@@ -532,7 +540,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #endif
         player.SendChat(T.SquadLeft, squad);
 
-        bool willNeedNewLeader = squad.Leader == null || squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID;
+        bool wasLeader = squad.Leader.Steam64 == player.Steam64;
+        bool willNeedNewLeader = squad.Leader == null || wasLeader;
         player.Squad = null;
         ClearMenu(player.Player);
         squad.Members.RemoveAll(p => p.Steam64 == player.Steam64);
@@ -564,6 +573,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
             if (player is { IsOnline: true, IsLeaving: false })
                 SendSquadList(player);
+
+            SquadStatusUpdated?.Invoke(player, squad, null, wasLeader, false);
 
             return;
         }
@@ -599,6 +610,11 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         }
 
         PlayerManager.ApplyTo(player);
+
+        SquadStatusUpdated?.Invoke(player, squad, null, wasLeader, false);
+
+        if (willNeedNewLeader)
+            SquadStatusUpdated?.Invoke(squad.Leader!, squad, squad, false, true);
     }
     public static void DisbandSquad(Squad squad)
     {
@@ -626,9 +642,10 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         UpdateUIMemberCount(squad.Team);
 
         if (squad.HasRally)
-        {
             squad.RallyPoint!.Destroy();
-        }
+
+        for (int i = 0; i < squad.Members.Count; ++i)
+            SquadStatusUpdated?.Invoke(squad.Members[i], squad, null, squad.Leader.Steam64 == squad.Members[i].Steam64, false);
     }
     public static void KickPlayerFromSquad(UCPlayer player, Squad squad)
     {
@@ -661,10 +678,13 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             squad.RallyPoint!.ClearUIForPlayer(player);
 
         PlayerManager.ApplyTo(player);
+        SquadStatusUpdated?.Invoke(player, squad, null, false, false);
     }
     public static void PromoteToLeader(Squad squad, UCPlayer newLeader)
     {
         _singleton.AssertLoaded();
+        if (newLeader == squad.Leader)
+            return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -677,6 +697,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         Traits.TraitManager.OnPlayerPromotedSquadleader(newLeader, squad);
 
+        UCPlayer oldLeader = squad.Leader;
         squad.Leader = newLeader;
 
         for (int i = 0; i < squad.Members.Count; i++)
@@ -690,6 +711,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         SortMembers(squad);
         UpdateMemberList(squad);
+        SquadStatusUpdated?.Invoke(oldLeader, squad, squad, true, false);
+        SquadStatusUpdated?.Invoke(newLeader, squad, squad, false, true);
     }
     public static bool FindSquad(string input, ulong teamID, out Squad squad)
     {
@@ -897,3 +920,5 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
             ? Localization.Colorize(Teams.TeamManager.GetTeamHexColor(Team), Name, flags)
             : Name;
 }
+
+public delegate void SquadUpdated(UCPlayer player, Squad? oldSquad, Squad? newSquad, bool oldIsLeader, bool newIsLeader);

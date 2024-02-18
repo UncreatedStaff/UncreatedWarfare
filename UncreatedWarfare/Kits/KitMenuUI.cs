@@ -530,14 +530,14 @@ public class KitMenuUI : UnturnedUI
             IncludedItems[index].SetVisibility(c, false);
         }
 
-        WarfareStats? stats = StatsManager.OnlinePlayers.FirstOrDefault(x => x.Steam64 == player.Steam64);
-        if (stats != null && stats.Kits.FirstOrDefault(x => x.KitID.Equals(kit.InternalName, StringComparison.Ordinal)) is { } kitStats)
-        {
-            ValStatsKills.SetText(c, kitStats.Kills.ToString(player.Locale.CultureInfo));
-            ValStatsDeaths.SetText(c, kitStats.Deaths.ToString(player.Locale.CultureInfo));
-            ValStatsPrimaryAverageDistance.SetText(c, kitStats.AverageGunKillDistance.ToString("0.#", player.Locale.CultureInfo) + " m");
-            ValStatsPlaytime.SetText(c, Localization.GetTimeFromMinutes(((int)kitStats.PlaytimeMinutes), player));
-        }
+        // WarfareStats? stats = StatsManager.OnlinePlayers.FirstOrDefault(x => x.Steam64 == player.Steam64);
+        // if (stats != null && stats.Kits.FirstOrDefault(x => x.KitID.Equals(kit.InternalName, StringComparison.Ordinal)) is { } kitStats)
+        // {
+        //     ValStatsKills.SetText(c, kitStats.Kills.ToString(player.Locale.CultureInfo));
+        //     ValStatsDeaths.SetText(c, kitStats.Deaths.ToString(player.Locale.CultureInfo));
+        //     ValStatsPrimaryAverageDistance.SetText(c, kitStats.AverageGunKillDistance.ToString("0.#", player.Locale.CultureInfo) + " m");
+        //     ValStatsPlaytime.SetText(c, Localization.GetTimeFromMinutes(((int)kitStats.PlaytimeMinutes), player));
+        // }
 
         KitManager? manager = KitManager.GetSingletonQuick();
 

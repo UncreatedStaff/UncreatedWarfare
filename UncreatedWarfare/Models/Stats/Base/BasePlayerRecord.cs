@@ -23,21 +23,17 @@ public abstract class BasePlayerRecord
     [Index]
     public byte Team { get; set; }
 
-    [Required]
     [ForeignKey(nameof(PlayerData))]
     [Column("Steam64")]
-    public ulong Steam64 { get; set; }
+    public ulong? Steam64 { get; set; }
 
-    [Required]
-    public WarfareUserData PlayerData { get; set; }
+    public WarfareUserData? PlayerData { get; set; }
 
-    [Required]
     [ForeignKey(nameof(Session))]
     [Column("Session")]
-    public ulong SessionId { get; set; }
+    public ulong? SessionId { get; set; }
 
-    [Required]
-    public SessionRecord Session { get; set; }
+    public SessionRecord? Session { get; set; }
 
     [NotMapped]
     public Vector3 Position
@@ -62,19 +58,23 @@ public abstract class BasePlayerRecord
         set => _position.z = value;
     }
 
+    [StringLength(255)]
+    [Required]
+    public string NearestLocation { get; set; }
+
     [Column("TimestampUTC")]
     public DateTimeOffset Timestamp { get; set; }
 
     public static void Map<TEntity>(ModelBuilder modelBuilder) where TEntity : BasePlayerRecord, new()
     {
-        modelBuilder.Entity<TEntity>()
-            .HasOne(x => x.PlayerData)
-            .WithMany()
+        modelBuilder.Entity<WarfareUserData>()
+            .HasMany<TEntity>()
+            .WithOne(x => x.PlayerData!)
             .OnDelete(DeleteBehavior.NoAction);
 
-        modelBuilder.Entity<TEntity>()
-            .HasOne(x => x.Session)
-            .WithMany()
+        modelBuilder.Entity<SessionRecord>()
+            .HasMany<TEntity>()
+            .WithOne(x => x.Session!)
             .OnDelete(DeleteBehavior.NoAction);
     }
 }

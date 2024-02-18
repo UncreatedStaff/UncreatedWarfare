@@ -1044,8 +1044,8 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             ulong dteam = e.Instigator.GetTeam();
             bool vehicleWasEnemy = (dteam == 1 && e.Team == 2) || (dteam == 2 && e.Team == 1);
             bool vehicleWasFriendly = dteam == e.Team;
-            if (!vehicleWasFriendly)
-                Stats.StatsManager.ModifyTeam(dteam, t => t.VehiclesDestroyed++, false);
+            // if (!vehicleWasFriendly)
+            //     Stats.StatsManager.ModifyTeam(dteam, t => t.VehiclesDestroyed++, false);
             int fullXP = 0;
             if (PointsConfig.XPData.TryGetValue(xpreward.ToString(), out PointsConfig.XPRewardData data) && data.Amount > 0)
                 fullXP = data.Amount;
@@ -1159,9 +1159,9 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     QuestManager.OnVehicleDestroyed(e, resMaxPl);
                 }
 
-                if (e.InstigatorId != 0)
-                    Stats.StatsManager.ModifyStats(e.InstigatorId, s => s.VehiclesDestroyed++, false);
-                Stats.StatsManager.ModifyVehicle(e.Vehicle.id, v => v.TimesDestroyed++);
+                // if (e.InstigatorId != 0)
+                //     Stats.StatsManager.ModifyStats(e.InstigatorId, s => s.VehiclesDestroyed++, false);
+                // Stats.StatsManager.ModifyVehicle(e.Vehicle.id, v => v.TimesDestroyed++);
             }
             else if (vehicleWasFriendly)
             {

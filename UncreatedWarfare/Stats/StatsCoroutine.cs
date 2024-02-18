@@ -31,27 +31,6 @@ internal static class StatsCoroutine
                 {
                     UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(Provider.clients[i]);
                     if (ucplayer == null) continue;
-                    byte team = ucplayer.Player.channel.owner.GetTeamByte();
-                    string? id = ucplayer.ActiveKitName;
-                    if (id != null)
-                    {
-                        StatsManager.ModifyStats(ucplayer.Steam64, s =>
-                        {
-                            s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval;
-                            WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == id && k.Team == team);
-                            if (kitData == default)
-                            {
-                                kitData = new WarfareStats.KitData { KitID = id, Team = team, PlaytimeMinutes = (uint)UCWarfare.Config.StatsInterval };
-                                s.Kits.Add(kitData);
-                            }
-                            else
-                            {
-                                kitData.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval;
-                            }
-                        }, true);
-                    }
-                    else
-                        StatsManager.ModifyStats(ucplayer.Steam64, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);
 
                     /* ON DUTY AWARDER */
                     if (ucplayer.OnDuty())
@@ -90,14 +69,10 @@ internal static class StatsCoroutine
                 _counter++;
 
                 /* CALCULATE AVERAGE PLAYERS AND SAVE */
-                StatsManager.ModifyTeam(1, t => t.AveragePlayers = (t.AveragePlayers * t.AveragePlayersCounter +
-                                                                    Provider.clients.Count(sp => sp.player.quests.groupID.m_SteamID == Teams.TeamManager.Team1ID)) / ++t.AveragePlayersCounter, false);
-                StatsManager.ModifyTeam(2, t => t.AveragePlayers = (t.AveragePlayers * t.AveragePlayersCounter +
-                                                                    Provider.clients.Count(sp => sp.player.quests.groupID.m_SteamID == Teams.TeamManager.Team2ID)) / ++t.AveragePlayersCounter, false);
-                StatsManager.SaveTeams();
-
-                /* TICK STAT BACKUP */
-                StatsManager.BackupTick();
+                // StatsManager.ModifyTeam(1, t => t.AveragePlayers = (t.AveragePlayers * t.AveragePlayersCounter +
+                //                                                     Provider.clients.Count(sp => sp.player.quests.groupID.m_SteamID == Teams.TeamManager.Team1ID)) / ++t.AveragePlayersCounter, false);
+                // StatsManager.ModifyTeam(2, t => t.AveragePlayers = (t.AveragePlayers * t.AveragePlayersCounter +
+                //                                                     Provider.clients.Count(sp => sp.player.quests.groupID.m_SteamID == Teams.TeamManager.Team2ID)) / ++t.AveragePlayersCounter, false);
 
 #if DEBUG
                 long mem = GC.GetTotalMemory(false);

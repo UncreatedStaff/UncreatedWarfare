@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
 
@@ -34,7 +35,9 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
     public IBuildable Buildable => _buildable ??= new UCStructure(Structure);
     object IBuildableDestroyedEvent.Region => Region;
     public EDamageOrigin DamageOrigin { get; }
-    internal StructureDestroyed(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, Vector3 ragoll, bool wasPickedUp, EDamageOrigin damageOrigin) : base()
+    public UnturnedAssetReference PrimaryAsset { get; }
+    public UnturnedAssetReference SecondaryAsset { get; }
+    internal StructureDestroyed(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, Vector3 ragoll, bool wasPickedUp, EDamageOrigin damageOrigin, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset) : base()
     {
         this.instigator = instigator;
         this.instigatorId = instigatorId;
@@ -48,6 +51,8 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
         _save = save;
         ListSqlConfig<SavedStructure>? m = save?.Manager;
         DamageOrigin = damageOrigin;
+        PrimaryAsset = primaryAsset;
+        SecondaryAsset = secondaryAsset;
         if (m is not null)
         {
             m.WriteWait();

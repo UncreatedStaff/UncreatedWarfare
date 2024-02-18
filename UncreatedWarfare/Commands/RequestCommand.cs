@@ -484,9 +484,9 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
 
             await UCWarfare.ToUpdate(token);
             GiveVehicle(ctx.Caller, vehicle, data);
-            Stats.StatsManager.ModifyStats(ctx.Caller.Steam64, x => x.VehiclesRequested++, false);
-            Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
-            Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
+            // Stats.StatsManager.ModifyStats(ctx.Caller.Steam64, x => x.VehiclesRequested++, false);
+            // Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
+            // Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
             CooldownManager.StartCooldown(ctx.Caller, CooldownType.RequestVehicle, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
         }
         else

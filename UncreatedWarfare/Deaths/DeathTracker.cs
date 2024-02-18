@@ -422,7 +422,7 @@ public class DeathTracker : BaseReloadSingleton
                         args.ItemGuid = asset.GUID;
                         e.PrimaryAsset = asset.GUID;
                         args.Flags |= DeathFlags.Item;
-                        e.TurretVehicleOwner = data.LastRocketShotVehicle;
+                        e.TurretVehicleOwner = data.LastRocketShotVehicleAsset;
                     }
                     else if (killer.Player!.equipment.asset is not null)
                     {

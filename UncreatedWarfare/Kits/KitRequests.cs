@@ -258,19 +258,19 @@ public class KitRequests(KitManager manager)
         ulong team = ctx.Caller.GetTeam();
         AmmoCommand.WipeDroppedItems(ctx.CallerID);
         await GiveKit(ctx.Caller, kit, true, true, token).ConfigureAwait(false);
-        string id = kit.InternalName;
-        StatsManager.ModifyKit(id, k => k.TimesRequested++);
-        StatsManager.ModifyStats(ctx.CallerID, s =>
-        {
-            WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == id && k.Team == team);
-            if (kitData == default)
-            {
-                kitData = new WarfareStats.KitData { KitID = id, Team = (byte)team, TimesRequested = 1 };
-                s.Kits.Add(kitData);
-            }
-            else
-                kitData.TimesRequested++;
-        }, false);
+        // string id = kit.InternalName;
+        // StatsManager.ModifyKit(id, k => k.TimesRequested++);
+        // StatsManager.ModifyStats(ctx.CallerID, s =>
+        // {
+        //     WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == id && k.Team == team);
+        //     if (kitData == default)
+        //     {
+        //         kitData = new WarfareStats.KitData { KitID = id, Team = (byte)team, TimesRequested = 1 };
+        //         s.Kits.Add(kitData);
+        //     }
+        //     else
+        //         kitData.TimesRequested++;
+        // }, false);
 
         ctx.Reply(T.RequestSignGiven, kit.Class);
 

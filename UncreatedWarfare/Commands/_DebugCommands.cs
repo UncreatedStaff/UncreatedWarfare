@@ -4,7 +4,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -42,7 +41,6 @@ using XPReward = Uncreated.Warfare.Levels.XPReward;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Permissions;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 #if DEBUG
 using HarmonyLib;
@@ -1873,15 +1871,11 @@ public class DebugCommand : AsyncCommand
             if ((adminType & (EAdminType.VANILLA_ADMIN | EAdminType.CONSOLE)) != 0)
                 level = PermissionLevel.Superuser;
 
-            string dir = Path.Combine(StatsManager.StatsDirectory, steam64.ToString(Data.AdminLocale) + ".dat");
-            WarfareStats.IO.ReadFrom(dir, out WarfareStats? stats);
-
             WarfareUserData data = new WarfareUserData
             {
                 PermissionLevel = level,
                 FirstJoined = firstJoined,
                 LastJoined = lastJoined,
-                TotalSeconds = stats?.PlaytimeMinutes ?? 0u,
                 Steam64 = steam64,
                 CharacterName = username.CharacterName.MaxLength(30)!,
                 DisplayName = null,

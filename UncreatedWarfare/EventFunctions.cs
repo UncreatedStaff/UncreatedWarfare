@@ -247,22 +247,24 @@ public static class EventFunctions
             }
 
             Patches.DeathsPatches.lastProjected = projectile;
-            if (gun.player.TryGetPlayerData(out UCPlayerData c))
+            if (!gun.player.TryGetPlayerData(out UCPlayerData c))
+                return;
+
+            c.LastRocketShot = gun.equippedGunAsset.GUID;
+            c.LastRocketShotVehicleAsset = default;
+            c.LastRocketShotVehicle = null;
+            InteractableVehicle? veh = gun.player.movement.getVehicle();
+            if (veh == null)
+                return;
+
+            for (int i = 0; i < veh.turrets.Length; ++i)
             {
-                c.LastRocketShot = gun.equippedGunAsset.GUID;
-                c.LastRocketShotVehicle = default;
-                InteractableVehicle? veh = gun.player.movement.getVehicle();
-                if (veh != null)
-                {
-                    for (int i = 0; i < veh.turrets.Length; ++i)
-                    {
-                        if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == gun.equippedGunAsset.id)
-                        {
-                            c.LastRocketShotVehicle = veh.asset.GUID;
-                            break;
-                        }
-                    }
-                }
+                if (veh.turrets[i].turret == null || veh.turrets[i].turret.itemID != gun.equippedGunAsset.id)
+                    continue;
+                
+                c.LastRocketShotVehicleAsset = veh.asset.GUID;
+                c.LastRocketShotVehicle = veh;
+                break;
             }
         }
         catch (Exception ex)
@@ -577,6 +579,7 @@ public static class EventFunctions
 
         c.LastDamageOrigin = damageOrigin;
         c.LastInstigator = instigatorSteamID.m_SteamID;
+        c.LastDamagedFromVehicle = null;
         if (instigatorSteamID != CSteamID.Nil)
         {
             c.LastItem = Guid.Empty;
@@ -593,7 +596,11 @@ public static class EventFunctions
                     }
                     break;
                 case EDamageOrigin.Rocket_Explosion:
-                    if (instigatorData != null) c.LastItem = instigatorData.LastRocketShot;
+                    if (instigatorData != null)
+                    {
+                        c.LastDamagedFromVehicle = instigatorData.LastRocketShotVehicle;
+                        c.LastItem = instigatorData.LastRocketShot;
+                    }
                     break;
                 case EDamageOrigin.Vehicle_Explosion:
                     if (instigatorData != null)
@@ -605,7 +612,9 @@ public static class EventFunctions
                 case EDamageOrigin.Bullet_Explosion:
                 case EDamageOrigin.Useable_Melee:
                 case EDamageOrigin.Useable_Gun:
-                    if (instigator != null && instigator.Player.equipment.asset != null) c.LastItem = instigator.Player.equipment.asset.GUID;
+                    if (instigator != null && instigator.Player.equipment.asset != null)
+                        c.LastItem = instigator.Player.equipment.asset.GUID;
+                    c.LastDamagedFromVehicle = instigator?.CurrentVehicle;
                     break;
                 case EDamageOrigin.Food_Explosion:
                     if (instigatorData != null) c.LastItem = instigatorData.LastExplosiveConsumed;
@@ -1663,7 +1672,6 @@ public static class EventFunctions
                 DutyCommand.InternOnToOff(ucplayer);
 
             StatsCoroutine.RemovePlayer(ucplayer.Steam64);
-            StatsManager.DeregisterPlayer(ucplayer.Steam64);
             try
             {
                 Data.Gamemode.PlayerLeave(ucplayer);

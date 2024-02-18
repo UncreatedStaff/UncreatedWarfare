@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
 
@@ -18,4 +19,6 @@ public interface IBuildableDestroyedEvent
     byte RegionPosY { get; }
     object Region { get; }
     EDamageOrigin DamageOrigin { get; }
+    UnturnedAssetReference PrimaryAsset { get; }
+    UnturnedAssetReference SecondaryAsset { get; }
 }

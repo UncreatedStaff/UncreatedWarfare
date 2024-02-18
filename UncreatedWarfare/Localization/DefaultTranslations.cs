@@ -1169,6 +1169,8 @@ internal static class T
     [TranslationData(SectionDeploy)]
     public static readonly Translation<string> DeployableNotFound           = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", FormatUppercase);
     [TranslationData(SectionDeploy)]
+    public static readonly Translation<IDeployable> DeployableAlreadyOnFOB  = new Translation<IDeployable>("<#ffa238>You are already on <#e3c27f>{0}</color>.", FOB.FormatNameColored);
+    [TranslationData(SectionDeploy)]
     public static readonly Translation DeployNotNearFOB                     = new Translation("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or in <#cedcde>MAIN BASE</color> in order to deploy.");
     [TranslationData(SectionDeploy)]
     public static readonly Translation DeployNotNearFOBInsurgency           = new Translation("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or <#e8d1a7>CACHE</color>, or in <#cedcde>MAIN BASE</color> in order to deploy.");

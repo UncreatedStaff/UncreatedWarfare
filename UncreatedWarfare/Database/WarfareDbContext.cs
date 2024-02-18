@@ -37,6 +37,8 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
     public DbSet<SessionRecord> Sessions => Set<SessionRecord>();
     public DbSet<MapData> Maps => Set<MapData>();
     public DbSet<SeasonData> Seasons => Set<SeasonData>();
+    public DbSet<FobRecord> FobRecords => Set<FobRecord>();
+    public DbSet<FobItemRecord> FobItemRecords => Set<FobItemRecord>();
     public DbSet<DeathRecord> DeathRecords => Set<DeathRecord>();
     public DbSet<DamageRecord> DamageRecords => Set<DamageRecord>();
     public DbSet<AidRecord> AidRecords => Set<AidRecord>();

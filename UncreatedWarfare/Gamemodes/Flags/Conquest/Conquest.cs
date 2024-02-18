@@ -270,7 +270,7 @@ public sealed partial class Conquest :
         if (_gameStats != null)
             _gameStats.flagOwnerChanges++;
         Chat.Broadcast(T.TeamCaptured, TeamManager.GetFactionSafe(capturedTeam)!, flag);
-        StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+        // StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         for (int i = 0; i < Singletons.Count; ++i)
         {
             if (Singletons[i] is IFlagCapturedListener f)

@@ -240,27 +240,27 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 if (medic.Player.TryGetPlayerData(out UCPlayerData c) && c.Stats is IRevivesStats r2)
                     r2.AddRevive();
 
-                Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
-
-                if (medic.ActiveKitName is { } activeKit)
-                {
-                    Stats.StatsManager.ModifyStats(medic.Steam64, s =>
-                    {
-                        s.Revives++;
-                        Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == activeKit && k.Team == team);
-                        if (kitData == default)
-                        {
-                            kitData = new Stats.WarfareStats.KitData { KitID = activeKit, Team = team, Revives = 1 };
-                            s.Kits.Add(kitData);
-                        }
-                        else
-                        {
-                            kitData.Revives++;
-                        }
-                    }, false);
-                }
-                else
-                    Stats.StatsManager.ModifyStats(medic.Steam64, s => s.Revives++, false);
+                // Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
+                // 
+                // if (medic.ActiveKitName is { } activeKit)
+                // {
+                //     Stats.StatsManager.ModifyStats(medic.Steam64, s =>
+                //     {
+                //         s.Revives++;
+                //         Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == activeKit && k.Team == team);
+                //         if (kitData == default)
+                //         {
+                //             kitData = new Stats.WarfareStats.KitData { KitID = activeKit, Team = team, Revives = 1 };
+                //             s.Kits.Add(kitData);
+                //         }
+                //         else
+                //         {
+                //             kitData.Revives++;
+                //         }
+                //     }, false);
+                // }
+                // else
+                //     Stats.StatsManager.ModifyStats(medic.Steam64, s => s.Revives++, false);
             }
         }
     }
@@ -357,30 +357,30 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 {
                     ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastEnemyInjured.Translate(killer)));
 
-                    Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
-                    if (killer.ActiveKitName is { } activeKit)
-                    {
-                        Stats.StatsManager.ModifyStats(killer.Steam64, s =>
-                        {
-                            s.Downs++;
-                            Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == activeKit && k.Team == kteam);
-                            if (kitData == default)
-                            {
-                                kitData = new Stats.WarfareStats.KitData { KitID = activeKit, Team = kteam, Downs = 1 };
-                                s.Kits.Add(kitData);
-                            }
-                            else
-                            {
-                                kitData.Downs++;
-                            }
-                        }, false);
-                        if (Assets.find(item) is ItemAsset asset)
-                        {
-                            Stats.StatsManager.ModifyWeapon(asset.id, activeKit, w => w.Downs++, true);
-                        }
-                    }
-                    else
-                        Stats.StatsManager.ModifyStats(killer.Steam64, s => s.Downs++, false);
+                    // Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
+                    // if (killer.ActiveKitName is { } activeKit)
+                    // {
+                    //     Stats.StatsManager.ModifyStats(killer.Steam64, s =>
+                    //     {
+                    //         s.Downs++;
+                    //         Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == activeKit && k.Team == kteam);
+                    //         if (kitData == default)
+                    //         {
+                    //             kitData = new Stats.WarfareStats.KitData { KitID = activeKit, Team = kteam, Downs = 1 };
+                    //             s.Kits.Add(kitData);
+                    //         }
+                    //         else
+                    //         {
+                    //             kitData.Downs++;
+                    //         }
+                    //     }, false);
+                    //     if (Assets.find(item) is ItemAsset asset)
+                    //     {
+                    //         Stats.StatsManager.ModifyWeapon(asset.id, activeKit, w => w.Downs++, true);
+                    //     }
+                    // }
+                    // else
+                    //     Stats.StatsManager.ModifyStats(killer.Steam64, s => s.Downs++, false);
                 }
                 else
                     ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastFriendlyInjured.Translate(killer)));

@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
 
@@ -28,11 +29,13 @@ public class DamageStructureRequested : BreakableEvent, IBuildableDestroyedEvent
     public uint InstanceID => _drop.instanceID;
     public bool IsSaved => _isSaved;
     public EDamageOrigin DamageOrigin => _damageOrigin;
+    public UnturnedAssetReference PrimaryAsset { get; }
+    public UnturnedAssetReference SecondaryAsset { get; }
     public SqlItem<SavedStructure>? Save => _save;
     public IBuildable Buildable => _buildable ??= new UCStructure(Structure);
     object IBuildableDestroyedEvent.Region => Region;
     public ushort PendingDamage { get; set; }
-    internal DamageStructureRequested(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin, ushort pendingTotalDamage)
+    internal DamageStructureRequested(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin, ushort pendingTotalDamage, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)
     {
         _damageOrigin = damageOrigin;
         _instigator = instigator;
@@ -44,6 +47,8 @@ public class DamageStructureRequested : BreakableEvent, IBuildableDestroyedEvent
         _y = y;
         PendingDamage = pendingTotalDamage;
         _save = save;
+        PrimaryAsset = primaryAsset;
+        SecondaryAsset = secondaryAsset;
         if (save?.Manager is not null)
         {
             save.Manager.WriteWait();

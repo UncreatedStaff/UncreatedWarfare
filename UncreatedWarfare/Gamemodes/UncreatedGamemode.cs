@@ -411,12 +411,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         if (!AllowCosmetics)
             player.SetCosmeticStates(false);
+
         if (!wasAlreadyOnline)
-        {
-            StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             UCWarfare.RunTask(Data.DatabaseManager.UpdateUsernames, player.Name, ctx: "Updaing usernames.", token: player.DisconnectToken);
-        }
-        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.UtcNow.Ticks);
     }
     private void InternalPreDispose()
     {
@@ -706,44 +703,44 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     switch (played)
                     {
                         // Any player who was online for 65% of the match will be awarded a win or punished with a loss
-                        case ITeamPresenceStats ps when tps.GetPresence(ps, 1) >= MatchPresentThreshold:
-                        {
-                            if (winner == 1)
-                                StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
-                            else
-                                StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
-                            break;
-                        }
-                        case ITeamPresenceStats ps:
-                        {
-                            if (tps.GetPresence(ps, 2) >= MatchPresentThreshold)
-                            {
-                                if (winner == 2)
-                                    StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
-                                else
-                                    StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
-                            }
-
-                            break;
-                        }
-                        case IPresenceStats ps2:
-                        {
-                            if (tps.GetPresence(ps2) >= MatchPresentThreshold)
-                            {
-                                if (IsWinner(played.Player))
-                                    StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
-                                else
-                                    StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
-                            }
-
-                            break;
-                        }
+                        // case ITeamPresenceStats ps when tps.GetPresence(ps, 1) >= MatchPresentThreshold:
+                        // {
+                        //     if (winner == 1)
+                        //         StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
+                        //     else
+                        //         StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
+                        //     break;
+                        // }
+                        // case ITeamPresenceStats ps:
+                        // {
+                        //     if (tps.GetPresence(ps, 2) >= MatchPresentThreshold)
+                        //     {
+                        //         if (winner == 2)
+                        //             StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
+                        //         else
+                        //             StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
+                        //     }
+                        // 
+                        //     break;
+                        // }
+                        // case IPresenceStats ps2:
+                        // {
+                        //     if (tps.GetPresence(ps2) >= MatchPresentThreshold)
+                        //     {
+                        //         if (IsWinner(played.Player))
+                        //             StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
+                        //         else
+                        //             StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
+                        //     }
+                        // 
+                        //     break;
+                        // }
                     }
                 }
             }
 
-            StatsManager.ModifyTeam(winner, t => t.Wins++, false);
-            StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
+            // StatsManager.ModifyTeam(winner, t => t.Wins++, false);
+            // StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
         }
         catch (Exception ex)
         {

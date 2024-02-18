@@ -6,13 +6,18 @@ using System.Globalization;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Models.Assets;
+using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -39,7 +44,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     private byte[] _originalState;
     private bool _destroyed;
     private bool _isBeingDestroyed;
-
+    private FobRecordTracker<WarfareDbContext>? _recordTracker;
+    public IBuildableDestroyedEvent? DestroyInfo { get; set; }
     public IReadOnlyList<IFOBItem> Items { get; }
     public IReadOnlyList<UCPlayer> FriendliesNearby { get; }
     public string Name { get; internal set; }
@@ -49,6 +55,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public GridLocation GridLocation { get; private set; }
     public RadioComponent Radio { get; internal set; }
     public Vector3 Position => transform.position;
+    public FobRecordTracker<WarfareDbContext>? Record => _recordTracker;
     public BunkerComponent? Bunker
     {
         get => _bunker;
@@ -134,6 +141,37 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         ClosestLocation = F.GetClosestLocationName(transform.position, true, true);
         GridLocation = new GridLocation(transform.position);
         Radius = FOBManager.Config.FOBBuildPickupRadiusNoBunker;
+
+        if (Radio == null)
+            return;
+
+        UCPlayer? player = UCPlayer.FromID(Radio.Owner);
+
+        SessionRecord? session = player?.CurrentSession;
+
+        if (session == null)
+        {
+            L.LogError($"Unable to find session for player {Radio.Owner} when creating FOB.");
+            return;
+        }
+
+        FobRecord fobRecord = new FobRecord
+        {
+            Steam64 = Owner,
+            FobAngle = Radio.transform.eulerAngles,
+            FobPosition = Radio.transform.position,
+            FobName = Name,
+            FobType = FobType.RadioFob,
+            FobNumber = Number,
+            NearestLocation = ClosestLocation,
+            SessionId = session.SessionId,
+            Timestamp = DateTimeOffset.UtcNow,
+            Team = (byte)Team,
+            Position = player!.Position
+        };
+
+        _recordTracker = new FobRecordTracker<WarfareDbContext>(fobRecord);
+        UCWarfare.RunTask(_recordTracker.Create, ctx: "Create FOB record.");
     }
     [UsedImplicitly]
     private void Start()
@@ -170,6 +208,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (Bunker != null)
             Bunker.FOB = this;
 
+
         L.LogDebug($"[FOBS] [{Name}] Initialized FOB: {Radio.Barricade.asset.itemName} (Radio State: {Radio.State})");
 
         OffloadNearbyLogisticsVehicle();
@@ -185,28 +224,65 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     public void ModifyBuild(int delta)
     {
-        if (delta != 0)
+        if (delta == 0)
+            return;
+
+        BuildSupply += delta;
+        UpdateResourceUI(true, false);
+
+        if (_recordTracker == null)
+            return;
+
+        UCWarfare.RunTask(_recordTracker.Update(record =>
         {
-            BuildSupply += delta;
-            UpdateResourceUI(true, false);
-        }
+            if (delta < 0)
+                record.BuildSpent += -delta;
+            else
+                record.BuildLoaded += delta;
+        }));
     }
     public void ModifyAmmo(int delta)
     {
-        if (delta != 0)
+        if (delta == 0)
+            return;
+
+        AmmoSupply += delta;
+        UpdateResourceUI(false, true);
+
+        if (_recordTracker == null)
+            return;
+
+        UCWarfare.RunTask(_recordTracker.Update(record =>
         {
-            AmmoSupply += delta;
-            UpdateResourceUI(false, true);
-        }
+            if (delta < 0)
+                record.AmmoSpent += -delta;
+            else
+                record.AmmoLoaded += delta;
+        }));
     }
     public void ModifyResources(int buildDelta, int ammoDelta)
     {
-        if (buildDelta != 0 || ammoDelta != 0)
+        if (buildDelta == 0 && ammoDelta == 0)
+            return;
+
+        BuildSupply += buildDelta;
+        AmmoSupply += ammoDelta;
+        UpdateResourceUI(buildDelta != 0, ammoDelta != 0);
+
+        if (_recordTracker == null)
+            return;
+
+        UCWarfare.RunTask(_recordTracker.Update(record =>
         {
-            BuildSupply += buildDelta;
-            AmmoSupply += ammoDelta;
-            UpdateResourceUI(buildDelta != 0, ammoDelta != 0);
-        }
+            if (buildDelta < 0)
+                record.BuildSpent += -buildDelta;
+            else
+                record.BuildLoaded += buildDelta;
+            if (ammoDelta < 0)
+                record.AmmoSpent += -ammoDelta;
+            else
+                record.AmmoLoaded += ammoDelta;
+        }));
     }
     public void Restock()
     {
@@ -221,19 +297,20 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         Vector3 pos = transform.position;
         if (Gamemode.Config.EffectUnloadBuild.ValidReference(out EffectAsset asset))
             F.TriggerEffectReliable(asset, 40, pos);
+
+        if (Radio.Barricade.interactable is not InteractableStorage storage)
+            return;
+
         // refresh inventory
-        if (Radio.Barricade.interactable is InteractableStorage storage)
+        // gets removed in InteractableStorage.updateState
+        storage.items.onStateUpdated += Radio.InvalidateRestock;
+        for (int i = 0; i < _friendlies.Count; ++i)
         {
-            // gets removed in InteractableStorage.updateState
-            storage.items.onStateUpdated += Radio.InvalidateRestock;
-            for (int i = 0; i < _friendlies.Count; ++i)
-            {
-                if (_friendlies[i].Player.inventory.storage == storage)
-                {
-                    _friendlies[i].Player.inventory.closeStorage();
-                    _friendlies[i].Player.inventory.openStorage(storage);
-                }
-            }
+            if (_friendlies[i].Player.inventory.storage != storage)
+                continue;
+
+            _friendlies[i].Player.inventory.closeStorage();
+            _friendlies[i].Player.inventory.openStorage(storage);
         }
     }
     public string GetUIColor()
@@ -268,6 +345,71 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         item.FOB = this;
         if (item is MonoBehaviour mb && item.Icon.ValidReference(out Guid icon))
             IconManager.AttachIcon(icon, mb.transform, item.Team, item.IconOffset);
+        if (item is RadioComponent c)
+        {
+            if (Radio != null && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
+                fobManager.UpdateFOBInList(Team, this);
+            Radio = c;
+            if (_recordTracker != null)
+            {
+                UCWarfare.RunTask(_recordTracker.Update(r =>
+                {
+                    r.Position = c.Position;
+                    r.FobAngle = c.transform.eulerAngles;
+                }), ctx: "Update FOB record.");
+            }
+            L.LogDebug($"[FOBS] [{Name}] Registered radio: {item.Buildable}.");
+            return;
+        }
+
+        if (_recordTracker != null && item.Owner != 0 && item.Type != BuildableType.Radio)
+        {
+            UCPlayer? player = UCPlayer.FromID(item.Owner);
+            SessionRecord? session = player?.CurrentSession;
+
+            if (session == null)
+            {
+                L.LogError($"Unable to find session for player {item.Owner} when creating FOB.");
+                return;
+            }
+
+            UCWarfare.RunTask(async () =>
+            {
+                UnturnedAssetReference itemRef;
+
+                if (item.Buildable == null)
+                    itemRef = default;
+                else if (item.Buildable.FullBuildable.ValidReference(out Guid guid))
+                    itemRef = new UnturnedAssetReference(guid);
+                else if (item.Buildable.Emplacement != null && item.Buildable.Emplacement.EmplacementVehicle.ValidReference(out guid))
+                    itemRef = new UnturnedAssetReference(guid);
+                else if (item.Buildable.Foundation.ValidReference(out guid))
+                    itemRef = new UnturnedAssetReference(guid);
+                else itemRef = default;
+
+                await _recordTracker.Create(item, new FobItemRecord
+                {
+                    Steam64 = item.Owner,
+                    Team = (byte)Team,
+                    FobId = await _recordTracker.GetRecordId(),
+                    FobItemAngle = item.Rotation.eulerAngles,
+                    FobItemPosition = item.Position,
+                    Item = itemRef,
+                    NearestLocation = ClosestLocation,
+                    Position = player!.Position,
+                    Timestamp = DateTimeOffset.UtcNow,
+                    SessionId = session.SessionId,
+                    Type = item.Type
+                });
+            }, ctx: "Create FOB item record.");
+
+            item.UpdateRecord += action =>
+            {
+                if (_recordTracker != null)
+                    UCWarfare.RunTask(_recordTracker.Update(item, action), ctx: "Update FOB item record.");
+            };
+        }
+
         if (item is BunkerComponent b)
         {
             BunkerComponent? oldBunker = Bunker;
@@ -284,14 +426,6 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             }
             else if (b.TryGetComponent(out spot))
                 Destroy(spot);
-            return;
-        }
-        if (item is RadioComponent c)
-        {
-            if (Radio != null && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
-                fobManager.UpdateFOBInList(Team, this);
-            Radio = c;
-            L.LogDebug($"[FOBS] [{Name}] Registered radio: {item.Buildable}.");
             return;
         }
         _items.Add(item);
@@ -391,6 +525,23 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (_isBeingDestroyed)
             return;
         _isBeingDestroyed = true;
+        if (_recordTracker != null)
+        {
+            bool destroyedByRoundEnd = Data.Gamemode == null || Data.Gamemode.State is not State.Active and not State.Staging;
+            bool teamkilled = !destroyedByRoundEnd && DestroyInfo != null && DestroyInfo.Instigator != null && DestroyInfo.Buildable.Group.GetTeam() == DestroyInfo.Instigator.GetTeam();
+
+            SessionRecord? session = DestroyInfo?.Instigator?.CurrentSession;
+
+            UCWarfare.RunTask(_recordTracker.Update(record =>
+            {
+                record.DestroyedAt = DateTimeOffset.UtcNow;
+                record.DestroyedByRoundEnd = destroyedByRoundEnd;
+                record.Teamkilled = teamkilled;
+                record.Instigator = DestroyInfo?.InstigatorId;
+                record.InstigatorSession = session;
+                record.InstigatorPosition = DestroyInfo?.Instigator?.Position;
+            }), ctx: "Update FOB record (destroyed).");
+        }
         for (int i = 0; i < _friendlies.Count; ++i)
         {
             FOBManager.ResourceUI.ClearFromPlayer(_friendlies[i].Connection);
@@ -734,33 +885,34 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (item.Equals(Radio))
             Radio = null!;
     }
-    public bool ContainsBuildable(IBuildable buildable)
+    public bool ContainsBuildable(IBuildable buildable) => FindFOBItem(buildable) != null;
+    public bool ContainsVehicle(InteractableVehicle vehicle) => FindFOBItem(vehicle) != null;
+    public IFOBItem? FindFOBItem(IBuildable buildable)
     {
         if (Radio != null && Radio.Barricade.instanceID == buildable.InstanceId &&
             buildable.Type == StructType.Barricade)
-            return true;
+            return Radio;
         if (Bunker != null && (Bunker.ActiveStructure.BuildableEquals(buildable) || Bunker.Base.BuildableEquals(buildable)))
-            return true;
+            return Bunker;
         for (int i = 0; i < _items.Count; ++i)
         {
-            if (_items[i] is ShovelableComponent sh &&
-                (sh.ActiveStructure.BuildableEquals(buildable) || sh.Base.BuildableEquals(buildable)))
-                return true;
+            if (_items[i] is ShovelableComponent sh && (sh.ActiveStructure.BuildableEquals(buildable) || sh.Base.BuildableEquals(buildable)))
+                return sh;
         }
 
-        return false;
+        return null;
     }
-    public bool ContainsVehicle(InteractableVehicle vehicle)
+    public IFOBItem? FindFOBItem(InteractableVehicle vehicle)
     {
         if (Bunker != null && Bunker.ActiveVehicle != null && Bunker.ActiveVehicle.instanceID == vehicle.instanceID)
-            return true;
+            return Bunker;
         for (int i = 0; i < _items.Count; ++i)
         {
             if (_items[i] is ShovelableComponent sh && sh.ActiveVehicle != null && sh.ActiveVehicle.instanceID == vehicle.instanceID)
-                return true;
+                return sh;
         }
 
-        return false;
+        return null;
     }
     internal IFOBItem? UpgradeItem(IFOBItem item, Transform newObj)
     {
@@ -768,18 +920,20 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         {
             for (int i = 0; i < _items.Count; ++i)
             {
-                if (_items[i].Equals(item))
-                {
-                    if (_items[i] is IDisposable d)
-                        d.Dispose();
-                    _items[i] = (IFOBItem)Activator.CreateInstance(item.GetType());
-                    _items[i].FOB = this;
-                    return _items[i];
-                }
+                if (!_items[i].Equals(item))
+                    continue;
+
+                if (_items[i] is IDisposable d)
+                    d.Dispose();
+
+                _items[i] = (IFOBItem)Activator.CreateInstance(item.GetType());
+                _items[i].FOB = this;
+                return _items[i];
             }
 
             return null;
         }
+
         if (itemMb is BunkerComponent b && b == Bunker)
         {
             if (b.TryGetComponent(out SpottedComponent comp))
@@ -799,16 +953,16 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
         for (int i = 0; i < _items.Count; ++i)
         {
-            if (_items[i] is MonoBehaviour mb && mb == itemMb)
-            {
-                IFOBItem comp = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
-                comp.FOB = this;
-                if (comp.Icon.ValidReference(out Guid icon))
-                    IconManager.AttachIcon(icon, newObj, comp.Team, comp.IconOffset);
-                Destroy(itemMb);
-                _items[i] = comp;
-                return comp;
-            }
+            if (_items[i] is not MonoBehaviour mb || mb != itemMb)
+                continue;
+
+            IFOBItem comp = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
+            comp.FOB = this;
+            if (comp.Icon.ValidReference(out Guid icon))
+                IconManager.AttachIcon(icon, newObj, comp.Team, comp.IconOffset);
+            Destroy(itemMb);
+            _items[i] = comp;
+            return comp;
         }
 
         return null;
@@ -981,7 +1135,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public void Dump(UCPlayer? target)
     {
         EffectAsset? marker = null;
-        L.Log($"[FOBS] [{Name}] === Fob Dump ===");
+        L.Log($"[FOBS] [{Name}] === Fob Dump === ({_recordTracker?.Record?.Id}");
         using IDisposable indent = L.IndentLog(1);
         L.Log($"Team: {Team}, Owner: {new OfflinePlayer(Owner)}");
         if (Radio == null)
@@ -1050,8 +1204,12 @@ public interface IFOB : IDeployable
     UCPlayer? Instigator { get; set; }
     GridLocation GridLocation { get; }
     Vector3 Position { get; }
+    IBuildableDestroyedEvent? DestroyInfo { get; set; }
+    FobRecordTracker<WarfareDbContext>? Record { get; }
     bool ContainsBuildable(IBuildable buildable);
     bool ContainsVehicle(InteractableVehicle vehicle);
+    IFOBItem? FindFOBItem(IBuildable buildable);
+    IFOBItem? FindFOBItem(InteractableVehicle vehicle);
     void Dump(UCPlayer? target);
 }
 public interface IResourceFOB : IFOB

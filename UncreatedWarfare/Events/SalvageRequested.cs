@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
 
@@ -25,11 +26,15 @@ public abstract class SalvageRequested : BreakablePlayerEvent, IBuildableDestroy
     object IBuildableDestroyedEvent.Region => RegionObj;
     ulong IBuildableDestroyedEvent.InstigatorId => Player.Steam64;
     public EDamageOrigin DamageOrigin => EDamageOrigin.Unknown;
-    protected SalvageRequested(UCPlayer player, object region, byte x, byte y, uint instanceId) : base(player)
+    public UnturnedAssetReference PrimaryAsset { get; }
+    public UnturnedAssetReference SecondaryAsset { get; }
+    protected SalvageRequested(UCPlayer player, object region, byte x, byte y, uint instanceId, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset) : base(player)
     {
         RegionObj = region;
         _x = x;
         _y = y;
         _instanceId = instanceId;
+        PrimaryAsset = primaryAsset;
+        SecondaryAsset = secondaryAsset;
     }
 }

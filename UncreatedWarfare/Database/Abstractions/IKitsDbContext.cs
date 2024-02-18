@@ -2,6 +2,7 @@
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
+using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Database.Abstractions;
@@ -63,30 +64,30 @@ public interface IKitsDbContext : IDbContext
             .WithOne(x => x.Kit)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<KitLayoutTransformation>()
-            .HasOne(x => x.PlayerData)
-            .WithMany()
-            .OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<WarfareUserData>()
+            .HasMany<KitLayoutTransformation>()
+            .WithOne(x => x.PlayerData)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Kit>()
             .HasMany<KitFavorite>()
             .WithOne(x => x.Kit)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<KitFavorite>()
-            .HasOne(x => x.PlayerData)
-            .WithMany()
-            .OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<WarfareUserData>()
+            .HasMany<KitFavorite>()
+            .WithOne(x => x.PlayerData)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<KitAccess>()
-            .HasOne(x => x.PlayerData)
-            .WithMany()
-            .OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<WarfareUserData>()
+            .HasMany<KitAccess>()
+            .WithOne(x => x.PlayerData)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<KitHotkey>()
-            .HasOne(x => x.PlayerData)
-            .WithMany()
-            .OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<WarfareUserData>()
+            .HasMany<KitHotkey>()
+            .WithOne(x => x.PlayerData)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Faction>()
             .HasMany<KitFilteredFaction>()
@@ -107,9 +108,9 @@ public interface IKitsDbContext : IDbContext
             .WithOne(x => x.Kit)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
-            .HasOne(x => x.Faction)
-            .WithMany()
+        modelBuilder.Entity<Faction>()
+            .HasMany<Kit>()
+            .WithOne(x => x.Faction!)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
 

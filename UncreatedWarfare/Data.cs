@@ -426,14 +426,6 @@ public static class Data
 
         indent.Dispose();
 
-        /* REGISTER STATS MANAGER */
-        StatsManager.LoadTeams();
-        StatsManager.LoadWeapons();
-        StatsManager.LoadKits();
-        StatsManager.LoadVehicles();
-        for (int i = 0; i < Provider.clients.Count; i++)
-            StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
-
         await SessionManager.CheckForTerminatedSessions(token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
 

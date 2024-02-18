@@ -34,6 +34,7 @@ public class VehicleComponent : MonoBehaviour
     public Guid LastItem;
     public bool LastItemIsVehicle;
     public InteractableVehicle Vehicle;
+    public InteractableVehicle? LastDamagedFromVehicle;
     public SqlItem<VehicleData>? Data;
     public EDamageOrigin LastDamageOrigin;
     public ulong LastInstigator;

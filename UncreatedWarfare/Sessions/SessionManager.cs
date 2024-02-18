@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using Microsoft.EntityFrameworkCore;
+using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -6,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -18,6 +18,7 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 
@@ -38,6 +39,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
 #endif
         await RestartSessionsForAll(false, true, token);
 
+        SquadManager.SquadStatusUpdated += OnSquadChanged;
         KitManager.OnManualKitChanged += OnKitChanged;
         EventDispatcher.GroupChanged += OnGroupChanged;
         Gamemode.OnGamemodeChanged += OnGamemodeChanged;
@@ -50,6 +52,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
         Gamemode.OnGamemodeChanged -= OnGamemodeChanged;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         KitManager.OnManualKitChanged -= OnKitChanged;
+        SquadManager.SquadStatusUpdated -= OnSquadChanged;
 
         KeyValuePair<ulong, SessionRecord>[] sessions;
         lock (_sessions)
@@ -219,6 +222,8 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
                 KitName = player.ActiveKitName,
                 MapId = MapScheduler.Current,
                 SeasonId = UCWarfare.Season,
+                SquadName = player.Squad?.Name,
+                SquadLeader = player.Squad?.Leader?.Steam64,
                 FinishedGame = false,
                 Team = (byte)player.GetTeam(),
                 UnexpectedTermination = true
@@ -248,6 +253,27 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
         FixupSession(dbContext, record);
 
         L.LogDebug($"[SESSIONS] Ended session {record.SessionId} for {record.Steam64}.");
+    }
+    private void OnSquadChanged(UCPlayer player, Squad? oldsquad, Squad? newsquad, bool oldisleader, bool newisleader)
+    {
+        if (player.IsLeaving || !player.HasInitedOnce)
+            return;
+
+        if (Data.Gamemode.State is not State.Staging and not State.Active || player.IsInitializing)
+        {
+            L.LogDebug($"[SESSIONS] Skipped creating session for {player.Steam64}. (gamemode initializing)");
+            return;
+        }
+
+        if (IsSessionExpired(player))
+        {
+            UCWarfare.RunTask(RestartSession, player, true, false, CancellationToken.None);
+            L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (squad changed)");
+        }
+        else
+        {
+            L.LogDebug($"[SESSIONS] Skipping creating session for {player.Steam64}. (squad changed)");
+        }
     }
     private void OnKitChanged(UCPlayer player, Kit? kit, Kit? oldkit)
     {
@@ -313,6 +339,18 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
         if (Data.Gamemode is not null && Data.Gamemode.GameId != currentSession.GameId)
             return true;
 
+        if (player.Squad != null)
+        {
+            if (!currentSession.SquadLeader.HasValue || currentSession.SquadLeader.Value != player.Squad.Leader.Steam64)
+                return true;
+
+            if (currentSession.SquadName == null || !currentSession.SquadName.Equals(player.Squad.Name, StringComparison.Ordinal))
+                return true;
+        }
+        else if (currentSession.SquadLeader.HasValue || currentSession.SquadName != null)
+            return true;
+
+
         return false;
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
@@ -357,11 +395,15 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
     private static void FixupSession(IGameDataDbContext dbContext, SessionRecord session)
     {
         if (session.Kit != null)
-            dbContext.Remove(session.Kit);
+            dbContext.Entry(session.Kit).State = EntityState.Detached;
         if (session.Game != null)
-            dbContext.Remove(session.Game);
+            dbContext.Entry(session.Game).State = EntityState.Detached;
         if (session.Map != null)
-            dbContext.Remove(session.Map);
+            dbContext.Entry(session.Map).State = EntityState.Detached;
+        if (session.PlayerData != null)
+            dbContext.Entry(session.PlayerData).State = EntityState.Detached;
+        if (session.SquadLeaderData != null)
+            dbContext.Entry(session.SquadLeaderData).State = EntityState.Detached;
     }
     private static async Task SaveSession(IGameDataDbContext dbContext, SessionRecord session, CancellationToken token = default)
     {

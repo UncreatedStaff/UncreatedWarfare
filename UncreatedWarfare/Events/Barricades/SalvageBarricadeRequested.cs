@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Events.Structures;
@@ -13,8 +14,8 @@ public sealed class SalvageBarricadeRequested : SalvageRequested
     public BarricadeData ServersideData => _data;
     public BarricadeRegion Region => (BarricadeRegion)RegionObj;
     public override IBuildable Buildable => BuildableCache ??= new UCBarricade(Barricade);
-    internal SalvageBarricadeRequested(UCPlayer instigator, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save)
-        : base(instigator, region, x, y, barricade.instanceID)
+    internal SalvageBarricadeRequested(UCPlayer instigator, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)
+        : base(instigator, region, x, y, barricade.instanceID, primaryAsset, secondaryAsset)
     {
         _drop = barricade;
         _data = barricadeData;

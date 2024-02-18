@@ -1,16 +1,17 @@
 ﻿using JetBrains.Annotations;
+using SDG.Framework.Utilities;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using SDG.Framework.Utilities;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.GameData;
+using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -21,6 +22,7 @@ namespace Uncreated.Warfare.FOBs;
 public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovelable, ISalvageListener
 {
     private bool _destroyed;
+    public event Action<Action<FobItemRecord>>? UpdateRecord;
 #nullable disable
     public FOB FOB { get; set; }
 #nullable restore
@@ -37,8 +39,10 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     public bool Destroyed => _destroyed;
     public TickResponsibilityCollection Builders { get; } = new TickResponsibilityCollection();
     public Vector3 Position => transform.position;
+    public Quaternion Rotation => transform.rotation;
     public bool NeedsRestock { get; internal set; }
     public float LastRestock { get; internal set; }
+    public ulong RecordId { get; set; }
 
     [UsedImplicitly]
     private void Awake()
@@ -71,7 +75,10 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
 
         Owner = Barricade.GetServersideData().owner;
         Team = Barricade.GetServersideData().group.GetTeam();
-        Builders.Set(Owner, FOBManager.Config.BaseFOBRepairHits);
+
+        UCPlayer? owner = UCPlayer.FromID(Owner);
+
+        Builders.Set(Owner, FOBManager.Config.BaseFOBRepairHits, owner?.CurrentSession?.SessionId ?? 0);
         
         if (Barricade.interactable is InteractableStorage storage)
         {
@@ -151,11 +158,11 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
                 return true;
             BarricadeManager.repair(Barricade.model, amt, 1, shoveler.CSteamID);
             FOBManager.TriggerBuildEffect(point);
-            Builders.Increment(shoveler.Steam64, amt);
+            Builders.Increment(shoveler.Steam64, amt, shoveler.CurrentSession?.SessionId ?? 0);
             UpdateHitsUI();
 
             if (State == RadioState.Bleeding && Barricade.GetServersideData().barricade.health >= maxHealth)
-                FOB.UpdateRadioState(RadioState.Alive);
+                FOB?.UpdateRadioState(RadioState.Alive);
 
             return true;
         }
@@ -170,11 +177,11 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
             float amt = maxHealth - Barricade.GetServersideData().barricade.health;
             BarricadeManager.repair(Barricade.model, amt, 1, shoveler.CSteamID);
             FOBManager.TriggerBuildEffect(transform.position);
-            Builders.Increment(shoveler.Steam64, amt);
+            Builders.Increment(shoveler.Steam64, amt, shoveler.CurrentSession?.SessionId ?? 0);
             UpdateHitsUI();
 
             if (State == RadioState.Bleeding)
-                FOB.UpdateRadioState(RadioState.Alive);
+                FOB?.UpdateRadioState(RadioState.Alive);
         }
     }
     private void UpdateHitsUI()
@@ -184,7 +191,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
         {
             float time = Time.realtimeSinceStartup;
             ToastMessage msg = new ToastMessage(ToastMessageStyle.ProgressBar, Points.GetProgressBar(Barricade.GetServersideData().barricade.health, Barricade.asset.health, 25).Colorize("ff9966"));
-            foreach (TickResponsibility responsibility in Builders)
+            foreach (TickResponsibility responsibility in Builders.GetGroupedEnumerator())
             {
                 if (time - responsibility.LastUpdated < 5f)
                 {
@@ -207,6 +214,8 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     private float _progressToBuild;
     private float _progressToRepair;
     private int _repairBuildRemoved;
+    private double _useTimeSeconds; // todo implement this
+    public event Action<Action<FobItemRecord>>? UpdateRecord;
     public FOB? FOB { get; set; }
     public BuildableType Type { get; private set; }
     public BuildableState State { get; private set; }
@@ -215,28 +224,33 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     public InteractableVehicle? ActiveVehicle { get; private set; }
     public IBuildable? Base { get; private set; }
     public Vector3 Position { get; private set; }
+    public Quaternion Rotation { get; private set; }
     public ulong Team { get; private set; }
     public ulong Owner { get; private set; }
     public float Progress { get; private set; }
     public float Total { get; private set; }
     public bool IsSalvaged { get; set; }
     public ulong Salvager { get; set; }
+    public IBuildableDestroyedEvent? DestroyInfo { get; set; }
     public bool IsFloating { get; private set; }
     public JsonAssetReference<EffectAsset>? Icon { get; protected set; }
     public float IconOffset { get; protected set; }
     public TickResponsibilityCollection Builders { get; } = new TickResponsibilityCollection();
     public Asset Asset { get; protected set; }
+    public ulong RecordId { get; set; }
+    public string ClosestLocation { get; set; }
 
     [UsedImplicitly]
     private void Awake()
     {
-        BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(transform);
+        Transform model = transform;
+        BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(model);
         if (barricade == null)
         {
-            StructureDrop structure = StructureManager.FindStructureByRootTransform(transform);
+            StructureDrop structure = StructureManager.FindStructureByRootTransform(model);
             if (structure == null)
             {
-                InteractableVehicle vehicle = DamageTool.getVehicle(transform);
+                InteractableVehicle vehicle = DamageTool.getVehicle(model);
                 if (vehicle == null)
                 {
                     L.LogWarning($"[FOBS] ShovelableComponent not added to barricade, structure, or vehicle: {name}.");
@@ -247,6 +261,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 ActiveStructure = null;
                 Asset = vehicle.asset;
                 Position = vehicle.transform.position;
+                Rotation = vehicle.transform.rotation;
                 Team = vehicle.lockedGroup.m_SteamID.GetTeam();
                 Owner = vehicle.lockedOwner.m_SteamID;
             }
@@ -255,6 +270,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 ActiveStructure = new UCStructure(structure);
                 Asset = structure.asset;
                 Position = structure.model.position;
+                Rotation = structure.model.rotation;
                 Team = structure.GetServersideData().group.GetTeam();
                 Owner = structure.GetServersideData().owner;
             }
@@ -264,6 +280,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             ActiveStructure = new UCBarricade(barricade);
             Asset = barricade.asset;
             Position = barricade.model.position;
+            Rotation = barricade.model.rotation;
             Team = barricade.GetServersideData().group.GetTeam();
             Owner = barricade.GetServersideData().owner;
         }
@@ -316,7 +333,9 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                     QuickShovel(pl);
             }, 1.25f);
         }
-        
+
+        _useTimeSeconds = 0;
+
         return;
         destroy:
         Destroy(this);
@@ -326,6 +345,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     private void Start()
     {
         IsFloating = FOB == null;
+        ClosestLocation = !IsFloating ? FOB!.ClosestLocation : F.GetClosestLocationName(transform.position, true, true);
         InitStart();
         L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] {Asset.FriendlyName} Initialized: {Buildable} in state: {State}.");
     }
@@ -381,6 +401,44 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             ActiveStructure = null!;
         }
 
+        if (FOB?.Record != null && Buildable != null)
+        {
+            UCWarfare.RunTask(FOB.Record.Update(record =>
+            {
+                if (Buildable.Emplacement != null)
+                    ++record.EmplacementsDestroyed;
+                else if (Buildable.Type == BuildableType.AmmoCrate)
+                    ++record.AmmoCratesDestroyed;
+                else if (Buildable.Type == BuildableType.RepairStation)
+                    ++record.RepairStationsDestroyed;
+                else if (Buildable.Type == BuildableType.Fortification)
+                    ++record.FortificationsDestroyed;
+                else if (Buildable.Type == BuildableType.Bunker)
+                    ++record.BunkersDestroyed;
+            }));
+        }
+        if (FOB?.Record != null)
+        {
+            bool destroyedByRoundEnd = Data.Gamemode == null || Data.Gamemode.State is not Gamemodes.State.Active and not Gamemodes.State.Staging;
+            bool teamkilled = !destroyedByRoundEnd && DestroyInfo != null && DestroyInfo.Instigator != null && DestroyInfo.Buildable.Group.GetTeam() == DestroyInfo.Instigator.GetTeam();
+
+            UCPlayer? instigator = DestroyInfo != null ? UCPlayer.FromID(DestroyInfo.InstigatorId) : null;
+
+            SessionRecord? session = instigator?.CurrentSession;
+            
+            UCWarfare.RunTask(FOB.Record.Update(this, record =>
+            {
+                record.DestroyedAt = DateTime.UtcNow;
+                record.DestroyedByRoundEnd = destroyedByRoundEnd;
+                record.Teamkilled = teamkilled;
+                record.Instigator = instigator?.Steam64;
+                record.InstigatorPosition = instigator?.Position;
+                record.InstigatorSessionId = session?.SessionId;
+                record.PrimaryAsset = DestroyInfo?.PrimaryAsset;
+                record.SecondaryAsset = DestroyInfo?.SecondaryAsset;
+                record.UseTimeSeconds = _useTimeSeconds;
+            }));
+        }
 
         FOBManager.EnsureDisposed(this);
         L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Destroyed: {Buildable} ({Asset.FriendlyName}).");
@@ -434,7 +492,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             {
                 Progress += amount;
 
-                Builders.Increment(shoveler.Steam64, amount);
+                Builders.Increment(shoveler.Steam64, amount, shoveler.CurrentSession?.SessionId ?? 0);
 
 
                 if (FOB != null)
@@ -529,7 +587,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                         return true;
                     }
 
-                    Builders.Increment(shoveler.Steam64, hits);
+                    Builders.Increment(shoveler.Steam64, hits, shoveler.CurrentSession?.SessionId ?? 0);
                     chargedFob = true;
 
                     SendBuildToastToBuilders(-dif);
@@ -544,7 +602,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
             if (!chargedFob)
             {
-                Builders.Increment(shoveler.Steam64, hits);
+                Builders.Increment(shoveler.Steam64, hits, shoveler.CurrentSession?.SessionId ?? 0);
             }
 
             if (ActiveStructure != null)
@@ -572,7 +630,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             }
 
             FOBManager.TriggerBuildEffect(point);
-            Builders.Increment(shoveler.Steam64, amt);
+            Builders.Increment(shoveler.Steam64, amt, shoveler.CurrentSession?.SessionId ?? 0);
             UpdateRepairUI(newHealth, maxHealth);
 
             if (Base != null)
@@ -611,7 +669,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
             FOBManager.TriggerBuildEffect(transform.position);
 
-            Builders.Increment(shoveler.Steam64, amount);
+            Builders.Increment(shoveler.Steam64, amount, shoveler.CurrentSession?.SessionId ?? 0);
             UpdateHitsUI();
 
             if (Progress >= Total)
@@ -663,7 +721,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 VehicleManager.repair(ActiveVehicle!, amt, 1, shoveler.CSteamID);
 
             UpdateRepairUI(1, 1);
-            Builders.Increment(shoveler.Steam64, amt);
+            Builders.Increment(shoveler.Steam64, amt, shoveler.CurrentSession?.SessionId ?? 0);
             FOBManager.TriggerBuildEffect(transform.position);
             if (Base != null)
             {
@@ -692,7 +750,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         {
             float time = Time.realtimeSinceStartup;
             ToastMessage msg = new ToastMessage(ToastMessageStyle.ProgressBar, Points.GetProgressBar(Progress, Total, 25));
-            foreach (TickResponsibility responsibility in Builders)
+            foreach (TickResponsibility responsibility in Builders.GetGroupedEnumerator())
             {
                 if (time - responsibility.LastUpdated < 5f && UCPlayer.FromID(responsibility.Steam64) is { } pl)
                     pl.Toasts.Queue(in msg);
@@ -710,7 +768,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         {
             float time = Time.realtimeSinceStartup;
             ToastMessage msg = new ToastMessage(ToastMessageStyle.ProgressBar, Points.GetProgressBar(health, maxHealth, 25).Colorize("ff9966"));
-            foreach (TickResponsibility responsibility in Builders)
+            foreach (TickResponsibility responsibility in Builders.GetGroupedEnumerator())
             {
                 if (time - responsibility.LastUpdated < 5f && UCPlayer.FromID(responsibility.Steam64) is { } pl)
                     pl.Toasts.Queue(in msg);
@@ -728,7 +786,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         try
         {
             float time = Time.realtimeSinceStartup;
-            foreach (TickResponsibility responsibility in Builders)
+            foreach (TickResponsibility responsibility in Builders.GetGroupedEnumerator())
             {
                 if (time - responsibility.LastUpdated < 5f && UCPlayer.FromID(responsibility.Steam64) is { } pl)
                     FOBManager.ShowResourceToast(new LanguageSet(pl), build: delta);
@@ -867,48 +925,86 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             @new = FOB.UpgradeItem(this, newTransform);
         else if (Data.Is(out IFOBs fobs))
             @new = fobs.FOBManager.UpgradeFloatingItem(this, newTransform);
+        
+        List<FobItemBuilderRecord> records = new List<FobItemBuilderRecord>(Builders.Count);
 
-        if (Buildable.Emplacement != null)
-            StatsManager.ModifyTeam(Team, s => ++s.EmplacementsBuilt, false);
-        if (Buildable.Type == BuildableType.Fortification)
-            StatsManager.ModifyTeam(Team, s => ++s.FortificationsBuilt, false);
-
+        DateTime now = DateTime.UtcNow;
         Builders.RetrieveLock();
         try
         {
-            foreach (TickResponsibility builder in Builders)
+            if (RecordId != 0)
             {
-                UCPlayer? player = UCPlayer.FromID(builder.Steam64);
-
-                float contribution = builder.Ticks / Builders.GetTicksNoLock();
-
-                if (contribution >= 0.1f)
+                foreach (TickResponsibility responsibility in Builders)
                 {
-                    if (player != null)
+                    UCPlayer? player = UCPlayer.FromID(responsibility.Steam64);
+
+                    records.Add(new FobItemBuilderRecord
                     {
-                        XPReward reward;
-                        if (Buildable.Type == BuildableType.Bunker)
-                            reward = XPReward.BunkerBuilt;
-                        else
-                            reward = XPReward.Shoveling;
-
-                        string msg = Buildable.Translate(player).ToUpperInvariant();
-
-                        Points.AwardXP(player, reward, msg + " BUILT", multiplier: contribution);
-                        ActionLog.Add(ActionLogType.HelpBuildBuildable, $"{Buildable} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", player);
-                        if (contribution > 0.3333f)
-                            QuestManager.OnBuildableBuilt(player, Buildable);
-                    }
-                    if (Buildable.Emplacement != null)
-                        StatsManager.ModifyStats(builder.Steam64, s => ++s.EmplacementsBuilt, false);
-                    if (Buildable.Type == BuildableType.Fortification)
-                        StatsManager.ModifyStats(builder.Steam64, s => ++s.FortificationsBuilt, false);
+                        Steam64 = responsibility.Steam64,
+                        Team = (byte)Team,
+                        SessionId = responsibility.SessionId == 0 ? null : responsibility.SessionId,
+                        FobItemId = RecordId,
+                        Hits = responsibility.Ticks,
+                        Responsibility = responsibility.Ticks / Builders.Ticks,
+                        NearestLocation = ClosestLocation ?? F.GetClosestLocationName(transform.position, true, true),
+                        Position = player?.Position ?? Vector3.zero,
+                        Timestamp = now - TimeSpan.FromSeconds(Time.realtimeSinceStartup - responsibility.LastUpdated)
+                    });
                 }
+            }
+
+            foreach (TickResponsibility responsibility in Builders.GetGroupedEnumerator())
+            {
+                UCPlayer? player = UCPlayer.FromID(responsibility.Steam64);
+
+                float contribution = responsibility.Ticks / Builders.GetTicksNoLock();
+
+                ActionLog.Add(ActionLogType.HelpBuildBuildable, $"{Buildable} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", responsibility.Steam64);
+
+                if (contribution < 0.1f || player == null)
+                    continue;
+
+                XPReward reward;
+                if (Buildable.Type == BuildableType.Bunker)
+                    reward = XPReward.BunkerBuilt;
+                else
+                    reward = XPReward.Shoveling;
+
+                string msg = Buildable.Translate(player).ToUpperInvariant();
+
+                Points.AwardXP(player, reward, msg + " BUILT", multiplier: contribution);
+                if (contribution > 0.3333f)
+                    QuestManager.OnBuildableBuilt(player, Buildable);
             }
         }
         finally
         {
             Builders.ReturnLock();
+        }
+
+        if (FOB?.Record != null)
+        {
+            if (Buildable != null)
+            {
+                UCWarfare.RunTask(FOB.Record.Update(record =>
+                {
+                    if (Buildable.Emplacement != null)
+                        ++record.EmplacementsBuilt;
+                    else if (Buildable.Type == BuildableType.Fortification)
+                        ++record.FortificationsBuilt;
+                    else if (Buildable.Type == BuildableType.AmmoCrate)
+                        ++record.AmmoCratesBuilt;
+                    else if (Buildable.Type == BuildableType.Bunker)
+                        ++record.BunkersBuilt;
+                    else if (Buildable.Type == BuildableType.RepairStation)
+                        ++record.RepairStationsBuilt;
+                }), ctx: "Update FOB record (increment built count).");
+            }
+            UCWarfare.RunTask(FOB.Record.Update(this, record =>
+            {
+                record.Builders = records;
+                record.BuiltAt = now;
+            }), ctx: "Update FOB item record (increment built count).");
         }
 
         if (@new == null)
@@ -1117,9 +1213,12 @@ public interface IFOBItem
     BuildableData? Buildable { get; }
     ulong Team { get; }
     ulong Owner { get; }
+    ulong RecordId { get; set; }
     JsonAssetReference<EffectAsset>? Icon { get; }
     float IconOffset { get; }
     Vector3 Position { get; }
+    Quaternion Rotation { get; }
+    event Action<Action<FobItemRecord>> UpdateRecord;
 }
 
 public enum FobRadius : byte

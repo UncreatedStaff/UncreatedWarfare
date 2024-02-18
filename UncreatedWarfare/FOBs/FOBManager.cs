@@ -12,6 +12,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs.UI;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -24,7 +25,6 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -61,8 +61,10 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
     public override void Load()
     {
+        EventDispatcher.PlayerDied += OnPlayerDied;
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.BarricadePlaced += OnBarricadePlaced;
+        EventDispatcher.VehicleDestroyed += OnVehicleDestroyed;
         EventDispatcher.BarricadeDestroyed += OnBarricadeDestroyed;
         EventDispatcher.BarricadePlaceRequested += OnRequestedBarricadePlace;
         _floatingItems = new List<IFOBItem>(64);
@@ -110,8 +112,10 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     {
         EventDispatcher.BarricadePlaceRequested -= OnRequestedBarricadePlace;
         EventDispatcher.BarricadeDestroyed -= OnBarricadeDestroyed;
+        EventDispatcher.VehicleDestroyed -= OnVehicleDestroyed;
         EventDispatcher.BarricadePlaced -= OnBarricadePlaced;
         EventDispatcher.GroupChanged -= OnGroupChanged;
+        EventDispatcher.PlayerDied -= OnPlayerDied;
         for (int i = _fobs.Count - 1; i >= 0; --i)
         {
             try
@@ -340,6 +344,34 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         return null;
     }
+    public IFOBItem? FindFobItem(IBuildable buildable)
+    {
+        if (buildable?.Model == null)
+            return null;
+        Vector3 pos = buildable.Model.position;
+        foreach (IFOB fob in FOBs.OrderBy(x => (pos - x.Position).sqrMagnitude))
+        {
+            IFOBItem? item = fob.FindFOBItem(buildable);
+            if (item != null)
+                return item;
+        }
+
+        return null;
+    }
+    public IFOBItem? FindFobItem(InteractableVehicle vehicle)
+    {
+        if (vehicle == null)
+            return null;
+        Vector3 pos = vehicle.transform.position;
+        foreach (IFOB fob in FOBs.OrderBy(x => (pos - x.Position).sqrMagnitude))
+        {
+            IFOBItem? item = fob.FindFOBItem(vehicle);
+            if (item != null)
+                return item;
+        }
+
+        return null;
+    }
     public T? FindNearestFOB<T>(Vector3 pos, ulong team) where T : IRadiusFOB
     {
         return _fobs
@@ -486,6 +518,52 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         AddFOB(fob);
         return fob;
+    }
+    private void OnPlayerDied(PlayerDied e)
+    {
+        if (e.WasSuicide || e.WasTeamkill || e.ActiveVehicle == null || !e.PrimaryAssetIsVehicle || Assets.find(e.PrimaryAsset) is not { } asset)
+            return;
+
+        BuildableData? data = FindBuildable(asset);
+        if (data == null)
+            return;
+
+        IFOBItem? item = FindFobItem(e.ActiveVehicle);
+
+        if (item?.FOB?.Record == null)
+            return;
+
+        UCWarfare.RunTask(item.FOB.Record.Update(record =>
+        {
+            ++record.EmplacementPlayerKills;
+        }), ctx: "Update FOB record (emplacement player kills).");
+        UCWarfare.RunTask(item.FOB.Record.Update(item, record =>
+        {
+            ++record.PlayerKills;
+        }), ctx: "Update FOB item record (player kills).");
+    }
+    private void OnVehicleDestroyed(VehicleDestroyed e)
+    {
+        if (e.ActiveVehicle == null || e.ActiveVehicle == e.Vehicle)
+            return;
+
+        BuildableData? data = FindBuildable(e.ActiveVehicle.asset);
+        if (data == null)
+            return;
+
+        IFOBItem? item = FindFobItem(e.ActiveVehicle);
+
+        if (item?.FOB?.Record == null)
+            return;
+
+        UCWarfare.RunTask(item.FOB.Record.Update(record =>
+        {
+            ++record.EmplacementVehicleKills;
+        }), ctx: "Update FOB record (emplacement vehicle kills).");
+        UCWarfare.RunTask(item.FOB.Record.Update(item, record =>
+        {
+            ++record.VehicleKills;
+        }), ctx: "Update FOB item record (vehicle kills).");
     }
     private void OnRequestedBarricadePlace(PlaceBarricadeRequested e)
     {
@@ -662,22 +740,21 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             fob = CreateStandardFob(drop);
             if (fob == null)
                 return;
-            StatsManager.ModifyTeam(team, s => ++s.FobsBuilt, false);
-            if (e.Owner != null)
-            {
-                if (Gamemode.Config.BarricadeFOBBunkerBase.ValidReference(out ItemBarricadeAsset fobBase))
-                    ItemManager.dropItem(new Item(fobBase.id, true), e.Owner.Position, true, true, true);
-                if (Gamemode.Config.BarricadeAmmoCrateBase.ValidReference(out ItemBarricadeAsset ammoBase))
-                    ItemManager.dropItem(new Item(ammoBase.id, true), e.Owner.Position, true, true, true);
-                QuestManager.OnFOBBuilt(e.Owner, fob);
-                Tips.TryGiveTip(e.Owner, 3, T.TipPlaceBunker);
-                StatsManager.ModifyStats(e.Owner.Steam64, s => ++s.FobsBuilt, false);
-            }
+
+            if (e.Owner == null)
+                return;
+
+            if (Gamemode.Config.BarricadeFOBBunkerBase.ValidReference(out ItemBarricadeAsset fobBase))
+                ItemManager.dropItem(new Item(fobBase.id, true), e.Owner.Position, true, true, true);
+            if (Gamemode.Config.BarricadeAmmoCrateBase.ValidReference(out ItemBarricadeAsset ammoBase))
+                ItemManager.dropItem(new Item(ammoBase.id, true), e.Owner.Position, true, true, true);
+            QuestManager.OnFOBBuilt(e.Owner, fob);
+            Tips.TryGiveTip(e.Owner, 3, T.TipPlaceBunker);
             return;
         }
 
         BuildableData? buildable = Config.Buildables.Find(b => b.Foundation.MatchGuid(guid));
-        if (buildable == null)
+        if (buildable == null || buildable.Type == BuildableType.Radio)
             return;
 
         fob = FindNearestFOB<FOB>(e.Barricade.model.position, team);
@@ -721,7 +798,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 }
                 else if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchGuid(e.ServersideData.barricade.asset.GUID))
                 {
-                    StatsManager.ModifyStats(e.InstigatorId, s => ++s.FobsDestroyed, false);
                     if (radio.State == RadioComponent.RadioState.Bleeding)
                         radio.FOB.Destroy();
                 }
@@ -802,7 +878,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Cache cache = new Cache(drop, team, location);
         int number;
         if (Data.Is(out Insurgency insurgency))
         {
@@ -813,9 +888,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 number = caches.Last().Number + 1;
         }
         else number = 0;
+        Cache cache = new Cache(drop, team, location, number != 0 ? "CACHE" + number.ToString(CultureInfo.InvariantCulture) : "CACHE", number);
 
-        cache.Number = number;
-        cache.Name = number == 0 ? "CACHE" : ("CACHE" + number);
 
         _singleton.AddFOB(cache);
 
@@ -885,9 +959,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                     Points.AwardXP(killer, XPReward.RadioDestroyed);
 
                     Points.TryAwardDriverAssist(killer.Player, XPReward.RadioDestroyed, quota: 5);
-
-                    StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
-                    StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
                 }
             }
         }

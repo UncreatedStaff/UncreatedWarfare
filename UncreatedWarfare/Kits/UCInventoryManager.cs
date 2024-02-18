@@ -551,8 +551,8 @@ public static class UCInventoryManager
     }
     public static int CountItems(Player player, Guid item)
     {
-#pragma warning disable CS0612
+#pragma warning disable CS0618
         return Assets.find(item) is not ItemAsset asset ? 0 : CountItems(player, asset.id);
-#pragma warning restore CS0612
+#pragma warning restore CS0618
     }
 }

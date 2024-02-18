@@ -62,7 +62,8 @@ public class UCPlayerData : MonoBehaviour
     internal Guid LastChargeDetonated;
     internal Guid LastShreddedBy;
     internal Guid LastRocketShot;
-    internal Guid LastRocketShotVehicle;
+    internal Guid LastRocketShotVehicleAsset;
+    internal InteractableVehicle? LastRocketShotVehicle;
     internal Guid LastGunShot; // used for amc
     internal ulong LastAttacker;
     private float _currentTimeSeconds;

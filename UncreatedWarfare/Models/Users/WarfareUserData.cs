@@ -39,8 +39,6 @@ public class WarfareUserData
 
     /// <remarks>UTC</remarks>
     public DateTimeOffset? LastJoined { get; set; }
-    
-    public uint TotalSeconds { get; set; }
 
     [DefaultValue(0ul)]
     public ulong DiscordId { get; set; }

@@ -1,15 +1,18 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using JetBrains.Annotations;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
@@ -26,6 +29,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     private readonly string _cl;
     public int Number;
     public bool IsDiscovered;
+    public IBuildableDestroyedEvent DestroyInfo { get; set; }
     public GridLocation GridLocation => _gc;
     public string ClosestLocation => _cl;
     public ulong Team { get; }
@@ -35,19 +39,23 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     public Vector3 Position { get; }
     public Vector3 SpawnPosition { get; }
     public bool IsDestroyed { get; private set; }
-    public string Name { get; set; }
+    public string Name { get; }
     float IDeployable.Yaw => _component == null ? 0 : _component.transform.rotation.eulerAngles.y;
     public BarricadeDrop Drop { get; private set; }
     public CacheLocation Location { get; }
     public float Radius => 40;
     public bool ContainsBuildable(IBuildable buildable) => buildable.Type == StructType.Barricade && Drop != null && Drop.instanceID == buildable.InstanceId;
     public bool ContainsVehicle(InteractableVehicle vehicle) => false;
-
-    public Cache(BarricadeDrop drop, ulong team, CacheLocation location)
+    public IFOBItem? FindFOBItem(IBuildable buildable) => null;
+    public IFOBItem? FindFOBItem(InteractableVehicle vehicle) => null;
+    public FobRecordTracker<WarfareDbContext>? Record { get; }
+    public Cache(BarricadeDrop drop, ulong team, CacheLocation location, string name, int number)
     {
         IsDiscovered = false;
         _component = drop.model.gameObject.AddComponent<CacheComponent>().Initialize(drop, this);
         Drop = drop;
+        Name = name;
+        Number = number;
         Vector3 pos = _component.transform.position;
         SpawnPosition = pos + new Vector3(0, 1f, 0);
         Position = pos;
@@ -62,6 +70,22 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
             if (flag != null)
                 _cl = flag.ShortName;
         }
+
+        FobRecord fobRecord = new FobRecord
+        {
+            Steam64 = 0ul,
+            FobAngle = Drop.model.eulerAngles,
+            FobPosition = Drop.model.position,
+            FobName = Name,
+            FobType = FobType.Cache,
+            FobNumber = Number,
+            NearestLocation = ClosestLocation,
+            Timestamp = DateTimeOffset.UtcNow,
+            Team = (byte)Team
+        };
+
+        Record = new FobRecordTracker<WarfareDbContext>(fobRecord);
+        UCWarfare.RunTask(Record.Create, ctx: "Create FOB record.");
     }
 
     public string UIColor

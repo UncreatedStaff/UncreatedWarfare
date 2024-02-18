@@ -2,9 +2,12 @@
 using System.Globalization;
 using SDG.Unturned;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
@@ -22,6 +25,8 @@ public class SpecialFOB : IFOB, IGameTickListener
     public string UIColor;
     public bool IsActive;
     public bool DisappearAroundEnemies;
+    public IBuildableDestroyedEvent DestroyInfo { get; set; }
+    public FobRecordTracker<WarfareDbContext>? Record { get; }
     public string Name => _name;
     public Vector3 SpawnPosition => _pos;
     public Vector3 Position => _pos;
@@ -32,7 +37,8 @@ public class SpecialFOB : IFOB, IGameTickListener
     public ulong Team { get; set; }
     public bool ContainsBuildable(IBuildable buildable) => false;
     public bool ContainsVehicle(InteractableVehicle vehicle) => false;
-
+    public IFOBItem? FindFOBItem(IBuildable buildable) => null;
+    public IFOBItem? FindFOBItem(InteractableVehicle vehicle) => null;
     public SpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
     {
         _name = name;
@@ -51,6 +57,22 @@ public class SpecialFOB : IFOB, IGameTickListener
         UIColor = color;
         IsActive = true;
         DisappearAroundEnemies = disappearAroundEnemies;
+
+        FobRecord fobRecord = new FobRecord
+        {
+            Steam64 = 0ul,
+            FobAngle = Quaternion.LookRotation(Vector3.forward).eulerAngles,
+            FobPosition = point,
+            FobName = Name,
+            FobType = FobType.SpecialFob,
+            FobNumber = 0,
+            NearestLocation = ClosestLocation,
+            Timestamp = DateTimeOffset.UtcNow,
+            Team = (byte)Team
+        };
+
+        Record = new FobRecordTracker<WarfareDbContext>(fobRecord);
+        UCWarfare.RunTask(Record.Create, ctx: "Create FOB record.");
     }
 
     void IGameTickListener.Tick()
@@ -65,6 +87,15 @@ public class SpecialFOB : IFOB, IGameTickListener
                 {
                     L.LogDebug($"[FOBS] [{Name}] Deleting FOB because of nearby enemies.", ConsoleColor.Green);
                     fobs.FOBManager.DeleteFOB(this);
+                    
+                    if (Record != null)
+                    {
+                        UCWarfare.RunTask(Record.Update(record =>
+                        {
+                            record.DestroyedByRoundEnd = false;
+                            record.DestroyedAt = DateTimeOffset.UtcNow;
+                        }), ctx: "Create FOB record.");
+                    }
                     return;
                 }
             }

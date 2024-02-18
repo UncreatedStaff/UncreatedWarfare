@@ -28,7 +28,7 @@ public static class Deployment
         if (player.Player.TryGetPlayerData(out UCPlayerData data))
             data.CancelDeployment();
     }
-    public static bool DeployTo(UCPlayer player, IDeployable location, CommandInteraction? ctx, bool cancelOnMove = true, bool cancelOnDamage = false, bool startCooldown = true)
+    public static bool DeployTo(UCPlayer player, IFOB? deployedFrom, IDeployable location, CommandInteraction? ctx, bool cancelOnMove = true, bool cancelOnDamage = false, bool startCooldown = true)
     {
         if (player is null || !player.IsOnline)
         {
@@ -51,17 +51,17 @@ public static class Deployment
             {
                 ctx?.Reply(T.DeployStandby, location, Mathf.CeilToInt(delay));
                 data.PendingDeploy = location;
-                data.CurrentTeleportRequest = player.Player.StartCoroutine(DeployToCoroutine(player, location, delay, ctx is not null, cancelOnMove, cancelOnDamage, startCooldown));
+                data.CurrentTeleportRequest = player.Player.StartCoroutine(DeployToCoroutine(player, deployedFrom, location, delay, ctx is not null, cancelOnMove, cancelOnDamage, startCooldown));
             }
             else
             {
-                ForceDeploy(player, location, ctx is not null, startCooldown);
+                ForceDeploy(player, deployedFrom, location, ctx is not null, startCooldown);
             }
             return true;
         }
         return false;
     }
-    private static IEnumerator DeployToCoroutine(UCPlayer player, IDeployable location, float delay, bool chat, bool cancelOnMove = true, bool cancelOnDamage = false, bool startCooldown = true)
+    private static IEnumerator DeployToCoroutine(UCPlayer player, IFOB? deployedFrom, IDeployable location, float delay, bool chat, bool cancelOnMove = true, bool cancelOnDamage = false, bool startCooldown = true)
     {
         if (player.Player.TryGetPlayerData(out UCPlayerData data))
         {
@@ -101,18 +101,34 @@ public static class Deployment
                     data.PendingDeploy = null;
                     yield break;
                 }
+
+                if (deployedFrom != null && !deployedFrom.CheckDeployableTick(player, chat))
+                {
+                    data.CurrentTeleportRequest = null;
+                    data.PendingDeploy = null;
+                    yield break;
+                }
             }
-            ForceDeploy(player, location, chat, startCooldown);
+            ForceDeploy(player, deployedFrom, location, chat, startCooldown);
             data.CurrentTeleportRequest = null;
             data.PendingDeploy = null;
         }
     }
-    public static void ForceDeploy(UCPlayer player, IDeployable location, bool chat, bool startCooldown = true)
+    public static void ForceDeploy(UCPlayer player, IFOB? deployedFrom, IDeployable location, bool chat, bool startCooldown = true)
     {
         player.Player.teleportToLocationUnsafe(location.SpawnPosition, location.Yaw);
         location.OnDeploy(player, chat);
         if (startCooldown)
             CooldownManager.StartCooldown(player, CooldownType.Deploy, RapidDeployment.GetDeployTime(player));
+        
+        if (location is IFOB { Record: { } record })
+        {
+            UCWarfare.RunTask(record.Update(record => ++record.DeploymentCount), ctx: "Update FOB record (delpoyment count).");
+        }
+        if (deployedFrom?.Record != null)
+        {
+            UCWarfare.RunTask(deployedFrom.Record.Update(record => ++record.TeleportCount), ctx: "Update FOB record (teleport count).");
+        }
     }
 }
 

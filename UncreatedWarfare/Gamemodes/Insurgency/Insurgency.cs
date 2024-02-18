@@ -482,8 +482,8 @@ public class Insurgency :
             if (destroyer.GetTeam() == AttackingTeam)
             {
                 Points.AwardXP(destroyer, XPReward.CacheDestroyed);
-                StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
-                StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
+                // StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
+                // StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                 if (_gameStats != null)
                 {
                     for (int i = 0; i < _gameStats.stats.Count; ++i)

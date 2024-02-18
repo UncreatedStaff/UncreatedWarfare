@@ -311,7 +311,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+        // StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         for (int i = 0; i < Singletons.Count; ++i)
         {
             if (Singletons[i] is IFlagCapturedListener f)

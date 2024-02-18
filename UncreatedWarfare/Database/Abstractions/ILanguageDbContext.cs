@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Database.Abstractions;
 public interface ILanguageDbContext : IDbContext
@@ -35,14 +36,14 @@ public interface ILanguageDbContext : IDbContext
             .IsRequired(true)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<LanguageContributor>()
-            .HasOne(x => x.ContributorData)
-            .WithMany()
+        modelBuilder.Entity<WarfareUserData>()
+            .HasMany<LanguageContributor>()
+            .WithOne(x => x.ContributorData)
             .OnDelete(DeleteBehavior.NoAction);
 
-        modelBuilder.Entity<LanguagePreferences>()
-            .HasOne(x => x.PlayerData)
-            .WithMany()
+        modelBuilder.Entity<WarfareUserData>()
+            .HasMany<LanguagePreferences>()
+            .WithOne(x => x.PlayerData)
             .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<LanguagePreferences>()

@@ -344,7 +344,7 @@ public class ZoneCommand : Command
 
         if (deployable != null)
         {
-            Deployment.ForceDeploy(ctx.Caller, deployable, false, false);
+            Deployment.ForceDeploy(ctx.Caller, null, deployable, false, false);
             ctx.Reply(T.DeploySuccess, deployable);
             ctx.LogAction(ActionLogType.Teleport, deployable.Translate(Localization.GetDefaultLanguage(), ctx.Caller.GetTeam(), FOB.FormatLocationName));
         }

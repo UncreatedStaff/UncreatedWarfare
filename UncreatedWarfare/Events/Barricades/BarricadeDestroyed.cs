@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
 
@@ -33,7 +34,10 @@ public class BarricadeDestroyed : EventState, IBuildableDestroyedEvent
     public SqlItem<SavedStructure>? Save => _save;
     object IBuildableDestroyedEvent.Region => Region;
     public EDamageOrigin DamageOrigin { get; }
-    internal BarricadeDestroyed(UCPlayer? instigator, ulong instigatorId, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin) : base()
+    public UnturnedAssetReference PrimaryAsset { get; }
+    public UnturnedAssetReference SecondaryAsset { get; }
+
+    internal BarricadeDestroyed(UCPlayer? instigator, ulong instigatorId, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset) : base()
     {
         this.instigator = instigator;
         this.instigatorId = instigatorId;
@@ -45,6 +49,8 @@ public class BarricadeDestroyed : EventState, IBuildableDestroyedEvent
         this.plant = plant;
         _save = save;
         DamageOrigin = damageOrigin;
+        PrimaryAsset = primaryAsset;
+        SecondaryAsset = secondaryAsset;
         if (save?.Manager is not null)
         {
             save.Manager.WriteWait();

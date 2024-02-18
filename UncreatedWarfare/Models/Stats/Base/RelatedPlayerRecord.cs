@@ -69,16 +69,14 @@ public abstract class RelatedPlayerRecord : InstigatedPlayerRecord
     {
         InstigatedPlayerRecord.Map<TEntity>(modelBuilder);
 
-        modelBuilder.Entity<TEntity>()
-            .HasOne(x => x.RelatedPlayerData)
-            .WithMany()
-            .IsRequired(false)
+        modelBuilder.Entity<WarfareUserData>()
+            .HasMany<TEntity>()
+            .WithOne(x => x.RelatedPlayerData!)
             .OnDelete(DeleteBehavior.NoAction);
 
-        modelBuilder.Entity<TEntity>()
-            .HasOne(x => x.RelatedPlayerSession)
-            .WithMany()
-            .IsRequired(false)
+        modelBuilder.Entity<SessionRecord>()
+            .HasMany<TEntity>()
+            .WithOne(x => x.RelatedPlayerSession!)
             .OnDelete(DeleteBehavior.NoAction);
     }
 }

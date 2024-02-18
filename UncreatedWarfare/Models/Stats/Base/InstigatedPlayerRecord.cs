@@ -69,16 +69,14 @@ public abstract class InstigatedPlayerRecord : BasePlayerRecord
     {
         BasePlayerRecord.Map<TEntity>(modelBuilder);
 
-        modelBuilder.Entity<TEntity>()
-            .HasOne(x => x.InstigatorData)
-            .WithMany()
-            .IsRequired(false)
+        modelBuilder.Entity<WarfareUserData>()
+            .HasMany<TEntity>()
+            .WithOne(x => x.InstigatorData!)
             .OnDelete(DeleteBehavior.NoAction);
 
-        modelBuilder.Entity<TEntity>()
-            .HasOne(x => x.InstigatorSession)
-            .WithMany()
-            .IsRequired(false)
+        modelBuilder.Entity<SessionRecord>()
+            .HasMany<TEntity>()
+            .WithOne(x => x.InstigatorSession!)
             .OnDelete(DeleteBehavior.NoAction);
     }
 }

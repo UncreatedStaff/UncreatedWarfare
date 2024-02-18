@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using Uncreated.SQL;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Events.Structures;
@@ -11,8 +12,8 @@ public sealed class SalvageStructureRequested : SalvageRequested
     public StructureData ServersideData => _data;
     public StructureRegion Region => (StructureRegion)RegionObj;
     public override IBuildable Buildable => BuildableCache ??= new UCStructure(Structure);
-    internal SalvageStructureRequested(UCPlayer instigator, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save)
-        : base(instigator, region, x, y, structure.instanceID)
+    internal SalvageStructureRequested(UCPlayer instigator, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)
+        : base(instigator, region, x, y, structure.instanceID, primaryAsset, secondaryAsset)
     {
         _drop = structure;
         _data = structureData;

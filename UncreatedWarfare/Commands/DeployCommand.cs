@@ -3,7 +3,6 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
@@ -30,14 +29,14 @@ public class DeployCommand : Command
         Structure = new CommandStructure
         {
             Description = "Deploy to a point of interest such as a main base, FOB, VCP, or cache.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Location", typeof(IDeployable), "Lobby", "Main"),
                 new CommandParameter("Cancel")
                 {
-                    Aliases = new string[] { "stop" }
+                    Aliases = [ "stop" ]
                 }
-            }
+            ]
         };
     }
 
@@ -76,13 +75,14 @@ public class DeployCommand : Command
         if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.Deploy, out Cooldown cooldown))
             throw ctx.Reply(T.DeployCooldown, cooldown);
 
+        IFOB? deployFromFob = null;
+
         if (!(inMain || inLobby))
         {
             if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.Combat, out Cooldown combatlog))
                 throw ctx.Reply(T.DeployInCombat, combatlog);
 
-            if (!Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out Guid guid) ||
-                !(ctx.Caller.IsOnFOB(out IFOB fob) && (fob is not FOB f2 || !f2.Bleeding) && fob.CheckDeployable(ctx.Caller, null) || UCBarricadeManager.IsBarricadeNearby(guid, 10, ctx.Caller.Position, team, out _)))
+            if (!(ctx.Caller.IsOnFOB(out deployFromFob) && deployFromFob is not FOB { Bleeding: true } && deployFromFob.CheckDeployable(ctx.Caller, null)))
                 throw ctx.Reply(Data.Is<Insurgency>() ? T.DeployNotNearFOBInsurgency : T.DeployNotNearFOB);
         }
 
@@ -106,8 +106,11 @@ public class DeployCommand : Command
 
         if (destination == null)
             throw ctx.Reply(T.DeployableNotFound, input);
+
+        if (destination.Equals(deployFromFob))
+            throw ctx.Reply(T.DeployableAlreadyOnFOB);
         
-        Deployment.DeployTo(ctx.Caller, destination, ctx, shouldCancelOnMove, shouldCancelOnDamage, startCooldown: true);
+        Deployment.DeployTo(ctx.Caller, deployFromFob, destination, ctx, shouldCancelOnMove, shouldCancelOnDamage, startCooldown: true);
         ctx.Defer();
     }
 }

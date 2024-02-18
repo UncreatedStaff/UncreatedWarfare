@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Factions;
@@ -60,6 +61,19 @@ public class SessionRecord
         // ReSharper disable once ValueParameterNotUsed
         set { }
     }
+
+    [Column("SquadName")]
+    [StringLength(32)]
+    [DefaultValue(null)]
+    public string? SquadName { get; set; }
+    
+    [ForeignKey(nameof(SquadLeaderData))]
+    [Column("SquadLeader")]
+    [DefaultValue(null)]
+    public ulong? SquadLeader { get; set; }
+
+    [DefaultValue(null)]
+    public WarfareUserData? SquadLeaderData { get; set; }
 
     [ForeignKey(nameof(PreviousSession))]
     [Column("PreviousSession")]

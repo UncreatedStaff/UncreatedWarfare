@@ -389,7 +389,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Data.Gamemode?.Subscribe();
-        StatsManager.LoadEvents();
         Data.LanguageDataStore?.Subscribe();
         GameUpdateMonitor.OnGameUpdateDetected += EventFunctions.OnGameUpdateDetected;
         EventDispatcher.PlayerJoined += EventFunctions.OnPostPlayerConnected;
@@ -481,7 +480,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         EventDispatcher.BarricadeDestroyed -= EventFunctions.OnBarricadeDestroyed;
         EventDispatcher.StructureDestroyed -= EventFunctions.OnStructureDestroyed;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
-        StatsManager.UnloadEvents();
     }
     internal void UpdateLangs(UCPlayer player, bool uiOnly)
     {
@@ -1076,14 +1074,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             {
                 L.LogError("Unpatching Error, perhaps Nelson changed something:");
                 L.LogError(ex);
-            }
-#if DEBUG
-            profiler2.Dispose();
-            profiler2 = ProfilingUtils.StartTracking("Saving Stats.");
-#endif
-            for (int i = 0; i < StatsManager.OnlinePlayers.Count; i++)
-            {
-                WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.AdminLocale) + ".dat");
             }
 #if DEBUG
             profiler2.Dispose();
