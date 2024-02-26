@@ -73,7 +73,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
 
         FobRecord fobRecord = new FobRecord
         {
-            Steam64 = 0ul,
+            Steam64 = null,
             FobAngle = Drop.model.eulerAngles,
             FobPosition = Drop.model.position,
             FobName = Name,
@@ -230,6 +230,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
             BarricadeManager.destroyBarricade(Drop, x, y, plant);
             Drop = null!;
         }
+        Record?.Dispose();
     }
     public class CacheComponent : MonoBehaviour, IManualOnDestroy
     {

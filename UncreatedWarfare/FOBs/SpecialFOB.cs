@@ -16,7 +16,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.FOBs;
 
-public class SpecialFOB : IFOB, IGameTickListener
+public class SpecialFOB : IFOB, IGameTickListener, IDisposable
 {
     private readonly string _name;
     private readonly string _cl;
@@ -60,7 +60,7 @@ public class SpecialFOB : IFOB, IGameTickListener
 
         FobRecord fobRecord = new FobRecord
         {
-            Steam64 = 0ul,
+            Steam64 = null,
             FobAngle = Quaternion.LookRotation(Vector3.forward).eulerAngles,
             FobPosition = point,
             FobName = Name,
@@ -162,5 +162,9 @@ public class SpecialFOB : IFOB, IGameTickListener
         L.Log($" Color: {UIColor}.");
         L.Log($" Active: {IsActive}, Disappear Around Enemies: {DisappearAroundEnemies}.");
         L.Log($" Team: {Team}.");
+    }
+    void IDisposable.Dispose()
+    {
+        Record?.Dispose();
     }
 }

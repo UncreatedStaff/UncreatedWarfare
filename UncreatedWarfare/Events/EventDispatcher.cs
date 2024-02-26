@@ -425,8 +425,11 @@ public static class EventDispatcher
         SteamPending? pending = null;
         for (int i = 0; i < Provider.pending.Count; ++i)
         {
-            if (Provider.pending[i].playerID.steamID.m_SteamID == callback.m_SteamID.m_SteamID)
-                pending = Provider.pending[i];
+            if (Provider.pending[i].playerID.steamID.m_SteamID != callback.m_SteamID.m_SteamID)
+                continue;
+            
+            pending = Provider.pending[i];
+            break;
         }
         if (pending is null) return;
         PlayerSave.TryReadSaveFile(callback.m_SteamID.m_SteamID, out PlayerSave? save);

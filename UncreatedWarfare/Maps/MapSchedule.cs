@@ -19,14 +19,14 @@ internal class MapScheduler : MonoBehaviour
     private int _map = -1;
 
     /* MAP DATA */
-    private static readonly List<MapData> MapRotation = new List<MapData>
-    {
-        new MapData("Fool's Road",      new ulong[] { 2407566267, 2407740920 }, removeChildren: new ulong[] { 2407566267 }),
-        new MapData("Goose Bay",        new ulong[] { 2301006771 }),
-        new MapData("Nuijamaa",         new ulong[] { 2557112412 }),
-        new MapData("Gulf of Aqaba",    new ulong[] { 2726964335 }),
-        new MapData("Changbai Shan",    new ulong[] { 2943688379, 24+07740920 }),
-    };
+    private static readonly List<MapData> MapRotation =
+    [
+        new MapData("Fool's Road",      [ 2407566267, 2407740920 ], removeChildren: [ 2407566267 ]),
+        new MapData("Goose Bay",        [ 2301006771 ]),
+        new MapData("Nuijamaa",         [ 2557112412 ]),
+        new MapData("Gulf of Aqaba",    [ 2726964335 ]),
+        new MapData("Changbai Shan",    [ 2943688379, 2407740920 ]),
+    ];
 
     /* MAP NAMES */
     public static readonly string FoolsRoad     = MapRotation[0].Name;

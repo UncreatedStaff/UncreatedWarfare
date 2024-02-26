@@ -265,6 +265,17 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     internal static void EnsureDisposed(IFOB fob)
     {
+        try
+        {
+            if (fob is IDisposable disposable)
+                disposable.Dispose();
+        }
+        catch (Exception ex)
+        {
+            L.LogError($"[FOBS] Failed to dispose FOB {fob.Name}.");
+            L.LogError(ex);
+        }
+
         if (_singleton == null)
             return;
 

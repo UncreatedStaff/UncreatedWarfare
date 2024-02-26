@@ -1880,13 +1880,14 @@ public class DebugCommand : AsyncCommand
                 CharacterName = username.CharacterName.MaxLength(30)!,
                 DisplayName = null,
                 NickName = username.NickName.MaxLength(30)!,
-                PlayerName = username.PlayerName.MaxLength(48)!
+                PlayerName = username.PlayerName.MaxLength(48)!,
+                DiscordId = await Data.AdminSql.GetDiscordID(steam64, token)
             };
 
             dbContext.UserData.Add(data);
         }
 
-        await dbContext.SaveChangesAsync(token);
+        await dbContext.SaveChangesAsync(CancellationToken.None);
     }
 
     private async Task dumpkit(CommandInteraction ctx, CancellationToken token)

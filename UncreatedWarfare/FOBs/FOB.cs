@@ -28,12 +28,17 @@ using UnityEngine;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.FOBs;
-public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickListener, IPlayerDisconnectListener
+public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickListener, IPlayerDisconnectListener, IDisposable
 {
     private const int ResourcesRewardLimit = 60;
 
     private static readonly List<RegionCoordinate> RegionBuffer = new List<RegionCoordinate>(4);
     private static readonly List<KeyValuePair<ItemData, float>> SupplyBuffer = new List<KeyValuePair<ItemData, float>>(32);
+
+    private int _buildSpent;
+    private int _ammoSpent;
+    private int _buildLoaded;
+    private int _ammoLoaded;
 
     private readonly List<IFOBItem> _items = new List<IFOBItem>();
     private readonly List<UCPlayer> _friendlies = new List<UCPlayer>(16);
@@ -141,9 +146,23 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         ClosestLocation = F.GetClosestLocationName(transform.position, true, true);
         GridLocation = new GridLocation(transform.position);
         Radius = FOBManager.Config.FOBBuildPickupRadiusNoBunker;
-
+    }
+    [UsedImplicitly]
+    private void Start()
+    {
         if (Radio == null)
+        {
+            L.LogWarning($"[FOBS] [{Name}] FOB created without setting radio.");
+            Destroy(this);
             return;
+        }
+
+        if (Radio.State != RadioComponent.RadioState.Alive)
+        {
+            L.LogWarning($"[FOBS] [{Name}] FOB created with damaged or destroyed radio.");
+            Destroy(this);
+            return;
+        }
 
         UCPlayer? player = UCPlayer.FromID(Radio.Owner);
 
@@ -172,23 +191,6 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
         _recordTracker = new FobRecordTracker<WarfareDbContext>(fobRecord);
         UCWarfare.RunTask(_recordTracker.Create, ctx: "Create FOB record.");
-    }
-    [UsedImplicitly]
-    private void Start()
-    {
-        if (Radio == null)
-        {
-            L.LogWarning($"[FOBS] [{Name}] FOB created without setting radio.");
-            Destroy(this);
-            return;
-        }
-
-        if (Radio.State != RadioComponent.RadioState.Alive)
-        {
-            L.LogWarning($"[FOBS] [{Name}] FOB created with damaged or destroyed radio.");
-            Destroy(this);
-            return;
-        }
 
         if (Bunker != null)
             Radius = FOBManager.Config.FOBBuildPickupRadius;
@@ -233,13 +235,10 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (_recordTracker == null)
             return;
 
-        UCWarfare.RunTask(_recordTracker.Update(record =>
-        {
-            if (delta < 0)
-                record.BuildSpent += -delta;
-            else
-                record.BuildLoaded += delta;
-        }));
+        if (delta < 0)
+            _buildSpent += -delta;
+        else
+            _buildLoaded += delta;
     }
     public void ModifyAmmo(int delta)
     {
@@ -252,13 +251,10 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (_recordTracker == null)
             return;
 
-        UCWarfare.RunTask(_recordTracker.Update(record =>
-        {
-            if (delta < 0)
-                record.AmmoSpent += -delta;
-            else
-                record.AmmoLoaded += delta;
-        }));
+        if (delta < 0)
+            _ammoSpent += -delta;
+        else
+            _ammoLoaded += delta;
     }
     public void ModifyResources(int buildDelta, int ammoDelta)
     {
@@ -272,17 +268,15 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (_recordTracker == null)
             return;
 
-        UCWarfare.RunTask(_recordTracker.Update(record =>
-        {
-            if (buildDelta < 0)
-                record.BuildSpent += -buildDelta;
-            else
-                record.BuildLoaded += buildDelta;
-            if (ammoDelta < 0)
-                record.AmmoSpent += -ammoDelta;
-            else
-                record.AmmoLoaded += ammoDelta;
-        }));
+        if (buildDelta < 0)
+            _buildSpent += -buildDelta;
+        else
+            _buildLoaded += buildDelta;
+
+        if (ammoDelta < 0)
+            _ammoSpent += -ammoDelta;
+        else
+            _ammoLoaded += ammoDelta;
     }
     public void Restock()
     {
@@ -540,6 +534,10 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 record.Instigator = DestroyInfo?.InstigatorId;
                 record.InstigatorSession = session;
                 record.InstigatorPosition = DestroyInfo?.Instigator?.Position;
+                record.BuildLoaded = _buildLoaded;
+                record.BuildSpent = _buildSpent;
+                record.AmmoLoaded = _ammoLoaded;
+                record.AmmoSpent = _ammoSpent;
             }), ctx: "Update FOB record (destroyed).");
         }
         for (int i = 0; i < _friendlies.Count; ++i)
@@ -712,26 +710,26 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 for (int j = 0; j < region.items.Count; j++)
                 {
                     ItemData item = region.items[j];
-                    if ((item.item.id == _ammoItemId || item.item.id == _buildItemId))
+                    if (item.item.id != _ammoItemId && item.item.id != _buildItemId)
+                        continue;
+                    
+                    float d = (item.point - pos).sqrMagnitude;
+                    if (d > sqrRad)
+                        continue;
+                    bool found = false;
+                    for (int i = 0; i < SupplyBuffer.Count; ++i)
                     {
-                        float d = (item.point - pos).sqrMagnitude;
-                        if (d > sqrRad)
+                        if (SupplyBuffer[i].Value >= sqrRad)
                             continue;
-                        bool f = false;
-                        for (int i = 0; i < SupplyBuffer.Count; ++i)
-                        {
-                            if (SupplyBuffer[i].Value < sqrRad)
-                            {
-                                f = true;
-                                SupplyBuffer.Insert(i, new KeyValuePair<ItemData, float>(item, d));
-                                break;
-                            }
-                        }
 
-                        if (!f)
-                        {
-                            SupplyBuffer.Add(new KeyValuePair<ItemData, float>(item, d));
-                        }
+                        found = true;
+                        SupplyBuffer.Insert(i, new KeyValuePair<ItemData, float>(item, d));
+                        break;
+                    }
+
+                    if (!found)
+                    {
+                        SupplyBuffer.Add(new KeyValuePair<ItemData, float>(item, d));
                     }
                 }
             }
@@ -884,6 +882,16 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         }
         if (item.Equals(Radio))
             Radio = null!;
+        try
+        {
+            if (this is IDisposable disposable)
+                disposable.Dispose();
+        }
+        catch (Exception ex)
+        {
+            L.LogError($"[FOBS] Failed to dispose FOB {Name}.");
+            L.LogError(ex);
+        }
     }
     public bool ContainsBuildable(IBuildable buildable) => FindFOBItem(buildable) != null;
     public bool ContainsVehicle(InteractableVehicle vehicle) => FindFOBItem(vehicle) != null;
@@ -1193,6 +1201,10 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     F.TriggerEffectReliable(marker, target.Connection, pos);
             }
         }
+    }
+    void IDisposable.Dispose()
+    {
+        Record?.Dispose();
     }
 }
 

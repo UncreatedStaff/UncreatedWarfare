@@ -401,7 +401,10 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             ActiveStructure = null!;
         }
 
-        if (FOB?.Record != null && Buildable != null)
+        bool destroyedByRoundEnd = Data.Gamemode == null || Data.Gamemode.State is not Gamemodes.State.Active and not Gamemodes.State.Staging;
+        bool teamkilled = !destroyedByRoundEnd && DestroyInfo != null && DestroyInfo.Instigator != null && DestroyInfo.Buildable.Group.GetTeam() == DestroyInfo.Instigator.GetTeam();
+
+        if (FOB?.Record != null && Buildable != null && State == BuildableState.Full && !destroyedByRoundEnd)
         {
             UCWarfare.RunTask(FOB.Record.Update(record =>
             {
@@ -419,9 +422,6 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         }
         if (FOB?.Record != null)
         {
-            bool destroyedByRoundEnd = Data.Gamemode == null || Data.Gamemode.State is not Gamemodes.State.Active and not Gamemodes.State.Staging;
-            bool teamkilled = !destroyedByRoundEnd && DestroyInfo != null && DestroyInfo.Instigator != null && DestroyInfo.Buildable.Group.GetTeam() == DestroyInfo.Instigator.GetTeam();
-
             UCPlayer? instigator = DestroyInfo != null ? UCPlayer.FromID(DestroyInfo.InstigatorId) : null;
 
             SessionRecord? session = instigator?.CurrentSession;

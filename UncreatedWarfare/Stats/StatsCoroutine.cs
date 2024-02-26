@@ -78,7 +78,7 @@ internal static class StatsCoroutine
                 long mem = GC.GetTotalMemory(false);
                 L.LogDebug("Memory usage: " + mem);
 
-                if (mem >= 1000000000 /* ~1GB */)
+                if (mem >= 10000000000 /* ~10GB */)
                 {
                     UCWarfare.ShutdownNow("Memory error, shutdown to prevent corrupted state.", 0);
                 }

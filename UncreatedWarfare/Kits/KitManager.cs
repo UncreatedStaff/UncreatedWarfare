@@ -393,12 +393,11 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             Kit newKit = await Defaults.CreateDefaultKit(null, TeamManager.DefaultKit, token);
         }
     }
-    public Task<IPageKitItem?> GetHeldItemFromKit(UCPlayer player, CancellationToken token = default)
+    public async Task<IPageKitItem?> GetHeldItemFromKit(UCPlayer player, CancellationToken token = default)
     {
+        await UCWarfare.ToUpdate(token);
         ItemJar? held = player.GetHeldItem(out byte page);
-        return held == null
-            ? Task.FromResult<IPageKitItem?>(null)
-            : GetItemFromKit(player, held, (Page)page, token);
+        return held != null ? await GetItemFromKit(player, held, (Page)page, token).ConfigureAwait(false) : null;
     }
 
     /// <summary>Gets the exact <see cref="IKitItem"/> and <see cref="IPageKitItem"/> that the player is holding from their kit (accounts for the item being moved).</summary>

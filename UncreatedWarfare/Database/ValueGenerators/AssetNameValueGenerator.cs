@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.ValueGeneration;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using Uncreated.Warfare.Models.Assets;
 
 namespace Uncreated.Warfare.Database.ValueGenerators;
@@ -51,12 +52,34 @@ public static class AssetNameValueGenerator
             if (Cache.TryGetValue(entityType, out ValueGenerator val))
                 return val;
 
-            MethodInfo getMethod = (assetProperty.GetMemberInfo(false, false) as PropertyInfo)?.GetGetMethod(true) ??
-                                   throw new ArgumentException("Asset property does not have a getter or is not a property.", nameof(assetProperty));
+            MemberInfo member = assetProperty.GetMemberInfo(true, false);
 
             Type delegateType = typeof(Func<,>).MakeGenericType(entityType, assetProperty.IsNullable ? typeof(UnturnedAssetReference?) : typeof(UnturnedAssetReference));
-            Delegate caller = Accessor.GenerateInstanceCaller(delegateType, getMethod, true, true)!;
-            ValueGenerator? newGenerator = (ValueGenerator?)typeof(AssetNameValueGenerator<>).MakeGenericType(entityType).GetConstructor(new Type[] { delegateType })?.Invoke(new object[] { caller });
+            Delegate caller;
+            if (member is PropertyInfo property)
+            {
+                MethodInfo getMethod = property.GetGetMethod(true) ??
+                                       throw new ArgumentException($"Asset property does not have a getter ({member}).", nameof(assetProperty));
+
+                caller = Accessor.GenerateInstanceCaller(delegateType, getMethod, true, true)!;
+            }
+            else
+            {
+                if (member is not FieldInfo underlyingField)
+                    throw new ArgumentException($"Asset is not a field or property ({member}).", nameof(assetProperty));
+
+                Delegate generateInstanceGetter = assetProperty.IsNullable
+                    ? Accessor.GenerateInstanceGetter<UnturnedAssetReference?>(entityType, underlyingField.Name, throwOnError: true)!
+                    : Accessor.GenerateInstanceGetter<UnturnedAssetReference>(entityType, underlyingField.Name, throwOnError: true)!;
+
+                MethodInfo getMethod = generateInstanceGetter.Method;
+
+                caller = getMethod.IsStatic 
+                    ? Accessor.GenerateStaticCaller(delegateType, generateInstanceGetter.Method, true, true)!
+                    : Accessor.GenerateInstanceCaller(delegateType, generateInstanceGetter.Method, true, true)!;
+            }
+
+            ValueGenerator? newGenerator = (ValueGenerator?)typeof(AssetNameValueGenerator<>).MakeGenericType(entityType).GetConstructor([delegateType])?.Invoke([caller]);
 
             if (newGenerator == null)
                 throw new NotSupportedException("Failed to create AssetNameValueGenerator<" + entityType.FullName + ">.");
