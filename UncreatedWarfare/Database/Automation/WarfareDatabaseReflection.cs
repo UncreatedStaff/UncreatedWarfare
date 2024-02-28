@@ -10,17 +10,22 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Reflection.Emit;
 using Uncreated.Networking;
 using Uncreated.SQL;
 using Uncreated.Warfare.Database.ValueConverters;
 using Uncreated.Warfare.Database.ValueGenerators;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Moderation;
+using MutableEntityTypeExtensions = Microsoft.EntityFrameworkCore.MutableEntityTypeExtensions;
 
 namespace Uncreated.Warfare.Database.Automation;
 public static class WarfareDatabaseReflection
 {
     public static int MaxAssetNameLength => 48;
+    private static Func<ITypeBase, Type>? _getClrType;
+    private static Func<IMutableEntityType, MemberInfo, IMutableProperty>? _addProperty;
+    private static Func<IMutableEntityType, string, Type, IMutableProperty>? _addPropertyShadow;
 
     /* automatically applied value converters by type */
     public static void AddValueConverters(IDictionary<Type, Type> valueConverters)
@@ -33,6 +38,88 @@ public static class WarfareDatabaseReflection
         valueConverters.Add(typeof(PrimaryKey), typeof(PrimaryKeyValueConverter));
         valueConverters.Add(typeof(DateTimeOffset), typeof(DateTimeOffsetValueConverter));
     }
+    private static Type GetClrType(ITypeBase type)
+    {
+        // this is necessary to support later versions of EF
+        if (_getClrType != null)
+            return _getClrType(type);
+
+        Accessor.GetDynamicMethodFlags(false, out MethodAttributes attributes, out CallingConventions conventions);
+        DynamicMethod method = new DynamicMethod("get_ClrType", attributes, conventions, typeof(Type), [ typeof(ITypeBase) ], typeof(WarfareDatabaseReflection), true);
+        method.DefineParameter(1, default, "type");
+        ILGenerator il = method.GetILGenerator();
+
+        Type? roType = Type.GetType("Microsoft.EntityFrameworkCore.Metadata.IReadOnlyTypeBase, Microsoft.EntityFrameworkCore");
+        PropertyInfo? property = (roType ?? typeof(ITypeBase)).GetProperty(nameof(ITypeBase.ClrType), BindingFlags.Instance | BindingFlags.Public);
+
+        if (property == null)
+            throw new InvalidProgramException("CLR type property not found.");
+
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Callvirt, property.GetMethod);
+        il.Emit(OpCodes.Ret);
+        _getClrType = (Func<ITypeBase, Type>)method.CreateDelegate(typeof(Func<ITypeBase, Type>));
+        return _getClrType(type);
+    }
+    private static IMutableProperty AddProperty(IMutableEntityType type, MemberInfo member)
+    {
+        // this is necessary to support later versions of EF
+        if (_addProperty != null)
+            return _addProperty(type, member);
+
+        Accessor.GetDynamicMethodFlags(false, out MethodAttributes attributes, out CallingConventions conventions);
+        DynamicMethod method = new DynamicMethod("AddProperty", attributes, conventions, typeof(IMutableProperty), [ typeof(IMutableEntityType), typeof(MemberInfo)], typeof(WarfareDatabaseReflection), true);
+        method.DefineParameter(1, default, "type");
+        ILGenerator il = method.GetILGenerator();
+
+        MethodInfo? addProperty = typeof(MutableEntityTypeExtensions).GetMethod("AddProperty", BindingFlags.Public | BindingFlags.Static, null, [ typeof(IMutableEntityType), typeof(MemberInfo) ], null);
+        addProperty ??= typeof(IMutableEntityType).GetMethod("AddProperty", BindingFlags.Public | BindingFlags.Instance, null, [ typeof(MemberInfo) ], null);
+
+        if (addProperty == null)
+            throw new InvalidProgramException("AddProperty method not found.");
+
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldarg_1);
+
+        if (addProperty.IsStatic)
+            il.Emit(OpCodes.Call, addProperty);
+        else
+            il.Emit(OpCodes.Callvirt, addProperty);
+
+        il.Emit(OpCodes.Ret);
+        _addProperty = (Func<IMutableEntityType, MemberInfo, IMutableProperty>)method.CreateDelegate(typeof(Func<IMutableEntityType, MemberInfo, IMutableProperty>));
+        return _addProperty(type, member);
+    }
+    private static IMutableProperty AddProperty(IMutableEntityType type, string name, Type clrType)
+    {
+        // this is necessary to support later versions of EF
+        if (_addPropertyShadow != null)
+            return _addPropertyShadow(type, name, clrType);
+
+        Accessor.GetDynamicMethodFlags(false, out MethodAttributes attributes, out CallingConventions conventions);
+        DynamicMethod method = new DynamicMethod("AddProperty", attributes, conventions, typeof(IMutableProperty), [ typeof(IMutableEntityType), typeof(string), typeof(Type)], typeof(WarfareDatabaseReflection), true);
+        method.DefineParameter(1, default, "type");
+        ILGenerator il = method.GetILGenerator();
+
+        MethodInfo? addProperty = typeof(MutableEntityTypeExtensions).GetMethod("AddProperty", BindingFlags.Public | BindingFlags.Static, null, [ typeof(IMutableEntityType), typeof(string), typeof(Type) ], null);
+        addProperty ??= typeof(IMutableEntityType).GetMethod("AddProperty", BindingFlags.Public | BindingFlags.Instance, null, [ typeof(MemberInfo), typeof(Type) ], null);
+
+        if (addProperty == null)
+            throw new InvalidProgramException("AddProperty shadow method not found.");
+
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldarg_1);
+        il.Emit(OpCodes.Ldarg_2);
+
+        if (addProperty.IsStatic)
+            il.Emit(OpCodes.Call, addProperty);
+        else
+            il.Emit(OpCodes.Callvirt, addProperty);
+
+        il.Emit(OpCodes.Ret);
+        _addPropertyShadow = (Func<IMutableEntityType, string, Type, IMutableProperty>)method.CreateDelegate(typeof(Func<IMutableEntityType, string, Type, IMutableProperty>));
+        return _addPropertyShadow(type, name, clrType);
+    }
     public static void ApplyValueConverterConfig(ModelBuilder modelBuilder, Action<Dictionary<Type, Type>>? modValueConverters = null)
     {
         Dictionary<Type, Type> valueConverters = new Dictionary<Type, Type>(16);
@@ -41,12 +128,13 @@ public static class WarfareDatabaseReflection
 
         foreach (IMutableEntityType entity in modelBuilder.Model.GetEntityTypes().OrderBy(x => x.ClrType.FullName).ToList())
         {
-            PropertyInfo[] properties = entity.ClrType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+            Type entityClrType = GetClrType(entity);
+            PropertyInfo[] properties = entityClrType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 
-            if (valueConverters.ContainsKey(entity.ClrType) || entity.ClrType.IsDefinedSafe<ValueConverterAttribute>())
+            if (valueConverters.ContainsKey(entityClrType) || entityClrType.IsDefinedSafe<ValueConverterAttribute>())
             {
-                if (modelBuilder.Model.RemoveEntityType(entity.ClrType) != null)
-                    Log($"Removed entity type {entity.ClrType.Name}.");
+                if (modelBuilder.Model.RemoveEntityType(entityClrType) != null)
+                    Log($"Removed entity type {entityClrType.Name}.");
 
                 continue;
             }
@@ -66,13 +154,13 @@ public static class WarfareDatabaseReflection
                 if (type == null && !valueConverters.TryGetValue(clrType, out type))
                     continue;
 
-                entity.AddProperty(property);
-                Log($"Added field {entity.ClrType.Name + "." + property.Name,-66} that was excluded.");
+                AddProperty(entity, property);
+                Log($"Added field {entityClrType.Name + "." + property.Name,-66} that was excluded.");
                 if (propertyAttribute?.Type == null && modelBuilder.Model.RemoveEntityType(clrType) != null)
-                    Log($"Removed entity type {entity.ClrType.Name}.");
+                    Log($"Removed entity type {entityClrType.Name}.");
             }
 
-            FieldInfo[] fields = entity.ClrType.GetFields(BindingFlags.Instance | BindingFlags.Public);
+            FieldInfo[] fields = entityClrType.GetFields(BindingFlags.Instance | BindingFlags.Public);
             foreach (FieldInfo field in fields)
             {
                 if (entity.GetProperties().Any(x => x.FieldInfo == field) || field.IsDefinedSafe<NotMappedAttribute>())
@@ -88,10 +176,10 @@ public static class WarfareDatabaseReflection
                 if (type == null && !valueConverters.TryGetValue(clrType, out type))
                     continue;
 
-                entity.AddProperty(field);
-                Log($"Added field {entity.ClrType.Name + "." + field.Name,-66} that was excluded.");
+                AddProperty(entity, field);
+                Log($"Added field {entityClrType.Name + "." + field.Name,-66} that was excluded.");
                 if (propertyAttribute?.Type == null && modelBuilder.Model.RemoveEntityType(clrType) != null)
-                    Log($"Removed entity type {entity.ClrType.Name}.");
+                    Log($"Removed entity type {entityClrType.Name}.");
             }
         }
 #pragma warning disable EF1001
@@ -119,7 +207,7 @@ public static class WarfareDatabaseReflection
                 string name = property.Name + "Packed";
                 if (property.DeclaringEntityType.GetProperties().Any(x => x.Name.Equals(name, StringComparison.Ordinal)))
                 {
-                    property.DeclaringEntityType.AddProperty(name, typeof(uint));
+                    AddProperty(property.DeclaringEntityType, name, typeof(uint));
                     Log($"Added packed IP column for {property.DeclaringEntityType.ClrType.Name}.{member?.Name ?? "null"}: {name}.");
                 }
             }
@@ -135,7 +223,7 @@ public static class WarfareDatabaseReflection
                 string name = addNameAttribute.ColumnName ?? (property.Name + "Name");
                 if (!property.DeclaringEntityType.GetProperties().Any(x => x.Name.Equals(name, StringComparison.Ordinal)))
                 {
-                    IMutableProperty assetNameProperty = property.DeclaringEntityType.AddProperty(name, typeof(string));
+                    IMutableProperty assetNameProperty = AddProperty(property.DeclaringEntityType, name, typeof(string));
                     assetNameProperty.SetMaxLength(MaxAssetNameLength);
                     assetNameProperty.IsNullable = nullable;
                     assetNameProperty.SetDefaultValue(nullable ? null : new string('0', 32));
