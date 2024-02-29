@@ -21,7 +21,7 @@ public class UnturnedAssetReferenceValueConverter : ValueConverter<UnturnedAsset
     [UsedImplicitly]
     public static void Apply(ModelBuilder modelBuilder, IMutableProperty property, bool nullable)
     {
-        property.SetValueConverter(nullable ? NullableInstance : Instance);
+        EFCompat.SetValueConverter(property, nullable ? NullableInstance : Instance);
         property.SetColumnType("char(32)");
     }
 }

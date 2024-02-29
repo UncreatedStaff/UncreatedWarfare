@@ -20,7 +20,7 @@ public class IPAddressValueConverter : ValueConverter<IPAddress?, string?>
     [UsedImplicitly]
     public static void Apply(ModelBuilder modelBuilder, IMutableProperty property, bool nullable)
     {
-        property.SetValueConverter(Instance);
+        EFCompat.SetValueConverter(property, Instance);
         property.SetColumnType("varchar(45)");
     }
 }

@@ -1,12 +1,10 @@
 ﻿using DanielWillett.ReflectionTools;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Reflection.Emit;
 using Uncreated.Warfare.Models.Assets;
 
 namespace Uncreated.Warfare.Database.ValueGenerators;
@@ -52,8 +50,8 @@ public static class AssetNameValueGenerator
             if (Cache.TryGetValue(entityType, out ValueGenerator val))
                 return val;
 
-            MemberInfo member = assetProperty.GetMemberInfo(true, false);
-
+            MemberInfo member = EFCompat.GetMemberInfo(assetProperty, true, false);
+            
             Type delegateType = typeof(Func<,>).MakeGenericType(entityType, assetProperty.IsNullable ? typeof(UnturnedAssetReference?) : typeof(UnturnedAssetReference));
             Delegate caller;
             if (member is PropertyInfo property)

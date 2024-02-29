@@ -23,7 +23,7 @@ public class IPv4RangeValueConverter : ValueConverter<IPv4Range, string>
     [UsedImplicitly]
     public static void Apply(ModelBuilder modelBuilder, IMutableProperty property, bool nullable)
     {
-        property.SetValueConverter(nullable ? NullableInstance : Instance);
+        EFCompat.SetValueConverter(property, nullable ? NullableInstance : Instance);
         property.SetColumnType("varchar(18)");
     }
 }
@@ -44,7 +44,7 @@ public class IPv4Converter : ValueConverter<IPv4Range, string>
     [UsedImplicitly]
     public static void Apply(ModelBuilder modelBuilder, IMutableProperty property, bool nullable)
     {
-        property.SetValueConverter(nullable ? NullableInstance : Instance);
+        EFCompat.SetValueConverter(property, nullable ? NullableInstance : Instance);
         property.SetColumnType("varchar(15)");
     }
 }

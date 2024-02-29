@@ -1,7 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System;
 using System.Collections;
@@ -10,22 +9,17 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Reflection.Emit;
 using Uncreated.Networking;
 using Uncreated.SQL;
 using Uncreated.Warfare.Database.ValueConverters;
 using Uncreated.Warfare.Database.ValueGenerators;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Moderation;
-using MutableEntityTypeExtensions = Microsoft.EntityFrameworkCore.MutableEntityTypeExtensions;
 
 namespace Uncreated.Warfare.Database.Automation;
 public static class WarfareDatabaseReflection
 {
     public static int MaxAssetNameLength => 48;
-    private static Func<ITypeBase, Type>? _getClrType;
-    private static Func<IMutableEntityType, MemberInfo, IMutableProperty>? _addProperty;
-    private static Func<IMutableEntityType, string, Type, IMutableProperty>? _addPropertyShadow;
 
     /* automatically applied value converters by type */
     public static void AddValueConverters(IDictionary<Type, Type> valueConverters)
@@ -38,102 +32,20 @@ public static class WarfareDatabaseReflection
         valueConverters.Add(typeof(PrimaryKey), typeof(PrimaryKeyValueConverter));
         valueConverters.Add(typeof(DateTimeOffset), typeof(DateTimeOffsetValueConverter));
     }
-    private static Type GetClrType(ITypeBase type)
-    {
-        // this is necessary to support later versions of EF
-        if (_getClrType != null)
-            return _getClrType(type);
-
-        Accessor.GetDynamicMethodFlags(false, out MethodAttributes attributes, out CallingConventions conventions);
-        DynamicMethod method = new DynamicMethod("get_ClrType", attributes, conventions, typeof(Type), [ typeof(ITypeBase) ], typeof(WarfareDatabaseReflection), true);
-        method.DefineParameter(1, default, "type");
-        ILGenerator il = method.GetILGenerator();
-
-        Type? roType = Type.GetType("Microsoft.EntityFrameworkCore.Metadata.IReadOnlyTypeBase, Microsoft.EntityFrameworkCore");
-        PropertyInfo? property = (roType ?? typeof(ITypeBase)).GetProperty(nameof(ITypeBase.ClrType), BindingFlags.Instance | BindingFlags.Public);
-
-        if (property == null)
-            throw new InvalidProgramException("CLR type property not found.");
-
-        il.Emit(OpCodes.Ldarg_0);
-        il.Emit(OpCodes.Callvirt, property.GetMethod);
-        il.Emit(OpCodes.Ret);
-        _getClrType = (Func<ITypeBase, Type>)method.CreateDelegate(typeof(Func<ITypeBase, Type>));
-        return _getClrType(type);
-    }
-    private static IMutableProperty AddProperty(IMutableEntityType type, MemberInfo member)
-    {
-        // this is necessary to support later versions of EF
-        if (_addProperty != null)
-            return _addProperty(type, member);
-
-        Accessor.GetDynamicMethodFlags(false, out MethodAttributes attributes, out CallingConventions conventions);
-        DynamicMethod method = new DynamicMethod("AddProperty", attributes, conventions, typeof(IMutableProperty), [ typeof(IMutableEntityType), typeof(MemberInfo)], typeof(WarfareDatabaseReflection), true);
-        method.DefineParameter(1, default, "type");
-        ILGenerator il = method.GetILGenerator();
-
-        MethodInfo? addProperty = typeof(MutableEntityTypeExtensions).GetMethod("AddProperty", BindingFlags.Public | BindingFlags.Static, null, [ typeof(IMutableEntityType), typeof(MemberInfo) ], null);
-        addProperty ??= typeof(IMutableEntityType).GetMethod("AddProperty", BindingFlags.Public | BindingFlags.Instance, null, [ typeof(MemberInfo) ], null);
-
-        if (addProperty == null)
-            throw new InvalidProgramException("AddProperty method not found.");
-
-        il.Emit(OpCodes.Ldarg_0);
-        il.Emit(OpCodes.Ldarg_1);
-
-        if (addProperty.IsStatic)
-            il.Emit(OpCodes.Call, addProperty);
-        else
-            il.Emit(OpCodes.Callvirt, addProperty);
-
-        il.Emit(OpCodes.Ret);
-        _addProperty = (Func<IMutableEntityType, MemberInfo, IMutableProperty>)method.CreateDelegate(typeof(Func<IMutableEntityType, MemberInfo, IMutableProperty>));
-        return _addProperty(type, member);
-    }
-    private static IMutableProperty AddProperty(IMutableEntityType type, string name, Type clrType)
-    {
-        // this is necessary to support later versions of EF
-        if (_addPropertyShadow != null)
-            return _addPropertyShadow(type, name, clrType);
-
-        Accessor.GetDynamicMethodFlags(false, out MethodAttributes attributes, out CallingConventions conventions);
-        DynamicMethod method = new DynamicMethod("AddProperty", attributes, conventions, typeof(IMutableProperty), [ typeof(IMutableEntityType), typeof(string), typeof(Type)], typeof(WarfareDatabaseReflection), true);
-        method.DefineParameter(1, default, "type");
-        ILGenerator il = method.GetILGenerator();
-
-        MethodInfo? addProperty = typeof(MutableEntityTypeExtensions).GetMethod("AddProperty", BindingFlags.Public | BindingFlags.Static, null, [ typeof(IMutableEntityType), typeof(string), typeof(Type) ], null);
-        addProperty ??= typeof(IMutableEntityType).GetMethod("AddProperty", BindingFlags.Public | BindingFlags.Instance, null, [ typeof(MemberInfo), typeof(Type) ], null);
-
-        if (addProperty == null)
-            throw new InvalidProgramException("AddProperty shadow method not found.");
-
-        il.Emit(OpCodes.Ldarg_0);
-        il.Emit(OpCodes.Ldarg_1);
-        il.Emit(OpCodes.Ldarg_2);
-
-        if (addProperty.IsStatic)
-            il.Emit(OpCodes.Call, addProperty);
-        else
-            il.Emit(OpCodes.Callvirt, addProperty);
-
-        il.Emit(OpCodes.Ret);
-        _addPropertyShadow = (Func<IMutableEntityType, string, Type, IMutableProperty>)method.CreateDelegate(typeof(Func<IMutableEntityType, string, Type, IMutableProperty>));
-        return _addPropertyShadow(type, name, clrType);
-    }
     public static void ApplyValueConverterConfig(ModelBuilder modelBuilder, Action<Dictionary<Type, Type>>? modValueConverters = null)
     {
         Dictionary<Type, Type> valueConverters = new Dictionary<Type, Type>(16);
         AddValueConverters(valueConverters);
         modValueConverters?.Invoke(valueConverters);
 
-        foreach (IMutableEntityType entity in modelBuilder.Model.GetEntityTypes().OrderBy(x => x.ClrType.FullName).ToList())
+        foreach (IMutableEntityType entity in modelBuilder.Model.GetEntityTypes().OrderBy(x => EFCompat.GetClrType(x).FullName).ToList())
         {
-            Type entityClrType = GetClrType(entity);
+            Type entityClrType = EFCompat.GetClrType(entity);
             PropertyInfo[] properties = entityClrType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 
             if (valueConverters.ContainsKey(entityClrType) || entityClrType.IsDefinedSafe<ValueConverterAttribute>())
             {
-                if (modelBuilder.Model.RemoveEntityType(entityClrType) != null)
+                if (EFCompat.RemoveEntityType(modelBuilder.Model, entityClrType) != null)
                     Log($"Removed entity type {entityClrType.Name}.");
 
                 continue;
@@ -141,7 +53,7 @@ public static class WarfareDatabaseReflection
 
             foreach (PropertyInfo property in properties)
             {
-                if (entity.GetProperties().Any(x => x.PropertyInfo == property) || property.IsDefinedSafe<NotMappedAttribute>())
+                if (entity.GetProperties().Any(x => EFCompat.GetPropertyInfo(x) == property) || property.IsDefinedSafe<NotMappedAttribute>())
                     continue;
 
                 Type clrType = property.PropertyType;
@@ -154,9 +66,9 @@ public static class WarfareDatabaseReflection
                 if (type == null && !valueConverters.TryGetValue(clrType, out type))
                     continue;
 
-                AddProperty(entity, property);
+                EFCompat.AddProperty(entity, property);
                 Log($"Added field {entityClrType.Name + "." + property.Name,-66} that was excluded.");
-                if (propertyAttribute?.Type == null && modelBuilder.Model.RemoveEntityType(clrType) != null)
+                if (propertyAttribute?.Type == null && EFCompat.RemoveEntityType(modelBuilder.Model, clrType) != null)
                     Log($"Removed entity type {entityClrType.Name}.");
             }
 
@@ -176,27 +88,27 @@ public static class WarfareDatabaseReflection
                 if (type == null && !valueConverters.TryGetValue(clrType, out type))
                     continue;
 
-                AddProperty(entity, field);
+                EFCompat.AddProperty(entity, field);
                 Log($"Added field {entityClrType.Name + "." + field.Name,-66} that was excluded.");
-                if (propertyAttribute?.Type == null && modelBuilder.Model.RemoveEntityType(clrType) != null)
+                if (propertyAttribute?.Type == null && EFCompat.RemoveEntityType(modelBuilder.Model, clrType) != null)
                     Log($"Removed entity type {entityClrType.Name}.");
             }
         }
 #pragma warning disable EF1001
-        foreach (IMutableProperty property in modelBuilder.Model.GetEntityTypes().SelectMany(x => x.GetProperties()).OrderBy(x => x.DeclaringEntityType.ClrType.FullName).ThenBy(x => x.GetColumnOrdinal()).ToList())
+        foreach (IMutableProperty property in modelBuilder.Model.GetEntityTypes().SelectMany(x => x.GetProperties()).OrderBy(x => EFCompat.GetClrType(x.DeclaringEntityType).FullName).ToList())
 #pragma warning restore EF1001
         {
             bool nullable = false;
-            Type clrType = property.ClrType;
+            Type clrType = EFCompat.GetClrType(property);
             if (clrType.IsGenericType && clrType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 nullable = true;
                 clrType = clrType.GenericTypeArguments[0];
             }
 
-            // Log($"Checking property {property.DeclaringEntityType.ClrType.Name + "." + property.Name,-60} of type {clrType.Name,-30}.");
+            // Log($"Checking property {EFCompat.GetClrType(property.DeclaringEntityType).Name + "." + EFCompat.GetName(property),-60} of type {clrType.Name,-30}.");
 
-            MemberInfo? member = (MemberInfo?)property.PropertyInfo ?? property.FieldInfo;
+            MemberInfo? member = (MemberInfo?)EFCompat.GetPropertyInfo(property) ?? property.FieldInfo;
 
             ValueConverterAttribute? propertyAttribute = member?.GetAttributeSafe<ValueConverterAttribute>();
             ValueConverterAttribute? typeAttribute = clrType.GetAttributeSafe<ValueConverterAttribute>();
@@ -204,35 +116,35 @@ public static class WarfareDatabaseReflection
             if (clrType == typeof(IPAddress) && (member == null || !member.IsDefinedSafe<DontAddPackedColumnAttribute>()))
             {
                 // add packed column for IP addresses
-                string name = property.Name + "Packed";
-                if (property.DeclaringEntityType.GetProperties().Any(x => x.Name.Equals(name, StringComparison.Ordinal)))
+                string name = EFCompat.GetName(property) + "Packed";
+                if (property.DeclaringEntityType.GetProperties().Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
                 {
-                    AddProperty(property.DeclaringEntityType, name, typeof(uint));
-                    Log($"Added packed IP column for {property.DeclaringEntityType.ClrType.Name}.{member?.Name ?? "null"}: {name}.");
+                    EFCompat.AddProperty(property.DeclaringEntityType, name, typeof(uint));
+                    Log($"Added packed IP column for {EFCompat.GetClrType(property.DeclaringEntityType).Name}.{member?.Name ?? "null"}: {name}.");
                 }
             }
 
             if (member != null && member.IsDefinedSafe<IndexAttribute>())
             {
-                property.DeclaringEntityType.AddIndex(property);
-                Log($"Added generic index for {property.DeclaringEntityType.ClrType.Name}.{member?.Name ?? "null"}.");
+                EFCompat.AddIndex(property.DeclaringEntityType, property);
+                Log($"Added generic index for {EFCompat.GetClrType(property.DeclaringEntityType).Name}.{member?.Name ?? "null"}.");
             }
 
             if (member != null && member.TryGetAttributeSafe(out AddNameAttribute addNameAttribute))
             {
-                string name = addNameAttribute.ColumnName ?? (property.Name + "Name");
-                if (!property.DeclaringEntityType.GetProperties().Any(x => x.Name.Equals(name, StringComparison.Ordinal)))
+                string name = addNameAttribute.ColumnName ?? (EFCompat.GetName(property) + "Name");
+                if (!property.DeclaringEntityType.GetProperties().Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
                 {
-                    IMutableProperty assetNameProperty = AddProperty(property.DeclaringEntityType, name, typeof(string));
-                    assetNameProperty.SetMaxLength(MaxAssetNameLength);
+                    IMutableProperty assetNameProperty = EFCompat.AddProperty(property.DeclaringEntityType, name, typeof(string));
+                    EFCompat.SetMaxLength(assetNameProperty, MaxAssetNameLength);
                     assetNameProperty.IsNullable = nullable;
                     assetNameProperty.SetDefaultValue(nullable ? null : new string('0', 32));
-                    assetNameProperty.SetValueGeneratorFactory((_, entityType) => AssetNameValueGenerator.Get(entityType.ClrType, property));
-                    Log($"Added asset name column for {property.DeclaringEntityType.ClrType.Name}.{member?.Name ?? "null"}: {name} (max length: {MaxAssetNameLength})");
+                    EFCompat.SetValueGeneratorFactory(assetNameProperty, (_, entityType) => AssetNameValueGenerator.Get(EFCompat.GetClrType(entityType), property));
+                    Log($"Added asset name column for {EFCompat.GetClrType(property.DeclaringEntityType).Name}.{member?.Name ?? "null"}: {name} (max length: {MaxAssetNameLength})");
                 }
                 else
                 {
-                    Log($"Asset name column already exists in {property.DeclaringEntityType.ClrType.Name}.{member?.Name ?? "null"}: {name}");
+                    Log($"Asset name column already exists in {EFCompat.GetClrType(property.DeclaringEntityType).Name}.{member?.Name ?? "null"}: {name}");
                 }
             }
 
@@ -307,7 +219,7 @@ public static class WarfareDatabaseReflection
 
                         dataType = (string)sqlEnumMethod
                             .MakeGenericMethod(clrType)
-                            .Invoke(null, new object[] { array })!;
+                            .Invoke(null, [ array ])!;
                     }
                 }
                 else
@@ -323,11 +235,11 @@ public static class WarfareDatabaseReflection
                 
                 ValueConverter converter = CreateValueConverter(ref converterType, clrType, nullable);
 
-                property.SetValueConverter(converter);
+                EFCompat.SetValueConverter(property, converter);
                 property.SetColumnType(dataType);
                 property.IsNullable = nullable;
 
-                Log($"Set converter for {property.DeclaringEntityType.Name}.{property.Name} to {converterType.Name}.");
+                Log($"Set converter for {EFCompat.GetName(property.DeclaringEntityType)}.{EFCompat.GetName(property)} to {converterType.Name}.");
                 Log($" - Type: {dataType}.");
                 continue;
             }
@@ -397,9 +309,9 @@ public static class WarfareDatabaseReflection
             {
                 try
                 {
-                    property.SetValueConverter((ValueConverter)Activator.CreateInstance(valConverterType)!);
+                    EFCompat.SetValueConverter(property, (ValueConverter)Activator.CreateInstance(valConverterType)!);
 
-                    Log($"Set converter for {property.DeclaringEntityType.Name}.{property.Name} to {valConverterType.Name}.");
+                    Log($"Set converter for {EFCompat.GetName(property.DeclaringEntityType)}.{EFCompat.GetName(property)} to {valConverterType.Name}.");
                 }
                 catch (Exception ex)
                 {
@@ -408,23 +320,24 @@ public static class WarfareDatabaseReflection
             }
             else
             {
-                MethodInfo? method = valConverterType.GetMethod(callback.MethodName, BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, new Type[] { typeof(ModelBuilder), typeof(IMutableProperty), typeof(bool) }, null);
+                MethodInfo? method = valConverterType.GetMethod(callback.MethodName, BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, [ typeof(ModelBuilder), typeof(IMutableProperty), typeof(bool) ], null);
                 if (method == null)
                     throw new MethodAccessException($"Failed to find value converter callback: {valConverterType.Name}.{callback.MethodName}.");
 
                 try
                 {
-                    method.Invoke(null, new object[] { modelBuilder, property, nullable });
+                    method.Invoke(null, [ modelBuilder, property, nullable ]);
                 }
                 catch (Exception ex)
                 {
                     throw new Exception($"Exception invoking value converter callback for {valConverterType.Name}.", ex);
                 }
 
-                if (valConverterType.IsInstanceOfType(property.GetValueConverter()) ||
+                ValueConverter? vc = EFCompat.GetValueConverter(property);
+                if (valConverterType.IsInstanceOfType(vc) ||
                     nullable && valConverterType.IsGenericType && (valConverterType.GetGenericTypeDefinition() == typeof(NullableReferenceTypeConverter<,>) || valConverterType.GetGenericTypeDefinition() == typeof(NullableValueTypeConverter<,>)))
                 {
-                    Log($"Set converter for {property.DeclaringEntityType.Name}.{property.Name} to {property.GetValueConverter().GetType().Name}.");
+                    Log($"Set converter for {EFCompat.GetName(property.DeclaringEntityType)}.{EFCompat.GetName(property)} to {vc!.GetType().Name}.");
                     Log($" - Type: {property.GetColumnType()}.");
                     if (clrType.IsValueType)
                         property.IsNullable = nullable;
@@ -435,9 +348,9 @@ public static class WarfareDatabaseReflection
                 try
                 {
                     ValueConverter converter = CreateValueConverter(ref valConverterType, clrType, nullable);
-                    property.SetValueConverter(converter);
+                    EFCompat.SetValueConverter(property, converter);
 
-                    Log($"Set converter for {property.DeclaringEntityType.Name}.{property.Name} to {valConverterType.Name}.");
+                    Log($"Set converter for {EFCompat.GetName(property.DeclaringEntityType)}.{EFCompat.GetName(property)} to {valConverterType.Name}.");
                     Log($" - Type: {property.GetColumnType()}.");
                     if (clrType.IsValueType)
                         property.IsNullable = nullable;
