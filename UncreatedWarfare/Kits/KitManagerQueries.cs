@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -267,19 +266,6 @@ partial class KitManager
     public Task DownloadPlayerKitData(UCPlayer player, bool lockPurchaseSync, CancellationToken token = default) =>
         DownloadPlayersKitData(new UCPlayer[] { player }, lockPurchaseSync, token);
 
-    internal async Task AddAccessRow(uint kit, ulong player, KitAccessType type, CancellationToken token = default)
-    {
-        await using IKitsDbContext dbContext = new WarfareDbContext();
-
-        dbContext.Add(new KitAccess
-        {
-            KitId = kit,
-            Steam64 = player,
-            AccessType = type,
-            Timestamp = DateTimeOffset.UtcNow
-        });
-        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-    }
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> HasAccess(uint kit, ulong player, CancellationToken token = default)
     {
@@ -287,69 +273,61 @@ partial class KitManager
 
         return kit != 0 && await dbContext.KitAccess.AnyAsync(x => x.KitId == kit && x.Steam64 == player, token);
     }
-    internal async Task<bool> AddAccessRow(string kit, ulong player, KitAccessType type, CancellationToken token = default)
+    internal async Task<bool> AddAccessRow(uint kit, ulong player, KitAccessType type, CancellationToken token = default)
     {
         await using IKitsDbContext dbContext = new WarfareDbContext();
 
-        uint pk = 0;
-        if (UCWarfare.IsLoaded && GetSingletonQuick() is { } kitmanager)
+        if (await dbContext.KitAccess.FirstOrDefaultAsync(kitAccess => kitAccess.Steam64 == player && kitAccess.KitId == kit, token) is { } access)
         {
-            Kit? kitFound = await kitmanager.FindKit(kit, token, true, x => x.Kits);
-            if (kitFound is not null)
-                pk = kitFound.PrimaryKey;
-        }
-
-        if (pk == 0)
-        {
-            Kit? kit2 = await dbContext.Kits.FirstOrDefaultAsync(x => x.InternalName == kit, token).ConfigureAwait(false);
-
-            if (kit2 == null)
+            if (access.AccessType == type)
                 return false;
 
-            pk = kit2.PrimaryKey;
-            if (pk == 0)
-                return false;
+            access.AccessType = type;
+            dbContext.Update(access);
+        }
+        else
+        {
+            dbContext.Add(new KitAccess
+            {
+                KitId = kit,
+                Steam64 = player,
+                AccessType = type,
+                Timestamp = DateTimeOffset.UtcNow
+            });
         }
 
-        dbContext.KitAccess.Add(new KitAccess
+        try
         {
-            KitId = pk,
-            Steam64 = player,
-            AccessType = type,
-            Timestamp = DateTimeOffset.UtcNow
-        });
-
-        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-
-        return true;
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            return true;
+        }
+        catch (DbUpdateException)
+        {
+            return false;
+        }
     }
     internal async Task<bool> RemoveAccessRow(uint kit, ulong player, CancellationToken token = default)
     {
         await using IKitsDbContext dbContext = new WarfareDbContext();
 
-        List<KitAccess> access = await dbContext.KitAccess.Where(x => x.KitId == kit && x.Steam64 == player)
-        .ToListAsync(token).ConfigureAwait(false);
+        List<KitAccess> access = await dbContext.KitAccess
+            .Where(x => x.KitId == kit && x.Steam64 == player)
+            .ToListAsync(token)
+            .ConfigureAwait(false);
 
         if (access is not { Count: > 0 })
             return false;
 
         dbContext.KitAccess.RemoveRange(access);
-        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        return true;
-    }
-    internal async Task<bool> RemoveAccessRow(string kit, ulong player, CancellationToken token = default)
-    {
-        await using IKitsDbContext dbContext = new WarfareDbContext();
-
-        List<KitAccess> access = await dbContext.KitAccess.Include(x => x.Kit).Where(x => x.Kit.InternalName == kit && x.Steam64 == player)
-            .ToListAsync(token).ConfigureAwait(false);
-
-        if (access is not { Count: > 0 })
+        try
+        {
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            return true;
+        }
+        catch (DbUpdateException)
+        {
             return false;
-
-        dbContext.KitAccess.RemoveRange(access);
-        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        return true;
+        }
     }
 
     /// <remarks>Thread Safe</remarks>

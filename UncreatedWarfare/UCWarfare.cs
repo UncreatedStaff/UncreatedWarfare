@@ -61,7 +61,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     public event EventHandler? UCWarfareLoaded;
     public event EventHandler? UCWarfareUnloading;
     internal Projectiles.ProjectileSolver Solver;
-    public HomebaseClientComponent? NetClient;
+    public WebSocketConnection? NetClient;
     public bool CoroutineTiming = false;
     private DateTime _nextRestartTime;
     internal volatile bool ProcessTasks = true;
@@ -112,7 +112,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             _earlyLoadTask = null;
         }
     });
-
+     
     private async Task EarlyLoad(CancellationToken token)
     {
 #if DEBUG
@@ -247,7 +247,8 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
-        InitNetClient();
+        await InitNetClient().ConfigureAwait(false);
+        await ToUpdate(token);
 
         if (!Config.DisableDailyQuests)
             Quests.DailyQuests.EarlyLoad();
@@ -256,40 +257,33 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         ActionLog.Add(ActionLogType.ServerStartup, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
     }
-    internal void InitNetClient()
+    internal async Task InitNetClient()
     {
         if (NetClient != null)
         {
-            try
-            {
-                DestroyImmediate(NetClient);
-                L.Log("Destroyed net client...", ConsoleColor.Magenta);
-            }
-            catch (Exception ex)
-            {
-                L.LogWarning("Error destroying net client.");
-                L.LogError(ex);
-                Destroy(NetClient);
-            }
-            finally
-            {
-                NetClient = null;
-            }
+            await NetClient.DisposeAsync().ConfigureAwait(false);
+            NetClient = null;
         }
+
+        await ToUpdate(UnloadCancel);
         if (Config.TCPSettings.EnableTCPServer)
         {
-            NetClient = gameObject.AddComponent<HomebaseClientComponent>();
+            NetClient = new WebSocketConnection(Config.TCPSettings.TCPServerIdentity, new Uri(Config.TCPSettings.TCPServerIP));
             NetClient.OnClientVerified += Data.OnClientConnected;
             NetClient.OnClientDisconnected += Data.OnClientDisconnected;
             NetClient.OnSentMessage += Data.OnClientSentMessage;
             NetClient.OnReceivedMessage += Data.OnClientReceivedMessage;
             NetClient.ModifyVerifyPacketCallback += OnVerifyPacketMade;
             NetClient.OnServerConfigRequested += Data.GetServerConfig;
-            NetClient.Init(Config.TCPSettings.TCPServerIP, Config.TCPSettings.TCPServerPort, Config.TCPSettings.TCPServerIdentity);
             L.Log("Attempting connection with Homebase...", ConsoleColor.Magenta);
+            await NetClient.Connect().ConfigureAwait(false);
+            if (NetClient.IsActive)
+                L.Log("Connected to Homebase.", ConsoleColor.Magenta);
+            else
+                L.LogError("Failed to connect to Homebase.");
         }
     }
-    private void OnVerifyPacketMade(ref VerifyPacket packet)
+    private static void OnVerifyPacketMade(ref VerifyPacket packet)
     {
         packet = new VerifyPacket(packet.Identity, packet.SecretKey, packet.ApiVersion, packet.TimezoneOffset, Config.Currency, Config.RegionKey, Version);
     }
@@ -1052,7 +1046,8 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 #endif
             if (NetClient != null)
             {
-                Destroy(NetClient);
+                await NetClient.DisposeAsync().ConfigureAwait(false);
+                await ToUpdate(token);
                 NetClient = null;
             }
 #if DEBUG

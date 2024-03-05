@@ -89,7 +89,7 @@ public class ReloadCommand : AsyncCommand
         }
         else if (module.Equals("tcp", StringComparison.OrdinalIgnoreCase))
         {
-            ReloadTCPServer();
+            await ReloadTCPServer().ConfigureAwait(false);
             ctx.Reply(T.ReloadedTCP);
             ctx.LogAction(ActionLogType.ReloadComponent, "TCP SERVER");
         }
@@ -278,12 +278,12 @@ public class ReloadCommand : AsyncCommand
             L.LogError(ex);
         }
     }
-    internal static void ReloadTCPServer()
+    internal static async Task ReloadTCPServer()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCWarfare.I.InitNetClient();
+        await UCWarfare.I.InitNetClient();
     }
     internal static async Task ReloadSQLServer(CommandInteraction? ctx, CancellationToken token = default)
     {

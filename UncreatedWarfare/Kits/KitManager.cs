@@ -1143,6 +1143,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> GiveAccess(Kit kit, UCPlayer player, KitAccessType type, CancellationToken token = default)
     {
+        // todo make update type and timestamp
         if (!player.IsOnline)
         {
             return await GiveAccess(kit, player.Steam64, type, token).ConfigureAwait(false);
@@ -1153,7 +1154,9 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         {
             if (player.AccessibleKits != null && player.AccessibleKits.Contains(kit.PrimaryKey))
                 return true;
-            await AddAccessRow(kit.PrimaryKey, player.Steam64, type, token).ConfigureAwait(false);
+            bool alreadyApplied = await AddAccessRow(kit.PrimaryKey, player.Steam64, type, token).ConfigureAwait(false);
+            if (!alreadyApplied)
+                return false;
 
             (player.AccessibleKits ??= new List<uint>(4)).Add(kit.PrimaryKey);
             InvokeOnKitAccessChanged(kit, player.Steam64, true, type);
@@ -1174,7 +1177,8 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         UCPlayer? online = UCWarfare.IsLoaded ? UCPlayer.FromID(player) : null;
         if (online != null && online.IsOnline)
             return await GiveAccess(kit, online, type, token).ConfigureAwait(false);
-        await AddAccessRow(kit.PrimaryKey, player, type, token).ConfigureAwait(false);
+        if (!await AddAccessRow(kit.PrimaryKey, player, type, token).ConfigureAwait(false))
+            return false;
         InvokeOnKitAccessChanged(kit, player, true, type);
         return true;
     }

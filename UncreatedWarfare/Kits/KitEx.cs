@@ -412,7 +412,9 @@ public static class KitEx
             if (kit == null)
                 return StandardErrorCode.NotFound;
 
-            await (state ? manager.GiveAccess(kit, player, type) : manager.RemoveAccess(kit, player)).ConfigureAwait(false);
+            bool alreadySet = !await (state ? manager.GiveAccess(kit, player, type) : manager.RemoveAccess(kit, player)).ConfigureAwait(false);
+            if (alreadySet)
+                return StandardErrorCode.InvalidData;
 
             ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
                                                          (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
@@ -448,7 +450,12 @@ public static class KitEx
                 Kit? kit = await manager.FindKit(kitId, set: x => x.Kits.Include(y => y.Translations)).ConfigureAwait(false);
                 if (kit != null)
                 {
-                    await (state ? manager.GiveAccess(kit, player, type) : manager.RemoveAccess(kit, player)).ConfigureAwait(false);
+                    bool alreadySet = !await (state ? manager.GiveAccess(kit, player, type) : manager.RemoveAccess(kit, player)).ConfigureAwait(false);
+                    if (alreadySet)
+                    {
+                        successes[i] = (int)StandardErrorCode.InvalidData;
+                        continue;
+                    }
                     ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
                         (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
                             (" DENIED ACCESS TO " + kitId + ".")), admin);

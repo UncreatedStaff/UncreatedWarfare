@@ -400,7 +400,9 @@ public class KitRequests(KitManager manager)
             ctx.Caller.PurchaseSync.Release();
         }
 
-        await Manager.AddAccessRow(kit.PrimaryKey, ctx.CallerID, KitAccessType.Credits, token).ConfigureAwait(false);
+        if (!await Manager.AddAccessRow(kit.PrimaryKey, ctx.CallerID, KitAccessType.Credits, token).ConfigureAwait(false))
+            L.LogWarning($"Already had access to bought kit: {ctx.CallerID}, {kit.PrimaryKey}, {kit.InternalName}.");
+        
         await UCWarfare.ToUpdate(token);
 
         (ctx.Caller.AccessibleKits ??= new List<uint>(4)).Add(kit.PrimaryKey);
