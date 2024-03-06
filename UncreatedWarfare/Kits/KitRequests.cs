@@ -2,11 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Json;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
@@ -17,7 +14,6 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -255,7 +251,6 @@ public class KitRequests(KitManager manager)
     private async Task<bool> GrantKitRequest(CommandInteraction ctx, Kit kit, CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
-        ulong team = ctx.Caller.GetTeam();
         AmmoCommand.WipeDroppedItems(ctx.CallerID);
         await GiveKit(ctx.Caller, kit, true, true, token).ConfigureAwait(false);
         // string id = kit.InternalName;

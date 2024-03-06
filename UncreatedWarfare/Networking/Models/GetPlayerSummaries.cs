@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration.JsonConverters;
 
 namespace Uncreated.Framework;
 #nullable disable
@@ -16,6 +17,7 @@ public class PlayerSummariesResponseData
 public class PlayerSummary
 {
     [JsonPropertyName("steamid")]
+    [JsonConverter(typeof(UInt64StringConverter))]
     public ulong Steam64 { get; set; }
 
     [JsonPropertyName("communityvisibilitystate")]
@@ -55,6 +57,7 @@ public class PlayerSummary
     public string RealName { get; set; }
 
     [JsonPropertyName("primaryclanid")]
+    [JsonConverter(typeof(UInt64StringConverter))]
     public ulong PrimaryGroupId { get; set; }
 
     [JsonPropertyName("timecreated")]
