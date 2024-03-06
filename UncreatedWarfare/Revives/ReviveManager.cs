@@ -5,8 +5,11 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -14,6 +17,8 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Assets;
+using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -155,7 +160,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? medic = UCPlayer.FromPlayer(healer);
-        if (medic == null)
+        UCPlayer? player = UCPlayer.FromPlayer(downed);
+        if (medic == null || player == null)
         {
             shouldAllow = false;
             return;
@@ -166,13 +172,16 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             shouldAllow = false;
             return;
         }
-        if (!_injuredPlayers.ContainsKey(downed.channel.owner.playerID.steamID.m_SteamID)) // if not injured
-            return;
-        if (medic.KitClass != Class.Medic)
+
+        bool isRevive = _injuredPlayers.ContainsKey(player.Steam64);
+        if (isRevive && medic.KitClass != Class.Medic) // if not injured
         {
             medic.SendChat(T.ReviveNotMedic);
             shouldAllow = false;
+            return;
         }
+
+        EventDispatcher.InvokeOnPlayerAided(medic, player, asset, isRevive, ref shouldAllow);
     }
     private void OnPlayerRespawned(PlayerLife obj)
     {

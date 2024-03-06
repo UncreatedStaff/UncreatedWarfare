@@ -1,6 +1,8 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using Uncreated.Warfare.Models.GameData;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Players;
 public class PlayerDied : PlayerEvent
@@ -24,7 +26,16 @@ public class PlayerDied : PlayerEvent
     public string? Message { get; internal set; }
     public Deaths.DeathMessageArgs LocalizationArgs { get; internal set; }
     public UCPlayer? DriverAssist { get; internal set; }
+    public UCPlayer? Player3 { get; internal set; }
+    public ulong? Player3Id { get; internal set; }
     public InteractableVehicle? ActiveVehicle { get; internal set; }
+    public Vector3 Point { get; internal set; }
+    public Vector3 KillerPoint { get; internal set; }
+    public Vector3 Player3Point { get; internal set; }
+    public SessionRecord? Session { get; internal set; }
+    public SessionRecord? KillerSession { get; internal set; }
+    public SessionRecord? Player3Session { get; internal set; }
+    public float TimeDeployed { get; internal set; }
     public PlayerDied(UCPlayer player) : base(player)
     {
     }

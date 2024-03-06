@@ -424,6 +424,8 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         UseableConsumeable.onConsumePerformed += EventFunctions.OnConsume;
         EventDispatcher.BarricadeDestroyed += EventFunctions.OnBarricadeDestroyed;
         EventDispatcher.StructureDestroyed += EventFunctions.OnStructureDestroyed;
+        EventDispatcher.PlayerAided += EventFunctions.OnPlayerAided;
+        EventDispatcher.PlayerDied += EventFunctions.OnPlayerDied;
         PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice2;
     }
     private void UnsubscribeFromEvents()
@@ -473,6 +475,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         UseableConsumeable.onConsumePerformed -= EventFunctions.OnConsume;
         EventDispatcher.BarricadeDestroyed -= EventFunctions.OnBarricadeDestroyed;
         EventDispatcher.StructureDestroyed -= EventFunctions.OnStructureDestroyed;
+        EventDispatcher.PlayerAided -= EventFunctions.OnPlayerAided;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
     }
     internal void UpdateLangs(UCPlayer player, bool uiOnly)

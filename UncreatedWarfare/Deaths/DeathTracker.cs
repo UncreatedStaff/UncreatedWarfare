@@ -122,6 +122,8 @@ public class DeathTracker : BaseReloadSingleton
         e.Instigator = instigator;
         e.Limb = limb;
         e.Cause = cause;
+        e.Point = dead.Position;
+        e.Session = dead.CurrentSession;
         switch (cause)
         {
             // death causes only possible through PvE:
@@ -154,6 +156,8 @@ public class DeathTracker : BaseReloadSingleton
         UCPlayerData? killerData = null;
         killer?.Player?.TryGetPlayerData(out killerData);
         e.Killer = killer;
+        e.KillerSession = killer?.CurrentSession;
+        e.KillerPoint = killer?.Position ?? e.Point;
 
         if (cause == EDeathCause.LANDMINE)
         {
@@ -235,6 +239,10 @@ public class DeathTracker : BaseReloadSingleton
                     args.Player3Name = triggerer.Name.CharacterName;
                     args.Player3Team = triggerer.GetTeam();
                     args.Flags |= DeathFlags.Player3;
+                    e.Player3 = triggerer;
+                    e.Player3Id = triggerer.Steam64;
+                    e.Player3Point = triggerer.Position;
+                    e.Player3Session = triggerer.CurrentSession;
                     // if all 3 parties are on the same team count it as a teamkill on the triggerer, as it's likely intentional
                     if (triggerer.GetTeam() == deadTeam && killer != null && killer.GetTeam() == deadTeam)
                         args.IsTeamkill = true;
@@ -309,6 +317,13 @@ public class DeathTracker : BaseReloadSingleton
                                         {
                                             args.Player3Name = e.DriverAssist?.Name.CharacterName ?? sp.playerID.characterName;
                                             args.Player3Team = sp.GetTeam();
+                                            if (e.DriverAssist != null)
+                                            {
+                                                e.Player3 = e.DriverAssist;
+                                                e.Player3Id = e.DriverAssist.Steam64;
+                                                e.Player3Point = e.DriverAssist.Position;
+                                                e.Player3Session = e.DriverAssist.CurrentSession;
+                                            }
                                             args.Flags |= DeathFlags.Player3;
                                         }
                                     }

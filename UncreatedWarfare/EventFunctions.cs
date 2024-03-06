@@ -13,6 +13,8 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
@@ -30,8 +32,10 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Players;
@@ -44,6 +48,7 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using Unturned.SystemEx;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 #pragma warning disable IDE0060 // Remove unused parameter
@@ -1385,6 +1390,15 @@ public static class EventFunctions
             if (isBleeding)
                 DeathTracker.OnWillStartBleeding(ref parameters);
         }
+
+        if (ucplayer == null)
+            return;
+
+        //DamageRecord dmgRecord = new DamageRecord
+        //{
+        //    Steam64 = ucplayer.Steam64,
+        //    Position = 
+        //} todo
     }
     internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)
     {
@@ -1920,6 +1934,70 @@ public static class EventFunctions
     skip:
         e.Player.SendChat(T.NoCraftingBlueprint);
         e.Break();
+    }
+    internal static void OnPlayerAided(PlayerAided e)
+    {
+        AidRecord record = new AidRecord
+        {
+            Steam64 = e.Player.Steam64,
+            SessionId = e.Player.CurrentSession?.SessionId,
+            Team = (byte)e.Player.GetTeam(),
+            Position = e.Player.Position,
+            Health = e.IsRevive ? 0 : e.Player.Player.life.health,
+            IsRevive = e.IsRevive,
+            Item = new UnturnedAssetReference(e.AidItem.GUID),
+            Instigator = e.MedicId,
+            InstigatorSessionId = e.Medic.CurrentSession?.SessionId,
+            InstigatorPosition = e.Medic.Position,
+            NearestLocation = F.GetClosestLocationName(e.Player.Position, true, false),
+            Timestamp = DateTimeOffset.UtcNow
+        };
+
+        UCWarfare.RunTask(async () =>
+        {
+            await using IStatsDbContext dbContext = new WarfareDbContext();
+
+            dbContext.AidRecords.Add(record);
+            await dbContext.SaveChangesAsync();
+        }, ctx: $"Add aid record for {e.MedicId} healing {e.Player.Steam64}.");
+    }
+    internal static void OnPlayerDied(PlayerDied e)
+    {
+        bool hasInst = e.Instigator.BIndividualAccount();
+        bool hasPl3 = e.Player3Id.HasValue && new CSteamID(e.Player3Id.Value).BIndividualAccount();
+        DeathRecord record = new DeathRecord
+        {
+            Steam64 = e.Steam64,
+            Team = (byte)e.DeadTeam,
+            Position = e.Point,
+            SessionId = e.Session?.SessionId,
+            DeathCause = e.Cause,
+            DeathMessage = e.Message ?? string.Empty,
+            Distance = e.KillDistance,
+            Instigator = hasInst ? e.Instigator.m_SteamID : null,
+            InstigatorPosition = hasInst ? e.KillerPoint : null,
+            InstigatorSessionId = hasInst ? e.KillerSession?.SessionId : null,
+            IsSuicide = e.WasSuicide,
+            IsTeamkill = e.WasTeamkill,
+            NearestLocation = F.GetClosestLocationName(e.Point, true, false),
+            PrimaryAsset = e.PrimaryAsset == Guid.Empty ? null : new UnturnedAssetReference(e.PrimaryAsset),
+            SecondaryAsset = e.SecondaryItem == Guid.Empty ? null : new UnturnedAssetReference(e.SecondaryItem),
+            Vehicle = e.TurretVehicleOwner == Guid.Empty ? null : new UnturnedAssetReference(e.TurretVehicleOwner),
+            RelatedPlayer = hasPl3 ? e.Player3Id : null,
+            RelatedPlayerPosition = hasPl3 ? e.Player3Point : null,
+            RelatedPlayerSessionId = hasPl3 ? e.Player3Session?.SessionId : null,
+            TimeDeployedSeconds = e.TimeDeployed,
+            Timestamp = DateTimeOffset.UtcNow
+        };
+
+        UCWarfare.RunTask(async () =>
+        {
+            await using IStatsDbContext dbContext = new WarfareDbContext();
+
+            dbContext.DeathRecords.Add(record);
+            await e.Player.FlushDamages(dbContext);
+            await dbContext.SaveChangesAsync();
+        }, ctx: $"Add death record for {e.Steam64} ({e.Cause}).");
     }
 }
 #pragma warning restore IDE0060 // Remove unused parameter

@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -23,13 +22,14 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;
@@ -131,6 +131,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private int _pendingReputation;
     internal VehicleSwapRequest PendingVehicleSwapRequest;
     internal int CacheLocationIndex = -1;
+    internal List<DamageRecord> DamageRecords = new List<DamageRecord>(32);
     internal UCPlayer(CSteamID steamID, Player player, string characterName, string nickName,
         bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore, PendingAsyncData data)
     {
@@ -1481,7 +1482,7 @@ public class PlayerSave
     [CommandSettable]
     public ulong Team;
     [CommandSettable]
-    public uint KitId = 0;
+    public uint KitId;
     public string SquadName = string.Empty;
     public ulong SquadLeader;
     public byte SquadLockedId;

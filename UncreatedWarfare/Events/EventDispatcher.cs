@@ -77,6 +77,8 @@ public static class EventDispatcher
     public static event EventDelegate<GroupChanged> GroupChanged;
     public static event EventDelegate<PlayerInjured> PlayerInjuring;
     public static event EventDelegate<PlayerEvent> PlayerInjured;
+    public static event EventDelegate<PlayerAided> PlayerAidRequested;
+    public static event EventDelegate<PlayerAided> PlayerAided;
     public static event EventDelegate<PlayerEvent> UIRefreshRequested;
 
     internal static void SubscribeToAll()
@@ -902,6 +904,32 @@ public static class EventDispatcher
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(PlayerInjuring));
+        }
+    }
+    internal static void InvokeOnPlayerAided(UCPlayer medic, UCPlayer player, ItemConsumeableAsset asset, bool isRevive, ref bool shouldAllow)
+    {
+        if (!shouldAllow || PlayerAidRequested == null && PlayerAided == null)
+            return;
+
+        PlayerAided args = new PlayerAided(medic, player, asset, isRevive, shouldAllow);
+        if (PlayerAidRequested != null)
+        {
+            foreach (EventDelegate<PlayerAided> inv in PlayerAidRequested.GetInvocationList().Cast<EventDelegate<PlayerAided>>())
+            {
+                if (!args.CanContinue) break;
+                TryInvoke(inv, args, nameof(PlayerAidRequested));
+            }
+
+            if (!args.CanContinue)
+            {
+                shouldAllow = false;
+                return;
+            }
+        }
+
+        foreach (EventDelegate<PlayerAided> inv in PlayerAided.GetInvocationList().Cast<EventDelegate<PlayerAided>>())
+        {
+            TryInvoke(inv, args, nameof(PlayerAided));
         }
     }
     internal static void InvokeOnPlayerInjured(PlayerInjured args)

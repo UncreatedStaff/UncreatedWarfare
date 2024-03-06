@@ -33,4 +33,7 @@ public class DeathRecord : RelatedPlayerRecord
 
     [DefaultValue(null)]
     public UnturnedAssetReference? SecondaryAsset { get; set; }
+
+    [DefaultValue(null)]
+    public UnturnedAssetReference? Vehicle { get; set; }
 }
