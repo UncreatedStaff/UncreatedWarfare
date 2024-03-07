@@ -132,14 +132,18 @@ public static class WarfareDatabaseReflection
 
             if (member != null && member.TryGetAttributeSafe(out AddNameAttribute addNameAttribute))
             {
-                string name = addNameAttribute.ColumnName ?? (EFCompat.GetName(property) + "Name");
+                string originalName = EFCompat.GetName(property);
+                string name = addNameAttribute.ColumnName ?? (originalName + "Name");
                 if (!property.DeclaringEntityType.GetProperties().Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
                 {
                     IMutableProperty assetNameProperty = EFCompat.AddProperty(property.DeclaringEntityType, name, typeof(string));
                     EFCompat.SetMaxLength(assetNameProperty, MaxAssetNameLength);
                     assetNameProperty.IsNullable = nullable;
                     assetNameProperty.SetDefaultValue(nullable ? null : new string('0', 32));
-                    EFCompat.SetValueGeneratorFactory(assetNameProperty, (_, entityType) => AssetNameValueGenerator.Get(EFCompat.GetClrType(entityType), property));
+
+                    EFCompat.SetValueGeneratorFactory(assetNameProperty,
+                        (_, entityType) => AssetNameValueGenerator.Get(entityType, originalName));
+
                     Log($"Added asset name column for {EFCompat.GetClrType(property.DeclaringEntityType).Name}.{member?.Name ?? "null"}: {name} (max length: {MaxAssetNameLength})");
                 }
                 else

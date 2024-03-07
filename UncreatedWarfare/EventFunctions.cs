@@ -48,7 +48,6 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Unturned.SystemEx;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 #pragma warning disable IDE0060 // Remove unused parameter
@@ -72,7 +71,7 @@ public static class EventFunctions
             if (DroppedItems.TryGetValue(steam64, out List<uint> items))
                 items.Add(newItem.instanceID);
             else
-                DroppedItems.Add(steam64, new List<uint> { newItem.instanceID });
+                DroppedItems.Add(steam64, [ newItem.instanceID ]);
 
             DroppedItemsOwners[newItem.instanceID] = steam64;
         }
@@ -94,12 +93,11 @@ public static class EventFunctions
     internal static void OnItemRemoved(ItemData item)
     {
         ItemsTempBuffer.Remove(item.item);
-        if (DroppedItemsOwners.TryGetValue(item.instanceID, out ulong pl))
-        {
-            DroppedItemsOwners.Remove(item.instanceID);
-            if (DroppedItems.TryGetValue(pl, out List<uint> items))
-                items.Remove(item.item.id);
-        }
+        if (!DroppedItemsOwners.Remove(item.instanceID, out ulong pl))
+            return;
+        
+        if (DroppedItems.TryGetValue(pl, out List<uint> items))
+            items.Remove(item.item.id);
     }
     internal static void OnClearAllItems()
     {
@@ -127,12 +125,12 @@ public static class EventFunctions
             uint nextindex = Data.GetItemManagerInstanceCount() + 1;
             if (DroppedItems.TryGetValue(inv.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instanceids))
             {
-                if (instanceids == null) DroppedItems[inv.player.channel.owner.playerID.steamID.m_SteamID] = new List<uint> { nextindex };
+                if (instanceids == null) DroppedItems[inv.player.channel.owner.playerID.steamID.m_SteamID] = [ nextindex ];
                 else instanceids.Add(nextindex);
             }
             else
             {
-                DroppedItems.Add(inv.player.channel.owner.playerID.steamID.m_SteamID, new List<uint> { nextindex });
+                DroppedItems.Add(inv.player.channel.owner.playerID.steamID.m_SteamID, [ nextindex ]);
             }
 
             DroppedItemsOwners[nextindex] = inv.player.channel.owner.playerID.steamID.m_SteamID;
@@ -1266,7 +1264,7 @@ public static class EventFunctions
     }
     internal static void OnPlayerDamageRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
     {
-        if (parameters.player.movement.isSafe)
+        if (parameters.player.movement.isSafe || !shouldAllow)
             return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1289,36 +1287,6 @@ public static class EventFunctions
             shouldAllow = false;
             return;
         }
-        //if (parameters.cause < DeathTracker.MainCampDeathCauseOffset && Data.Gamemode is TeamGamemode gm && gm.EnableAMC && OffenseManager.IsValidSteam64Id(parameters.killer) && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
-        //{
-        //    Player killer = PlayerTool.getPlayer(parameters.killer);
-        //    if (killer != null)
-        //    {
-        //        ulong killerteam = killer.GetTeam();
-        //        ulong deadteam = parameters.player.GetTeam();
-        //        if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(pos)) ||
-        //            (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(pos)))
-        //        {
-        //            // if the player has shot since they died
-        //            if (!killer.TryGetPlayerData(out UCPlayerData comp) || comp.LastGunShot != default)
-        //                goto next;
-        //            shouldAllow = false;
-        //            byte newdamage = (byte)Math.Min(byte.MaxValue, Mathf.RoundToInt(parameters.damage * parameters.times * UCWarfare.Config.AMCDamageMultiplier));
-        //            killer.life.askDamage(newdamage, parameters.direction * newdamage, (EDeathCause)((int)DeathTracker.MainCampDeathCauseOffset + (int)parameters.cause),
-        //            parameters.limb, parameters.player.channel.owner.playerID.steamID, out _, true, ERagdollEffect.NONE, false, true);
-        //            if (!LastSentMessages.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out long lasttime) || new TimeSpan(DateTime.Now.Ticks - lasttime).TotalSeconds > 5)
-        //            {
-        //                killer.SendChat(T.AntiMainCampWarning);
-        //                if (lasttime == default)
-        //                    LastSentMessages.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, DateTime.Now.Ticks);
-        //                else
-        //                    LastSentMessages[parameters.player.channel.owner.playerID.steamID.m_SteamID] = DateTime.Now.Ticks;
-        //            }
-        //        }
-        //    }
-        //}
-        // next:
-        if (!shouldAllow) return;
 
         UCPlayer? killer = UCPlayer.FromCSteamID(parameters.killer);
 
@@ -1353,52 +1321,91 @@ public static class EventFunctions
             {
                 VehicleBay? bay = VehicleBay.GetSingletonQuick();
                 VehicleData? data = bay?.GetDataSync(veh.asset.GUID);
-                if (data != null)
+                if (data != null && (data.PassengersInvincible || data.CrewInvincible && Array.IndexOf(data.CrewSeats, parameters.player.movement.getSeat()) != -1))
                 {
-                    if (data.PassengersInvincible || data.CrewInvincible && Array.IndexOf(data.CrewSeats, parameters.player.movement.getSeat()) != -1)
-                    {
-                        shouldAllow = false;
-                        return;
-                    }
+                    shouldAllow = false;
+                    return;
                 }
             }
         }
 
         StrengthInNumbers.OnPlayerDamageRequested(ref parameters);
-
+        bool wasInjured = false;
         if (Data.Is(out IRevives rev))
-            rev.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
-        if (shouldAllow)
         {
-            bool isBleeding;
-            switch (parameters.bleedingModifier)
-            {
-                case DamagePlayerParameters.Bleeding.Always:
-                    isBleeding = true;
-                    break;
-                case DamagePlayerParameters.Bleeding.Never:
-                    isBleeding = false;
-                    break;
-                case DamagePlayerParameters.Bleeding.Heal:
-                    isBleeding = false;
-                    break;
-                default:
-                    byte amount = (byte)Mathf.Min(byte.MaxValue, Mathf.FloorToInt(parameters.damage * parameters.times));
-                    isBleeding = amount < parameters.player.life.health && Provider.modeConfigData.Players.Can_Start_Bleeding && amount >= 20;
-                    break;
-            }
-            if (isBleeding)
-                DeathTracker.OnWillStartBleeding(ref parameters);
+            wasInjured = rev.ReviveManager.IsInjured(parameters.player.channel.owner.playerID.steamID.m_SteamID);
+            rev.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
+        }
+        bool isInjured = rev != null && rev.ReviveManager.IsInjured(parameters.player.channel.owner.playerID.steamID.m_SteamID);
+        byte amount = (byte)Mathf.Min(byte.MaxValue, Mathf.FloorToInt(parameters.damage * parameters.times));
+        bool isBleeding;
+        if (!shouldAllow)
+        {
+            isBleeding = false;
+            if (isInjured && !wasInjured)
+                goto saveRecord;
+            return;
+        }
+
+        isBleeding = parameters.bleedingModifier switch
+        {
+            DamagePlayerParameters.Bleeding.Always => true,
+            DamagePlayerParameters.Bleeding.Never => false,
+            DamagePlayerParameters.Bleeding.Heal => false,
+            _ => amount < parameters.player.life.health && Provider.modeConfigData.Players.Can_Start_Bleeding &&
+                 amount >= 20
+        };
+
+        saveRecord:
+        PlayerDied? e = null;
+        if (isBleeding)
+        {
+            DeathTracker.OnWillStartBleeding(ref parameters);
+            if (parameters.player.TryGetPlayerData(out UCPlayerData data))
+                e = data.LastBleedingEvent;
         }
 
         if (ucplayer == null)
             return;
 
-        //DamageRecord dmgRecord = new DamageRecord
-        //{
-        //    Steam64 = ucplayer.Steam64,
-        //    Position = 
-        //} todo
+        if (e == null)
+        {
+            DeathMessageArgs args = new DeathMessageArgs();
+            e = new PlayerDied(ucplayer);
+            DeathTracker.FillArgs(ucplayer, parameters.cause, parameters.limb, parameters.killer, ref args, e);
+        }
+
+        bool hasInstigator = e.Instigator.BIndividualAccount() && e.Instigator.m_SteamID != ucplayer.Steam64;
+        bool hasPl3 = e.Player3Id.HasValue && new CSteamID(e.Player3Id.Value).BIndividualAccount() && e.Player3Id.Value != ucplayer.Steam64 && e.Player3Id.Value != e.Instigator.m_SteamID;
+        DamageRecord dmgRecord = new DamageRecord
+        {
+            Steam64 = ucplayer.Steam64,
+            Position = ucplayer.Position,
+            Team = (byte)ucplayer.GetTeam(),
+            Damage = amount,
+            SessionId = ucplayer.CurrentSession?.SessionId,
+            Distance = e.KillDistance,
+            Instigator = hasInstigator ? e.Instigator.m_SteamID : null,
+            InstigatorSessionId = hasInstigator ? e.KillerSession?.SessionId : null,
+            InstigatorPosition = hasInstigator ? e.KillerPoint : null,
+            PrimaryAsset = e.PrimaryAsset == Guid.Empty ? null : new UnturnedAssetReference(e.PrimaryAsset),
+            SecondaryAsset = e.SecondaryItem == Guid.Empty ? null : new UnturnedAssetReference(e.SecondaryItem),
+            Vehicle = e.TurretVehicleOwner == Guid.Empty ? null : new UnturnedAssetReference(e.TurretVehicleOwner),
+            IsInjure = !wasInjured && isInjured,
+            IsInjured = isInjured && wasInjured,
+            IsTeamkill = e.WasTeamkill,
+            Limb = e.Limb,
+            IsSuicide = e.WasSuicide,
+            NearestLocation = F.GetClosestLocationName(ucplayer.Position, true, false),
+            Cause = e.Cause,
+            RelatedPlayer = hasPl3 ? e.Player3Id : null,
+            RelatedPlayerPosition = hasPl3 ? e.Player3Point : null,
+            RelatedPlayerSessionId = hasPl3 ? e.Player3Session?.SessionId : null,
+            TimeDeployedSeconds = e.TimeDeployed,
+            Timestamp = DateTimeOffset.UtcNow
+        };
+
+        ucplayer.DamageRecords.Add(dmgRecord);
     }
     internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)
     {
@@ -1708,6 +1715,16 @@ public static class EventFunctions
             else
                 ActionLog.Add(ActionLogType.Disconnect, $"Players online: {Provider.clients.Count - 1}", ucplayer.Steam64);
             PlayerManager.NetCalls.SendPlayerLeft.NetInvoke(ucplayer.Steam64);
+            if (e.Player.DamageRecords.Count > 0)
+            {
+                UCWarfare.RunTask(async () =>
+                {
+                    await using IStatsDbContext dbContext = new WarfareDbContext();
+
+                    await e.Player.FlushDamages(dbContext).ConfigureAwait(false);
+                    await dbContext.SaveChangesAsync();
+                }, ctx: "Flushing damage records on leave.");
+            }
         }
         catch (Exception ex)
         {
@@ -1963,8 +1980,8 @@ public static class EventFunctions
     }
     internal static void OnPlayerDied(PlayerDied e)
     {
-        bool hasInst = e.Instigator.BIndividualAccount();
-        bool hasPl3 = e.Player3Id.HasValue && new CSteamID(e.Player3Id.Value).BIndividualAccount();
+        bool hasInst = e.Instigator.BIndividualAccount() && e.Instigator.m_SteamID != e.Steam64;
+        bool hasPl3 = e.Player3Id.HasValue && new CSteamID(e.Player3Id.Value).BIndividualAccount() && e.Instigator.m_SteamID != e.Player3Id.Value && e.Player3Id.Value != e.Steam64;
         DeathRecord record = new DeathRecord
         {
             Steam64 = e.Steam64,
@@ -1990,12 +2007,15 @@ public static class EventFunctions
             Timestamp = DateTimeOffset.UtcNow
         };
 
+        if (e.Player.DamageRecords.Count > 0)
+            record.KillShot = e.Player.DamageRecords[^1];
+
         UCWarfare.RunTask(async () =>
         {
             await using IStatsDbContext dbContext = new WarfareDbContext();
 
             dbContext.DeathRecords.Add(record);
-            await e.Player.FlushDamages(dbContext);
+            await e.Player.FlushDamages(dbContext).ConfigureAwait(false);
             await dbContext.SaveChangesAsync();
         }, ctx: $"Add death record for {e.Steam64} ({e.Cause}).");
     }

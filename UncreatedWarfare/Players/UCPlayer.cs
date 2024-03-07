@@ -1170,6 +1170,12 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         // todo
     }
 
+    public async Task FlushDamages(IStatsDbContext dbContext, CancellationToken token = default)
+    {
+        await UCWarfare.ToUpdate(token);
+        dbContext.DamageRecords.AddRange(DamageRecords);
+        DamageRecords.Clear();
+    }
     private class EqualityComparer : IEqualityComparer<UCPlayer>
     {
         bool IEqualityComparer<UCPlayer>.Equals(UCPlayer x, UCPlayer y) => x == y || x.Steam64 == y.Steam64;

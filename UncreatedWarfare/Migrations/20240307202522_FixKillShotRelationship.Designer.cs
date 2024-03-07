@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240307202522_FixKillShotRelationship")]
+    partial class FixKillShotRelationship
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1007,6 +1009,10 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<float>("Damage")
                         .HasColumnType("float");
+
+                    b.Property<ulong?>("DeathResultId")
+                        .HasColumnName("DeathResult")
+                        .HasColumnType("bigint unsigned");
 
                     b.Property<float?>("Distance")
                         .HasColumnType("float");
@@ -2153,7 +2159,7 @@ namespace Uncreated.Warfare.Migrations
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("Uncreated.Warfare.Models.Stats.Records.DamageRecord", "KillShot")
-                        .WithOne()
+                        .WithOne("DeathResult")
                         .HasForeignKey("Uncreated.Warfare.Models.Stats.Records.DeathRecord", "KillShotId");
 
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "RelatedPlayerData")

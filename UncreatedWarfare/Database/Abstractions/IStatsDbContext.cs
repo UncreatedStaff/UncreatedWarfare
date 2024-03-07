@@ -33,5 +33,9 @@ public interface IStatsDbContext : IDbContext
             .HasMany(x => x.Builders)
             .WithOne(x => x.FobItem)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DeathRecord?>()
+            .HasOne(x => x!.KillShot)
+            .WithOne();
     }
 }

@@ -18,7 +18,7 @@ internal static class EFCompat
     private static Func<ITypeBase, string>? _getTypeName;
     private static Func<IMutableProperty, Type>? _getPropClrType;
     private static Func<IMutableProperty, PropertyInfo?>? _getPropertyInfo;
-    private static Func<IMutableProperty, string>? _getPropertyName;
+    private static Func<IPropertyBase, string>? _getPropertyName;
     private static Func<IProperty, ValueConverter?>? _getValueConverter;
     private static Func<IPropertyBase, bool, bool, MemberInfo>? _getMemberInfo;
     private static Func<IMutableEntityType, IMutableProperty, IMutableIndex>? _addIndex;
@@ -94,13 +94,13 @@ internal static class EFCompat
         _getPropertyInfo = (Func<IMutableProperty, PropertyInfo>)method.CreateDelegate(typeof(Func<IMutableProperty, PropertyInfo>));
         return _getPropertyInfo(prop);
     }
-    public static string GetName(IMutableProperty prop)
+    public static string GetName(IPropertyBase prop)
     {
         if (_getPropertyName != null)
             return _getPropertyName(prop);
 
         Accessor.GetDynamicMethodFlags(false, out MethodAttributes attributes, out CallingConventions conventions);
-        DynamicMethod method = new DynamicMethod("get_Name", attributes, conventions, typeof(string), [ typeof(IMutableProperty) ], typeof(EFCompat), true);
+        DynamicMethod method = new DynamicMethod("get_Name", attributes, conventions, typeof(string), [ typeof(IPropertyBase) ], typeof(EFCompat), true);
         method.DefineParameter(1, default, "property");
         ILGenerator il = method.GetILGenerator();
 
@@ -113,7 +113,7 @@ internal static class EFCompat
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Callvirt, property.GetMethod);
         il.Emit(OpCodes.Ret);
-        _getPropertyName = (Func<IMutableProperty, string>)method.CreateDelegate(typeof(Func<IMutableProperty, string>));
+        _getPropertyName = (Func<IPropertyBase, string>)method.CreateDelegate(typeof(Func<IPropertyBase, string>));
         return _getPropertyName(prop);
     }
     public static ValueConverter? GetValueConverter(IProperty prop)

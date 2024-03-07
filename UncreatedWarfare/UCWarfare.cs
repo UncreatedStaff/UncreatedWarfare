@@ -935,6 +935,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 profiler2.Dispose();
                 profiler2 = ProfilingUtils.StartTracking("Unload UCAnnouncer.");
 #endif
+
+                await ToUpdate(token);
+
                 if (Announcer != null)
                 {
                     await Data.Singletons.UnloadSingletonAsync(Announcer, token: token);
@@ -944,6 +947,29 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 profiler2.Dispose();
                 profiler2 = ProfilingUtils.StartTracking("Unload Gamemode");
 #endif
+                await ToUpdate(token);
+
+                // save pending damage records
+                if (PlayerManager.OnlinePlayers.Any(player => player.DamageRecords.Count > 0))
+                {
+                    try
+                    {
+                        await using IStatsDbContext dbContext = new WarfareDbContext();
+                        
+                        dbContext.DamageRecords.AddRange(PlayerManager.OnlinePlayers.SelectMany(player => player.DamageRecords));
+                        PlayerManager.OnlinePlayers.ForEach(player => player.DamageRecords.Clear());
+
+                        await dbContext.SaveChangesAsync(token);
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError("Error saving damage records.");
+                        L.LogError(ex);
+                    }
+                }
+
+                await ToUpdate(token);
+
                 if (Data.Gamemode != null)
                 {
                     Data.Gamemode.IsPendingCancel = true;

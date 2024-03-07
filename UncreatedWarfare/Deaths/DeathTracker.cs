@@ -108,7 +108,7 @@ public class DeathTracker : BaseReloadSingleton
         _injuredPlayers.Add(pl.Steam64, new InjuredDeathCache(e, args));
         return e;
     }
-    private static void FillArgs(UCPlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, ref DeathMessageArgs args, PlayerDied e)
+    internal static void FillArgs(UCPlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, ref DeathMessageArgs args, PlayerDied e)
     {
         args.DeadPlayerName = dead.Name.CharacterName;
         ulong deadTeam = dead.GetTeam();
@@ -414,9 +414,9 @@ public class DeathTracker : BaseReloadSingleton
                 }
                 break;
             case EDeathCause.SHRED:
-                if (killerData != null && killerData.LastShreddedBy != default)
+                if (deadData != null && deadData.LastShreddedBy != default)
                 {
-                    Asset? a = Assets.find(killerData.LastShreddedBy);
+                    Asset? a = Assets.find(deadData.LastShreddedBy);
                     if (a != null)
                     {
                         args.ItemName = a.FriendlyName;
@@ -698,19 +698,20 @@ public class DeathTracker : BaseReloadSingleton
     }
     internal static void OnWillStartBleeding(ref DamagePlayerParameters parameters)
     {
-        if (parameters.player.TryGetPlayerData(out UCPlayerData data))
-        {
-            if (parameters.cause != EDeathCause.BLEEDING)
-            {
-                UCPlayer? dead = UCPlayer.FromPlayer(parameters.player);
-                if (dead is null) return;
-                DeathMessageArgs args = new DeathMessageArgs();
-                PlayerDied e = new PlayerDied(dead);
-                FillArgs(dead, parameters.cause, parameters.limb, parameters.killer, ref args, e);
-                data.LastBleedingArgs = args;
-                data.LastBleedingEvent = e;
-            }
-        }
+        if (!parameters.player.TryGetPlayerData(out UCPlayerData data))
+            return;
+
+        if (parameters.cause == EDeathCause.BLEEDING)
+            return;
+
+        UCPlayer? dead = UCPlayer.FromPlayer(parameters.player);
+        if (dead is null) return;
+        DeathMessageArgs args = new DeathMessageArgs();
+        PlayerDied e = new PlayerDied(dead);
+        FillArgs(dead, parameters.cause, parameters.limb, parameters.killer, ref args, e);
+        data.LastBleedingArgs = args;
+        data.LastBleedingEvent = e;
+        e.WasBleedout = true;
     }
     internal static void ReviveManagerUnloading()
     {

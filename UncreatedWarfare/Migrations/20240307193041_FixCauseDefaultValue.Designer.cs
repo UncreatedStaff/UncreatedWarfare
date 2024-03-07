@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240307193041_FixCauseDefaultValue")]
+    partial class FixCauseDefaultValue
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1168,18 +1170,11 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnName("InstigatorSession")
                         .HasColumnType("bigint unsigned");
 
-                    b.Property<bool>("IsBleedout")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<bool>("IsSuicide")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("IsTeamkill")
                         .HasColumnType("tinyint(1)");
-
-                    b.Property<ulong?>("KillShotId")
-                        .HasColumnName("KillShot")
-                        .HasColumnType("bigint unsigned");
 
                     b.Property<string>("NearestLocation")
                         .IsRequired()
@@ -1256,9 +1251,6 @@ namespace Uncreated.Warfare.Migrations
                     b.HasIndex("Instigator");
 
                     b.HasIndex("InstigatorSessionId");
-
-                    b.HasIndex("KillShotId")
-                        .IsUnique();
 
                     b.HasIndex("RelatedPlayer");
 
@@ -2151,10 +2143,6 @@ namespace Uncreated.Warfare.Migrations
                         .WithMany()
                         .HasForeignKey("InstigatorSessionId")
                         .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("Uncreated.Warfare.Models.Stats.Records.DamageRecord", "KillShot")
-                        .WithOne()
-                        .HasForeignKey("Uncreated.Warfare.Models.Stats.Records.DeathRecord", "KillShotId");
 
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "RelatedPlayerData")
                         .WithMany()

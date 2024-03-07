@@ -348,53 +348,21 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.ToString(Data.AdminLocale)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
         _injuredPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, new DownedPlayerData(parameters));
-        PlayerDied? died = DeathTracker.OnInjured(in parameters);
-        Guid item = died != null ? died.PrimaryAsset : Guid.Empty;
-
+        DeathTracker.OnInjured(in parameters);
         if (parameters.player.transform.TryGetComponent(out Reviver reviver))
             reviver.TellProneDelayed();
 
-        if (killer != null)
-        {
-            if (killer.Player.TryGetPlayerData(out UCPlayerData c))
-                c.TryUpdateAttackers(killer.Steam64);
+        if (killer == null)
+            return;
 
-            if (killer.Steam64 != parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide
-            {
-                byte kteam = killer.SteamPlayer.GetTeamByte();
-                if (kteam != team)
-                {
-                    ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastEnemyInjured.Translate(killer)));
+        if (killer.Player.TryGetPlayerData(out UCPlayerData c))
+            c.TryUpdateAttackers(killer.Steam64);
 
-                    // Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
-                    // if (killer.ActiveKitName is { } activeKit)
-                    // {
-                    //     Stats.StatsManager.ModifyStats(killer.Steam64, s =>
-                    //     {
-                    //         s.Downs++;
-                    //         Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == activeKit && k.Team == kteam);
-                    //         if (kitData == default)
-                    //         {
-                    //             kitData = new Stats.WarfareStats.KitData { KitID = activeKit, Team = kteam, Downs = 1 };
-                    //             s.Kits.Add(kitData);
-                    //         }
-                    //         else
-                    //         {
-                    //             kitData.Downs++;
-                    //         }
-                    //     }, false);
-                    //     if (Assets.find(item) is ItemAsset asset)
-                    //     {
-                    //         Stats.StatsManager.ModifyWeapon(asset.id, activeKit, w => w.Downs++, true);
-                    //     }
-                    // }
-                    // else
-                    //     Stats.StatsManager.ModifyStats(killer.Steam64, s => s.Downs++, false);
-                }
-                else
-                    ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastFriendlyInjured.Translate(killer)));
-            }
-        }
+        if (killer.Steam64 == parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide
+            return;
+
+        byte kteam = killer.SteamPlayer.GetTeamByte();
+        ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, (kteam != team ? T.XPToastEnemyInjured : T.XPToastFriendlyInjured).Translate(killer)));
     }
     private void OnPlayerDeath(PlayerDied e)
     {

@@ -13,6 +13,7 @@ public class PlayerDied : PlayerEvent
     public CSteamID Instigator { get; internal set; }
     public bool WasTeamkill { get; internal set; }
     public bool WasSuicide { get; internal set; }
+    public bool WasBleedout { get; internal set; }
     public bool WasEffectiveKill => !WasSuicide && !WasTeamkill;
     public ulong DeadTeam { get; internal set; }
     public ulong KillerTeam { get; internal set; }
@@ -35,7 +36,7 @@ public class PlayerDied : PlayerEvent
     public SessionRecord? Session { get; internal set; }
     public SessionRecord? KillerSession { get; internal set; }
     public SessionRecord? Player3Session { get; internal set; }
-    public float TimeDeployed { get; internal set; }
+    public float TimeDeployed { get; internal set; } // todo
     public PlayerDied(UCPlayer player) : base(player)
     {
     }

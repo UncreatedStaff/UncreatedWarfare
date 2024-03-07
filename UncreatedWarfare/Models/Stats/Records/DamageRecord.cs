@@ -18,12 +18,18 @@ public class DamageRecord : RelatedPlayerRecord
     [AddName]
     public UnturnedAssetReference? SecondaryAsset { get; set; }
 
-    [DefaultValue(nameof(EDamageOrigin.Unknown))]
-    public EDamageOrigin Origin { get; set; }
+    [DefaultValue(null)]
+    [AddName]
+    public UnturnedAssetReference? Vehicle { get; set; }
+
+    public EDeathCause Cause { get; set; }
 
     [DefaultValue(null)]
     public float? Distance { get; set; }
     public float Damage { get; set; }
+
+    [DefaultValue(0f)]
+    public float TimeDeployedSeconds { get; set; }
 
     [DefaultValue(false)]
     public bool IsTeamkill { get; set; }
@@ -33,6 +39,9 @@ public class DamageRecord : RelatedPlayerRecord
 
     [DefaultValue(false)]
     public bool IsInjure { get; set; }
+
+    [DefaultValue(false)]
+    public bool IsInjured { get; set; }
 
     [DefaultValue(nameof(ELimb.SKULL))]
     public ELimb Limb { get; set; }

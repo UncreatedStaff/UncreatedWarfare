@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Models.Assets;
 
@@ -39,17 +40,26 @@ public class AssetNameValueGenerator<TEntity> : ValueGenerator<string?> where TE
     public override bool GeneratesTemporaryValues => false;
 
 }
+
+/// <summary>
+/// Adds a column to <see cref="UnturnedAssetReference"/> columns that stores the English name of the asset.
+/// </summary>
 public static class AssetNameValueGenerator
 {
-    private static readonly Dictionary<Type, ValueGenerator> Cache = new Dictionary<Type, ValueGenerator>();
+    private record struct ValueGeneratorInstance(Type Type, string Name);
+    private static readonly Dictionary<ValueGeneratorInstance, ValueGenerator> Cache = new Dictionary<ValueGeneratorInstance, ValueGenerator>();
 
-    public static ValueGenerator Get(Type entityType, IProperty assetProperty)
+    public static ValueGenerator Get(IEntityType type, string name)
     {
         lock (Cache)
         {
-            if (Cache.TryGetValue(entityType, out ValueGenerator val))
+            Type entityType = EFCompat.GetClrType(type);
+            ValueGeneratorInstance inst = new ValueGeneratorInstance(entityType, name);
+            if (Cache.TryGetValue(inst, out ValueGenerator val))
                 return val;
 
+            IProperty assetProperty = type.GetProperties().First(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal));
+            
             MemberInfo member = EFCompat.GetMemberInfo(assetProperty, true, false);
             
             Type delegateType = typeof(Func<,>).MakeGenericType(entityType, assetProperty.IsNullable ? typeof(UnturnedAssetReference?) : typeof(UnturnedAssetReference));
@@ -82,7 +92,7 @@ public static class AssetNameValueGenerator
             if (newGenerator == null)
                 throw new NotSupportedException("Failed to create AssetNameValueGenerator<" + entityType.FullName + ">.");
 
-            Cache.Add(entityType, newGenerator);
+            Cache.Add(inst, newGenerator);
             return newGenerator;
         }
     }
