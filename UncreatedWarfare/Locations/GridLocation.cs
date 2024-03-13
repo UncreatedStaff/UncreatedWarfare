@@ -5,13 +5,12 @@ using Uncreated.Warfare.Models.Localization;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Locations;
-
 public readonly struct GridLocation : ITranslationArgument
 {
     private static LevelData? _lvl;
-    public const int SUBGRID_AMOUNT = 3; // dont set at 10 or higher
-    public const int OPTIMAL_GRID_SIZE_WORLD_SCALE = 150;
-    public const float BORDER_PERCENTAGE = 1f / 30f;
+    public const int SubgridAmount = 3; // dont set at 10 or higher
+    public const int OptimalGridSizeWorldScale = 150;
+    public const float BorderPercentage = 1f / 30f;
     public readonly byte X;
     public readonly byte Y;
     public readonly byte Index;
@@ -20,11 +19,11 @@ public readonly struct GridLocation : ITranslationArgument
     {
         get
         {
-            int index = Index == 0 || Index > SUBGRID_AMOUNT * SUBGRID_AMOUNT ? Mathf.CeilToInt(SUBGRID_AMOUNT * SUBGRID_AMOUNT / 2f) : Index;
-            int subgridx = X * SUBGRID_AMOUNT;
-            int subgridy = Y * SUBGRID_AMOUNT;
-            subgridx += (index - 1) % SUBGRID_AMOUNT;
-            subgridy += SUBGRID_AMOUNT - Mathf.CeilToInt(index / (float)SUBGRID_AMOUNT);
+            int index = Index is 0 or > SubgridAmount * SubgridAmount ? Mathf.CeilToInt(SubgridAmount * SubgridAmount / 2f) : Index;
+            int subgridx = X * SubgridAmount;
+            int subgridy = Y * SubgridAmount;
+            subgridx += (index - 1) % SubgridAmount;
+            subgridy += SubgridAmount - Mathf.CeilToInt(index / (float)SubgridAmount);
             CartographyVolume? cartographyVolume = VolumeManager<CartographyVolume, CartographyVolumeManager>.Get()?.GetMainVolume();
             if (cartographyVolume != null)
             {
@@ -35,18 +34,18 @@ public readonly struct GridLocation : ITranslationArgument
                 float sizeX = 1f - bdrx * 2f;
                 float sizeY = 1f - bdry * 2f;
                 Vector3 pos = cartographyVolume.transform.TransformPoint(
-                    bdrx + sizeX * ((float)subgridx / (sectionsX * SUBGRID_AMOUNT)) - 0.5f + sizeX / (sectionsX * SUBGRID_AMOUNT * 2f), 0,
-                    -(bdry + sizeY * ((float)subgridy / (sectionsY * SUBGRID_AMOUNT)) - 0.5f + sizeY / (sectionsY * SUBGRID_AMOUNT * 2f)));
+                    bdrx + sizeX * ((float)subgridx / (sectionsX * SubgridAmount)) - 0.5f + sizeX / (sectionsX * SubgridAmount * 2f), 0,
+                    -(bdry + sizeY * ((float)subgridy / (sectionsY * SubgridAmount)) - 0.5f + sizeY / (sectionsY * SubgridAmount * 2f)));
                 return new Vector2(pos.x, pos.z);
             }
-            int sqrCt = GetLegacyGridSize() * SUBGRID_AMOUNT;
+            int sqrCt = GetLegacyGridSize() * SubgridAmount;
             if (subgridx >= sqrCt)
                 subgridx = sqrCt - 1;
             if (subgridy >= sqrCt)
                 subgridy = sqrCt - 1;
             int size = Level.size;
             float actualSize = size / (size / (size - Level.border * 2f));
-            int bdr = Mathf.RoundToInt(actualSize * BORDER_PERCENTAGE);
+            int bdr = Mathf.RoundToInt(actualSize * BorderPercentage);
             float gridSize = actualSize - bdr * 2;
             float sqrSize = gridSize / sqrCt;
             return new Vector2(
@@ -58,8 +57,8 @@ public readonly struct GridLocation : ITranslationArgument
     /// <exception cref="ArgumentOutOfRangeException"/>
     private GridLocation(byte x, byte y, byte index)
     {
-        if (index > SUBGRID_AMOUNT * SUBGRID_AMOUNT)
-            throw new ArgumentOutOfRangeException(nameof(index), "Index must either be 0 or 1-" + (SUBGRID_AMOUNT * SUBGRID_AMOUNT) + " inclusive.");
+        if (index > SubgridAmount * SubgridAmount)
+            throw new ArgumentOutOfRangeException(nameof(index), "Index must either be 0 or 1-" + (SubgridAmount * SubgridAmount) + " inclusive.");
         if (x > 25)
             throw new ArgumentOutOfRangeException(nameof(x), "X must be 0-25 inclusive.");
         if (y > 25)
@@ -144,7 +143,7 @@ public readonly struct GridLocation : ITranslationArgument
                         index = (byte)((value[i] - 48) * 10 + (value[i + 1] - 48));
                     else
                         index = (byte)(value[i] - 48);
-                    if (index > SUBGRID_AMOUNT * SUBGRID_AMOUNT)
+                    if (index > SubgridAmount * SubgridAmount)
                         goto rtnFalse;
                     goto rtnTrue;
                 }
@@ -169,6 +168,51 @@ public readonly struct GridLocation : ITranslationArgument
         return location;
     }
     internal static int GetLegacyGridSize() => Level.info == null ? 1 : GetLegacyGridSize(Level.info.size);
+
+    /// <summary>
+    /// Get the size of the map's image (and total size) based on a legacy size.
+    /// </summary>
+    public static int GetLegacyMapSize(ELevelSize size) => size switch
+    {
+        ELevelSize.TINY => Level.TINY_SIZE,
+        ELevelSize.SMALL => Level.SMALL_SIZE,
+        ELevelSize.MEDIUM => Level.MEDIUM_SIZE,
+        ELevelSize.LARGE => Level.LARGE_SIZE,
+        ELevelSize.INSANE => Level.INSANE_SIZE,
+        _ => 0,
+    };
+
+    /// <summary>
+    /// Get the expected legacy size from a map's image size (or total size), or <see langword="null"/> if it doesn't match any legacy sizes.
+    /// </summary>
+    public static ELevelSize? GetLegacySizeFromMapSize(int mapSize)
+    {
+        if (mapSize == Level.TINY_SIZE)
+            return ELevelSize.TINY;
+        if (mapSize == Level.SMALL_SIZE)
+            return ELevelSize.SMALL;
+        if (mapSize == Level.MEDIUM_SIZE)
+            return ELevelSize.MEDIUM;
+        if (mapSize == Level.LARGE_SIZE)
+            return ELevelSize.LARGE;
+        if (mapSize == Level.INSANE_SIZE)
+            return ELevelSize.INSANE;
+
+        return null;
+    }
+
+    /// <summary>
+    /// Get the size of the map's border based on a legacy size.
+    /// </summary>
+    public static int GetLegacyBorderSize(ELevelSize size) => size switch
+    {
+        ELevelSize.TINY => Level.TINY_BORDER,
+        ELevelSize.SMALL => Level.SMALL_BORDER,
+        ELevelSize.MEDIUM => Level.MEDIUM_BORDER,
+        ELevelSize.LARGE => Level.LARGE_BORDER,
+        ELevelSize.INSANE => Level.INSANE_BORDER,
+        _ => 0,
+    };
     public static int GetLegacyGridSize(ELevelSize size) => size switch
     {
         ELevelSize.TINY => 3,    // A-C
@@ -193,22 +237,22 @@ public readonly struct GridLocation : ITranslationArgument
             float bdry = border / box.z;
             local.x += 0.5f;
             local.z = 0.5f - local.z;
-            int subgridx = Mathf.FloorToInt((local.x - bdrx) / ((1f - bdrx * 2f) / (sectionsX * SUBGRID_AMOUNT)));
-            int subgridy = Mathf.FloorToInt((local.z - bdry) / ((1f - bdry * 2f) / (sectionsY * SUBGRID_AMOUNT)));
-            X = (byte)(subgridx / SUBGRID_AMOUNT);
-            Y = (byte)(subgridy / SUBGRID_AMOUNT);
+            int subgridx = Mathf.FloorToInt((local.x - bdrx) / ((1f - bdrx * 2f) / (sectionsX * SubgridAmount)));
+            int subgridy = Mathf.FloorToInt((local.z - bdry) / ((1f - bdry * 2f) / (sectionsY * SubgridAmount)));
+            X = (byte)(subgridx / SubgridAmount);
+            Y = (byte)(subgridy / SubgridAmount);
             if (local.x < bdrx || local.z < bdry || local.x > 1f - bdrx || local.z > 1f - bdry)
                 Index = 0;
             else
-                Index = (byte)(subgridx % SUBGRID_AMOUNT + ((SUBGRID_AMOUNT - 1) - subgridy % SUBGRID_AMOUNT) * SUBGRID_AMOUNT + 1);
+                Index = (byte)(subgridx % SubgridAmount + ((SubgridAmount - 1) - subgridy % SubgridAmount) * SubgridAmount + 1);
             _toStringCache = ToString(X, Y, Index);
             return;
         }
 
-        int sqrCt = GetLegacyGridSize() * SUBGRID_AMOUNT;
+        int sqrCt = GetLegacyGridSize() * SubgridAmount;
         int size = Level.size;
         float actualSize = size / (size / (size - Level.border * 2f)); // size of the mapped area (world)
-        int bdr = Mathf.RoundToInt(actualSize * BORDER_PERCENTAGE);
+        int bdr = Mathf.RoundToInt(actualSize * BorderPercentage);
         float gridSize = actualSize - bdr * 2;
         float sqrSize = gridSize / sqrCt;
         float x = actualSize / 2 + pos.x;
@@ -241,10 +285,10 @@ public readonly struct GridLocation : ITranslationArgument
         }
         else
             ySqr = Mathf.FloorToInt((y - bdr) / sqrSize);
-        X = (byte)(xSqr / SUBGRID_AMOUNT);
-        Y = (byte)(ySqr / SUBGRID_AMOUNT);
+        X = (byte)(xSqr / SubgridAmount);
+        Y = (byte)(ySqr / SubgridAmount);
         if (!isOut)
-            Index = (byte)((xSqr % SUBGRID_AMOUNT) + ((SUBGRID_AMOUNT - 1) - (ySqr % SUBGRID_AMOUNT)) * SUBGRID_AMOUNT + 1);
+            Index = (byte)((xSqr % SubgridAmount) + ((SubgridAmount - 1) - (ySqr % SubgridAmount)) * SubgridAmount + 1);
         else Index = 0;
 
         _toStringCache = ToString(X, Y, Index);
@@ -264,7 +308,7 @@ public readonly struct GridLocation : ITranslationArgument
             ELevelSize.INSANE => 128f,
             _ => 0f
         }) * 2f));
-        border = Mathf.RoundToInt(actualSize * BORDER_PERCENTAGE);
+        border = Mathf.RoundToInt(actualSize * BorderPercentage);
         sections = GetLegacyGridSize(size);
         sectionWidth = Mathf.RoundToInt((actualSize - border * 2) / sections);
     }
@@ -278,93 +322,94 @@ public readonly struct GridLocation : ITranslationArgument
     /// <param name="border">world scale</param>
     public static void GetMapMetrics(int length, int width, out int sectionsX, out int sectionsY, out int sectionWidthX, out int sectionWidthY, out int border)
     {
-        border = Mathf.RoundToInt(Math.Min(length, width) * BORDER_PERCENTAGE);
+        border = Mathf.RoundToInt(Math.Min(length, width) * BorderPercentage);
         int l2 = length - border * 2;
         int w2 = width - border * 2;
-        sectionsX = l2 / OPTIMAL_GRID_SIZE_WORLD_SCALE;
-        int xmod = l2 % OPTIMAL_GRID_SIZE_WORLD_SCALE;
+        sectionsX = l2 / OptimalGridSizeWorldScale;
+        int xmod = l2 % OptimalGridSizeWorldScale;
         if (xmod != 0)
         {
-            if (xmod > OPTIMAL_GRID_SIZE_WORLD_SCALE / 2)
+            if (xmod > OptimalGridSizeWorldScale / 2)
                 ++sectionsX;
             sectionWidthX = l2 / sectionsX;
         }
         else
-            sectionWidthX = OPTIMAL_GRID_SIZE_WORLD_SCALE;
-        sectionsY = w2 / OPTIMAL_GRID_SIZE_WORLD_SCALE;
-        int ymod = w2 % OPTIMAL_GRID_SIZE_WORLD_SCALE;
+            sectionWidthX = OptimalGridSizeWorldScale;
+        sectionsY = w2 / OptimalGridSizeWorldScale;
+        int ymod = w2 % OptimalGridSizeWorldScale;
         if (ymod != 0)
         {
-            if (xmod > OPTIMAL_GRID_SIZE_WORLD_SCALE / 2)
+            if (xmod > OptimalGridSizeWorldScale / 2)
                 ++sectionsY;
             sectionWidthY = w2 / sectionsY;
         }
         else
-            sectionWidthY = OPTIMAL_GRID_SIZE_WORLD_SCALE;
+            sectionWidthY = OptimalGridSizeWorldScale;
         if (sectionsX > 26)
         {
             sectionsX = 26;
             sectionWidthX = l2 / sectionsX;
         }
-        if (sectionsY > 26)
-        {
-            sectionsY = 26;
-            sectionWidthY = w2 / sectionsY;
-        }
+
+        if (sectionsY <= 26)
+            return;
+        
+        sectionsY = 26;
+        sectionWidthY = w2 / sectionsY;
     }
 
-    public static (int X, int Y) ImageSize => (_lvl ??= new LevelData()).MapImageSize;
-    public static bool LegacyMapping => (_lvl ??= new LevelData()).LegacyMapping;
-    public static Vector2 CaptureSize => (_lvl ??= new LevelData()).CaptureSize;
-    public static Vector2 DistanceScale => (_lvl ??= new LevelData()).DistanceScale;
-    public static Matrix4x4 TransformMatrix => (_lvl ??= new LevelData()).TransformMatrix;
-    public static Matrix4x4 TransformMatrixInverse => (_lvl ??= new LevelData()).TransformMatrixInverse;
+    public static Vector2Int ImageSize => (_lvl ??= new LevelData()).ImageSizeIntl;
+    public static bool LegacyMapping => (_lvl ??= new LevelData()).LegacyMappingIntl;
+    public static Vector2 CaptureSize => (_lvl ??= new LevelData()).CaptureSizeIntl;
+    public static Vector2 DistanceScale => (_lvl ??= new LevelData()).DistanceScaleIntl;
+    public static Matrix4x4 TransformMatrix => (_lvl ??= new LevelData()).TransformMatrixIntl;
+    public static Matrix4x4 TransformMatrixInverse => (_lvl ??= new LevelData()).TransformMatrixInverseIntl;
     public static float WorldDistanceToMapDistanceX(float x)
     {
         _lvl ??= new LevelData();
         
-        return x / _lvl.DistanceScale.x;
+        return x / _lvl.DistanceScaleIntl.x;
     }
     public static float WorldDistanceToMapDistanceY(float y)
     {
         _lvl ??= new LevelData();
         
-        return y / _lvl.DistanceScale.x;
+        return y / _lvl.DistanceScaleIntl.x;
     }
     public static float MapDistanceToWorldDistanceX(float x)
     {
         _lvl ??= new LevelData();
         
-        return x * _lvl.DistanceScale.x;
+        return x * _lvl.DistanceScaleIntl.x;
     }
     public static float MapDistanceToWorldDistanceY(float y)
     {
         _lvl ??= new LevelData();
         
-        return y * _lvl.DistanceScale.x;
+        return y * _lvl.DistanceScaleIntl.x;
     }
     public static Vector2 WorldCoordsToMapCoords(Vector3 worldPos)
     {
         _lvl ??= new LevelData();
 
-        Vector3 n = new Vector3((worldPos.x / _lvl.CaptureSize.x + 0.5f) * _lvl.MapImageSize.X, 0f, (worldPos.z / _lvl.CaptureSize.y + 0.5f) * _lvl.MapImageSize.Y);
-        return _lvl.TransformMatrixInverse.MultiplyPoint3x4(n);
+        Vector3 n = new Vector3((worldPos.x / _lvl.CaptureSizeIntl.x + 0.5f) * _lvl.ImageSizeIntl.x, 0f, (worldPos.z / _lvl.CaptureSizeIntl.y + 0.5f) * _lvl.ImageSizeIntl.y);
+        return _lvl.TransformMatrixInverseIntl.MultiplyPoint3x4(n);
     }
     public static Vector3 MapCoordsToWorldCoords(Vector2 mapPos)
     {
         _lvl ??= new LevelData();
 
-        Vector3 n = new Vector3((mapPos.x / _lvl.MapImageSize.X - 0.5f) * _lvl.CaptureSize.x, (mapPos.y / _lvl.MapImageSize.Y - 0.5f) * _lvl.CaptureSize.y, 0f);
-        return _lvl.TransformMatrix.MultiplyPoint3x4(n);
+        Vector3 n = new Vector3((mapPos.x / _lvl.ImageSizeIntl.x - 0.5f) * _lvl.CaptureSizeIntl.x, (mapPos.y / _lvl.ImageSizeIntl.y - 0.5f) * _lvl.CaptureSizeIntl.y, 0f);
+        return _lvl.TransformMatrixIntl.MultiplyPoint3x4(n);
     }
     private sealed class LevelData
     {
-        public bool LegacyMapping;
-        public Matrix4x4 TransformMatrix;
-        public Matrix4x4 TransformMatrixInverse;
-        public (int X, int Y) MapImageSize;
-        public Vector2 CaptureSize;
-        public Vector2 DistanceScale; // * = map to world, / = world to map
+        public bool LegacyMappingIntl;
+        public Matrix4x4 TransformMatrixIntl;
+        public Matrix4x4 TransformMatrixInverseIntl;
+        public Vector2Int ImageSizeIntl;
+        public Vector2 CaptureSizeIntl;
+        public Vector2 DistanceScaleIntl; // * = map to world, / = world to map
         public LevelData()
         {
             if (Level.isLoaded)
@@ -379,24 +424,24 @@ public readonly struct GridLocation : ITranslationArgument
             CartographyVolume vol = CartographyVolumeManager.Get().GetMainVolume();
             if (vol != null)
             {
-                LegacyMapping = false;
-                TransformMatrix = Matrix4x4.TRS(vol.transform.position, vol.transform.rotation * Quaternion.Euler(90f, 0.0f, 0.0f), Vector3.one);
-                TransformMatrixInverse = TransformMatrix.inverse;
+                LegacyMappingIntl = false;
+                TransformMatrixIntl = Matrix4x4.TRS(vol.transform.position, vol.transform.rotation * Quaternion.Euler(90f, 0.0f, 0.0f), Vector3.one);
+                TransformMatrixInverseIntl = TransformMatrixIntl.inverse;
                 Vector3 size = vol.CalculateLocalBounds().size;
-                MapImageSize = (Mathf.CeilToInt(size.x), Mathf.CeilToInt(size.z));
-                CaptureSize = new Vector2(size.x, size.z);
-                DistanceScale = new Vector2(CaptureSize.x / MapImageSize.X, CaptureSize.y / MapImageSize.Y);
+                ImageSizeIntl = new Vector2Int(Mathf.CeilToInt(size.x), Mathf.CeilToInt(size.z));
+                CaptureSizeIntl = new Vector2(size.x, size.z);
+                DistanceScaleIntl = new Vector2(CaptureSizeIntl.x / ImageSizeIntl.x, CaptureSizeIntl.y / ImageSizeIntl.y);
             }
             else
             {
-                LegacyMapping = true;
-                TransformMatrix = Matrix4x4.TRS(new Vector3(0.0f, 1028f, 0.0f), Quaternion.Euler(90f, 0.0f, 0.0f), Vector3.one);
-                TransformMatrixInverse = TransformMatrix.inverse;
+                LegacyMappingIntl = true;
+                TransformMatrixIntl = Matrix4x4.TRS(new Vector3(0.0f, 1028f, 0.0f), Quaternion.Euler(90f, 0.0f, 0.0f), Vector3.one);
+                TransformMatrixInverseIntl = TransformMatrixIntl.inverse;
                 ushort s = Level.size;
                 float w = s - Level.border * 2f;
-                MapImageSize = (s, s);
-                CaptureSize = new Vector2(w, w);
-                DistanceScale = new Vector2(w / s, w / s);
+                ImageSizeIntl = new Vector2Int(s, s);
+                CaptureSizeIntl = new Vector2(w, w);
+                DistanceScaleIntl = new Vector2(w / s, w / s);
             }
 
             Level.onPrePreLevelLoaded -= Reset;

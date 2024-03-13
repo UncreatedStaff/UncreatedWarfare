@@ -113,7 +113,7 @@ public static class ZoneDrawing
 
         yield return null;
         
-        Texture2D img = new Texture2D(GridLocation.ImageSize.X, GridLocation.ImageSize.Y);
+        Texture2D img = new Texture2D(GridLocation.ImageSize.x, GridLocation.ImageSize.y);
         string levelMap = Path.Combine(Level.info.path, chart ? "Chart.png" : "Map.png");
         if (File.Exists(levelMap))
         {

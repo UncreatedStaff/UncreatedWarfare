@@ -168,7 +168,7 @@ public abstract class Zone : IListItem, IZone
 
     protected static Vector2 LegacyMappingFromMapPos(float x, float z)
     {
-        return new Vector2((x - GridLocation.ImageSize.X / 2f) * GridLocation.DistanceScale.x, -z * GridLocation.DistanceScale.y);
+        return new Vector2((x - GridLocation.ImageSize.x / 2f) * GridLocation.DistanceScale.x, -z * GridLocation.DistanceScale.y);
     }
 
     /// <summary>

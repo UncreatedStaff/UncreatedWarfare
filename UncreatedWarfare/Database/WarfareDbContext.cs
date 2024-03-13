@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Database;
 public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, ISeasonsDbContext, IGameDataDbContext
 {
     internal static string? ConnStringOverride = null;
-
+    
     public DbSet<LanguageInfo> Languages => Set<LanguageInfo>();
     public DbSet<LanguagePreferences> LanguagePreferences => Set<LanguagePreferences>();
     public DbSet<WarfareUserData> UserData => Set<WarfareUserData>();
