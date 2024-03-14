@@ -1,24 +1,100 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Globalization;
+using System.Text.Json.Serialization;
+using Uncreated.Encoding;
+using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Locations;
-public readonly struct GridLocation : ITranslationArgument
+
+[JsonConverter(typeof(GridLocationConverter))]
+public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocation>, IComparable<GridLocation>
 {
+    private readonly uint _data;
+
     private static LevelData? _lvl;
-    public const int SubgridAmount = 3; // dont set at 10 or higher
+
+    /// <summary>
+    /// Square root of the amount of subgrids in a grid. Ex. in a 3x3 = 9 subgrid, this value will be 3.
+    /// </summary>
+    /// <remarks>Must be within the interval [1, 9].</remarks>
+    public const int SubgridAmount = 3;
+
+    /// <summary>
+    /// The preferred distance between grids in meters. This will be scaled slightly to ensure the grid looks squared.
+    /// </summary>
     public const int OptimalGridSizeWorldScale = 150;
+
+    /// <summary>
+    /// What percentage of the image is border for the grid?
+    /// </summary>
     public const float BorderPercentage = 1f / 30f;
-    public readonly byte X;
-    public readonly byte Y;
-    public readonly byte Index;
-    private readonly string _toStringCache;
+
+    /// <summary>
+    /// The X coordinate of the grid.
+    /// </summary>
+    [JsonPropertyName("x")]
+    [Newtonsoft.Json.JsonProperty("x")]
+    public byte X => (byte)((_data >> 16) & 0xFF);
+
+    /// <summary>
+    /// The Y coordinate of the grid.
+    /// </summary>
+    [JsonPropertyName("y")]
+    [Newtonsoft.Json.JsonProperty("y")]
+    public byte Y => (byte)((_data >> 8) & 0xFF);
+
+    /// <summary>
+    /// The sub-grid index of in the current grid.
+    /// </summary>
+    [JsonPropertyName("index")]
+    [Newtonsoft.Json.JsonProperty("index")]
+    public byte Index => (byte)(_data & 0xFF);
+
+    /// <summary>
+    /// Was this grid location verified to be a valid location? This will always be true unless the <see cref="GridLocation"/> hasn't been initialized by a constructor.
+    /// </summary>
+    [JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public bool IsChecked => _data >> 24 == 0xFF;
+
+    /// <summary>
+    /// Is this a valid <see cref="GridLocation"/>? This will always be true unless the <see cref="GridLocation"/> hasn't been initialized by a constructor.
+    /// </summary>
+    [JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public bool IsValid => _data >> 24 == 0xFF || (((_data >> 16) & 0xFF) <= 25 && ((_data >> 8) & 0xFF) <= 25 && (_data & 0xFF) <= SubgridAmount * SubgridAmount);
+
+    /// <summary>
+    /// The captialized letter of the current X coordinate of the grid.
+    /// </summary>
+    [JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public char LetterX
+    {
+        get
+        {
+            uint x = (_data >> 16) & 0xFF;
+            return x > 25 ? default : (char)(x + 65);
+        }
+    }
+
+    /// <summary>
+    /// The center of the referenced grid or sub-grid.
+    /// </summary>
+    /// <exception cref="SingletonUnloadedException">Not ran on an active server.</exception>
+    [JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
     public Vector2 Center
     {
         get
         {
+            if (!UCWarfare.IsLoaded)
+                throw new SingletonUnloadedException(typeof(UCWarfare));
+
             int index = Index is 0 or > SubgridAmount * SubgridAmount ? Mathf.CeilToInt(SubgridAmount * SubgridAmount / 2f) : Index;
             int subgridx = X * SubgridAmount;
             int subgridy = Y * SubgridAmount;
@@ -54,8 +130,12 @@ public readonly struct GridLocation : ITranslationArgument
         }
     }
 
+    /// <summary>
+    /// Create a grid location from an X-coordinate, a Y-coordinate, and a subgrid index.
+    /// </summary>
     /// <exception cref="ArgumentOutOfRangeException"/>
-    private GridLocation(byte x, byte y, byte index)
+    [Newtonsoft.Json.JsonConstructor]
+    public GridLocation(byte x, byte y, byte index)
     {
         if (index > SubgridAmount * SubgridAmount)
             throw new ArgumentOutOfRangeException(nameof(index), "Index must either be 0 or 1-" + (SubgridAmount * SubgridAmount) + " inclusive.");
@@ -63,13 +143,160 @@ public readonly struct GridLocation : ITranslationArgument
             throw new ArgumentOutOfRangeException(nameof(x), "X must be 0-25 inclusive.");
         if (y > 25)
             throw new ArgumentOutOfRangeException(nameof(y), "Y must be 0-25 inclusive.");
-        X = x;
-        Y = y;
-        Index = index;
 
-        _toStringCache = ToString(x, y, index);
+        _data = 0xFF000000u | (uint)(x << 16 | y << 8 | index);
     }
-    private static unsafe string ToString(byte x, byte y, byte index)
+
+    /// <summary>
+    /// Create a grid location from an X-coordinate letter, a Y-coordinate, and a subgrid index.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    public GridLocation(char x, byte y, byte index)
+    {
+        if (index > SubgridAmount * SubgridAmount)
+            throw new ArgumentOutOfRangeException(nameof(index), "Index must either be 0 or 1-" + (SubgridAmount * SubgridAmount) + " inclusive.");
+        if (x is not (>= 'A' and <= 'Z' or >= 'a' and <= 'z'))
+            throw new ArgumentOutOfRangeException(nameof(x), "X must be A-Z inclusive.");
+        if (y > 25)
+            throw new ArgumentOutOfRangeException(nameof(y), "Y must be 0-25 inclusive.");
+
+        byte xVal = x is >= 'A' and <= 'Z' ? (byte)(x - 'A') : (byte)(x - 'a');
+        _data = 0xFF000000u | (uint)(xVal << 16 | y << 8 | index);
+    }
+
+    /// <summary>
+    /// Create a <see cref="GridLocation"/> from any given point inside a grid and subgrid.
+    /// </summary>
+    /// <exception cref="SingletonUnloadedException">Not ran on an active server.</exception>
+    public GridLocation(in Vector3 pos)
+    {
+        if (!UCWarfare.IsLoaded)
+            throw new SingletonUnloadedException(typeof(UCWarfare));
+
+        byte xVal, yVal, indexVal;
+        CartographyVolume? cartographyVolume = VolumeManager<CartographyVolume, CartographyVolumeManager>.Get()?.GetMainVolume();
+        if (cartographyVolume != null)
+        {
+            Vector3 local = cartographyVolume.transform.InverseTransformPoint(pos);
+            Vector3 box = cartographyVolume.GetBoxSize();
+            GetMapMetrics(Mathf.RoundToInt(box.x), Mathf.RoundToInt(box.z), out int sectionsX, out int sectionsY, out _, out _, out int border);
+            float bdrx = border / box.x;
+            float bdry = border / box.z;
+            local.x += 0.5f;
+            local.z = 0.5f - local.z;
+            int subgridx = Mathf.FloorToInt((local.x - bdrx) / ((1f - bdrx * 2f) / (sectionsX * SubgridAmount)));
+            int subgridy = Mathf.FloorToInt((local.z - bdry) / ((1f - bdry * 2f) / (sectionsY * SubgridAmount)));
+            xVal = (byte)(subgridx / SubgridAmount);
+            yVal = (byte)(subgridy / SubgridAmount);
+            if (local.x < bdrx || local.z < bdry || local.x > 1f - bdrx || local.z > 1f - bdry)
+                indexVal = 0;
+            else
+                indexVal = (byte)(subgridx % SubgridAmount + ((SubgridAmount - 1) - subgridy % SubgridAmount) * SubgridAmount + 1);
+
+            _data = 0xFF000000u | (uint)(xVal << 16 | yVal << 8 | indexVal);
+            return;
+        }
+
+        int sqrCt = GetLegacyGridSize() * SubgridAmount;
+        int size = Level.size;
+        float actualSize = size / (size / (size - Level.border * 2f)); // size of the mapped area (world)
+        int bdr = Mathf.RoundToInt(actualSize * BorderPercentage);
+        float gridSize = actualSize - bdr * 2;
+        float sqrSize = gridSize / sqrCt;
+        float x = actualSize / 2 + pos.x;
+        float y = actualSize / 2 - pos.z;
+
+        int xSqr;
+        bool isOut = false;
+        if (x < bdr)
+        {
+            isOut = true;
+            xSqr = 0;
+        }
+        else if (x > bdr + gridSize)
+        {
+            isOut = true;
+            xSqr = sqrCt - 1;
+        }
+        else
+            xSqr = Mathf.FloorToInt((x - bdr) / sqrSize);
+        int ySqr;
+        if (y < bdr)
+        {
+            isOut = true;
+            ySqr = 0;
+        }
+        else if (y > bdr + gridSize)
+        {
+            isOut = true;
+            ySqr = sqrCt - 1;
+        }
+        else
+            ySqr = Mathf.FloorToInt((y - bdr) / sqrSize);
+        xVal = (byte)(xSqr / SubgridAmount);
+        yVal = (byte)(ySqr / SubgridAmount);
+        if (!isOut)
+            indexVal = (byte)((xSqr % SubgridAmount) + ((SubgridAmount - 1) - (ySqr % SubgridAmount)) * SubgridAmount + 1);
+        else indexVal = 0;
+
+        _data = 0xFF000000u | (uint)(xVal << 16 | yVal << 8 | indexVal);
+    }
+
+    /// <summary>
+    /// Check if two locations are in the same grid.
+    /// </summary>
+    public bool GridEquals(GridLocation other) => (_data & 0xFFFFFF00u) == (other._data & 0xFFFFFF00u);
+
+    /// <summary>
+    /// Check if two locations are in the same grid and sub-grid.
+    /// </summary>
+    public bool Equals(GridLocation other) => _data == other._data;
+
+    /// <summary>
+    /// Compare two locations to each other. Sorted from most significant to least significant: <see cref="IsChecked"/>, <see cref="X"/>, <see cref="Y"/>, <see cref="Index"/>.
+    /// </summary>
+    public int CompareTo(GridLocation other) => _data.CompareTo(other._data);
+
+    /// <summary>
+    /// Check if two locations are in the same grid and sub-grid.
+    /// </summary>
+    public override bool Equals(object? obj) => obj is GridLocation location && Equals(location);
+    public override int GetHashCode() => unchecked((int)(_data & 0xFFFFFF | ~(_data & 0xFF000000)));
+
+    /// <summary>
+    /// Check if two locations are in the same grid and sub-grid.
+    /// </summary>
+    public static bool operator ==(GridLocation left, GridLocation right) => left._data == right._data;
+
+    /// <summary>
+    /// Check if two locations are in the same grid and sub-grid.
+    /// </summary>
+    public static bool operator !=(GridLocation left, GridLocation right) => left._data != right._data;
+
+    /// <summary>
+    /// Compare two locations to each other. Sorted from most significant to least significant: <see cref="IsChecked"/>, <see cref="X"/>, <see cref="Y"/>, <see cref="Index"/>.
+    /// </summary>
+    public static bool operator <(GridLocation left, GridLocation right) => left._data < right._data;
+
+    /// <summary>
+    /// Compare two locations to each other. Sorted from most significant to least significant: <see cref="IsChecked"/>, <see cref="X"/>, <see cref="Y"/>, <see cref="Index"/>.
+    /// </summary>
+    public static bool operator >(GridLocation left, GridLocation right) => left._data > right._data;
+
+    /// <summary>
+    /// Compare two locations to each other. Sorted from most significant to least significant: <see cref="IsChecked"/>, <see cref="X"/>, <see cref="Y"/>, <see cref="Index"/>.
+    /// </summary>
+    public static bool operator <=(GridLocation left, GridLocation right) => left._data <= right._data;
+
+    /// <summary>
+    /// Compare two locations to each other. Sorted from most significant to least significant: <see cref="IsChecked"/>, <see cref="X"/>, <see cref="Y"/>, <see cref="Index"/>.
+    /// </summary>
+    public static bool operator >=(GridLocation left, GridLocation right) => left._data >= right._data;
+
+    /// <summary>
+    /// Convert a grid location with the given <paramref name="x"/>, <paramref name="y"/>, and <paramref name="index"/> to a string representation, formatted like A1-1.
+    /// </summary>
+    public static unsafe string ToString(byte x, byte y, byte index)
     {
         ++y;
         int len = y > 9 ? 5 : 4;
@@ -93,11 +320,18 @@ public readonly struct GridLocation : ITranslationArgument
         }
         return new string(ptr, 0, len);
     }
-    /// <returns>A cached string representation of the grid, formatted like A1-1.</returns>
-    public override string ToString() => _toStringCache;
+
+    /// <returns>String representation of the grid, formatted like A1-1.</returns>
+    public override string ToString() => ToString(X, Y, Index);
+
     string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags) => _toStringCache;
-    public static bool TryParse(string value, out GridLocation location)
+        ref TranslationFlags flags) => ToString();
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
+    /// <returns><see langword="True"/> if a valid <see cref="GridLocation"/> was parsed, otherwise <see langword="false"/>.</returns>
+    public static bool TryParse(ReadOnlySpan<char> value, out GridLocation location)
     {
         if (value.Length is < 2 or > 8)
         {
@@ -129,7 +363,8 @@ public readonly struct GridLocation : ITranslationArgument
         }
         if (x > 25 || y > 25)
         {
-            goto rtnFalse;
+            location = default;
+            return false;
         }
         byte index = 0;
 
@@ -160,8 +395,12 @@ public readonly struct GridLocation : ITranslationArgument
         location = new GridLocation(x, y, index);
         return true;
     }
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
     /// <exception cref="FormatException"/>
-    public static GridLocation Parse(string value)
+    public static GridLocation Parse(ReadOnlySpan<char> value)
     {
         if (!TryParse(value, out GridLocation location))
             throw new FormatException("Unable to parse GridLocation.");
@@ -213,6 +452,10 @@ public readonly struct GridLocation : ITranslationArgument
         ELevelSize.INSANE => Level.INSANE_BORDER,
         _ => 0,
     };
+
+    /// <summary>
+    /// Get the ideal grid size from a legacy size.
+    /// </summary>
     public static int GetLegacyGridSize(ELevelSize size) => size switch
     {
         ELevelSize.TINY => 3,    // A-C
@@ -222,77 +465,7 @@ public readonly struct GridLocation : ITranslationArgument
         ELevelSize.INSANE => 26, // A-Z
         _ => 1                   // A
     };
-    public GridLocation(in Vector3 pos)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        CartographyVolume? cartographyVolume = VolumeManager<CartographyVolume, CartographyVolumeManager>.Get()?.GetMainVolume();
-        if (cartographyVolume != null)
-        {
-            Vector3 local = cartographyVolume.transform.InverseTransformPoint(pos);
-            Vector3 box = cartographyVolume.GetBoxSize();
-            GetMapMetrics(Mathf.RoundToInt(box.x), Mathf.RoundToInt(box.z), out int sectionsX, out int sectionsY, out _, out _, out int border);
-            float bdrx = border / box.x;
-            float bdry = border / box.z;
-            local.x += 0.5f;
-            local.z = 0.5f - local.z;
-            int subgridx = Mathf.FloorToInt((local.x - bdrx) / ((1f - bdrx * 2f) / (sectionsX * SubgridAmount)));
-            int subgridy = Mathf.FloorToInt((local.z - bdry) / ((1f - bdry * 2f) / (sectionsY * SubgridAmount)));
-            X = (byte)(subgridx / SubgridAmount);
-            Y = (byte)(subgridy / SubgridAmount);
-            if (local.x < bdrx || local.z < bdry || local.x > 1f - bdrx || local.z > 1f - bdry)
-                Index = 0;
-            else
-                Index = (byte)(subgridx % SubgridAmount + ((SubgridAmount - 1) - subgridy % SubgridAmount) * SubgridAmount + 1);
-            _toStringCache = ToString(X, Y, Index);
-            return;
-        }
 
-        int sqrCt = GetLegacyGridSize() * SubgridAmount;
-        int size = Level.size;
-        float actualSize = size / (size / (size - Level.border * 2f)); // size of the mapped area (world)
-        int bdr = Mathf.RoundToInt(actualSize * BorderPercentage);
-        float gridSize = actualSize - bdr * 2;
-        float sqrSize = gridSize / sqrCt;
-        float x = actualSize / 2 + pos.x;
-        float y = actualSize / 2 - pos.z;
-
-        int xSqr;
-        bool isOut = false;
-        if (x < bdr)
-        {
-            isOut = true;
-            xSqr = 0;
-        }
-        else if (x > bdr + gridSize)
-        {
-            isOut = true;
-            xSqr = sqrCt - 1;
-        }
-        else
-            xSqr = Mathf.FloorToInt((x - bdr) / sqrSize);
-        int ySqr;
-        if (y < bdr)
-        {
-            isOut = true;
-            ySqr = 0;
-        }
-        else if (y > bdr + gridSize)
-        {
-            isOut = true;
-            ySqr = sqrCt - 1;
-        }
-        else
-            ySqr = Mathf.FloorToInt((y - bdr) / sqrSize);
-        X = (byte)(xSqr / SubgridAmount);
-        Y = (byte)(ySqr / SubgridAmount);
-        if (!isOut)
-            Index = (byte)((xSqr % SubgridAmount) + ((SubgridAmount - 1) - (ySqr % SubgridAmount)) * SubgridAmount + 1);
-        else Index = 0;
-
-        _toStringCache = ToString(X, Y, Index);
-    }
     /// <summary>
     /// Only works with maps without a cartography volume.
     /// </summary>
@@ -312,6 +485,7 @@ public readonly struct GridLocation : ITranslationArgument
         sections = GetLegacyGridSize(size);
         sectionWidth = Mathf.RoundToInt((actualSize - border * 2) / sections);
     }
+
     /// <summary>
     /// Only works with maps with a cartography volume.
     /// </summary>
@@ -356,6 +530,25 @@ public readonly struct GridLocation : ITranslationArgument
         
         sectionsY = 26;
         sectionWidthY = w2 / sectionsY;
+    }
+
+    /// <summary>
+    /// Write this location to a <see cref="ByteWriter"/>.
+    /// </summary>
+    public void Write(ByteWriter writer) => writer.Write(unchecked((int)(_data & 0xFFFFFF)));
+
+    /// <summary>
+    /// Write a location to a <see cref="ByteWriter"/>.
+    /// </summary>
+    public static void WriteLocation(ByteWriter writer, GridLocation gridLocation) => gridLocation.Write(writer);
+
+    /// <summary>
+    /// Read a location from a <see cref="ByteReader"/>.
+    /// </summary>
+    public static GridLocation ReadLocation(ByteReader reader)
+    {
+        int data = reader.ReadInt32();
+        return new GridLocation((byte)((data >> 16) & 0xFF), (byte)((data >> 8) & 0xFF), (byte)(data & 0xFF));
     }
 
     public static Vector2Int ImageSize => (_lvl ??= new LevelData()).ImageSizeIntl;
