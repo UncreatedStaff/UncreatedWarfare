@@ -23,48 +23,6 @@ Zero based, surrounded in curly brackets (`{}`).
 <br> Example (Translation<`int`, `ItemAsset`>): `Given you {0}x {1}.`
 <br>  -> `Given you 4x M4A1.`
 
-
-**Formatting**
-
-***Default Formatting (T Constants)***
-```
-• FormatPlural              "$plural$"  See Below
-• FormatUppercase           "upper"     Turns the argument UPPERCASE.
-• FormatLowercase           "lower"     Turns the argument lowercase.
-• FormatPropercase          "proper"    Turns the argument ProperCase.
-• FormatRarityColor         "rarity"    Colors assets to their rarity color.
-• FormatTimeLong            "tlong"     Turns time to: 3 minutes and 4 seconds, etc.
-• FormatTimeShort_MM_SS     "tshort1"   Turns time to: 03:04, etc.
-• FormatTimeShort_HH_MM_SS  "tshort2"   Turns time to: 01:03:04, etc.
-   Time can be int, uint, float (all in seconds), or TimeSpan
-```
-Other formats are stored in the most prominant class of the interface (`UCPlayer` for `IPlayer`, `FOB` for `IDeployable`, etc.)
-<br>Anything that would work in `T[N].ToString(string, IFormatProvider)` will work here.
-
-<br>**Color substitution from color dictionary**
-
-`c$value$` will be replaced by the color `value` from the color dictionary on startup.
-<br> Example: `You need 100 more <#c$credits$>credits</color>.`
-
-<br>**Conditional pluralization of existing terms**
-
-`${p:arg:text}`  will replace text with the plural version of text if `{arg}` is not one.
-`${p:arg:text!}` will replace text with the plural version of text if `{arg}` is one.
- Example: `There ${p:0:is} {0} ${p:0:apple}, ${p:0:it} ${p:0:is} ${p:0:a }${p:0:fruit}. ${p:0:It} ${p:0:taste!} good.`
-  -> ({0} = 1) `There is 1 apple, it is a fruit. It tastes good.`
-  -> ({0} = 3) `There are 3 apples, they are fruits. They taste good.`
-
-<br>**Conditional pluralization of argument values**
-
-Using the format: `'xxxx' + FormatPlural` will replace the value for that argument with the plural version.
-<br> Example: `You cant place {0} here.` arg0Fmt: `RarityFormat + FormatPlural`
-<br>  -> `You can't place <#xxxxx>FOB Radios</color> here.`
-<br>
-<br>Using the format: `'xxxx' + FormatPlural + '{arg}'` will replace the value for that argument with the plural version if `{arg}` is not one.
-<br> Example: `There are {0} {1} already on this FOB.` arg1Fmt: `RarityFormat + FormatPlural + {0}`
-<br>  -> (4, FOB Radio Asset) `There are 4 <#xxxxx>FOB Radios</color> already on this FOB.`
-
-
 ## factions.properties
 Contains the faction translations, including names, short names, and abbreviations.
 <br>See **Properties** section below.
@@ -144,5 +102,47 @@ Also notice the `{n}` formatting placeholders. These are replaced by translation
 #  {n} - [Type] (Formatting) Description
 ```
 
-# Other
+# Notes
 Please leave in-game terms such as **FOB**, **Rally**, **Build**, **Ammo**, and other item names in English.
+
+# Advanced Users (translations):
+
+**Formatting**
+
+***Default Formatting (T Constants)***
+```
+• FormatPlural              "$plural$"  See Below
+• FormatUppercase           "upper"     Turns the argument UPPERCASE.
+• FormatLowercase           "lower"     Turns the argument lowercase.
+• FormatPropercase          "proper"    Turns the argument ProperCase.
+• FormatRarityColor         "rarity"    Colors assets to their rarity color.
+• FormatTimeLong            "tlong"     Turns time to: 3 minutes and 4 seconds, etc.
+• FormatTimeShort_MM_SS     "tshort1"   Turns time to: 03:04, etc.
+• FormatTimeShort_HH_MM_SS  "tshort2"   Turns time to: 01:03:04, etc.
+   Time can be int, uint, float (all in seconds), or TimeSpan
+```
+Other formats are stored in the most prominant class of the interface (`UCPlayer` for `IPlayer`, `FOB` for `IDeployable`, etc.)
+<br>Anything that would work in `T[N].ToString(string, IFormatProvider)` will work here.
+
+<br>**Color substitution from color dictionary**
+
+`c$value$` will be replaced by the color `value` from the color dictionary on startup.
+<br> Example: `You need 100 more <#c$credits$>credits</color>.`
+
+<br>**Conditional pluralization of existing terms**
+
+`${p:arg:text}`  will replace text with the plural version of text if `{arg}` is not one.
+`${p:arg:text!}` will replace text with the plural version of text if `{arg}` is one.
+ Example: `There ${p:0:is} {0} ${p:0:apple}, ${p:0:it} ${p:0:is} ${p:0:a }${p:0:fruit}. ${p:0:It} ${p:0:taste!} good.`
+  -> ({0} = 1) `There is 1 apple, it is a fruit. It tastes good.`
+  -> ({0} = 3) `There are 3 apples, they are fruits. They taste good.`
+
+<br>**Conditional pluralization of argument values**
+
+Using the format: `'xxxx' + FormatPlural` will replace the value for that argument with the plural version.
+<br> Example: `You cant place {0} here.` arg0Fmt: `RarityFormat + FormatPlural`
+<br>  -> `You can't place <#xxxxx>FOB Radios</color> here.`
+<br>
+<br>Using the format: `'xxxx' + FormatPlural + '{arg}'` will replace the value for that argument with the plural version if `{arg}` is not one.
+<br> Example: `There are {0} {1} already on this FOB.` arg1Fmt: `RarityFormat + FormatPlural + {0}`
+<br>  -> (4, FOB Radio Asset) `There are 4 <#xxxxx>FOB Radios</color> already on this FOB.`
