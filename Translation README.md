@@ -105,6 +105,67 @@ Also notice the `{n}` formatting placeholders. These are replaced by translation
 # Notes
 Please leave in-game terms such as **FOB**, **Rally**, **Build**, **Ammo**, and other item names in English.
 
+# Examples
+`Enum/SDG.Unturned.ELimb.json`
+```json
+{
+  "%NAME%": "Membru",
+  "LEFT_FOOT": "Left Glezna",
+  "LEFT_LEG": "Left Picior",
+  "RIGHT_FOOT": "Dreapta Glezna",
+  "RIGHT_LEG": "Dreapta Picior",
+  "LEFT_HAND": "Left Mana",
+  "LEFT_ARM": "Left Brat",
+  "RIGHT_HAND": "Dreapta Mana",
+  "RIGHT_ARM": "Dreapta Brat",
+  "LEFT_BACK": "Stanga Spate",
+  "RIGHT_BACK": "Dreapta Spate",
+  "LEFT_FRONT": "Stanga Fata",
+  "RIGHT_FRONT": "Dreapta Fata",
+  "SPINE": "Spinare",
+  "SKULL": "Craniu"
+}
+```
+`deaths.json`
+```jsonc
+[
+  // ...
+  {
+    "death-cause": "charge",
+    "translations": {
+      "None": "{0} a explodat de la un explozibil.",
+      "Item": "{0} a explodat de la un {3}.",
+      "Item, Killer": "{1} la explodat pe {0} cu un {3}.",
+      "Killer": "{1} a explodat pe {0} cu un.",
+      "Suicide": "{0} sa explodat singur.",
+      "Item, Suicide": "{0} sa explodat singur cu un {3}."
+    }
+  },
+  // ...
+]
+```
+`translations.properties`
+```properties
+# Formatting Arguments:
+#  {0} - [Text]
+# Default Value: <#a1998d><#dbb67f>{0}</color> needs FOB supplies.
+SuppliesBuildToast: <#a1998d><#dbb67f>{0}</color> are nevoie de provizii la FOB.
+```
+`factions.properties`
+```properties
+# Germany (ID: germany, #5)
+#  Name:         Germany
+#  Short Name:   Germany
+#  Abbreviation: DE
+#  Flag:         https://i.imgur.com/91Apxc5.png
+# Default: Germany
+Name: 德意志联邦共和国
+# Default: Germany
+ShortName: 德意志国
+# Default: DE
+Abbreviation: 德国
+```
+
 # Advanced Users (translations):
 
 **Formatting**
