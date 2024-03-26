@@ -319,22 +319,22 @@ public static class PlayerManager
     public static class NetCalls
     {
         public static readonly NetCall<ulong, bool> SendSetQueueSkip = new NetCall<ulong, bool>(ReceiveSetQueueSkip);
-        public static readonly NetCall<ulong> GetPermissionsRequest = new NetCall<ulong>(ReceivePermissionRequest);
+        public static readonly NetCall<ulong> RequestPermissions = new NetCall<ulong>(ReceivePermissionRequest);
         public static readonly NetCall<ulong> CheckPlayerOnlineStatusRequest = new NetCall<ulong>(ReceivePlayerOnlineCheckRequest);
         /// <summary>Ack: Success = yes, other = no.</summary>
-        public static readonly NetCall<ulong> CheckUserInDiscordServerRequest = new NetCall<ulong>(1022);
+        public static readonly NetCall<ulong> CheckUserInDiscordServerRequest = new NetCall<ulong>(KnownNetMessage.CheckUserInDiscordServerRequest);
 
-        public static readonly NetCall<ulong, ulong, TicketType, string> RequestOpenTicket = new NetCall<ulong, ulong, TicketType, string>(1037);
+        public static readonly NetCall<ulong, ulong, TicketType, string> RequestOpenTicket = new NetCall<ulong, ulong, TicketType, string>(KnownNetMessage.RequestOpenTicket);
 
-        public static readonly NetCallRaw<PlayerListEntry[]> SendPlayerList = new NetCallRaw<PlayerListEntry[]>(1000, PlayerListEntry.ReadArray, PlayerListEntry.WriteArray);
-        public static readonly NetCallRaw<PlayerListEntry> SendPlayerJoined = new NetCallRaw<PlayerListEntry>(1016, PlayerListEntry.Read, PlayerListEntry.Write);
-        public static readonly NetCall<ulong> SendPlayerLeft = new NetCall<ulong>(1017);
-        public static readonly NetCall<ulong, bool> SendDutyChanged = new NetCall<ulong, bool>(1018);
-        public static readonly NetCall<ulong, byte> SendTeamChanged = new NetCall<ulong, byte>(1019);
-        public static readonly NetCall<ulong, bool> SendPlayerOnlineStatus = new NetCall<ulong, bool>(1036);
-        public static readonly NetCall<ulong, EAdminType> SendPermissions = new NetCall<ulong, EAdminType>(1034);
+        public static readonly NetCallRaw<PlayerListEntry[]> SendPlayerList = new NetCallRaw<PlayerListEntry[]>(KnownNetMessage.SendPlayerList, PlayerListEntry.ReadArray, PlayerListEntry.WriteArray);
+        public static readonly NetCallRaw<PlayerListEntry> SendPlayerJoined = new NetCallRaw<PlayerListEntry>(KnownNetMessage.SendPlayerJoined, PlayerListEntry.Read, PlayerListEntry.Write);
+        public static readonly NetCall<ulong> SendPlayerLeft = new NetCall<ulong>(KnownNetMessage.SendPlayerLeft);
+        public static readonly NetCall<ulong, bool> SendDutyChanged = new NetCall<ulong, bool>(KnownNetMessage.SendDutyChanged);
+        public static readonly NetCall<ulong, byte> SendTeamChanged = new NetCall<ulong, byte>(KnownNetMessage.SendTeamChanged);
+        public static readonly NetCall<ulong, bool> SendPlayerOnlineStatus = new NetCall<ulong, bool>(KnownNetMessage.SendPlayerOnlineStatus);
+        public static readonly NetCall<ulong, EAdminType> SendPermissions = new NetCall<ulong, EAdminType>(KnownNetMessage.SendPermissions);
 
-        [NetCall(ENetCall.FROM_SERVER, 1024)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendSetQueueSkip)]
         internal static async Task ReceiveSetQueueSkip(MessageContext context, ulong player, bool status)
         {
             await UCWarfare.ToUpdate();
@@ -349,12 +349,12 @@ public static class PlayerManager
                 PlayerSave.WriteToSaveFile(save);
             }
         }
-        [NetCall(ENetCall.FROM_SERVER, 1033)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestPermissions)]
         internal static void ReceivePermissionRequest(MessageContext context, ulong target)
         {
             context.Reply(SendPermissions, target, PermissionSaver.Instance.GetPlayerPermissionLevel(target));
         }
-        [NetCall(ENetCall.FROM_SERVER, 1035)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.CheckPlayerOnlineStatusRequest)]
         internal static void ReceivePlayerOnlineCheckRequest(MessageContext context, ulong target)
         {
             context.Reply(SendPlayerOnlineStatus, target, PlayerTool.getSteamPlayer(target) is not null);

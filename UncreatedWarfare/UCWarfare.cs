@@ -137,7 +137,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         Logging.OnLogError += L.NetLogError;
         Logging.OnLogException += L.NetLogException;
         Logging.ExecuteOnMainThread = RunOnMainThread;
-        NetFactory.Reflect(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
+        NetFactory.Reflect(Assembly.GetExecutingAssembly(), NetCallOrigin.ServerOnly);
 
         L.Log("Registering Commands: ", ConsoleColor.Magenta);
 

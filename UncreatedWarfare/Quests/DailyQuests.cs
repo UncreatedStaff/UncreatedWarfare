@@ -800,11 +800,11 @@ public static class DailyQuests
 
     public static class NetCalls
     {
-        public static readonly NetCallRaw<DailyQuest[], DateTime> SendNextQuests = new NetCallRaw<DailyQuest[], DateTime>(1125, DailyQuest.ReadMany, null, DailyQuest.WriteMany, null);
+        public static readonly NetCallRaw<DailyQuest[], DateTime> SendNextQuests = new NetCallRaw<DailyQuest[], DateTime>(KnownNetMessage.SendNextQuests, DailyQuest.ReadMany, null, DailyQuest.WriteMany, null);
         public static readonly NetCallRaw<Folder> AckNextQuestsUploaded = new NetCallRaw<Folder>(ReceiveQuestData, Folder.Read, Folder.Write, 65536);
 
 
-        [NetCall(ENetCall.FROM_SERVER, 1126)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.AckNextQuestsUploaded)]
         public static async Task ReceiveQuestData(MessageContext context, Folder folder)
         {
             try

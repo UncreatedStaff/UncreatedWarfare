@@ -294,7 +294,7 @@ public static class KitSync
         public static readonly NetCall<uint> MulticastKitDeleted = new NetCall<uint>(OnForeignKitDeleted);
         public static readonly NetCall<ulong> MulticastKitAccessChanged = new NetCall<ulong>(OnForeignAccessUpdated);
 
-        [NetCall(ENetCall.FROM_SERVER, 3008)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.MulticastKitUpdated)]
         private static async Task OnForeignKitUpdated(MessageContext ctx, uint pk)
         {
             try
@@ -322,7 +322,7 @@ public static class KitSync
                 L.LogError(ex);
             }
         }
-        [NetCall(ENetCall.FROM_SERVER, 3006)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.MulticastKitDeleted)]
         private static async Task OnForeignKitDeleted(MessageContext ctx, uint pk)
         {
             try
@@ -350,7 +350,7 @@ public static class KitSync
                 L.LogError(ex);
             }
         }
-        [NetCall(ENetCall.FROM_SERVER, 3007)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.MulticastKitAccessChanged)]
         private static async Task OnForeignAccessUpdated(MessageContext ctx, ulong steamId)
         {
             try

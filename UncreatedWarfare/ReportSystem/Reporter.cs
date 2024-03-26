@@ -791,11 +791,11 @@ public class Reporter : MonoBehaviour
     public static class NetCalls
     {
         /// <summary>T1: report <br>T2: isOnline</br></summary>
-        public static readonly NetCallRaw<Report?, bool> SendReportInvocation = new NetCallRaw<Report?, bool>(4000, Report.ReadReport, null, Report.WriteReport!, null, 256);
-        public static readonly NetCall<bool, string> ReceiveInvocationResponse = new NetCall<bool, string>(4001, 78);
-        public static readonly NetCall<ulong, ulong, string, EReportType> RequestReport = new NetCall<ulong, ulong, string, EReportType>(4002);
+        public static readonly NetCallRaw<Report?, bool> SendReportInvocation = new NetCallRaw<Report?, bool>(KnownNetMessage.SendReportInvocation, Report.ReadReport, null, Report.WriteReport!, null, 256);
+        public static readonly NetCall<bool, string> ReceiveInvocationResponse = new NetCall<bool, string>(KnownNetMessage.ReceiveInvocationResponse, 78);
+        public static readonly NetCall<ulong, ulong, string, EReportType> RequestReport = new NetCall<ulong, ulong, string, EReportType>(KnownNetMessage.RequestReport);
 
-        [NetCall(ENetCall.FROM_SERVER, 4002)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestReport)]
         private static async Task<StandardErrorCode> ReceiveReportRequest(MessageContext ctx, ulong player, ulong admin, string message, EReportType type)
         {
             if (!UCWarfare.IsLoaded)

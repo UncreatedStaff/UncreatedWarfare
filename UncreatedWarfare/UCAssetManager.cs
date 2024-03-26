@@ -302,11 +302,11 @@ public static class UCAssetManager
         public static readonly NetCall<string, Type> RequestFindAssetByText = new NetCall<string, Type>(ReceiveRequestAssetByText);
         public static readonly NetCall<Guid> RequestFindAssetByGuid = new NetCall<Guid>(ReceiveRequestAssetByGuid);
 
-        public static readonly NetCallRaw<AssetInfo[]> SendFindAssets = new NetCallRaw<AssetInfo[]>(3103, AssetInfo.ReadMany, AssetInfo.WriteMany);
+        public static readonly NetCallRaw<AssetInfo[]> SendFindAssets = new NetCallRaw<AssetInfo[]>(KnownNetMessage.SendFindAssets, AssetInfo.ReadMany, AssetInfo.WriteMany);
 
         private static MethodInfo? _idMethod;
         private static MethodInfo? _textMethod;
-        [NetCall(ENetCall.FROM_SERVER, 3100)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestFindAssetById)]
         private static void ReceiveRequestAssetById(MessageContext context, ushort id, Type assetType)
         {
             if (!Level.isLoaded)
@@ -337,7 +337,7 @@ public static class UCAssetManager
                 ctx.Reply(SendFindAssets, info);
             }
         }
-        [NetCall(ENetCall.FROM_SERVER, 3101)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestFindAssetByText)]
         private static void ReceiveRequestAssetByText(MessageContext context, string name, Type assetType)
         {
             if (!Level.isLoaded)
@@ -362,7 +362,7 @@ public static class UCAssetManager
 
             ctx.Reply(SendFindAssets, info);
         }
-        [NetCall(ENetCall.FROM_SERVER, 3102)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestFindAssetByGuid)]
         private static void ReceiveRequestAssetByGuid(MessageContext context, Guid guid)
         {
             if (!Level.isLoaded)

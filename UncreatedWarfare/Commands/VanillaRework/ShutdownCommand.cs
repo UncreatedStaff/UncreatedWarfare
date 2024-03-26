@@ -176,9 +176,9 @@ public class ShutdownCommand : Command
     }
     public static class NetCalls
     {
-        public static readonly NetCall<ulong, string> SendShuttingDownInstant = new NetCall<ulong, string>(1012);
-        public static readonly NetCall<ulong, string> SendShuttingDownAfter = new NetCall<ulong, string>(1013);
-        public static readonly NetCall<ulong> SendCancelledShuttingDownAfter = new NetCall<ulong>(1014);
-        public static readonly NetCall<ulong, string, uint> SendShuttingDownInSeconds = new NetCall<ulong, string, uint>(1015);
+        public static readonly NetCall<ulong, string> SendShuttingDownInstant = new NetCall<ulong, string>(KnownNetMessage.SendShuttingDownInstant);
+        public static readonly NetCall<ulong, string> SendShuttingDownAfter = new NetCall<ulong, string>(KnownNetMessage.SendShuttingDownAfter);
+        public static readonly NetCall<ulong> SendCancelledShuttingDownAfter = new NetCall<ulong>(KnownNetMessage.SendCancelledShuttingDownAfter);
+        public static readonly NetCall<ulong, string, uint> SendShuttingDownInSeconds = new NetCall<ulong, string, uint>(KnownNetMessage.SendShuttingDownInSeconds);
     }
 }

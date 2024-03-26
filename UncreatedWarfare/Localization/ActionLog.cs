@@ -641,11 +641,11 @@ public class ActionLog : MonoBehaviour
     }
     public static class NetCalls
     {
-        public static readonly NetCallRaw<ActionLogMeta, byte[]> SendLog = new NetCallRaw<ActionLogMeta, byte[]>(1127, ActionLogMeta.ReadMeta,
+        public static readonly NetCallRaw<ActionLogMeta, byte[]> SendLog = new NetCallRaw<ActionLogMeta, byte[]>(KnownNetMessage.SendLog, ActionLogMeta.ReadMeta,
             reader => reader.ReadLongBytes(), ActionLogMeta.WriteMeta, (writer, b) => writer.WriteLong(b));
         public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
 
-        [NetCall(ENetCall.FROM_SERVER, 1128)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestCurrentLog)]
         internal static Task ReceiveCurrentLogRequest(MessageContext context)
         {
             if (UCWarfare.Config.SendActionLogs && _instance != null)

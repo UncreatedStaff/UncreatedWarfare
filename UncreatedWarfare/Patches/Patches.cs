@@ -98,7 +98,7 @@ public static partial class Patches
             {
                 LogMessage log = new LogMessage(splits[i], Console.ForegroundColor);
                 L.AddLog(log);
-                if (UCWarfare.CanUseNetCall && value.IndexOf(LOG_MESSAGE_ID_STR, StringComparison.Ordinal) != 21)
+                if (UCWarfare.CanUsNetCallOrigin && value.IndexOf(LOG_MESSAGE_ID_STR, StringComparison.Ordinal) != 21)
                     L.NetCalls.SendLogMessage.Invoke(Data.NetClient!, log, 0);
             }
         }*/

@@ -34,7 +34,7 @@ public sealed class PlayerList : BaseSingletonComponent
     {
         public static NetCall SendTickPlayerList = new NetCall(ReceivePlayerListTick);
 
-        [NetCall(ENetCall.FROM_SERVER, 1102)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendTickPlayerList)]
         private static void ReceivePlayerListTick(MessageContext ctx)
         {
             PlayerList? list = Instance;

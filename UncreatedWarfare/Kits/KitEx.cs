@@ -390,18 +390,18 @@ public static class KitEx
         public static readonly NetCall<ulong, ulong, string> RequestUnlockLoadout = new NetCall<ulong, ulong, string>(ReceiveUnlockLoadoutRequest);
         public static readonly NetCall<string, ulong> RequestKitAccess = new NetCall<string, ulong>(ReceiveKitAccessRequest);
         public static readonly NetCall<string[], ulong> RequestKitsAccess = new NetCall<string[], ulong>(ReceiveKitsAccessRequest);
-        public static readonly NetCall<ulong[]> RequestIsNitroBoosting = new NetCall<ulong[]>(1138, capacity: sizeof(ulong) * 48 + sizeof(ushort));
-        public static readonly NetCall<ulong, int> RequestIsModifyLoadoutTicketOpen = new NetCall<ulong, int>(1038);
+        public static readonly NetCall<ulong[]> RequestIsNitroBoosting = new NetCall<ulong[]>(KnownNetMessage.RequestIsNitroBoosting, capacity: sizeof(ulong) * 48 + sizeof(ushort));
+        public static readonly NetCall<ulong, int> RequestIsModifyLoadoutTicketOpen = new NetCall<ulong, int>(KnownNetMessage.RequestIsModifyLoadoutTicketOpen);
 
-        public static readonly NetCall<string, Class, string> SendKitClass = new NetCall<string, Class, string>(1114);
-        public static readonly NetCall<string, int> SendAckCreateLoadout = new NetCall<string, int>(1111);
-        public static readonly NetCall<int[]> SendAckSetKitsAccess = new NetCall<int[]>(1133);
-        public static readonly NetCall<byte, byte[]> SendKitsAccess = new NetCall<byte, byte[]>(1137);
-        public static readonly NetCall<byte[]> RespondIsNitroBoosting = new NetCall<byte[]>(1139, 50);
+        public static readonly NetCall<string, Class, string> SendKitClass = new NetCall<string, Class, string>(KnownNetMessage.SendKitClass);
+        public static readonly NetCall<string, int> SendAckCreateLoadout = new NetCall<string, int>(KnownNetMessage.SendAckCreateLoadout);
+        public static readonly NetCall<int[]> SendAckSetKitsAccess = new NetCall<int[]>(KnownNetMessage.SendAckSetKitsAccess);
+        public static readonly NetCall<byte, byte[]> SendKitsAccess = new NetCall<byte, byte[]>(KnownNetMessage.SendKitsAccess);
+        public static readonly NetCall<byte[]> RespondIsNitroBoosting = new NetCall<byte[]>(KnownNetMessage.RespondIsNitroBoosting, 50);
         public static readonly NetCall<ulong[], byte[]> SendNitroBoostingUpdated = new NetCall<ulong[], byte[]>(ReceiveIsNitroBoosting);
 
 
-        [NetCall(ENetCall.FROM_SERVER, 1100)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestSetKitAccess)]
         internal static async Task<StandardErrorCode> ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kitId, KitAccessType type, bool state)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
@@ -430,7 +430,7 @@ public static class KitEx
             return StandardErrorCode.Success;
 
         }
-        [NetCall(ENetCall.FROM_SERVER, 1132)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestSetKitsAccess)]
         internal static async Task ReceiveSetKitsAccess(MessageContext context, ulong admin, ulong player, string[] kits, KitAccessType type, bool state)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
@@ -474,7 +474,7 @@ public static class KitEx
         }
         /// <returns><see cref="PlayerHasAccessCode"/> if the player has access to the kit, <see cref="PlayerHasNoAccessCode"/> if they don't,<br/>
         /// <see cref="KitNotFoundErrorCode"/> if the kit isn't found, and <see cref="MessageContext.CODE_GENERIC_FAILURE"/> if <see cref="KitManager"/> isn't loaded.</returns>
-        [NetCall(ENetCall.FROM_SERVER, 1134)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestKitAccess)]
         private static async Task<int> ReceiveKitAccessRequest(MessageContext context, string kitId, ulong player)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
@@ -488,7 +488,7 @@ public static class KitEx
             return await manager.HasAccess(kit, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode;
         }
 
-        [NetCall(ENetCall.FROM_SERVER, 1136)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestKitsAccess)]
         private static async Task ReceiveKitsAccessRequest(MessageContext context, string[] kits, ulong player)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
@@ -512,7 +512,7 @@ public static class KitEx
         }
         
 
-        [NetCall(ENetCall.FROM_SERVER, 1113)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestKitClass)]
         internal static async Task ReceiveRequestKitClass(MessageContext context, string kitId)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
@@ -530,7 +530,7 @@ public static class KitEx
 
             context.Reply(SendKitClass, kitId, Class.None, kitId);
         }
-        [NetCall(ENetCall.FROM_SERVER, 1110)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestCreateLoadout)]
         private static async Task ReceiveCreateLoadoutRequest(MessageContext context, ulong fromPlayer, ulong player, Class @class, string displayName)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
@@ -545,7 +545,7 @@ public static class KitEx
                 context.Reply(SendAckCreateLoadout, string.Empty, (int)StandardErrorCode.ModuleNotLoaded);
             }
         }
-        [NetCall(ENetCall.FROM_SERVER, 1141)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestUpgradeLoadout)]
         private static async Task ReceiveUpgradeLoadoutRequest(MessageContext context, ulong fromPlayer, ulong player, Class @class, string loadoutId)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
@@ -560,7 +560,7 @@ public static class KitEx
                 context.Acknowledge(StandardErrorCode.ModuleNotLoaded);
             }
         }
-        [NetCall(ENetCall.FROM_SERVER, 1142)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestUnlockLoadout)]
         private static async Task ReceiveUnlockLoadoutRequest(MessageContext context, ulong fromPlayer, ulong player, string displayName)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
@@ -575,7 +575,7 @@ public static class KitEx
                 context.Acknowledge(StandardErrorCode.ModuleNotLoaded);
             }
         }
-        [NetCall(ENetCall.FROM_SERVER, 1140)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendNitroBoostingUpdated)]
         private static async Task ReceiveIsNitroBoosting(MessageContext context, ulong[] players, byte[] codes)
         {
             KitManager? manager = KitManager.GetSingletonQuick();

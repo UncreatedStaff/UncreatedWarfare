@@ -747,17 +747,10 @@ public static class L
 
     public static class NetCalls
     {
-        //public static readonly NetCall RequestFullLog = new NetCall(ReceiveRequestFullLog);
         public static readonly NetCall<string> RequestRunCommand = new NetCall<string>(ReceiveCommand);
-        //public static readonly NetCall<bool> SetRequestLogState = new NetCall<bool>(ReceiveRequestsLogState);
+        public static readonly NetCall<string> SendFatalException = new NetCall<string>(KnownNetMessage.SendFatalException);
 
-        //public static readonly NetCallRaw<LogMessage, byte> SendLogMessage = new NetCallRaw<LogMessage, byte>(1030, LogMessage.Read, null, LogMessage.Write, null);
-        //public static readonly NetCallRaw<LogMessage[], byte> SendFullLog = new NetCallRaw<LogMessage[], byte>(1031, LogMessage.ReadMany, null, LogMessage.WriteMany, null);
-        public static readonly NetCall<string> SendFatalException = new NetCall<string>(1131);
-
-        /*[NetCall(ENetCall.FROM_SERVER, 1029)]
-        internal static void ReceiveRequestFullLog(MessageContext context) => context.Reply(SendFullLog, Logs.ToArray(), (byte)0);*/
-        [NetCall(ENetCall.FROM_SERVER, 1032)]
+        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestRunCommand)]
         internal static void ReceiveCommand(MessageContext context, string command)
         {
             if (UCWarfare.IsMainThread)
@@ -765,11 +758,6 @@ public static class L
             else
                 UCWarfare.RunOnMainThread(() => RunCommand(command));
         }
-        /*[NetCall(ENetCall.FROM_SERVER, 1023)]
-        private static void ReceiveRequestsLogState(MessageContext context, bool state)
-        {
-            isRequestingLog = state;
-        }*/
     }
 
     public sealed class UCLogger : ILogger
