@@ -901,8 +901,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
                 if (item is not IAssetRedirect && asset is ItemGunAsset && !UCWarfare.Config.DisableAprilFools && HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS))
                 {
-                                           // Dootpressor
-                    if (Assets.find(new Guid("c3d3123823334847a9fd294e5d764889")) is ItemBarrelAsset barrel)
+                    if (Assets.find(UCWarfare.AprilFoolsBarrel) is ItemBarrelAsset barrel)
                     {
                         unsafe
                         {
@@ -984,6 +983,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                         }
                         L.LogWarning("[GIVE KIT] Out of bounds item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
                         (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((itm, jar));
+                        continue;
                     }
 
                     int ic2 = page.getItemCount();

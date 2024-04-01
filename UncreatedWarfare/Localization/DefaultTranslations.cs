@@ -1347,6 +1347,81 @@ internal static class T
     public static readonly Translation SignSaddamHussein = new Translation("<color=red>Saddam Hussein\n ▇▅▆▇▆▅▅█</color>", TranslationFlags.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "elite_kit_pointer", Description = "Points to the building with elite kits.")]
     public static readonly Translation SignEliteKitPointer = new Translation("<color=#f0a31c>Elite kits found in this building     --></color>", TranslationFlags.TMProSign);
+    
+    [TranslationData(Section = SectionSigns, SignId = "faq1_1")]
+    public static readonly Translation SignFAQ1Part1 = new Translation("""
+                                                                       <#fa6122>Giving up or Flaring
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq1_2")]
+    public static readonly Translation SignFAQ1Part2 = new Translation("""
+                                                                       <#2df332>Q: Help! I can't give up when I'm downed or flare in a air vehicle </color>
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq1_3")]
+    public static readonly Translation SignFAQ1Part3 = new Translation("""
+                                                                        <#FFFFFF>A: Press <#2df332>/</color> on your keyboard to give up when downed or flare. If this doesn't work head to</color>
+                                                                        <#f01f1c>Controls -> Mods/Plugins -> Code Hotkey#3
+                                                                        """, TranslationFlags.TMProSign);
+    
+    [TranslationData(Section = SectionSigns, SignId = "faq2_1")]
+    public static readonly Translation SignFAQ2Part1 = new Translation("""
+                                                                       <#fa6122>Squad Commands
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq2_2")]
+    public static readonly Translation SignFAQ2Part2 = new Translation("""
+                                                                       <#fa6122>To Join a Squad
+                                                                       <#FFFFFF>/Squad join <#2df332>(Name)</color>
+                                                                       <#fa6122>To Create a Squad
+                                                                       <#FFFFFF>/Squad Create
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq2_3")]
+    public static readonly Translation SignFAQ2Part3 = new Translation("""
+                                                                       <#fa6122>Other Squad Commands
+                                                                       <#FFFFFF>/squad leave
+                                                                       /squad disband
+                                                                       /squad promote <#2df332>(player)</color>
+                                                                       /squad kick <#2df332>(player)
+                                                                       </color>/squad lock / unlock
+                                                                       """, TranslationFlags.TMProSign);
+    
+    [TranslationData(Section = SectionSigns, SignId = "faq3_1")]
+    public static readonly Translation SignFAQ3Part1 = new Translation("""
+                                                                       <#fa6122>How do I get a kit?
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq3_2")]
+    public static readonly Translation SignFAQ3Part2 = new Translation("""
+                                                                       <#FFFFFF>If you are new to the server look at a kit sign that says free, and type <#2df332>/request</color> to receive it
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq3_3")]
+    public static readonly Translation SignFAQ3Part3 = new Translation("""
+                                                                       <#FFFFFF>Some kits are not free and will need to be purchased with in-game credits, do <#2df332>/buy</color> on the kit sign to purchase it
+                                                                       """, TranslationFlags.TMProSign);
+    
+    [TranslationData(Section = SectionSigns, SignId = "faq4_1")]
+    public static readonly Translation SignFAQ4Part1 = new Translation("""
+                                                                       <#fa6122>How do I deploy to the battlefield?
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq4_2")]
+    public static readonly Translation SignFAQ4Part2 = new Translation("""
+                                                                       <#FFFFFF>On the left side of your screen, you can see the FOBs that belong to your team. Each fob displays a different number <#6698FF>(FOB#)</color>, and location.
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq4_3")]
+    public static readonly Translation SignFAQ4Part3 = new Translation("""
+                                                                       <#FFFFFF>To deploy you have to type: /dep fob(number) <#2df332>e.g. /deploy fob1</color> Check its location before deploying.
+                                                                       """, TranslationFlags.TMProSign);
+    
+    [TranslationData(Section = SectionSigns, SignId = "faq5_1")]
+    public static readonly Translation SignFAQ5Part1 = new Translation("""
+                                                                       <#fa6122>How do I get a vehicle?
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq5_2")]
+    public static readonly Translation SignFAQ5Part2 = new Translation("""
+                                                                       <#FFFFFF>Look at a vehicle you would like to request, and type <#2df332>/request</color> to unlock the vehicle
+                                                                       """, TranslationFlags.TMProSign);
+    [TranslationData(Section = SectionSigns, SignId = "faq5_3")]
+    public static readonly Translation SignFAQ5Part3 = new Translation("""
+                                                                       <#FFFFFF>Some Vehicles require a special kit: Like Helicopters APCs, IFVs, and MBTs. You'll need to request and/or buy, <#2df332>the crewman or pilot kit to gain access to them
+                                                                       """, TranslationFlags.TMProSign);
+    
     #endregion
 
     #region Announcements

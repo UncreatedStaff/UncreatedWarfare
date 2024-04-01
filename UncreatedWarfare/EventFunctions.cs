@@ -1852,5 +1852,19 @@ public static class EventFunctions
         e.Player.SendChat(T.NoCraftingBlueprint);
         e.Break();
     }
+    
+    internal static void ChangeBarrelRequested(PlayerEquipment equipment, UseableGun gun, Item olditem, ItemJar newitem, ref bool shouldallow)
+    {
+        if (!HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS))
+            return;
+
+        if (olditem?.GetAsset() is not { } asset || asset.GUID != UCWarfare.AprilFoolsBarrel)
+            return;
+
+        if (UCPlayer.FromPlayer(equipment.player) is { } player && player.OnDuty())
+            return;
+
+        shouldallow = false;
+    }
 }
 #pragma warning restore IDE0060 // Remove unused parameter
