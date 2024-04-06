@@ -49,7 +49,7 @@ internal class MapScheduler : MonoBehaviour
     public static string GetMapName(int index) => MapRotation[index].Name;
 
     // Map to load if rotation is undefined
-    private static readonly string DefaultMap = GulfOfAqaba;
+    private static readonly string DefaultMap = ChangbaiShan;
 
     private static List<ulong> _originalMods;
     private static List<ulong> _originalIgnoreChildren;

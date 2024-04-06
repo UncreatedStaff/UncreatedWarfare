@@ -152,7 +152,7 @@ public static class UCBarricadeManager
                 for (int i = 0; i < region.Count; i++)
                 {
                     LevelObject drop = region[i];
-                    if (drop.asset.GUID == guid && drop.GetPosition() == pos)
+                    if (drop.asset != null && drop.asset.GUID == guid && drop.GetPosition() == pos)
                         return drop;
                 }
             }
@@ -162,7 +162,7 @@ public static class UCBarricadeManager
                 for (int i = 0; i < region.Count; i++)
                 {
                     LevelObject drop = region[i];
-                    if (drop.asset.GUID != guid) continue;
+                    if (drop.asset != null && drop.asset.GUID != guid) continue;
                     Vector3 pos2 = drop.GetPosition() - pos;
                     if (pos2.x > -tolerance && pos2.x < tolerance &&
                         pos2.y > -tolerance && pos2.y < tolerance &&
