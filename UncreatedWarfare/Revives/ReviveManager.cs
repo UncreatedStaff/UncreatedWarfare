@@ -351,7 +351,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             Vector3 downedPlayerPos = player.Position;
             foreach (UCPlayer nearbyMedic in PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == team && x.KitClass == Class.Medic && (x.Position - downedPlayerPos).sqrMagnitude < notifyDistSqr))
             {
-                Tips.TryGiveTip(nearbyMedic, 0, T.TipInjuredNearby, player);
+                if (player.Steam64 != nearbyMedic.Steam64)
+                    Tips.TryGiveTip(nearbyMedic, 0, T.TipInjuredNearby, player);
             }
         }
 
