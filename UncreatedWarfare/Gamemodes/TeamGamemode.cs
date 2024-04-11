@@ -141,16 +141,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
             else
                 TeamManager.EvaluateBases();
         }
-
-#if DEBUG
-        // AMC damage multiplier test
-        if (EverySecond)
-        {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                player.SendString($"AMC Damage Mult: {player.GetAMCDamageMultiplier().ToString("F4", player.Locale.CultureInfo)}.");
-        }
-#endif
-
+        
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             UCPlayer player = PlayerManager.OnlinePlayers[i];

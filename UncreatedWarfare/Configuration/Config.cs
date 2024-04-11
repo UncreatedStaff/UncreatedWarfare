@@ -123,9 +123,26 @@ public class SystemConfigData : JSONConfigData
         get => WebsiteUri?.OriginalString;
         set => WebsiteUri = value == null ? null : new Uri(value);
     }
+    [JsonPropertyName("audio_record_url")]
+    public string? AudioRecordBaseUrl
+    {
+        get => AudioRecordBaseUri?.OriginalString;
+        set => AudioRecordBaseUri = value == null ? null : new Uri(value);
+    }
+    [JsonPropertyName("audio_record_username")]
+    public string? AudioRecordUsername { get; set; }
+
+    [JsonPropertyName("audio_record_password")]
+    public string? AudioRecordPassword { get; set; }
+
+    [JsonPropertyName("voice_buffer_size")]
+    public int VoiceBufferSize { get; set; }
 
     [JsonIgnore]
     public Uri? WebsiteUri { get; set; }
+
+    [JsonIgnore]
+    public Uri? AudioRecordBaseUri { get; set; }
 
     public override void SetDefaults()
     {
@@ -176,6 +193,7 @@ public class SystemConfigData : JSONConfigData
         SteamAPIKey = null;
         StripeAPIKey = null;
         WebsiteDomain = null;
+        VoiceBufferSize = 1048576; // 1 MiB
     }
     public class ModerationConfig
     {

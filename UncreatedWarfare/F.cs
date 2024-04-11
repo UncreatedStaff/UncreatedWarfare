@@ -2126,6 +2126,35 @@ public static class F
             db.UpdateAvatar(summary.Steam64, AvatarSize.Full, summary.AvatarUrlFull);
         }
     }
+    /// <summary>
+    /// Counts the number of (base 10) digits in a number.
+    /// </summary>
+    /// <remarks>Include separators every 3 digits.</remarks>
+    public static int CountDigits(int num, bool commas = false) => CountDigits((uint)Math.Abs(num), commas);
+
+    /// <summary>
+    /// Counts the number of (base 10) digits in a number.
+    /// </summary>
+    /// <remarks>Include separators every 3 digits.</remarks>
+    public static int CountDigits(uint num, bool commas = false)
+    {
+        int c = num switch
+        {
+            <= 9 => 1,
+            <= 99 => 2,
+            <= 999 => 3,
+            <= 9999 => 4,
+            <= 99999 => 5,
+            <= 999999 => 6,
+            <= 9999999 => 7,
+            <= 99999999 => 8,
+            <= 999999999 => 9,
+            _ => 10
+        };
+        if (commas)
+            c += (c - 1) / 3;
+        return c;
+    }
 }
 
 public readonly struct PrimaryKeyPair<T>

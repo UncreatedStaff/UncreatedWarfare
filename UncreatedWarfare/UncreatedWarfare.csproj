@@ -127,6 +127,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
     <PackageReference Include="MySqlConnector" Version="2.3.6" />
     <PackageReference Include="System.Text.Json" Version="7.0.4" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="7.5.1" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="SET &quot;sourcedir=$(OutDir)&#xD;&#xA;XCOPY /v /y &quot;%25sourcedir%25\$(ProjectName).dll*&quot; &quot;C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin\$(ProjectName).dll*&quot;&#xD;&#xA;XCOPY /v /y &quot;%25sourcedir%25\$(ProjectName).pdb*&quot; &quot;C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin\$(ProjectName).pdb*&quot;&#xD;&#xA;XCOPY /v /y &quot;%25sourcedir%25\$(ProjectName).xml*&quot; &quot;C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin\$(ProjectName).xml*&quot;&#xD;&#xA;FOR %25%25a IN (&quot;C:\SteamCMD\steamapps\common\U3DS\Uncreated\Warfare\Lang\en-us\*&quot;) DO DEL &quot;%25%25a&quot; " />
