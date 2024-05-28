@@ -11,6 +11,7 @@ using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
@@ -1643,21 +1644,22 @@ public static class EventFunctions
             bool kick = false;
             string? cn = null;
             string? nn = null;
-            string? match = Data.GetChatFilterViolation(e.PendingPlayer.playerID.playerName);
+            bool isAdmin = PermissionSaver.Instance.GetPlayerPermissionLevel(e.Steam64) > EAdminType.MEMBER;
+            string? match = isAdmin ? null : Data.GetChatFilterViolation(e.PendingPlayer.playerID.playerName);
             if (match != null)
             {
                 LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
                 ActionLog.Add(ActionLogType.ChatFilterViolation, "PLAYER NAME: " + e.PendingPlayer.playerID.playerName, e.PendingPlayer.playerID.steamID.m_SteamID);
                 throw e.Reject(T.NameProfanityPlayerNameKickMessage.Translate(langInfo, match));
             }
-            match = Data.GetChatFilterViolation(e.PendingPlayer.playerID.characterName);
+            match = isAdmin ? null : Data.GetChatFilterViolation(e.PendingPlayer.playerID.characterName);
             if (match != null)
             {
                 LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
                 ActionLog.Add(ActionLogType.ChatFilterViolation, "CHARACTER NAME: " + e.PendingPlayer.playerID.characterName, e.PendingPlayer.playerID.steamID.m_SteamID);
                 throw e.Reject(T.NameProfanityCharacterNameKickMessage.Translate(langInfo, match));
             }
-            match = Data.GetChatFilterViolation(e.PendingPlayer.playerID.nickName);
+            match = isAdmin ? null : Data.GetChatFilterViolation(e.PendingPlayer.playerID.nickName);
             if (match != null)
             {
                 LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
