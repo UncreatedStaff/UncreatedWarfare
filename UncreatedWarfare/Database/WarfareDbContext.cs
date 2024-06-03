@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Storage;
 using System;
+using Newtonsoft.Json.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Models.Authentication;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
@@ -72,6 +74,8 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
         IStatsDbContext.ConfigureModels(modelBuilder);
         ISeasonsDbContext.ConfigureModels(modelBuilder);
         IGameDataDbContext.ConfigureModels(modelBuilder);
+
+        modelBuilder.Entity<HomebaseAuthenticationKey>();
 
         /* Adds preset value converters */
         WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder);

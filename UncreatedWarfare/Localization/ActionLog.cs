@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -912,6 +913,7 @@ public enum ActionLogType : byte
     
     [Translatable(IsPrioritizedTranslation = false)]
     [Obsolete("Don't use this.")]
+    [Ignore]
     Max = RemoveModerationEntry
 }
 // ReSharper restore InconsistentNaming

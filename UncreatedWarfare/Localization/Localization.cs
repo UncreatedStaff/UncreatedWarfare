@@ -937,7 +937,7 @@ public static class Localization
 
         for (int i = 0; i < fields.Length; ++i)
         {
-            if (Attribute.IsDefined(fields[i], typeof(JsonIgnoreAttribute)))
+            if (Attribute.IsDefined(fields[i], typeof(JsonIgnoreAttribute)) || fields[i].IsIgnored())
                 continue;
             string k0 = fields[i].GetValue(null).ToString();
             string? k1 = null;

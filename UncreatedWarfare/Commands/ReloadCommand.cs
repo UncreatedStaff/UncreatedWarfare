@@ -10,6 +10,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
@@ -59,46 +60,46 @@ public class ReloadCommand : AsyncCommand
         if (!ctx.TryGet(0, out string module))
             throw ctx.SendCorrectUsage(Syntax);
 
-        if (module.Equals("help", StringComparison.OrdinalIgnoreCase))
+        if (module.Equals("help", StringComparison.InvariantCultureIgnoreCase))
             throw ctx.SendNotImplemented();
 
-        if (module.Equals("translations", StringComparison.OrdinalIgnoreCase) || module.Equals("lang", StringComparison.OrdinalIgnoreCase))
+        if (module.Equals("translations", StringComparison.InvariantCultureIgnoreCase) || module.Equals("lang", StringComparison.InvariantCultureIgnoreCase))
         {
             await ReloadTranslations(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             ctx.Reply(T.ReloadedTranslations, Localization.TotalDefaultTranslations);
             ctx.LogAction(ActionLogType.ReloadComponent, "TRANSLATIONS");
         }
-        else if (module.Equals("flags", StringComparison.OrdinalIgnoreCase))
+        else if (module.Equals("flags", StringComparison.InvariantCultureIgnoreCase))
         {
             ReloadFlags();
             ctx.Reply(T.ReloadedFlags);
             ctx.LogAction(ActionLogType.ReloadComponent, "FLAGS");
         }
-        else if (module.Equals("permissions", StringComparison.OrdinalIgnoreCase))
+        else if (module.Equals("permissions", StringComparison.InvariantCultureIgnoreCase))
         {
             ReloadPermissions();
             ctx.Reply(T.ReloadedPermissions);
             ctx.LogAction(ActionLogType.ReloadComponent, "PERMISSIONS");
         }
-        else if (module.Equals("colors", StringComparison.OrdinalIgnoreCase))
+        else if (module.Equals("colors", StringComparison.InvariantCultureIgnoreCase))
         {
             ReloadColors();
             ctx.Reply(T.ReloadedGeneric, "colors");
             ctx.LogAction(ActionLogType.ReloadComponent, "COLORS");
         }
-        else if (module.Equals("tcp", StringComparison.OrdinalIgnoreCase))
+        else if (module.Equals("homebase", StringComparison.InvariantCultureIgnoreCase)
+                 || module.Equals("tcp", StringComparison.InvariantCultureIgnoreCase))
         {
-            await ReloadTCPServer().ConfigureAwait(false);
-            ctx.Reply(T.ReloadedTCP);
+            await ReloadHomebase(ctx).ConfigureAwait(false);
             ctx.LogAction(ActionLogType.ReloadComponent, "TCP SERVER");
         }
-        else if (module.Equals("sql", StringComparison.OrdinalIgnoreCase))
+        else if (module.Equals("sql", StringComparison.InvariantCultureIgnoreCase))
         {
             await ReloadSQLServer(ctx, token).ConfigureAwait(false);
             ctx.LogAction(ActionLogType.ReloadComponent, "MYSQL CONNECTION");
         }
-        else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase) || module.Equals("factions", StringComparison.OrdinalIgnoreCase))
+        else if (module.Equals("teams", StringComparison.InvariantCultureIgnoreCase) || module.Equals("factions", StringComparison.InvariantCultureIgnoreCase))
         {
             await TeamManager.ReloadFactions(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
@@ -278,12 +279,24 @@ public class ReloadCommand : AsyncCommand
             L.LogError(ex);
         }
     }
-    internal static async Task ReloadTCPServer()
+    internal static async Task ReloadHomebase(CommandInteraction? ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        await UCWarfare.I.InitNetClient();
+        if (Data.RpcConnection is { IsClosed: false })
+        {
+            await Data.RpcConnection.CloseAsync();
+        }
+
+        if (await HomebaseConnector.ConnectAsync())
+        {
+            ctx?.Reply(T.ReloadedTCP);
+        }
+        else
+        {
+            ctx?.SendUnknownError();
+        }
     }
     internal static async Task ReloadSQLServer(CommandInteraction? ctx, CancellationToken token = default)
     {

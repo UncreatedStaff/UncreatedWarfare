@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -101,6 +102,8 @@ public static class L
         }
         
         Cleaner = new StackTraceCleaner(config);
+
+        Accessor.Logger = new UCLoggerReflectionTools();
     }
     public static bool IsBufferingLogs { get; set; }
     public static void FlushBadLogs()
@@ -805,6 +808,32 @@ public static class L
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => default;
     }
+    public sealed class UCLoggerReflectionTools : IReflectionToolsLogger
+    {
+        public void LogDebug(string source, string message)
+        {
+            L.LogDebug($"[{source}] {message}");
+        }
+
+        public void LogInfo(string source, string message)
+        {
+            Log($"[{source}] {message}");
+        }
+
+        public void LogWarning(string source, string message)
+        {
+            L.LogWarning(message, method: source);
+        }
+
+        public void LogError(string source, Exception? ex, string? message)
+        {
+            if (message != null)
+                L.LogError(message, method: source);
+            if (ex != null)
+                L.LogError(ex, method: source);
+        }
+    }
+
     public sealed class UCLoggerFactory : ILoggerFactory, ILoggerProvider
     {
         public bool DebugLogging { get; set; }

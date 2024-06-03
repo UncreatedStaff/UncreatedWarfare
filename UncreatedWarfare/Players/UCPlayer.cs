@@ -3,6 +3,7 @@ using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -71,6 +72,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
      * If you need it to stick around save the UCPlayer instead.
      */
     public readonly UCSemaphore PurchaseSync;
+    public readonly IReadOnlyCollection<object> Components;
     public readonly UCPlayerKeys Keys;
     public readonly UCPlayerEvents Events;
     public KitMenuUIData KitMenuData;
@@ -133,7 +135,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal int CacheLocationIndex = -1;
     internal List<DamageRecord> DamageRecords = new List<DamageRecord>(32);
     internal UCPlayer(CSteamID steamID, Player player, string characterName, string nickName,
-        bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore, PendingAsyncData data)
+        bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore,
+        PendingAsyncData data, object[] components
+        )
     {
         Steam64 = steamID.m_SteamID;
         PurchaseSync = semaphore;
@@ -141,6 +145,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         Player = player;
         CSteamID = steamID;
         AccountId = steamID.GetAccountID().m_AccountID;
+        Components = new ReadOnlyCollection<object>(components);
         Save = save;
         Locale = new UCPlayerLocale(this, data.LanguagePreferences);
         if (!Data.OriginalPlayerNames.Remove(Steam64, out _cachedName))
@@ -523,13 +528,16 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         if (Util.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
             return FromCSteamID(steamId);
 
-        if (name == null) return null;
+        if (name == null)
+            return null;
+
         UCPlayer? player = PlayerManager.OnlinePlayers.Find(
             s =>
             s.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase) ||
             s.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase) ||
             s.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase)
             );
+
         if (includeContains && player == null)
         {
             player = PlayerManager.OnlinePlayers.Find(s =>
@@ -537,6 +545,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                 s.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1 ||
                 s.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1);
         }
+
         return player;
     }
     public static UCPlayer? FromName(string name, bool includeContains, IEnumerable<UCPlayer> selection)

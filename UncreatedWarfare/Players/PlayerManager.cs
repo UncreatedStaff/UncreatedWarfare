@@ -13,6 +13,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using UnityEngine;
 using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
@@ -25,7 +26,7 @@ public static class PlayerManager
     // auto added on join and detroyed on leave
     public static readonly Type[] PlayerComponentTypes =
     {
-
+        typeof(AudioRecordPlayerComponent)
     };
 
     public static readonly List<UCPlayer> OnlinePlayers;
@@ -195,10 +196,14 @@ public static class PlayerManager
             }
         }
 
-        Component[] compBuffer = new Component[PlayerComponentTypes.Length];
+        object[] compBuffer = new object[PlayerComponentTypes.Length];
         for (int i = 0; i < PlayerComponentTypes.Length; ++i)
         {
-            compBuffer[i] = player.gameObject.AddComponent(PlayerComponentTypes[i]);
+            Type type = PlayerComponentTypes[i];
+            if (typeof(Component).IsAssignableFrom(type))
+                compBuffer[i] = player.gameObject.AddComponent(type);
+            else
+                compBuffer[i] = Activator.CreateInstance(type);
         }
 
         UCPlayer ucplayer;
@@ -227,7 +232,8 @@ public static class PlayerManager
                 src ?? new CancellationTokenSource(),
                 save,
                 semaphore,
-                asyncData
+                asyncData,
+                compBuffer
             );
 
             Data.OriginalPlayerNames.Remove(ucplayer.Steam64);
@@ -269,11 +275,16 @@ public static class PlayerManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         player.SetOffline();
-        for (int i = 0; i < PlayerComponentTypes.Length; ++i)
+        foreach (object component in player.Components)
         {
-            if (player.Player.TryGetComponent(PlayerComponentTypes[i], out Component comp))
-                UnityEngine.Object.Destroy(comp);
+            if (component is IManualOnDestroy onDestroy)
+                onDestroy.ManualOnDestroy();
+            if (component is IDisposable disposable)
+                disposable.Dispose();
+            if (component is UnityEngine.Object unityComponent)
+                UnityEngine.Object.Destroy(unityComponent);
         }
+
         OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == player.Steam64);
         lock (_dict)
         {

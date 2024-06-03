@@ -1,10 +1,17 @@
-﻿using JetBrains.Annotations;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Async;
+using JetBrains.Annotations;
+using System;
+using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Players;
-public sealed class PlayerList : BaseSingletonComponent
+
+[RpcClass]
+public class PlayerList : BaseSingletonComponent
 {
     private const float UpdateTime = 5f;
     public static PlayerList? Instance { get; private set; }
@@ -20,16 +27,31 @@ public sealed class PlayerList : BaseSingletonComponent
     [UsedImplicitly]
     private void Update()
     {
-        if (Time.realtimeSinceStartup - _lastTick > UpdateTime)
+        if (Time.realtimeSinceStartup - _lastTick <= UpdateTime)
         {
-            _lastTick = Time.realtimeSinceStartup;
-
-            if (UCWarfare.CanUseNetCall)
-            {
-                NetCalls.SendTickPlayerList.NetInvoke();
-            }
+            return;
         }
+
+        _lastTick = Time.realtimeSinceStartup;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await TickPlayerList();
+            }
+            catch (Exception ex)
+            {
+                await UniTask.SwitchToMainThread();
+                L.LogError("Error ticking player list.");
+                L.LogError(ex);
+            }
+        });
     }
+
+    [RpcSend, RpcTimeout(5 * Timeouts.Seconds)]
+    protected virtual RpcTask TickPlayerList() => _ = RpcTask.NotImplemented;
+
     public static class NetCalls
     {
         public static NetCall SendTickPlayerList = new NetCall(ReceivePlayerListTick);

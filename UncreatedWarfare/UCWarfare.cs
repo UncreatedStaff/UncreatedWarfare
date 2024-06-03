@@ -31,6 +31,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
@@ -76,7 +77,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     public static int Season => Version.Major;
     public static bool IsLoaded => I is not null;
     public static SystemConfigData Config => I is null ? throw new SingletonUnloadedException(typeof(UCWarfare)) : I._config.Data;
-    public static bool CanUseNetCall => IsLoaded && Config.TCPSettings.EnableTCPServer && I.NetClient != null && I.NetClient.IsActive;
+    public static bool CanUseNetCall => false;
     [UsedImplicitly]
     private void Awake()
     {
@@ -258,7 +259,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
-        await InitNetClient().ConfigureAwait(false);
+        await HomebaseConnector.ConnectAsync(token);
         await ToUpdate(token);
 
         if (!Config.DisableDailyQuests)
@@ -267,36 +268,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         ToastManager.Init();
 
         ActionLog.Add(ActionLogType.ServerStartup, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
-    }
-    internal async Task InitNetClient()
-    {
-        if (NetClient != null)
-        {
-            await NetClient.DisposeAsync().ConfigureAwait(false);
-            NetClient = null;
-        }
-
-        await ToUpdate(UnloadCancel);
-        if (Config.TCPSettings.EnableTCPServer)
-        {
-            NetClient = new WebSocketConnection(Config.TCPSettings.TCPServerIdentity, new Uri(Config.TCPSettings.TCPServerIP));
-            NetClient.OnClientVerified += Data.OnClientConnected;
-            NetClient.OnClientDisconnected += Data.OnClientDisconnected;
-            NetClient.OnSentMessage += Data.OnClientSentMessage;
-            NetClient.OnReceivedMessage += Data.OnClientReceivedMessage;
-            NetClient.ModifyVerifyPacketCallback += OnVerifyPacketMade;
-            NetClient.OnServerConfigRequested += Data.GetServerConfig;
-            L.Log("Attempting connection with Homebase...", ConsoleColor.Magenta);
-            await NetClient.Connect().ConfigureAwait(false);
-            if (NetClient.IsActive)
-                L.Log("Connected to Homebase.", ConsoleColor.Magenta);
-            else
-                L.LogError("Failed to connect to Homebase.");
-        }
-    }
-    private static void OnVerifyPacketMade(ref VerifyPacket packet)
-    {
-        packet = new VerifyPacket(packet.Identity, packet.SecretKey, packet.ApiVersion, packet.TimezoneOffset, Config.Currency, Config.RegionKey, Version);
     }
     public async Task LoadAsync(CancellationToken token)
     {

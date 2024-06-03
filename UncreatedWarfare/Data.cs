@@ -16,6 +16,10 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using DanielWillett.ModularRpcs.Abstractions;
+using DanielWillett.ModularRpcs.DependencyInjection;
+using DanielWillett.ModularRpcs.Routing;
+using DanielWillett.ModularRpcs.Serialization;
 using Uncreated.Framework;
 using Uncreated.Homebase.Unturned;
 using Uncreated.Homebase.Unturned.Warfare;
@@ -168,6 +172,11 @@ public static class Data
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
     internal static SteamPlayer NilSteamPlayer;
 
+    public static IRpcConnectionLifetime HomebaseLifetime { get; private set; }
+    public static IRpcSerializer RpcSerializer { get; private set; }
+    public static IRpcRouter RpcRouter { get; private set; }
+    public static IModularRpcRemoteConnection RpcConnection { get; internal set; }
+
     [OperationTest(DisplayName = "Fast Kits Check")]
     [Conditional("DEBUG")]
     [UsedImplicitly]
@@ -244,7 +253,7 @@ public static class Data
             Address = ip,
             FactionTeam1 = TeamManager.Team1Faction.PrimaryKey.Key,
             FactionTeam2 = TeamManager.Team2Faction.PrimaryKey.Key,
-            Identity = UCWarfare.Config.TCPSettings.TCPServerIdentity,
+            Identity = UCWarfare.Config.Identity,
             MapId = MapScheduler.Current,
             Port = Provider.port,
             MaxPlayers = Provider.maxPlayers,
@@ -284,6 +293,10 @@ public static class Data
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+
+        HomebaseLifetime = new ClientRpcConnectionLifetime();
+        RpcSerializer = new DefaultSerializer();
+        RpcRouter = new DependencyInjectionRpcRouter(Singletons, RpcSerializer, HomebaseLifetime);
 
         OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
         PlaytimeComponents = new Dictionary<ulong, UCPlayerData>(Provider.maxPlayers);

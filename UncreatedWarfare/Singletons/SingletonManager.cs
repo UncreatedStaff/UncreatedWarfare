@@ -1,4 +1,9 @@
-﻿using JetBrains.Annotations;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ModularRpcs;
+using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Reflection;
+using DanielWillett.ReflectionTools;
+using JetBrains.Annotations;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -12,7 +17,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Singletons;
 internal delegate void SingletonDelegate(IUncreatedSingleton singleton, bool success);
 internal delegate void ReloadSingletonDelegate(IReloadableSingleton singleton, bool success);
-internal class SingletonManager : MonoBehaviour
+internal class SingletonManager : MonoBehaviour, IServiceProvider
 {
     private readonly List<SingletonInformation> _singletons = new List<SingletonInformation>(32);
 
@@ -207,11 +212,23 @@ internal class SingletonManager : MonoBehaviour
 #endif
         ThreadUtil.assertIsGameThread();
         Type inputType = singleton?.GetType() ?? typeof(T);
+        if (inputType.IsDefinedSafe<RpcClassAttribute>())
+        {
+            inputType = ProxyGenerator.Instance.GetProxyType(inputType);
+        }
+
         if (typeof(Component).IsAssignableFrom(inputType))
         {
             try
             {
-                singleton = (gameObject.AddComponent(inputType) as T)!;
+                if (ProxyGenerator.Instance.IsProxyType(inputType))
+                {
+                    singleton = (T)(object)ProxyGenerator.Instance.CreateProxyComponent(gameObject, inputType, Data.RpcRouter);
+                }
+                else
+                {
+                    singleton = (T)(object)gameObject.AddComponent(inputType);
+                }
             }
             catch (Exception ex)
             {
@@ -224,7 +241,14 @@ internal class SingletonManager : MonoBehaviour
         }
         else
         {
-            singleton = Activator.CreateInstance<T>();
+            if (ProxyGenerator.Instance.IsProxyType(inputType))
+            {
+                singleton = (T)ProxyGenerator.Instance.CreateProxy(Data.RpcRouter, inputType);
+            }
+            else
+            {
+                singleton = (T)Activator.CreateInstance(inputType);
+            }
         }
     }
     /// <summary>Creates a reference to a singleton object without loading it. Call <see cref="LoadSingleton{T}(T, bool)"/> to finish loading it.</summary>
@@ -799,6 +823,23 @@ internal class SingletonManager : MonoBehaviour
                 next:;
             }
         }
+    }
+
+    public object? GetService(Type serviceType)
+    {
+        if (UCWarfare.IsMainThread)
+        {
+            return GetSingleton(serviceType);
+        }
+
+        object? service = null;
+        Task.Run(async () =>
+        {
+            await UniTask.SwitchToMainThread();
+            service = GetSingleton(serviceType);
+        }).Wait();
+
+        return service;
     }
 }
 
