@@ -172,9 +172,9 @@ public static class Data
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
     internal static SteamPlayer NilSteamPlayer;
 
-    public static IRpcConnectionLifetime HomebaseLifetime { get; private set; }
-    public static IRpcSerializer RpcSerializer { get; private set; }
-    public static IRpcRouter RpcRouter { get; private set; }
+    public static IRpcConnectionLifetime HomebaseLifetime { get; internal set; }
+    public static IRpcSerializer RpcSerializer { get; internal set; }
+    public static IRpcRouter RpcRouter { get; internal set; }
     public static IModularRpcRemoteConnection RpcConnection { get; internal set; }
 
     [OperationTest(DisplayName = "Fast Kits Check")]
@@ -293,10 +293,6 @@ public static class Data
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-
-        HomebaseLifetime = new ClientRpcConnectionLifetime();
-        RpcSerializer = new DefaultSerializer();
-        RpcRouter = new DependencyInjectionRpcRouter(Singletons, RpcSerializer, HomebaseLifetime);
 
         OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
         PlaytimeComponents = new Dictionary<ulong, UCPlayerData>(Provider.maxPlayers);

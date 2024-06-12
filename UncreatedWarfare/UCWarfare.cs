@@ -17,6 +17,12 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using DanielWillett.ModularRpcs;
+using DanielWillett.ModularRpcs.Abstractions;
+using DanielWillett.ModularRpcs.DependencyInjection;
+using DanielWillett.ModularRpcs.Reflection;
+using DanielWillett.ModularRpcs.Routing;
+using DanielWillett.ModularRpcs.Serialization;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
@@ -258,6 +264,14 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         gameObject.AddComponent<ActionLog>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
+
+        Data.HomebaseLifetime = new ClientRpcConnectionLifetime();
+        Data.RpcSerializer = new DefaultSerializer();
+        Data.RpcRouter = new DependencyInjectionRpcRouter(Data.Singletons, Data.RpcSerializer, Data.HomebaseLifetime);
+
+        ProxyGenerator.Instance.SetLogger(Accessor.Active);
+        ((IRefSafeLoggable)Data.HomebaseLifetime).SetLogger(Accessor.Active);
+        ((IRefSafeLoggable)Data.RpcRouter       ).SetLogger(Accessor.Active);
 
         await HomebaseConnector.ConnectAsync(token);
         await ToUpdate(token);
@@ -1253,7 +1267,15 @@ public class UCWarfareNexus : IModuleNexus
     }
     private static Assembly? ErrorAssemblyNotResolved(object sender, ResolveEventArgs args)
     {
-        CommandWindow.LogError($"Unknown assembly: {args.Name}.");
+        // this can be raised when looking for other language translations for an assembly
+        if (!args.Name.Contains(".resources, ", StringComparison.Ordinal))
+        {
+            CommandWindow.LogError($"Unknown assembly: {args.Name}.");
+        }
+        else
+        {
+            CommandWindow.Log($"Unknown resx assembly: {args.Name}.");
+        }
         return null;
     }
     private static Assembly? ResolveAssemblyCompiler(object sender, ResolveEventArgs args)

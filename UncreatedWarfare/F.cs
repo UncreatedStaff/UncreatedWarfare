@@ -1906,12 +1906,14 @@ public static class F
             player.Player.quests.TrackQuest(null);
         return true;
     }
+    [Obsolete("this is bad this needs removed")]
     public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other)
     {
         if (token == other)
             return;
         token = token.CanBeCanceled && token != other ? CancellationTokenSource.CreateLinkedTokenSource(token, other).Token : token;
     }
+    [Obsolete("this is bad this needs removed")]
     public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other1, CancellationToken other2)
     {
         if (token.CanBeCanceled)

@@ -41,6 +41,7 @@ using XPReward = Uncreated.Warfare.Levels.XPReward;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Permissions;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 #if DEBUG
 using HarmonyLib;
@@ -1915,7 +1916,6 @@ public class DebugCommand : AsyncCommand
 
         ctx.ReplyString(Environment.NewLine + JsonSerializer.Serialize(kit, JsonEx.serializerSettings));
     }
-
 
     private void dumpfactions(CommandInteraction ctx)
     {

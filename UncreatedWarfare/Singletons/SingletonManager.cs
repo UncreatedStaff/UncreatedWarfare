@@ -214,7 +214,13 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
         Type inputType = singleton?.GetType() ?? typeof(T);
         if (inputType.IsDefinedSafe<RpcClassAttribute>())
         {
-            inputType = ProxyGenerator.Instance.GetProxyType(inputType);
+            Type proxyType = ProxyGenerator.Instance.GetProxyType(inputType);
+            L.LogDebug($"Making singleton type {Accessor.Formatter.Format(proxyType)} instead of {Accessor.Formatter.Format(inputType)}.");
+            inputType = proxyType;
+        }
+        else
+        {
+            L.LogDebug($"Making singleton type {Accessor.Formatter.Format(inputType)}.");
         }
 
         if (typeof(Component).IsAssignableFrom(inputType))

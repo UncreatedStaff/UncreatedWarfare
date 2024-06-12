@@ -14,16 +14,21 @@ namespace Uncreated.Warfare.Players;
 public class PlayerList : BaseSingletonComponent
 {
     private const float UpdateTime = 5f;
-    public static PlayerList? Instance { get; private set; }
     private float _lastTick;
+    public static PlayerList? Instance { get; private set; }
     public override void Load()
     {
         Instance = this;
     }
+
     public override void Unload()
     {
         Instance = null;
     }
+
+    [RpcSend, RpcTimeout(5 * Timeouts.Seconds)]
+    protected internal virtual RpcTask TickPlayerList() => RpcTask.NotImplemented;
+
     [UsedImplicitly]
     private void Update()
     {
@@ -38,7 +43,7 @@ public class PlayerList : BaseSingletonComponent
         {
             try
             {
-                await TickPlayerList();
+                await TickPlayerList().IgnoreNoConnections();
             }
             catch (Exception ex)
             {
@@ -49,8 +54,12 @@ public class PlayerList : BaseSingletonComponent
         });
     }
 
-    [RpcSend, RpcTimeout(5 * Timeouts.Seconds)]
-    protected virtual RpcTask TickPlayerList() => _ = RpcTask.NotImplemented;
+    [RpcReceive]
+    private void ReceiveUpdateDelay()
+    {
+        _lastTick = Time.realtimeSinceStartup;
+        L.Log("received update delay.");
+    }
 
     public static class NetCalls
     {

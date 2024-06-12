@@ -95,7 +95,7 @@
   <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->
   <ItemGroup>
     <PackageReference Include="DanielWillett.StackCleaner" Version="[1.4.2,)" />
-    <PackageReference Include="DanielWillett.ReflectionTools" Version="[3.2.0,)" />
+    <PackageReference Include="DanielWillett.ReflectionTools" Version="[3.2.1,)" />
     <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="[3.0.0,)" />
     <PackageReference Include="Uncreated.Networking.Warfare" Version="[3.2.4,)" />
     <PackageReference Include="Uncreated.UI" Version="[1.0.0,)" />
@@ -122,13 +122,13 @@
 
   <ItemGroup>
     <Reference Include="DanielWillett.ModularRPCs">
-      <HintPath>..\..\ModularRPCs\ModularRPCs\bin\Debug\netstandard2.1\DanielWillett.ModularRPCs.dll</HintPath>
+      <HintPath>..\..\ModularRPCs\ModularRPCs\bin\Release\netstandard2.1\DanielWillett.ModularRPCs.dll</HintPath>
     </Reference>
     <Reference Include="DanielWillett.ModularRPCs.WebSockets">
-      <HintPath>..\..\ModularRPCs\ModularRPCs.WebSockets\bin\Debug\netstandard2.1\DanielWillett.ModularRPCs.WebSockets.dll</HintPath>
+      <HintPath>..\..\ModularRPCs\ModularRPCs.WebSockets\bin\Release\netstandard2.1\DanielWillett.ModularRPCs.WebSockets.dll</HintPath>
     </Reference>
     <Reference Include="DanielWillett.ModularRPCs.Unity">
-      <HintPath>..\..\ModularRPCs\ModularRPCs.Unity\bin\Debug\net461\DanielWillett.ModularRPCs.Unity.dll</HintPath>
+      <HintPath>..\..\ModularRPCs\ModularRPCs.Unity\bin\Release\net461\DanielWillett.ModularRPCs.Unity.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
