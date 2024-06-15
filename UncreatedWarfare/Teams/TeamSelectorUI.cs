@@ -15,8 +15,8 @@ public class TeamSelectorUI : UnturnedUI
     public readonly UnturnedUIElement LogicConfirmToggle = new UnturnedUIElement("anim_logic_btn_confirm");
     public readonly UnturnedUIElement LogicOpenTeamMenu = new UnturnedUIElement("anim_logic_page_teams");
     public readonly UnturnedUIElement LogicOpenOptionsMenu = new UnturnedUIElement("anim_logic_page_options");
-    public readonly UnturnedUIElement[] LogicTeamToggle = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("anim_logic_team_{0}", 1, length: 2);
-    public readonly UnturnedUIElement[] LogicTeamSelectedToggle = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("anim_logic_team_{0}_selected", 1, length: 2);
+    public readonly UnturnedUIElement[] LogicTeamToggle = ElementPatterns.CreateArray<UnturnedUIElement>("anim_logic_team_{0}", 1, length: 2);
+    public readonly UnturnedUIElement[] LogicTeamSelectedToggle = ElementPatterns.CreateArray<UnturnedUIElement>("anim_logic_team_{0}_selected", 1, length: 2);
 
     public readonly UnturnedButton ButtonConfirm = new UnturnedButton("btn_confirm");
     public readonly UnturnedLabel LabelConfirm = new UnturnedLabel("lbl_confirm");
@@ -25,14 +25,14 @@ public class TeamSelectorUI : UnturnedUI
     public readonly UnturnedLabel TeamsTitle = new UnturnedLabel("lbl_title");
 
     /* TEAM SELECTORS */
-    public readonly UnturnedButton[] TeamButtons = UnturnedUIPatterns.CreateArray<UnturnedButton>("btn_{0}", 1, length: 2);
-    public readonly UnturnedLabel[] TeamNames = UnturnedUIPatterns.CreateArray<UnturnedLabel>("lbl_name_{0}", 1, length: 2);
-    public readonly UnturnedImage[] TeamFlags = UnturnedUIPatterns.CreateArray<UnturnedImage>("img_flag_{0}", 1, length: 2);
-    public readonly UnturnedLabel[] TeamCounts = UnturnedUIPatterns.CreateArray<UnturnedLabel>("lbl_ct_{0}", 1, length: 2);
-    public readonly UnturnedLabel[] TeamStatus = UnturnedUIPatterns.CreateArray<UnturnedLabel>("lbl_status_{0}", 1, length: 2);
+    public readonly UnturnedButton[] TeamButtons = ElementPatterns.CreateArray<UnturnedButton>("btn_{0}", 1, length: 2);
+    public readonly UnturnedLabel[] TeamNames = ElementPatterns.CreateArray<UnturnedLabel>("lbl_name_{0}", 1, length: 2);
+    public readonly UnturnedImage[] TeamFlags = ElementPatterns.CreateArray<UnturnedImage>("img_flag_{0}", 1, length: 2);
+    public readonly UnturnedLabel[] TeamCounts = ElementPatterns.CreateArray<UnturnedLabel>("lbl_ct_{0}", 1, length: 2);
+    public readonly UnturnedLabel[] TeamStatus = ElementPatterns.CreateArray<UnturnedLabel>("lbl_status_{0}", 1, length: 2);
 
-    public readonly UnturnedLabel[] TeamPlayersTeam1 = UnturnedUIPatterns.CreateArray<UnturnedLabel>("pl_1_{0}", 1, length: PlayerListCount);
-    public readonly UnturnedLabel[] TeamPlayersTeam2 = UnturnedUIPatterns.CreateArray<UnturnedLabel>("pl_2_{0}", 1, length: PlayerListCount);
+    public readonly UnturnedLabel[] TeamPlayersTeam1 = ElementPatterns.CreateArray<UnturnedLabel>("pl_1_{0}", 1, length: PlayerListCount);
+    public readonly UnturnedLabel[] TeamPlayersTeam2 = ElementPatterns.CreateArray<UnturnedLabel>("pl_2_{0}", 1, length: PlayerListCount);
 
     public readonly UnturnedLabel[][] TeamPlayers;
 
@@ -44,8 +44,8 @@ public class TeamSelectorUI : UnturnedUI
     public readonly UnturnedButton OptionsTrackQuestsCheckButton = new UnturnedButton("chk_track_quests");
 
     /* INTERNATIONALIZATION */
-    public readonly LanguageBox[] Languages = UnturnedUIPatterns.CreateArray<LanguageBox>("box_l10n_{1}{0}", 1, to: 6);
-    public readonly CultureBox[] Cultures = UnturnedUIPatterns.CreateArray<CultureBox>("box_i14n_{1}{0}", 1, to: 25);
+    public readonly LanguageBox[] Languages = ElementPatterns.CreateArray<LanguageBox>("box_l10n_{1}{0}", 1, to: 6);
+    public readonly CultureBox[] Cultures = ElementPatterns.CreateArray<CultureBox>("box_i14n_{1}{0}", 1, to: 25);
 
     public readonly PlaceholderTextBox LanguageSearchBox = new PlaceholderTextBox("txt_search_l10n", "txt_search_l10n_placeholder");
     public readonly PlaceholderTextBox CultureSearchBox = new PlaceholderTextBox("txt_search_i14n", "txt_search_i14n_placeholder");
@@ -64,7 +64,7 @@ public class TeamSelectorUI : UnturnedUI
     public event Action<UCPlayer, string>? OnCultureSearch;
     public event Action<UCPlayer, int>? OnLanguageApply;
     public event Action<UCPlayer, int>? OnCultureApply;
-    public TeamSelectorUI() : base(Gamemode.Config.UITeamSelector, true, false)
+    public TeamSelectorUI() : base(Gamemode.Config.UITeamSelector.GetId(), true, false)
     {
         TeamPlayers = new UnturnedLabel[][]
         {

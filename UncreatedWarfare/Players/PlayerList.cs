@@ -3,7 +3,7 @@ using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
 using JetBrains.Annotations;
 using System;
-using System.Threading.Tasks;
+using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
@@ -27,7 +27,7 @@ public class PlayerList : BaseSingletonComponent
     }
 
     [RpcSend, RpcTimeout(5 * Timeouts.Seconds)]
-    protected internal virtual RpcTask TickPlayerList() => RpcTask.NotImplemented;
+    protected internal virtual RpcTask TickPlayerList(CancellationToken token = default) => RpcTask.NotImplemented;
 
     [UsedImplicitly]
     private void Update()
@@ -39,11 +39,11 @@ public class PlayerList : BaseSingletonComponent
 
         _lastTick = Time.realtimeSinceStartup;
 
-        Task.Run(async () =>
+        UCWarfare.RunTask(async token =>
         {
             try
             {
-                await TickPlayerList().IgnoreNoConnections();
+                await TickPlayerList(token).IgnoreNoConnections();
             }
             catch (Exception ex)
             {
@@ -51,7 +51,7 @@ public class PlayerList : BaseSingletonComponent
                 L.LogError("Error ticking player list.");
                 L.LogError(ex);
             }
-        });
+        }, UCWarfare.UnloadCancel);
     }
 
     [RpcReceive]

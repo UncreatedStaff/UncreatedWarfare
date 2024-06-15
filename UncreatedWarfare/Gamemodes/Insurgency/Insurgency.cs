@@ -99,7 +99,7 @@ public class Insurgency :
     public Insurgency() : base("Insurgency", 0.25F) { }
     protected override Task PreInit(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
@@ -114,14 +114,14 @@ public class Insurgency :
     }
     protected override Task PostInit(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         Locations.Reload();
 
         return base.PostInit(token);
     }
     protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         _gameStats.Reset();
 
         _attackTeam = (ulong)Random.Range(1, 3);
@@ -141,7 +141,7 @@ public class Insurgency :
     }
     protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         RallyManager.WipeAllRallies();
 
         TrySpawnNewCache();

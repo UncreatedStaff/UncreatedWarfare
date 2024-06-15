@@ -50,7 +50,7 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
 
         try
         {
-            token.CombineIfNeeded(CancelTokenSource.Token);
+            using CombinedTokenSources tokens = token.CombineTokensIfNeeded(CancelTokenSource.Token);
 
             await using IStatsDbContext dbContext = new TDbContext();
 
@@ -97,7 +97,7 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
             if (_itemPrimaryKeys.TryGetValue(item, out ulong pk) && pk != 0)
                 throw new InvalidOperationException("Only run create once per item.");
 
-            token.CombineIfNeeded(CancelTokenSource.Token);
+            using CombinedTokenSources tokens = token.CombineTokensIfNeeded(CancelTokenSource.Token);
 
             await using IStatsDbContext dbContext = new TDbContext();
 

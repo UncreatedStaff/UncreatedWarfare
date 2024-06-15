@@ -269,9 +269,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         Data.RpcSerializer = new DefaultSerializer();
         Data.RpcRouter = new DependencyInjectionRpcRouter(Data.Singletons, Data.RpcSerializer, Data.HomebaseLifetime);
 
-        ProxyGenerator.Instance.SetLogger(Accessor.Active);
-        ((IRefSafeLoggable)Data.HomebaseLifetime).SetLogger(Accessor.Active);
-        ((IRefSafeLoggable)Data.RpcRouter       ).SetLogger(Accessor.Active);
+        ProxyGenerator.Instance.SetLogger(L.Logger);
+        ((IRefSafeLoggable)Data.HomebaseLifetime).SetLogger(L.Logger);
+        ((IRefSafeLoggable)Data.RpcRouter       ).SetLogger(L.Logger);
 
         await HomebaseConnector.ConnectAsync(token);
         await ToUpdate(token);
@@ -1013,8 +1013,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 #endif
             if (Data.DatabaseManager != null)
             {
-                CancellationToken token2 = new CancellationTokenSource(5000).Token;
-                token2.CombineIfNeeded(token);
+                using CancellationTokenSource src = new CancellationTokenSource(5000);
+                CancellationToken token2 = src.Token;
+                using CombinedTokenSources tokens = token2.CombineTokensIfNeeded(src.Token);
                 try
                 {
                     await Data.DatabaseManager.CloseAsync(token2);
@@ -1031,8 +1032,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             }
             if (Data.RemoteSQL != null)
             {
-                CancellationToken token2 = new CancellationTokenSource(5000).Token;
-                token2.CombineIfNeeded(token);
+                using CancellationTokenSource src = new CancellationTokenSource(5000);
+                CancellationToken token2 = src.Token;
+                using CombinedTokenSources tokens = token2.CombineTokensIfNeeded(src.Token);
                 try
                 {
                     await Data.RemoteSQL.CloseAsync(token2);

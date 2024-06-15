@@ -52,16 +52,21 @@ partial class KitManager
         if (lockPurchaseSync)
         {
             Task[] tasks = new Task[players.Length];
+            CombinedTokenSources[] tknSources = new CombinedTokenSources[players.Length];
             for (int i = 0; i < players.Length; ++i)
             {
                 UCPlayer pl = players[i];
                 CancellationToken token2 = token;
-                token2.CombineIfNeeded(pl.DisconnectToken);
+                tknSources[i] = token2.CombineTokensIfNeeded(pl.DisconnectToken);
                 tasks[i] = pl.PurchaseSync.WaitAsync(token2);
             }
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            for (int i = 0; i < tknSources.Length; ++i)
+                tknSources[i].Dispose();
         }
+
         await UCWarfare.ToUpdate(token);
 
         try
@@ -408,7 +413,7 @@ partial class KitManager
     }
     internal async Task SaveFavorites(UCPlayer player, IReadOnlyList<uint> favoriteKits, CancellationToken token = default)
     {
-        token.CombineIfNeeded(UCWarfare.UnloadCancel);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
 
         await using IKitsDbContext dbContext = new WarfareDbContext();
 

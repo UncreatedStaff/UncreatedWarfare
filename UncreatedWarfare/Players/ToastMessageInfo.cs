@@ -24,7 +24,7 @@ public sealed class ToastMessageInfo
     public int Channel { get; }
     public Guid Guid { get; private set; }
     public ushort Id { get; private set; }
-    public JsonAssetReference<EffectAsset>? Asset { get; private set; }
+    public EffectAsset? Asset { get; private set; }
     public bool Inturrupt { get; }
     public bool RequiresClearing { get; }
     public bool Reliable { get; set; } = true;
@@ -73,7 +73,7 @@ public sealed class ToastMessageInfo
         RequiresResend = requiresResend && canResend;
         Key = requiresClearing || inturrupt || canResend ? UnturnedUIKeyPool.Claim() : (short)-1;
     }
-    public void UpdateAsset(JsonAssetReference<EffectAsset> asset)
+    public void UpdateAsset(EffectAsset? asset)
     {
         Asset = asset;
         if (Assets.hasLoadedUgc)
@@ -91,12 +91,12 @@ public sealed class ToastMessageInfo
         if (level != Level.BUILD_INDEX_GAME)
             return;
 
-        if (Asset?.Asset != null)
+        if (Asset != null)
         {
             if (!_durationOverridden)
-                _duration = Asset.Asset.lifetime;
-            Guid = Asset.Guid;
-            Id = Asset.Id;
+                _duration = Asset.lifetime;
+            Guid = Asset.GUID;
+            Id = Asset.id;
             UI?.LoadFromConfig(Asset);
         }
         else

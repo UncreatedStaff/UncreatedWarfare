@@ -22,7 +22,9 @@ namespace Uncreated.Warfare.FOBs;
 public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovelable, ISalvageListener
 {
     private bool _destroyed;
+#pragma warning disable CS0067 // (event not used even though it's part of an interface)
     public event Action<Action<FobItemRecord>>? UpdateRecord;
+#pragma warning restore CS0067
 #nullable disable
     public FOB FOB { get; set; }
 #nullable restore
@@ -215,7 +217,9 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     private float _progressToRepair;
     private int _repairBuildRemoved;
     private double _useTimeSeconds; // todo implement this
+#pragma warning disable CS0067 // (event not used even though it's part of an interface)
     public event Action<Action<FobItemRecord>>? UpdateRecord;
+#pragma warning restore CS0067
     public FOB? FOB { get; set; }
     public BuildableType Type { get; private set; }
     public BuildableState State { get; private set; }

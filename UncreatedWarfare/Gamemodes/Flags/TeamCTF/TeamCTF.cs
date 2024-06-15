@@ -16,7 +16,7 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     public TeamCTF() : base(nameof(TeamCTF), Config.AASEvaluateTime) { }
     protected override Task PostDispose(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         foreach (SteamPlayer player in Provider.clients)
         {
@@ -27,7 +27,7 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     }
     protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         SpawnBlockers();
         StartStagingPhase(Config.AASStagingTime);

@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Framework.UI;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.SQL;
@@ -880,17 +881,27 @@ public static class F
         }
         return false;
     }
-    public static bool HasGuid<T>(this RotatableConfig<JsonAssetReference<T>[]> assets, Guid guid) where T : Asset
+    public static void LoadFromConfig(this UnturnedUI ui, JsonAssetReference<EffectAsset>? reference)
     {
-        if (assets is null || !assets.HasValue)
-            return false;
-        return assets.Value.HasGuid(guid);
+        reference.ValidReference(out ushort id);
+        ui.LoadFromConfig(id);
     }
-    public static bool HasID<T>(this RotatableConfig<JsonAssetReference<T>[]> assets, ushort id) where T : Asset
+    public static void LoadFromConfig(this UnturnedUI ui, RotatableConfig<JsonAssetReference<EffectAsset>> reference)
+    {
+        reference.ValidReference(out ushort id);
+        ui.LoadFromConfig(id);
+    }
+    public static bool HasGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>[]>? assets, Guid guid) where TAsset : Asset
     {
         if (assets is null || !assets.HasValue)
             return false;
-        return assets.Value.HasID(id);
+        return assets.Value!.HasGuid(guid);
+    }
+    public static bool HasID<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>[]>? assets, ushort id) where TAsset : Asset
+    {
+        if (assets is null || !assets.HasValue)
+            return false;
+        return assets.Value!.HasID(id);
     }
     public static TAsset? GetAsset<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference) where TAsset : Asset
     {
@@ -903,6 +914,16 @@ public static class F
         if (reference.ValidReference(out TAsset asset))
             return asset;
         return null;
+    }
+    public static ushort GetId<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference) where TAsset : Asset
+    {
+        reference.ValidReference(out ushort id);
+        return id;
+    }
+    public static ushort GetId<TAsset>(this JsonAssetReference<TAsset>? reference) where TAsset : Asset
+    {
+        reference.ValidReference(out ushort id);
+        return id;
     }
     public static bool ValidReference<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, out Guid guid) where TAsset : Asset
     {
@@ -1000,7 +1021,7 @@ public static class F
     }
     public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, Guid match) where TAsset : Asset
     {
-        return reference.ValidReference(out Guid guid) && guid == match;
+        return reference!.ValidReference(out Guid guid) && guid == match;
     }
     public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, TAsset match) where TAsset : Asset
     {
@@ -1010,7 +1031,7 @@ public static class F
     {
         return reference.ValidReference(out Guid guid) && guid == match;
     }
-    public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, RotatableConfig<JsonAssetReference<TAsset>>? match) where TAsset : Asset
+    public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, RotatableConfig<JsonAssetReference<TAsset>> match) where TAsset : Asset
     {
         return reference.ValidReference(out Guid guid) && match.ValidReference(out Guid guid2) && guid == guid2;
     }
@@ -1906,63 +1927,73 @@ public static class F
             player.Player.quests.TrackQuest(null);
         return true;
     }
-    [Obsolete("this is bad this needs removed")]
-    public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other)
+    public static CombinedTokenSources CombineTokensIfNeeded(this ref CancellationToken token, CancellationToken other)
     {
-        if (token == other)
-            return;
-        token = token.CanBeCanceled && token != other ? CancellationTokenSource.CreateLinkedTokenSource(token, other).Token : token;
+        if (token.CanBeCanceled)
+        {
+            if (!other.CanBeCanceled)
+                return new CombinedTokenSources(token, null);
+
+            if (token == other)
+                return new CombinedTokenSources(token, null);
+
+            CancellationTokenSource src = CancellationTokenSource.CreateLinkedTokenSource(token, other);
+            token = src.Token;
+            return new CombinedTokenSources(token, src);
+        }
+
+        if (!other.CanBeCanceled)
+            return default;
+        
+        token = other;
+        return new CombinedTokenSources(other, null);
     }
-    [Obsolete("this is bad this needs removed")]
-    public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other1, CancellationToken other2)
+    public static CombinedTokenSources CombineTokensIfNeeded(this ref CancellationToken token, CancellationToken other1, CancellationToken other2)
     {
+        CancellationTokenSource src;
         if (token.CanBeCanceled)
         {
             if (other1.CanBeCanceled)
             {
-                if (other1 == other2)
+                if (other2.CanBeCanceled)
                 {
-                    if (token == other1)
-                        return;
-
-                    token = other2.CanBeCanceled
-                        ? CancellationTokenSource.CreateLinkedTokenSource(token).Token : token;
-                    return;
+                    src = CancellationTokenSource.CreateLinkedTokenSource(token, other1, other2);
+                    token = src.Token;
+                    return new CombinedTokenSources(token, src);
                 }
-                token = other2.CanBeCanceled
-                    ? CancellationTokenSource.CreateLinkedTokenSource(token, other1, other2).Token
-                    : CancellationTokenSource.CreateLinkedTokenSource(token, other1).Token;
-            }
-            else
-            {
-                if (token == other2)
-                    return;
 
-                token = other2.CanBeCanceled
-                    ? CancellationTokenSource.CreateLinkedTokenSource(token, other2).Token : token;
+                src = CancellationTokenSource.CreateLinkedTokenSource(token, other1);
+                token = src.Token;
+                return new CombinedTokenSources(token, src);
             }
+
+            if (!other2.CanBeCanceled)
+                return new CombinedTokenSources(token, null);
+            
+            src = CancellationTokenSource.CreateLinkedTokenSource(token, other2);
+            token = src.Token;
+            return new CombinedTokenSources(token, src);
         }
-        else
+        
+        if (other1.CanBeCanceled)
         {
-            if (other1.CanBeCanceled)
+            if (other2.CanBeCanceled)
             {
-                if (other1 == other2)
-                {
-                    token = other1;
-                }
-                else
-                {
-                    token = other2.CanBeCanceled
-                        ? CancellationTokenSource.CreateLinkedTokenSource(other1, other2).Token : other1;
-                }
+                src = CancellationTokenSource.CreateLinkedTokenSource(other1, other2);
+                token = src.Token;
+                return new CombinedTokenSources(token, src);
             }
-            else if (other2.CanBeCanceled)
-            {
-                if (token == other2)
-                    return;
-                token = other2;
-            }
+
+            token = other1;
+            return new CombinedTokenSources(other1, null);
         }
+
+        if (!other2.CanBeCanceled)
+            return default;
+
+        token = other2;
+        return new CombinedTokenSources(token, null);
+
     }
 
     /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>[,`<paramref name="columnPk"/>`]) VALUES (parameters[,LAST_INSERT_ID(@pk)]) ON DUPLICATE KEY UPDATE (<paramref name="columns"/>,`<paramref name="columnPk"/>`=LAST_INSERT_ID(`<paramref name="columnPk"/>`);<br/>SET @pk := (SELECT LAST_INSERT_ID() as `pk`);<br/>SELECT @pk</summary>
@@ -2282,4 +2313,18 @@ public readonly struct PrimaryKeyPair<T>
     }
 
     public override string ToString() => $"({{{Key}}}, {(Value is null ? "NULL" : Value.ToString())})";
+}
+public readonly struct CombinedTokenSources : IDisposable
+{
+    private readonly CancellationTokenSource? _tknSrc;
+    public readonly CancellationToken Token;
+    internal CombinedTokenSources(CancellationToken token, CancellationTokenSource? tknSrc)
+    {
+        Token = token;
+        _tknSrc = tknSrc;
+    }
+    public void Dispose()
+    {
+        _tknSrc?.Dispose();
+    }
 }

@@ -57,7 +57,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     protected int _t2score;
     protected override Task PreInit(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
@@ -82,7 +82,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     }
     public override Task DeclareWin(ulong winner, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         StartCoroutine(EndGameCoroutine());
         return base.DeclareWin(winner, token);

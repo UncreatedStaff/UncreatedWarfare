@@ -54,7 +54,7 @@ public class SquadMenuUI : UnturnedUI
     public readonly UnturnedUIElement[] MemberParents;
     public readonly UnturnedLabel[] MemberNames;
     public readonly UnturnedLabel[] MemberIcons;
-    public SquadMenuUI() : base(Gamemode.Config.UISquadMenu)
+    public SquadMenuUI() : base(Gamemode.Config.UISquadMenu.GetId())
     {
         OtherSquadParents = new UnturnedUIElement[]
         {

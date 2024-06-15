@@ -31,7 +31,7 @@ public class Invasion :
     public Invasion() : base(nameof(Invasion), Config.AASEvaluateTime) { }
     protected override Task PostDispose(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         foreach (SteamPlayer player in Provider.clients)
         {
@@ -42,14 +42,14 @@ public class Invasion :
     }
     protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         PickTeams();
         return base.PreGameStarting(isOnLoad, token);
     }
     protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         Flag? firstFlag = null;
         if (DefendingTeam == 1)

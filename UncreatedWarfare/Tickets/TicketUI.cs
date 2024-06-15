@@ -8,5 +8,5 @@ public class TicketUI : UnturnedUI
     public readonly UnturnedLabel Tickets = new UnturnedLabel("Tickets");
     public readonly UnturnedLabel Bleed = new UnturnedLabel("Bleed");
     public readonly UnturnedLabel Status = new UnturnedLabel("Status");
-    public TicketUI() : base(Gamemode.Config.UITickets) { }
+    public TicketUI() : base(Gamemode.Config.UITickets.GetId()) { }
 }

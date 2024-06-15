@@ -61,14 +61,14 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     protected override Task PreInit(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         if (UseTeamSelector)
             AddSingletonRequirement(ref _teamSelector);
         return TeamManager.ReloadFactions(token);
     }
     protected override Task PreDispose(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         if (HasOnReadyRan)
             DestroyBlockers();
@@ -77,7 +77,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     protected override async Task PostInit(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
@@ -110,7 +110,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
@@ -153,7 +153,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     protected override Task OnReady(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         TeamManager.CheckGroups();
         return base.OnReady(token);
@@ -271,26 +271,33 @@ public abstract class TeamGamemode : Gamemode, ITeams
         }
 
         CancellationToken token = player.DisconnectToken;
-        token.CombineIfNeeded(UnloadToken);
-        UCWarfare.RunTask(async tkn =>
+        CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
+        UCWarfare.RunTask(async tokens =>
         {
-            await UCWarfare.ToUpdate(tkn);
-            for (int i = 0; i < Singletons.Count; ++i)
+            try
             {
-                IUncreatedSingleton singleton = Singletons[i];
-                if (singleton is IJoinedTeamListener l1)
-                    l1.OnJoinTeam(player, team);
-                if (singleton is IJoinedTeamListenerAsync l2)
+                await UCWarfare.ToUpdate(tokens.Token);
+                for (int i = 0; i < Singletons.Count; ++i)
                 {
-                    Task task = l2.OnJoinTeamAsync(player, team, tkn);
-                    if (!task.IsCompleted)
+                    IUncreatedSingleton singleton = Singletons[i];
+                    if (singleton is IJoinedTeamListener l1)
+                        l1.OnJoinTeam(player, team);
+                    if (singleton is IJoinedTeamListenerAsync l2)
                     {
-                        await task.ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(tkn);
+                        Task task = l2.OnJoinTeamAsync(player, team, tokens.Token);
+                        if (!task.IsCompleted)
+                        {
+                            await task.ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(tokens.Token);
+                        }
                     }
                 }
             }
-        }, token, "Joining team: " + player.Steam64 + ".");
+            finally
+            {
+                tokens.Dispose();
+            }
+        }, tokens, "Joining team: " + player.Steam64 + ".");
     }
     public override void PlayerLeave(UCPlayer player)
     {

@@ -77,7 +77,7 @@ public sealed partial class Conquest :
     public Conquest() : base(nameof(Conquest), Config.AASEvaluateTime) { }
     protected override Task PreInit(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
         AddSingletonRequirement(ref _fobManager);
@@ -133,7 +133,7 @@ public sealed partial class Conquest :
     }
     protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();

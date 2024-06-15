@@ -96,7 +96,7 @@ public class ActionManager : BaseSingleton
     private static bool _uiWarnSent;
     private static void OpenUI(UCPlayer player, ref bool handled)
     {
-        if (!ActionMenuUI.Asset.ValidReference(out EffectAsset _))
+        if (!ActionMenuUI.HasAssetOrId)
         {
             if (!_uiWarnSent)
             {

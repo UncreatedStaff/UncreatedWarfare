@@ -149,7 +149,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();

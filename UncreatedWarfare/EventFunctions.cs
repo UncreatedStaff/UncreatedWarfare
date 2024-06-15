@@ -707,7 +707,7 @@ public static class EventFunctions
             ucplayer.Loading = true;
             bool shouldApplyLastKit = false, forceLastKitRemoval = false;
 
-            if (UCPlayer.LoadingUI.IsValid)
+            if (UCPlayer.LoadingUI.HasAssetOrId)
                 UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
 
             if (ucplayer.Player.life.isDead)
@@ -863,10 +863,9 @@ public static class EventFunctions
                 }
 
                 await UCWarfare.ToUpdate(tkn);
-                if (ucplayer.IsOnline)
+                if (ucplayer.IsOnline && UCPlayer.LoadingUI.HasAssetOrId)
                 {
-                    if (UCPlayer.LoadingUI.IsValid)
-                        UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
+                    UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
                 }
             }, token, ctx: $"Player connecting: {ucplayer.Steam64}.");
             ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);

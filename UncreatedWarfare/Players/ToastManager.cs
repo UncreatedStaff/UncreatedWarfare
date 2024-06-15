@@ -312,14 +312,14 @@ public sealed class ToastManager
     }
     internal static void ReloadToastIds()
     {
-        ToastMessages[(int)ToastMessageStyle.GameOver].UpdateAsset(Gamemode.Config.UIToastWin);
-        ToastMessages[(int)ToastMessageStyle.Large].UpdateAsset(Gamemode.Config.UIToastLarge);
-        ToastMessages[(int)ToastMessageStyle.Medium].UpdateAsset(Gamemode.Config.UIToastMedium);
-        ToastMessages[(int)ToastMessageStyle.Mini].UpdateAsset(Gamemode.Config.UIToastXP);
-        ToastMessages[(int)ToastMessageStyle.ProgressBar].UpdateAsset(Gamemode.Config.UIToastProgress);
-        ToastMessages[(int)ToastMessageStyle.Tip].UpdateAsset(Gamemode.Config.UIToastTip);
-        ToastMessages[(int)ToastMessageStyle.Popup].UpdateAsset(Gamemode.Config.UIPopup);
-        ToastMessages[(int)ToastMessageStyle.FlashingWarning].UpdateAsset(Gamemode.Config.UIFlashingWarning);
+        ToastMessages[(int)ToastMessageStyle.GameOver].UpdateAsset(Gamemode.Config.UIToastWin.GetAsset());
+        ToastMessages[(int)ToastMessageStyle.Large].UpdateAsset(Gamemode.Config.UIToastLarge.GetAsset());
+        ToastMessages[(int)ToastMessageStyle.Medium].UpdateAsset(Gamemode.Config.UIToastMedium.GetAsset());
+        ToastMessages[(int)ToastMessageStyle.Mini].UpdateAsset(Gamemode.Config.UIToastXP.GetAsset());
+        ToastMessages[(int)ToastMessageStyle.ProgressBar].UpdateAsset(Gamemode.Config.UIToastProgress.GetAsset());
+        ToastMessages[(int)ToastMessageStyle.Tip].UpdateAsset(Gamemode.Config.UIToastTip.GetAsset());
+        ToastMessages[(int)ToastMessageStyle.Popup].UpdateAsset(Gamemode.Config.UIPopup.GetAsset());
+        ToastMessages[(int)ToastMessageStyle.FlashingWarning].UpdateAsset(Gamemode.Config.UIFlashingWarning.GetAsset());
     }
     private void EnableFlags(ToastMessageInfo info)
     {

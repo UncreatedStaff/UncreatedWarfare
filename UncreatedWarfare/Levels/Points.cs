@@ -199,7 +199,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         AwardCreditsAsync(player, amount, message.Translate(player), redmessage, isPurchase, @lock, token);
     public static async Task AwardCreditsAsync(CreditsParameters parameters, CancellationToken token = default, bool @lock = true)
     {
-        token.CombineIfNeeded(UCWarfare.UnloadCancel);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
         UCPlayer? player = parameters.Player;
         Task? remote = null;
         bool locked = false;
@@ -356,7 +356,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         try
         {
             // cancel on unload
-            token.CombineIfNeeded(UCWarfare.UnloadCancel);
+            using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
             Task? remote = null;
             await UCWarfare.ToUpdate(token);
 

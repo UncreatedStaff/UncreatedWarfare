@@ -1,7 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ModularRpcs;
+using DanielWillett.ModularRpcs.Protocol;
 using DanielWillett.ModularRpcs.WebSockets;
-using DanielWillett.ReflectionTools;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,12 +12,50 @@ public static class HomebaseConnector
 {
     public static async Task<bool> ConnectAsync(CancellationToken token = default)
     {
-        await UniTask.SwitchToMainThread(token);
+        Uri? connectUri = await GetConnectUri(token);
+        if (connectUri == null)
+            return false;
 
+        L.LogDebug($"Connecting to homebase at: {connectUri}.");
+
+        WebSocketEndpoint endpoint = WebSocketEndpoint.AsClient(connectUri);
+        endpoint.ShouldAutoReconnect = true;
+#if DEBUG
+        // lower the reconnect delay
+        endpoint.DelaySettings = new PlateauingDelay(amplifier: 3.6d, climb: 1.8d, maximum: 60d, start: 10d);
+#endif
+        WebSocketClientsideRemoteRpcConnection connection;
+        try
+        {
+            connection = await endpoint.RequestConnectionAsync(Data.RpcRouter, Data.HomebaseLifetime, Data.RpcSerializer, token).ConfigureAwait(false);
+            connection.Local.SetLogger(L.Logger);
+            connection.OnReconnect += GetConnectUri;
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Failed to open WebSocket client.");
+            L.LogError(ex);
+            return false;
+        }
+
+        await UniTask.SwitchToMainThread(token);
+        Data.RpcConnection = connection;
+        return true;
+    }
+
+    private static Task<Uri?> GetConnectUri(WebSocketClientsideRemoteRpcConnection connection)
+    {
+        return GetConnectUri(CancellationToken.None);
+    }
+
+    private static async Task<Uri?> GetConnectUri(CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
+        
         if (UCWarfare.Config.HomebaseConfig is not { Enabled: true, ConnectEndpoint.Length: > 0 })
         {
             L.LogWarning("Homebase disabled or not configured.");
-            return false;
+            return null;
         }
 
         string? authJwt = null;
@@ -27,7 +65,7 @@ public static class HomebaseConnector
             if (string.IsNullOrEmpty(UCWarfare.Config.HomebaseConfig.AuthKey))
             {
                 L.LogWarning("Authentication key not configured.");
-                return false;
+                return null;
             }
 
             Uri authUri = new Uri(UCWarfare.Config.HomebaseConfig.AuthEndpoint);
@@ -45,7 +83,7 @@ public static class HomebaseConnector
             {
                 L.LogError("Failed to authenticate WebSocket client.");
                 L.LogError(ex);
-                return false;
+                return null;
             }
 
             await UniTask.SwitchToMainThread(token);
@@ -60,24 +98,6 @@ public static class HomebaseConnector
             connectUri = new Uri(connectUri, "?token=" + Uri.EscapeDataString(authJwt));
         }
 
-        L.LogDebug($"Connecting to homebase at: {connectUri}.");
-
-        WebSocketEndpoint endpoint = WebSocketEndpoint.AsClient(connectUri);
-        WebSocketClientsideRemoteRpcConnection connection;
-        try
-        {
-            connection = await endpoint.RequestConnectionAsync(Data.RpcRouter, Data.HomebaseLifetime, Data.RpcSerializer, token).ConfigureAwait(false);
-            connection.Local.SetLogger(Accessor.Active);
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Failed to open WebSocket client.");
-            L.LogError(ex);
-            return false;
-        }
-
-        await UniTask.SwitchToMainThread(token);
-        Data.RpcConnection = connection;
-        return true;
+        return connectUri;
     }
 }

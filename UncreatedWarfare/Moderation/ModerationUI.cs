@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
+using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
@@ -35,13 +36,13 @@ internal partial class ModerationUI : UnturnedUI
     /* HEADERS */
     public LabeledButton[] Headers { get; } =
     {
-        new LabeledButton("ButtonModeration"),
-        new LabeledButton("ButtonPlayers"),
-        new LabeledButton("ButtonTickets"),
-        new LabeledButton("ButtonLogs")
+        new LabeledButton("Container/ButtonModeration", "Container/ButtonModeration/ButtonModerationLabel"),
+        new LabeledButton("Container/ButtonPlayers", "Container/ButtonPlayers/ButtonPlayersLabel"),
+        new LabeledButton("Container/ButtonTickets", "Container/ButtonTickets/ButtonTicketsLabel"),
+        new LabeledButton("Container/ButtonLogs", "Container/ButtonLogs/ButtonLogsLabel")
     };
 
-    public LabeledButton ButtonClose { get; } = new LabeledButton("ButtonClose");
+    public LabeledButton ButtonClose { get; } = new LabeledButton("Container/ButtonClose", "Container/ButtonClose/ButtonCloseLabel");
 
     public UnturnedUIElement[] PageLogic { get; } =
     {
@@ -52,21 +53,24 @@ internal partial class ModerationUI : UnturnedUI
     };
     
     /* PLAYER LIST */
-    public PlayerListEntry[] ModerationPlayerList { get; } = UnturnedUIPatterns.CreateArray<PlayerListEntry>("ModerationPlayer{1}_{0}", 1, to: 30);
-    public UnturnedTextBox PlayerSearch { get; } = new UnturnedTextBox("ModerationPlayersInputSearch");
-    public UnturnedTextBox ModerationPlayerSearch { get; } = new UnturnedTextBox("ModerationPlayersInputSearch")
+    public PlayerListEntry[] ModerationPlayerList { get; } = ElementPatterns.CreateArray<PlayerListEntry>("Container/Backdrop/PageModeration/ModerationPlayerList/Viewport/Content/", 1, to: 30);
+    public UnturnedTextBox ModerationPlayerSearch { get; } = new UnturnedTextBox("Container/Backdrop/PageModeration/ModerationPlayersInputSearch")
     {
         UseData = true
     };
     public UnturnedEnumButton<PlayerSearchMode> ModerationPlayerSearchModeButton { get; }
-        = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "ModerationButtonToggleOnline", "ModerationButtonToggleOnlineLabel")
+        = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "Container/Backdrop/PageModeration/ModerationButtonToggleOnline", "Container/Backdrop/PageModeration/ModerationButtonToggleOnline/ModerationButtonToggleOnlineLabel")
         {
             TextFormatter = (v, player) => "View - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
         };
 
     /* MODERATION HISTORY LIST */
-    public ModerationHistoryEntry[] ModerationHistory { get; } = UnturnedUIPatterns.CreateArray<ModerationHistoryEntry>("ModerationEntry{1}_{0}", 1, to: ModerationHistoryLength);
-    public LabeledStateButton ModerationHistoryBackButton { get; } = new LabeledStateButton("ModerationListBackButton");
+    public ModerationHistoryEntry[] ModerationHistory { get; } = ElementPatterns.CreateArray<ModerationHistoryEntry>("Container/Backdrop/PageModeration/ModerationList/Viewport/Content/", 1, to: ModerationHistoryLength);
+    public LabeledStateButton ModerationHistoryBackButton { get; } = new LabeledStateButton(
+        "Container/Backdrop/PageModeration/ModerationListControls/ModerationListBackButton",
+        "Container/Backdrop/PageModeration/ModerationListControls/ModerationListBackButton/ModerationListBackButtonLabel",
+        "Container/Backdrop/PageModeration/ModerationListControls/ModerationListBackButton/ModerationListBackButtonState"
+    );
     public LabeledStateButton ModerationHistoryNextButton { get; } = new LabeledStateButton("ModerationListNextButton");
     public StateTextBox ModerationHistoryPage { get; } = new StateTextBox("ModerationListPageInput");
     public UnturnedTextBox ModerationHistorySearch { get; } = new UnturnedTextBox("ModerationInputSearch")
@@ -116,9 +120,9 @@ internal partial class ModerationUI : UnturnedUI
     public UnturnedLabel ModerationInfoReason { get; } = new UnturnedLabel("ModerationInfoReason");
     public UnturnedLabel ModerationInfoPlayerName { get; } = new UnturnedLabel("ModerationInfoPlayerName");
     public UnturnedLabel ModerationInfoPlayerId { get; } = new UnturnedLabel("ModerationInfoPlayerId");
-    public UnturnedLabel[] ModerationInfoExtraInfo { get; } = UnturnedUIPatterns.CreateArray<UnturnedLabel>("ModerationInfoExtra_{0}", 1, to: 12);
-    public ModerationInfoActor[] ModerationInfoActors { get; } = UnturnedUIPatterns.CreateArray<ModerationInfoActor>("Moderation{1}Actor_{0}", 1, to: 10);
-    public ModerationInfoEvidence[] ModerationInfoEvidenceEntries { get; } = UnturnedUIPatterns.CreateArray<ModerationInfoEvidence>("Moderation{1}Evidence_{0}", 1, to: 10);
+    public UnturnedLabel[] ModerationInfoExtraInfo { get; } = ElementPatterns.CreateArray<UnturnedLabel>("ModerationInfoExtra_{0}", 1, to: 12);
+    public ModerationInfoActor[] ModerationInfoActors { get; } = ElementPatterns.CreateArray<ModerationInfoActor>("Moderation{1}Actor_{0}", 1, to: 10);
+    public ModerationInfoEvidence[] ModerationInfoEvidenceEntries { get; } = ElementPatterns.CreateArray<ModerationInfoEvidence>("Moderation{1}Evidence_{0}", 1, to: 10);
     public UnturnedUIElement LogicModerationInfoUpdateScrollVisual { get; } = new UnturnedUIElement("LogicModerationInfoUpdateScrollVisual");
 
 
@@ -132,7 +136,7 @@ internal partial class ModerationUI : UnturnedUI
     public LabeledStateButton ModerationButtonMute { get; } = new LabeledStateButton("ButtonMute");
     public LabeledStateButton ModerationButtonBan { get; } = new LabeledStateButton("ButtonBan");
 
-    public LabeledStateButton[] Presets { get; } = UnturnedUIPatterns.CreateArray(index =>
+    public LabeledStateButton[] Presets { get; } = ElementPatterns.CreateArray(index =>
         new LabeledStateButton("ButtonPreset_" + index.ToString(CultureInfo.InvariantCulture),
             "ButtonPreset_" + index.ToString(CultureInfo.InvariantCulture) + "_Label",
             "ButtonPreset_" + index.ToString(CultureInfo.InvariantCulture) + "_State"), 1, to: 12);
@@ -169,17 +173,17 @@ internal partial class ModerationUI : UnturnedUI
     };
     public LabeledRightClickableButton ModerationActionToggleButton1 { get; } = new LabeledRightClickableButton("ModerationToggleButton1");
     public LabeledRightClickableButton ModerationActionToggleButton2 { get; } = new LabeledRightClickableButton("ModerationToggleButton2");
-    public ModerationSelectedActor[] ModerationActionActors { get; } = UnturnedUIPatterns.CreateArray<ModerationSelectedActor>("Moderation{1}SelectedActor_{0}", 1, to: 10);
-    public ModerationSelectedEvidence[] ModerationActionEvidence { get; } = UnturnedUIPatterns.CreateArray<ModerationSelectedEvidence>("ModerationSelectedEvidence{1}_{0}", 1, to: 10);
+    public ModerationSelectedActor[] ModerationActionActors { get; } = ElementPatterns.CreateArray<ModerationSelectedActor>("Moderation{1}SelectedActor_{0}", 1, to: 10);
+    public ModerationSelectedEvidence[] ModerationActionEvidence { get; } = ElementPatterns.CreateArray<ModerationSelectedEvidence>("ModerationSelectedEvidence{1}_{0}", 1, to: 10);
     public LabeledStateButton ModerationActionAddActorButton { get; } = new LabeledStateButton("ModerationSelectedActorsHeaderAdd");
     public LabeledStateButton ModerationActionAddEvidenceButton { get; } = new LabeledStateButton("ModerationSelectedEvidenceHeaderAdd");
     public UnturnedEnumButtonTracker<MuteType> MuteTypeTracker { get; }
     public UnturnedUIElement LogicModerationActionsUpdateScrollVisual { get; } = new UnturnedUIElement("LogicModerationActionsUpdateScrollVisual");
 
     /* ACTION CONTROLS */
-    public ActionControl[] ModerationActionControls { get; } = UnturnedUIPatterns.CreateArray<ActionControl>("ModerationActionControl{1}_{0}", 1, to: 4);
+    public ActionControl[] ModerationActionControls { get; } = ElementPatterns.CreateArray<ActionControl>("ModerationActionControl{1}_{0}", 1, to: 4);
 
-    public ModerationUI() : base(Gamemode.Config.UIModerationMenu, debugLogging: false)
+    public ModerationUI() : base(Gamemode.Config.UIModerationMenu.GetId(), debugLogging: false)
     {
         MuteTypeTracker = new UnturnedEnumButtonTracker<MuteType>(MuteType.Both, ModerationActionToggleButton1)
         {
@@ -482,7 +486,7 @@ internal partial class ModerationUI : UnturnedUI
     }
     public async Task Open(UCPlayer player, CancellationToken token = default)
     {
-        token.CombineIfNeeded(player.DisconnectToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
         await UCWarfare.ToUpdate(token);
 
         if (TeamSelector.Instance != null)
@@ -517,7 +521,7 @@ internal partial class ModerationUI : UnturnedUI
     }
     public async Task SetPage(UCPlayer player, Page page, bool isAlreadyInView, CancellationToken token = default)
     {
-        token.CombineIfNeeded(player.DisconnectToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
         if (page is not Page.Moderation and not Page.Players and not Page.Tickets and not Page.Logs)
             throw new ArgumentOutOfRangeException(nameof(page));
         await UCWarfare.ToUpdate(token);
@@ -1321,184 +1325,184 @@ internal partial class ModerationUI : UnturnedUI
     }
     public class PlayerListEntry
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayer_{0}", Mode = FormatMode.Replace)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Name", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerName_{0}", AdditionalPath = "ModerationPlayer_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel Name { get; set; }
 
-        [UIPattern("ModerateButton", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerModerateButton_{0}", AdditionalPath = "ModerationPlayer_{0}", Mode = FormatMode.Replace)]
         public UnturnedButton ModerateButton { get; set; }
 
-        [UIPattern("ModerateButtonLabel", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerModerateButtonLabel_{0}", AdditionalPath = "ModerationPlayer_{0}/ModerationPlayerModerateButton_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel ModerateButtonLabel { get; set; }
 
-        [UIPattern("SteamID", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerSteamID_{0}", AdditionalPath = "ModerationPlayer_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel SteamId { get; set; }
 
-        [UIPattern("Pfp", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerPfp_{0}", AdditionalPath = "ModerationPlayer_{0}/ModerationPlayerPfpMask_{0}", Mode = FormatMode.Replace)]
         public UnturnedImage ProfilePicture { get; set; }
     }
     public class ModerationHistoryEntry
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntry_{0}", Mode = FormatMode.Replace)]
         public UnturnedButton Root { get; set; }
 
-        [UIPattern("Type", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryType_{0}", AdditionalPath = "ModerationEntry_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel Type { get; set; }
 
-        [UIPattern("Reputation", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryReputation_{0}", AdditionalPath = "ModerationEntry_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel Reputation { get; set; }
 
-        [UIPattern("Duration", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryDuration_{0}", AdditionalPath = "ModerationEntry_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel Duration { get; set; }
 
-        [UIPattern("Icon", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryIcon_{0}", AdditionalPath = "ModerationEntry_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel Icon { get; set; }
 
-        [UIPattern("Message", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryMessage_{0}", AdditionalPath = "ModerationEntry_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel Message { get; set; }
 
-        [UIPattern("AdminPfp", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryAdminPfp_{0}", AdditionalPath = "ModerationEntry_{0}/ModerationEntryAdminPfpMask_{0}", Mode = FormatMode.Replace)]
         public UnturnedImage AdminProfilePicture { get; set; }
 
-        [UIPattern("Admin", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryAdmin_{0}", AdditionalPath = "ModerationEntry_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel Admin { get; set; }
 
-        [UIPattern("Timestamp", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryTimestamp_{0}", AdditionalPath = "ModerationEntry_{0}", Mode = FormatMode.Replace)]
         public UnturnedLabel Timestamp { get; set; }
     }
     public class ModerationInfoActor
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern("", Mode = FormatMode.Format)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Pfp", Mode = FormatMode.Format)]
+        [Pattern("Pfp", Mode = FormatMode.Format)]
         public UnturnedImage ProfilePicture { get; set; }
 
-        [UIPattern("Name", Mode = FormatMode.Format)]
+        [Pattern("Name", Mode = FormatMode.Format)]
         public UnturnedLabel Name { get; set; }
 
-        [UIPattern("Steam64", Mode = FormatMode.Format)]
+        [Pattern("Steam64", Mode = FormatMode.Format)]
         public UnturnedLabel Steam64 { get; set; }
 
-        [UIPattern("Role", Mode = FormatMode.Format)]
+        [Pattern("Role", Mode = FormatMode.Format)]
         public UnturnedLabel Role { get; set; }
     }
     public class ModerationInfoEvidence
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern("", Mode = FormatMode.Format)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Preview", Mode = FormatMode.Format)]
+        [Pattern("Preview", Mode = FormatMode.Format)]
         public UnturnedImage PreviewImage { get; set; }
 
-        [UIPattern("Open", Mode = FormatMode.Format)]
+        [Pattern("Open", Mode = FormatMode.Format)]
         public UnturnedButton PreviewImageButton { get; set; }
 
-        [UIPattern("PreviewName", Mode = FormatMode.Format)]
+        [Pattern("PreviewName", Mode = FormatMode.Format)]
         public UnturnedLabel PreviewName { get; set; }
 
-        [UIPattern("NoPreviewName", Mode = FormatMode.Format)]
+        [Pattern("NoPreviewName", Mode = FormatMode.Format)]
         public UnturnedLabel NoPreviewName { get; set; }
 
-        [UIPattern("PreviewMessage", Mode = FormatMode.Format)]
+        [Pattern("PreviewMessage", Mode = FormatMode.Format)]
         public UnturnedLabel PreviewMessage { get; set; }
 
-        [UIPattern("NoPreviewMessage", Mode = FormatMode.Format)]
+        [Pattern("NoPreviewMessage", Mode = FormatMode.Format)]
         public UnturnedLabel NoPreviewMessage { get; set; }
 
-        [UIPattern("Actor", Mode = FormatMode.Format)]
+        [Pattern("Actor", Mode = FormatMode.Format)]
         public UnturnedLabel ActorName { get; set; }
 
-        [UIPattern("Actor64", Mode = FormatMode.Format)]
+        [Pattern("Actor64", Mode = FormatMode.Format)]
         public UnturnedLabel ActorId { get; set; }
 
-        [UIPattern("Link", Mode = FormatMode.Format)]
+        [Pattern("Link", Mode = FormatMode.Format)]
         public UnturnedLabel Link { get; set; }
 
-        [UIPattern("Timestamp", Mode = FormatMode.Format)]
+        [Pattern("Timestamp", Mode = FormatMode.Format)]
         public UnturnedLabel Timestamp { get; set; }
 
-        [UIPattern("Open", Mode = FormatMode.Format)]
+        [Pattern("Open", Mode = FormatMode.Format)]
         public UnturnedButton OpenButton { get; set; }
     }
     public class ModerationSelectedActor
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern("", Mode = FormatMode.Format)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Pfp", Mode = FormatMode.Format)]
+        [Pattern("Pfp", Mode = FormatMode.Format)]
         public UnturnedImage ProfilePicture { get; set; }
 
-        [UIPattern("Name", Mode = FormatMode.Format)]
+        [Pattern("Name", Mode = FormatMode.Format)]
         public UnturnedLabel Name { get; set; }
 
-        [UIPattern("Role", Mode = FormatMode.Format)]
+        [Pattern("Role", Mode = FormatMode.Format)]
         public UnturnedTextBox RoleInput { get; set; }
 
-        [UIPattern("Steam64", Mode = FormatMode.Format)]
+        [Pattern("Steam64", Mode = FormatMode.Format)]
         public UnturnedTextBox Steam64Input { get; set; }
 
-        [UIPattern("You", Mode = FormatMode.Format)]
+        [Pattern("You", Mode = FormatMode.Format)]
         public UnturnedButton YouButton { get; set; }
 
-        [UIPattern("AsAdminCheck", Mode = FormatMode.Format)]
+        [Pattern("AsAdminCheck", Mode = FormatMode.Format)]
         public UnturnedButton AsAdminToggleButton { get; set; }
 
-        [UIPattern("AsAdminCheckToggleState", Mode = FormatMode.Format)]
+        [Pattern("AsAdminCheckToggleState", Mode = FormatMode.Format)]
         public UnturnedUIElement AsAdminToggleState { get; set; }
 
-        [UIPattern("Remove", Mode = FormatMode.Format)]
+        [Pattern("Remove", Mode = FormatMode.Format)]
         public UnturnedButton RemoveButton { get; set; }
     }
     public class ModerationSelectedEvidence
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern("", Mode = FormatMode.Format)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Preview", Mode = FormatMode.Format)]
+        [Pattern("Preview", Mode = FormatMode.Format)]
         public UnturnedImage PreviewImage { get; set; }
 
-        [UIPattern("PreviewMask", Mode = FormatMode.Format)]
+        [Pattern("PreviewMask", Mode = FormatMode.Format)]
         public UnturnedUIElement PreviewRoot { get; set; }
 
-        [UIPattern("PreviewName", Mode = FormatMode.Format)]
+        [Pattern("PreviewName", Mode = FormatMode.Format)]
         public UnturnedLabel PreviewName { get; set; }
 
-        [UIPattern("NoPreviewName", Mode = FormatMode.Format)]
+        [Pattern("NoPreviewName", Mode = FormatMode.Format)]
         public UnturnedLabel NoPreviewName { get; set; }
 
-        [UIPattern("Actor", Mode = FormatMode.Format)]
+        [Pattern("Actor", Mode = FormatMode.Format)]
         public UnturnedLabel ActorName { get; set; }
 
-        [UIPattern("Timestamp", Mode = FormatMode.Format)]
+        [Pattern("Timestamp", Mode = FormatMode.Format)]
         public UnturnedTextBox TimestampInput { get; set; }
 
-        [UIPattern("Message", Mode = FormatMode.Format)]
+        [Pattern("Message", Mode = FormatMode.Format)]
         public UnturnedTextBox MessageInput { get; set; }
 
-        [UIPattern("Link", Mode = FormatMode.Format)]
+        [Pattern("Link", Mode = FormatMode.Format)]
         public UnturnedTextBox LinkInput { get; set; }
 
-        [UIPattern("Steam64", Mode = FormatMode.Format)]
+        [Pattern("Steam64", Mode = FormatMode.Format)]
         public UnturnedTextBox Steam64Input { get; set; }
 
-        [UIPattern("ButtonNow", Mode = FormatMode.Format)]
+        [Pattern("ButtonNow", Mode = FormatMode.Format)]
         public UnturnedButton NowButton { get; set; }
 
-        [UIPattern("ButtonYou", Mode = FormatMode.Format)]
+        [Pattern("ButtonYou", Mode = FormatMode.Format)]
         public UnturnedButton YouButton { get; set; }
 
-        [UIPattern("ButtonRemove", Mode = FormatMode.Format)]
+        [Pattern("ButtonRemove", Mode = FormatMode.Format)]
         public UnturnedButton RemoveButton { get; set; }
     }
     public class ActionControl
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern("", Mode = FormatMode.Format)]
         public UnturnedButton Root { get; set; }
 
-        [UIPattern("Label", Mode = FormatMode.Format)]
+        [Pattern("Label", Mode = FormatMode.Format)]
         public UnturnedLabel Text { get; set; }
     }
     public class ModerationData : IUnturnedUIData

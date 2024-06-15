@@ -11,22 +11,22 @@ namespace Uncreated.Warfare.Levels;
 
 public class XPUI : UnturnedUI
 {
-    public readonly UnturnedUIElement Parent = new UnturnedUIElement("Image");
-    public readonly UnturnedLabel Rank = new UnturnedLabel("Rank");
-    public readonly UnturnedLabel XP = new UnturnedLabel("XP");
-    public readonly UnturnedLabel Next = new UnturnedLabel("Next");
-    public readonly UnturnedLabel Progress = new UnturnedLabel("Progress");
+    public readonly UnturnedUIElement Parent = new UnturnedUIElement("Canvas/Image");
+    public readonly UnturnedLabel Rank = new UnturnedLabel("Canvas/Image/Image/Rank");
+    public readonly UnturnedLabel XP = new UnturnedLabel("Canvas/Image/Image/XP");
+    public readonly UnturnedLabel Next = new UnturnedLabel("Canvas/Image/Image/Next");
+    public readonly UnturnedLabel Progress = new UnturnedLabel("Canvas/Image/Image/Progress");
 
 #if SHOW_LEVEL
-    public readonly UnturnedLabel Level = new UnturnedLabel("Level");
+    public readonly UnturnedLabel Level = new UnturnedLabel("Canvas/Image/Image/Level");
 #endif
 
 #if SHOW_DIVISION
-    public readonly UnturnedLabel Division = new UnturnedLabel("Division");
-    public readonly UnturnedUIElement DivisionBackground = new UnturnedUIElement("DivisonBkgr");
+    public readonly UnturnedLabel Division = new UnturnedLabel("Canvas/Image/DivisonBkgr/Division");
+    public readonly UnturnedUIElement DivisionBackground = new UnturnedUIElement("Canvas/Image/DivisonBkgr");
 #endif
 
-    public XPUI() : base(Gamemode.Config.UIXPPanel, reliable: false) { }
+    public XPUI() : base(Gamemode.Config.UIXPPanel.GetId(), reliable: false) { }
     public void SendTo(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
@@ -114,7 +114,7 @@ public class CreditsUI : UnturnedUI
     public readonly UnturnedUIElement Parent = new UnturnedUIElement("Image");
     private static string? _creditsColor;
     public string CreditsColor => _creditsColor ??= UCWarfare.GetColorHex("credits");
-    public CreditsUI() : base(Gamemode.Config.UICreditsPanel) { }
+    public CreditsUI() : base(Gamemode.Config.UICreditsPanel.GetId()) { }
     public void SendTo(UCPlayer player)
     {
         L.LogDebug("Sending creds ui to " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");

@@ -39,7 +39,7 @@ public class BuffUI : UnturnedUI
     public UnturnedUIElement[] Parents;
     public UnturnedLabel[] SolidIcons;
     public UnturnedLabel[] BlinkingIcons;
-    public BuffUI() : base(Gamemode.Config.UIBuffs, true, false)
+    public BuffUI() : base(Gamemode.Config.UIBuffs.GetId(), true, false)
     {
         Parents = new UnturnedUIElement[MaxBuffs]
         {

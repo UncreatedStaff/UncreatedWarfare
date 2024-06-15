@@ -1,6 +1,7 @@
 ﻿#define FUNCTION_LOG
 #define LOG_ANSI
 
+using DanielWillett.ReflectionTools;
 using HarmonyLib;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
@@ -14,8 +15,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
+using Uncreated.Framework.UI;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
@@ -28,7 +29,6 @@ namespace Uncreated.Warfare;
 
 public static class L
 {
-    private static UCLogger? _logger;
     /// <summary>Default Language (previously <see cref="JSONMethods"/>.DEFAULT_LANGUAGE)</summary>
     public const string Default = Languages.EnglishUS;
     private const char ConsoleEscapeCharacter = '\u001B';
@@ -46,9 +46,12 @@ public static class L
     private delegate void OutputToConsole(string value, ConsoleColor color);
     private static OutputToConsole? _outputToConsoleMethod;
     internal static readonly StackTraceCleaner Cleaner;
-    public static UCLogger Logger => _logger ??= new UCLogger();
+    public static UCLogger Logger { get; } = new UCLogger();
     static L()
     {
+#if DEBUG
+        Logger.DebugLogging = true;
+#endif
         StackCleanerConfiguration config = new StackCleanerConfiguration
         {
             ColorFormatting = StackColorFormatType.ExtendedANSIColor,
@@ -104,6 +107,7 @@ public static class L
         Cleaner = new StackTraceCleaner(config);
 
         Accessor.Logger = new UCLoggerReflectionTools();
+        GlobalLogger.Instance = Logger;
     }
     public static bool IsBufferingLogs { get; set; }
     public static void FlushBadLogs()
@@ -780,6 +784,21 @@ public static class L
             string str = formatter(state, exception);
             if (logLevel is not LogLevel.Warning and not LogLevel.Critical and not LogLevel.Error && !string.IsNullOrWhiteSpace(_categoryName))
                 str = "[" + _categoryName + "] " + str;
+
+            if (UCWarfare.IsMainThread)
+            {
+                SendLogIntl(logLevel, str, eventId);
+            }
+            else
+            {
+                string str2 = str;
+                LogLevel logLvl2 = logLevel;
+                EventId ev2 = eventId;
+                UCWarfare.RunOnMainThread(() => SendLogIntl(logLvl2, str2, ev2));
+            }
+        }
+        private static void SendLogIntl(LogLevel logLevel, string str, EventId eventId)
+        {
             switch (logLevel)
             {
                 default:

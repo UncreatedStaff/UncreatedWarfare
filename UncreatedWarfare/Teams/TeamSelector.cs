@@ -1,13 +1,12 @@
-﻿using SDG.NetTransport;
+﻿using Cysharp.Threading.Tasks;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Players;
@@ -191,7 +190,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
     private async UniTask JoinCoroutine(UCPlayer player, ulong targetTeam)
     {
         CancellationToken token = player.DisconnectToken;
-        token.CombineIfNeeded(UCWarfare.UnloadCancel);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
 
         ITransportConnection c = player.Connection;
         JoinUI.LabelConfirm.SetText(c, T.TeamsUIJoining.Translate(player));
@@ -417,7 +416,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
                 for (int i = 0; i < language.Contributors.Count; ++i)
                     credits[i] = language.Contributors[i].Contributor;
 
-                token.CombineIfNeeded(UCWarfare.UnloadCancel);
+                using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
                 PlayerNames[] names = await Data.AdminSql.GetUsernamesAsync(credits, token).ConfigureAwait(false);
                 box.Contributors.SetText(c, string.Join(Environment.NewLine, names.Select(PlayerNames.SelectPlayerName)));
                 box.ContributorsLabel.SetVisibility(c, true);

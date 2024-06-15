@@ -197,15 +197,15 @@ public static class InvasionUI
             CTFUI.ListUI.Header.SetText(c, T.FlagsHeader.Translate(player));
             if (team == 1 || team == 2)
             {
-                for (int i = 0; i < CTFUI.ListUI.Parents.Length; i++)
+                for (int i = 0; i < CTFUI.ListUI.Rows.Length; i++)
                 {
                     if (rotation.Count <= i)
                     {
-                        CTFUI.ListUI.Parents[i].SetVisibility(c, false);
+                        CTFUI.ListUI.Rows[i].Root.SetVisibility(c, false);
                     }
                     else
                     {
-                        CTFUI.ListUI.Parents[i].SetVisibility(c, true);
+                        CTFUI.ListUI.Rows[i].Root.SetVisibility(c, true);
                         int index = team == 1 ? i : rotation.Count - i - 1;
                         Flag flag = rotation[index];
                         string objective = string.Empty;
@@ -223,25 +223,26 @@ public static class InvasionUI
                                     objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UIIconDefend}</color>";
                             }
                         }
-                        CTFUI.ListUI.Names[i].SetText(c, flag.Discovered(team) ?
-                            $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" :
-                            T.UndiscoveredFlag.Translate(player));
-                        CTFUI.ListUI.Icons[i].SetText(c, objective);
+                        CTFUI.ListUI.Rows[i].Name.SetText(c,
+                            flag.Discovered(team)
+                            ? $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>"
+                            : T.UndiscoveredFlag.Translate(player)
+                        );
+                        CTFUI.ListUI.Rows[i].Icon.SetText(c, objective);
                     }
                 }
             }
             else if (team == 3)
             {
-                for (int i = 0; i < CTFUI.ListUI.Parents.Length; i++)
+                for (int i = 0; i < CTFUI.ListUI.Rows.Length; i++)
                 {
-                    string i2 = i.ToString();
                     if (rotation.Count <= i)
                     {
-                        CTFUI.ListUI.Parents[i].SetVisibility(c, false);
+                        CTFUI.ListUI.Rows[i].Root.SetVisibility(c, false);
                     }
                     else
                     {
-                        CTFUI.ListUI.Parents[i].SetVisibility(c, true);
+                        CTFUI.ListUI.Rows[i].Root.SetVisibility(c, true);
                         Flag flag = rotation[i];
                         string objective = string.Empty;
                         if (flag.IsObj(attack))
@@ -256,10 +257,10 @@ public static class InvasionUI
                             if (flag.Owner == 1)
                                 objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconDefend}</color>";
                         }
-                        CTFUI.ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
-                            $"{(flag.Discovered(1) ? string.Empty : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
-                            $"{(flag.Discovered(2) ? string.Empty : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
-                        CTFUI.ListUI.Icons[i].SetText(c, objective);
+                        CTFUI.ListUI.Rows[i].Name.SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
+                                                             $"{(flag.Discovered(1) ? string.Empty : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
+                                                             $"{(flag.Discovered(2) ? string.Empty : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
+                        CTFUI.ListUI.Rows[i].Icon.SetText(c, objective);
                     }
                 }
             }
@@ -303,8 +304,8 @@ public static class InvasionUI
                         }
                     }
                     if (ownerChanged)
-                        CTFUI.ListUI.Names[i3].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
-                    CTFUI.ListUI.Icons[i3].SetText(c, objective);
+                        CTFUI.ListUI.Rows[i3].Name.SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
+                    CTFUI.ListUI.Rows[i3].Icon.SetText(c, objective);
                 }
                 else
                 {
@@ -321,10 +322,10 @@ public static class InvasionUI
                             objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconDefend}</color>";
                     }
                     if (ownerChanged)
-                        CTFUI.ListUI.Names[i3].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
-                                                          $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
-                                                          $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
-                    CTFUI.ListUI.Icons[i3].SetText(c, objective);
+                        CTFUI.ListUI.Rows[i3].Name.SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
+                                                              $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
+                                                              $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
+                    CTFUI.ListUI.Rows[i3].Icon.SetText(c, objective);
                 }
             }
         }

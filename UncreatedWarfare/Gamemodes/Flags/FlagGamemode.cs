@@ -34,7 +34,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     protected abstract bool TimeToEvaluatePoints();
     protected override Task PostDispose(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         ResetFlags();
         OnFlagDict.Clear();
@@ -43,14 +43,14 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected override Task OnReady(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         LoadAllFlags();
         return base.OnReady(token);
     }
     protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         Flag? obj1 = null;
         Flag? obj2 = null;

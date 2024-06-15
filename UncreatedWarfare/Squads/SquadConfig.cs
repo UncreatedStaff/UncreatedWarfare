@@ -11,9 +11,9 @@ public sealed class SquadsConfig : Config<SquadConfigData>
     }
     protected override void OnReload()
     {
-        SquadManager.MenuUI.LoadFromConfig(Data.SquadMenuUI);
-        SquadManager.ListUI.LoadFromConfig(Data.SquadListUI);
-        SquadManager.RallyUI.LoadFromConfig(Data.SquadRallyUI);
+        F.LoadFromConfig(SquadManager.MenuUI, Data.SquadMenuUI);
+        F.LoadFromConfig(SquadManager.ListUI, Data.SquadListUI);
+        F.LoadFromConfig(SquadManager.RallyUI, Data.SquadRallyUI);
     }
 }
 

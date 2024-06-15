@@ -17,16 +17,16 @@ public static class InsurgencyUI
         CTFUI.ListUI.Header.SetVisibility(c, true);
         CTFUI.ListUI.Header.SetText(c, T.CachesHeader.Translate(player));
         int i = 0;
-        int num = Math.Min(gm.Caches.Count, CTFUI.ListUI.Parents.Length);
+        int num = Math.Min(gm.Caches.Count, CTFUI.ListUI.Rows.Length);
         for (; i < num; i++)
         {
             Insurgency.CacheData cache = gm.Caches[i];
 
-            CTFUI.ListUI.Parents[i].SetVisibility(c, true);
-            CTFUI.ListUI.Names[i].SetText(c, GetCacheLabel(cache, player, gm));
+            CTFUI.ListUI.Rows[i].Root.SetVisibility(c, true);
+            CTFUI.ListUI.Rows[i].Name.SetText(c, GetCacheLabel(cache, player, gm));
         }
-        for (; i < CTFUI.ListUI.Parents.Length; i++)
-            CTFUI.ListUI.Parents[i].SetVisibility(c, false);
+        for (; i < CTFUI.ListUI.Rows.Length; i++)
+            CTFUI.ListUI.Rows[i].Root.SetVisibility(c, false);
     }
     public static void ReplicateCacheUpdate(Insurgency.CacheData cache)
     {
@@ -35,13 +35,13 @@ public static class InsurgencyUI
 #endif
         if (!Data.Is(out Insurgency gm)) return;
         int index = gm.Caches.IndexOf(cache);
-        if (index < 0 || index >= CTFUI.ListUI.Parents.Length)
+        if (index < 0 || index >= CTFUI.ListUI.Rows.Length)
             return;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer player = PlayerManager.OnlinePlayers[i];
             if (!player.HasUIHidden)
-                CTFUI.ListUI.Names[index].SetText(player.Connection, GetCacheLabel(cache, player, gm));
+                CTFUI.ListUI.Rows[index].Name.SetText(player.Connection, GetCacheLabel(cache, player, gm));
         }
     }
     public static string GetCacheLabel(Insurgency.CacheData cache, UCPlayer player, Insurgency insurgency)

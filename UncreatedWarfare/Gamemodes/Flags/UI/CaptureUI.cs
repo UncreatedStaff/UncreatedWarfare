@@ -7,14 +7,14 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags.UI;
 public class CaptureUI : UnturnedUI
 {
-    public readonly UnturnedLabel Background = new UnturnedLabel("BackgroundCircle");
-    public readonly UnturnedLabel Foreground = new UnturnedLabel("ForegroundCircle");
-    public readonly UnturnedLabel T1CountIcon = new UnturnedLabel("T1CountIcon");
-    public readonly UnturnedLabel T1Count = new UnturnedLabel("T1Count");
-    public readonly UnturnedLabel T2CountIcon = new UnturnedLabel("T2CountIcon");
-    public readonly UnturnedLabel T2Count = new UnturnedLabel("T2Count");
-    public readonly UnturnedLabel Status = new UnturnedLabel("Status");
-    public CaptureUI() : base(Gamemode.Config.UICapture, reliable: false) { }
+    public readonly UnturnedLabel Background = new UnturnedLabel("Canvas/Circles/BackgroundCircle");
+    public readonly UnturnedLabel Foreground = new UnturnedLabel("Canvas/Circles/BackgroundCircle/ForegroundCircle");
+    public readonly UnturnedLabel T1CountIcon = new UnturnedLabel("Canvas/Circles/BackgroundCircle/ForegroundCircle/T1CountIcon");
+    public readonly UnturnedLabel T1Count = new UnturnedLabel("Canvas/Circles/BackgroundCircle/ForegroundCircle/T1CountIcon/T1Count");
+    public readonly UnturnedLabel T2CountIcon = new UnturnedLabel("Canvas/Circles/BackgroundCircle/ForegroundCircle/T2CountIcon");
+    public readonly UnturnedLabel T2Count = new UnturnedLabel("Canvas/Circles/BackgroundCircle/ForegroundCircle/T2CountIcon/T2Count");
+    public readonly UnturnedLabel Status = new UnturnedLabel("Canvas/Circles/Status");
+    public CaptureUI() : base(Gamemode.Config.UICapture.GetId(), reliable: false) { }
 
     public void Send(UCPlayer player, in CaptureUIParameters p)
     {

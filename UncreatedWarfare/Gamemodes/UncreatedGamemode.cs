@@ -157,7 +157,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public override async Task LoadAsync(CancellationToken token)
     {
         _tokenSrc = new CancellationTokenSource();
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         await UCWarfare.ToUpdate(token);
         if (!isActiveAndEnabled)
             throw new Exception("Gamemode object has been destroyed!");
@@ -491,7 +491,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public async Task OnLevelReady(CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         if (!_wasLevelLoadedOnStart)
         {
             await UCWarfare.ToUpdate(token);
@@ -667,7 +667,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             GameRecord.EndTimestamp = DateTimeOffset.UtcNow;
             GameRecord.WinnerFactionId = TeamManager.GetFaction(winner).PrimaryKey;
-            token.CombineIfNeeded(UnloadToken);
+            using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
             ThreadUtil.assertIsGameThread();
             State = State.Finished;
             OnStateUpdated?.Invoke();
@@ -843,7 +843,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         try
         {
             ThreadUtil.assertIsGameThread();
-            token.CombineIfNeeded(UnloadToken);
+            using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
             Task task = PreGameStarting(onLoad, token);
             if (!task.IsCompleted)
             {
@@ -860,7 +860,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     {
                         UCPlayer pl = set.Next;
                         pl.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-                        if (UCPlayer.LoadingUI.IsValid)
+                        if (UCPlayer.LoadingUI.HasAssetOrId)
                             UCPlayer.LoadingUI.SendToPlayer(pl.Connection, val);
                     }
                 }
@@ -924,32 +924,33 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             }
 
             List<Task> initTasks = new List<Task>();
-            foreach (UCPlayer pl in PlayerManager.OnlinePlayers.ToList())
+            foreach (UCPlayer pl in PlayerManager.OnlinePlayers)
             {
                 CancellationToken tk2 = token;
-                tk2.CombineIfNeeded(pl.DisconnectToken);
+                CombinedTokenSources tokens2 = tk2.CombineTokensIfNeeded(pl.DisconnectToken);
                 pl.IsInitializing = true;
-                initTasks.Add(UCWarfare.RunTask(async (player, tkn) =>
+                initTasks.Add(UCWarfare.RunTask(async (tokens2, player) =>
                 {
                     try
                     {
-                        await player.PurchaseSync.WaitAsync(tkn).ConfigureAwait(false);
+                        await player.PurchaseSync.WaitAsync(tokens2.Token).ConfigureAwait(false);
                         try
                         {
-                            await UCWarfare.ToUpdate(tkn);
-                            await Data.Gamemode.InternalPlayerInit(player, player.HasInitedOnce, tkn).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(tokens2.Token);
+                            await Data.Gamemode.InternalPlayerInit(player, player.HasInitedOnce, tokens2.Token).ConfigureAwait(false);
                         }
                         finally
                         {
                             player.PurchaseSync.Release();
                         }
                     }
-                    catch (TaskCanceledException) when (tkn.IsCancellationRequested) { }
+                    catch (TaskCanceledException) when (tokens2.Token.IsCancellationRequested) { }
                     finally
                     {
+                        tokens2.Dispose();
                         player.IsInitializing = false;
                     }
-                }, pl, tk2));
+                }, tokens2, pl));
             }
 
             try
@@ -973,7 +974,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     if (pl.Player.quests.isMarkerPlaced)
                         pl.Player.quests.replicateSetMarker(false, Vector3.zero, string.Empty);
                 }
-                if (UCPlayer.LoadingUI.IsValid)
+                if (UCPlayer.LoadingUI.HasAssetOrId)
                     UCPlayer.LoadingUI.ClearFromAllPlayers();
             }
             await PostPlayerInit(onLoad, token).ConfigureAwait(false);
@@ -992,7 +993,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     internal async Task OnPlayerJoined(UCPlayer player, CancellationToken token)
     {
         ThreadUtil.assertIsGameThread();
-        token.CombineIfNeeded(UnloadToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         await InvokeSingletonEvent<IPlayerConnectListener, IPlayerConnectListenerAsync>
             (x => x.OnPlayerConnecting(player), x => x.OnPlayerConnecting(player, token), token, onlineCheck: player)
             .ConfigureAwait(false);
@@ -1341,7 +1342,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     internal Task OnQuestCompleted(QuestCompleted e, CancellationToken token)
     {
-        token.CombineIfNeeded(UnloadToken, e.Player.DisconnectToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken, e.Player.DisconnectToken);
         return InvokeSingletonEvent<IQuestCompletedListener, IQuestCompletedListenerAsync>
             (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e);
     }
@@ -1349,7 +1350,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         if (!RankManager.OnQuestCompleted(e))
         {
-            token.CombineIfNeeded(UnloadToken, e.Player.DisconnectToken);
+            using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken, e.Player.DisconnectToken);
             return InvokeSingletonEvent<IQuestCompletedHandler, IQuestCompletedHandlerAsync>
                 (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e);
         }

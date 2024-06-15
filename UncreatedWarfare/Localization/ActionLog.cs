@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using DanielWillett.ReflectionTools;
+using JetBrains.Annotations;
 using SDG.Unturned;
 using System;
 using System.Collections.Concurrent;
@@ -10,7 +11,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using DanielWillett.ReflectionTools;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -252,15 +252,14 @@ public class ActionLog : MonoBehaviour
     }
     public static bool TryParseLogType(string text, out ActionLogType type)
     {
-        char[] t = text.ToCharArray();
         for (int i = 0; i < Types.Length; ++i)
         {
             char[]? val = Types[i];
-            if (val is null || val.Length != t.Length)
+            if (val is null || val.Length != text.Length)
                 continue;
-            for (int j = 0; j < t.Length; ++j)
+            for (int j = 0; j < text.Length; ++j)
             {
-                if (char.ToUpperInvariant(t[j]) != char.ToUpperInvariant(val[j]))
+                if (char.ToUpperInvariant(text[j]) != char.ToUpperInvariant(val[j]))
                     goto g;
             }
 
@@ -352,34 +351,36 @@ public class ActionLog : MonoBehaviour
 
                 CancellationTokenSource src = new CancellationTokenSource();
                 CancellationToken tk2 = token;
-                tk2.CombineIfNeeded(src.Token);
-                Task t = SendLogAsync(meta, MessageContext.Nil, tk2);
-                try
+                Task<bool> t;
+                using (_ = tk2.CombineTokensIfNeeded(src.Token))
                 {
-                    await Task.WhenAny(t,
-                        new
-                            Func<Task>( // while send is not complete and  and can use net call and < 20 seconds since start
-                                async () =>
-                                {
-                                    int counter = 0;
-                                    while (!t.IsCompleted && UCWarfare.CanUseNetCall && ++counter < 801)
+                    t = SendLogAsync(meta, MessageContext.Nil, tk2);
+                    try
+                    {
+                        await Task.WhenAny(t,
+                            new
+                                Func<Task>( // while send is not complete and and can use net call and < 20 seconds since start
+                                    async () =>
                                     {
-                                        await Task.Delay(25, tk2);
-                                    }
-                                })());
-                    src.Cancel();
+                                        int counter = 0;
+                                        while (!t.IsCompleted && UCWarfare.CanUseNetCall && ++counter < 801)
+                                        {
+                                            await Task.Delay(25, tk2);
+                                        }
+                                    })());
+                        src.Cancel();
+                    }
+                    catch (OperationCanceledException) when (src.IsCancellationRequested)
+                    {
+                    }
                 }
-                catch (OperationCanceledException) when (src.IsCancellationRequested)
-                {
-                }
-
                 if (!UCWarfare.CanUseNetCall)
                 {
                     L.Log("Cancelled action log sending...", ConsoleColor.Magenta);
                     return;
                 }
 
-                if (t.IsCompleted)
+                if (t is { IsCompleted: true, Result: true })
                 {
                     try
                     {
@@ -401,12 +402,10 @@ public class ActionLog : MonoBehaviour
                         L.LogError(ex);
                     }
                 }
-#if DEBUG
                 else
                 {
-                    L.LogWarning("[ACT LOG] Send task timed out on log \"" + logName + "\".");
+                    L.LogWarning("[ACT LOG] Send task timed out or failed on log \"" + logName + "\".");
                 }
-#endif
             }
             catch (Exception ex)
             {

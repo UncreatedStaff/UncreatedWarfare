@@ -532,28 +532,26 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         if (e.Player.HotkeyBindings is not { Count: > 0 })
             return;
         CancellationToken tkn = UCWarfare.UnloadCancel;
-        if (Data.Gamemode != null)
-            tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
-        tkn.CombineIfNeeded(e.Player.DisconnectToken);
+        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(e.Player.DisconnectToken, Data.Gamemode != null ? Data.Gamemode.UnloadToken : default);
         if (e.Item == null)
             return;
 
         // move hotkey to a different item of the same type
-        UCWarfare.RunTask(static async (mngr, ev, token) =>
+        UCWarfare.RunTask(static async (mngr, ev, tokens) =>
         {
-            IPageKitItem? jar2 = await mngr.GetItemFromKit(ev.Player, ev.OldX, ev.OldY, ev.Item!, ev.OldPage, token).ConfigureAwait(false);
+            IPageKitItem? jar2 = await mngr.GetItemFromKit(ev.Player, ev.OldX, ev.OldY, ev.Item!, ev.OldPage, tokens.Token).ConfigureAwait(false);
             if (jar2 == null || !ev.Player.IsOnline)
                 return;
 
-            await ev.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            await ev.Player.PurchaseSync.WaitAsync(tokens.Token).ConfigureAwait(false);
             try
             {
                 if (!ev.Player.IsOnline || ev.Player.HotkeyBindings is not { Count: > 0 })
                     return;
 
-                Kit? activeKit = await ev.Player.GetActiveKit(token).ConfigureAwait(false);
+                Kit? activeKit = await ev.Player.GetActiveKit(tokens.Token).ConfigureAwait(false);
 
-                await UCWarfare.ToUpdate(token);
+                await UCWarfare.ToUpdate(tokens.Token);
                 if (!ev.Player.IsOnline || ev.Player.HotkeyBindings is not { Count: > 0 })
                     return;
 
@@ -606,9 +604,10 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             }
             finally
             {
+                tokens.Dispose();
                 ev.Player.PurchaseSync.Release();
             }
-        }, this, e, tkn, ctx: "Set keybind to new item after it's dropped.");
+        }, this, e, tokens, ctx: "Set keybind to new item after it's dropped.");
     }
     private void OnItemPickedUp(ItemPickedUp e)
     {
@@ -650,24 +649,22 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             return;
 
         CancellationToken tkn = UCWarfare.UnloadCancel;
-        if (Data.Gamemode != null)
-            tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
-        tkn.CombineIfNeeded(e.Player.DisconnectToken);
-        UCWarfare.RunTask(async token =>
+        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(e.Player.DisconnectToken, Data.Gamemode != null ? Data.Gamemode.UnloadToken : default);
+        UCWarfare.RunTask(async tokens =>
         {
-            token.ThrowIfCancellationRequested();
+            tokens.Token.ThrowIfCancellationRequested();
 
-            await e.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            await e.Player.PurchaseSync.WaitAsync(tokens.Token).ConfigureAwait(false);
             try
             {
                 if (e.Player.HotkeyBindings == null)
                     return;
 
-                Kit? activeKit = await e.Player.GetActiveKit(token).ConfigureAwait(false);
+                Kit? activeKit = await e.Player.GetActiveKit(tokens.Token).ConfigureAwait(false);
                 if (activeKit == null)
                     return;
 
-                await UCWarfare.ToUpdate(token);
+                await UCWarfare.ToUpdate(tokens.Token);
 
                 foreach (HotkeyBinding binding in e.Player.HotkeyBindings)
                 {
@@ -687,10 +684,11 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             }
             finally
             {
+                tokens.Dispose();
                 e.Player.PurchaseSync.Release();
             }
 
-        }, tkn, ctx: "Checking for new binding of picked up item.");
+        }, tokens, ctx: "Checking for new binding of picked up item.");
     }
     private void OnItemMoved(ItemMoved e)
     {
@@ -750,24 +748,22 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             return;
 
         CancellationToken tkn = UCWarfare.UnloadCancel;
-        if (Data.Gamemode != null)
-            tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
-        tkn.CombineIfNeeded(e.Player.DisconnectToken);
-        UCWarfare.RunTask(async token =>
+        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(e.Player.DisconnectToken, Data.Gamemode != null ? Data.Gamemode.UnloadToken : default);
+        UCWarfare.RunTask(async tokens =>
         {
-            token.ThrowIfCancellationRequested();
+            tokens.Token.ThrowIfCancellationRequested();
 
-            await e.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            await e.Player.PurchaseSync.WaitAsync(tokens.Token).ConfigureAwait(false);
             try
             {
                 if (e.Player.HotkeyBindings == null)
                     return;
 
-                Kit? kit = await e.Player.GetActiveKit(token).ConfigureAwait(false);
+                Kit? kit = await e.Player.GetActiveKit(tokens.Token).ConfigureAwait(false);
                 if (kit is null)
                     return;
 
-                await UCWarfare.ToUpdate(token);
+                await UCWarfare.ToUpdate(tokens.Token);
 
                 foreach (HotkeyBinding binding in e.Player.HotkeyBindings)
                 {
@@ -802,10 +798,11 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             }
             finally
             {
+                tokens.Dispose();
                 e.Player.PurchaseSync.Release();
             }
 
-        }, tkn, ctx: "Checking for new binding of moved item.");
+        }, tokens, ctx: "Checking for new binding of moved item.");
     }
     private void OnSwapClothingRequested(SwapClothingRequested e)
     {
@@ -1302,7 +1299,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     public async Task RefreshFavorites(UCPlayer player, bool psLock, CancellationToken token = default)
     {
-        token.CombineIfNeeded(player.DisconnectToken, UCWarfare.UnloadCancel);
+        CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken, UCWarfare.UnloadCancel);
         if (psLock)
             await player.PurchaseSync.WaitAsync(token);
         try
@@ -1323,6 +1320,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
 
         UCWarfare.RunOnMainThread(() =>
         {
+            tokens.Dispose();
             OnFavoritesRefreshed?.Invoke();
             MenuUI.OnFavoritesRefreshed(player);
             Warfare.Signs.UpdateKitSigns(player, null);

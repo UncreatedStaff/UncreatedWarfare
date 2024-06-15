@@ -17,7 +17,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using DanielWillett.ModularRpcs.Abstractions;
-using DanielWillett.ModularRpcs.DependencyInjection;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using Uncreated.Framework;
@@ -640,30 +639,38 @@ public static class Data
         CancellationTokenSource? old = Interlocked.Exchange(ref _netClientSource, src);
         old?.Cancel();
         CancellationToken tkn = src.Token;
-        tkn.CombineIfNeeded(UCWarfare.UnloadCancel);
-        UCWarfare.RunTask(async token =>
+        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
+        tkn.ThrowIfCancellationRequested();
+        UCWarfare.RunTask(async tokens =>
         {
-            await UCWarfare.ToUpdate(token);
-            tkn.ThrowIfCancellationRequested();
-            PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
-            if (!UCWarfare.Config.DisableDailyQuests)
-                Quests.DailyQuests.OnConnectedToServer();
-            if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)
-                ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
-            tkn.ThrowIfCancellationRequested();
-            IUncreatedSingleton[] singletons = Singletons.GetSingletons();
-            for (int i = 0; i < singletons.Length; ++i)
+            try
             {
-                if (singletons[i] is ITCPConnectedListener l)
+                await UCWarfare.ToUpdate(tokens.Token);
+                tokens.Token.ThrowIfCancellationRequested();
+                PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
+                if (!UCWarfare.Config.DisableDailyQuests)
+                    Quests.DailyQuests.OnConnectedToServer();
+                if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)
+                    ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
+                tokens.Token.ThrowIfCancellationRequested();
+                IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+                for (int i = 0; i < singletons.Length; ++i)
                 {
-                    await l.OnConnected(token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    if (singletons[i] is ITCPConnectedListener l)
+                    {
+                        await l.OnConnected(tokens.Token).ConfigureAwait(false);
+                        await UCWarfare.ToUpdate(tokens.Token);
+                    }
                 }
+                tokens.Token.ThrowIfCancellationRequested();
+                if (ActionLog.Instance != null)
+                    await ActionLog.Instance.OnConnected(tokens.Token).ConfigureAwait(false);
             }
-            tkn.ThrowIfCancellationRequested();
-            if (ActionLog.Instance != null)
-                await ActionLog.Instance.OnConnected(token).ConfigureAwait(false);
-        }, tkn, ctx: "Execute on client connected events.", timeout: 120000);
+            finally
+            {
+                tokens.Dispose();
+            }
+        }, tokens, ctx: "Execute on client connected events.", timeout: 120000);
     }
     public static void HideAllUI(UCPlayer player)
     {

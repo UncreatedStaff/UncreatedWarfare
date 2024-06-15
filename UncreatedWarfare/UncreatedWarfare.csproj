@@ -98,7 +98,7 @@
     <PackageReference Include="DanielWillett.ReflectionTools" Version="[3.2.1,)" />
     <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="[3.0.0,)" />
     <PackageReference Include="Uncreated.Networking.Warfare" Version="[3.2.4,)" />
-    <PackageReference Include="Uncreated.UI" Version="[1.0.0,)" />
+    <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease5" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
 
     <!-- for the love of god do not touch these version numbers -->

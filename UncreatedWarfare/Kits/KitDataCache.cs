@@ -139,7 +139,7 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
             ulong steam64 = player.Steam64;
 
             CancellationToken tkn = player.DisconnectToken;
-            tkn.CombineIfNeeded(UCWarfare.UnloadCancel);
+            using CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
 
             List<Kit> kits = await IncludeCachedKitData(dbContext.Kits)
                 .Where(x =>
