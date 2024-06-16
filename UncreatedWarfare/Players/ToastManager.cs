@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.UI;
 using UnityEngine;
@@ -32,32 +33,32 @@ public sealed class ToastManager
         ToastMessages = new ToastMessageInfo[len];
         ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, Gamemode.WinToastUI, WinToastUI.SendToastCallback)
         {
-            ResendNames = new string[] { "Header", "Team1Tickets", "Team2Tickets", "Team1Image", "Team2Image" },
+            ResendNames = [ "Canvas/Content/Header", "Canvas/Content/Header/Team1Tickets", "Canvas/Content/Header/Team2Tickets", "Canvas/Content/Header/Team1Image", "Canvas/Content/Header/Team2Image" ],
             ClearableSlots = 3
         };
         ToastMessages[(int)ToastMessageStyle.Large] = new ToastMessageInfo(ToastMessageStyle.Large, 0, Gamemode.Config.UIToastLarge, canResend: true)
         {
-            ResendNames = new string[] { "Top", "Middle", "Bottom" },
+            ResendNames = [ "Canvas/Content/Top", "Canvas/Content/Middle", "Canvas/Content/Bottom" ],
             ClearableSlots = 3
         };
         ToastMessages[(int)ToastMessageStyle.Medium] = new ToastMessageInfo(ToastMessageStyle.Medium, 0, Gamemode.Config.UIToastMedium, canResend: true)
         {
-            ResendNames = new string[] { "Middle" },
+            ResendNames = [ "Canvas/Content/Middle" ],
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.Mini] = new ToastMessageInfo(ToastMessageStyle.Mini, 1, Gamemode.Config.UIToastXP, canResend: true)
         {
-            ResendNames = new string[] { "Text" },
+            ResendNames = [ "Canvas/Content/Text" ],
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.ProgressBar] = new ToastMessageInfo(ToastMessageStyle.ProgressBar, 2, Gamemode.Config.UIToastProgress, inturrupt: true, canResend: true)
         {
-            ResendNames = new string[] { "Progress", "Bar" },
+            ResendNames = [ "Canvas/Content/Progress", "Canvas/Content/Bar" ],
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.Tip] = new ToastMessageInfo(ToastMessageStyle.Tip, 0, Gamemode.Config.UIToastTip, canResend: true)
         {
-            ResendNames = new string[] { "Text" },
+            ResendNames = [ "Canvas/Content/Text" ],
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.Popup] = new ToastMessageInfo(ToastMessageStyle.Popup, 3, PopupUI.Instance, PopupUI.SendToastCallback, requiresClearing: true)
@@ -66,10 +67,9 @@ public sealed class ToastManager
             DisableFlags = EPluginWidgetFlags.ShowCenterDot | EPluginWidgetFlags.ShowInteractWithEnemy,
             EnableFlags = EPluginWidgetFlags.ForceBlur | EPluginWidgetFlags.Modal
         };
-        // todo update UI mod to fix the requireResend: true
-        ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, 4, Gamemode.Config.UIFlashingWarning, requiresClearing: true, canResend: true, requiresResend: true)
+        ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, 4, Gamemode.Config.UIFlashingWarning, requiresClearing: true, canResend: true)
         {
-            ResendNames = new string[] { "Text" },
+            ResendNames = [ "Canvas/Text" ],
             ClearableSlots = 1
         };
         int maxChannel = -1;
@@ -312,14 +312,14 @@ public sealed class ToastManager
     }
     internal static void ReloadToastIds()
     {
-        ToastMessages[(int)ToastMessageStyle.GameOver].UpdateAsset(Gamemode.Config.UIToastWin.GetAsset());
-        ToastMessages[(int)ToastMessageStyle.Large].UpdateAsset(Gamemode.Config.UIToastLarge.GetAsset());
-        ToastMessages[(int)ToastMessageStyle.Medium].UpdateAsset(Gamemode.Config.UIToastMedium.GetAsset());
-        ToastMessages[(int)ToastMessageStyle.Mini].UpdateAsset(Gamemode.Config.UIToastXP.GetAsset());
-        ToastMessages[(int)ToastMessageStyle.ProgressBar].UpdateAsset(Gamemode.Config.UIToastProgress.GetAsset());
-        ToastMessages[(int)ToastMessageStyle.Tip].UpdateAsset(Gamemode.Config.UIToastTip.GetAsset());
-        ToastMessages[(int)ToastMessageStyle.Popup].UpdateAsset(Gamemode.Config.UIPopup.GetAsset());
-        ToastMessages[(int)ToastMessageStyle.FlashingWarning].UpdateAsset(Gamemode.Config.UIFlashingWarning.GetAsset());
+        ToastMessages[(int)ToastMessageStyle.GameOver].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastWin));
+        ToastMessages[(int)ToastMessageStyle.Large].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastLarge));
+        ToastMessages[(int)ToastMessageStyle.Medium].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastMedium));
+        ToastMessages[(int)ToastMessageStyle.Mini].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastXP));
+        ToastMessages[(int)ToastMessageStyle.ProgressBar].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastProgress));
+        ToastMessages[(int)ToastMessageStyle.Tip].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastTip));
+        ToastMessages[(int)ToastMessageStyle.Popup].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIPopup));
+        ToastMessages[(int)ToastMessageStyle.FlashingWarning].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIFlashingWarning));
     }
     private void EnableFlags(ToastMessageInfo info)
     {

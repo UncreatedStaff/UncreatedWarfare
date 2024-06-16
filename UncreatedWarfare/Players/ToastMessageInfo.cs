@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Players;
 public enum ToastMessageStyle
@@ -56,12 +57,12 @@ public sealed class ToastMessageInfo
         Inturrupt = inturrupt;
         Key = UI.Key;
         CanResend = false;
-        UpdateAsset(ui.Asset);
+        UpdateAsset(new JsonAssetContainer<EffectAsset>(ui.Asset));
     }
     public ToastMessageInfo(ToastMessageStyle style, int channel, JsonAssetReference<EffectAsset> asset, bool requiresClearing = false, bool inturrupt = false, bool canResend = false, bool requiresResend = false)
         : this(style, channel, requiresClearing, inturrupt, canResend, requiresResend)
     {
-        UpdateAsset(asset);
+        UpdateAsset(new JsonAssetContainer<EffectAsset>(asset));
     }
     public ToastMessageInfo(ToastMessageStyle style, int channel, bool requiresClearing = false, bool inturrupt = false, bool canResend = false, bool requiresResend = false)
     {
@@ -73,16 +74,17 @@ public sealed class ToastMessageInfo
         RequiresResend = requiresResend && canResend;
         Key = requiresClearing || inturrupt || canResend ? UnturnedUIKeyPool.Claim() : (short)-1;
     }
-    public void UpdateAsset(EffectAsset? asset)
+    public void UpdateAsset(JsonAssetContainer<EffectAsset> assetContainer)
     {
-        Asset = asset;
-        if (Assets.hasLoadedUgc)
+        Asset = assetContainer.Asset as EffectAsset;
+        UI?.LoadFromConfig(assetContainer);
+        if (!Assets.isLoading)
         {
             OnLevelLoaded(Level.BUILD_INDEX_GAME);
         }
         else
         {
-            Level.onLevelLoaded += OnLevelLoaded;
+            Level.onPrePreLevelLoaded += OnLevelLoaded;
         }
     }
 
@@ -102,7 +104,6 @@ public sealed class ToastMessageInfo
         else
         {
             L.LogError($"Unknown asset for toast message: {Style}, {Asset?.ToString() ?? "Not Defined"}.");
-            UI?.LoadFromConfig(null);
         }
 
         Level.onLevelLoaded -= OnLevelLoaded;

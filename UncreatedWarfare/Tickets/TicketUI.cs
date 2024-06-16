@@ -1,7 +1,10 @@
 ﻿using Uncreated.Framework.UI;
+using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Tickets;
+
+[UnturnedUI(BasePath = "Canvas/Image")]
 public class TicketUI : UnturnedUI
 {
     public readonly UnturnedImage Flag = new UnturnedImage("Flag");

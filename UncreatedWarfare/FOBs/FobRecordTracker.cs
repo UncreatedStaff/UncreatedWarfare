@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Cysharp.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,7 +17,6 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
     private readonly UCSemaphore _semaphore = new UCSemaphore(0, 1);
     public FobRecord Record { get; private set; }
     public IReadOnlyDictionary<IFOBItem, ulong> Items { get; private set; }
-    public CancellationTokenSource CancelTokenSource { get; } = new CancellationTokenSource();
     public FobRecordTracker(FobRecord record)
     {
         Record = record;
@@ -24,9 +24,13 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
     }
     public void Dispose()
     {
-        Task task = Task.Run(() => _semaphore.WaitAsync(CancellationToken.None));
-        UCWarfare.SpinWaitUntil(() => task.IsCompleted);
-        CancelTokenSource.Dispose();
+        // allow time for objects to be destroyed first.
+        UCWarfare.RunTask(async () =>
+        {
+            await UniTask.NextFrame(PlayerLoopTiming.PostLateUpdate);
+            await UniTask.SwitchToThreadPool();
+            await _semaphore.WaitAsync(CancellationToken.None);
+        }, ctx: $"Finishing FOB record updates ({Record.FobName}, {Record.Id}).");
     }
 
     public Task WaitAsync(CancellationToken token = default) => _semaphore.WaitAsync(token);
@@ -43,19 +47,17 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
             _semaphore.Release();
         }
     }
-    public async Task Create(CancellationToken token = default)
+    public async Task Create()
     {
         if (_primaryKey != 0)
             throw new InvalidOperationException("Only run create once.");
 
         try
         {
-            using CombinedTokenSources tokens = token.CombineTokensIfNeeded(CancelTokenSource.Token);
-
             await using IStatsDbContext dbContext = new TDbContext();
 
             dbContext.FobRecords.Add(Record);
-            await dbContext.SaveChangesAsync(token);
+            await dbContext.SaveChangesAsync(CancellationToken.None);
 
             _primaryKey = Record.Id;
         }
@@ -65,9 +67,9 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
         }
         
     }
-    public async Task Update(Action<FobRecord> update, CancellationToken token = default)
+    public async Task Update(Action<FobRecord> update)
     {
-        await _semaphore.WaitAsync(token);
+        await _semaphore.WaitAsync(CancellationToken.None);
         try
         {
             if (_primaryKey == 0)
@@ -75,34 +77,32 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
 
             await using IStatsDbContext dbContext = new TDbContext();
 
-            Record = await dbContext.FobRecords.FirstAsync(x => x.Id == _primaryKey, token);
+            Record = await dbContext.FobRecords.FirstAsync(x => x.Id == _primaryKey, CancellationToken.None);
 
-            await UCWarfare.ToUpdate(token);
+            await UCWarfare.ToUpdate(CancellationToken.None);
             update(Record);
 
             dbContext.Update(Record);
 
-            await dbContext.SaveChangesAsync(token);
+            await dbContext.SaveChangesAsync(CancellationToken.None);
         }
         finally
         {
             _semaphore.Release();
         }
     }
-    public async Task Create(IFOBItem item, FobItemRecord itemRecord, CancellationToken token = default)
+    public async Task Create(IFOBItem item, FobItemRecord itemRecord)
     {
-        await _semaphore.WaitAsync(token);
+        await _semaphore.WaitAsync(CancellationToken.None);
         try
         {
             if (_itemPrimaryKeys.TryGetValue(item, out ulong pk) && pk != 0)
                 throw new InvalidOperationException("Only run create once per item.");
 
-            using CombinedTokenSources tokens = token.CombineTokensIfNeeded(CancelTokenSource.Token);
-
             await using IStatsDbContext dbContext = new TDbContext();
 
             dbContext.FobItemRecords.Add(itemRecord);
-            await dbContext.SaveChangesAsync(token);
+            await dbContext.SaveChangesAsync(CancellationToken.None);
             _itemPrimaryKeys[item] = itemRecord.Id;
             item.RecordId = itemRecord.Id;
         }
@@ -111,13 +111,13 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
             _semaphore.Release();
         }
     }
-    public static async Task Update(ulong primaryKey, Action<FobItemRecord> update, CancellationToken token = default)
+    public static async Task Update(ulong primaryKey, Action<FobItemRecord> update)
     {
         await using IStatsDbContext dbContext = new TDbContext();
 
-        FobItemRecord item = await dbContext.FobItemRecords.FirstAsync(x => x.Id == primaryKey, token);
+        FobItemRecord item = await dbContext.FobItemRecords.FirstAsync(x => x.Id == primaryKey, CancellationToken.None);
 
-        await UCWarfare.ToUpdate(token);
+        await UCWarfare.ToUpdate(CancellationToken.None);
         update(item);
 
         dbContext.Update(item);
@@ -130,17 +130,17 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
             }
         }
 
-        await dbContext.SaveChangesAsync(token);
+        await dbContext.SaveChangesAsync(CancellationToken.None);
     }
-    public async Task Update(IFOBItem fobItem, Action<FobItemRecord> update, CancellationToken token = default)
+    public async Task Update(IFOBItem fobItem, Action<FobItemRecord> update)
     {
-        await _semaphore.WaitAsync(token);
+        await _semaphore.WaitAsync(CancellationToken.None);
         try
         {
             if (!_itemPrimaryKeys.TryGetValue(fobItem, out ulong pk) || pk == 0)
                 throw new InvalidOperationException("Run create before running Update on this item.");
 
-            await Update(pk, update, token);
+            await Update(pk, update);
         }
         finally
         {

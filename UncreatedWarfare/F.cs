@@ -883,13 +883,11 @@ public static class F
     }
     public static void LoadFromConfig(this UnturnedUI ui, JsonAssetReference<EffectAsset>? reference)
     {
-        reference.ValidReference(out ushort id);
-        ui.LoadFromConfig(id);
+        ui.LoadFromConfig(new JsonAssetContainer<EffectAsset>(reference ?? new JsonAssetReference<EffectAsset>()));
     }
     public static void LoadFromConfig(this UnturnedUI ui, RotatableConfig<JsonAssetReference<EffectAsset>> reference)
     {
-        reference.ValidReference(out ushort id);
-        ui.LoadFromConfig(id);
+        ui.LoadFromConfig(new JsonAssetContainer<EffectAsset>(reference == null ? new JsonAssetReference<EffectAsset>() : reference));
     }
     public static bool HasGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>[]>? assets, Guid guid) where TAsset : Asset
     {
@@ -923,6 +921,16 @@ public static class F
     public static ushort GetId<TAsset>(this JsonAssetReference<TAsset>? reference) where TAsset : Asset
     {
         reference.ValidReference(out ushort id);
+        return id;
+    }
+    public static Guid GetGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference) where TAsset : Asset
+    {
+        reference.ValidReference(out Guid id);
+        return id;
+    }
+    public static Guid GetGuid<TAsset>(this JsonAssetReference<TAsset>? reference) where TAsset : Asset
+    {
+        reference.ValidReference(out Guid id);
         return id;
     }
     public static bool ValidReference<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, out Guid guid) where TAsset : Asset

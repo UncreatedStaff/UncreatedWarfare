@@ -175,13 +175,13 @@ public class FOBListUI : UnturnedUI
     }
     public class FOBListElement
     {
-        [Pattern("", Mode = FormatMode.Prefix)]
+        [Pattern(Root = true)]
         public UnturnedUIElement Root { get; set; }
 
-        [Pattern("N{0}", AdditionalPath = "{0}", Mode = FormatMode.Replace)]
+        [Pattern("N{0}")]
         public UnturnedLabel Name { get; set; }
 
-        [Pattern("R{0}", AdditionalPath = "{0}", Mode = FormatMode.Replace)]
+        [Pattern("R{0}")]
         public UnturnedLabel Resources { get; set; }
     }
     private static string GetFOBUIText(in LanguageSet set, IFOB fob) => T.FOBUI.Translate(set.Language, fob, fob.GridLocation, fob.ClosestLocation, team: set.Team, target: set.Players.Count == 1 ? set.Players[0] : null);

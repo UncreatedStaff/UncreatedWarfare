@@ -882,16 +882,6 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         }
         if (item.Equals(Radio))
             Radio = null!;
-        try
-        {
-            if (this is IDisposable disposable)
-                disposable.Dispose();
-        }
-        catch (Exception ex)
-        {
-            L.LogError($"[FOBS] Failed to dispose FOB {Name}.");
-            L.LogError(ex);
-        }
     }
     public bool ContainsBuildable(IBuildable buildable) => FindFOBItem(buildable) != null;
     public bool ContainsVehicle(InteractableVehicle vehicle) => FindFOBItem(vehicle) != null;

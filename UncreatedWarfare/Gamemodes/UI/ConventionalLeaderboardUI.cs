@@ -66,7 +66,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel[] Team2PlayerCaptures = ElementPatterns.CreateArray<UnturnedLabel>("DataEmpty/Scalar/Leaderboard/Team2/{0}/2C{0}",  1, to: 14);
     public readonly UnturnedLabel[] Team2PlayerDamage   = ElementPatterns.CreateArray<UnturnedLabel>("DataEmpty/Scalar/Leaderboard/Team2/{0}/2T{0}",  1, to: 14);
     public readonly UnturnedLabel[] Team2PlayerVCs      = ElementPatterns.CreateArray<UnturnedLabel>("DataEmpty/Scalar/Leaderboard/Team2/{0}/2VC{0}", 1, to: 14);
-    
+
     public readonly UnturnedLabel TeamStatsHeader           = new UnturnedLabel("DataEmpty/Scalar/BottomContainer/WarAnalytics/WarHeader");
 
     public readonly UnturnedLabel TeamDurationLabel         = new UnturnedLabel("DataEmpty/Scalar/BottomContainer/WarAnalytics/ColumnGroupLeft/ColumnLeft/lblDuration");
