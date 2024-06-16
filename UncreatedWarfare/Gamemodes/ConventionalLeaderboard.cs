@@ -66,9 +66,6 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
 
     protected override void Update()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (_vcStateT1 is null || _vcStateT2 is null) return;
         int num = Math.Min(LeaderboardUI.Team1PlayerVCs.Length + 1, StatsTeam1!.Count);
         for (int i = 1; i < num; i++)
@@ -117,9 +114,6 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
             throw new ArgumentException("PlayerStatOverrides must be at least 12 elements long.");
         if (LeaderboardOverrides.Length < 6)
             throw new ArgumentException("LeaderboardOverrides must be at least 6 elements long.");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         CultureInfo culture = set.CultureInfo;
         LanguageInfo lang = set.Language;
         int len = 47;

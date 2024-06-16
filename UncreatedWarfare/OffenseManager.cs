@@ -362,9 +362,6 @@ public static class OffenseManager
     }
     public static async Task ApplyMuteSettings(UCPlayer joining, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (joining == null) return;
         MuteType type = MuteType.None;
         Mute[] mutes = await Data.ModerationSql.GetActiveEntries<Mute>(joining.Steam64, joining.IPAddresses, joining.HWIDs, false, false, token: token).ConfigureAwait(false);
@@ -407,9 +404,6 @@ public static class OffenseManager
     /// <returns>0 for a successful ban.</returns>
     internal static async Task<StandardErrorCode> BanPlayerAsync(ulong targetId, ulong callerId, string reason, int duration, DateTimeOffset timestamp, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer? target = UCPlayer.FromID(targetId);
         UCPlayer? caller = UCPlayer.FromID(callerId);
         PlayerNames name;
@@ -524,9 +518,6 @@ public static class OffenseManager
     /// <returns>0 for a successful unban, 2 when the target isn't banned.</returns>
     internal static async Task<StandardErrorCode> UnbanPlayer(ulong targetId, ulong callerId, DateTimeOffset timestamp, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(targetId, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         if (!Provider.requestUnbanPlayer(callerId == 0 ? CSteamID.Nil : new CSteamID(callerId), new CSteamID(targetId)))
@@ -559,9 +550,6 @@ public static class OffenseManager
     /// <returns>0 for a successful warn, 2 when the target isn't banned.</returns>
     internal static async Task<StandardErrorCode> WarnPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer? target = UCPlayer.FromID(targetId);
         if (target is null)
             return StandardErrorCode.NotFound;
@@ -599,9 +587,6 @@ public static class OffenseManager
     /// <returns>0 for a successful mute.</returns>
     internal static async Task<StandardErrorCode> MutePlayerAsync(ulong target, ulong admin, MuteType type, int duration, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer? muted = UCPlayer.FromID(target);
         DateTime now = DateTime.Now;
         await Data.DatabaseManager.NonQueryAsync(

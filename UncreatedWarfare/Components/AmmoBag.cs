@@ -29,9 +29,6 @@ public class AmmoBagComponent : MonoBehaviour
     }
     public async Task ResupplyPlayer(UCPlayer player, Kit kit, int ammoCost, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Ammo -= ammoCost;
         if (Data.Is(out IKitRequests req))
         {

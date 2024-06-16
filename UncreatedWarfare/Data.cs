@@ -289,10 +289,6 @@ public static class Data
     }
     internal static async Task LoadVariables(CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-
         OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
         PlaytimeComponents = new Dictionary<ulong, UCPlayerData>(Provider.maxPlayers);
 

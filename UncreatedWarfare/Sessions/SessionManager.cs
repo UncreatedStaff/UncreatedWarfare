@@ -34,9 +34,6 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
     protected override async Task LoadAsync(CancellationToken token)
     {
         _semaphore.Release();
-#if DEBUG
-        using IDisposable disposable = ProfilingUtils.StartTracking();
-#endif
         await RestartSessionsForAll(false, true, token);
 
         SquadManager.SquadStatusUpdated += OnSquadChanged;
@@ -46,9 +43,6 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
     }
     protected override async Task UnloadAsync(CancellationToken token)
     {
-#if DEBUG
-        using IDisposable disposable = ProfilingUtils.StartTracking();
-#endif
         Gamemode.OnGamemodeChanged -= OnGamemodeChanged;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         KitManager.OnManualKitChanged -= OnKitChanged;
@@ -78,9 +72,6 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
                 lockpSync &= await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
             {
-#if DEBUG
-                using IDisposable disposable = ProfilingUtils.StartTracking();
-#endif
                 await UCWarfare.ToUpdate(token);
                 await using IGameDataDbContext dbContext = new WarfareDbContext();
                 SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
@@ -116,9 +107,6 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-#if DEBUG
-            using IDisposable disposable = ProfilingUtils.StartTracking();
-#endif
             await UCWarfare.ToUpdate(token);
 
             UCPlayer[] onlinePlayers = PlayerManager.OnlinePlayers.ToArray();
@@ -239,9 +227,6 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
     }
     private static void EndSession(IGameDataDbContext dbContext, SessionRecord record, bool endGame, bool update = true)
     {
-#if DEBUG
-        using IDisposable disposable = ProfilingUtils.StartTracking();
-#endif
         record.EndedTimestamp = DateTimeOffset.UtcNow;
         record.FinishedGame = endGame;
         record.UnexpectedTermination = false;
@@ -355,9 +340,6 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable disposable = ProfilingUtils.StartTracking();
-#endif
         SessionRecord record;
         lock (_sessions)
         {
@@ -378,9 +360,6 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
     {
         if (Data.Gamemode is null)
             return;
-#if DEBUG
-        using IDisposable disposable = ProfilingUtils.StartTracking();
-#endif
 
         if (!wasAlreadyOnline && IsSessionExpired(player))
         {

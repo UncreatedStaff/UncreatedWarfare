@@ -90,9 +90,6 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     private IEnumerator<WaitForSeconds> EndGameCoroutine()
     {
         yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();

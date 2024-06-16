@@ -177,9 +177,6 @@ public static class UCBarricadeManager
     }
     public static BarricadeData? GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop? drop)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Transform? barricadeTransform = GetBarricadeTransformFromLook(look);
         if (barricadeTransform == null)
         {
@@ -202,9 +199,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             Regions.getRegionsInRadius(origin, range, RegionBuffer);
@@ -230,9 +224,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             Regions.getRegionsInRadius(origin, range, RegionBuffer);
@@ -256,9 +247,6 @@ public static class UCBarricadeManager
     }
     public static IEnumerable<BarricadeDrop> GetBarricadesByGuid(Guid guid)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<BarricadeDrop> list = new List<BarricadeDrop>();
 
         for (int x = 0; x < Regions.WORLD_SIZE; x++)
@@ -343,9 +331,6 @@ public static class UCBarricadeManager
     }
     public static List<BarricadeDrop> GetBarricadesWhere(Predicate<BarricadeDrop> predicate)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<BarricadeDrop> list = new List<BarricadeDrop>();
         for (int x = 0; x < Regions.WORLD_SIZE; x++)
         {
@@ -366,9 +351,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             List<BarricadeDrop> list = new List<BarricadeDrop>();
             Regions.getRegionsInRadius(origin, range, RegionBuffer);
@@ -389,9 +371,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             int rtn = 0;
             Regions.getRegionsInRadius(origin, range, RegionBuffer);
@@ -415,9 +394,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             int rtn = 0;
             Regions.getRegionsInRadius(origin, range, RegionBuffer);
@@ -439,9 +415,6 @@ public static class UCBarricadeManager
     }
     public static int CountBarricadesWhere(Predicate<BarricadeDrop> predicate, int max = -1)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int rtn = 0;
         for (int x = 0; x < Regions.WORLD_SIZE; x++)
         {
@@ -463,9 +436,6 @@ public static class UCBarricadeManager
     }
     public static int CountStructuresWhere(Predicate<StructureDrop> predicate, int max = -1)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int rtn = 0;
         for (int x = 0; x < Regions.WORLD_SIZE; x++)
         {
@@ -487,9 +457,6 @@ public static class UCBarricadeManager
     }
     public static IEnumerable<BarricadeDrop> GetNearbyBarricades(IEnumerable<BarricadeDrop> selection, float range, Vector3 origin, bool sortClosest)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<BarricadeDrop> list = new List<BarricadeDrop>();
         if (range == 0) return list;
         float sqrRange = range * range;
@@ -507,9 +474,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             List<BarricadeDrop> list = new List<BarricadeDrop>();
@@ -533,9 +497,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             //ulong group = TeamManager.GetGroupID(team);
@@ -559,9 +520,6 @@ public static class UCBarricadeManager
     }
     public static IEnumerable<StructureDrop> GetNearbyStructures(IEnumerable<StructureDrop> selection, float range, Vector3 origin, bool sortClosest)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<StructureDrop> list = new List<StructureDrop>();
         if (range == 0) return list;
         float sqrRange = range * range;
@@ -579,9 +537,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             List<StructureDrop> list = new List<StructureDrop>();
@@ -605,9 +560,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             //ulong group = TeamManager.GetGroupID(team);
@@ -633,9 +585,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             int rtn = 0;
@@ -658,9 +607,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             ulong group = TeamManager.GetGroupID(team);
@@ -687,9 +633,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             ulong group = TeamManager.GetGroupID(team);
@@ -716,9 +659,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             int rtn = 0;
@@ -740,9 +680,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             ulong group = TeamManager.GetGroupID(team);
@@ -768,9 +705,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             Regions.getRegionsInRadius(origin, range, RegionBuffer);
@@ -797,9 +731,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             List<ItemData> list = new List<ItemData>();
@@ -823,9 +754,6 @@ public static class UCBarricadeManager
     {
         lock (RegionBuffer)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             RegionBuffer.Clear();
             float sqrRange = range * range;
             List<ItemData> list = new List<ItemData>();
@@ -861,9 +789,6 @@ public static class UCBarricadeManager
         ThreadUtil.assertIsGameThread();
         if (amount < 1)
             return 0;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int counter = 0;
 
         for (int i = Math.Min(storage.items.items.Count - 1, byte.MaxValue); i >= 0; --i)
@@ -881,9 +806,6 @@ public static class UCBarricadeManager
     }
     public static BarricadeDrop? FindBarricadeDrop(BarricadeData data)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         uint id = data.instanceID;
         if (Regions.tryGetCoordinate(data.point, out byte x, out byte y))
         {
@@ -924,9 +846,6 @@ public static class UCBarricadeManager
     {
         if (BarricadeManager.regions == null)
             throw new InvalidOperationException("Barricade manager has not yet been initialized.");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Vector3 expectedPosition = interactable.transform.position;
         bool f = false;
         if (Regions.tryGetCoordinate(expectedPosition, out byte x1, out byte y1))
@@ -974,9 +893,6 @@ public static class UCBarricadeManager
     }
     public static BarricadeDrop? FindBarricade(uint instanceID)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (byte x = 0; x < Regions.WORLD_SIZE; x++)
         {
             for (byte y = 0; y < Regions.WORLD_SIZE; y++)
@@ -1005,9 +921,6 @@ public static class UCBarricadeManager
     {
         if (BarricadeManager.regions == null)
             throw new InvalidOperationException("Barricade manager has not yet been initialized.");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         bool f = false;
         if (Regions.tryGetCoordinate(expectedPosition, out byte x1, out byte y1))
         {
@@ -1056,9 +969,6 @@ public static class UCBarricadeManager
     {
         if (StructureManager.regions == null)
             throw new InvalidOperationException("Structure manager has not yet been initialized.");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         bool f = false;
         if (Regions.tryGetCoordinate(expectedPosition, out byte x1, out byte y1))
         {
@@ -1098,9 +1008,6 @@ public static class UCBarricadeManager
     }
     public static StructureDrop? FindStructure(uint instanceID)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int x = 0; x < Regions.WORLD_SIZE; x++)
         {
             for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -1122,9 +1029,6 @@ public static class UCBarricadeManager
     {
         if (LevelObjects.objects == null)
             throw new InvalidOperationException("LevelObjects has not yet been initialized.");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         bool f = false;
         byte x1 = byte.MaxValue, y1 = byte.MaxValue;
         if (!float.IsNaN(expectedPosition.x) && !float.IsNaN(expectedPosition.y) && !float.IsNaN(expectedPosition.z) &&
@@ -1170,9 +1074,6 @@ public static class UCBarricadeManager
     {
         if (LevelObjects.objects == null)
             throw new InvalidOperationException("LevelObjects has not yet been initialized.");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         bool f = false;
         Vector3 expectedPosition = transform.position;
         if (Regions.tryGetCoordinate(expectedPosition, out byte x1, out byte y1))
@@ -1218,9 +1119,6 @@ public static class UCBarricadeManager
     {
         if (LevelObjects.objects == null)
             throw new InvalidOperationException("LevelObjects has not yet been initialized.");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int x = 0; x < Regions.WORLD_SIZE; x++)
         {
             for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -1239,9 +1137,6 @@ public static class UCBarricadeManager
     {
         if (LevelObjects.objects == null)
             throw new InvalidOperationException("LevelObjects has not yet been initialized.");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         bool f = false;
         byte x1 = byte.MaxValue, y1 = byte.MaxValue;
         if (!float.IsNaN(expectedPosition.x) && !float.IsNaN(expectedPosition.y) && !float.IsNaN(expectedPosition.z) &&
@@ -1285,9 +1180,6 @@ public static class UCBarricadeManager
     }
     public static LevelObject? FindObject(uint instanceID, Guid guid)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int x = 0; x < Regions.WORLD_SIZE; x++)
         {
             for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -1397,9 +1289,6 @@ public static class UCBarricadeManager
     }
     public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius, List<RegionCoordinate> search)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float sqrRadius = radius * radius;
         if (ItemManager.regions == null || sqrRadius <= 0) return true;
         int ct = 0;

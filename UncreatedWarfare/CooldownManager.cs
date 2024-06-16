@@ -41,9 +41,6 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
     {
         if (seconds <= 0f) return;
         Singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (HasCooldown(player, type, out Cooldown existing, data))
             existing.TimeAdded = Time.realtimeSinceStartup;
         else
@@ -53,9 +50,6 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
     public static bool HasCooldown(UCPlayer player, CooldownType type, out Cooldown cooldown, params object[] data)
     {
         Singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Singleton.Cooldowns.RemoveAll(c => c.Player == null || c.SecondsLeft <= 0f);
         cooldown = Singleton.Cooldowns.Find(c => c.CooldownType == type && c.Player.Steam64 == player.Steam64 && StatesEqual(data, c.Parameters));
         return cooldown != null;
@@ -89,9 +83,6 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
     public static bool HasCooldownNoStateCheck(UCPlayer player, CooldownType type, out Cooldown cooldown)
     {
         Singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Singleton.Cooldowns.RemoveAll(c => c.Player == null || c.Timeleft.TotalSeconds <= 0);
         cooldown = Singleton.Cooldowns.Find(c => c.CooldownType == type && c.Player.CSteamID == player.CSteamID);
         return cooldown != null;

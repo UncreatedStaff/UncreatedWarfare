@@ -37,9 +37,6 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
     public void Initialize(GameObject projectile, UCPlayer firer, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         _projectile = projectile;
         _firer = firer;
         _maxTurnDegrees = responsiveness;
@@ -109,9 +106,6 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
             _laserTarget = null;
         }
 
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float minAngle = 45;
 
         if (_firer is null)
@@ -143,9 +137,6 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
     {
         if (_isActive)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (_aim == null)
             {
                 _isActive = false;

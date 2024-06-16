@@ -142,9 +142,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         DeathTracker.RemovePlayerInfo(player.Steam64);
         if (_injuredPlayers.TryGetValue(player.Steam64, out DownedPlayerData p))
         {
@@ -156,9 +153,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     private void OnHealPlayer(Player healer, Player downed, ItemConsumeableAsset asset, ref bool shouldAllow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer? medic = UCPlayer.FromPlayer(healer);
         UCPlayer? player = UCPlayer.FromPlayer(downed);
         if (medic == null || player == null)
@@ -185,9 +179,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     private void OnPlayerRespawned(PlayerLife obj)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (obj.player.TryGetComponent(out Reviver r))
             r.TellStandDelayed(1.5f);
         obj.player.movement.sendPluginSpeedMultiplier(1.0f);
@@ -195,9 +186,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     internal void SetStanceBetter(Player player, EPlayerStance stance)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.SetPrivateStance == null || Data.ReplicateStance == null)
         {
             player.stance.checkStance(stance);
@@ -209,9 +197,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     internal void OnPlayerHealed(UCPlayer medic, UCPlayer target)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (target.Player.TryGetComponent(out Reviver r) && _injuredPlayers.ContainsKey(target.Steam64))
         {
             ActionLog.Add(ActionLogType.RevivedPlayer, target.Steam64.ToString(Data.AdminLocale), medic.Steam64);
@@ -275,9 +260,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     public void RevivePlayer(Player target)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (_injuredPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
         {
             if (target.TryGetComponent(out Reviver r))
@@ -286,9 +268,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!_injuredPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DownedPlayerData p))
         {
             UCPlayer? killer = UCPlayer.FromCSteamID(parameters.killer);
@@ -321,9 +300,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     internal void InjurePlayer(in DamagePlayerParameters parameters, UCPlayer? killer)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         parameters.player.equipment.dequip();
 
         // times per second FixedUpdate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
@@ -366,9 +342,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     private void OnPlayerDeath(PlayerDied e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         //L.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
         SetStanceBetter(e.Player, EPlayerStance.STAND);
         if (_injuredPlayers.ContainsKey(e.Steam64))
@@ -392,9 +365,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     public IEnumerable<Vector3> GetPositionsOfTeam(ulong team)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ulong[] downed = _injuredPlayers.Keys.ToArray();
         List<Vector3> positions = new List<Vector3>(downed.Length / 2 + 4);
         for (int i = 0; i < downed.Length; i++)
@@ -502,9 +472,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         {
             if (shouldAllow && Loaded)
             {
-#if DEBUG
-                using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
                 if (_singleton._injuredPlayers.ContainsKey(equipment.player.channel.owner.playerID.steamID.m_SteamID))
                 {
                     shouldAllow = false;
@@ -515,9 +482,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         {
             if (Loaded)
             {
-#if DEBUG
-                using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
                 if (_singleton._injuredPlayers.ContainsKey(_player.Player.channel.owner.playerID.steamID.m_SteamID))
                 {
                     TellStanceNoDelay(EPlayerStance.PRONE);
@@ -527,9 +491,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #pragma warning restore IDE0051
         private void OnPlayerPostDamage(Player player, byte damage, Vector3 force, EDeathCause cause, ELimb limb, CSteamID killerid)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (killerid.TryGetPlayerData(out UCPlayerData killer) && killer.Stats != null && killer.Stats is IPVPModeStats pvp)
             {
                 pvp.AddDamage(damage);
@@ -572,9 +533,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         public void RevivePlayer(IRevives? g = default, bool remove = true)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (g == default) Data.Is<IRevives>(out g);
             if (g != default)
             {
@@ -603,9 +561,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         public void FinishKillingPlayer(bool isDead = false)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (Data.Is(out IRevives g))
             {
                 RevivePlayer(g, false);

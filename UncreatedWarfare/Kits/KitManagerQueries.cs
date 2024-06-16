@@ -22,9 +22,6 @@ partial class KitManager
     public async Task DownloadPlayersKitData(IEnumerable<UCPlayer> playerList, bool lockPurchaseSync,
         CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer[] players = playerList.AsArrayFast(true);
         if (players.Length == 0)
             return;

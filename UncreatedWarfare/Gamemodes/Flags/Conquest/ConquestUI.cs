@@ -12,9 +12,6 @@ public static class ConquestUI
 {
     public static void SendFlagList(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (player == null || player.HasUIHidden) return;
         ulong team = player.GetTeam();
         if (team < 1 || team > 3) return;
@@ -79,9 +76,6 @@ public static class ConquestUI
 
     public static void UpdateFlag(Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.Is(out IFlagRotation gm))
         {
             int index = gm.Rotation.IndexOf(flag);
@@ -130,9 +124,6 @@ public static class ConquestUI
     }
     public static CaptureUIParameters ComputeUI(ulong team, Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
 
         if (flag.IsContested(out _))
         {

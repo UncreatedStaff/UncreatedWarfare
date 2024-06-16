@@ -304,9 +304,6 @@ public static class F
     }
     public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (replaceIf == null || replaceWith == null || source.Length == 0 || replaceIf.Length == 0) return source;
         char[] chars = source.ToCharArray();
@@ -338,9 +335,6 @@ public static class F
     }
     public static string RemoveMany(this string source, bool caseSensitive, params char[] replacables)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (replacables.Length == 0) return source;
         char[] chars = source.ToCharArray();
@@ -474,9 +468,6 @@ public static class F
     }
     public static UCPlayerData? GetPlayerData(this Player player, out bool success)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.PlaytimeComponents.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out UCPlayerData pt))
         {
             success = pt != null;
@@ -497,9 +488,6 @@ public static class F
     }
     public static UCPlayerData? GetPlayerData(this CSteamID player, out bool success)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.PlaytimeComponents.TryGetValue(player.m_SteamID, out UCPlayerData pt))
         {
             success = pt != null;
@@ -532,9 +520,6 @@ public static class F
     }
     public static UCPlayerData? GetPlayerData(this ulong player, out bool success)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (player == 0)
         {
             success = false;
@@ -580,9 +565,6 @@ public static class F
     }
     public static bool IsInMain(this Player player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!Data.Is<ITeams>()) return false;
         ulong team = player.GetTeam();
         return team switch
@@ -594,18 +576,12 @@ public static class F
     }
     public static bool IsInMain(Vector3 point)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!Data.Is<ITeams>()) return false;
         return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
     }
     public static bool IsOnFlag(this Player player) => player != null && Data.Is(out IFlagRotation fg) && fg.OnFlag != null && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
     public static bool IsOnFlag(this Player player, out Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (player != null && Data.Is(out IFlagRotation fg))
         {
             if (fg.OnFlag == null || fg.Rotation == null)
@@ -662,17 +638,6 @@ public static class F
         }
         else success = true;
     }
-#if DEBUG
-    public static void SaveProfilingData()
-    {
-        string directory = Path.Combine(Data.Paths.BaseDirectory, "Profiling") + Path.DirectorySeparatorChar;
-        CheckDir(directory, out _);
-        string fi = Path.Combine(directory, DateTime.Now.ToString("yyyy-mm-dd_HH-mm-ss") + "_profile.csv");
-        L.Log("Flushing profiling information to " + fi, ConsoleColor.Cyan);
-        ProfilingUtils.WriteAllDataToCSV(fi);
-        ProfilingUtils.Clear();
-    }
-#endif
     public static void SendSteamURL(this SteamPlayer player, string message, ulong s64) =>
         player.SendURL(message, $"https://steamcommunity.com/profiles/{s64}/");
     public static void SendURL(this SteamPlayer player, string message, string url)
@@ -724,9 +689,6 @@ public static class F
     }
     public static LocationDevkitNode? GetClosestLocation(Vector3 point)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         IReadOnlyList<LocationDevkitNode> list = LocationDevkitNodeSystem.Get().GetAllNodes();
         int index = -1;
         float smallest = -1f;
@@ -826,9 +788,6 @@ public static class F
     }
     public static bool FilterName(string original, out string final)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (UCWarfare.Config.DisableNameFilter || UCWarfare.Config.MinAlphanumericStringLength <= 0)
         {
             final = original;

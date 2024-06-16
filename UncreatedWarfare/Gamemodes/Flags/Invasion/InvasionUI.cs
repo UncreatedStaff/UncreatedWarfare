@@ -12,9 +12,6 @@ public static class InvasionUI
 {
     public static CaptureUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle, ulong atkTeam)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (flag.Owner == atkTeam)
         {
             if (team == atkTeam)
@@ -180,9 +177,6 @@ public static class InvasionUI
     }
     public static void SendFlagList(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (player == null || player.HasUIHidden) return;
         ulong team = player.GetTeam();
         if (team < 1 || team > 3) return;
@@ -268,9 +262,6 @@ public static class InvasionUI
     }
     public static void ReplicateFlagUpdate(Flag flag, bool ownerChanged = true)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.Is(out IFlagRotation gm) && Data.Is(out IAttackDefense atkdef))
         {
             ulong attack = atkdef.AttackingTeam;
@@ -332,9 +323,6 @@ public static class InvasionUI
     }
     public static CaptureUIParameters RefreshStaticUI(ulong team, Flag flag, bool inVehicle, ulong atkTeam)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (team != 1 && team != 2) return new CaptureUIParameters(0, EFlagStatus.DONT_DISPLAY, null);
         if (flag.IsObj(atkTeam))
         {

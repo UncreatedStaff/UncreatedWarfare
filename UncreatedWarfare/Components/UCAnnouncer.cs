@@ -20,9 +20,6 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
     string IReloadableSingleton.ReloadKey => "announcer";
     void IUncreatedSingleton.Load()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         stop = false;
         Messages.Clear();
         for (int i = 0; i < T.Translations.Length; ++i)

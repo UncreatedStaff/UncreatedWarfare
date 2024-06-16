@@ -88,9 +88,6 @@ public class Invasion :
     }
     public override void LoadRotation()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (AllFlags == null || AllFlags.Count == 0) return;
         try
         {
@@ -156,9 +153,6 @@ public class Invasion :
     }
     public override void InitFlag(Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         base.InitFlag(flag);
         flag.EvaluatePointsOverride = FlagCheck;
         flag.IsContestedOverride = ContestedCheck;
@@ -167,9 +161,6 @@ public class Invasion :
     }
     private void FlagCheck(Flag flag, bool overrideInactiveCheck = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (State == State.Active || overrideInactiveCheck)
         {
             if (flag.ID == (AttackingTeam == 1ul ? ObjectiveTeam1!.ID : ObjectiveTeam2!.ID))
@@ -196,9 +187,6 @@ public class Invasion :
     }
     private bool ContestedCheck(Flag flag, out ulong winner)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (flag.IsObj(_attackTeam))
         {
             if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers == 0)
@@ -241,9 +229,6 @@ public class Invasion :
     }
     protected override void PlayerEnteredFlagRadius(Flag flag, UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
     }
@@ -284,18 +269,12 @@ public class Invasion :
     }
     protected override void PlayerLeftFlagRadius(Flag flag, UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(player.Connection);
         UpdateFlag(flag);
     }
     protected override void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (newOwner == 1)
         {
             ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(1) + (_attackTeam == 1 ? " ATTACK" : " DEFENSE"));
@@ -375,9 +354,6 @@ public class Invasion :
     }
     protected override void FlagPointsChanged(float newPts, float oldPts, Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (newPts == 0)
             flag.SetOwner(0);
         UpdateFlag(flag);
@@ -397,9 +373,6 @@ public class Invasion :
     }
     public override void OnGroupChanged(GroupChanged e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         CTFUI.ClearFlagList(e.Player);
         if (OnFlagDict.TryGetValue(e.Player.Steam64, out int index))
         {

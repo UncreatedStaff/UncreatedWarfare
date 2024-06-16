@@ -487,9 +487,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     public object Clone() => new Kit(InternalName, this);
     public void SetItemArray(IKitItem[] items, IKitsDbContext dbContext)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<KitItemModel> models = ItemModels;
         BitArray workingArray = new BitArray(items.Length);
         for (int i = 0; i < items.Length; ++i)
@@ -545,9 +542,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     }
     private void UpdateItemArray()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         KitItemModel[] models = ItemModels.ToArray();
         if (models is not { Length: > 0 })
         {
@@ -583,9 +577,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     }
     public void SetUnlockRequirementArray(UnlockRequirement[] items, IKitsDbContext dbContext)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<KitUnlockRequirement> models = UnlockRequirementsModels;
         BitArray workingArray = new BitArray(items.Length);
         for (int i = 0; i < items.Length; ++i)
@@ -646,9 +637,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     }
     private void UpdateUnlockRequirementArray()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         KitUnlockRequirement[] models = UnlockRequirementsModels.ToArray();
         if (models is not { Length: > 0 })
         {
@@ -686,9 +674,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     /// <summary>Will not update signs.</summary>
     public void SetSignText(IKitsDbContext dbContext, ulong setter, Kit kit, string? text, LanguageInfo? language = null)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (kit is null) throw new ArgumentNullException(nameof(kit));
 
         language ??= Warfare.Localization.GetDefaultLanguage();

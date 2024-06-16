@@ -44,9 +44,6 @@ public class Tips : BaseSingleton
         => TryGiveTip(player, cooldown, translation, translation.Translate(player, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10));
     private static void TryGiveTip(UCPlayer player, int cooldown, Translation translation, string text)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         _singleton.AssertLoaded();
         Tip tip = _singleton._tips.Find(t => t.Steam64 == player.Steam64 && t.Translation == translation);
         if (tip is null)

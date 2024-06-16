@@ -117,9 +117,6 @@ public static class EventFunctions
     }
     internal static void OnDropItemFinal(Item item, ref Vector3 location, ref bool shouldAllow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (ItemsTempBuffer.TryGetValue(item, out PlayerInventory inv))
         {
             uint nextindex = Data.GetItemManagerInstanceCount() + 1;
@@ -150,9 +147,6 @@ public static class EventFunctions
     }
     internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         BarricadeData data = drop.GetServersideData();
 
         BarricadeComponent owner = drop.model.gameObject.AddComponent<BarricadeComponent>();
@@ -172,9 +166,6 @@ public static class EventFunctions
     {
         try
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             const float radius = 3;
             const float length = 700;
             const int rayMask = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE | RayMasks.LARGE |
@@ -278,9 +269,6 @@ public static class EventFunctions
     }
     internal static void BulletSpawned(UseableGun gun, BulletInfo bullet)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (gun.player.TryGetPlayerData(out UCPlayerData c))
         {
             c.LastGunShot = gun.equippedGunAsset.GUID;
@@ -288,9 +276,6 @@ public static class EventFunctions
     }
     internal static void ReloadCommand_onTranslationsReloaded()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             UCWarfare.I.UpdateLangs(player, false);
     }
@@ -334,9 +319,6 @@ public static class EventFunctions
     internal static void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angleX,
         ref float angleY, ref float angleZ, ref ulong owner, ref ulong group, ref bool shouldAllow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         try
         {
             if (!shouldAllow) return;
@@ -485,9 +467,6 @@ public static class EventFunctions
     }
     internal static void OnItemDropRequested(ItemDropRequested e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (e.Item.GetAsset() is not { } itemAsset)
             return;
 
@@ -534,9 +513,6 @@ public static class EventFunctions
     }
     internal static void OnPreVehicleDamage(CSteamID instigatorSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!shouldAllow)
             return;
 
@@ -697,9 +673,6 @@ public static class EventFunctions
 
     internal static void OnPostPlayerConnected(PlayerJoined e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         try
         {
             // reset the player to spawn if they have joined in a different game as they last played in.
@@ -925,9 +898,6 @@ public static class EventFunctions
     }
     internal static void OnBattleyeKicked(SteamPlayer client, string reason)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer? player = UCPlayer.FromSteamPlayer(client);
         PlayerNames names = player != null ? player.Name : new PlayerNames(client);
         Chat.Broadcast(T.BattlEyeKickBroadcast, names);
@@ -1008,9 +978,6 @@ public static class EventFunctions
     }
     internal static void OnEnterStorage(CSteamID instigator, InteractableStorage storage, ref bool shouldAllow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (storage == null ||
             !shouldAllow ||
             Gamemode.Config.TimeLimitedStorages is null ||
@@ -1038,9 +1005,6 @@ public static class EventFunctions
     }
     internal static void OnBarricadeDamaged(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(barricadeTransform.position))
         {
             shouldAllow = false;
@@ -1145,9 +1109,6 @@ public static class EventFunctions
     }
     internal static void OnStructureDamaged(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(structureTransform.position))
         {
             shouldAllow = false;
@@ -1242,9 +1203,6 @@ public static class EventFunctions
     }
     internal static void OnEnterVehicle(EnterVehicle e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!e.Vehicle.transform.TryGetComponent(out VehicleComponent component))
         {
             component = e.Vehicle.transform.gameObject.AddComponent<VehicleComponent>();
@@ -1265,9 +1223,6 @@ public static class EventFunctions
     {
         if (parameters.player.movement.isSafe || !shouldAllow)
             return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.Gamemode.State != State.Active)
         {
             shouldAllow = false;
@@ -1408,9 +1363,6 @@ public static class EventFunctions
     }
     internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (player == null) return;
         UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
         if (ucplayer == null || ucplayer.OffDuty() && (ucplayer.Squad == null || !ucplayer.IsSquadLeader()))
@@ -1421,9 +1373,6 @@ public static class EventFunctions
     }
     internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (player == null) return;
         if (gesture == EPlayerGesture.POINT)
         {
@@ -1440,9 +1389,6 @@ public static class EventFunctions
     }
     private static void PlaceMarker(UCPlayer ucplayer, Vector3 point, bool requireSquad, bool placeMarkerOnMap)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         if (placeMarkerOnMap)
             ucplayer.Player.quests.replicateSetMarker(true, point);
@@ -1479,9 +1425,6 @@ public static class EventFunctions
 
     public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer, EffectAsset marker)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (marker == null) return;
         ThreadUtil.assertIsGameThread();
         if (ucplayer.Squad == null)
@@ -1500,9 +1443,6 @@ public static class EventFunctions
     private static readonly Guid KitRack = new Guid("7ee1d28efe904a369c93c544494fa1ef");
     internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!player.inventory.isStoring || player == null || jar == null || jar.item == null || allow == false) return;
         UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
         if (ucplayer != null && ucplayer.OnDuty())
@@ -1526,9 +1466,6 @@ public static class EventFunctions
     }
     internal static void StructureMovedInWorkzone(CSteamID instigator, byte x, byte y, uint instanceID, ref Vector3 point, ref byte angleX, ref byte angleY, ref byte angleZ, ref bool shouldAllow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         Vector3 pt = point, rt = F.BytesToEuler(angleX, angleY, angleZ);
         if (saver != null && saver.TryGetSaveNoLock(instanceID, StructType.Structure, out SqlItem<SavedStructure> item) && item.Item != null)
@@ -1556,9 +1493,6 @@ public static class EventFunctions
     }
     internal static void BarricadeMovedInWorkzone(CSteamID instigator, byte x, byte y, ushort plant, uint instanceID, ref Vector3 point, ref byte angleX, ref byte angleY, ref byte angleZ, ref bool shouldAllow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         Vector3 pt = point, rt = F.BytesToEuler(angleX, angleY, angleZ);
         if (saver != null && saver.TryGetSaveNoLock(instanceID, StructType.Barricade, out SqlItem<SavedStructure> item) && item.Item != null)
@@ -1591,9 +1525,6 @@ public static class EventFunctions
     }
     internal static void OnPlayerLeavesVehicle(ExitVehicle e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (e.Vehicle.transform.TryGetComponent(out VehicleComponent component))
         {
             component.OnPlayerExitedVehicle(e);
@@ -1603,9 +1534,6 @@ public static class EventFunctions
     }
     internal static void OnVehicleSwapSeat(VehicleSwapSeat e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         InteractableVehicle vehicle = e.Vehicle;
         if (vehicle.transform.TryGetComponent(out VehicleComponent component))
         {
@@ -1619,18 +1547,12 @@ public static class EventFunctions
     {
         if (!UCWarfare.Config.AllowBatteryStealing)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             allow = false;
             theif.SendChat(T.NoStealingBatteries);
         }
     }
     internal static void OnCalculateSpawnDuringRevive(PlayerLife sender, bool wantsToSpawnAtHome, ref Vector3 position, ref float yaw)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ulong team = sender.player.GetTeam();
         if (team is 1 or 2)
         {
@@ -1648,9 +1570,6 @@ public static class EventFunctions
     internal static void OnCalculateSpawnDuringJoin(SteamPlayerID playerID, ref Vector3 point, ref float yaw, ref EPlayerStance initialStance, ref bool needsNewSpawnpoint)
     {
         needsNewSpawnpoint = false;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         // leave the player where they logged off if they logged off in the same game.
         if (PlayerSave.TryReadSaveFile(playerID.steamID.m_SteamID, out PlayerSave save))
         {
@@ -1670,9 +1589,6 @@ public static class EventFunctions
     }
     internal static void OnPlayerDisconnected(PlayerEvent e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ulong s64 = e.Steam64;
         DroppedItems.Remove(s64);
         TeamManager.PlayerBaseStatus?.Remove(s64);
@@ -1735,9 +1651,6 @@ public static class EventFunctions
         => UCWarfare.I.UpdateLangs(player, false);
     internal static async Task OnPrePlayerConnect(PlayerPending e, CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         try
         {
             bool kick = false;
@@ -1834,9 +1747,6 @@ public static class EventFunctions
     }
     internal static void OnStructureDestroyed(StructureDestroyed e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (e.InstigatorId != 0ul)
         {
             SteamPlayer damager = PlayerTool.getSteamPlayer(e.InstigatorId);
@@ -1850,9 +1760,6 @@ public static class EventFunctions
     }
     internal static void OnBarricadeDestroyed(BarricadeDestroyed e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         IconRenderer[] iconrenderers = e.Transform.GetComponents<IconRenderer>();
         foreach (IconRenderer iconRenderer in iconrenderers)
             IconManager.DeleteIcon(iconRenderer);
@@ -1908,9 +1815,6 @@ public static class EventFunctions
         }
         if (Data.Is(out IRevives r))
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (pl2 is not null && pl is not null)
                 r.ReviveManager.OnPlayerHealed(pl2, pl);
         }

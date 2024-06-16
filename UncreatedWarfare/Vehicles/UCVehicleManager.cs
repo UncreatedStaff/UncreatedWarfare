@@ -318,9 +318,6 @@ public static class UCVehicleManager
     }
     public static VehicleBarricadeRegion? FindRegionFromVehicleWithIndex(this InteractableVehicle vehicle, out ushort index, int subvehicleIndex = 0)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (vehicle == null)
         {
             index = ushort.MaxValue;
@@ -340,9 +337,6 @@ public static class UCVehicleManager
     }
     public static IEnumerable<InteractableVehicle> GetNearbyVehicles(Guid id, float radius, Vector3 origin)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float sqrRadius = radius * radius;
         List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
         List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
@@ -357,9 +351,6 @@ public static class UCVehicleManager
     }
     public static int CountNearbyVehicles(Guid id, float radius, Vector3 origin, ulong team = 0)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float sqrRadius = radius * radius;
         List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
         int amt = 0;
@@ -374,9 +365,6 @@ public static class UCVehicleManager
     }
     public static bool IsVehicleNearby(Guid id, float radius, Vector3 origin, out InteractableVehicle vehicle)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float sqrRadius = radius * radius;
         List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
         VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
@@ -394,9 +382,6 @@ public static class UCVehicleManager
     }
     public static IEnumerable<InteractableVehicle> GetNearbyVehicles(IEnumerable<Guid> ids, float radius, Vector3 origin)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float sqrRadius = radius * radius;
         List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
         List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
@@ -411,9 +396,6 @@ public static class UCVehicleManager
     }
     public static InteractableVehicle? GetNearestLogi(Vector3 point, float radius, ulong team = 0)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
         VehicleManager.getVehiclesInRadius(point, Mathf.Pow(radius, 2), vehicles);
         VehicleBay? bay = VehicleBay.GetSingletonQuick();

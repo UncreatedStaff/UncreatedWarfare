@@ -1262,9 +1262,6 @@ public static class TeamManager
     public static bool InMainCached(UCPlayer player) => PlayerBaseStatus != null && PlayerBaseStatus.TryGetValue(player.Steam64, out byte team) && team != 0;
     public static void EvaluateBases()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         PlayerBaseStatus ??= new Dictionary<ulong, byte>();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {

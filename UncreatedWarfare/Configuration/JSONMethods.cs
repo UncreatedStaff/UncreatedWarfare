@@ -442,9 +442,6 @@ public static partial class JSONMethods
 {
     public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> hexValues)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         F.CheckDir(Data.Paths.BaseDirectory, out bool fileExists);
         string chatColors = Path.Combine(Data.Paths.BaseDirectory, "chat_colors.json");
         if (fileExists)
@@ -542,9 +539,6 @@ public static partial class JSONMethods
     }
     public static Dictionary<string, Vector3> LoadExtraPoints()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         F.CheckDir(Data.Paths.FlagStorage, out bool dirExists);
         if (dirExists)
         {
@@ -651,9 +645,6 @@ public static partial class JSONMethods
     }
     public static Dictionary<ulong, string> LoadLanguagePreferences()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         F.CheckDir(Data.Paths.LangStorage, out bool dirExists);
         string langPrefs = Path.Combine(Data.Paths.LangStorage, "preferences.json");
         if (dirExists)

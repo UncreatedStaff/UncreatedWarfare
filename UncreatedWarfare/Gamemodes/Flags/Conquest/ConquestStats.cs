@@ -41,9 +41,6 @@ public sealed class ConquestStatTracker : TeamStatTracker<ConquestStats>, ILonge
 
     public void GetTopStats(int count, out List<ConquestStats> statsT1, out List<ConquestStats> statsT2)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<ConquestStats> stats = this.stats.ToList();
 
         stats.RemoveAll(p =>

@@ -529,9 +529,6 @@ public static class UCInventoryManager
     [Obsolete("Use GUID instead.")]
     public static int CountItems(Player player, ushort itemID)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int count = 0;
 
         for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)

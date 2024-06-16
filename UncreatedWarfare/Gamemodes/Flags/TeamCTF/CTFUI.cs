@@ -18,9 +18,6 @@ public static class CTFUI
     public static int FromMax(int cap, int max) => Math.Abs(cap) >= max ? Gamemode.Config.UICircleFontCharacters.Length - 1 : (Gamemode.Config.UICircleFontCharacters.Length - 1) / max * Math.Abs(cap);
     public static CaptureUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (inVehicle)
             return new CaptureUIParameters(team, EFlagStatus.IN_VEHICLE, flag);
 
@@ -201,9 +198,6 @@ public static class CTFUI
     }
     public static void SendFlagList(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (player == null || player.HasUIHidden) return;
         ulong team = player.GetTeam();
         if (team < 1 || team > 3) return;
@@ -285,9 +279,6 @@ public static class CTFUI
     }
     public static void ReplicateFlagUpdate(Flag flag, bool ownerChanged = true)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.Is(out IFlagRotation gm))
         {
             List<Flag> rotation = gm.Rotation;
@@ -346,9 +337,6 @@ public static class CTFUI
     }
     public static CaptureUIParameters RefreshStaticUI(ulong team, Flag flag, bool inVehicle)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (team != 1 && team != 2) return new CaptureUIParameters(0, EFlagStatus.DONT_DISPLAY, null!);
 
         return ComputeUI(team, flag, inVehicle);

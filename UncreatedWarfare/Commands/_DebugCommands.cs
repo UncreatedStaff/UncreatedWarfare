@@ -115,17 +115,11 @@ public class DebugCommand : AsyncCommand
                 len = 2;
             try
             {
-#if DEBUG
-                using IDisposable profiler = ProfilingUtils.StartTracking(info.Name + " Debug Command");
-#endif
                 ctx.Offset = 1;
                 object obj = info.Invoke(this, len == 2 ? new object[] { ctx, token } : new object[] { ctx });
                 if (obj is Task task)
                 {
                     await task.ConfigureAwait(false);
-#if DEBUG
-                    profiler.Dispose();
-#endif
                     await UCWarfare.ToUpdate();
                 }
                 ctx.Offset = 0;

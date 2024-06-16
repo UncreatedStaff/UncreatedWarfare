@@ -110,9 +110,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public override Task DeclareWin(ulong winner, CancellationToken token)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         StartCoroutine(EndGameCoroutine(winner));
         return base.DeclareWin(winner, token);
     }
@@ -120,9 +117,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     {
         yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
@@ -135,9 +129,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     private void OnShouldStartNewGame()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (_endScreen != null)
         {
             _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
@@ -158,9 +149,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     protected void LoadFlagsIntoRotation()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ResetFlags();
         OnFlagDict.Clear();
 
@@ -177,9 +165,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     public override void LoadRotation()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (AllFlags == null || AllFlags.Count == 0) return;
         try
         {
@@ -232,9 +217,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     protected virtual void InvokeOnObjectiveChanged(Flag oldFlag, Flag newFlag, ulong team, int oldObj, int newObj)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (team != 0)
         {
             if (_gameStats != null)
@@ -308,9 +290,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     protected virtual float GetCaptureXPMultiplier() => 1f;
     protected virtual void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         // StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         for (int i = 0; i < Singletons.Count; ++i)
         {
@@ -349,18 +328,12 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     protected override void PlayerEnteredFlagRadius(Flag flag, UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         L.LogDebug("Player " + player.Name.PlayerName + " entered flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
     }
     protected override void PlayerLeftFlagRadius(Flag flag, UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ITransportConnection channel = player.Connection;
         L.LogDebug("Player " + player.Name.PlayerName + " left flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.LeftCaptureRadius, flag);
@@ -369,9 +342,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     private void UpdateFlag(Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         CaptureUIParameters t1 = default;
         CaptureUIParameters t2 = default;
         CaptureUIParameters t1V = default;
@@ -406,9 +376,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     protected override void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (newOwner == 1)
         {
             ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(1));
@@ -491,18 +458,12 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     protected override void FlagPointsChanged(float newPts, float oldPts, Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (newPts == 0)
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
     public override void PlayerLeave(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (OnFlagDict.TryGetValue(player.Steam64, out int index))
             FlagRotation[index].RecalcCappers();
 

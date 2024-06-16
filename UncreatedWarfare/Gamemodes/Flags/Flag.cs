@@ -174,9 +174,6 @@ public class Flag : IDisposable, IObjective, IZone
     }
     public void ResetFlag()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         SetOwner(0, false);
         _points = 0;
         _lastOwner = 0;
@@ -211,9 +208,6 @@ public class Flag : IDisposable, IObjective, IZone
     }
     public void RecalcCappers()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Team1TotalPlayers = 0;
         Team1TotalCappers = 0;
         Team2TotalPlayers = 0;
@@ -253,9 +247,6 @@ public class Flag : IDisposable, IObjective, IZone
     }
     public PlayerChange GetUpdatedPlayers()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Stopwatch sw = Stopwatch.StartNew();
         List<UCPlayer> prevPlayers = ListPool<UCPlayer>.claim();
         if (prevPlayers.Capacity < PlayersOnFlag.Count)
@@ -318,9 +309,6 @@ public class Flag : IDisposable, IObjective, IZone
 
     public void SetPoints(float value, bool skipEvent = false, bool skipDeltaPoints = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float oldPts = _points;
         if (value > MaxPoints) _points = MaxPoints;
         else if (value < -MaxPoints) _points = -MaxPoints;
@@ -371,9 +359,6 @@ public class Flag : IDisposable, IObjective, IZone
     public bool IsNeutral() => _points == 0;
     public void CapT1(float amount)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         amount *= CaptureMultiplier;
         float amt = Points + amount;
         if (Points > 0 && amt < 0 || Points < 0 && amt > 0) // if sign will be changing
@@ -392,9 +377,6 @@ public class Flag : IDisposable, IObjective, IZone
     }
     public void CapT2(float amount)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         amount *= CaptureMultiplier;
         float amt = Points - amount;
         if (Points > 0 && amt < 0 || Points < 0 && amt > 0) // if sign will be changing
@@ -507,9 +489,6 @@ public class Flag : IDisposable, IObjective, IZone
     }
     public bool IsContested(out ulong winner)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (IsContestedOverride != null)
             return IsContestedOverride(this, out winner);
 
@@ -570,9 +549,6 @@ public class Flag : IDisposable, IObjective, IZone
     }
     public void EvaluatePoints(bool overrideInactiveCheck = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (EvaluatePointsOverride != null)
         {
             EvaluatePointsOverride(this, overrideInactiveCheck);

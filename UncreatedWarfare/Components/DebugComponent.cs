@@ -123,9 +123,6 @@ internal class DebugComponent : MonoBehaviour
     }
     private void AnalyzePing(UCPlayer pl, UCPlayerData data)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float latest = pl.SteamPlayer.ping * 1000f;
         data.AddPing(latest);
         float[] pings = data.PingBuffer;

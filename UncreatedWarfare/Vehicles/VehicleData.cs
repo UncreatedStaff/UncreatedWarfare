@@ -699,9 +699,6 @@ public struct Delay : IJsonReadWrite
     // TODO: gamemode blacklist not working
     public static bool IsDelayed(Delay[] delays, out Delay delay, ulong team)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         delay = Nil;
         string? gm = Data.Gamemode?.Name;
         if (delays == null || delays.Length == 0) return false;

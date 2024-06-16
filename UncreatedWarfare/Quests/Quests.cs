@@ -40,9 +40,6 @@ public abstract class BaseQuestData : ITranslationArgument
     }
     public string Translate(bool forAsset, LanguageInfo language, CultureInfo culture, params object[]? formatting)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (forAsset)
         {
             if (formatting is not null && formatting.Length > 0) formatting[0] = "{0}";
@@ -81,9 +78,6 @@ public abstract class BaseQuestData : ITranslationArgument
     public abstract void ReadPresets(ref Utf8JsonReader reader);
     public void ReadRewards(ref Utf8JsonReader reader)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         lock (RewardExpressionTempList)
         {
             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
@@ -129,9 +123,6 @@ public abstract class BaseQuestData<TTracker, TState, TQuestData> : BaseQuestDat
     public sealed override IQuestState GetState() => GetNewState();
     public TState GetNewState()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         TState state = new TState();
         state.Init((TQuestData)this);
         return state;
@@ -139,9 +130,6 @@ public abstract class BaseQuestData<TTracker, TState, TQuestData> : BaseQuestDat
     protected abstract TTracker CreateQuestTracker(UCPlayer? player, ref TState state, IQuestPreset? preset);
     public TTracker CreateQuestTracker(UCPlayer? player, in IQuestPreset? preset = null)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         TState state = GetNewState();
         TTracker tracker = CreateQuestTracker(player, ref state, preset);
         return tracker;
@@ -153,9 +141,6 @@ public abstract class BaseQuestData<TTracker, TState, TQuestData> : BaseQuestDat
     public sealed override BaseQuestTracker CreateTracker(UCPlayer player) => CreateQuestTracker(player);
     public sealed override BaseQuestTracker? GetTracker(UCPlayer? player, IQuestState state)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (state is not TState st2)
             return null;
 
@@ -164,9 +149,6 @@ public abstract class BaseQuestData<TTracker, TState, TQuestData> : BaseQuestDat
     }
     public sealed override BaseQuestTracker? GetTracker(UCPlayer? player, IQuestPreset preset)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (preset.State is not TState st2)
             return null;
 
@@ -324,9 +306,6 @@ public abstract class BaseQuestData<TTracker, TState, TQuestData> : BaseQuestDat
     }
     public sealed override void ReadPresets(ref Utf8JsonReader reader)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<Preset> presets = new List<Preset>(4);
         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
         {

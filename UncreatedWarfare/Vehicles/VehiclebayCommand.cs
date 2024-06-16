@@ -206,9 +206,6 @@ public class VehicleBayCommand : AsyncCommand
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ctx.AssertGamemode(out IVehicles vehicleGm);
         ctx.AssertGamemode(out IStructureSaving structureGm);
         ctx.AssertRanByPlayer();

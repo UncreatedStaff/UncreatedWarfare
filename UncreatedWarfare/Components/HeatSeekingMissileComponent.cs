@@ -33,10 +33,6 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
     public void Initialize(GameObject projectile, UCPlayer firer, float projectileSpeed, float responsiveness, float guidanceRampTime)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-
         if (firer.CurrentVehicle is not null)
         {
             foreach (var passenger in firer.CurrentVehicle.turrets)
@@ -83,9 +79,6 @@ public class HeatSeekingMissileComponent : MonoBehaviour
     [UsedImplicitly]
     private void FixedUpdate()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (_controller == null)
         {
             Destroy(this);

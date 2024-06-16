@@ -451,9 +451,6 @@ public static class Localization
     private static readonly Guid F15 = new Guid("423d31c55cf84396914be9175ea70d0c");
     public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, LanguageInfo language, CultureInfo culture, FactionInfo? team)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         VehicleBayComponent? comp = spawn.Structure?.Item?.Buildable?.Model?.GetComponent<VehicleBayComponent>();
         if (comp == null) return data.VehicleID.ToString("N");
 

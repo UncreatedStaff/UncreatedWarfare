@@ -240,9 +240,6 @@ public class VehicleComponent : MonoBehaviour
     }
     internal void OnPlayerEnteredVehicle(EnterVehicle e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer player = e.Player;
 
         byte toSeat = e.PassengerIndex;
@@ -271,9 +268,6 @@ public class VehicleComponent : MonoBehaviour
     }
     public void OnPlayerExitedVehicle(ExitVehicle e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (IsInVehiclebay)
             EvaluateUsage(e.Player.Player.channel.owner);
 
@@ -318,9 +312,6 @@ public class VehicleComponent : MonoBehaviour
     }
     public void OnPlayerSwapSeatRequested(VehicleSwapSeat e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (e.NewSeat == 0)
         {
             // new driver
@@ -343,9 +334,6 @@ public class VehicleComponent : MonoBehaviour
     }
     public void EvaluateUsage(SteamPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         byte currentSeat = player.player.movement.getSeat();
         bool isCrewSeat = Data?.Item != null && Data.Item.CrewSeats.ArrayContains(currentSeat);
 
@@ -437,9 +425,6 @@ public class VehicleComponent : MonoBehaviour
     }
     private IEnumerator<WaitForSeconds> ForceSupplyLoopCoroutine(UCPlayer caller, SupplyType type, int amount)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ItemAsset? supplyAsset;
 
         if (type is SupplyType.Build)
@@ -541,9 +526,6 @@ public class VehicleComponent : MonoBehaviour
         while (true)
         {
             yield return new WaitForSeconds(3);
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (F.IsInMain(Vehicle.transform.position))
             {
                 //var ammoCrate = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.AmmoCrateGUID, 30, Vehicle.transform.position, true).FirstOrDefault();

@@ -121,9 +121,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     private async Task SendQuests(UCPlayer player, CancellationToken token = default)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -178,9 +175,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         AssertLoadedIntl();
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         VehicleData data = new VehicleData(vehicle.asset.GUID)
         {
             PrimaryKey = PrimaryKey.NotAssigned
@@ -195,9 +189,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         AssertLoadedIntl();
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         SqlItem<VehicleData>? data = await GetDataProxy(vehicle, token).ConfigureAwait(false);
         if (data is not null)
         {

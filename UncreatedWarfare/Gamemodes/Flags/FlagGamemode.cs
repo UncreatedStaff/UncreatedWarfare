@@ -148,9 +148,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected void ConvertFlags()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         TeamManager.OnReloadFlags();
         int c = AllFlags.Count == 0 ? 48 : AllFlags.Count;
         AllFlags.Clear();
@@ -219,9 +216,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected virtual void RemovePlayerFromFlag(ulong playerId, UCPlayer? player, Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (flag == null)
             return;
         if (OnFlagDict.TryGetValue(playerId, out int index) && index == flag.Index)
@@ -233,9 +227,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     public virtual void AddPlayerOnFlag(UCPlayer player, Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (OnFlagDict.TryGetValue(player.Steam64, out int index))
         {
             if (index != flag.Index)
@@ -293,9 +284,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     internal virtual bool IsInteractableEnabled(Interactable interactable)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Vector3 pos = interactable.transform.position;
         if (TeamManager.IsInAnyMainOrAMCOrLobby(pos))
             return true;
@@ -335,9 +323,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     internal virtual bool IsPowerObjectEnabled(InteractableObject obj)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (CheckFlag(TeamManager.Team1Main.Data.GridObjects) ||
             CheckFlag(TeamManager.Team2Main.Data.GridObjects) ||
             CheckFlag(TeamManager.Team1AMC.Data.GridObjects) ||
@@ -402,9 +387,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         if (!Data.UseElectricalGrid) return;
         if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenObjective)
             return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         GridObject[]? arr = oldObj?.ZoneData?.Item?.Data.GridObjects;
         if (arr is { Length: > 0 })
         {
@@ -423,9 +405,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         if (!Data.UseElectricalGrid) return;
         if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenInRotation)
             return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         SetPowerForAllInGrid(OutOfRotationGridObjects, false);
         SetPowerForAllInGrid(RotationGridObjects, true);
 
@@ -459,9 +438,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     protected static void SetPowerForAllInGrid(IEnumerable<GridObject>? arr, bool state)
     {
         if (!Data.UseElectricalGrid || arr == null) return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         foreach (GridObject obj in arr)
         {
             if (obj.Object is { interactable: { } inx } && inx != null && inx.objectAsset.interactability == EObjectInteractability.BINARY_STATE)

@@ -256,9 +256,6 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
     }
     public async Task<(Kit, StandardErrorCode)> CreateLoadout(ulong fromPlayer, ulong player, Class @class, string displayName, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         string loadoutName = await GetFreeLoadoutName(player).ConfigureAwait(false);
         Kit? kit = await Manager.FindKit(loadoutName, token, true, x => x.Kits).ConfigureAwait(false);
         if (kit != null)

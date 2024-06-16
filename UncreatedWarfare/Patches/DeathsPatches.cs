@@ -34,9 +34,6 @@ public static partial class Patches
         [HarmonyPostfix]
         private static void OnPostProjected(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (lastProjected != null && lastProjected.activeInHierarchy && __instance.equippedGunAsset.isTurret && FOBManager.Loaded)
             {
                 BuildableData? data = FOBManager.Config.Buildables.Find(x =>
@@ -77,9 +74,6 @@ public static partial class Patches
         [HarmonyPrefix]
         private static bool TriggerEnterBumper(Collider other, InteractableVehicle ___vehicle)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (other == null || !Provider.isServer || ___vehicle == null || ___vehicle.asset == null || other.isTrigger || other.CompareTag("Debris"))
                 return false;
             if (other.transform.CompareTag("Player"))

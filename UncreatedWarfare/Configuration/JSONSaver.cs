@@ -96,9 +96,6 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     public void Save()
     {
         if (!isInited) Init();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Save -> " + file);
-#endif
         _threadLocker.Wait();
         if (useSerializer)
         {
@@ -148,9 +145,6 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     }
     public void Read()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Reload -> " + file);
-#endif
         _threadLocker.Wait();
         if (!File.Exists(file))
             CreateFileIfNotExists(LoadDefaults());
@@ -276,9 +270,6 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     }
     public void TryUpgrade()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver TryUpgrade -> " + file);
-#endif
         try
         {
             bool needsSaving = false;

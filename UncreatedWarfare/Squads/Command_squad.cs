@@ -76,9 +76,6 @@ public class SquadCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ctx.AssertRanByPlayer();
 
         ctx.AssertGamemode<ISquads>();

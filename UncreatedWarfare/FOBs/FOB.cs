@@ -694,9 +694,6 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
     private void TryConsumeResources()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Vector3 pos = transform.position;
         Regions.getRegionsInRadius(pos, Radius, RegionBuffer);
         try
@@ -1026,9 +1023,6 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     void IGameTickListener.Tick()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (this.transform == null)
             return;
         Vector3 pos = transform.position;

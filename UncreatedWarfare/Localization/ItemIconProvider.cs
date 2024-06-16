@@ -256,9 +256,6 @@ internal static class ItemIconProvider
     public static char? GetCharacter(ItemAsset asset) => GetCharacter(asset.GUID);
     public static char? GetCharacter(Guid guid)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         lock (ItemData)
         {
             return ItemData.TryGetValue(guid, out ItemIconData data) ? data.Character : null;
@@ -266,9 +263,6 @@ internal static class ItemIconProvider
     }
     public static char? GetCharacter(RedirectType type)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         lock (RedirectData)
         {
             return RedirectData.TryGetValue(type, out ItemIconData data) ? data.Character : null;
@@ -352,9 +346,6 @@ internal static class ItemIconProvider
     }
     public static string GetIconOrName(ItemAsset asset, bool rich = true, bool tmpro = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         lock (ItemData)
         {
             if (ItemData.TryGetValue(asset.GUID, out ItemIconData data))
@@ -502,9 +493,6 @@ internal static class ItemIconProvider
                 else
                     data2.Add(new ItemIconData(type!.Value, icon, hexColor is null ? WhiteColor : Util.PackHex(hexColor)));
             }, token).ConfigureAwait(false);
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         lock (RedirectData)
         {
             lock (ItemData)

@@ -280,9 +280,6 @@ public class KitRequests(KitManager manager)
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (UCWarfare.Config.ModifySkillLevels)
             player.EnsureSkillsets(kit?.Skillsets.Select(x => x.Skillset) ?? Array.Empty<Skillset>());
         player.ChangeKit(kit);
@@ -429,9 +426,6 @@ public class KitRequests(KitManager manager)
     {
         if (kit is null) throw new ArgumentNullException(nameof(kit));
         await UCWarfare.ToUpdate(token);
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<KeyValuePair<ItemJar, Page>> nonKitItems = new List<KeyValuePair<ItemJar, Page>>(16);
         for (byte page = 0; page < PlayerInventory.PAGES - 2; ++page)
         {

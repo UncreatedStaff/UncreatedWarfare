@@ -489,9 +489,6 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     private void OnPreDeath(PlayerLife life)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer? player = UCPlayer.FromPlayer(life.player);
         
         if (player == null || !player.ActiveKit.HasValue)
@@ -835,9 +832,6 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     public async Task<Kit?> TryGiveUnarmedKit(UCPlayer player, bool manual, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!player.IsOnline)
             return null;
         Kit? kit = await GetDefaultKit(player.GetTeam(), token, x => RequestableSet(x, false)).ConfigureAwait(false);
@@ -849,9 +843,6 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     public async Task<Kit?> TryGiveRiflemanKit(UCPlayer player, bool manual, bool tip, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         await using IKitsDbContext dbContext = new WarfareDbContext();
 
         List<Kit> kits = await dbContext.Kits

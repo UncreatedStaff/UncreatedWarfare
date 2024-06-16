@@ -29,9 +29,6 @@ public static partial class Patches
         [HarmonyPrefix]
         static bool ServerSetSignTextInternalLang(InteractableSign sign, BarricadeRegion region, byte x, byte y, ushort plant, string trimmedText)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (trimmedText.StartsWith(Signs.Prefix, StringComparison.OrdinalIgnoreCase))
             {
                 BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
@@ -85,9 +82,6 @@ public static partial class Patches
             byte to_rot,
             byte to_page)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             __state = null;
 
             ItemRegion region = ItemManager.regions[x, y];
@@ -125,9 +119,6 @@ public static partial class Patches
         [HarmonyPrefix]
         static bool SendRegion(SteamPlayer client, BarricadeRegion region, byte x, byte y, NetId parentNetId, float sortOrder)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
             if (pl == null) return true;
             if (region.drops.Count > 0)

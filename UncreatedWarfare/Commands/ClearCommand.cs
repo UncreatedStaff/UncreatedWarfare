@@ -63,9 +63,6 @@ public class ClearCommand : Command
     }
     public override void Execute(CommandInteraction ctx)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ctx.AssertArgs(1, Syntax);
 
         if (ctx.MatchParameter(0, "help"))

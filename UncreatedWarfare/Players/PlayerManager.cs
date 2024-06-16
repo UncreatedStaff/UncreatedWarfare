@@ -113,9 +113,6 @@ public static class PlayerManager
     public static PlayerSave? GetSave(ulong playerID) => PlayerSave.TryReadSaveFile(playerID, out PlayerSave? save) ? save : null;
     public static void ApplyToOnline()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < OnlinePlayers.Count; i++)
         {
             ApplyTo(OnlinePlayers[i]);
@@ -124,9 +121,6 @@ public static class PlayerManager
     public static void ApplyTo(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         player.Save.Apply(player);
         PlayerSave.WriteToSaveFile(player.Save);
     }
@@ -172,9 +166,6 @@ public static class PlayerManager
     }
     internal static UCPlayer InvokePlayerConnected(Player player, PendingAsyncData asyncData, out bool newPlayer)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ulong s64 = player.channel.owner.playerID.steamID.m_SteamID;
         if (!PlayerSave.TryReadSaveFile(s64, out PlayerSave? save) || save == null)
         {
@@ -271,9 +262,6 @@ public static class PlayerManager
     }
     internal static void InvokePlayerDisconnected(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         player.SetOffline();
         foreach (object component in player.Components)
         {

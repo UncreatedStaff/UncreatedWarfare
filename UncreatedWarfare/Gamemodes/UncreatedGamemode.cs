@@ -161,9 +161,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         await UCWarfare.ToUpdate(token);
         if (!isActiveAndEnabled)
             throw new Exception("Gamemode object has been destroyed!");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking(Name + " Load Sequence");
-#endif
+
         if (_singletons is null)
         {
             _singletons = new List<IUncreatedSingleton>(16);
@@ -234,21 +232,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public void Reload() => throw new NotImplementedException();
     public override async Task UnloadAsync(CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking(Name + " Unload Sequence");
-#endif
         await UCWarfare.ToUpdate(token);
-#if DEBUG
-        IDisposable profiler1 = ProfilingUtils.StartTracking(Name + " Unsubscribe");
-#endif
         Unsubscribe();
         InternalUnsubscribe();
-#if DEBUG
-        profiler1.Dispose();
-#endif
-#if DEBUG
-        IDisposable profiler2 = ProfilingUtils.StartTracking(Name + " Pre Dispose");
-#endif
         Task task = PreDispose(token);
         if (!task.IsCompleted)
         {
@@ -257,21 +243,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             ThreadUtil.assertIsGameThread();
         }
         InternalPreDispose();
-#if DEBUG
-        profiler2.Dispose();
-#endif
-#if DEBUG
-        IDisposable profiler3 = ProfilingUtils.StartTracking(Name + " Dispose");
-#endif
         await Data.Singletons.UnloadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        profiler3.Dispose();
-#endif
-#if DEBUG
-        IDisposable profiler4 = ProfilingUtils.StartTracking(Name + " Post Dispose");
-#endif
         InternalPostDispose();
         task = PostDispose(token);
         if (!task.IsCompleted)
@@ -280,9 +254,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
         }
-#if DEBUG
-        profiler4.Dispose();
-#endif
 
         UCWarfare.I.ProcessTasks = false;
         try
@@ -559,9 +530,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 L.LogError(ex);
             }
         }
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
     }
     internal void CancelAll()
     {
@@ -584,9 +552,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         while (!IsPendingCancel)
         {
-#if DEBUG
-            IDisposable profiler = ProfilingUtils.StartTracking(Name + " Gamemode Event Loop");
-#endif
             for (int i = PlayerManager.OnlinePlayers.Count - 1; i >= 0; i--)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
@@ -626,13 +591,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             QuestManager.OnGameTick();
             if (Every10Seconds)
                 ServerHeartbeatTimer.Beat();
-#if DEBUG
-            profiler.Dispose();
-            if (EveryXSeconds(150))
-            {
-                F.SaveProfilingData();
-            }
-#endif
+
             Ticks++;
             yield return new WaitForSecondsRealtime(_eventLoopSpeed);
         }
@@ -1046,9 +1005,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public static Type? FindGamemode(string name)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < Gamemodes.Count; ++i)
         {
             if (Gamemodes[i].Key.ToString().Equals(name, StringComparison.OrdinalIgnoreCase))
@@ -1148,9 +1104,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public void ReplaceBarricadesAndStructures()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         L.Log("Destroying unknown barricades and structures...", ConsoleColor.Magenta);
         if (StructureManager.regions is null)
@@ -1243,9 +1196,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     // todo rewrite this is awful
     public static void ReadGamemodes()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (GamemodeRotation.Count > 0) GamemodeRotation.Clear();
         if (UCWarfare.Config.GamemodeRotation == null)
         {
@@ -1315,9 +1265,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public static Type? GetNextGamemode()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float total = 0f;
         for (int i = 0; i < GamemodeRotation.Count; i++)
             total += GamemodeRotation[i].Value;
@@ -1370,10 +1317,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             L.LogDebug("Invoke sync singleton event " + typeof(T).Name);
         */
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils
-            .StartTracking("Singleton event: " + typeof(T).Name + " in " + DisplayName + ".");
-#endif
         bool tmFound = false;
         for (int i = 0; i < _singletons.Count; ++i)
         {
@@ -1427,11 +1370,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils
-            .StartTracking("Async singleton event: " + typeof(TSync).Name + " / " +
-                           typeof(TAsync).Name + " in " + DisplayName + ".");
-#endif
         bool tmFound = false;
         
         void CheckContinue(EventState? args, UCPlayer? onlineCheck)

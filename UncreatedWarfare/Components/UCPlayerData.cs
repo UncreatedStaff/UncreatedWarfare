@@ -96,9 +96,6 @@ public class UCPlayerData : MonoBehaviour
     }
     public void Update()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float dt = Time.deltaTime;
         _currentTimeSeconds += dt;
     }

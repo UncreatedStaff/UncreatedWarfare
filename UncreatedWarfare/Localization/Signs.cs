@@ -151,9 +151,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static void CheckAllSigns()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         foreach (uint id in ActiveSigns.Keys.ToList())
         {
@@ -190,9 +187,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static void UpdateAllSigns(UCPlayer? player = null, bool updatePlainText = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         bool a = player is null;
         if (!a && !player!.IsOnline)
@@ -227,9 +221,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     }
     public static void UpdateLoadoutSigns(UCPlayer? player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         bool b = player is null;
         if (player is null)
@@ -287,9 +278,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static void UpdateKitSigns(UCPlayer? player, string? kitName)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         bool a = kitName is null;
         if (player is null)
@@ -437,9 +425,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     }
     public static void UpdateTraitSigns(UCPlayer? player, TraitData? data)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         string n = data?.TypeName!;
         bool a = n is null;
@@ -500,9 +485,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     public static void UpdateVehicleBaySigns(UCPlayer? player) => UpdateVehicleBaySigns(player, (VehicleSpawn?)null);
     public static void UpdateVehicleBaySigns(UCPlayer? player, VehicleSpawn? spawn)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int key = spawn is null ? PrimaryKey.NotAssigned : spawn.PrimaryKey;
         ThreadUtil.assertIsGameThread();
         bool a = key < 0;
@@ -543,9 +525,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     }
     public static void UpdateVehicleBaySigns(UCPlayer? player, VehicleData? data)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int key = data is null ? PrimaryKey.NotAssigned : data.PrimaryKey;
         ThreadUtil.assertIsGameThread();
         bool a = key < 0;
@@ -586,9 +565,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     }
     public static void InvalidateTraitSigns(UCPlayer? player, TraitData? data)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         string n = data?.TypeName!;
         bool a = n is null;
@@ -619,9 +595,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     public static void InvalidateVehicleBaySigns() => InvalidateVehicleBaySigns((VehicleSpawn?)null);
     public static void InvalidateVehicleBaySigns(VehicleSpawn? spawn)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int key = spawn is null ? PrimaryKey.NotAssigned : spawn.PrimaryKey;
         ThreadUtil.assertIsGameThread();
         bool a = key < 0;
@@ -641,9 +614,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     }
     public static void InvalidateVehicleBaySigns(VehicleData? data)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int key = data is null ? PrimaryKey.NotAssigned : data.PrimaryKey;
         ThreadUtil.assertIsGameThread();
         bool a = key < 0;
@@ -691,9 +661,6 @@ public class Signs : BaseSingleton, ILevelStartListener
     }
     public static void SetSignTextServerOnly(InteractableSign sign, string text)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         BarricadeDrop barricadeByRootFast = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
         byte[] state = barricadeByRootFast.GetServersideData().barricade.state;

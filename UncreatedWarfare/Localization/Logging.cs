@@ -1,5 +1,4 @@
-﻿#define FUNCTION_LOG
-#define LOG_ANSI
+﻿#define LOG_ANSI
 
 using DanielWillett.ReflectionTools;
 using HarmonyLib;
@@ -15,9 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Uncreated.Framework;
 using Uncreated.Framework.UI;
-using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -37,9 +34,6 @@ public static class L
     private static int _indention;
     private static FileStream _log;
     private static readonly List<LogMessage> BadLogBuffer = new List<LogMessage>(0);
-#if FUNCTION_LOG
-    private static FileStream _flog;
-#endif
     private static bool _inL;
     private static bool _notWindows;
     private static ICommandInputOutput? _defaultIOHandler;
@@ -191,20 +185,6 @@ public static class L
                 File.Move(Data.Paths.CurrentLog, n);
             }
             _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
-#if FUNCTION_LOG
-            _flog = new FileStream(Data.Paths.FunctionLog, FileMode.Create, FileAccess.Write, FileShare.Read);
-            try
-            {
-                Harmony.Patches.Patcher.Patch(typeof(ProfilingUtils).GetMethod(nameof(ProfilingUtils.StartTracking), BindingFlags.Static | BindingFlags.Public),
-                    prefix: new HarmonyMethod(typeof(L).GetMethod(nameof(StartTracking),
-                        BindingFlags.Static | BindingFlags.NonPublic)));
-            }
-            catch (Exception ex)
-            {
-                CommandWindow.LogError("Error patching ProfilingUtils.StartTracking.");
-                CommandWindow.LogError(ex);
-            }
-#endif
             try
             {
                 FieldInfo? defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -264,35 +244,6 @@ public static class L
             CommandWindow.LogError(ex);
         }
     }
-#if FUNCTION_LOG
-    private static readonly string[] BlockedLoggingFunction =
-    {
-        "Update",
-        "FixedUpdate",
-        "IsInside",
-        "IsDelayed",
-        "UpdateSign",
-        "UpdateSignInternal",
-        "IsInMain"
-    };
-    static void StartTracking(string callerName, string filepath, int linenumber)
-    {
-        if (callerName.IndexOf("Log", StringComparison.Ordinal) != -1 ||
-            callerName.IndexOf("Translate", StringComparison.Ordinal) != -1 ||
-            callerName.IndexOf("Simulate", StringComparison.Ordinal) != -1)
-            return;
-        for (int i = 0; i < BlockedLoggingFunction.Length; ++i)
-        {
-            if (BlockedLoggingFunction[i].Equals(callerName, StringComparison.Ordinal)) return;
-        }
-        if (_flog != null)
-        {
-            byte[] bytes = System.Text.Encoding.ASCII.GetBytes(DateTime.Now.ToString("s") + " - " + callerName + " - " + linenumber + " - " + filepath + Environment.NewLine);
-            _flog.Write(bytes, 0, bytes.Length);
-            _flog.Flush();
-        }
-    }
-#endif
     private static void OnUnityLogMessage(string condition, string stacktrace, LogType type)
     {
         switch (type)
@@ -449,9 +400,6 @@ public static class L
     internal static void NetLogException(Exception ex) => LogError(ex, method: "UncreatedNetworking");
     public static void Log(string info, ConsoleColor color = ConsoleColor.White)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!UCWarfare.IsLoaded)
             LogAsLibrary("[INFO]  " + info, color);
         else

@@ -1074,9 +1074,6 @@ public class RepairStationComponent : ShovelableComponent
         {
             if (State == BuildableState.Full && Data.Gamemode is { State: Gamemodes.State.Staging or Gamemodes.State.Active } && (FOB == null || !FOB.Bleeding))
             {
-#if DEBUG
-                IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
                 VehicleManager.getVehiclesInRadius(Position, 25f * 25f, WorkingVehicles);
                 try
                 {
@@ -1153,18 +1150,12 @@ public class RepairStationComponent : ShovelableComponent
                 {
                     WorkingVehicles.Clear();
                 }
-#if DEBUG
-                profiler.Dispose();
-#endif
             }
             yield return new WaitForSeconds(tickSpeed);
         }
     }
     public void TickRepair(InteractableVehicle vehicle)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (vehicle.health >= vehicle.asset.health)
             return;
 
@@ -1187,9 +1178,6 @@ public class RepairStationComponent : ShovelableComponent
     }
     public void TickRefuel(InteractableVehicle vehicle)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (vehicle.fuel >= vehicle.asset.fuel)
             return;
 

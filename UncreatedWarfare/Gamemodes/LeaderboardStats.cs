@@ -178,9 +178,6 @@ public abstract class BaseStatTracker<TIndividualStats> : MonoBehaviour, IStatTr
     public float GetPresence(ITeamPresenceStats stats, ulong team) => team == 1 ? ((float)stats.OnlineTicksT1 / coroutinect) : (team == 2 ? (stats.OnlineTicksT2 / coroutinect) : 0f);
     public virtual void Reset()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         stats ??= new List<TIndividualStats>();
         coroutinect = 0;
 
@@ -221,9 +218,6 @@ public abstract class BaseStatTracker<TIndividualStats> : MonoBehaviour, IStatTr
     }
     public void OnPlayerJoin(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         bool found = false;
         for (int j = 0; j < stats.Count; ++j)
         {
@@ -258,18 +252,12 @@ public abstract class BaseStatTracker<TIndividualStats> : MonoBehaviour, IStatTr
     }
     public virtual void StartTracking()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         start = DateTime.Now;
         coroutinect = 0;
         StartTicking();
     }
     protected virtual void OnTick()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         coroutinect++;
     }
     protected void StopTicking()

@@ -126,9 +126,6 @@ public static partial class Patches
         [UsedImplicitly]
         static void OnPlayerEnteredQueuePost()
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (Provider.pending.Count > 0)
             {
                 for (int i = 0; i < Provider.pending.Count; i++)
@@ -181,9 +178,6 @@ public static partial class Patches
         [UsedImplicitly]
         static bool OnChatRequested(in ServerInvocationContext context, byte flags, string text)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             SteamPlayer callingPlayer = context.GetCallingPlayer();
             UCPlayer? caller = UCPlayer.FromSteamPlayer(callingPlayer);
             if (callingPlayer == null || callingPlayer.player == null || Time.realtimeSinceStartup - callingPlayer.lastChat < ChatManager.chatrate)
@@ -363,9 +357,6 @@ public static partial class Patches
         [UsedImplicitly]
         static bool OnGestureReceived(EPlayerGesture newGesture, PlayerAnimator __instance)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (OnPlayerGesture_Global != null)
             {
                 bool allow = true;
@@ -383,9 +374,6 @@ public static partial class Patches
         [UsedImplicitly]
         static bool OnPlayerMarked(ref bool newIsMarkerPlaced, ref Vector3 newMarkerPosition, ref string newMarkerTextOverride, PlayerQuests __instance)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             bool isAllowed = true;
             OnPlayerMarker_Global.Invoke(__instance.player, ref newMarkerPosition, ref newMarkerTextOverride, ref newIsMarkerPlaced, ref isAllowed);
             return isAllowed;
@@ -399,9 +387,6 @@ public static partial class Patches
         [UsedImplicitly]
         static bool CancelStoringNonWhitelistedItem(PlayerInventory __instance, byte page_0, byte x_0, byte y_0, byte page_1, byte x_1, byte y_1, byte rot_1)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             bool allow = true;
             ItemJar jar = __instance.getItem(page_0, __instance.getIndex(page_0, x_0, y_0));
             if (page_1 == PlayerInventory.STORAGE)
@@ -418,9 +403,6 @@ public static partial class Patches
         [UsedImplicitly]
         static bool CancelLeavingGroup(Player player)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             UCPlayer? pl = UCPlayer.FromPlayer(player);
             if (pl == null || pl.OnDutyOrAdmin()) return true;
             player.SendChat(T.NoLeavingGroup);
@@ -435,9 +417,6 @@ public static partial class Patches
         [UsedImplicitly]
         static bool CancelCosmeticChangesPrefix(EVisualToggleType type, PlayerClothing __instance)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             EVisualToggleType newtype = type;
             bool allow = true;
             OnPlayerTogglesCosmetics_Global?.Invoke(ref newtype, __instance.player.channel.owner, ref allow);
@@ -452,9 +431,6 @@ public static partial class Patches
         [UsedImplicitly]
         static bool BatteryStealingOverride(in ServerInvocationContext context)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             bool allow = true;
             OnBatterySteal_Global?.Invoke(context.GetCallingPlayer(), ref allow);
             return allow;
@@ -470,9 +446,6 @@ public static partial class Patches
         [UsedImplicitly]
         static void OnPreMeleeHit(UseableMelee __instance)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             ItemWeaponAsset weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
 
             RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), weaponAsset.range, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE, __instance.player);

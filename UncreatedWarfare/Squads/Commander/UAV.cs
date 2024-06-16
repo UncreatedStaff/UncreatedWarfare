@@ -221,9 +221,6 @@ public class UAV : MonoBehaviour, IBuff
     }
     private void Init(ulong team, UCPlayer requester, UCPlayer approver, Vector3 loc, bool isMarker)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         _requester = requester;
         _approver = approver;
         _startTime = Time.realtimeSinceStartup;
@@ -456,7 +453,6 @@ public class UAV : MonoBehaviour, IBuff
     private void Scan()
     {
 #if DEBUG
-        IDisposable profiler = ProfilingUtils.StartTracking();
         float time = Time.realtimeSinceStartup;
 #endif
         float rad = _radius * _radius;
@@ -472,7 +468,6 @@ public class UAV : MonoBehaviour, IBuff
 
         _scanOutput.Sort((a, b) => a.Key.CompareTo(b.Key));
 #if DEBUG
-        profiler.Dispose();
         L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Scan output: ");
         using IDisposable d = L.IndentLog(1);
         for (int i = 0; i < _scanOutput.Count; ++i)

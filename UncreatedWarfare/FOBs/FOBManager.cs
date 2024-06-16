@@ -187,9 +187,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public void LoadRepairStations()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         foreach (BarricadeDrop barricade in UCBarricadeManager.NonPlantedBarricades)
         {
             BuildableData? data = FindBuildable(barricade.asset);
@@ -481,9 +478,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     void IJoinedTeamListener.OnJoinTeam(UCPlayer player, ulong team) => ListUI.UpdateFor(this, player);
     void ILevelStartListener.OnLevelReady()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         foreach (BuildableData b in Config.Buildables)
         {
             if (b.Foundation.ValidReference(out Guid guid) && !Whitelister.IsWhitelisted(guid, out _))
@@ -504,9 +498,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < FOBs.Count; i++)
         {
             IFOB f = FOBs[i];
@@ -579,9 +570,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     private void OnRequestedBarricadePlace(PlaceBarricadeRequested e)
     {
         if (IgnorePlacingBarricade) return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
 
         ulong team = e.GroupOwner.GetTeam();
         if (team is not 1ul and not 2ul || e.OriginalPlacer == null)
@@ -791,9 +779,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     private void OnBarricadeDestroyed(BarricadeDestroyed e)
     {
         L.LogDebug("[FOBS] barricade destroyed: " + e.Barricade.asset.itemName + ".");
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (e.Transform.TryGetComponent(out RadioComponent radio) && radio.FOB != null)
         {
             ulong team = e.ServersideData.group.GetTeam();
@@ -886,9 +871,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
         
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int number;
         if (Data.Is(out Insurgency insurgency))
         {
@@ -913,9 +895,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public void DeleteFOB(IFOB fob, ulong instigator = 0)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Deployment.CancelDeploymentsTo(fob);
         ulong team = fob.Team;
 
@@ -979,9 +958,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     {
         if (_singleton is { IsUnloading: false })
             _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<IFOB> fobs = _singleton._fobs;
         if (int.TryParse(name, NumberStyles.Number, Data.LocalLocale, out int fobNumber))
         {

@@ -97,7 +97,6 @@
     <PackageReference Include="DanielWillett.StackCleaner" Version="[1.4.2,)" />
     <PackageReference Include="DanielWillett.ReflectionTools" Version="[3.2.1,)" />
     <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="[3.0.0,)" />
-    <PackageReference Include="Uncreated.Networking.Warfare" Version="[3.2.4,)" />
     <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease10" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
 
@@ -107,7 +106,6 @@
     <PackageReference Include="System.Runtime.Caching" Version="4.5.0" />
     <PackageReference Include="System.Text.Json" Version="4.7.1" NoWarn="NU1605" />
     <PackageReference Include="UniTask" Version="2.5.0" />
-    <PackageReference Update="OpenMod.Unturned.Redist" NoWarn="NU1701" />
     <PackageReference Update="Lib.Harmony" NoWarn="NU1701" />
 
     <PackageReference Include="MySqlConnector" Version="0.69.10" />
@@ -131,4 +129,67 @@
       <HintPath>..\..\ModularRPCs\ModularRPCs.Unity\bin\Release\net461\DanielWillett.ModularRPCs.Unity.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <!-- Installation -->
+  <PropertyGroup>
+    <U3DSPath>C:/SteamCMD/steamapps/common/U3DS</U3DSPath>
+  </PropertyGroup>
+
+  <!-- Unturned Files -->
+  <Choose>
+    <When Condition="exists('$(U3DSPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
+      <PropertyGroup>
+        <UnturnedDllPath>$(U3DSPath)/Unturned_Data/Managed</UnturnedDllPath>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <UnturnedDllPath>../Libraries</UnturnedDllPath>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup>
+    <!-- Unturned -->
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(UnturnedDllPath)/Assembly-CSharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="SDG.NetTransport">
+      <HintPath>$(UnturnedDllPath)/SDG.NetTransport.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="SDG.NetPak.Runtime">
+      <HintPath>$(UnturnedDllPath)/SDG.NetPak.Runtime.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+
+    <!-- Third Party -->
+    <Reference Include="com.rlabrecque.steamworks.net">
+      <HintPath>$(UnturnedDllPath)/com.rlabrecque.steamworks.net.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+
+    <!-- Unity -->
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(UnturnedDllPath)/UnityEngine.CoreModule.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(UnturnedDllPath)/UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(UnturnedDllPath)/UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>$(UnturnedDllPath)/UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),Assembly-CSharp.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,Assembly-CSharp.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetTransport.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetTransport.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetPak.Runtime.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetPak.Runtime.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),com.rlabrecque.steamworks.net.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,com.rlabrecque.steamworks.net.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.CoreModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.CoreModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.ImageConversionModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.ImageConversionModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.PhysicsModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.PhysicsModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UnityWebRequestModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UnityWebRequestModule.dll))*&quot;" />
+  </Target>
 </Project>

@@ -56,9 +56,6 @@ public static class IconManager
     }
     public static void CheckExistingBuildables()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         foreach (BarricadeDrop barricade in UCBarricadeManager.NonPlantedBarricades)
         {
             ulong team = barricade.GetServersideData().group.GetTeam();
@@ -101,9 +98,6 @@ public static class IconManager
     }
     public static void DrawNewMarkers(UCPlayer player, bool clearOld)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<Guid> seenTypes = clearOld ? new List<Guid>(Icons.Count) : null!;
 
         ulong team = player.GetTeam();
@@ -128,9 +122,6 @@ public static class IconManager
         => AttachIcon(effectGUID, transform, new Vector3(0f, yOffset, 0f), team, player);
     public static void AttachIcon(Guid effectGUID, Transform transform, Vector3 offset, ulong team = 0, ulong player = 0)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (transform.gameObject.TryGetComponent(out IconRenderer icon))
             DeleteIcon(icon);
         
@@ -144,9 +135,6 @@ public static class IconManager
     }
     public static void DeleteIcon(IconRenderer icon, bool destroy = true)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!Icons.Contains(icon))
             return;
         EffectManager.ClearEffectByGuid_AllPlayers(icon.EffectGUID);
@@ -159,17 +147,11 @@ public static class IconManager
     }
     public static void DrawNewIconsOfType(Guid effectGUID)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         EffectManager.ClearEffectByGuid_AllPlayers(effectGUID);
         SpawnNewIconsOfType(effectGUID);
     }
     public static void SpawnNewIconsOfType(Guid effectGUID)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         foreach (IconRenderer icon in Icons)
         {
             if (icon.EffectGUID == effectGUID)

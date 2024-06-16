@@ -154,9 +154,6 @@ public class Insurgency :
     }
     public override Task DeclareWin(ulong winner, CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         StartCoroutine(EndGameCoroutine(winner));
         return base.DeclareWin(winner, token);
     }
@@ -164,9 +161,6 @@ public class Insurgency :
     {
         yield return new WaitForSeconds(Config.InsurgencyFirstCacheSpawnTime);
 
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<CacheData> activeCaches = ActiveCaches;
         if (activeCaches.Count > 0 && !activeCaches[0].IsDiscovered)
         {
@@ -177,9 +171,6 @@ public class Insurgency :
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
         yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
@@ -192,9 +183,6 @@ public class Insurgency :
     }
     private void OnShouldStartNewGame()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (_endScreen != null)
         {
             _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
@@ -205,9 +193,6 @@ public class Insurgency :
     }
     protected override void EventLoopAction()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (EveryXSeconds(Config.AASFlagTickSeconds))
             CheckMainCampZones();
         base.EventLoopAction();
@@ -229,9 +214,6 @@ public class Insurgency :
     }
     public override void OnGroupChanged(GroupChanged e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (e.NewTeam is > 0 and < 3)
         {
             InsurgencyUI.SendCacheList(e.Player);
@@ -245,9 +227,6 @@ public class Insurgency :
     }
     public bool AddIntelligencePoints(int points, UCPlayer? instigator)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<CacheData> activeCaches = ActiveCaches;
         if (activeCaches.Count != 1 && activeCaches.Count != 2) return false;
         CacheData first = activeCaches[0];
@@ -295,9 +274,6 @@ public class Insurgency :
     }
     public void OnCacheDiscovered(Cache cache, UCPlayer? instigator)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         cache.IsDiscovered = true;
 
         if (instigator != null && instigator.Player.TryGetPlayerData(out UCPlayerData data) && data.Stats is InsurgencyPlayerStats ips)
@@ -334,9 +310,6 @@ public class Insurgency :
     public void TrySpawnNewCache(bool message = false)
     {
 
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         const float sqrRadius = 300 * 300;
         CacheLocation[] viableSpawns = Locations.Locations
             .Where(c1 => c1 != null && !c1.IsDisabled && !_seenCaches.Contains(c1) &&
@@ -443,9 +416,6 @@ public class Insurgency :
     }
     public void OnCacheDestroyed(Cache cache, UCPlayer? destroyer)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (State != State.Active)
             return;
         CachesDestroyed++;
@@ -525,9 +495,6 @@ public class Insurgency :
     }
     public override void ShowStagingUI(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         CTFUI.StagingUI.SendToPlayer(player.Connection);
         if (player.GetTeam() == AttackingTeam)
             CTFUI.StagingUI.Top.SetText(player.Connection, T.PhaseBriefing.Translate(player));
@@ -536,9 +503,6 @@ public class Insurgency :
     }
     protected override void EndStagingPhase()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         base.EndStagingPhase();
         if (_attackTeam == 1)
             DestoryBlockerOnT1();

@@ -19,9 +19,6 @@ public static class UCAssetManager
     private static readonly char[] Splits = { ' ' };
     public static ItemAsset? FindItemAsset(string itemName, out int numberOfSimilarNames, bool additionalCheckWithoutNonAlphanumericCharacters = true)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         itemName = itemName.ToLower();
         string[] insplits = itemName.Split(Splits);
 

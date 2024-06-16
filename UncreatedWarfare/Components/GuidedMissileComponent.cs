@@ -25,9 +25,6 @@ internal class GuidedMissileComponent : MonoBehaviour
 
     public void Initialize(GameObject projectile, Player firer, float projectileSpeed, float responsiveness, float cutoffDistance = 1000)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         _projectile = projectile;
         //this._firer = firer;
         _maxTurnDegrees = responsiveness;
@@ -80,9 +77,6 @@ internal class GuidedMissileComponent : MonoBehaviour
                 return;
             }
 
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             // update the distance of the guider position so that it stays in front of the projectile
             _guiderDistance += Time.fixedDeltaTime * _projectileSpeed;
 

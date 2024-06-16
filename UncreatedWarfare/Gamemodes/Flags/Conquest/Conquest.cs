@@ -104,9 +104,6 @@ public sealed partial class Conquest :
     {
         yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
@@ -119,9 +116,6 @@ public sealed partial class Conquest :
     }
     private void OnShouldStartNewGame()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (_endScreen != null)
         {
             _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
@@ -152,9 +146,6 @@ public sealed partial class Conquest :
     }
     public override void LoadRotation()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (AllFlags == null || AllFlags.Count == 0) throw new InvalidOperationException("Flags have not yet been loaded!");
         IntlLoadRotation();
         if (FlagRotation.Count < 1)
@@ -210,9 +201,6 @@ public sealed partial class Conquest :
 
     protected override void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (newOwner == 1)
         {
             ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(1));
@@ -243,9 +231,6 @@ public sealed partial class Conquest :
 
     private void OnFlagNeutralized(Flag flag, ulong neutralizingTeam, ulong lostTeam)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Chat.Broadcast(T.FlagNeutralized, flag);
         for (int i = 0; i < Singletons.Count; ++i)
         {
@@ -263,9 +248,6 @@ public sealed partial class Conquest :
     }
     private void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         L.Log("Team " + capturedTeam + " captured " + flag.Name + ".", ConsoleColor.Green);
         if (_gameStats != null)
             _gameStats.flagOwnerChanges++;
@@ -289,9 +271,6 @@ public sealed partial class Conquest :
     }
     private void UpdateFlag(Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         CaptureUIParameters t1 = default;
         CaptureUIParameters t2 = default;
         if (flag.Team1TotalCappers > 0)
@@ -310,27 +289,18 @@ public sealed partial class Conquest :
     }
     protected override void FlagPointsChanged(float newPts, float oldPts, Flag flag)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (newPts == 0)
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
     protected override void PlayerEnteredFlagRadius(Flag flag, UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         L.LogDebug("Player " + player.Name.PlayerName + " entered flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
     }
     protected override void PlayerLeftFlagRadius(Flag flag, UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         L.LogDebug("Player " + player.Name.PlayerName + " left flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(player.Connection);

@@ -512,9 +512,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     }
     public async Task<PlayerNames> GetUsernamesAsync(ulong s64, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         token.ThrowIfCancellationRequested();
         PlayerNames name = default;
         await QueryAsync(
@@ -539,9 +536,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     {
         if (s64Array.Length == 0)
             return Array.Empty<PlayerNames>();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         token.ThrowIfCancellationRequested();
         PlayerNames[] rtn = new PlayerNames[s64Array.Length];
 
@@ -601,9 +595,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     }
     public async Task<ulong> GetDiscordID(ulong s64, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         token.ThrowIfCancellationRequested();
         ulong tid = 0;
         await QueryAsync("SELECT `DiscordID` FROM `" + TableDiscordIds + "` WHERE `Steam64`=@0 LIMIT 1;", new object[] { s64 },
@@ -613,9 +604,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     }
     public async Task<ulong> GetSteam64(ulong discordId, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         token.ThrowIfCancellationRequested();
         ulong tid = 0;
         await QueryAsync("SELECT `Steam64` FROM `" + TableDiscordIds + "` WHERE `DiscordID`=@0 LIMIT 1;", new object[] { discordId },
@@ -636,9 +624,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     public async Task AddReport(Report report, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         byte[] blob;
         lock (ReportWriter)
         {
@@ -871,9 +856,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     public async Task AddKill(ulong player, ulong team, int amount = 1, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!Data.TrackStats || amount == 0) return;
         if (amount > 0)
         {
@@ -908,9 +890,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     public async Task AddDeath(ulong player, ulong team, int amount = 1, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!Data.TrackStats || amount == 0) return;
         if (amount > 0)
         {
@@ -945,9 +924,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     public async Task AddTeamkill(ulong steam64, ulong team, int amount = 1, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!Data.TrackStats || amount == 0) return;
         if (amount > 0)
         {
@@ -1030,9 +1006,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     public Task RegisterLogin(Player player, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         string ipaddress;
         if (player.channel.owner.getIPv4Address(out uint ipnum))
         {
@@ -1059,9 +1032,6 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     public async Task<uint> TryGetPackedIPAsync(ulong id, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         uint ip = 0;
         await QueryAsync(
             $"SELECT `{ColumnLoginDataUnpackedIP}`, `{ColumnLoginDataPackedIP}` " +

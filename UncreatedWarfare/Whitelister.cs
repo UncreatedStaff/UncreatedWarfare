@@ -61,9 +61,6 @@ public class Whitelister : ListSingleton<WhitelistItem>
     }
     private void OnItemPickup(Player pl, byte x, byte y, uint instanceID, byte toX, byte toY, byte toRot, byte toPage, ItemData itemData, ref bool shouldAllow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer? player = UCPlayer.FromPlayer(pl);
 
         if (player is null || player.OnDuty())
@@ -131,9 +128,6 @@ public class Whitelister : ListSingleton<WhitelistItem>
     }
     private void OnBarricadeSalvageRequested(SalvageBarricadeRequested e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!(e.Player.OnDuty() || IsWhitelisted(e.Barricade.asset.GUID, out _) || e.Player.IsSquadLeader() && RallyManager.IsRally(e.Barricade.asset)))
         {
             Kit? kit = e.Player.CachedActiveKitInfo;
@@ -146,9 +140,6 @@ public class Whitelister : ListSingleton<WhitelistItem>
     }
     private void OnStructureSalvageRequested(SalvageStructureRequested e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (e.Player.OnDuty() || IsWhitelisted(e.Structure.asset.GUID, out _))
             return;
 
@@ -161,9 +152,6 @@ public class Whitelister : ListSingleton<WhitelistItem>
     }
     private void OnEditSignRequest(CSteamID steamID, InteractableSign sign, ref string text, ref bool shouldAllow)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer? player = UCPlayer.FromCSteamID(steamID);
         if (player == null || !player.OnDuty())
         {
@@ -185,9 +173,6 @@ public class Whitelister : ListSingleton<WhitelistItem>
         ref bool shouldAllow)
     {
         // ReSharper restore InconsistentNaming
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         try
         {
             UCPlayer? player = UCPlayer.FromID(owner);
@@ -266,9 +251,6 @@ public class Whitelister : ListSingleton<WhitelistItem>
         )
     {
         // ReSharper restore InconsistentNaming
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         try
         {
             UCPlayer? player = UCPlayer.FromID(owner);

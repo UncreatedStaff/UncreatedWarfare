@@ -54,9 +54,6 @@ public sealed class CommandStructure
     /// <exception cref="BaseCommandInteraction"/>
     public void OnHelpCommand(CommandInteraction ctx, IExecutableCommand cmd)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (string.IsNullOrEmpty(Description) && DescriptionTranslations == null && Parameters is not { Length: > 0 })
             return;
 

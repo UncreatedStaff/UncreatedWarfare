@@ -86,9 +86,6 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
     }
     public virtual void GetTopStats(int count, out List<InsurgencyPlayerStats> statsT1, out List<InsurgencyPlayerStats> statsT2)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<InsurgencyPlayerStats> stats = this.stats.ToList();
 
         stats.RemoveAll(p =>

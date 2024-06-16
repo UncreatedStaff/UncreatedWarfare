@@ -34,9 +34,6 @@ public class ICommand : AsyncCommand
     }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ctx.AssertRanByPlayer();
 
         ctx.AssertArgs(1, Syntax + " - " + Help);

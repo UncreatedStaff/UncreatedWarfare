@@ -3408,9 +3408,6 @@ internal static class T
     internal static readonly List<string> AllLanguages = new List<string>(4);
     static T()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("Translation reflection");
-#endif
         FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).Where(x => typeof(Translation).IsAssignableFrom(x.FieldType)).ToArray();
         Translations = new Translation[fields.Length];
         int i2 = -1;

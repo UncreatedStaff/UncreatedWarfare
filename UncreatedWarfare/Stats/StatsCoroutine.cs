@@ -18,9 +18,6 @@ internal static class StatsCoroutine
     {
         while (true)
         {
-#if DEBUG
-            IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             try
             {
                 int n = Afk.Clamp(_counter);
@@ -89,9 +86,6 @@ internal static class StatsCoroutine
                 L.LogError("Error in Stats Coroutine:");
                 L.LogError(ex);
             }
-#if DEBUG
-            profiler.Dispose();
-#endif
             // stats interval is in minutes here
             yield return new WaitForSeconds(UCWarfare.Config.StatsInterval * 60f);
         }

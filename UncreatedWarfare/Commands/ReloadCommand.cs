@@ -172,9 +172,6 @@ public class ReloadCommand : AsyncCommand
     internal static async Task ReloadTranslations(CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         try
         {
             await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);
@@ -196,16 +193,10 @@ public class ReloadCommand : AsyncCommand
     }
     internal static void ReloadGamemodeConfig()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Gamemode.ConfigObj.Reload();
     }
     internal static void ReloadFlags()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         try
         {
             Gamemode.ConfigObj.Reload();
@@ -235,9 +226,6 @@ public class ReloadCommand : AsyncCommand
     }
     internal static void ReloadAllConfigFiles()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         try
         {
             _ = Data.Singletons.ReloadSingletonAsync("announcer");
@@ -281,9 +269,6 @@ public class ReloadCommand : AsyncCommand
     }
     internal static async Task ReloadHomebase(CommandInteraction? ctx)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Data.RpcConnection is { IsClosed: false })
         {
             await Data.RpcConnection.CloseAsync();
@@ -300,9 +285,6 @@ public class ReloadCommand : AsyncCommand
     }
     internal static async Task ReloadSQLServer(CommandInteraction? ctx, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         L.Log("Reloading SQL...");
         List<UCSemaphore> players = PlayerManager.GetAllSemaphores();
         try

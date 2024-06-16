@@ -15,9 +15,6 @@ public static class RallyManager
     public const float TELEPORT_HEIGHT_OFFSET = 2f;
     public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         BarricadeData data = drop.GetServersideData();
 
         if (IsRally(drop.asset))
@@ -51,9 +48,6 @@ public static class RallyManager
         ref bool shouldAllow
     )
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!IsRally(barricade.asset))
             return;
 
@@ -99,9 +93,6 @@ public static class RallyManager
     {
         try
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             SquadManager.RallyUI.ClearFromAllPlayers();
 
             foreach (BarricadeDrop drop in GetRallyPointBarricades().ToList())
@@ -118,9 +109,6 @@ public static class RallyManager
     }
     public static IEnumerable<BarricadeDrop> GetRallyPointBarricades()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (BarricadeManager.regions is null)
             return Array.Empty<BarricadeDrop>();
         return UCBarricadeManager.NonPlantedBarricades.Where(b => IsRally(b.asset));
@@ -153,9 +141,6 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
 
     public void UpdateUIForAwaitingPlayers(int secondsLeft)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!IsActive)
             return;
         TimeSpan seconds = TimeSpan.FromSeconds(secondsLeft);
@@ -240,15 +225,8 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
 
         while (SecondsLeft > 0)
         {
-#if DEBUG
-            IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
 
             UpdateUIForAwaitingPlayers(SecondsLeft);
-
-#if DEBUG
-            profiler.Dispose();
-#endif
 
             yield return new WaitForSecondsRealtime(1);
             SecondsLeft--;

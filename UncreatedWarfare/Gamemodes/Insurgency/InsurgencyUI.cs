@@ -8,9 +8,6 @@ public static class InsurgencyUI
 {
     public static void SendCacheList(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!Data.Is(out Insurgency gm) || gm.Caches == null || player.HasUIHidden) return;
         ITransportConnection c = player.Player.channel.owner.transportConnection;
         CTFUI.ListUI.SendToPlayer(c);
@@ -30,9 +27,6 @@ public static class InsurgencyUI
     }
     public static void ReplicateCacheUpdate(Insurgency.CacheData cache)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!Data.Is(out Insurgency gm)) return;
         int index = gm.Caches.IndexOf(cache);
         if (index < 0 || index >= CTFUI.ListUI.Rows.Length)
@@ -46,9 +40,6 @@ public static class InsurgencyUI
     }
     public static string GetCacheLabel(Insurgency.CacheData cache, UCPlayer player, Insurgency insurgency)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ulong team = player.GetTeam();
 
         if (!cache.IsActive)

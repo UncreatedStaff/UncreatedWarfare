@@ -92,9 +92,6 @@ public class Config<TData> : IConfiguration<TData> where TData : JSONConfigData,
     }
     public void Save()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("JsonConfig Save -> " + _dir);
-#endif
         if (!File.Exists(_dir))
             File.Create(_dir)?.Close();
         using (FileStream stream = new FileStream(_dir, FileMode.Truncate, FileAccess.Write, FileShare.None))
@@ -136,9 +133,6 @@ public class Config<TData> : IConfiguration<TData> where TData : JSONConfigData,
     protected virtual void OnReload() { }
     public void Reload()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("JsonConfig Reload -> " + _dir);
-#endif
         if (!File.Exists(_dir))
         {
             LoadDefaults();
@@ -239,9 +233,6 @@ public class Config<TData> : IConfiguration<TData> where TData : JSONConfigData,
     }
     public void LoadDefaults()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("JsonConfig LoadDefaults -> " + _dir);
-#endif
         Data = new TData();
         Data.SetDefaults();
         using (FileStream stream = new FileStream(_dir, FileMode.Create, FileAccess.Write, FileShare.None))

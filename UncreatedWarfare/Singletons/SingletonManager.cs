@@ -57,9 +57,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <returns>The loaded singleton.</returns>
     public async Task<T> LoadSingletonAsync<T>(bool throwErrors = true, bool @lock = true, CancellationToken token = default) where T : class, IUncreatedSingleton
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         await UCWarfare.ToUpdate(token);
         Type inputType = typeof(T);
         T singleton = null!;
@@ -104,9 +101,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <returns>The loaded singleton.</returns>
     public async Task<IUncreatedSingleton> LoadSingletonAsync(Type type, bool throwErrors = true, bool @lock = true, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         await UCWarfare.ToUpdate(token);
         IUncreatedSingleton singleton = null!;
         PopulateSingleton(ref singleton, type, throwErrors);
@@ -156,9 +150,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <returns>The loaded singleton.</returns>
     public async Task<T> LoadSingletonAsync<T>(T singleton, bool throwErrors = true, bool @lock = true, CancellationToken token = default) where T : class, IUncreatedSingleton
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Type inputType = singleton.GetType();
         SingletonInformation info = new SingletonInformation(singleton);
         if (@lock)
@@ -207,9 +198,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
     public void PopulateSingleton<T>(ref T singleton, bool throwErrors) where T : class, IUncreatedSingleton
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         Type inputType = singleton?.GetType() ?? typeof(T);
         if (inputType.IsDefinedSafe<RpcClassAttribute>())
@@ -265,9 +253,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
     public void PopulateSingleton(ref IUncreatedSingleton singleton, Type type, bool throwErrors)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!typeof(IUncreatedSingleton).IsAssignableFrom(type))
             throw new ArgumentException("Type is not derived from " + nameof(IUncreatedSingleton), nameof(type));
         ThreadUtil.assertIsGameThread();
@@ -293,9 +278,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     }
     internal async Task LoadSingletonsInOrderAsync(List<IUncreatedSingleton> singletons, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<SingletonDependencyInformation> info = new List<SingletonDependencyInformation>(singletons.Count);
         List<SingletonDependencyInformation> loadOrder = new List<SingletonDependencyInformation>(singletons.Count);
         for (int i = 0; i < singletons.Count; ++i)
@@ -332,9 +314,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     }
     internal async Task<bool> UnloadSingletonsInOrderAsync(List<IUncreatedSingleton> singletons, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         bool success = true;
         for (int i = singletons.Count - 1; i >= 0; --i)
         {
@@ -403,9 +382,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     }
     private async Task LoadIntlAsync(SingletonInformation singleton, bool rethrow, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         singleton.IsLoaded = false;
         CheckLoadingUnloadingStatus(singleton);
         try
@@ -450,9 +426,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <returns><see langword="True"/> if the singleton was successfully unloaded and removed, otherwise <see langword="false"/>.</returns>
     public async Task<bool> UnloadSingletonAsync(Type type, bool throwErrors = false, bool @lock = true, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         SingletonInformation? info = null;
         await UCWarfare.ToUpdate(token);
         for (int i = _singletons.Count - 1; i >= 0; --i)
@@ -496,9 +469,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <returns><see langword="True"/> if the singleton was successfully unloaded and removed, otherwise <see langword="false"/>.</returns>
     public async Task<bool> UnloadSingletonAsync<T>(T field, bool throwErrors = false, bool @lock = true, CancellationToken token = default) where T : class, IUncreatedSingleton
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Type inputType = field?.GetType() ?? typeof(T);
         SingletonInformation? info = null;
         await UCWarfare.ToUpdate(token);
@@ -536,9 +506,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     }
     private async Task<bool> UnloadIntlAsync(SingletonInformation singleton, bool rethrow, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         singleton.IsLoaded = false;
         CheckLoadingUnloadingStatus(singleton);
         try
@@ -567,9 +534,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <returns>The singleton if it was found, otherwise <see langword="null"/>.</returns>
     public async Task<IReloadableSingleton?> ReloadSingletonAsync(string key, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         await UCWarfare.ToUpdate(token);
         for (int i = 0; i < _singletons.Count; ++i)
         {
@@ -594,9 +558,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
 
     public async Task<IReloadableSingleton?> ReloadSingletonAsync(IReloadableSingleton singleton, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         await UCWarfare.ToUpdate(token);
         await UCWarfare.ToUpdate(token);
         for (int i = 0; i < _singletons.Count; ++i)
@@ -620,9 +581,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     }
     private async Task<IReloadableSingleton?> ReloadIntlAsync(SingletonInformation singleton, bool rethrow, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "Reloading " + singleton.SingletonType.Name + ".");
-#endif
         if (singleton.Singleton is IReloadableSingleton reloadable)
         {
             CheckLoadingUnloadingStatus(singleton);
@@ -659,9 +617,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     public T? GetSingleton<T>() where T : class, IUncreatedSingleton
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "GetSingleton<" + typeof(T).Name + ">");
-#endif
         for (int i = 0; i < _singletons.Count; ++i)
             if (_singletons[i].Singleton is T v)
                 return v;
@@ -671,9 +626,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     public bool TryGetSingleton<T>(out T loaded) where T : class, IUncreatedSingleton
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "TryGetSingleton<" + typeof(T).Name + ">");
-#endif
         for (int i = 0; i < _singletons.Count; ++i)
         {
             if (_singletons[i].Singleton is T v)
@@ -692,9 +644,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     public IUncreatedSingleton? GetSingleton(Type type)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "Get Singleton type :" + type.Name + ".");
-#endif
         for (int i = 0; i < _singletons.Count; ++i)
             if (_singletons[i].SingletonType == type)
                 return _singletons[i].Singleton;
@@ -706,9 +655,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     public bool IsLoaded<T>() where T : class, IUncreatedSingleton
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "IsLoaded<" + typeof(T).Name + ">");
-#endif
         for (int i = 0; i < _singletons.Count; ++i)
             if (_singletons[i].SingletonType is T)
                 return _singletons[i].IsLoaded;
@@ -742,9 +688,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
         public SingletonInformation(IUncreatedSingleton singleton)
         {
             SingletonType = singleton.GetType();
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking("SingletonInformation Constructor Type: " + SingletonType.Name + ".");
-#endif
             Singleton = singleton;
             IsLoaded = false;
             if (Attribute.GetCustomAttributes(SingletonType, 
@@ -761,9 +704,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
         /// <exception cref="SingletonLoadException"/>
         public async Task UnloadAsync(CancellationToken token = default)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "Unloading " + SingletonType.Name + ".");
-#endif
             await UCWarfare.ToUpdate(token);
             if (Singleton.LoadAsynchrounously)
             {
@@ -780,9 +720,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
         /// <exception cref="SingletonLoadException"/>
         public async Task LoadAsync(CancellationToken token = default)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "Loading " + SingletonType.Name + ".");
-#endif
             await UCWarfare.ToUpdate(token);
             if (RequiresLevel && !Level.isLoaded)
             {
@@ -810,9 +747,6 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
         public bool isLoaded = false;
         public SingletonDependencyInformation(IUncreatedSingleton singleton)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             Singleton = singleton;
             SingletonType = singleton.GetType();
             Attribute[] attributes = Attribute.GetCustomAttributes(SingletonType, typeof(SingletonDependencyAttribute));

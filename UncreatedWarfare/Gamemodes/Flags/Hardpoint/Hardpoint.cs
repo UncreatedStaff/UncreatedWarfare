@@ -264,9 +264,6 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     {
         yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
@@ -279,9 +276,6 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     }
     private void OnShouldStartNewGame()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (_endScreen != null)
         {
             _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;

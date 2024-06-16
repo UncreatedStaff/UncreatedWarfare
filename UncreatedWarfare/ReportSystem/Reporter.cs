@@ -111,9 +111,6 @@ public class Reporter : MonoBehaviour
     }
     private void TickPlayer(PlayerData data, float deltaTime, float time)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Player player = data.player;
         InteractableVehicle veh = player.movement.getVehicle();
         if (veh != null)
@@ -184,9 +181,6 @@ public class Reporter : MonoBehaviour
     float lastTick = 0;
     private void Update()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float dt = Time.deltaTime;
         float time = Time.realtimeSinceStartup;
         bool tickTime = time - lastTick > 5f;
@@ -259,9 +253,6 @@ public class Reporter : MonoBehaviour
     }
     internal void OnVehicleRequest(ulong player, Guid vehicle, PrimaryKey spawn)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < data.Count; ++i)
         {
             if (data[i].Steam64 == player)
@@ -280,9 +271,6 @@ public class Reporter : MonoBehaviour
     }
     internal void OnVehicleDied(ulong owner, PrimaryKey spawnKey, ulong killer, Guid vehicle, Guid weapon, EDamageOrigin origin, bool tk)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (spawnKey.IsValid)
         {
             for (int i = 0; i < data.Count; ++i)
@@ -326,9 +314,6 @@ public class Reporter : MonoBehaviour
     }
     internal void OnPlayerJoin(SteamPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < data.Count; ++i)
         {
             if (data[i].Steam64 == player.playerID.steamID.m_SteamID)
@@ -355,9 +340,6 @@ public class Reporter : MonoBehaviour
     /// <summary>Slow, use rarely.</summary>
     public ulong RecentPlayerNameCheck(string name, UCPlayer.NameSearch type)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (type == UCPlayer.NameSearch.CharacterName)
         {
             foreach (PlayerData current in data)
@@ -464,9 +446,6 @@ public class Reporter : MonoBehaviour
     }
     internal void OnPlayerChat(ulong player, string message)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < data.Count; ++i)
         {
             if (data[i].Steam64 == player)
@@ -478,9 +457,6 @@ public class Reporter : MonoBehaviour
     }
     internal void OnDamagedStructure(ulong player, StructureDamageData strdata)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < data.Count; ++i)
         {
             if (data[i].Steam64 == player)
@@ -506,9 +482,6 @@ public class Reporter : MonoBehaviour
     // todo this sucks
     internal void OnDestroyedStructure(ulong player, uint instId)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < data.Count; ++i)
         {
             if (data[i].Steam64 == player)
@@ -561,9 +534,6 @@ public class Reporter : MonoBehaviour
 
         public void InsertChat(string message)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (message.Length < 1 || message[0] == '/') return;
             if (chatLogs.Count > 0 && chatLogs[0].Value.Key == message && (DateTime.Now - chatLogs[0].Value.Value).TotalSeconds < 10d)
             {

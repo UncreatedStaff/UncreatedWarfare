@@ -127,9 +127,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     }
     private void OnGroupChanged(GroupChanged e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (e.Player.Squad != null)
         {
             LeaveSquad(e.Player, e.Player.Squad);
@@ -161,9 +158,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void SendSquadMenu(UCPlayer player, Squad squad, bool holdMemberCountUpdate = false)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ITransportConnection c = player.Player.channel.owner.transportConnection;
         MenuUI.SendToPlayer(c);
         MenuUI.Header.SetText(c, T.SquadsUIHeaderPlayerCount.Translate(player, false, squad, squad.Members.Count, SQUAD_MAX_MEMBERS));
@@ -211,9 +205,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void UpdateUIMemberCount(ulong team)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer player = PlayerManager.OnlinePlayers[i];
@@ -274,9 +265,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     void IJoinedTeamListener.OnJoinTeam(UCPlayer player, ulong team)
     {
         _singleton.IsLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (player.Save.LastGame == Data.Gamemode.GameId && player.Save.SquadLeader != 0ul && !string.IsNullOrEmpty(player.Save.SquadName))
         {
             string sn = player.Save.SquadName;
@@ -296,9 +284,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void SendSquadListToTeam(ulong team)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             if (PlayerManager.OnlinePlayers[i].GetTeam() == team && PlayerManager.OnlinePlayers[i].Squad == null)
@@ -309,9 +294,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void SendSquadList(UCPlayer player, ulong team)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ITransportConnection c = player.Player.channel.owner.transportConnection;
         ListUI.SendToPlayer(c);
         int s2 = 0;
@@ -354,9 +336,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void ReplicateLockSquad(Squad squad)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int index = 0;
         for (int i = 0; i < Squads.Count; i++)
         {
@@ -418,9 +397,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void ReplicateKitChange(UCPlayer player)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Squad? squad = player.Squad;
         if (squad is null) return;
         int plInd = -1;
@@ -444,9 +420,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void UpdateMemberList(Squad squad)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int m = 0; m < squad.Members.Count; m++)
         {
             UCPlayer player = squad.Members[m];
@@ -471,9 +444,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     }
     public static string FindUnusedSquadName(ulong team)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int n = 0; n < SquadNames.Length; n++)
         {
             string name = SquadNames[n];
@@ -494,9 +464,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         string name = FindUnusedSquadName(team);
         Squad squad = new Squad(name, leader, team, leader.KitBranch);
         Squads.Add(squad);
@@ -517,17 +484,11 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     }
     private static void SortSquadNames()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Squads.Sort((a, b) => a.Name[0].CompareTo(b.Name[0]));
     }
     public static void JoinSquad(UCPlayer player, Squad squad)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         foreach (UCPlayer p in squad.Members)
         {
             if (p.Steam64 != player.Steam64)
@@ -559,9 +520,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     }
     private static void SortMembers(Squad squad)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         squad.Members.Sort((a, b) => b.CachedXP.CompareTo(a.CachedXP));
         if (squad.Leader is { IsOnline: true, IsLeaving: false })
         {
@@ -572,9 +530,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void LeaveSquad(UCPlayer player, Squad squad)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         player.SendChat(T.SquadLeft, squad);
 
         bool wasLeader = squad.Leader.Steam64 == player.Steam64;
@@ -656,9 +611,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void DisbandSquad(Squad squad)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Squads.Remove(squad);
         squad.Disbanded = true;
 
@@ -687,9 +639,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void KickPlayerFromSquad(UCPlayer player, Squad squad)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (player == null || squad == null || squad.Members.Count < 2)
             return;
 
@@ -722,9 +671,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         _singleton.AssertLoaded();
         if (newLeader == squad.Leader)
             return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (squad.Leader.KitClass == Class.Squadleader)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
@@ -754,9 +700,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static bool FindSquad(string input, ulong teamID, out Squad squad)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<Squad> friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
         string name = input.ToLower();
         if (name.Length == 1)
@@ -784,9 +727,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static void SetLocked(Squad squad, bool value)
     {
         _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ActionLog.Add(value ? ActionLogType.LockedSquad : ActionLogType.UnlockedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team), squad.Leader);
         squad.LockOrUnlock(value);
         ReplicateLockSquad(squad);

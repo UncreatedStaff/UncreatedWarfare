@@ -60,9 +60,6 @@ public class KitBoosting(KitManager manager) : ITCPConnectedListener
     }
     internal void OnNitroBoostingUpdated(ulong player, byte state)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         if (state is 0 or 1)
         {

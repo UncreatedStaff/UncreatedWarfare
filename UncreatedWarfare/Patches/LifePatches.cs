@@ -60,9 +60,6 @@ public static partial class Patches
         [UsedImplicitly]
         static bool SimulatePlayerLifePre(uint simulation, PlayerLife __instance, uint ___lastBleed, ref bool ____isBleeding, ref uint ___lastRegenerate)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (!Data.Is(out IRevives r)) return true;
             if (Provider.isServer)
             {
@@ -92,9 +89,6 @@ public static partial class Patches
         [UsedImplicitly]
         static void SimulatePlayerLifePost(uint simulation, PlayerLife __instance, ref uint ___lastBleed, ref bool ____isBleeding)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (!Data.Is(out IRevives r)) return;
             if (Provider.isServer)
             {
@@ -125,9 +119,6 @@ public static partial class Patches
         [UsedImplicitly]
         static void OnStopStoring(PlayerInventory __instance)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             UCPlayer? player = UCPlayer.FromPlayer(__instance.player);
             if (player == null) return;
             if (player.StorageCoroutine != null)

@@ -121,9 +121,6 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
     }
     public virtual void GetTopStats(int count, out List<T> statsT1, out List<T> statsT2)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<T> stats = this.stats.ToList();
 
         stats.RemoveAll(p =>

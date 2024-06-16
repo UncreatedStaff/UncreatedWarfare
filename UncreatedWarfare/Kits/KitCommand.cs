@@ -382,9 +382,6 @@ public sealed class KitCommand : AsyncCommand
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ctx.AssertGamemode<IKitRequests>();
         KitManager? manager = KitManager.GetSingletonQuick();
         if (manager == null)

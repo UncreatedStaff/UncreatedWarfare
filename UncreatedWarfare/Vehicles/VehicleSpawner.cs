@@ -89,9 +89,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     private void OnPlayerEnterMain(UCPlayer player, ulong team)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         try
         {
             WriteWait();
@@ -171,9 +168,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     void IFlagCapturedListener.OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner) => UpdateFlagSigns();
     private void UpdateFlagSigns()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         Signs.UpdateVehicleBaySigns(null);
     }
@@ -294,9 +288,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
     private void OnBarricadeDestroyed(BarricadeDestroyed e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Gamemode.Config.StructureVehicleBay.MatchGuid(e.Barricade.asset.GUID) && TryGetSpawn(e.Barricade, out SqlItem<VehicleSpawn> spawn))
         {
             Guid guid = spawn.Item is { Vehicle.Item: { } vehicle } ? vehicle.VehicleID : Guid.Empty;
@@ -319,9 +310,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
     private void OnStructureDestroyed(StructureDestroyed e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (Gamemode.Config.StructureVehicleBay.MatchGuid(e.Structure.asset.GUID) && TryGetSpawn(e.Structure, out SqlItem<VehicleSpawn> spawn))
         {
             Guid guid = spawn.Item is { Vehicle.Item: { } vehicle } ? vehicle.VehicleID : Guid.Empty;
@@ -491,9 +479,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public async Task RespawnAllVehicles(CancellationToken token = default)
     {
         L.Log("Respawning vehicles...", ConsoleColor.Magenta);
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         await UCWarfare.ToUpdate(token);
         DeleteAllVehiclesFromWorld();
 
@@ -646,9 +631,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
     public static void DeleteVehicle(InteractableVehicle vehicle)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         PreDeleteVehicle(vehicle);
         VehicleManager.askVehicleDestroy(vehicle);
@@ -656,9 +638,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
     public static void DeleteAllVehiclesFromWorld()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ThreadUtil.assertIsGameThread();
         for (int i = 0; i < VehicleManager.vehicles.Count; i++)
         {
@@ -708,9 +687,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
         {
             if (seat == 0 && excludeDriver)
@@ -728,9 +704,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public static bool TryGetFirstNonCrewSeat(InteractableVehicle vehicle, VehicleData data, out byte seat)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (seat = 0; seat < vehicle.passengers.Length; seat++)
         {
             Passenger passenger = vehicle.passengers[seat];
@@ -746,9 +719,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public static bool TryGetFirstNonDriverSeat(InteractableVehicle vehicle, out byte seat)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         seat = 0;
         do
         {
@@ -760,9 +730,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public static bool IsOwnerInVehicle(InteractableVehicle vehicle, UCPlayer owner)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (vehicle.lockedOwner == CSteamID.Nil || owner == null) return false;
 
         foreach (Passenger passenger in vehicle.passengers)
@@ -775,9 +742,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public static int CountCrewmen(InteractableVehicle vehicle, VehicleData data)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         int count = 0;
         for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
         {
@@ -836,9 +800,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     private static void OnVehicleExitRequested(ExitVehicleRequested e)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!e.Player.OnDuty() && e.ExitLocation.y - F.GetHeightAt2DPoint(e.ExitLocation.x, e.ExitLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
         {
             if (!FOBManager.Config.Buildables.Exists(v => v.Type == BuildableType.Emplacement && v.Emplacement is not null && v.Emplacement.EmplacementVehicle is not null && v.Emplacement.EmplacementVehicle.Guid == e.Vehicle.asset.GUID))
@@ -851,9 +812,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     private void OnVehicleEnterRequested(EnterVehicleRequested e)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!UCVehicleManager.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
         {
             e.Break();
@@ -895,9 +853,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     private void OnVehicleSwapSeatRequested(VehicleSwapSeatRequested e)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!UCVehicleManager.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
         {
             e.Break();
@@ -1021,9 +976,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public static async Task<InteractableVehicle?> SpawnLockedVehicle(Guid vehicleId, Vector3 position, Quaternion rotation, ulong owner = 0ul, ulong groupOwner = 0ul, bool @lock = true, bool checkExisting = false, CancellationToken token = default)
     {
         await UCWarfare.ToLevelLoad();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
         if (checkExisting)
@@ -1145,9 +1097,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
 
     public async Task<bool> UnlinkSign(BarricadeDrop drop, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (drop.interactable is not InteractableSign sign)
             return false;
         StructureSaver? saver = StructureSaver.GetSingletonQuick();
@@ -1196,9 +1145,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     }
     public async Task<bool> LinkSign(BarricadeDrop drop, SqlItem<VehicleSpawn> spawn, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (drop.interactable is not InteractableSign sign || spawn is null)
             return false;
         StructureSaver? saver = StructureSaver.GetSingletonQuick();
@@ -1542,9 +1488,6 @@ public class VehicleSpawn : IListItem
     internal async Task<InteractableVehicle?> SpawnVehicle(CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (HasLinkedVehicle(out InteractableVehicle vehicle))
         {
             ReportError("Vehicle already linked: {#" + vehicle.instanceID + "}.");
@@ -1619,9 +1562,6 @@ public class VehicleSpawn : IListItem
 
     public bool HasLinkedVehicle(out InteractableVehicle vehicle)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (LinkedVehicle == null)
         {
             vehicle = null!;
@@ -1677,9 +1617,6 @@ public class VehicleSpawn : IListItem
     public void UpdateSign()
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         IBuildable? sign = Sign?.Item?.Buildable;
         if (sign is null || sign.Model == null || sign.Drop is not BarricadeDrop drop) return;
         if (TeamManager.PlayerBaseStatus != null && TeamManager.Team1Main.IsInside(sign.Model.transform.position))
@@ -1704,9 +1641,6 @@ public class VehicleSpawn : IListItem
     }
     private static void UpdateSignInternal(IEnumerator<SteamPlayer> players, VehicleSpawn spawn, BarricadeDrop drop, ulong team)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         VehicleData? data = spawn.Vehicle?.Item;
         if (data == null)
             return;
@@ -1725,9 +1659,6 @@ public class VehicleSpawn : IListItem
     }
     private static void UpdateSignInternal(SteamPlayer player, VehicleSpawn spawn, BarricadeDrop drop)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         VehicleData? data = spawn.Vehicle?.Item;
         if (data == null || UCPlayer.FromSteamPlayer(player) is not { } pl)
             return;
@@ -1835,9 +1766,6 @@ public sealed class VehicleBayComponent : MonoBehaviour
     void FixedUpdate()
     {
         if (_state == VehicleBayState.NotInitialized) return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float time = Time.realtimeSinceStartup;
         bool vcheck = false;
         if (_checkTime || (time - _lastDelayCheck > 1f && _state is VehicleBayState.Unknown or VehicleBayState.Delayed or VehicleBayState.TimeDelayed))

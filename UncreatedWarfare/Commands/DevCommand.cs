@@ -22,9 +22,6 @@ public class DevCommand : AsyncCommand
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ctx.AssertHelpCheck(0, Syntax + " - Developer commands for config setup.");
 
         if (ctx.MatchParameter(0, "caches", "cache"))

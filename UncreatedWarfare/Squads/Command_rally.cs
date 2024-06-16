@@ -30,9 +30,6 @@ public class RallyCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
 
         ctx.AssertGamemode<ISquads>();
 

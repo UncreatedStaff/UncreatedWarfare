@@ -29,9 +29,6 @@ public static partial class Patches
         [UsedImplicitly]
         static void TryAddPlayerPostfix(ref byte seat, Player player, InteractableVehicle __instance, ref bool __result)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (__result)
             {
                 if (DesiredSeat is >= 0 and <= byte.MaxValue)

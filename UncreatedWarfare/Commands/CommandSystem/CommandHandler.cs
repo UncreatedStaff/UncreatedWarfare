@@ -105,9 +105,6 @@ public static class CommandHandler
     }
     public static void LoadCommands()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Commands.Clear();
         RegisterVanillaCommands();
         Type t = typeof(IExecutableCommand);
@@ -256,9 +253,6 @@ public static class CommandHandler
             return true;
         }
 
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (message == null || message.Length < 2) goto notCommand;
         int cmdStart = -1;
         int cmdEnd = -1;
@@ -681,13 +675,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         {
             try
             {
-#if DEBUG
-                using IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + Command.CommandName);
-#endif
                 Command.Execute(this);
-#if DEBUG
-                profiler.Dispose();
-#endif
                 CommandHandler.ActiveCommands.Remove(this);
                 if (!Responded)
                 {
@@ -743,9 +731,6 @@ public sealed class CommandInteraction : BaseCommandInteraction
             {
                 try
                 {
-#if DEBUG
-                    using IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + Command.CommandName);
-#endif
                     if (Command.Synchronize)
                         await Command.Semaphore!.WaitAsync(CommandHandler.GlobalCommandCancel.Token).ConfigureAwait(false);
                     try
@@ -760,9 +745,6 @@ public sealed class CommandInteraction : BaseCommandInteraction
                     {
                         try
                         {
-#if DEBUG
-                            profiler.Dispose();
-#endif
                             CommandHandler.ActiveCommands.Remove(this);
                             CheckShouldStartCooldown();
                         }

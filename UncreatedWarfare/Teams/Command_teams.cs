@@ -22,9 +22,6 @@ public class TeamsCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         ctx.AssertRanByPlayer();

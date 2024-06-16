@@ -257,9 +257,6 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         }
         public void Destroy()
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             foreach (UCPlayer player in _cache.NearbyDefenders)
                 _cache.OnDefenderLeft(player);
             foreach (UCPlayer player in _cache.NearbyAttackers)

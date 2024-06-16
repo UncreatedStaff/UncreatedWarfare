@@ -53,10 +53,6 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         BarricadeDrop? drop;
         string? kitId = null;

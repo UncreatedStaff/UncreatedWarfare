@@ -20,9 +20,6 @@ public class PermissionSaver : JSONSaver<PermissionSave>
     }
     public EAdminType GetPlayerPermissionLevel(ulong player, bool forceFullSearch = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!forceFullSearch && PlayerManager.FromID(player) is UCPlayer pl)
             return pl.PermissionLevel;
         else
@@ -40,9 +37,6 @@ public class PermissionSaver : JSONSaver<PermissionSave>
     }
     public void SetPlayerPermissionLevel(ulong player, EAdminType level)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (PlayerManager.FromID(player) is UCPlayer pl)
             pl.ResetPermissionLevel();
         bool set = false;
@@ -76,9 +70,6 @@ public class PermissionSaver : JSONSaver<PermissionSave>
     }
     public void AddPlayer(ulong player, int save)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         PermissionSave psave = this[save];
         ulong[] old = psave.Members;
         psave.Members = new ulong[old.Length + 1];
@@ -92,9 +83,6 @@ public class PermissionSaver : JSONSaver<PermissionSave>
     }
     public bool RemovePlayer(int save, int index)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         PermissionSave psave = this[save];
         if (psave.Members.Length == 0) return false;
         ulong[] old = psave.Members;

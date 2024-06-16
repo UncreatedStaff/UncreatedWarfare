@@ -200,9 +200,6 @@ public static class QuestJsonEx
     // todo rewrite
     public static bool TryReadIntegralValue(this ref Utf8JsonReader reader, out DynamicIntegerValue value)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
@@ -318,9 +315,6 @@ public static class QuestJsonEx
     }
     public static bool TryReadFloatValue(this ref Utf8JsonReader reader, out DynamicFloatValue value)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
@@ -441,9 +435,6 @@ public static class QuestJsonEx
     }
     public static unsafe bool TryReadStringValue(this ref Utf8JsonReader reader, out DynamicStringValue value, bool isKitselector)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
@@ -513,9 +504,6 @@ public static class QuestJsonEx
     }
     public static unsafe bool TryReadEnumValue<TEnum>(this ref Utf8JsonReader reader, out DynamicEnumValue<TEnum> value) where TEnum : unmanaged, Enum
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();
@@ -695,9 +683,6 @@ public static class QuestJsonEx
     }
     public static unsafe bool TryReadAssetValue<TAsset>(this ref Utf8JsonReader reader, out DynamicAssetValue<TAsset> value) where TAsset : Asset
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (reader.TokenType == JsonTokenType.String)
         {
             string? str = reader.GetString();

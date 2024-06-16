@@ -74,9 +74,6 @@ public class WhitelistCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!Data.Gamemode.UseWhitelist || !Whitelister.Loaded) throw ctx.SendGamemodeError();
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);

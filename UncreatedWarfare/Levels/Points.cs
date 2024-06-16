@@ -370,9 +370,6 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             }
 
             if (!Data.TrackStats || PointsConfigObj.Data.GlobalXPMultiplier == 0f) return;
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             float multiplier = -1;
             UCPlayer? player = parameters.Player;
 
@@ -609,9 +606,6 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     }
     public static string GetProgressBar(float currentPoints, float totalPoints, int barLength = 50)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         float ratio = currentPoints / totalPoints;
 
         int progress = Mathf.RoundToInt(ratio * barLength);
@@ -638,9 +632,6 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     }
     public static void TryAwardDriverAssist(Player gunner, XPReward reward, int amount = 0, int rep = 0, float quota = 0)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         InteractableVehicle vehicle = gunner.movement.getVehicle();
         if (vehicle != null)
         {
@@ -662,9 +653,6 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     }
     public static void TryAwardFOBCreatorXP(FOB fob, XPReward reward, float multiplier = 1f)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         UCPlayer? creator = UCPlayer.FromID(fob.Owner);
 
         if (creator != null)

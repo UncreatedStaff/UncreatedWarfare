@@ -1577,9 +1577,6 @@ public abstract class DatabaseInterface
         => WhitelistIP(targetId, callerId, range, false, timestamp, token);
     public async Task<StandardErrorCode> WhitelistIP(ulong targetId, ulong callerId, IPv4Range range, bool add, DateTimeOffset timestamp, CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (add)
         {
             await Sql.NonQueryAsync(

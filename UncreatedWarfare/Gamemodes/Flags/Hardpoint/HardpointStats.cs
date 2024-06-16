@@ -93,9 +93,6 @@ public class HardpointTracker : TeamStatTracker<HardpointPlayerStats>, ILongestS
 
     public virtual void GetTopStats(int count, out List<HardpointPlayerStats> statsT1, out List<HardpointPlayerStats> statsT2)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         List<HardpointPlayerStats> stats = this.stats.ToList();
 
         stats.RemoveAll(p =>

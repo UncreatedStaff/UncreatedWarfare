@@ -9,7 +9,6 @@ using SDG.Framework.Utilities;
 using SDG.Unturned;
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -23,8 +22,6 @@ using DanielWillett.ModularRpcs.DependencyInjection;
 using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
-using Uncreated.Framework;
-using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
@@ -45,7 +42,6 @@ using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using MainThreadTask = Uncreated.Framework.MainThreadTask;
 #if NETSTANDARD || NETFRAMEWORK
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking.Purchasing;
@@ -54,7 +50,7 @@ using Uncreated.Warfare.Networking.Purchasing;
 namespace Uncreated.Warfare;
 
 public delegate void VoidDelegate();
-public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
+public class UCWarfare : MonoBehaviour
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(6, 00, 0); // 2:00 AM EST
     public static readonly Version Version = new Version(3, 2, 6, 0);
@@ -62,13 +58,11 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     private readonly List<UCTask> _tasks = UCWarfareNexus.Active ? new List<UCTask>(16) : null!;
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
-    public Coroutine? StatsRoutine;
     public UCAnnouncer Announcer;
     internal DebugComponent Debugger;
     public event EventHandler? UCWarfareLoaded;
     public event EventHandler? UCWarfareUnloading;
     internal Projectiles.ProjectileSolver Solver;
-    public WebSocketConnection? NetClient;
     public bool CoroutineTiming = false;
     private DateTime _nextRestartTime;
     internal volatile bool ProcessTasks = true;
@@ -76,8 +70,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     private readonly CancellationTokenSource _unloadCancellationTokenSource = UCWarfareNexus.Active ? new CancellationTokenSource() : null!;
     public readonly SemaphoreSlim PlayerJoinLock = UCWarfareNexus.Active ? new SemaphoreSlim(0, 1) : null!;
     public float LastUpdateDetected = -1f;
-    private static ConcurrentQueue<ThreadResult>? _threadRequests;
-    internal static ConcurrentQueue<ThreadResult> ThreadQueueEntries => !IsLoaded ? null! : _threadRequests ??= new ConcurrentQueue<ThreadResult>();
     public bool FullyLoaded { get; private set; }
     public static CancellationToken UnloadCancel => IsLoaded ? I._unloadCancellationTokenSource.Token : CancellationToken.None;
     public static int Season => Version.Major;
@@ -87,7 +79,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     [UsedImplicitly]
     private void Awake()
     {
-        ThreadQueue.Queue = this;
         if (I != null) throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Uncreated Warfare is already loaded."));
         I = this;
         FullyLoaded = false;
@@ -122,9 +113,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
      
     private async Task EarlyLoad(CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         L.Log("Started loading - Uncreated Warfare version " + Version + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
               "Please stop using this plugin now.", ConsoleColor.Green);
 
@@ -292,9 +280,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             _earlyLoadTask = null;
         }
         else await ToUpdate(token);
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Data.SendUpdateServerConfig();
         EventDispatcher.SubscribeToAll();
 
@@ -375,9 +360,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     }
     private void SubscribeToEvents()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Data.Gamemode?.Subscribe();
         Data.LanguageDataStore?.Subscribe();
         GameUpdateMonitor.OnGameUpdateDetected += EventFunctions.OnGameUpdateDetected;
@@ -427,9 +409,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     }
     private void UnsubscribeFromEvents()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         Data.Gamemode?.Unsubscribe();
         EventDispatcher.UnsubscribeFromAll();
         Data.LanguageDataStore?.Unsubscribe();
@@ -478,9 +457,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     }
     internal void UpdateLangs(UCPlayer player, bool uiOnly)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!uiOnly)
             player.OnLanguageChanged();
 
@@ -867,15 +843,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     }
     internal async Task LetTasksUnload(CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         while (_tasks.Count > 0)
         {
             UCTask task = _tasks[0];
-#if DEBUG
-            using IDisposable profiler2 = ProfilingUtils.StartTracking("Unloading task: " + (task.Context ?? "<no context>") + ".");
-#endif
             if (task.AwaitOnUnload && !task.Task.IsCompleted)
             {
                 L.LogDebug("Letting task \"" + (task.Context ?? "null") + "\" finish for up to 10 seconds before unloading...");
@@ -902,10 +872,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     public async Task UnloadAsync(CancellationToken token)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        IDisposable profiler = ProfilingUtils.StartTracking();
-        IDisposable profiler2;
-#endif
         FullyLoaded = false;
         try
         {
@@ -924,15 +890,8 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             await LetTasksUnload(token).ConfigureAwait(false);
             if (Data.Singletons is not null)
             {
-#if DEBUG
-                profiler2 = ProfilingUtils.StartTracking("Unload DeathTracker");
-#endif
                 await Data.Singletons.UnloadSingletonAsync(Data.DeathTracker, false, token: token);
                 Data.DeathTracker = null!;
-#if DEBUG
-                profiler2.Dispose();
-                profiler2 = ProfilingUtils.StartTracking("Unload UCAnnouncer.");
-#endif
 
                 await ToUpdate(token);
 
@@ -941,10 +900,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                     await Data.Singletons.UnloadSingletonAsync(Announcer, token: token);
                     Announcer = null!;
                 }
-#if DEBUG
-                profiler2.Dispose();
-                profiler2 = ProfilingUtils.StartTracking("Unload Gamemode");
-#endif
                 await ToUpdate(token);
 
                 // save pending damage records
@@ -974,9 +929,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                     await Data.Singletons.UnloadSingletonAsync(Data.Gamemode, token: token);
                     Data.Gamemode = null!;
                 }
-#if DEBUG
-                profiler2.Dispose();
-#endif
             }
 
             await LetTasksUnload(token).ConfigureAwait(false);
@@ -988,9 +940,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 Data.ModerationSql.OnNewModerationEntryAdded -= OffenseManager.OnNewModerationEntryAdded;
             }
 
-#if DEBUG
-            profiler2 = ProfilingUtils.StartTracking("Destroy GameObjects");
-#endif
             ThreadUtil.assertIsGameThread();
             if (Solver != null)
             {
@@ -1004,13 +953,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
             if (Debugger != null)
                 Destroy(Debugger);
-#if DEBUG
-            profiler2.Dispose();
-#endif
             OffenseManager.Deinit();
-#if DEBUG
-            profiler2 = ProfilingUtils.StartTracking("Unload MySQL");
-#endif
             if (Data.DatabaseManager != null)
             {
                 using CancellationTokenSource src = new CancellationTokenSource(5000);
@@ -1049,46 +992,24 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                     Data.RemoteSQL = null!;
                 }
             }
-#if DEBUG
-            profiler2.Dispose();
-#endif
             await LetTasksUnload(token).ConfigureAwait(false);
             await ToUpdate(token);
             ThreadUtil.assertIsGameThread();
-#if DEBUG
-            profiler2 = ProfilingUtils.StartTracking("Stopping Coroutines");
-#endif
             L.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
-#if DEBUG
-            profiler2.Dispose();
-            profiler2 = ProfilingUtils.StartTracking("Unsubscribing from events.");
-#endif
             L.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
-#if DEBUG
-            profiler2.Dispose();
-#endif
             CommandWindow.shouldLogDeaths = true;
-#if DEBUG
-            profiler2 = ProfilingUtils.StartTracking("Destroying NetClient.");
-#endif
             if (NetClient != null)
             {
                 await NetClient.DisposeAsync().ConfigureAwait(false);
                 await ToUpdate(token);
                 NetClient = null;
             }
-#if DEBUG
-            profiler2.Dispose();
-#endif
             Logging.OnLogInfo -= L.NetLogInfo;
             Logging.OnLogWarning -= L.NetLogWarning;
             Logging.OnLogError -= L.NetLogError;
             Logging.OnLogException -= L.NetLogException;
-#if DEBUG
-            profiler2 = ProfilingUtils.StartTracking("Harmony Cleanup.");
-#endif
             try
             {
                 LoadingQueueBlockerPatches.Unpatch();
@@ -1099,9 +1020,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
                 L.LogError("Unpatching Error, perhaps Nelson changed something:");
                 L.LogError(ex);
             }
-#if DEBUG
-            profiler2.Dispose();
-#endif
         }
         catch (Exception ex)
         {
@@ -1109,9 +1027,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             L.LogError(ex);
         }
 
-#if DEBUG
-        profiler2 = ProfilingUtils.StartTracking("Unload remaining Singletons.");
-#endif
         if (Data.Singletons != null)
         {
             await Data.Singletons.UnloadAllAsync(token);
@@ -1120,14 +1035,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         }
 
         Data.NilSteamPlayer = null!;
-#if DEBUG
-        profiler2.Dispose();
-#endif
         L.Log("Warfare unload complete", ConsoleColor.Blue);
-#if DEBUG
-        profiler.Dispose();
-        F.SaveProfilingData();
-#endif
         await Task.Delay(100, token);
     }
     public static Color GetColor(string key)

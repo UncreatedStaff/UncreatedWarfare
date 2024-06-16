@@ -302,9 +302,6 @@ public static class KitEx
     public static float GetTeamLimit(this Kit kit) => kit.TeamLimit ?? KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(kit.Class);
     public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ulong t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;
@@ -319,9 +316,6 @@ public static class KitEx
     }
     public static bool IsClassLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         ulong t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;

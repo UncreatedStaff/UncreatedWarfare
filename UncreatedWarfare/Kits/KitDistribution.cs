@@ -69,9 +69,6 @@ public class KitDistribution(KitManager manager)
     public void DistributeKitItems(UCPlayer player, Kit? kit, bool clearInventory = true, bool sendActionTip = true, bool ignoreAmmobags = false)
     {
         ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (clearInventory)
             UCInventoryManager.ClearInventory(player, !Data.UseFastKits);
 
