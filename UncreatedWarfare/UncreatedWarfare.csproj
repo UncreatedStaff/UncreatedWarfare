@@ -97,6 +97,8 @@
     <PackageReference Include="DanielWillett.StackCleaner" Version="[1.4.2,)" />
     <PackageReference Include="DanielWillett.ReflectionTools" Version="[3.2.1,)" />
     <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="[3.0.0,)" />
+    <PackageReference Include="DanielWillett.SpeedBytes" Version="[1.1.2,)" />
+    <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="[1.1.1,)" />
     <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease10" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
 
@@ -107,6 +109,11 @@
     <PackageReference Include="System.Text.Json" Version="4.7.1" NoWarn="NU1605" />
     <PackageReference Include="UniTask" Version="2.5.0" />
     <PackageReference Update="Lib.Harmony" NoWarn="NU1701" />
+
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.3" />
+    <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
 
     <PackageReference Include="MySqlConnector" Version="0.69.10" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
@@ -163,6 +170,10 @@
       <HintPath>$(UnturnedDllPath)/SDG.NetPak.Runtime.dll</HintPath>
       <Private>true</Private>
     </Reference>
+    <Reference Include="UnturnedDat">
+      <HintPath>$(UnturnedDllPath)/UnturnedDat.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
 
     <!-- Third Party -->
     <Reference Include="com.rlabrecque.steamworks.net">
@@ -189,7 +200,7 @@
     </Reference>
   </ItemGroup>
 
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),Assembly-CSharp.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,Assembly-CSharp.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetTransport.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetTransport.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetPak.Runtime.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetPak.Runtime.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),com.rlabrecque.steamworks.net.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,com.rlabrecque.steamworks.net.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.CoreModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.CoreModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.ImageConversionModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.ImageConversionModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.PhysicsModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.PhysicsModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UnityWebRequestModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UnityWebRequestModule.dll))*&quot;" />
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(U3DSPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
+    <Exec Command="XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),Assembly-CSharp.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,Assembly-CSharp.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnturnedDat.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnturnedDat.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetTransport.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetTransport.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetPak.Runtime.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetPak.Runtime.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),com.rlabrecque.steamworks.net.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,com.rlabrecque.steamworks.net.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.CoreModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.CoreModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.ImageConversionModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.ImageConversionModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.PhysicsModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.PhysicsModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UnityWebRequestModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UnityWebRequestModule.dll))*&quot;" />
   </Target>
 </Project>

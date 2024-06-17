@@ -9,7 +9,7 @@ using Uncreated.Warfare.Commands;
 
 namespace Uncreated.Warfare.Configuration;
 
-public class Config<TData> : IConfiguration<TData> where TData : JSONConfigData, new()
+public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfigData, new()
 {
     public delegate TData CustomDeserializer(ref Utf8JsonReader reader);
     public delegate void CustomSerializer(TData obj, Utf8JsonWriter writer);
@@ -270,7 +270,7 @@ public abstract class JSONConfigData
     public JSONConfigData() => SetDefaults();
     public abstract void SetDefaults();
 }
-public interface IConfiguration
+public interface IConfigurationHolder
 {
     string Directory { get; }
     string? ReloadKey { get; }
@@ -279,7 +279,7 @@ public interface IConfiguration
     void Save();
 }
 
-public interface IConfiguration<TData> : IConfiguration where TData : JSONConfigData, new()
+public interface IConfigurationHolder<TData> : IConfigurationHolder where TData : JSONConfigData, new()
 {
     TData Data { get; }
 }

@@ -284,6 +284,7 @@ public static class L
         {
             if (_outputToConsoleMethod is not null)
                 AddLog(message);
+            // todo
             CommandHandler.OnLog(message);
         }
     }

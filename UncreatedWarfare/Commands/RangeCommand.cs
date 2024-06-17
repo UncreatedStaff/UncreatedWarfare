@@ -18,7 +18,7 @@ public class RangeCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
 

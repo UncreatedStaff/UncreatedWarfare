@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -17,6 +18,7 @@ using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
@@ -44,7 +46,7 @@ using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
 namespace Uncreated.Warfare;
 
-public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlayer>, IModerationActor
+public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlayer>, IModerationActor, ICommandUser
 {
     [FormatDisplay(typeof(IPlayer), "Character Name")]
     public const string FormatCharacterName = "cn";
@@ -285,6 +287,10 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public EffectAsset? LastPing { get; internal set; }
     public ulong? ViewLens { get; set; }
     public bool UsingRemotePlay { get; }
+
+    bool ICommandUser.IsSuperUser => Player.channel.owner.isAdmin;
+    CSteamID ICommandUser.Steam64 => Unsafe.As<ulong, CSteamID>(ref Unsafe.AsRef(in Steam64));
+    void ICommandUser.SendMessage(string message) => this.SendString(message);
     ulong IPlayer.Steam64 => Steam64;
     public bool IsAdmin => Player.channel.owner.isAdmin;
     public bool IsTeam1 => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;

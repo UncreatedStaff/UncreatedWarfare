@@ -57,7 +57,7 @@ public class AttachCommand : Command
         };
     }
 
-    public override unsafe void Execute(CommandInteraction ctx)
+    public override unsafe void Execute(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
 

@@ -37,7 +37,7 @@ public class BanCommand : AsyncCommand
             }
         };
     }
-    public override Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override Task Execute(CommandContext ctx, CancellationToken token)
     {
         throw ctx.SendNotImplemented();
 #if false

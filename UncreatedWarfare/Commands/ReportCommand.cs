@@ -53,7 +53,7 @@ public class ReportCommand : AsyncCommand
             }
         };
     }
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         if (Data.Reporter == null)
             throw ctx.Reply(T.ReportNotConnected);

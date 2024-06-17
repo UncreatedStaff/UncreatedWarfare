@@ -204,7 +204,7 @@ public class VehicleBayCommand : AsyncCommand
         };
     }
 
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertGamemode(out IVehicles vehicleGm);
         ctx.AssertGamemode(out IStructureSaving structureGm);
@@ -830,7 +830,7 @@ public class VehicleBayCommand : AsyncCommand
     }
 
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    public static async Task<SqlItem<VehicleData>?> GetVehicleTarget(CommandInteraction ctx, VehicleBay bay, VehicleSpawner spawner, CancellationToken token = default)
+    public static async Task<SqlItem<VehicleData>?> GetVehicleTarget(CommandContext ctx, VehicleBay bay, VehicleSpawner spawner, CancellationToken token = default)
     {
         if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
@@ -850,7 +850,7 @@ public class VehicleBayCommand : AsyncCommand
         return null;
     }
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    public static SqlItem<VehicleSpawn>? GetBayTarget(CommandInteraction ctx, VehicleSpawner spawner)
+    public static SqlItem<VehicleSpawn>? GetBayTarget(CommandContext ctx, VehicleSpawner spawner)
     {
         if (ctx.TryGetTarget(out InteractableVehicle vehicle) && spawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
         {
@@ -867,7 +867,7 @@ public class VehicleBayCommand : AsyncCommand
         return null;
     }
     /// <summary>Sign barricade >> Spawner barricade >> Spawner structure >> Linked Vehicle</summary>
-    public static BarricadeDrop? GetSignTarget(CommandInteraction ctx, VehicleSpawner spawner, out SqlItem<VehicleSpawn> spawn)
+    public static BarricadeDrop? GetSignTarget(CommandContext ctx, VehicleSpawner spawner, out SqlItem<VehicleSpawn> spawn)
     {
         if (ctx.TryGetTarget(out BarricadeDrop drop) && spawner.TryGetSpawn(drop, out spawn))
         {

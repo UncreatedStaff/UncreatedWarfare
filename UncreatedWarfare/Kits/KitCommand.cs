@@ -380,7 +380,7 @@ public sealed class KitCommand : AsyncCommand
         };
     }
 
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertGamemode<IKitRequests>();
         KitManager? manager = KitManager.GetSingletonQuick();

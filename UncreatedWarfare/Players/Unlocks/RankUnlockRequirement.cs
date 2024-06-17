@@ -44,21 +44,21 @@ public class RankUnlockRequirement : UnlockRequirement
         writer.Write(UnlockRank);
     }
 
-    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
         ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
         if (!success)
             L.LogWarning("Invalid rank order in kit requirement: " + (kit?.InternalName ?? string.Empty) + " :: " + UnlockRank + ".");
         return ctx.Reply(T.RequestKitLowRank, data);
     }
-    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, VehicleData data)
     {
         ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
         if (!success)
             L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + UnlockRank + ".");
         return ctx.Reply(T.RequestVehicleRankIncomplete, rankData);
     }
-    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
         ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
         if (!success)

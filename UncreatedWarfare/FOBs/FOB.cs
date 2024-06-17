@@ -963,7 +963,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         return null;
     }
     float IDeployable.GetDelay() => FOBManager.Config.DeployFOBDelay;
-    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandContext? ctx)
     {
         if (Bunker == null || Bunker.ActiveStructure?.Model == null || Bunker.State != ShovelableComponent.BuildableState.Full)
         {

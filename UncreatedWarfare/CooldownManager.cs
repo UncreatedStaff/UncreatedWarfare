@@ -257,8 +257,8 @@ public enum CooldownType
     Rally,
     [Translatable("Execute Command")]
     Command,
-    [Translatable("Execute Command Portion")]
-    PortionCommand,
+    [Translatable("Execute Isolated Command")]
+    IsolatedCommand,
     [Translatable("Interact Vehicle Seats")]
     InteractVehicleSeats
 }

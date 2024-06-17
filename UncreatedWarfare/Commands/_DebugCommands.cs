@@ -11,12 +11,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore;
-using Uncreated.Framework;
-using Uncreated.Json;
-using Uncreated.Networking.Async;
 using Uncreated.Players;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -40,6 +37,7 @@ using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Permissions;
 using Uncreated.Warfare.Teams;
 #if DEBUG
@@ -74,7 +72,7 @@ public class DebugCommand : AsyncCommand
             ParameterInfo[] p = method.GetParameters();
             if (p.Length is not 1 and not 2)
                 continue;
-            if (!p[0].ParameterType.IsAssignableFrom(typeof(CommandInteraction)))
+            if (!p[0].ParameterType.IsAssignableFrom(typeof(CommandContext)))
                 continue;
             if (p.Length == 2 && (method.ReturnType != typeof(Task) || p[1].ParameterType.IsAssignableFrom(typeof(CancellationToken))))
                 continue;
@@ -90,7 +88,7 @@ public class DebugCommand : AsyncCommand
             Parameters = parameters.ToArray()
         };
     }
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         if (ctx.TryGet(0, out string operation))
         {
@@ -107,7 +105,7 @@ public class DebugCommand : AsyncCommand
                 throw ctx.Reply(T.DebugNoMethod, operation);
             ParameterInfo[] parameters = info.GetParameters();
             int len = 1;
-            if (parameters.Length == 0 || parameters[0].ParameterType != typeof(CommandInteraction))
+            if (parameters.Length == 0 || parameters[0].ParameterType != typeof(CommandContext))
                 throw ctx.Reply(T.DebugNoMethod, operation);
             if (parameters.Length > 2 || (parameters.Length == 2 && parameters[1].ParameterType != typeof(CancellationToken)))
                 throw ctx.Reply(T.DebugNoMethod, operation);
@@ -126,9 +124,9 @@ public class DebugCommand : AsyncCommand
             }
             catch (Exception ex)
             {
-                if (ex is BaseCommandInteraction b2)
+                if (ex is BaseCommandContext b2)
                     throw b2;
-                if (ex.InnerException is BaseCommandInteraction b)
+                if (ex.InnerException is BaseCommandContext b)
                     throw b;
                 L.LogError(ex.InnerException ?? ex);
                 throw ctx.Reply(T.DebugErrorExecuting, info.Name, (ex.InnerException ?? ex).GetType().Name);
@@ -139,7 +137,7 @@ public class DebugCommand : AsyncCommand
 #pragma warning disable IDE1006
 #pragma warning disable IDE0051
     private const string GIVE_XP_SYNTAX = "/test givexp <player> <amount> [team - required if offline]";
-    private async Task givexp(CommandInteraction ctx, CancellationToken token)
+    private async Task givexp(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -191,7 +189,7 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString($"Couldn't parse {ctx.Get(1)!} as a number.");
     }
     private const string GIVE_CREDITS_SYNTAX = "/test givecredits <player> <amount> [team - required if offline]";
-    private async Task givecredits(CommandInteraction ctx, CancellationToken token)
+    private async Task givecredits(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -238,7 +236,7 @@ public class DebugCommand : AsyncCommand
         else
             ctx.ReplyString($"Couldn't parse {ctx.Get(1)!} as a number.");
     }
-    private void quickcap(CommandInteraction ctx)
+    private void quickcap(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.ADMIN);
 
@@ -278,7 +276,7 @@ public class DebugCommand : AsyncCommand
         }
         else ctx.SendGamemodeError();
     }
-    private void quickwin(CommandInteraction ctx)
+    private void quickwin(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.ADMIN);
 
@@ -295,7 +293,7 @@ public class DebugCommand : AsyncCommand
         UCWarfare.RunTask(Data.Gamemode.DeclareWin, team, ctx: "/test quickwin executed for " + team + ".");
         ctx.Defer();
     }
-    private void zone(CommandInteraction ctx)
+    private void zone(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.STAFF);
 
@@ -311,7 +309,7 @@ public class DebugCommand : AsyncCommand
         else
             ctx.ReplyString(txt + " Current Flag: <#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
     }
-    private void sign(CommandInteraction ctx)
+    private void sign(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.STAFF);
 
@@ -328,7 +326,7 @@ public class DebugCommand : AsyncCommand
             L.Log("Sign Text: \n" + sign.text + "\nEND", ConsoleColor.Green);
         }
     }
-    private void time(CommandInteraction ctx)
+    private void time(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
@@ -337,7 +335,7 @@ public class DebugCommand : AsyncCommand
     }
     // test zones: test zonearea all true false false true false
     private const string ZONEAREA_SYNTAX = "Syntax: /test zonearea [<selection: active|all> <extra-zones> <path> <range> <fill> <drawAngles>]";
-    private void zonearea(CommandInteraction ctx)
+    private void zonearea(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
@@ -346,7 +344,7 @@ public class DebugCommand : AsyncCommand
         UCWarfare.I.StartCoroutine(ZoneDrawing.CreateFlagOverlay(ctx, openOutput: true));
         ctx.Defer();
     }
-    private void rotation(CommandInteraction ctx)
+    private void rotation(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
@@ -354,7 +352,7 @@ public class DebugCommand : AsyncCommand
         fg.PrintFlagRotation();
     }
     private const byte DOWN_DAMAGE = 55;
-    private void down(CommandInteraction ctx)
+    private void down(CommandContext ctx)
     {
         ctx.AssertGamemode(out IRevives revive);
 
@@ -385,7 +383,7 @@ public class DebugCommand : AsyncCommand
         revive.ReviveManager.InjurePlayer(in p, player == ctx.Caller ? null : player);
         ctx.ReplyString($"Injured {(player == ctx.Caller ? "you" : player.CharacterName)}.");
     }
-    private void clearui(CommandInteraction ctx)
+    private void clearui(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
 
@@ -400,7 +398,7 @@ public class DebugCommand : AsyncCommand
         ctx.Caller.HasUIHidden = !ctx.Caller.HasUIHidden;
         ctx.ReplyString("<#a4a5b3>UI " + (ctx.Caller.HasUIHidden ? "hidden." : "visible."));
     }
-    private void game(CommandInteraction ctx)
+    private void game(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         if (Data.Gamemode is not null)
@@ -409,7 +407,7 @@ public class DebugCommand : AsyncCommand
             ctx.SendGamemodeError();
     }
     private const string PLAYER_SAVE_USAGE = "/test playersave <player> <property> <value>";
-    private async Task playersave(CommandInteraction ctx, CancellationToken token)
+    private async Task playersave(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -459,7 +457,7 @@ public class DebugCommand : AsyncCommand
             ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
     }
     private const string GAMEMODE_USAGE = "/test gamemode <gamemode>";
-    private void gamemode(CommandInteraction ctx)
+    private void gamemode(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.ADMIN);
 
@@ -508,14 +506,14 @@ public class DebugCommand : AsyncCommand
         else
             ctx.SendCorrectUsage(GAMEMODE_USAGE);
     }
-    private void trackstats(CommandInteraction ctx)
+    private void trackstats(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         Data.TrackStats = !Data.TrackStats;
         ctx.ReplyString(Data.TrackStats ? "Re-enabled stat tracking." : "Disabled stat tracking.");
     }
-    private void destroyblocker(CommandInteraction ctx)
+    private void destroyblocker(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -538,7 +536,7 @@ public class DebugCommand : AsyncCommand
 
         ctx.ReplyString(ct == 0 ? "Couldn't find any zone blockers." : $"Destroyed {ct} zone blocked{ct.S()}");
     }
-    private void skipstaging(CommandInteraction ctx)
+    private void skipstaging(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -554,7 +552,7 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString("Staging phase is not active.");
         }
     }
-    private void resetlobby(CommandInteraction ctx)
+    private void resetlobby(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -579,7 +577,7 @@ public class DebugCommand : AsyncCommand
         }
         else ctx.SendGamemodeError();
     }
-    private void clearcooldowns(CommandInteraction ctx)
+    private void clearcooldowns(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -590,7 +588,7 @@ public class DebugCommand : AsyncCommand
             pl = ctx.Caller;
         CooldownManager.RemoveCooldown(pl);
     }
-    private void instid(CommandInteraction ctx)
+    private void instid(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
 
@@ -637,7 +635,7 @@ public class DebugCommand : AsyncCommand
         }
         ctx.ReplyString("You must be looking at a barricade, structure, vehicle, or object.");
     }
-    private void fakereport(CommandInteraction ctx)
+    private void fakereport(CommandContext ctx)
     {
         if (!UCWarfare.Config.EnableReporter) throw ctx.SendNotImplemented();
 
@@ -665,7 +663,7 @@ public class DebugCommand : AsyncCommand
         });
         ctx.Defer();
     }
-    private void questdump(CommandInteraction ctx)
+    private void questdump(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
@@ -673,7 +671,7 @@ public class DebugCommand : AsyncCommand
 
         QuestManager.PrintAllQuests(ctx.Caller);
     }
-    private void completequest(CommandInteraction ctx)
+    private void completequest(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.ADMIN);
 
@@ -704,7 +702,7 @@ public class DebugCommand : AsyncCommand
             }
         }
     }
-    private void setsign(CommandInteraction ctx)
+    private void setsign(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
 
@@ -717,14 +715,14 @@ public class DebugCommand : AsyncCommand
         }
     }
 #if DEBUG
-    private void saveall(CommandInteraction ctx)
+    private void saveall(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         F.SaveProfilingData();
     }
 #endif
-    private void questtest(CommandInteraction ctx)
+    private void questtest(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
 
@@ -742,20 +740,20 @@ public class DebugCommand : AsyncCommand
             }
         }
     }
-    private void gettime(CommandInteraction ctx)
+    private void gettime(CommandContext ctx)
     {
         ctx.AssertArgs(1, "/test gettime <timestr>");
 
         string t = ctx.GetRange(0)!;
         ctx.ReplyString("Time: " + Util.ParseTimespan(t).ToString("g"));
     }
-    private void getperms(CommandInteraction ctx)
+    private void getperms(CommandContext ctx)
     {
         ctx.ReplyString("Permission: " + ctx.Caller.GetPermissions());
     }
 #if DEBUG
     private static readonly InstanceSetter<InteractableVehicle, bool>? SetEngineOn = Accessor.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField");
-    private void drivetest(CommandInteraction ctx)
+    private void drivetest(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
         VehicleAsset asset =
@@ -784,7 +782,7 @@ public class DebugCommand : AsyncCommand
         UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 20)));
         UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 10)));*/
     }
-    private IEnumerator _coroutine(CommandInteraction ctx, VehicleAsset asset, Vector3 pos)
+    private IEnumerator _coroutine(CommandContext ctx, VehicleAsset asset, Vector3 pos)
     {
         Vector3 forward = ctx.Caller.Player.look.aim.forward;
         pos += (forward * 4);
@@ -843,7 +841,7 @@ public class DebugCommand : AsyncCommand
         }
     }
 #endif
-    private void resetdebug(CommandInteraction ctx)
+    private void resetdebug(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         if (UCWarfare.I.Debugger != null)
@@ -853,7 +851,7 @@ public class DebugCommand : AsyncCommand
         }
         else throw ctx.ReplyString("Debugger is not active.");
     }
-    private void quest(CommandInteraction ctx)
+    private void quest(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
         ctx.AssertPermissions(EAdminType.ADMIN);
@@ -886,7 +884,7 @@ public class DebugCommand : AsyncCommand
         }
         else ctx.SendCorrectUsage("/test quest <add|track|remove> <id>");
     }
-    private void flag(CommandInteraction ctx)
+    private void flag(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
         ctx.AssertPermissions(EAdminType.ADMIN);
@@ -927,7 +925,7 @@ public class DebugCommand : AsyncCommand
         }
         ctx.ReplyString("Syntax: /test flag <set|get|remove> <flag> [value]");
     }
-    private void findasset(CommandInteraction ctx)
+    private void findasset(CommandContext ctx)
     {
         if (ctx.TryGet(0, out Guid guid))
         {
@@ -942,7 +940,7 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString("<#ff8c69>Please use a <GUID> or <uhort, type>");
         }
     }
-    private void traits(CommandInteraction ctx)
+    private void traits(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
@@ -968,7 +966,7 @@ public class DebugCommand : AsyncCommand
               ", " + (ctx.Caller.ActiveBuffs[4]?.GetType().Name ?? "null") +
               ", " + (ctx.Caller.ActiveBuffs[5]?.GetType().Name ?? "null") + " ]");
     }
-    private void sendui(CommandInteraction ctx)
+    private void sendui(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
@@ -990,7 +988,7 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString("Syntax: /test sendui <id> [key]");
         }
     }
-    private void advancedelays(CommandInteraction ctx)
+    private void advancedelays(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
@@ -1002,7 +1000,7 @@ public class DebugCommand : AsyncCommand
         else
             ctx.SendCorrectUsage("/test advancedelays <seconds>.");
     }
-    private void listcooldowns(CommandInteraction ctx)
+    private void listcooldowns(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
@@ -1014,7 +1012,7 @@ public class DebugCommand : AsyncCommand
         }
     }
 #if DEBUG
-    private void giveuav(CommandInteraction ctx)
+    private void giveuav(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
@@ -1024,7 +1022,7 @@ public class DebugCommand : AsyncCommand
         UAV.GiveUAV(ctx.Caller.GetTeam(), ctx.Caller, ctx.Caller, isMarker, pos);
         ctx.Defer();
     }
-    private async Task requestuav(CommandInteraction ctx, CancellationToken token)
+    private async Task requestuav(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
@@ -1032,7 +1030,7 @@ public class DebugCommand : AsyncCommand
         await UAV.RequestUAV(ctx.Caller, token);
         ctx.Defer();
     }
-    private async Task testfield(CommandInteraction ctx, CancellationToken token)
+    private async Task testfield(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByPlayer();
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1085,7 +1083,7 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString("Spawned " + (sections * sections * 4) + " vehicles.");
     }
 #endif
-    private async Task squad(CommandInteraction ctx, CancellationToken token)
+    private async Task squad(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
@@ -1149,7 +1147,7 @@ public class DebugCommand : AsyncCommand
 
         ctx.Defer();
     }
-    private void effect(CommandInteraction ctx)
+    private void effect(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
         ctx.AssertPermissions(EAdminType.MODERATOR);
@@ -1205,7 +1203,7 @@ public class DebugCommand : AsyncCommand
         }
         throw ctx.ReplyString($"<#ff8c69>{asset.name}'s effect property hasn't been set. Possibly the effect was set up incorrectly.");
     }
-    private void watchdogtest(CommandInteraction ctx)
+    private void watchdogtest(CommandContext ctx)
     {
         ctx.AssertRanByConsole();
         ctx.ReplyString("Starting...");
@@ -1221,7 +1219,7 @@ public class DebugCommand : AsyncCommand
     }
 
 #if DEBUG
-    private void runtests(CommandInteraction ctx)
+    private void runtests(CommandContext ctx)
     {
         ctx.AssertRanByConsole();
 
@@ -1386,7 +1384,7 @@ public class DebugCommand : AsyncCommand
         });
     }
 #endif
-    private void translate(CommandInteraction ctx)
+    private void translate(CommandContext ctx)
     {
         if (ctx.TryGet(0, out string name))
         {
@@ -1408,7 +1406,7 @@ public class DebugCommand : AsyncCommand
             else ctx.ReplyString(name + " not found.");
         }
     }
-    private void nerd(CommandInteraction ctx)
+    private void nerd(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.STAFF);
         if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer))
@@ -1427,7 +1425,7 @@ public class DebugCommand : AsyncCommand
         }
         else ctx.SendCorrectUsage("/test nerd <player>");
     }
-    private void unnerd(CommandInteraction ctx)
+    private void unnerd(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.STAFF);
         if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer))
@@ -1441,7 +1439,7 @@ public class DebugCommand : AsyncCommand
         }
         else ctx.SendCorrectUsage("/test unnerd <player>");
     }
-    private void findassets(CommandInteraction ctx)
+    private void findassets(CommandContext ctx)
     {
         ctx.AssertRanByConsole();
         ctx.AssertHelpCheck(0, "/test findassets <type>.<field/property> <value> - List assets by their value");
@@ -1498,7 +1496,7 @@ public class DebugCommand : AsyncCommand
             return ((PropertyInfo)field).GetMethod.Invoke(asset, Array.Empty<object>());
         }
     }
-    private void hardpointadv(CommandInteraction ctx)
+    private void hardpointadv(CommandContext ctx)
     {
         ctx.AssertGamemode(out Hardpoint hardpoint);
         ctx.AssertOnDuty();
@@ -1506,7 +1504,7 @@ public class DebugCommand : AsyncCommand
         hardpoint.ForceNextObjective();
         ctx.Defer();
     }
-    private void setholiday(CommandInteraction ctx)
+    private void setholiday(CommandContext ctx)
     {
         ctx.AssertRanByConsole();
         
@@ -1533,7 +1531,7 @@ public class DebugCommand : AsyncCommand
         }
         throw ctx.ReplyString("Invalid holiday: " + SqlTypes.Enum<ENPCHoliday>());
     }
-    private void startloadout(CommandInteraction ctx)
+    private void startloadout(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
 
@@ -1550,7 +1548,7 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString($"Given {items.Length} default item{items.Length.S()} for a {Localization.TranslateEnum(@class, ctx.LanguageInfo)} loadout.");
     }
 
-    private async Task viewlens(CommandInteraction ctx, CancellationToken token)
+    private async Task viewlens(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByPlayer();
 
@@ -1587,7 +1585,7 @@ public class DebugCommand : AsyncCommand
         else ctx.SendCorrectUsage("/test viewlens <player ...> - Simulates UI from another player's perspective.");
     }
 
-    private void dumpfob(CommandInteraction ctx)
+    private void dumpfob(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.HELPER);
         
@@ -1611,7 +1609,7 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString("Check console.");
     }
 
-    private async Task exportlang(CommandInteraction ctx, CancellationToken token)
+    private async Task exportlang(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
         ctx.AssertHelpCheck(0, "/text exportlang [lang]");
@@ -1621,7 +1619,7 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString(lang + " exported.");
     }
 
-    private void zonespeedtest(CommandInteraction ctx)
+    private void zonespeedtest(CommandContext ctx)
     {
         ctx.AssertRanByConsole();
         ZoneList zl = Data.Singletons.GetSingleton<ZoneList>()!;
@@ -1643,7 +1641,7 @@ public class DebugCommand : AsyncCommand
             zl.WriteRelease();
         }
     }
-    private async Task getpfp(CommandInteraction ctx)
+    private async Task getpfp(CommandContext ctx)
     {
         ctx.AssertRanByConsole();
         if (!ctx.TryGet(0, out ulong steam64, out _, true))
@@ -1659,7 +1657,7 @@ public class DebugCommand : AsyncCommand
             L.Log("PFP URL: " + (pfp ?? "NULL"));
     }
 
-    private void damage(CommandInteraction ctx)
+    private void damage(CommandContext ctx)
     {
         ctx.AssertPermissions(EAdminType.ADMIN_ON_DUTY | EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
@@ -1699,49 +1697,49 @@ public class DebugCommand : AsyncCommand
             throw ctx.SendCorrectUsage("/test damage <amount>[%] while looking at a barricade, structure, or vehicle.");
     }
 
-    private async Task migratebans(CommandInteraction ctx, CancellationToken token)
+    private async Task migratebans(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
         await Migration.MigrateBans(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
-    private async Task migratebe(CommandInteraction ctx, CancellationToken token)
+    private async Task migratebe(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
         await Migration.MigrateBattlEyeKicks(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
-    private async Task migratekicks(CommandInteraction ctx, CancellationToken token)
+    private async Task migratekicks(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
         await Migration.MigrateKicks(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
-    private async Task migratemutes(CommandInteraction ctx, CancellationToken token)
+    private async Task migratemutes(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
         await Migration.MigrateMutes(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
-    private async Task migratetks(CommandInteraction ctx, CancellationToken token)
+    private async Task migratetks(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
         await Migration.MigrateTeamkills(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
-    private async Task migratewarns(CommandInteraction ctx, CancellationToken token)
+    private async Task migratewarns(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
         await Migration.MigrateWarnings(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
 
-    private void geticons(CommandInteraction ctx)
+    private void geticons(CommandContext ctx)
     {
         ctx.AssertRanByConsole();
         ctx.ReplyString(string.Join(string.Empty, ItemIconProvider.Defaults.Select(x => x.Character).Where(x => x.HasValue).Select(x => x!.Value.ToString())));
     }
-    private void fobcooldown(CommandInteraction ctx)
+    private void fobcooldown(CommandContext ctx)
     {
         if (ctx.TryGet(0, out int playerCount))
         {
@@ -1753,13 +1751,13 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString($"Current cooldown: {Util.ToTimeString(TimeSpan.FromSeconds(CooldownManager.GetFOBDeployCooldown(playerCount)))} for {playerCount} player(s)..");
         }
     }
-    private void amcdamage(CommandInteraction ctx)
+    private void amcdamage(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
 
         ctx.ReplyString($"Your multiplier is currently {ctx.Caller.GetAMCDamageMultiplier().ToString("F4", ctx.CultureInfo)}.");
     }
-    private void nearpos(CommandInteraction ctx)
+    private void nearpos(CommandContext ctx)
     {
         ctx.AssertRanByPlayer();
         ctx.AssertPermissions(EAdminType.STAFF);
@@ -1810,7 +1808,7 @@ public class DebugCommand : AsyncCommand
         }
     }
 
-    private async Task migrateusers(CommandInteraction ctx, CancellationToken token)
+    private async Task migrateusers(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
 
@@ -1884,7 +1882,7 @@ public class DebugCommand : AsyncCommand
         await dbContext.SaveChangesAsync(CancellationToken.None);
     }
 
-    private async Task dumpkit(CommandInteraction ctx, CancellationToken token)
+    private async Task dumpkit(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
 
@@ -1910,7 +1908,7 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString(Environment.NewLine + JsonSerializer.Serialize(kit, JsonEx.serializerSettings));
     }
 
-    private void dumpfactions(CommandInteraction ctx)
+    private void dumpfactions(CommandContext ctx)
     {
         ctx.AssertRanByConsole();
 

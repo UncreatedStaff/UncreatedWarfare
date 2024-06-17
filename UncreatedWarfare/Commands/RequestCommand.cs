@@ -8,6 +8,7 @@ using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -51,7 +52,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
         };
     }
 
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         BarricadeDrop? drop;
@@ -364,9 +365,9 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
         }
     }
     /// <remarks>Thread Safe</remarks>
-    internal Task RequestVehicle(CommandInteraction ctx, InteractableVehicle vehicle, VehicleData data, CancellationToken token = default) => RequestVehicle(ctx, vehicle, data, ctx.Caller.GetTeam(), token);
+    internal Task RequestVehicle(CommandContext ctx, InteractableVehicle vehicle, VehicleData data, CancellationToken token = default) => RequestVehicle(ctx, vehicle, data, ctx.Caller.GetTeam(), token);
     /// <remarks>Thread Safe</remarks>
-    internal async Task RequestVehicle(CommandInteraction ctx, InteractableVehicle vehicle, VehicleData data, ulong team, CancellationToken token = default)
+    internal async Task RequestVehicle(CommandContext ctx, InteractableVehicle vehicle, VehicleData data, ulong team, CancellationToken token = default)
     {
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate();

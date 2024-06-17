@@ -20,7 +20,7 @@ public class DevCommand : AsyncCommand
 
     public DevCommand() : base("dev", EAdminType.ADMIN) { }
 
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertHelpCheck(0, Syntax + " - Developer commands for config setup.");
 

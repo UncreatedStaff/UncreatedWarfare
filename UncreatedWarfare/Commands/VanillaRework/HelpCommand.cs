@@ -2,6 +2,7 @@
 using System.Reflection;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
@@ -36,7 +37,7 @@ public sealed class HelpCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         if (ctx.TryGet(0, out string range))
         {

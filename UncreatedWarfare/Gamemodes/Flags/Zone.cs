@@ -256,7 +256,7 @@ public abstract class Zone : IListItem, IZone
     /// <summary>Hashes <see cref="Name"/></summary>
     public override int GetHashCode() => Name.GetHashCode();
 
-    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx) => true;
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandContext? ctx) => true;
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat) => true;
     string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)

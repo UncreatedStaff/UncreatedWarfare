@@ -23,7 +23,7 @@ public static class ZoneDrawing
     private static readonly Color Color2 = new Color(0.15f, 0.2f, 0.15f, 0.8f);
     private static readonly Color Color2Path = new Color(0.15f, 0, 0, 0.8f);
     private static readonly Color Color1Path = new Color(1, 0, 0, 0.8f);
-    public static IEnumerator CreateFlagOverlay(CommandInteraction ctx, string? fileName = null, bool openOutput = false)
+    public static IEnumerator CreateFlagOverlay(CommandContext ctx, string? fileName = null, bool openOutput = false)
     {
         bool includeUnloadedZones = !ctx.MatchFlag("rot", "rotation", "noAll");
         bool extraZones = !ctx.MatchFlag("flags", "noExtra", "noMains");

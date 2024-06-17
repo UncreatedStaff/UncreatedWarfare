@@ -28,7 +28,7 @@ public static class Deployment
         if (player.Player.TryGetPlayerData(out UCPlayerData data))
             data.CancelDeployment();
     }
-    public static bool DeployTo(UCPlayer player, IFOB? deployedFrom, IDeployable location, CommandInteraction? ctx, bool cancelOnMove = true, bool cancelOnDamage = false, bool startCooldown = true)
+    public static bool DeployTo(UCPlayer player, IFOB? deployedFrom, IDeployable location, CommandContext? ctx, bool cancelOnMove = true, bool cancelOnDamage = false, bool startCooldown = true)
     {
         if (player is null || !player.IsOnline)
         {
@@ -137,7 +137,7 @@ public interface IDeployable : ITranslationArgument
     Vector3 SpawnPosition { get; }
     float Yaw { get; }
     float GetDelay();
-    bool CheckDeployable(UCPlayer player, CommandInteraction? ctx);
+    bool CheckDeployable(UCPlayer player, CommandContext? ctx);
     bool CheckDeployableTick(UCPlayer player, bool chat);
     void OnDeploy(UCPlayer player, bool chat);
 }

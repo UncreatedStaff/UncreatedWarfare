@@ -182,17 +182,17 @@ public abstract class UnlockRequirement : ICloneable, IVersionableReadWrite
         columns[++index] = new Schema.Column(COLUMN_JSON, SqlTypes.STRING_255);
         return new Schema(tableName, columns, false, typeof(UnlockRequirement));
     }
-    public virtual Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    public virtual Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
         L.LogWarning("Unhandled kit requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
-    public virtual Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    public virtual Exception RequestVehicleFailureToMeet(CommandContext ctx, VehicleData data)
     {
         L.LogWarning("Unhandled vehicle requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
-    public virtual Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    public virtual Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
         L.LogWarning("Unhandled trait requirement type: " + GetType().Name);
         return ctx.SendUnknownError();

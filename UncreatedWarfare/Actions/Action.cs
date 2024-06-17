@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using System.Collections;
+using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Players;
@@ -8,14 +9,13 @@ namespace Uncreated.Warfare.Actions;
 
 public class Action
 {
-    public readonly UCPlayer Caller;
-    public readonly JsonAssetReference<EffectAsset> ViewerEffect;
-    public readonly JsonAssetReference<EffectAsset>? CallerEffect;
-    public readonly List<UCPlayer> Viewers;
-    public readonly List<UCPlayer> ToastReceivers;
-    public readonly EActionOrigin Origin;
-    public readonly EActionType Type;
-    public readonly Vector3? InitialPosition;
+    private readonly EffectAsset _viewerEffect;
+    private readonly EffectAsset? _callerEffect;
+    private readonly List<UCPlayer> _viewers;
+    private readonly List<UCPlayer> _toastReceivers;
+    private readonly ActionOrigin _origin;
+    private readonly ActionType _type;
+    private readonly Vector3? _initialPosition;
     protected readonly int LifeTime;
     protected readonly float UpdateFrequency;
     protected bool SquadWide;
@@ -23,55 +23,60 @@ public class Action
 
     private readonly Translation<Color>? _chatMessage;
     private readonly Translation? _toast;
+    public UCPlayer Caller { get; }
 
-    public Action(UCPlayer caller, JsonAssetReference<EffectAsset> viewerEffect, JsonAssetReference<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, float updateFrequency, int lifeTime, EActionOrigin origin, EActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
+    public Action(UCPlayer caller, EffectAsset viewerEffect, EffectAsset? callerEffect, IEnumerable<UCPlayer> viewers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
         : this(caller, viewerEffect, callerEffect, viewers, viewers, updateFrequency, lifeTime, origin, type, chatMessage, toast, squadWide) { }
-    public Action(UCPlayer caller, JsonAssetReference<EffectAsset> viewerEffect, JsonAssetReference<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, IEnumerable<UCPlayer> toastReceivers, float updateFrequency, int lifeTime, EActionOrigin origin, EActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
+    public Action(UCPlayer caller, EffectAsset viewerEffect, EffectAsset? callerEffect, IEnumerable<UCPlayer> viewers, IEnumerable<UCPlayer> toastReceivers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
     {
         Caller = caller;
-        ViewerEffect = viewerEffect;
-        CallerEffect = callerEffect;
+        _viewerEffect = viewerEffect;
+        _callerEffect = callerEffect;
         LifeTime = lifeTime;
-        Viewers = viewers as List<UCPlayer> ?? viewers.ToList();
-        ToastReceivers = toastReceivers as List<UCPlayer> ?? toastReceivers.ToList();
+        _viewers = viewers.ToList();
+        _toastReceivers = ReferenceEquals(viewers, toastReceivers) ? _viewers : toastReceivers.ToList();
         UpdateFrequency = updateFrequency;
         SquadWide = squadWide;
-        Origin = origin;
-        Type = type;
+        _origin = origin;
+        _type = type;
         _chatMessage = chatMessage;
         _toast = toast;
 
-        switch (Origin)
+        switch (_origin)
         {
-            case EActionOrigin.CALLER_MARKER:
-                InitialPosition = new Vector3(caller.Player.quests.markerPosition.x, F.GetTerrainHeightAt2DPoint(caller.Player.quests.markerPosition.x, caller.Player.quests.markerPosition.z), caller.Player.quests.markerPosition.z);
+            case ActionOrigin.AtCallerLookTarget:
+                Transform look = caller.Player.look.aim;
+                _initialPosition = Physics.Raycast(look.position, look.forward, out RaycastHit hit, 800) ? hit.point : null;
                 break;
-            case EActionOrigin.CALLER_POSITION:
-                InitialPosition = caller.Position;
+
+            case ActionOrigin.AtCallerPosition:
+                _initialPosition = caller.Position;
                 break;
-            case EActionOrigin.CALLER_LOOK:
-                InitialPosition = Physics.Raycast(caller.Player.look.aim.position, caller.Player.look.aim.forward, out RaycastHit hit, 800) ? hit.point : null;
+
+            case ActionOrigin.AtCallerWaypoint:
+                Vector3 marker = caller.Player.quests.markerPosition;
+                _initialPosition = new Vector3(marker.x, F.GetTerrainHeightAt2DPoint(marker.x, marker.z), marker.z);
                 break;
+
             default:
-                InitialPosition = null;
+                _initialPosition = null;
                 break;
         }
 
-
-        if (!ViewerEffect.Exists)
-            L.LogWarning("Action could not start: Effect asset not found: " + ViewerEffect.Guid);
-        if (CallerEffect is not null && !CallerEffect.Exists)
-            L.LogWarning("Action could not start: Effect asset not found: " + CallerEffect.Guid);
+        if (_viewerEffect == null)
+        {
+            L.LogWarning("Action could not play viewer effect. Asset not found.");
+        }
 
         ActionComponent[] existing = Caller.Player.transform.gameObject.GetComponents<ActionComponent>();
         L.LogDebug("Existing actions: " + existing.Length);
         foreach (ActionComponent component in existing)
         {
-            if (component.Action != null && Type == component.Action.Type)
-            {
-                L.LogDebug("     Attempting to cancel action action...");
-                component.Action.Cancel();
-            }
+            if (component.Action == null || component.Action._type != type)
+                continue;
+            
+            L.LogDebug($"     Attempting to cancel {type} action...");
+            component.Action.Cancel();
         }
 
         _component = Caller.Player.transform.gameObject.AddComponent<ActionComponent>();
@@ -81,7 +86,7 @@ public class Action
         if (_component == null)
             return;
 
-        if (Origin != EActionOrigin.FOLLOW_CALLER && InitialPosition == null)
+        if (_origin != ActionOrigin.FollowCaller && _initialPosition == null)
             return;
         
         if (CheckValid != null && !CheckValid())
@@ -89,12 +94,11 @@ public class Action
         
         _component.Initialize(this);
 
-        if (!CooldownManager.HasCooldown(Caller, CooldownType.AnnounceAction, out _, ViewerEffect.Guid))
-        {
-            Announce();
-            CooldownManager.StartCooldown(Caller, CooldownType.AnnounceAction, 5, ViewerEffect.Guid);
-        }
-           
+        if (CooldownManager.HasCooldown(Caller, CooldownType.AnnounceAction, out _, _viewerEffect.GUID))
+            return;
+
+        Announce();
+        CooldownManager.StartCooldown(Caller, CooldownType.AnnounceAction, 5, _viewerEffect.GUID);
     }
     public void Cancel()
     {
@@ -113,25 +117,12 @@ public class Action
         if (_toast is null)
             return;
 
-        if (SquadWide && Caller.Squad != null)
+        foreach (UCPlayer? player in _toastReceivers.Where(x => x.IsOnline))
         {
-            foreach (var player in ToastReceivers.Where(x => x.IsOnline))
-            {
-                if (_toast is Translation<string> t) // TODO: better way to do account for different types of translations / clean up
-                    Tips.TryGiveTip(player, 5, t, Caller.Squad.Name);
-                else
-                    Tips.TryGiveTip(player, 5, _toast);
-            }
-        }
-        else
-        {
-            foreach (var player in ToastReceivers.Where(x => x.IsOnline))
-            {
-                if (_toast is Translation<string> t)
-                    Tips.TryGiveTip(player, 5, t, Caller.NickName);
-                else
-                    Tips.TryGiveTip(player, 5, _toast);
-            }
+            if (_toast is Translation<string> t) // TODO: better way to do account for different types of translations / clean up
+                Tips.TryGiveTip(player, 5, t, SquadWide && Caller.Squad != null ? Caller.Squad.Name : Caller.NickName);
+            else
+                Tips.TryGiveTip(player, 5, _toast);
         }
     }
     public static void SayTeam(UCPlayer caller, Translation<Color>? chatMessage)
@@ -139,14 +130,16 @@ public class Action
         if (chatMessage is null)
             return;
 
-        ulong t = caller.GetTeam();
-        Color t1 = Teams.TeamManager.GetTeamColor(t);
+        ulong team = caller.GetTeam();
+        Color teamColor = Teams.TeamManager.GetTeamColor(team);
 
-        foreach (LanguageSet set in LanguageSet.OnTeam(t))
+        foreach (LanguageSet set in LanguageSet.OnTeam(team))
         {
-            string t2 = chatMessage.Translate(set.Language, t1);
+            string translation = chatMessage.Translate(set.Language, teamColor);
             while (set.MoveNext())
-                ChatManager.serverSendMessage(t2, Palette.AMBIENT, caller.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
+            {
+                ChatManager.serverSendMessage(translation, Palette.AMBIENT, caller.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
+            }
         }
     }
     public delegate bool CheckValidHandler();
@@ -162,69 +155,71 @@ public class Action
     public class ActionComponent : MonoBehaviour
     {
         private Action _action;
+        private WaitForSecondsRealtime _waitObj;
         public Action Action => _action;
-
         public void Initialize(Action action)
         {
             _action = action;
             StartCoroutine(Loop());
+            _waitObj = new WaitForSecondsRealtime(action.UpdateFrequency);
         }
         private void SendMarkers()
         {
-            Vector3 position = _action.Origin == EActionOrigin.FOLLOW_CALLER ? transform.position : _action.InitialPosition!.Value;
-            _action.CallerEffect.ValidReference(out EffectAsset? callerEffect);
-            if (_action.ViewerEffect.ValidReference(out EffectAsset viewerEffect))
+            Vector3 position = _action._origin == ActionOrigin.FollowCaller ? transform.position : _action._initialPosition!.Value;
+            if (_action._viewerEffect == null)
+                return;
+
+            F.TriggerEffectReliable(_action._viewerEffect, Data.GetPooledTransportConnectionList(_action._viewers.Where(x => x.IsOnline).Select(x => x.Connection), _action._viewers.Count), position);
+            if (_action._callerEffect == null)
+                return;
+
+            foreach (UCPlayer player in _action._viewers.Where(x => x.IsOnline))
             {
-                F.TriggerEffectReliable(viewerEffect, Data.GetPooledTransportConnectionList(_action.Viewers.Where(x => x.IsOnline).Select(x => x.Connection), _action.Viewers.Count), position);
-                if (callerEffect != null)
-                    foreach (UCPlayer player in _action.Viewers.Where(x => x.IsOnline))
-                        F.TriggerEffectReliable(callerEffect, player.Connection, player.Position);
+                F.TriggerEffectReliable(_action._callerEffect, player.Connection, player.Position);
             }
         }
-        public void Destroy()
-        {
-            if (_action.Finished != null)
-                _action.Finished();
-            Destroy(this);
-            L.LogDebug("DESTROYED ACTION");
-        }
-
-        private IEnumerator<WaitForSeconds> Loop()
+        private IEnumerator Loop()
         {
             int counter = 0;
 
-            while (counter < _action.LifeTime * (1 / _action.UpdateFrequency))
+            float updatesPerSecond = 1 / _action.UpdateFrequency;
+            int totalCounts = Mathf.CeilToInt(_action.LifeTime * updatesPerSecond);
+
+            while (counter < totalCounts)
             {
                 SendMarkers();
 
-                if (counter % 3 * (1 / _action.UpdateFrequency) == 0) // every 3 seconds
+                if (_action.LoopCheckComplete != null && _action.LoopCheckComplete())
                 {
-                    if (_action.LoopCheckComplete != null && _action.LoopCheckComplete())
-                    {
-                        _action.CompleteAction();
-                        yield break;
-                    }
+                    _action.CompleteAction();
+                    yield break;
                 }
 
                 counter++;
-                yield return new WaitForSeconds(_action.UpdateFrequency);
+                yield return _waitObj;
             }
 
             Destroy();
         }
+        public void Destroy()
+        {
+            _action.Finished?.Invoke();
+            Destroy(this);
+            L.LogDebug("DESTROYED ACTION");
+        }
     }
 }
-public enum EActionOrigin
+public enum ActionOrigin
 {
-    FOLLOW_CALLER,
-    CALLER_LOOK,
-    CALLER_POSITION,
-    CALLER_MARKER
+    FollowCaller,
+    AtCallerLookTarget,
+    AtCallerPosition,
+    AtCallerWaypoint
 }
-public enum EActionType
+public enum ActionType
 {
-    ORDER,
-    SIMPLE_REQUEST,
-    SQUADLEADER_REQUEST,
-    EMOTE
+    Order,
+    SimpleRequest,
+    SquadleaderRequest,
+    Emote
 }

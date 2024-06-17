@@ -18,7 +18,7 @@ public sealed class KitsCommand : AsyncCommand
         };
     }
 
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         await UCWarfare.ToUpdate(token);
         ctx.AssertRanByPlayer();

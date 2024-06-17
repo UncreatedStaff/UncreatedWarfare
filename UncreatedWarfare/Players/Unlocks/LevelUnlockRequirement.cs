@@ -46,17 +46,17 @@ public class LevelUnlockRequirement : UnlockRequirement
         writer.Write(UnlockLevel);
     }
 
-    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
         LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestKitLowLevel, data);
     }
-    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, VehicleData data)
     {
         LevelData data2 = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestVehicleMissingLevels, data2);
     }
-    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
         LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestTraitLowLevel, trait, data);

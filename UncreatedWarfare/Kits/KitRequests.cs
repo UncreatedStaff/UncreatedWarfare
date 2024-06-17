@@ -22,8 +22,8 @@ public class KitRequests(KitManager manager)
 {
     public KitManager Manager { get; } = manager;
 
-    /// <exception cref="CommandInteraction"/>
-    public async Task RequestLoadout(int loadoutId, CommandInteraction ctx, CancellationToken token = default)
+    /// <exception cref="CommandContext"/>
+    public async Task RequestLoadout(int loadoutId, CommandContext ctx, CancellationToken token = default)
     {
         Kit? loadout = await Manager.Loadouts.GetLoadout(ctx.Caller, loadoutId, token).ConfigureAwait(false);
 
@@ -32,7 +32,7 @@ public class KitRequests(KitManager manager)
 
         await RequestLoadoutIntl(loadout, ctx, token).ConfigureAwait(false);
     }
-    private async Task RequestLoadoutIntl(Kit? loadout, CommandInteraction ctx, CancellationToken token = default)
+    private async Task RequestLoadoutIntl(Kit? loadout, CommandContext ctx, CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
         if (loadout == null)
@@ -74,8 +74,8 @@ public class KitRequests(KitManager manager)
         }
     }
 
-    /// <exception cref="CommandInteraction"/>
-    public async Task RequestKit(Kit kit, CommandInteraction ctx, CancellationToken token = default)
+    /// <exception cref="CommandContext"/>
+    public async Task RequestKit(Kit kit, CommandContext ctx, CancellationToken token = default)
     {
         if (kit.Type == KitType.Loadout)
         {
@@ -248,7 +248,7 @@ public class KitRequests(KitManager manager)
         if (manual)
             KitManager.InvokeOnManualKitChanged(player, kit, oldKit);
     }
-    private async Task<bool> GrantKitRequest(CommandInteraction ctx, Kit kit, CancellationToken token = default)
+    private async Task<bool> GrantKitRequest(CommandContext ctx, Kit kit, CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
         AmmoCommand.WipeDroppedItems(ctx.CallerID);
@@ -346,8 +346,8 @@ public class KitRequests(KitManager manager)
         if (manual)
             KitManager.InvokeOnManualKitChanged(player, null, oldKit);
     }
-    /// <exception cref="BaseCommandInteraction"/>
-    public async Task BuyKit(CommandInteraction ctx, Kit kit, Vector3? effectPos = null, CancellationToken token = default)
+    /// <exception cref="BaseCommandContext"/>
+    public async Task BuyKit(CommandContext ctx, Kit kit, Vector3? effectPos = null, CancellationToken token = default)
     {
         if (!ctx.Caller.HasDownloadedKitData)
             await Manager.DownloadPlayerKitData(ctx.Caller, false, token).ConfigureAwait(false);

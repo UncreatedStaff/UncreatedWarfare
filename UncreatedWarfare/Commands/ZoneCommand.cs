@@ -39,7 +39,7 @@ public class ZeCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
@@ -145,7 +145,7 @@ public class ZoneCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
@@ -241,7 +241,7 @@ public class ZoneCommand : Command
         }
         else throw ctx.SendCorrectUsage(SYNTAX);
     }
-    private void Visualize(CommandInteraction ctx)
+    private void Visualize(CommandContext ctx)
     {
         Zone? zone;
         if (ctx.TryGetRange(0, out string zname))
@@ -295,7 +295,7 @@ public class ZoneCommand : Command
         EffectManager.askEffectClearByID(ZonePlayerComponent.Corner.id, channel);
         EffectManager.askEffectClearByID(ZonePlayerComponent.Center.id, channel);
     }
-    private void Go(CommandInteraction ctx)
+    private void Go(CommandContext ctx)
     {
         Zone? zone;
         if (ctx.TryGetRange(0, out string zname))

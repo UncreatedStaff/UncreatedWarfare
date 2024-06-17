@@ -111,7 +111,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         if (old > -1 && old < _currentPoints!.Count)
             EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + old, PointText(old));
     }
-    internal void UtilCommand(CommandInteraction ctx)
+    internal void UtilCommand(CommandContext ctx)
     {
         ThreadUtil.assertIsGameThread();
         if (!ctx.HasArgs(1))
@@ -128,7 +128,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 _player.Player.transform.rotation.eulerAngles.y);
         }
     }
-    internal void DeleteCommand(CommandInteraction ctx)
+    internal void DeleteCommand(CommandContext ctx)
     {
         if (_isLoading)
             return;
@@ -190,7 +190,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         _currentBuilderIsExisting = false;
         _currentBuilder!.Id = 0;
     }
-    internal void CreateCommand(CommandInteraction ctx)
+    internal void CreateCommand(CommandContext ctx)
     {
         if (_isLoading)
             return;
@@ -388,7 +388,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 break;
         }
     }
-    internal void EditCommand(CommandInteraction ctx)
+    internal void EditCommand(CommandContext ctx)
     {
         if (_isLoading)
             return;

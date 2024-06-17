@@ -72,7 +72,7 @@ public class WhitelistCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         if (!Data.Gamemode.UseWhitelist || !Whitelister.Loaded) throw ctx.SendGamemodeError();
 

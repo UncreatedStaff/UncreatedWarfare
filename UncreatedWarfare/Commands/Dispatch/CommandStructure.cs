@@ -1,9 +1,11 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Uncreated.Framework;
+using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Commands.CommandSystem;
@@ -51,18 +53,20 @@ public sealed class CommandStructure
 
         return Description;
     }
-    /// <exception cref="BaseCommandInteraction"/>
-    public void OnHelpCommand(CommandInteraction ctx, IExecutableCommand cmd)
+    /// <exception cref="BaseCommandContext"/>
+    public async UniTask OnHelpCommand(CommandContext ctx, CommandType cmd)
     {
         if (string.IsNullOrEmpty(Description) && DescriptionTranslations == null && Parameters is not { Length: > 0 })
             return;
 
+        /* todo
         if (!cmd.CheckPermission(ctx))
         {
             throw ctx.SendNoPermission();
         }
+        */
 
-        string? desc = GetDescription(ctx.LanguageInfo);
+        string? desc = GetDescription(ctx.Language);
 
         StringBuilder builder = new StringBuilder(ctx.IsConsole ? "/" : (ctx.IMGUI ? "/<color=#ffffff>" : "/<#fff>"), Chat.MaxMessageSize);
         builder.Append(cmd.CommandName.ToLowerInvariant());
@@ -71,7 +75,8 @@ public sealed class CommandStructure
         if (Parameters is { Length: > 0 })
         {
             builder.Append(' ');
-            FormatParameters(Parameters, builder, ctx, out string? desc2, colors: !ctx.IsConsole);
+            string? desc2 = await FormatParameters(Parameters, builder, ctx, colors: !ctx.IsConsole);
+            await UniTask.SwitchToMainThread();
             if (desc2 != null)
                 desc = desc2;
             if (builder.Length > Chat.MaxMessageSize - 64) // retry without colors
@@ -82,7 +87,8 @@ public sealed class CommandStructure
                     builder.Clear().Append("<#fff>").Append(ctx.IMGUI ? "/<color=#ffffff>" : "/<#fff>")
                     .Append(cmd.CommandName.ToLowerInvariant()).Append("</color>").Append(' ');
 
-                FormatParameters(Parameters, builder, ctx, out _, colors: false);
+                await FormatParameters(Parameters, builder, ctx, colors: false);
+                await UniTask.SwitchToMainThread();
             }
         }
         if (desc != null)
@@ -121,10 +127,10 @@ public sealed class CommandStructure
         }
         return t.IsValueType ? DefaultValueTypeColor : DefaultClassTypeColor;
     }
-    private static void FormatParameters(CommandParameter[] paramters, StringBuilder builder, CommandInteraction ctx, out string? desc, bool colors = true)
+    private static async UniTask<string?> FormatParameters(CommandParameter[] paramters, StringBuilder builder, CommandContext ctx, bool colors = true)
     {
-        desc = null;
-        ++ctx.Offset;
+        string? desc = null;
+        ++ctx.ArgumentOffset;
         try
         {
             if (ctx.TryGet(0, out string val)) // part of path
@@ -175,12 +181,13 @@ public sealed class CommandStructure
                     if (p.Parameters is { Length: > 0 })
                     {
                         builder.Append(' ');
-                        FormatParameters(p.Parameters, builder, ctx, out string? d2, colors);
+                        string? d2 = await FormatParameters(p.Parameters, builder, ctx, colors);
+                        await UniTask.SwitchToMainThread();
                         if (d2 != null)
                             desc = d2;
                     }
-                    desc = p.GetDescription(ctx.LanguageInfo);
-                    return;
+                    desc = p.GetDescription(ctx.Language);
+                    return desc;
                 }
             }
 
@@ -189,8 +196,13 @@ public sealed class CommandStructure
             {
                 CommandParameter p = paramters[i];
                 string? flag = p.FlagName;
-                if (string.IsNullOrEmpty(flag) || p.Permission.HasValue && !ctx.HasPermission(p.Permission.Value))
+                if (string.IsNullOrEmpty(flag) || p.Permission.HasValue && !await ctx.HasPermission(p.Permission.Value))
+                {
+                    await UniTask.SwitchToMainThread();
                     continue;
+                }
+
+                await UniTask.SwitchToMainThread();
                 bool has = ctx.MatchFlag(flag);
                 if (!has && p.Aliases is { Length: > 0 })
                     has = ctx.MatchFlag(p.Aliases);
@@ -201,7 +213,7 @@ public sealed class CommandStructure
                 if (flag[0] != '-')
                     builder.Append('-');
                 if (has)
-                    desc = p.GetDescription(ctx.LanguageInfo);
+                    desc = p.GetDescription(ctx.Language);
                 builder.Append(flag);
                 builder.Append(": ").Append(p.Name);
                 if (!has)
@@ -217,8 +229,13 @@ public sealed class CommandStructure
                 CommandParameter p = paramters[i];
                 if (!string.IsNullOrEmpty(p.FlagName))
                     continue;
-                if (p.Permission.HasValue && !ctx.HasPermission(p.Permission.Value))
+                if (p.Permission.HasValue && !await ctx.HasPermission(p.Permission.Value))
+                {
+                    await UniTask.SwitchToMainThread();
                     continue;
+                }
+
+                await UniTask.SwitchToMainThread();
                 if (!any)
                 {
                     any = true;
@@ -317,13 +334,16 @@ public sealed class CommandStructure
             if (paramters.Length == 1 && string.IsNullOrEmpty(paramters[0].FlagName) && builder.Length < Chat.MaxMessageSize / 2)
             {
                 builder.Append(' ');
-                FormatParameters(paramters[0].Parameters, builder, ctx, out _, colors);
+                await FormatParameters(paramters[0].Parameters, builder, ctx, colors);
+                await UniTask.SwitchToMainThread();
             }
         }
         finally
         {
-            --ctx.Offset;
+            --ctx.ArgumentOffset;
         }
+
+        return desc;
     }
 }
 public sealed class CommandParameter
@@ -335,7 +355,7 @@ public sealed class CommandParameter
     public int ChainDisplayCount { get; set; }
     public string? FlagName { get; set; }
     public string? Description { get; set; }
-    public EAdminType? Permission { get; set; }
+    public PermissionLeaf? Permission { get; set; }
     public string[] Aliases { get; set; } = Array.Empty<string>();
     public TranslationList? DescriptionTranslations { get; set; }
     public CommandParameter[] Parameters { get; set; } = Array.Empty<CommandParameter>();

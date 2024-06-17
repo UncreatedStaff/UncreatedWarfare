@@ -719,7 +719,7 @@ public class KitMenuUI : UnturnedUI
                 if (proxy == null)
                     return;
 
-                await manager.Requests.RequestKit(proxy, CommandInteraction.CreateTemporary(pl), tokens.Token);
+                await manager.Requests.RequestKit(proxy, CommandContext.CreateTemporary(pl), tokens.Token);
             }
             finally
             {

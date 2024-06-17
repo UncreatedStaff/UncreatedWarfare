@@ -446,8 +446,8 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         trait = null!;
         return false;
     }
-    /// <exception cref="CommandInteraction"/>
-    public static void RequestTrait(TraitData trait, CommandInteraction ctx)
+    /// <exception cref="CommandContext"/>
+    public static void RequestTrait(TraitData trait, CommandContext ctx)
     {
         Singleton.AssertLoaded<TraitManager, TraitData>();
 

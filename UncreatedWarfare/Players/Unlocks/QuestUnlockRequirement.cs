@@ -90,7 +90,7 @@ public class QuestUnlockRequirement : UnlockRequirement
         writer.Write(UnlockPresets);
     }
 
-    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
@@ -99,7 +99,7 @@ public class QuestUnlockRequirement : UnlockRequirement
         }
         return ctx.Reply(T.RequestKitQuestIncomplete, null!);
     }
-    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, VehicleData data)
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
@@ -108,7 +108,7 @@ public class QuestUnlockRequirement : UnlockRequirement
         }
         return ctx.Reply(T.RequestVehicleQuestIncomplete, null!);
     }
-    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {

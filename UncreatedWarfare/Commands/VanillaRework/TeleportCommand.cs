@@ -101,7 +101,7 @@ public class TeleportCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 

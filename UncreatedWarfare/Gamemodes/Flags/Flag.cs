@@ -686,7 +686,7 @@ public class Flag : IDisposable, IObjective, IZone
         Zone? zone = ZoneData.Item;
         return zone is IDeployable deployable ? deployable.GetDelay() : 0f;
     }
-    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandContext? ctx)
     {
         Zone? zone = ZoneData.Item;
         return zone is IDeployable deployable && deployable.CheckDeployable(player, ctx);

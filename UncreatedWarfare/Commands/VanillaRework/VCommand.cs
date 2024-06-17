@@ -110,7 +110,7 @@ public class VCommand : AsyncCommand
         };
     }
 
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertHelpCheck(0, ctx.HasPermission(EAdminType.ADMIN_ON_DUTY) ? (AdminSyntax + " - " + AdminHelp) : (Syntax + " - " + Help));
 

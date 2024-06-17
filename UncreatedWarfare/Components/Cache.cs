@@ -121,7 +121,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         }
         return Name;
     }
-    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandContext? ctx)
     {
         ulong team = player.GetTeam();
         if (team == 0 || team != Team)

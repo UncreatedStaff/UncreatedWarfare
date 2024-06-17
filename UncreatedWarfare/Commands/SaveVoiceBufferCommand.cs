@@ -20,7 +20,7 @@ public class SaveVoiceBufferCommand : AsyncCommand
             ]
         };
     }
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         if (!ctx.TryGet(0, out _, out UCPlayer? onlinePlayer, true) || onlinePlayer == null)
             throw ctx.SendPlayerNotFound();

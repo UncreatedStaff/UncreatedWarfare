@@ -38,7 +38,7 @@ public class LangCommand : AsyncCommand
         };
     }
 
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         
@@ -110,7 +110,7 @@ public class LangCommand : AsyncCommand
         }
         else throw ctx.Reply(T.ResetLanguageHow);
     }
-    private static void CheckIMGUIRequirements(CommandInteraction ctx, LanguageInfo newSet)
+    private static void CheckIMGUIRequirements(CommandContext ctx, LanguageInfo newSet)
     {
         if (ctx.Caller.Save.IMGUI && !newSet.RequiresIMGUI)
         {

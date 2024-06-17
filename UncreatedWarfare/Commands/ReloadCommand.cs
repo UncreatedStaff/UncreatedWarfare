@@ -23,7 +23,7 @@ public class ReloadCommand : AsyncCommand
     public static event VoidDelegate OnTranslationsReloaded;
     public static event VoidDelegate OnFlagsReloaded;
 
-    public static Dictionary<string, IConfiguration> ReloadableConfigs = new Dictionary<string, IConfiguration>();
+    public static Dictionary<string, IConfigurationHolder> ReloadableConfigs = new Dictionary<string, IConfigurationHolder>();
 
     public ReloadCommand() : base("reload", EAdminType.ADMIN, 1)
     {
@@ -52,7 +52,7 @@ public class ReloadCommand : AsyncCommand
             }
         };
     }
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         if (!ctx.IsConsole && !ctx.Caller.IsAdmin)
             ctx.AssertOnDuty();
@@ -110,7 +110,7 @@ public class ReloadCommand : AsyncCommand
         else
         {
             module = module.ToLowerInvariant();
-            if (ReloadableConfigs.TryGetValue(module, out IConfiguration config))
+            if (ReloadableConfigs.TryGetValue(module, out IConfigurationHolder config))
             {
                 config.Reload();
                 ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
@@ -238,17 +238,17 @@ public class ReloadCommand : AsyncCommand
                     IEnumerable<FieldInfo> configfields = o.GetType()
                         .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance |
                                    BindingFlags.Static).Where(x =>
-                            x.FieldType.GetInterfaces().Contains(typeof(IConfiguration)));
+                            x.FieldType.GetInterfaces().Contains(typeof(IConfigurationHolder)));
                     foreach (FieldInfo config in configfields)
                     {
-                        IConfiguration c;
+                        IConfigurationHolder c;
                         if (config.IsStatic)
                         {
-                            c = (IConfiguration)config.GetValue(null);
+                            c = (IConfigurationHolder)config.GetValue(null);
                         }
                         else
                         {
-                            c = (IConfiguration)config.GetValue(o);
+                            c = (IConfigurationHolder)config.GetValue(o);
                         }
 
                         c.Reload();
@@ -267,7 +267,7 @@ public class ReloadCommand : AsyncCommand
             L.LogError(ex);
         }
     }
-    internal static async Task ReloadHomebase(CommandInteraction? ctx)
+    internal static async Task ReloadHomebase(CommandContext? ctx)
     {
         if (Data.RpcConnection is { IsClosed: false })
         {
@@ -283,7 +283,7 @@ public class ReloadCommand : AsyncCommand
             ctx?.SendUnknownError();
         }
     }
-    internal static async Task ReloadSQLServer(CommandInteraction? ctx, CancellationToken token = default)
+    internal static async Task ReloadSQLServer(CommandContext? ctx, CancellationToken token = default)
     {
         L.Log("Reloading SQL...");
         List<UCSemaphore> players = PlayerManager.GetAllSemaphores();
@@ -335,10 +335,10 @@ public class ReloadCommand : AsyncCommand
     {
         ReloadableConfigs.Remove(reloadKey);
     }
-    internal static bool RegisterConfigForReload<TData>(IConfiguration<TData> config) where TData : JSONConfigData, new()
+    internal static bool RegisterConfigForReload<TData>(IConfigurationHolder<TData> config) where TData : JSONConfigData, new()
     {
         if (config is null) return false;
-        if (ReloadableConfigs.TryGetValue(config.ReloadKey!, out IConfiguration config2))
+        if (ReloadableConfigs.TryGetValue(config.ReloadKey!, out IConfigurationHolder config2))
             return ReferenceEquals(config, config2);
         ReloadableConfigs.Add(config.ReloadKey!, config);
         return true;

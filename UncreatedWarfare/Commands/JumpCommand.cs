@@ -45,7 +45,7 @@ public class JumpCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         ctx.AssertArgs(1, Syntax);
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);

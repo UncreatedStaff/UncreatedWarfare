@@ -21,7 +21,7 @@ public class BuyCommand : AsyncCommand
             Description = "Purchase a kit for credits, must be looking at a kit sign."
         };
     }
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByPlayer();
 

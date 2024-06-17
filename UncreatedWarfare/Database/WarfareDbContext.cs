@@ -44,6 +44,7 @@ public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext
     public DbSet<DeathRecord> DeathRecords => Set<DeathRecord>();
     public DbSet<DamageRecord> DamageRecords => Set<DamageRecord>();
     public DbSet<AidRecord> AidRecords => Set<AidRecord>();
+    public DbSet<Permission> Permissions => Set<Permission>();
 
     /* configure database settings */
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

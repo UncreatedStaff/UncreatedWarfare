@@ -30,7 +30,7 @@ public class AmmoCommand : AsyncCommand
             Description = "Refill your kit while looking at an ammo crate or ammo bag or your vehicle's trunk while in main."
         };
     }
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
         ctx.AssertRanByPlayer();
 

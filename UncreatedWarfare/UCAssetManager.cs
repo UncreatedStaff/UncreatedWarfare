@@ -1,16 +1,14 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.SpeedBytes;
+using SDG.Framework.Utilities;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Threading.Tasks;
-using SDG.Framework.Utilities;
-using Uncreated.Encoding;
-using Uncreated.Networking;
-using Uncreated.Networking.Async;
-    
+
 namespace Uncreated.Warfare;
 
 public static class UCAssetManager
@@ -72,6 +70,11 @@ public static class UCAssetManager
         return asset;
     }
 
+    /// <summary>
+    /// Returns the asset category (<see cref="EAssetType"/>) of <typeparamref name="TAsset"/>. Effeciently cached.
+    /// </summary>
+    [Pure]
+    public static EAssetType GetAssetCategory<TAsset>() where TAsset : Asset => GetAssetCategoryCache<TAsset>.Category;
     public static bool TryGetAsset<TAsset>(string assetName, out TAsset asset, out bool multipleResultsFound, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
     {
         if (Guid.TryParse(assetName, out Guid guid))
@@ -80,7 +83,7 @@ public static class UCAssetManager
             multipleResultsFound = false;
             return asset is not null && (selector is null || selector(asset));
         }
-        EAssetType type = AssetTypeHelper<TAsset>.Type;
+        EAssetType type = GetAssetCategory<TAsset>();
         if (type != EAssetType.NONE)
         {
             if (ushort.TryParse(assetName, out ushort value))
@@ -201,7 +204,7 @@ public static class UCAssetManager
                 assets.Add(asset);
             return assets;
         }
-        EAssetType type = AssetTypeHelper<TAsset>.Type;
+        EAssetType type = GetAssetCategory<TAsset>();
         if (type != EAssetType.NONE)
         {
             if (ushort.TryParse(assetName, out ushort value))
@@ -271,6 +274,7 @@ public static class UCAssetManager
 
         return assets;
     }
+#if FALSE
     public static class NetCalls
     {
         /// <summary>Server-side</summary>
@@ -368,6 +372,7 @@ public static class UCAssetManager
             context.Reply(SendFindAssets, Assets.find(guid) is { } asset ? new AssetInfo[] { new AssetInfo(asset) } : Array.Empty<AssetInfo>());
         }
     }
+#endif
     public static void SyncAssetsFromOrigin(AssetOrigin origin) => SyncAssetsFromOriginMethod?.Invoke(origin);
     public static void TryLoadAsset(string filePath, AssetOrigin origin)
     {
@@ -512,6 +517,56 @@ public static class UCAssetManager
         generator.Emit(OpCodes.Ret);
 
         LoadFile = (Action<string, AssetOrigin>)dm.CreateDelegate(typeof(Action<string, AssetOrigin>));
+    }
+    private static class GetAssetCategoryCache<TAsset> where TAsset : Asset
+    {
+        public static readonly EAssetType Category;
+        static GetAssetCategoryCache()
+        {
+            Type type = typeof(TAsset);
+            if (typeof(ItemAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.ITEM;
+            }
+            else if (typeof(VehicleAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.VEHICLE;
+            }
+            else if (typeof(ObjectAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.OBJECT;
+            }
+            else if (typeof(EffectAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.EFFECT;
+            }
+            else if (typeof(AnimalAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.ANIMAL;
+            }
+            else if (typeof(SpawnAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.SPAWN;
+            }
+            else if (typeof(SkinAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.SKIN;
+            }
+            else if (typeof(MythicAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.MYTHIC;
+            }
+            else if (typeof(ResourceAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.RESOURCE;
+            }
+            else if (typeof(DialogueAsset).IsAssignableFrom(type) || typeof(QuestAsset).IsAssignableFrom(type) || typeof(VendorAsset).IsAssignableFrom(type))
+            {
+                Category = EAssetType.NPC;
+            }
+            else
+                Category = EAssetType.NONE;
+        }
     }
 }
 

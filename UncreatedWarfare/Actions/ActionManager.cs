@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,134 +11,106 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Actions;
 
-public class ActionManager : BaseSingleton
+/// <summary>
+/// Handles the action menu.
+/// </summary>
+public class ActionManager : IGamemodeHostedService
 {
-    public static readonly ActionMenuUI ActionMenuUI = new ActionMenuUI();
-    public static ActionManager Singleton;
-
-    public override void Load()
+    private readonly ActionMenuUI _ui;
+    public ActionManager()
     {
+        _ui = new ActionMenuUI();
+
+        _ui.NeedMedic.OnClicked += NeedMedic;
+        _ui.NeedAmmo.OnClicked += NeedAmmo;
+        _ui.NeedRide.OnClicked += NeedRide;
+        _ui.NeedSupport.OnClicked += NeedSupport;
+        _ui.ThankYou.OnClicked += ThankYou;
+        _ui.Sorry.OnClicked += Sorry;
+        _ui.HeliPickup.OnClicked += HeliPickup;
+        _ui.HeliDropoff.OnClicked += HeliDropoff;
+        _ui.SuppliesBuild.OnClicked += SuppliesBuild;
+        _ui.SuppliesAmmo.OnClicked += SuppliesAmmo;
+        _ui.AirSupport.OnClicked += AirSupport;
+        _ui.ArmorSupport.OnClicked += ArmorSupport;
+
+        _ui.LoadBuild.OnClicked += LoadBuild;
+        _ui.LoadAmmo.OnClicked += LoadAmmo;
+        _ui.UnloadBuild.OnClicked += UnloadBuild;
+        _ui.UnloadAmmo.OnClicked += UnloadAmmo;
+
+        _ui.Attack.OnClicked += Attack;
+        _ui.Defend.OnClicked += Defend;
+        _ui.Move.OnClicked += Move;
+        _ui.Build.OnClicked += Build;
+
+        _ui.AttackMarker.OnClicked += AttackMarker;
+        _ui.DefendMarker.OnClicked += DefendMarker;
+        _ui.MoveMarker.OnClicked += MoveMarker;
+        _ui.BuildMarker.OnClicked += BuildMarker;
+
+        _ui.Cancel.OnClicked += Cancel;
+    }
+    public async UniTask StartAsync()
+    {
+        await UniTask.SwitchToMainThread();
+
         UCPlayerKeys.SubscribeKeyDown(OpenUI, Data.Keys.ActionMenu);
-
-        ActionMenuUI.NeedMedic.OnClicked += NeedMedic;
-        ActionMenuUI.NeedAmmo.OnClicked += NeedAmmo;
-        ActionMenuUI.NeedRide.OnClicked += NeedRide;
-        ActionMenuUI.NeedSupport.OnClicked += NeedSupport;
-        ActionMenuUI.ThankYou.OnClicked += ThankYou;
-        ActionMenuUI.Sorry.OnClicked += Sorry;
-        ActionMenuUI.HeliPickup.OnClicked += HeliPickup;
-        ActionMenuUI.HeliDropoff.OnClicked += HeliDropoff;
-        ActionMenuUI.SuppliesBuild.OnClicked += SuppliesBuild;
-        ActionMenuUI.SuppliesAmmo.OnClicked += SuppliesAmmo;
-        ActionMenuUI.AirSupport.OnClicked += AirSupport;
-        ActionMenuUI.ArmorSupport.OnClicked += ArmorSupport;
-
-        ActionMenuUI.LoadBuild.OnClicked += LoadBuild;
-        ActionMenuUI.LoadAmmo.OnClicked += LoadAmmo;
-        ActionMenuUI.UnloadBuild.OnClicked += UnloadBuild;
-        ActionMenuUI.UnloadAmmo.OnClicked += UnloadAmmo;
-
-        ActionMenuUI.Attack.OnClicked += Attack;
-        ActionMenuUI.Defend.OnClicked += Defend;
-        ActionMenuUI.Move.OnClicked += Move;
-        ActionMenuUI.Build.OnClicked += Build;
-
-        ActionMenuUI.AttackMarker.OnClicked += AttackMarker;
-        ActionMenuUI.DefendMarker.OnClicked += DefendMarker;
-        ActionMenuUI.MoveMarker.OnClicked += MoveMarker;
-        ActionMenuUI.BuildMarker.OnClicked += BuildMarker;
-
-        ActionMenuUI.Cancel.OnClicked += Cancel;
-        Singleton = this;
     }
-
-    public override void Unload()
+    public async UniTask StopAsync()
     {
-        Singleton = null!;
+        await UniTask.SwitchToMainThread();
+
         UCPlayerKeys.UnsubscribeKeyDown(OpenUI, Data.Keys.ActionMenu);
-
-        ActionMenuUI.NeedMedic.OnClicked -= NeedMedic;
-        ActionMenuUI.NeedAmmo.OnClicked -= NeedAmmo;
-        ActionMenuUI.NeedRide.OnClicked -= NeedRide;
-        ActionMenuUI.NeedSupport.OnClicked -= NeedSupport;
-        ActionMenuUI.ThankYou.OnClicked -= ThankYou;
-        ActionMenuUI.Sorry.OnClicked -= Sorry;
-        ActionMenuUI.HeliPickup.OnClicked -= HeliPickup;
-        ActionMenuUI.HeliDropoff.OnClicked -= HeliDropoff;
-        ActionMenuUI.SuppliesBuild.OnClicked -= SuppliesBuild;
-        ActionMenuUI.SuppliesAmmo.OnClicked -= SuppliesAmmo;
-        ActionMenuUI.AirSupport.OnClicked -= AirSupport;
-        ActionMenuUI.ArmorSupport.OnClicked -= ArmorSupport;
-
-        ActionMenuUI.LoadBuild.OnClicked -= LoadBuild;
-        ActionMenuUI.LoadAmmo.OnClicked -= LoadAmmo;
-        ActionMenuUI.UnloadBuild.OnClicked -= UnloadBuild;
-        ActionMenuUI.UnloadAmmo.OnClicked -= UnloadAmmo;
-
-        ActionMenuUI.Attack.OnClicked -= Attack;
-        ActionMenuUI.Defend.OnClicked -= Defend;
-        ActionMenuUI.Move.OnClicked -= Move;
-        ActionMenuUI.Build.OnClicked -= Build;
-
-        ActionMenuUI.AttackMarker.OnClicked -= AttackMarker;
-        ActionMenuUI.DefendMarker.OnClicked -= DefendMarker;
-        ActionMenuUI.MoveMarker.OnClicked -= MoveMarker;
-        ActionMenuUI.BuildMarker.OnClicked -= BuildMarker;
-
-        ActionMenuUI.Cancel.OnClicked -= Cancel;
+        
+        Provider.clients.ForEach(_ui.ClearFromPlayer);
     }
-    private static bool _uiWarnSent;
-    private static void OpenUI(UCPlayer player, ref bool handled)
+    private void OpenUI(UCPlayer player, ref bool handled)
     {
-        if (!ActionMenuUI.HasAssetOrId)
-        {
-            if (!_uiWarnSent)
-            {
-                L.LogWarning("Skipping sending action UI, effect not found.");
-                _uiWarnSent = true;
-            }
+        if (!_ui.HasAssetOrId)
             return;
-        }
+        
         if (player.IsActionMenuOpen || Data.Gamemode.LeaderboardUp())
             return;
-        ActionMenuUI.SendToPlayer(player.Connection);
+
+        _ui.SendToPlayer(player.Connection);
 
         player.IsActionMenuOpen = true;
         if (player.IsSquadLeader())
         {
-            ActionMenuUI.SquadSection.SetVisibility(player.Connection, true);
+            _ui.SquadSection.SetVisibility(player.Connection, true);
         }
-        
+
         FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(player.Position, player.GetTeam());
         if (fob != null)
         {
             // TODO: fully test this later
-            ActionMenuUI.LogiSection.SetVisibility(player.Connection, true);
+            _ui.LogiSection.SetVisibility(player.Connection, true);
         }
 
         player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
     }
-    private static void CloseUI(UCPlayer player)
+    private void CloseUI(UCPlayer player)
     {
         player.IsActionMenuOpen = false;
-        ActionMenuUI.ClearFromPlayer(player.Connection);
+        _ui.ClearFromPlayer(player.Connection);
         player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
     }
-    private static void Cancel(UnturnedButton button, Player player)
+    private void Cancel(UnturnedButton button, Player player)
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
-        CloseUI(caller);
+
+        if (caller != null)
+            CloseUI(caller);
     }
-    private static void NeedMedic(UnturnedButton button, Player player)
+    private void NeedMedic(UnturnedButton button, Player player)
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -148,13 +121,11 @@ public class ActionManager : BaseSingleton
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        
-
-        Action action = new Action(caller, Gamemode.Config.EffectActionNeedMedic.Value, Gamemode.Config.EffectActionNearbyMedic.Value, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, EActionType.SIMPLE_REQUEST, T.NeedMedicChat, T.NeedMedicToast);
+        Action action = new Action(caller, Gamemode.Config.EffectActionNeedMedic.Value, Gamemode.Config.EffectActionNearbyMedic.Value, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedMedicChat, T.NeedMedicToast);
         action.Start();
         CloseUI(caller);
     }
-    private static void NeedAmmo(UnturnedButton button, Player player)
+    private void NeedAmmo(UnturnedButton button, Player player)
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -165,11 +136,11 @@ public class ActionManager : BaseSingleton
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        Action action = new Action(caller, Gamemode.Config.EffectActionNeedAmmo.Value, Gamemode.Config.EffectActionNearbyAmmo.Value, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, EActionType.SIMPLE_REQUEST, T.NeedAmmoChat, T.NeedAmmoToast);
+        Action action = new Action(caller, Gamemode.Config.EffectActionNeedAmmo.Value, Gamemode.Config.EffectActionNearbyAmmo.Value, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedAmmoChat, T.NeedAmmoToast);
         action.Start();
         CloseUI(caller);
     }
-    private static void NeedRide(UnturnedButton button, Player player)
+    private void NeedRide(UnturnedButton button, Player player)
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -182,14 +153,14 @@ public class ActionManager : BaseSingleton
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        Action action = new Action(caller, Gamemode.Config.EffectActionNeedRide.Value, null, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, EActionType.SIMPLE_REQUEST, T.NeedRideChat, T.NeedRideToast)
+        Action action = new Action(caller, Gamemode.Config.EffectActionNeedRide.Value, null, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedRideChat, T.NeedRideToast)
         {
             CheckValid = () => !caller.IsInVehicle
         };
         action.Start();
         CloseUI(caller);
     }
-    private static void NeedSupport(UnturnedButton button, Player player)
+    private void NeedSupport(UnturnedButton button, Player player)
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -199,11 +170,11 @@ public class ActionManager : BaseSingleton
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        Action action = new Action(caller, Gamemode.Config.EffectActionNeedSupport.Value, null, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, EActionType.SIMPLE_REQUEST, T.NeedSupportChat, T.NeedSupportToast);
+        Action action = new Action(caller, Gamemode.Config.EffectActionNeedSupport.Value, null, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedSupportChat, T.NeedSupportToast);
         action.Start();
         CloseUI(caller);
     }
-    private static void ThankYou(UnturnedButton button, Player player)
+    private void ThankYou(UnturnedButton button, Player player)
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -213,7 +184,7 @@ public class ActionManager : BaseSingleton
 
         CloseUI(caller);
     }
-    private static void Sorry(UnturnedButton button, Player player)
+    private void Sorry(UnturnedButton button, Player player)
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -223,7 +194,7 @@ public class ActionManager : BaseSingleton
 
         CloseUI(caller);
     }
-    private static void HeliPickup(UnturnedButton button, Player player) // WIP
+    private void HeliPickup(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -238,7 +209,7 @@ public class ActionManager : BaseSingleton
             p.KitClass == Class.Pilot &&
             p.Player != caller);
 
-        Action action = new Action(caller, Gamemode.Config.EffectActionHeliPickup.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_POSITION, EActionType.SQUADLEADER_REQUEST, T.HeliPickupChat, T.HeliPickupToast, squadWide: true)
+        Action action = new Action(caller, Gamemode.Config.EffectActionHeliPickup.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerPosition, ActionType.SquadleaderRequest, T.HeliPickupChat, T.HeliPickupToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -258,7 +229,7 @@ public class ActionManager : BaseSingleton
         action.Start();
         CloseUI(caller);
     }
-    private static void HeliDropoff(UnturnedButton button, Player player) // WIP
+    private void HeliDropoff(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -273,7 +244,7 @@ public class ActionManager : BaseSingleton
             p.IsInSameVehicleAs(caller) &&
             p.Player != caller);
 
-        Action action = new Action(caller, Gamemode.Config.EffectActionHeliDropoff.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, EActionOrigin.CALLER_MARKER, EActionType.SQUADLEADER_REQUEST, T.HeliDropoffChat, T.HeliDropoffToast, squadWide: true)
+        Action action = new Action(caller, Gamemode.Config.EffectActionHeliDropoff.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, ActionOrigin.AtCallerWaypoint, ActionType.SquadleaderRequest, T.HeliDropoffChat, T.HeliDropoffToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -294,7 +265,7 @@ public class ActionManager : BaseSingleton
         action.Start();
         CloseUI(caller);
     }
-    private static void SuppliesBuild(UnturnedButton button, Player player) // WIP
+    private void SuppliesBuild(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -308,7 +279,7 @@ public class ActionManager : BaseSingleton
             (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround))) &&
             p.Player != caller);
 
-        Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesBuild.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, EActionOrigin.CALLER_POSITION, EActionType.SQUADLEADER_REQUEST, T.SuppliesBuildChat, T.SuppliesBuildToast, squadWide: true)
+        Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesBuild.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, ActionOrigin.AtCallerPosition, ActionType.SquadleaderRequest, T.SuppliesBuildChat, T.SuppliesBuildToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -337,7 +308,7 @@ public class ActionManager : BaseSingleton
         action.Start();
         CloseUI(caller);
     }
-    private static void SuppliesAmmo(UnturnedButton button, Player player) // WIP
+    private void SuppliesAmmo(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -351,7 +322,7 @@ public class ActionManager : BaseSingleton
             (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround))) &&
             p.Player != caller);
 
-        Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_POSITION, EActionType.SQUADLEADER_REQUEST, T.SuppliesAmmoChat, T.SuppliesAmmoToast, squadWide: true)
+        Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerPosition, ActionType.SquadleaderRequest, T.SuppliesAmmoChat, T.SuppliesAmmoToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -380,7 +351,7 @@ public class ActionManager : BaseSingleton
         action.Start();
         CloseUI(caller);
     }
-    private static void AirSupport(UnturnedButton button, Player player) // WIP
+    private void AirSupport(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -394,7 +365,7 @@ public class ActionManager : BaseSingleton
             (p.IsInVehicle && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsAssaultAircraft) &&
             p.Player != caller);
 
-        Action action = new Action(caller, Gamemode.Config.EffectActionAirSupport.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, EActionType.SQUADLEADER_REQUEST, T.AirSupportChat, T.AirSupportToast, squadWide: true)
+        Action action = new Action(caller, Gamemode.Config.EffectActionAirSupport.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.SquadleaderRequest, T.AirSupportChat, T.AirSupportToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -414,7 +385,7 @@ public class ActionManager : BaseSingleton
         action.Start();
         CloseUI(caller);
     }
-    private static void ArmorSupport(UnturnedButton button, Player player) // WIP
+    private void ArmorSupport(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -430,7 +401,7 @@ public class ActionManager : BaseSingleton
             (p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsArmor) &&
             p.Player != caller);
 
-        Action action = new Action(caller, Gamemode.Config.EffectActionArmorSupport.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, EActionType.SQUADLEADER_REQUEST, T.ArmorSupportChat, T.ArmorSupportToast, squadWide: true)
+        Action action = new Action(caller, Gamemode.Config.EffectActionArmorSupport.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.SquadleaderRequest, T.ArmorSupportChat, T.ArmorSupportToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -450,28 +421,28 @@ public class ActionManager : BaseSingleton
         action.Start();
         CloseUI(caller);
     }
-    private static void UnloadBuild(UnturnedButton button, Player player) // WIP
+    private void UnloadBuild(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
         TryUnloadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build);
     }
-    private static void UnloadAmmo(UnturnedButton button, Player player) // WIP
+    private void UnloadAmmo(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
         TryUnloadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Ammo);
     }
-    private static void LoadBuild(UnturnedButton button, Player player) // WIP
+    private void LoadBuild(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
         TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build, true);
     }
-    private static void LoadAmmo(UnturnedButton button, Player player) // WIP
+    private void LoadAmmo(UnturnedButton button, Player player) // WIP
     {
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
@@ -480,7 +451,7 @@ public class ActionManager : BaseSingleton
     }
     
     const int REQUIRED_UNLOAD_AMOUNT_FOR_REWARD = 5;
-    private static void TryUnloadSupplies(UCPlayer caller, int amount, JsonAssetReference<ItemAsset>? buildOrAmmo)
+    private void TryUnloadSupplies(UCPlayer caller, int amount, JsonAssetReference<ItemAsset>? buildOrAmmo)
     {
         if (buildOrAmmo is null || !buildOrAmmo.Exists)
             return;
@@ -525,7 +496,7 @@ public class ActionManager : BaseSingleton
             }
         }
     }
-    private static void TryLoadSupplies(UCPlayer caller, int amount, JsonAssetReference<ItemAsset>? supplyItem, bool build)
+    private void TryLoadSupplies(UCPlayer caller, int amount, JsonAssetReference<ItemAsset>? supplyItem, bool build)
     {
         if (!supplyItem.ValidReference(out ItemAsset itemasset))
             return;
@@ -564,62 +535,62 @@ public class ActionManager : BaseSingleton
             }
         }
     }
-    private static void Attack(UnturnedButton button, Player player)
+    private void Attack(UnturnedButton button, Player player)
     {
         UCPlayer caller = UCPlayer.FromPlayer(player)!;
 
-        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionAttack.Value, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, EActionType.ORDER, null, T.AttackToast, squadWide: true);
+        Action action = new Action(caller, Gamemode.Config.EffectActionAttack.Value, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.AttackToast, squadWide: true);
         action.CheckValid = () => !F.IsInMain(caller);
         action.Start();
         CloseUI(caller);
     }
-    private static void Defend(UnturnedButton button, Player player)
+    private void Defend(UnturnedButton button, Player player)
     {
         UCPlayer caller = UCPlayer.FromPlayer(player)!;
 
-        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionDefend.Value, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, EActionType.ORDER, null, T.DefendToast, squadWide: true);
+        Action action = new Action(caller, Gamemode.Config.EffectActionDefend.Value, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.DefendToast, squadWide: true);
         action.CheckValid = () => !F.IsInMain(caller);
         action.Start();
         CloseUI(caller);
     }
-    private static void Move(UnturnedButton button, Player player)
+    private void Move(UnturnedButton button, Player player)
     {
         UCPlayer caller = UCPlayer.FromPlayer(player)!;
 
-        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionMove.Value, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, EActionType.ORDER, null, T.MoveToast, squadWide: true);
+        Action action = new Action(caller, Gamemode.Config.EffectActionMove.Value, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.MoveToast, squadWide: true);
         action.CheckValid = () => !F.IsInMain(caller);
         action.Start();
         CloseUI(caller);
     }
-    private static void Build(UnturnedButton button, Player player)
+    private void Build(UnturnedButton button, Player player)
     {
         UCPlayer caller = UCPlayer.FromPlayer(player)!;
 
-        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, EActionType.ORDER, null, T.BuildToast, squadWide: true);
+        Action action = new Action(caller, Gamemode.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.BuildToast, squadWide: true);
         action.CheckValid = () => !F.IsInMain(caller);
         action.Start();
         CloseUI(caller);
     }
-    private static void AttackMarker(UnturnedButton button, Player player)
+    private void AttackMarker(UnturnedButton button, Player player)
     {
         UCPlayer caller = UCPlayer.FromPlayer(player)!;
 
-        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionAttack.Value, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_MARKER, EActionType.ORDER, null, T.AttackToast, squadWide: true);
+        Action action = new Action(caller, Gamemode.Config.EffectActionAttack.Value, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.AttackToast, squadWide: true);
         action.CheckValid = () =>
         {
             if (!caller.Player.quests.isMarkerPlaced)
@@ -638,14 +609,14 @@ public class ActionManager : BaseSingleton
         action.Start();
         CloseUI(caller);
     }
-    private static void DefendMarker(UnturnedButton button, Player player)
+    private void DefendMarker(UnturnedButton button, Player player)
     {
         UCPlayer caller = UCPlayer.FromPlayer(player)!;
 
-        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionDefend.Value, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_MARKER, EActionType.ORDER, null, T.DefendToast, squadWide: true);
+        Action action = new Action(caller, Gamemode.Config.EffectActionDefend.Value, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.DefendToast, squadWide: true);
         action.CheckValid = () =>
         {
             if (!caller.Player.quests.isMarkerPlaced)
@@ -663,14 +634,14 @@ public class ActionManager : BaseSingleton
         action.Start();
         CloseUI(caller);
     }
-    private static void MoveMarker(UnturnedButton button, Player player)
+    private void MoveMarker(UnturnedButton button, Player player)
     {
         UCPlayer caller = UCPlayer.FromPlayer(player)!;
 
-        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionMove.Value, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_MARKER, EActionType.ORDER, null, T.MoveToast, squadWide: true);
+        Action action = new Action(caller, Gamemode.Config.EffectActionMove.Value, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.MoveToast, squadWide: true);
         action.CheckValid = () =>
         {
             if (!caller.Player.quests.isMarkerPlaced)
@@ -688,14 +659,14 @@ public class ActionManager : BaseSingleton
         action.Start();
         CloseUI(caller);
     }
-    private static void BuildMarker(UnturnedButton button, Player player)
+    private void BuildMarker(UnturnedButton button, Player player)
     {
         UCPlayer caller = UCPlayer.FromPlayer(player)!;
 
-        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_MARKER, EActionType.ORDER, null, T.BuildToast, squadWide: true);
+        Action action = new Action(caller, Gamemode.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.BuildToast, squadWide: true);
         action.CheckValid = () =>
         {
             if (!caller.Player.quests.isMarkerPlaced)
@@ -712,13 +683,5 @@ public class ActionManager : BaseSingleton
         };
         action.Start();
         CloseUI(caller);
-    }
-    private static void UAV(UnturnedButton button, Player player)
-    {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
-        CloseUI(caller);
-
-        UCWarfare.RunTask(Squads.Commander.UAV.RequestUAV, caller, caller.DisconnectToken);
     }
 }

@@ -13,7 +13,7 @@ internal static class CacheLocationsEditCommand
 {
     internal const string Syntax = "/dev caches <add|next|start|nearest|remove|disable|enable|move|stop>";
     internal static readonly Dictionary<CacheLocation, BarricadeDrop> Drops = new Dictionary<CacheLocation, BarricadeDrop>(EqualityComparer<CacheLocation>.Default);
-    internal static async Task Execute(CommandInteraction ctx)
+    internal static async Task Execute(CommandContext ctx)
     {
         await UCWarfare.ToUpdate();
 
@@ -217,7 +217,7 @@ internal static class CacheLocationsEditCommand
         else throw ctx.SendCorrectUsage(Syntax);
     }
 
-    private static void CheckEditOperation(CommandInteraction ctx, CacheLocations locations)
+    private static void CheckEditOperation(CommandContext ctx, CacheLocations locations)
     {
         if (ctx.Caller.CacheLocationIndex == -1)
             throw ctx.ReplyString("<#ffe7ff>You must be in edit mode to select caches. <#a77aa5>/dev caches start</color> to iterate through them.");

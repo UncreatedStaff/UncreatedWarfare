@@ -128,7 +128,7 @@ public static class Localization
         }
         return translatable.Translate(player.Locale.LanguageInfo, fmt, player, player.Locale.CultureInfo, ref flags);
     }
-    public static string Translate<T>(this T translatable, CommandInteraction ctx, string? fmt = null) where T : ITranslationArgument
+    public static string Translate<T>(this T translatable, CommandContext ctx, string? fmt = null) where T : ITranslationArgument
     {
         TranslationFlags flags = TranslationFlags.ForChat;
         if (ctx.IMGUI)

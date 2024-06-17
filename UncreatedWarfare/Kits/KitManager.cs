@@ -908,7 +908,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         List<Kit> kits = new List<Kit>(Cache.KitDataByKey.Values.Where(x => x is { IsPublicKit: true, Requestable: true }));
         return kits.Count == 0 ? null : kits[UnityEngine.Random.Range(0, kits.Count)];
     }
-    public bool TryCreateSquadOnRequestSquadleaderKit(CommandInteraction ctx)
+    public bool TryCreateSquadOnRequestSquadleaderKit(CommandContext ctx)
     {
         if (ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
         {

@@ -12,5 +12,5 @@ public class BuildCommand : Command
             Description = "Legacy command, tells you to use your shovel."
         };
     }
-    public override void Execute(CommandInteraction ctx) => ctx.Reply(T.BuildLegacyExplanation);
+    public override void Execute(CommandContext ctx) => ctx.Reply(T.BuildLegacyExplanation);
 }

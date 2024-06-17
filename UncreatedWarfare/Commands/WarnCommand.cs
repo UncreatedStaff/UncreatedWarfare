@@ -28,7 +28,7 @@ public class WarnCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         throw ctx.SendNotImplemented();
 #if false

@@ -24,7 +24,7 @@ public class HolidayCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         if (ctx.ArgumentCount == 0)
             throw ctx.ReplyString("Current holiday: \"" + HolidayUtil.getActiveHoliday() + "\".");

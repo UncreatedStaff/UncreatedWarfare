@@ -14,7 +14,7 @@ public class ConfirmCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         ctx.Defer();
     }
@@ -32,7 +32,7 @@ public class DenyCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override void Execute(CommandContext ctx)
     {
         ctx.Defer();
     }
