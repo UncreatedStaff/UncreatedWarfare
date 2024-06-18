@@ -1,229 +1,259 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
-using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
+using DelayType = Uncreated.Warfare.Vehicles.DelayType;
 
 namespace Uncreated.Warfare.Commands;
-public class VehicleBayCommand : AsyncCommand
+
+[Command("vehiclebay", "vb")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class VehicleBayCommand : IExecutableCommand
 {
-    public VehicleBayCommand() : base("vehiclebay", EAdminType.STAFF)
+    private static readonly PermissionLeaf PermissionAdd        = new PermissionLeaf("commands.vehiclebay.edit.add",           unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionRemove     = new PermissionLeaf("commands.vehiclebay.edit.remove",        unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionSet        = new PermissionLeaf("commands.vehiclebay.edit.set",           unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionRegister   = new PermissionLeaf("commands.vehiclebay.spawn.register",     unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionDeregister = new PermissionLeaf("commands.vehiclebay.spawn.deregister",   unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionForce      = new PermissionLeaf("commands.vehiclebay.spawn.force",        unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionLinkSign   = new PermissionLeaf("commands.vehiclebay.spawn.signs.link",   unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionUnlinkSign = new PermissionLeaf("commands.vehiclebay.spawn.signs.unlink", unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionCheck      = new PermissionLeaf("commands.vehiclebay.spawn.check",        unturned: false, warfare: true);
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        AddAlias("vb");
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Manage vehicle data and vehicle spawners.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Add")
                 {
-                    Aliases = new string[] { "a", "create" },
+                    Aliases = [ "a", "create" ],
+                    Permission = PermissionAdd,
                     Description = "Adds the vehicle you're looking at to the vehicle bay."
                 },
                 new CommandParameter("Remove")
                 {
-                    Aliases = new string[] { "delete", "r" },
+                    Aliases = [ "delete", "r" ],
+                    Permission = PermissionRemove,
                     Description = "Removes the vehicle you're looking at from the vehicle bay."
                 },
                 new CommandParameter("SaveMeta")
                 {
-                    Aliases = new string[] { "savemetadata", "metadata" },
+                    Aliases = [ "savemetadata", "metadata" ],
+                    Permission = PermissionSet,
                     Description = "Saves the barricades that are placed on the current vehicle to the vehicle bay."
                 },
                 new CommandParameter("Set")
                 {
-                    Aliases = new string[] { "s" },
+                    Aliases = [ "s" ],
+                    Permission = PermissionSet,
                     Description = "Sets the trunk items to your current inventory or any other property to the given value.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Items")
                         {
-                            Aliases = new string[] { "item", "inventory" },
+                            Aliases = [ "item", "inventory" ],
                             Description = "Sets the trunk items to your current inventory."
                         },
                         new CommandParameter("Property", typeof(string))
                         {
                             Description = "Sets a property of your target vehicle's data.",
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Value", typeof(object))
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Delay")
                 {
-                    Aliases = new string[] { "delays" },
+                    Aliases = [ "delays" ],
+                    Permission = PermissionSet,
                     Description = "Modify request delays of your target vehicle.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Add")
                         {
-                            Aliases = new string[] { "a", "new" },
-                            Parameters = new CommandParameter[]
-                            {
+                            Aliases = [ "a", "new" ],
+                            Parameters =
+                            [
                                 new CommandParameter("Type", "Time", "Flag", "Percent", "Staging", "None")
                                 {
                                     Description = "Remove the first matching delay.",
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("Gamemode", typeof(string))
                                         {
                                             Description = "Put an exclamation point before to act as a blacklist.",
-                                            Parameters = new CommandParameter[]
-                                            {
+                                            Parameters =
+                                            [
                                                 new CommandParameter("Value", typeof(float))
                                                 {
                                                     Description = "Value is not allowed on all types of delays."
                                                 }
-                                            }
+                                            ]
                                         }
-                                    }
+                                    ]
                                 }
-                            }
+                            ]
                         },
                         new CommandParameter("Remove")
                         {
-                            Aliases = new string[] { "r", "delete" },
-                            Parameters = new CommandParameter[]
-                            {
+                            Aliases = [ "r", "delete" ],
+                            Parameters =
+                            [
                                 new CommandParameter("All")
                                 {
-                                    Aliases = new string[] { "clear" },
+                                    Aliases = [ "clear" ],
                                     Description = "Clears all delays.",
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("Gamemode", typeof(string))
                                         {
                                             Description = "Put an exclamation point before to act as a blacklist.",
-                                            Parameters = new CommandParameter[]
-                                            {
+                                            Parameters =
+                                            [
                                                 new CommandParameter("Value", typeof(float))
                                                 {
                                                     Description = "Value is not allowed on all types of delays."
                                                 }
-                                            }
+                                            ]
                                         }
-                                    }
+                                    ]
                                 },
                                 new CommandParameter("Type", "Time", "Flag", "Percent", "Staging", "None")
                                 {
                                     Description = "Remove the first matching delay.",
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("Gamemode", typeof(string))
                                         {
                                             Description = "Put an exclamation point before to act as a blacklist.",
-                                            Parameters = new CommandParameter[]
-                                            {
+                                            Parameters =
+                                            [
                                                 new CommandParameter("Value", typeof(float))
                                                 {
                                                     Description = "Value is not allowed on all types of delays."
                                                 }
-                                            }
+                                            ]
                                         }
-                                    }
+                                    ]
                                 }
-                            },
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("CrewSeats")
                 {
-                    Aliases = new string[] { "seats", "crew" },
+                    Aliases = [ "seats", "crew" ],
+                    Permission = PermissionSet,
                     Description = "Specify which seats must be manned by crew kits (pilots, crewmen, etc).",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Add")
                         {
-                            Aliases = new string[] { "a", "create" },
-                            Parameters = new CommandParameter[]
-                            {
+                            Aliases = [ "a", "create" ],
+                            Parameters =
+                            [
                                 new CommandParameter("Seat", typeof(byte))
                                 {
                                     Description = "Seat index starts at zero (for driver)."
                                 }
-                            }
+                            ]
                         },
                         new CommandParameter("Remove")
                         {
-                            Aliases = new string[] { "r", "delete" },
-                            Parameters = new CommandParameter[]
-                            {
+                            Aliases = [ "r", "delete" ],
+                            Parameters =
+                            [
                                 new CommandParameter("Seat", typeof(byte))
                                 {
                                     Description = "Seat index starts at zero (for driver)."
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Register")
                 {
-                    Aliases = new string[] { "reg" },
+                    Aliases = [ "reg" ],
+                    Permission = PermissionRegister,
                     Description = "Link a vehicle spawn to a vehicle and save it.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Vehicle", typeof(VehicleAsset))
-                    }
+                    ]
                 },
                 new CommandParameter("Deregister")
                 {
-                    Aliases = new string[] { "dereg" },
+                    Aliases = [ "dereg" ],
+                    Permission = PermissionDeregister,
                     Description = "Unlink a vehicle spawn and unsave it."
                 },
                 new CommandParameter("Force")
                 {
-                    Aliases = new string[] { "respawn" },
+                    Aliases = [ "respawn" ],
+                    Permission = PermissionForce,
                     Description = "Force a vehicle spawn to despawn it's active vehicle and respawn it."
                 },
                 new CommandParameter("Link")
                 {
-                    Description = "Begin or end a vehicle sign link."
+                    Description = "Begin or end a vehicle sign link.",
+                    Permission = PermissionLinkSign
                 },
                 new CommandParameter("Unlink")
                 {
-                    Description = "Unlink a sign and vehicle spawn."
+                    Description = "Unlink a sign and vehicle spawn.",
+                    Permission = PermissionUnlinkSign
                 },
                 new CommandParameter("Check")
                 {
-                    Aliases = new string[] { "id", "wtf" },
+                    Aliases = [ "id", "wtf" ],
+                    Permission = PermissionCheck,
                     Description = "Get which vehicle is linked to the targetted spawner."
                 }
-            }
+            ]
         };
     }
 
-    public override async Task Execute(CommandContext ctx, CancellationToken token)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertGamemode(out IVehicles vehicleGm);
-        ctx.AssertGamemode(out IStructureSaving structureGm);
-        ctx.AssertRanByPlayer();
+        Context.AssertGamemode(out IVehicles vehicleGm);
+        Context.AssertGamemode(out IStructureSaving structureGm);
+        Context.AssertRanByPlayer();
 
         VehicleBay bay = vehicleGm.VehicleBay;
         VehicleSpawner spawner = vehicleGm.VehicleSpawner;
         StructureSaver saver = structureGm.StructureSaver;
 
-        ctx.AssertHelpCheck(0, "/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...] - Manage vehicle spawners, signs, and the vehicle bay.");
+        Context.AssertHelpCheck(0, "/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...] - Manage vehicle spawners, signs, and the vehicle bay.");
 
-        if (ctx.MatchParameter(0, "delay", "delays"))
+        if (Context.MatchParameter(0, "delay", "delays"))
         {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
-
-            ctx.AssertHelpCheck(1, "/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode] - Modify request delays of vehicle.");
+            await Context.AssertPermissions(PermissionSet, token);
             
-            SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, spawner, token).ConfigureAwait(false);
+            Context.AssertHelpCheck(1, "/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode] - Modify request delays of vehicle.");
+            
+            SqlItem<VehicleData>? data = await GetVehicleTarget(Context, bay, spawner, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             if (data?.Item is not null)
             {
@@ -232,20 +262,20 @@ public class VehicleBayCommand : AsyncCommand
                 {
                     await UniTask.SwitchToMainThread(token);
                     bool adding;
-                    if (ctx.MatchParameter(1, "add", "a", "new"))
+                    if (Context.MatchParameter(1, "add", "a", "new"))
                         adding = true;
-                    else if (ctx.MatchParameter(1, "remove", "r", "delete"))
+                    else if (Context.MatchParameter(1, "remove", "r", "delete"))
                         adding = false;
                     else
                     {
-                        ctx.SendCorrectUsage("/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode]");
+                        Context.SendCorrectUsage("/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode]");
                         return;
                     }
-                    if (ctx.MatchParameter(2, "all", "clear"))
+                    if (Context.MatchParameter(2, "all", "clear"))
                     {
                         if (adding)
                         {
-                            ctx.SendCorrectUsage("/vehiclebay delay add <time|flag|percent|staging|none> [value] [!][gamemode]");
+                            Context.SendCorrectUsage("/vehiclebay delay add <time|flag|percent|staging|none> [value] [!][gamemode]");
                             return;
                         }
                         int rem = data.Item.Delays.Length;
@@ -256,32 +286,33 @@ public class VehicleBayCommand : AsyncCommand
                             await UniTask.SwitchToMainThread(token);
                             Signs.UpdateVehicleBaySigns(null, data.Item);
                         }
-                        ctx.Reply(T.VehicleBayRemovedDelay, rem);
+                        Context.Reply(T.VehicleBayRemovedDelay, rem);
                         return;
                     }
+
                     DelayType type;
-                    if (ctx.MatchParameter(2, "time"))
+                    if (Context.MatchParameter(2, "time"))
                         type = DelayType.Time;
-                    else if (ctx.MatchParameter(2, "flag", "objective", "objectives"))
+                    else if (Context.MatchParameter(2, "flag", "objective", "objectives"))
                         type = DelayType.Flag;
-                    else if (ctx.MatchParameter(2, "flagpercent", "percent"))
+                    else if (Context.MatchParameter(2, "flagpercent", "percent"))
                         type = DelayType.FlagPercentage;
-                    else if (ctx.MatchParameter(2, "staging", "prep"))
+                    else if (Context.MatchParameter(2, "staging", "prep"))
                         type = DelayType.OutOfStaging;
-                    else if (ctx.MatchParameter(2, "teammates", "players"))
+                    else if (Context.MatchParameter(2, "teammates", "players"))
                         type = DelayType.Teammates;
-                    else if (ctx.MatchParameter(2, "none"))
+                    else if (Context.MatchParameter(2, "none"))
                         type = DelayType.None;
                     else
                     {
-                        ctx.SendCorrectUsage(adding
+                        Context.SendCorrectUsage(adding
                             ? "/vehiclebay delay add <time|flag|percent|staging|teammates|none> [value] [!][gamemode]"
                             : "/vehiclebay delay remove <all|time|flag|percent|staging|teammates|none> [value] [!][gamemode]");
                         return;
                     }
-                    if (type == DelayType.None && ctx.ArgumentCount < 4)
+                    if (type == DelayType.None && Context.ArgumentCount < 4)
                     {
-                        ctx.SendCorrectUsage(adding
+                        Context.SendCorrectUsage(adding
                             ? "/vehiclebay delay add none [!]<gamemode>"
                             : "/vehiclebay delay remove none [!]<gamemode>");
                         return;
@@ -289,16 +320,16 @@ public class VehicleBayCommand : AsyncCommand
                     string? gamemode = null;
                     if (type is DelayType.OutOfStaging or DelayType.None)
                     {
-                        if (ctx.HasArg(3))
-                            gamemode = ctx.Get(3)!;
+                        if (Context.HasArgs(4))
+                            gamemode = Context.Get(3)!;
                     }
-                    else if (ctx.ArgumentCount < 4)
+                    else if (Context.ArgumentCount < 4)
                     {
-                        ctx.SendCorrectUsage("/vehiclebay delay " + ctx.Get(1)!.ToLower() + " " + ctx.Get(1)!.ToLower() + " <value> [gamemode]");
+                        Context.SendCorrectUsage("/vehiclebay delay " + Context.Get(1)!.ToLower() + " " + Context.Get(1)!.ToLower() + " <value> [gamemode]");
                         return;
                     }
-                    else if (ctx.ArgumentCount > 4)
-                        gamemode = ctx.Get(4)!;
+                    else if (Context.ArgumentCount > 4)
+                        gamemode = Context.Get(4)!;
                     
                     if (string.IsNullOrEmpty(gamemode) && type == DelayType.None)
                     {
@@ -310,9 +341,9 @@ public class VehicleBayCommand : AsyncCommand
                         }
                         gamemode += ">";
                         if (adding)
-                            ctx.SendCorrectUsage("/vehiclebay delay add none [!]" + gamemode);
+                            Context.SendCorrectUsage("/vehiclebay delay add none [!]" + gamemode);
                         else
-                            ctx.SendCorrectUsage("/vehiclebay delay remove none [!]" + gamemode);
+                            Context.SendCorrectUsage("/vehiclebay delay remove none [!]" + gamemode);
                         return;
                     }
                     if (!string.IsNullOrEmpty(gamemode))
@@ -336,24 +367,24 @@ public class VehicleBayCommand : AsyncCommand
                             }
                             gamemode += ">";
                             if (adding)
-                                ctx.SendCorrectUsage("/vehiclebay delay add <type> [value] [!]" + gamemode);
+                                Context.SendCorrectUsage("/vehiclebay delay add <type> [value] [!]" + gamemode);
                             else
-                                ctx.SendCorrectUsage("/vehiclebay delay remove <type> [value] [!]" + gamemode);
+                                Context.SendCorrectUsage("/vehiclebay delay remove <type> [value] [!]" + gamemode);
                             return;
                         }
                         else gamemode = gm;
                     }
 
                     float val = 0;
-                    if (type != DelayType.OutOfStaging && type != DelayType.None && !ctx.TryGet(3, out val))
+                    if (type != DelayType.OutOfStaging && type != DelayType.None && !Context.TryGet(3, out val))
                     {
-                        ctx.SendCorrectUsage("/vehiclebay delay " + (adding ? "add" : "remove") + " " + ctx.Get(2)! + " <value (float)>" + (string.IsNullOrEmpty(gamemode) ? string.Empty : " [!]" + gamemode));
+                        Context.SendCorrectUsage("/vehiclebay delay " + (adding ? "add" : "remove") + " " + Context.Get(2)! + " <value (float)>" + (string.IsNullOrEmpty(gamemode) ? string.Empty : " [!]" + gamemode));
                         return;
                     }
                     
                     if (adding)
                     {
-                        ctx.LogAction(ActionLogType.SetVehicleDataProperty, "ADDED DELAY " + type + " VALUE: " + val.ToString(Data.AdminLocale)
+                        Context.LogAction(ActionLogType.SetVehicleDataProperty, "ADDED DELAY " + type + " VALUE: " + val.ToString(Data.AdminLocale)
                             + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                         Delay[] itemDelays = data.Item.Delays;
                         Delay.AddDelay(ref itemDelays, type, val, gamemode);
@@ -366,7 +397,7 @@ public class VehicleBayCommand : AsyncCommand
                         }
                         await data.SaveItem(token).ConfigureAwait(false);
                         await UniTask.SwitchToMainThread(token);
-                        ctx.Reply(T.VehicleBayAddedDelay, type, val, string.IsNullOrEmpty(gamemode) ? "any" : gamemode);
+                        Context.Reply(T.VehicleBayAddedDelay, type, val, string.IsNullOrEmpty(gamemode) ? "any" : gamemode);
                     }
                     else
                     {
@@ -385,10 +416,10 @@ public class VehicleBayCommand : AsyncCommand
                             }
                             await data.SaveItem(token).ConfigureAwait(false);
                             await UniTask.SwitchToMainThread(token);
-                            ctx.LogAction(ActionLogType.SetVehicleDataProperty, "REMOVED " + rem.ToString(Data.AdminLocale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
+                            Context.LogAction(ActionLogType.SetVehicleDataProperty, "REMOVED " + rem.ToString(Data.AdminLocale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
                                 + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                         }
-                        ctx.Reply(T.VehicleBayRemovedDelay, rem);
+                        Context.Reply(T.VehicleBayRemovedDelay, rem);
                     }
                 }
                 finally
@@ -397,69 +428,72 @@ public class VehicleBayCommand : AsyncCommand
                 }
             }
             else
-                ctx.Reply(T.VehicleBayNoTarget);
+                Context.Reply(T.VehicleBayNoTarget);
         }
-        else if (ctx.MatchParameter(0, "add", "a", "create"))
+        else if (Context.MatchParameter(0, "add", "a", "create"))
         {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
+            await Context.AssertPermissions(PermissionAdd, token);
+            await UniTask.SwitchToMainThread(token);
 
-            ctx.AssertHelpCheck(1, "/vehiclebay <add|a|create> - Adds the vehicle you're looking at to the vehicle bay.");
+            Context.AssertHelpCheck(1, "/vehiclebay <add|a|create> - Adds the vehicle you're looking at to the vehicle bay.");
 
-            if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+            if (Context.TryGetVehicleTarget(out InteractableVehicle? vehicle))
             {
-                SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, spawner, token).ConfigureAwait(false);
+                SqlItem<VehicleData>? data = await GetVehicleTarget(Context, bay, spawner, token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
                 if (data?.Item == null)
                 {
-                    ctx.LogAction(ActionLogType.CreateVehicleData, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
+                    Context.LogAction(ActionLogType.CreateVehicleData, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
                     await bay.AddRequestableVehicle(vehicle, token).ConfigureAwait(false);
                     await UniTask.SwitchToMainThread(token);
-                    ctx.Reply(T.VehicleBayAdded, vehicle.asset);
+                    Context.Reply(T.VehicleBayAdded, vehicle.asset);
                 }
                 else
                 {
                     await UniTask.SwitchToMainThread(token);
-                    ctx.Reply(T.VehicleBayAlreadyAdded, vehicle.asset);
+                    Context.Reply(T.VehicleBayAlreadyAdded, vehicle.asset);
                 }
             }
             else
-                ctx.Reply(T.VehicleBayNoTarget);
+                Context.Reply(T.VehicleBayNoTarget);
         }
-        else if (ctx.MatchParameter(0, "remove", "r", "delete"))
+        else if (Context.MatchParameter(0, "remove", "r", "delete"))
         {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
+            await Context.AssertPermissions(PermissionRemove, token);
+            await UniTask.SwitchToMainThread(token);
 
-            ctx.AssertHelpCheck(1, "/vehiclebay <remove|r|delete> - Removes the vehicle you're looking at from the vehicle bay.");
+            Context.AssertHelpCheck(1, "/vehiclebay <remove|r|delete> - Removes the vehicle you're looking at from the vehicle bay.");
 
-            if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+            if (Context.TryGetVehicleTarget(out InteractableVehicle? vehicle))
             {
                 if (await bay.RemoveRequestableVehicle(vehicle.asset.GUID, token).ConfigureAwait(false))
                 {
                     await UniTask.SwitchToMainThread(token);
-                    ctx.LogAction(ActionLogType.DeleteVehicleData, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
-                    ctx.Reply(T.VehicleBayRemoved, vehicle.asset);
+                    Context.LogAction(ActionLogType.DeleteVehicleData, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
+                    Context.Reply(T.VehicleBayRemoved, vehicle.asset);
                 }
                 else
                 {
                     await UniTask.SwitchToMainThread(token);
-                    ctx.Reply(T.VehicleBayNotAdded, vehicle.asset);
+                    Context.Reply(T.VehicleBayNotAdded, vehicle.asset);
                 }
             }
             else
-                ctx.Reply(T.VehicleBayNoTarget);
+                Context.Reply(T.VehicleBayNoTarget);
         }
-        else if (ctx.MatchParameter(0, "savemeta", "savemetadata", "metadata"))
+        else if (Context.MatchParameter(0, "savemeta", "savemetadata", "metadata"))
         {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
+            await Context.AssertPermissions(PermissionSet, token);
+            await UniTask.SwitchToMainThread(token);
 
-            ctx.AssertHelpCheck(1, "/vehiclebay <savemeta|savemetadata|metadata> - Saves the barricades that are placed on the current vehicle to the vehicle bay.");
+            Context.AssertHelpCheck(1, "/vehiclebay <savemeta|savemetadata|metadata> - Saves the barricades that are placed on the current vehicle to the vehicle bay.");
 
-            if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+            if (Context.TryGetVehicleTarget(out InteractableVehicle? vehicle))
             {
-                SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, spawner, token).ConfigureAwait(false);
+                SqlItem<VehicleData>? data = await GetVehicleTarget(Context, bay, spawner, token).ConfigureAwait(false);
                 if (data?.Item != null)
                 {
-                    ctx.LogAction(ActionLogType.SetVehicleDataProperty, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SAVED METADATA");
+                    Context.LogAction(ActionLogType.SetVehicleDataProperty, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SAVED METADATA");
                     await data.Enter(token).ConfigureAwait(false);
                     try
                     {
@@ -467,7 +501,7 @@ public class VehicleBayCommand : AsyncCommand
                         data.Item.SaveMetaData(vehicle);
                         await data.SaveItem(token).ConfigureAwait(false);
                         await UniTask.SwitchToMainThread(token);
-                        ctx.Reply(T.VehicleBaySavedMeta, vehicle.asset);
+                        Context.Reply(T.VehicleBaySavedMeta, vehicle.asset);
                     }
                     finally
                     {
@@ -475,21 +509,22 @@ public class VehicleBayCommand : AsyncCommand
                     }
                 }
                 else
-                    ctx.Reply(T.VehicleBayNotAdded);
+                    Context.Reply(T.VehicleBayNotAdded);
             }
             else
-                ctx.Reply(T.VehicleBayNoTarget);
+                Context.Reply(T.VehicleBayNoTarget);
         }
-        else if (ctx.MatchParameter(0, "set", "s"))
+        else if (Context.MatchParameter(0, "set", "s"))
         {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
+            await Context.AssertPermissions(PermissionSet, token);
+            await UniTask.SwitchToMainThread(token);
 
-            ctx.AssertHelpCheck(1, "/vehiclebay <set|s> <items|property> [value] - Sets the trunk items to your current inventory or any other property to the given value.");
+            Context.AssertHelpCheck(1, "/vehiclebay <set|s> <items|property> [value] - Sets the trunk items to your current inventory or any other property to the given value.");
 
-            SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, spawner, token).ConfigureAwait(false);
+            SqlItem<VehicleData>? data = await GetVehicleTarget(Context, bay, spawner, token).ConfigureAwait(false);
             if (data?.Item is not null)
             {
-                if (ctx.MatchParameter(1, "items", "item", "inventory"))
+                if (Context.MatchParameter(1, "items", "item", "inventory"))
                 {
                     await data.Enter(token).ConfigureAwait(false);
                     await UniTask.SwitchToMainThread(token);
@@ -502,32 +537,32 @@ public class VehicleBayCommand : AsyncCommand
                             if (page == PlayerInventory.AREA)
                                 continue;
 
-                            byte pageCount = ctx.Caller.Player.inventory.getItemCount(page);
+                            byte pageCount = Context.Player.Player.inventory.getItemCount(page);
 
                             for (byte index = 0; index < pageCount; index++)
                             {
-                                if (Assets.find(EAssetType.ITEM, ctx.Caller.Player.inventory.getItem(page, index).item.id) is ItemAsset a)
+                                if (Assets.find(EAssetType.ITEM, Context.Player.Player.inventory.getItem(page, index).item.id) is ItemAsset a)
                                     items.Add(a.GUID);
                             }
                         }
 
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
-                        ctx.LogAction(ActionLogType.SetVehicleDataProperty,
+                        Context.LogAction(ActionLogType.SetVehicleDataProperty,
                             $"{asset?.vehicleName ?? "null"} / {(asset == null ? "0" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - SET ITEMS");
                         data.Item.Items = items.ToArray();
                         await data.SaveItem(token).ConfigureAwait(false);
                         await UniTask.SwitchToMainThread(token);
                         if (items.Count == 0)
-                            ctx.Reply(T.VehicleBayClearedItems, asset!);
+                            Context.Reply(T.VehicleBayClearedItems, asset!);
                         else
-                            ctx.Reply(T.VehicleBaySetItems, asset!, items.Count);
+                            Context.Reply(T.VehicleBaySetItems, asset!, items.Count);
                     }
                     finally
                     {
                         data.Release();
                     }
                 }
-                else if (ctx.TryGet(2, out string value) && ctx.TryGet(1, out string property))
+                else if (Context.TryGet(2, out string value) && Context.TryGet(1, out string property))
                 {
                     (SetPropertyResult result, MemberInfo? info) = await bay.SetProperty(data.Item, property, value, token).ConfigureAwait(false);
                     await UniTask.SwitchToMainThread(token);
@@ -535,113 +570,114 @@ public class VehicleBayCommand : AsyncCommand
                     {
                         case SetPropertyResult.Success:
                             VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
-                            ctx.LogAction(ActionLogType.SetVehicleDataProperty,
+                            Context.LogAction(ActionLogType.SetVehicleDataProperty,
                                 $"{asset?.vehicleName ?? "null"} / {asset?.id ?? 0} / {data.Item.VehicleID:N} - SET " +
                                 (info?.Name ?? property).ToUpper() + " >> " + value.ToUpper());
-                            ctx.Reply(T.VehicleBaySetProperty!, property, asset, value);
+                            Context.Reply(T.VehicleBaySetProperty!, property, asset, value);
                             Signs.UpdateVehicleBaySigns(null, data.Item);
                             break;
                         default:
                         case SetPropertyResult.ObjectNotFound:
-                            ctx.Reply(T.VehicleBayNotAdded);
+                            Context.Reply(T.VehicleBayNotAdded);
                             break;
                         case SetPropertyResult.PropertyNotFound:
-                            ctx.Reply(T.VehicleBayInvalidProperty, property);
+                            Context.Reply(T.VehicleBayInvalidProperty, property);
                             break;
                         case SetPropertyResult.ParseFailure:
                         case SetPropertyResult.TypeNotSettable:
-                            ctx.Reply(T.VehicleBayInvalidSetValue, value, property);
+                            Context.Reply(T.VehicleBayInvalidSetValue, value, property);
                             break;
                         case SetPropertyResult.PropertyProtected:
-                            ctx.Reply(T.VehicleBayNotCommandSettable, property);
+                            Context.Reply(T.VehicleBayNotCommandSettable, property);
                             break;
                     }
                 }
                 else
-                    ctx.SendCorrectUsage("/vehiclebay set <items|property> [value]");
+                    Context.SendCorrectUsage("/vehiclebay set <items|property> [value]");
             }
             else
             {
-                await UCWarfare.ToUpdate();
-                ctx.Reply(T.VehicleBayNoTarget);
+                Context.Reply(T.VehicleBayNoTarget);
             }
         }
-        else if (ctx.MatchParameter(0, "crewseats", "seats", "crew"))
+        else if (Context.MatchParameter(0, "crewseats", "seats", "crew"))
         {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
+            await Context.AssertPermissions(PermissionSet, token);
+            await UniTask.SwitchToMainThread(token);
 
-            ctx.AssertHelpCheck(1, "/vehiclebay <crewseats|seats|crew> <add|remove> <seat index> - Registers or deregisters a seat index as requiring crewman to enter.");
+            Context.AssertHelpCheck(1, "/vehiclebay <crewseats|seats|crew> <add|remove> <seat index> - Registers or deregisters a seat index as requiring crewman to enter.");
 
-            if (ctx.MatchParameter(1, "add", "a", "create"))
+            if (Context.MatchParameter(1, "add", "a", "create"))
             {
-                SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, spawner, token).ConfigureAwait(false);
+                SqlItem<VehicleData>? data = await GetVehicleTarget(Context, bay, spawner, token).ConfigureAwait(false);
                 if (data?.Item is not null)
                 {
-                    if (ctx.TryGet(2, out byte seat))
+                    if (Context.TryGet(2, out byte seat))
                     {
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
                         if (!data.Item.CrewSeats.Contains(seat))
                         {
-                            ctx.LogAction(ActionLogType.SetVehicleDataProperty, $"{asset?.vehicleName ?? "null"} /" +
+                            Context.LogAction(ActionLogType.SetVehicleDataProperty, $"{asset?.vehicleName ?? "null"} /" +
                                 $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - ADDED CREW SEAT {seat}.");
                             await bay.AddCrewSeat(data, seat, token).ConfigureAwait(false);
                             await UniTask.SwitchToMainThread(token);
-                            ctx.Reply(T.VehicleBaySeatAdded, seat, asset!);
+                            Context.Reply(T.VehicleBaySeatAdded, seat, asset!);
                         }
                         else
-                            ctx.Reply(T.VehicleBaySeatAlreadyAdded, seat, asset!);
+                            Context.Reply(T.VehicleBaySeatAlreadyAdded, seat, asset!);
                     }
                     else
-                        ctx.SendCorrectUsage("/vehiclebay crewseats add <seat index>");
+                        Context.SendCorrectUsage("/vehiclebay crewseats add <seat index>");
                 }
                 else
-                    ctx.Reply(T.VehicleBayNoTarget);
+                    Context.Reply(T.VehicleBayNoTarget);
             }
-            else if (ctx.MatchParameter(1, "remove", "r", "delete"))
+            else if (Context.MatchParameter(1, "remove", "r", "delete"))
             {
-                SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, spawner, token).ConfigureAwait(false);
+                SqlItem<VehicleData>? data = await GetVehicleTarget(Context, bay, spawner, token).ConfigureAwait(false);
                 if (data?.Item is not null)
                 {
-                    if (ctx.TryGet(2, out byte seat))
+                    if (Context.TryGet(2, out byte seat))
                     {
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
                         if (data.Item.CrewSeats.Contains(seat))
                         {
-                            ctx.LogAction(ActionLogType.SetVehicleDataProperty, $"{asset?.vehicleName ?? "null"} /" +
+                            Context.LogAction(ActionLogType.SetVehicleDataProperty, $"{asset?.vehicleName ?? "null"} /" +
                                 $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - REMOVED CREW SEAT {seat}.");
                             await bay.RemoveCrewSeat(data, seat, token).ConfigureAwait(false);
                             await UniTask.SwitchToMainThread(token);
-                            ctx.Reply(T.VehicleBaySeatRemoved, seat, asset!);
+                            Context.Reply(T.VehicleBaySeatRemoved, seat, asset!);
                         }
                         else
-                            ctx.Reply(T.VehicleBaySeatNotAdded, seat, asset!);
+                            Context.Reply(T.VehicleBaySeatNotAdded, seat, asset!);
                     }
                     else
-                        ctx.SendCorrectUsage("/vehiclebay crewseats remove <seat index>");
+                        Context.SendCorrectUsage("/vehiclebay crewseats remove <seat index>");
                 }
                 else
-                    ctx.Reply(T.VehicleBayNoTarget);
+                    Context.Reply(T.VehicleBayNoTarget);
             }
             else
-                ctx.SendCorrectUsage("/vehiclebay crewseats <add|remove> <seat index>");
+                Context.SendCorrectUsage("/vehiclebay crewseats <add|remove> <seat index>");
         }
-        else if (ctx.MatchParameter(0, "register", "reg"))
+        else if (Context.MatchParameter(0, "register", "reg"))
         {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
+            await Context.AssertPermissions(PermissionRegister, token);
+            await UniTask.SwitchToMainThread(token);
 
-            ctx.AssertHelpCheck(1, "/vehiclebay <register|reg> <vehicle id> - Sets the vehicle spawner you're looking at to spawn the given vehicle id (guid or uint16).");
+            Context.AssertHelpCheck(1, "/vehiclebay <register|reg> <vehicle id> - Sets the vehicle spawner you're looking at to spawn the given vehicle id (guid or uint16).");
             
-            if (!ctx.TryGet(1, out VehicleAsset asset, out _, true))
+            if (!Context.TryGet(1, out VehicleAsset? asset, out _, true))
             {
-                if (ctx.HasArg(1))
-                    ctx.Reply(T.VehicleBayInvalidInput, ctx.Get(1)!);
+                if (Context.HasArgs(2))
+                    Context.Reply(T.VehicleBayInvalidInput, Context.Get(1)!);
                 else
-                    ctx.SendCorrectUsage("/vehiclebay register <vehicle id or guid>");
+                    Context.SendCorrectUsage("/vehiclebay register <vehicle id or guid>");
                 return;
             }
             if (asset is not null)
             {
-                if (ctx.TryGetTarget(out BarricadeDrop barricade))
+                if (Context.TryGetTarget(out BarricadeDrop barricade))
                 {
                     if (Gamemode.Config.StructureVehicleBay.MatchGuid(barricade.asset.GUID))
                     {
@@ -649,23 +685,23 @@ public class VehicleBayCommand : AsyncCommand
                         {
                             SqlItem<VehicleData>? data = bay.GetDataProxySync(asset.GUID);
                             if (data?.Item == null)
-                                throw ctx.Reply(T.VehicleBayInvalidInput, asset.GUID.ToString("N"));
+                                throw Context.Reply(T.VehicleBayInvalidInput, asset.GUID.ToString("N"));
                             (SqlItem<SavedStructure> save, _) = await saver.AddBarricade(barricade, token).ConfigureAwait(false);
                             await spawner.CreateSpawn(save, data, null, token).ConfigureAwait(false);
                             await UniTask.SwitchToMainThread(token);
-                            ctx.LogAction(ActionLogType.RegisteredSpawn, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                            Context.LogAction(ActionLogType.RegisteredSpawn, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                                                           $"REGISTERED BARRICADE SPAWN AT {barricade.model.transform.position:N2} ID: {barricade.instanceID}");
-                            ctx.Reply(T.VehicleBaySpawnRegistered, asset);
+                            Context.Reply(T.VehicleBaySpawnRegistered, asset);
                         }
                         else
-                            ctx.Reply(T.VehicleBaySpawnAlreadyRegistered, asset);
+                            Context.Reply(T.VehicleBaySpawnAlreadyRegistered, asset);
                     }
                     else
                     {
-                        ctx.Reply(T.VehicleBayInvalidBayItem, barricade.asset);
+                        Context.Reply(T.VehicleBayInvalidBayItem, barricade.asset);
                     }
                 }
-                else if (ctx.TryGetTarget(out StructureDrop structure))
+                else if (Context.TryGetTarget(out StructureDrop structure))
                 {
                     if (Gamemode.Config.StructureVehicleBay.MatchGuid(structure.asset.GUID))
                     {
@@ -673,35 +709,36 @@ public class VehicleBayCommand : AsyncCommand
                         {
                             SqlItem<VehicleData>? data = bay.GetDataProxySync(asset.GUID);
                             if (data?.Item == null)
-                                throw ctx.Reply(T.VehicleBayInvalidInput, asset.GUID.ToString("N"));
+                                throw Context.Reply(T.VehicleBayInvalidInput, asset.GUID.ToString("N"));
                             (SqlItem<SavedStructure> save, _) = await saver.AddStructure(structure, token).ConfigureAwait(false);
                             await spawner.CreateSpawn(save, data, null, token).ConfigureAwait(false);
                             await UniTask.SwitchToMainThread(token);
-                            ctx.LogAction(ActionLogType.RegisteredSpawn, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                            Context.LogAction(ActionLogType.RegisteredSpawn, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                                                           $"REGISTERED STRUCTURE SPAWN AT {structure.model.transform.position:N2} ID: {structure.instanceID}");
-                            ctx.Reply(T.VehicleBaySpawnRegistered, asset);
+                            Context.Reply(T.VehicleBaySpawnRegistered, asset);
                         }
                         else
-                            ctx.Reply(T.VehicleBaySpawnAlreadyRegistered, asset);
+                            Context.Reply(T.VehicleBaySpawnAlreadyRegistered, asset);
                     }
                     else
                     {
-                        ctx.Reply(T.VehicleBayInvalidBayItem, structure.asset);
+                        Context.Reply(T.VehicleBayInvalidBayItem, structure.asset);
                     }
                 }
                 else
-                    ctx.Reply(T.VehicleBayNoTarget);
+                    Context.Reply(T.VehicleBayNoTarget);
             }
             else
-                ctx.Reply(T.VehicleBayInvalidInput, ctx.Get(1)!);
+                Context.Reply(T.VehicleBayInvalidInput, Context.Get(1)!);
         }
-        else if (ctx.MatchParameter(0, "deregister", "dereg"))
+        else if (Context.MatchParameter(0, "deregister", "dereg"))
         {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
+            await Context.AssertPermissions(PermissionDeregister, token);
+            await UniTask.SwitchToMainThread(token);
 
-            ctx.AssertHelpCheck(1, "/vehiclebay <deregister|dereg> - Disables the vehicle spawner you're looking at from spawning vehicles.");
+            Context.AssertHelpCheck(1, "/vehiclebay <deregister|dereg> - Disables the vehicle spawner you're looking at from spawning vehicles.");
 
-            SqlItem<VehicleSpawn>? spawn = GetBayTarget(ctx, spawner);
+            SqlItem<VehicleSpawn>? spawn = GetBayTarget(Context, spawner);
             if (spawn?.Item is { } spawn2)
             {
                 await spawner.RemoveSpawn(spawn, token).ConfigureAwait(false);
@@ -709,27 +746,28 @@ public class VehicleBayCommand : AsyncCommand
                 VehicleData? data = spawn2.Vehicle?.Item;
                 if (data is not null && Assets.find(data.VehicleID) is VehicleAsset asset)
                 {
-                    ctx.LogAction(ActionLogType.DeregisteredSpawn, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - DEREGISTERED SPAWN KEY: {spawn2.StructureKey}.");
-                    ctx.Reply(T.VehicleBaySpawnDeregistered, asset);
+                    Context.LogAction(ActionLogType.DeregisteredSpawn, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - DEREGISTERED SPAWN KEY: {spawn2.StructureKey}.");
+                    Context.Reply(T.VehicleBaySpawnDeregistered, asset);
                 }
                 else
                 {
-                    ctx.LogAction(ActionLogType.DeregisteredSpawn, $"{spawn2.VehicleKey} - DEREGISTERED SPAWN ID: {spawn2.StructureKey}");
-                    ctx.Reply(T.VehicleBaySpawnDeregistered, null!);
+                    Context.LogAction(ActionLogType.DeregisteredSpawn, $"{spawn2.VehicleKey} - DEREGISTERED SPAWN ID: {spawn2.StructureKey}");
+                    Context.Reply(T.VehicleBaySpawnDeregistered, null!);
                 }
             }
-            else if (ctx.TryGetTarget(out BarricadeDrop _) || ctx.TryGetTarget(out StructureDrop _))
-                ctx.Reply(T.VehicleBaySpawnNotRegistered);
+            else if (Context.TryGetTarget(out BarricadeDrop _) || Context.TryGetTarget(out StructureDrop _))
+                Context.Reply(T.VehicleBaySpawnNotRegistered);
             else
-                ctx.Reply(T.VehicleBayNoTarget);
+                Context.Reply(T.VehicleBayNoTarget);
         }
-        else if (ctx.MatchParameter(0, "force", "respawn"))
+        else if (Context.MatchParameter(0, "force", "respawn"))
         {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
+            await Context.AssertPermissions(PermissionForce, token);
+            await UniTask.SwitchToMainThread(token);
 
-            ctx.AssertHelpCheck(1, "/vehiclebay <force|respawn> - Deletes the linked vehicle to the spawner you're looking at from the world and spawns another.");
+            Context.AssertHelpCheck(1, "/vehiclebay <force|respawn> - Deletes the linked vehicle to the spawner you're looking at from the world and spawns another.");
 
-            SqlItem<VehicleSpawn>? spawn = GetBayTarget(ctx, spawner);
+            SqlItem<VehicleSpawn>? spawn = GetBayTarget(Context, spawner);
             if (spawn?.Item is { } spawn2)
             {
                 if (spawn2.HasLinkedVehicle(out InteractableVehicle veh))
@@ -739,23 +777,26 @@ public class VehicleBayCommand : AsyncCommand
                 await UniTask.SwitchToMainThread(token);
                 if (vehicle != null)
                 {
-                    ctx.LogAction(ActionLogType.VehicleBayForceSpawn,
+                    Context.LogAction(ActionLogType.VehicleBayForceSpawn,
                         $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - FORCED VEHICLE TO SPAWN ID: {spawn2.StructureKey}");
-                    ctx.Reply(T.VehicleBayForceSuccess, vehicle.asset);
+                    Context.Reply(T.VehicleBayForceSuccess, vehicle.asset);
                 }
                 else
-                    throw ctx.SendUnknownError();
+                    throw Context.SendUnknownError();
             }
             else
-                ctx.Reply(T.VehicleBayNoTarget);
+                Context.Reply(T.VehicleBayNoTarget);
         }
-        else if (ctx.MatchParameter(0, "link"))
+        else if (Context.MatchParameter(0, "link"))
         {
-            ctx.AssertHelpCheck(1, "/vehiclebay <link> - Use while looking at a spawner to start linking, then on a sign to link the sign to the spawner.");
+            await Context.AssertPermissions(PermissionLinkSign, token);
+            await UniTask.SwitchToMainThread(token);
+
+            Context.AssertHelpCheck(1, "/vehiclebay <link> - Use while looking at a spawner to start linking, then on a sign to link the sign to the spawner.");
             
-            if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign)
+            if (Context.TryGetBarricadeTarget(out BarricadeDrop? drop) && drop.interactable is InteractableSign)
             {
-                if (ctx.Caller.Player.TryGetPlayerData(out Components.UCPlayerData c))
+                if (Context.Player.Player.TryGetPlayerData(out Components.UCPlayerData c))
                 {
                     if (c.Currentlylinking is { Item: not null } proxy)
                     {
@@ -763,88 +804,95 @@ public class VehicleBayCommand : AsyncCommand
                         if (await spawner.LinkSign(drop, proxy, token).ConfigureAwait(false))
                         {
                             await UniTask.SwitchToMainThread(token);
-                            ctx.LogAction(ActionLogType.LinkedVehicleBaySign,
+                            Context.LogAction(ActionLogType.LinkedVehicleBaySign,
                                 $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID} - " +
                                 $"LINKED TO SPAWN AT {drop.model.transform.position:N2} KEY: {c.Currentlylinking.PrimaryKey}");
                             VehicleData? data = proxy.Item?.Vehicle?.Item;
                             VehicleAsset? asset = data == null ? null : Assets.find<VehicleAsset>(data.VehicleID);
-                            ctx.Reply(T.VehicleBayLinkFinished, asset!);
+                            Context.Reply(T.VehicleBayLinkFinished, asset!);
                             c.Currentlylinking = null;
                         }
                         else
                         {
                             await UniTask.SwitchToMainThread(token);
-                            throw ctx.SendUnknownError();
+                            throw Context.SendUnknownError();
                         }
                     }
                     else
-                        ctx.Reply(T.VehicleBayLinkNotStarted);
+                        Context.Reply(T.VehicleBayLinkNotStarted);
                 }
                 else
-                    ctx.SendUnknownError();
+                    Context.SendUnknownError();
             }
             else
             {
-                SqlItem<VehicleSpawn>? spawn = GetBayTarget(ctx, spawner);
+                SqlItem<VehicleSpawn>? spawn = GetBayTarget(Context, spawner);
                 if (spawn?.Item is not null)
                 {
-                    if (ctx.Caller.Player.TryGetPlayerData(out Components.UCPlayerData c))
+                    if (Context.Player.Player.TryGetPlayerData(out Components.UCPlayerData c))
                     {
                         c.Currentlylinking = spawn;
-                        ctx.Reply(T.VehicleBayLinkStarted);
+                        Context.Reply(T.VehicleBayLinkStarted);
                     }
                     else
-                        ctx.SendUnknownError();
+                        Context.SendUnknownError();
                 }
                 else
-                    ctx.Reply(T.VehicleBaySpawnNotRegistered);
+                    Context.Reply(T.VehicleBaySpawnNotRegistered);
             }
         }
-        else if (ctx.MatchParameter(0, "unlink"))
+        else if (Context.MatchParameter(0, "unlink"))
         {
-            ctx.AssertHelpCheck(1, "/vehiclebay <unlink> - Use while looking at a sign to unlink it from it's spawner.");
+            await Context.AssertPermissions(PermissionUnlinkSign, token);
+            await UniTask.SwitchToMainThread(token);
+
+            Context.AssertHelpCheck(1, "/vehiclebay <unlink> - Use while looking at a sign to unlink it from it's spawner.");
             
-            BarricadeDrop? sign = GetSignTarget(ctx, spawner, out SqlItem<VehicleSpawn> spawn);
+            BarricadeDrop? sign = GetSignTarget(Context, spawner, out SqlItem<VehicleSpawn> spawn);
             if (sign != null && !sign.GetServersideData().barricade.isDead && sign.interactable is InteractableSign)
             {
                 await spawner.UnlinkSign(sign, token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
-                ctx.Reply(T.VehicleBayUnlinked, spawn.Item?.Vehicle?.Item is { } data ? Assets.find<VehicleAsset>(data.VehicleID) : null!);
+                Context.Reply(T.VehicleBayUnlinked, spawn.Item?.Vehicle?.Item is { } data ? Assets.find<VehicleAsset>(data.VehicleID) : null!);
             }
             else
-                ctx.Reply(T.VehicleBayNoTarget);
+                Context.Reply(T.VehicleBayNoTarget);
         }
-        else if (ctx.MatchParameter(0, "check", "id", "wtf"))
+        else if (Context.MatchParameter(0, "check", "id", "wtf"))
         {
-            ctx.AssertHelpCheck(1, "/vehiclebay <check|id|wtf> - Tells you what vehicle spawns from the spawner you're looking at.");
+            await Context.AssertPermissions(PermissionCheck, token);
+            await UniTask.SwitchToMainThread(token);
 
-            SqlItem<VehicleSpawn>? spawn = GetBayTarget(ctx, spawner);
+            Context.AssertHelpCheck(1, "/vehiclebay <check|id|wtf> - Tells you what vehicle spawns from the spawner you're looking at.");
+
+            SqlItem<VehicleSpawn>? spawn = GetBayTarget(Context, spawner);
             if (spawn is not null)
             {
                 VehicleAsset? asset = spawn.Item?.Vehicle?.Item is { } data ? Assets.find<VehicleAsset>(data.VehicleID) : null;
-                ctx.Reply(T.VehicleBayCheck, spawn.PrimaryKey.Key, asset!, asset?.id ?? 0);
+                Context.Reply(T.VehicleBayCheck, spawn.PrimaryKey.Key, asset!, asset?.id ?? 0);
             }
             else
-                ctx.Reply(T.VehicleBaySpawnNotRegistered);
+                Context.Reply(T.VehicleBaySpawnNotRegistered);
         }
-        else ctx.SendCorrectUsage("/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...]");
+        else Context.SendCorrectUsage("/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...]");
     }
 
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
     public static async Task<SqlItem<VehicleData>?> GetVehicleTarget(CommandContext ctx, VehicleBay bay, VehicleSpawner spawner, CancellationToken token = default)
     {
-        if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+        await UniTask.SwitchToMainThread(token);
+        if (ctx.TryGetVehicleTarget(out InteractableVehicle? vehicle))
         {
             SqlItem<VehicleData>? item = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
             if (item?.Item != null)
                 return item;
         }
 
-        if (ctx.TryGetTarget(out BarricadeDrop drop) && spawner.TryGetSpawn(drop, out SqlItem<VehicleSpawn> spawn))
+        if (ctx.TryGetBarricadeTarget(out BarricadeDrop? drop) && spawner.TryGetSpawn(drop, out SqlItem<VehicleSpawn> spawn))
         {
             return spawn.Item?.Vehicle;
         }
-        if (ctx.TryGetTarget(out StructureDrop drop2) && spawner.TryGetSpawn(drop2, out spawn))
+        if (ctx.TryGetStructureTarget(out StructureDrop? drop2) && spawner.TryGetSpawn(drop2, out spawn))
         {
             return spawn.Item?.Vehicle;
         }
@@ -853,15 +901,15 @@ public class VehicleBayCommand : AsyncCommand
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
     public static SqlItem<VehicleSpawn>? GetBayTarget(CommandContext ctx, VehicleSpawner spawner)
     {
-        if (ctx.TryGetTarget(out InteractableVehicle vehicle) && spawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
+        if (ctx.TryGetVehicleTarget(out InteractableVehicle? vehicle) && spawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
         {
             return spawn;
         }
-        if (ctx.TryGetTarget(out BarricadeDrop drop) && spawner.TryGetSpawn(drop, out spawn))
+        if (ctx.TryGetBarricadeTarget(out BarricadeDrop? drop) && spawner.TryGetSpawn(drop, out spawn))
         {
             return spawn;
         }
-        if (ctx.TryGetTarget(out StructureDrop drop2) && spawner.TryGetSpawn(drop2, out spawn))
+        if (ctx.TryGetStructureTarget(out StructureDrop? drop2) && spawner.TryGetSpawn(drop2, out spawn))
         {
             return spawn;
         }
@@ -870,11 +918,11 @@ public class VehicleBayCommand : AsyncCommand
     /// <summary>Sign barricade >> Spawner barricade >> Spawner structure >> Linked Vehicle</summary>
     public static BarricadeDrop? GetSignTarget(CommandContext ctx, VehicleSpawner spawner, out SqlItem<VehicleSpawn> spawn)
     {
-        if (ctx.TryGetTarget(out BarricadeDrop drop) && spawner.TryGetSpawn(drop, out spawn))
+        if (ctx.TryGetBarricadeTarget(out BarricadeDrop? drop) && spawner.TryGetSpawn(drop, out spawn))
         {
             return drop;
         }
-        if (ctx.TryGetTarget(out StructureDrop drop2) && spawner.TryGetSpawn(drop2, out spawn) || (ctx.TryGetTarget(out InteractableVehicle vehicle) && spawner.TryGetSpawn(vehicle, out spawn)))
+        if (ctx.TryGetStructureTarget(out StructureDrop? drop2) && spawner.TryGetSpawn(drop2, out spawn) || (ctx.TryGetVehicleTarget(out InteractableVehicle? vehicle) && spawner.TryGetSpawn(vehicle, out spawn)))
         {
             return spawn?.Item?.Sign?.Item?.Buildable?.Drop as BarricadeDrop;
         }

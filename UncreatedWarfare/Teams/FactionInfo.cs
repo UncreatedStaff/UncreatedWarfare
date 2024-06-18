@@ -91,7 +91,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     [JsonPropertyName("emoji")]
     public string? Emoji { get; set; }
     [JsonIgnore]
-    public PrimaryKey PrimaryKey { get; set; }
+    public uint PrimaryKey { get; set; }
     [JsonIgnore]
     public string Sprite => "<sprite index=" + (TMProSpriteIndex.HasValue ? TMProSpriteIndex.Value.ToString(Data.AdminLocale) : "0") + ">";
     [JsonPropertyName("factionId")]
@@ -664,7 +664,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             }
         }
 
-        list.Sort((a, b) => a.PrimaryKey.Key.CompareTo(b.PrimaryKey.Key));
+        list.Sort((a, b) => a.PrimaryKey.CompareTo(b.PrimaryKey));
 
         if (UCWarfare.IsLoaded)
         {

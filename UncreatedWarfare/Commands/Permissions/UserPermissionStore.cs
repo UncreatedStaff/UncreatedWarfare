@@ -495,6 +495,14 @@ public class UserPermissionStore : IAsyncDisposable
     {
         _permissionGroupFileWatcher?.Dispose();
 
-        await _semaphore.WaitAsync(TimeSpan.FromSeconds(3d));
+        try
+        {
+            await _semaphore.WaitAsync(TimeSpan.FromSeconds(3d));
+        }
+        catch { /* ignored */ }
+        finally
+        {
+            _semaphore.Dispose();
+        }
     }
 }

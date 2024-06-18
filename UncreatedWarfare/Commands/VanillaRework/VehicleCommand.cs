@@ -1,12 +1,12 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Globalization;
 using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
@@ -14,38 +14,48 @@ using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
-public class VCommand : AsyncCommand
+
+[Command("vehicle", "v", "veh"), Priority(1)]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class VehicleCommand : IExecutableCommand
 {
-    // private const float SwapRequestDuration = 15f;
-    private const float GiveRequestDuration = 15f;
     private const string AdminSyntax = "/v <vehicle|kick|give|accept|deny> [player]";
     private const string Syntax = "/v <kick|give|accept|deny> [player]";
     private const string AdminHelp = "Spawn a vehicle in front of you or manage your requested vehicle.";
     private const string Help = "Manage your requested vehicle.";
 
-    public VCommand() : base("vehicle", EAdminType.MEMBER, 1)
+    private static readonly PermissionLeaf PermissionSpawn = new PermissionLeaf("commands.vehicle.spawn", unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionKick  = new PermissionLeaf("commands.vehicle.kick", unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionGive  = new PermissionLeaf("commands.vehicle.give", unturned: false, warfare: true);
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        AddAlias("v");
-        AddAlias("veh");
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Spawns a vehicle in front of you.",
             Parameters =
             [
                 new CommandParameter("Enter")
                 {
-                    Permission = EAdminType.ADMIN_ON_DUTY,
+                    Permission = PermissionSpawn,
                     FlagName = "e",
                     Description = "Enter the vehicle after it spawns."
                 },
                 new CommandParameter("Vehicle", typeof(VehicleAsset))
                 {
                     Description = "Summon a vehicle in front of you.",
-                    Permission = EAdminType.ADMIN_ON_DUTY
+                    Permission = PermissionSpawn
                 },
                 new CommandParameter("Kick")
                 {
                     Aliases = [ "Remove", "K" ],
+                    Permission = PermissionKick,
                     Description = "Remove a player from your vehicle. Can not be done while moving unless they are the driver.",
                     Parameters =
                     [
@@ -64,16 +74,19 @@ public class VCommand : AsyncCommand
                 new CommandParameter("Accept")
                 {
                     Aliases = [ "A", "Acc" ],
+                    Permission = PermissionGive,
                     Description = "Accept a vehicle-related request."
                 },
                 new CommandParameter("Deny")
                 {
                     Aliases = [ "D", "Dn" ],
+                    Permission = PermissionGive,
                     Description = "Deny a vehicle-related request."
                 },
                 new CommandParameter("Give")
                 {
                     Aliases = [ "Transfer", "G" ],
+                    Permission = PermissionGive,
                     Description = "Transfer ownerhip of your vehicle to someone else, they must also have the vehicle unlocked. Will not give credits when abandoned.",
                     Parameters =
                     [
@@ -85,48 +98,39 @@ public class VCommand : AsyncCommand
                             Description = "Sends a request to give instead of just forcing it over (this behavior is forced when the recepient is in main)."
                         }
                     ]
-                },
-                /*
-                new CommandParameter("Enter")
-                {
-                    Aliases = [ "Swap", "E" ],
-                    Description = "Swap seats with the player in the specified seat, moving them to the next available seat or kicking them.",
-                    Parameters =
-                    [
-                        new CommandParameter("Seat", "Driver", "Pilot", "Turret", typeof(byte)),
-                        new CommandParameter("Accept")
-                        {
-                            Aliases = [ "Yes", "Y" ],
-                            Description = "Accept a swap request from a fellow passenger."
-                        },
-                        new CommandParameter("Deny")
-                        {
-                            Aliases = [ "No", "N" ],
-                            Description = "Deny a swap request from a fellow passenger, done automatically after a cooldown."
-                        }
-                    }
-                }*/
+                }
             ]
         };
     }
 
-    public override async Task Execute(CommandContext ctx, CancellationToken token)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, ctx.HasPermission(EAdminType.ADMIN_ON_DUTY) ? (AdminSyntax + " - " + AdminHelp) : (Syntax + " - " + Help));
+        Context.AssertHelpCheck(0, await Context.HasPermission(PermissionSpawn, token) ? (AdminSyntax + " - " + AdminHelp) : (Syntax + " - " + Help));
 
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
-        bool kick = ctx.MatchParameter(0, "kick", "remove", "k");
-        bool enter = !kick && ctx.MatchParameter(0, "enter", "swap", "e");
-        if (kick || enter || ctx.MatchParameter(0, "give", "transfer", "g"))
+        bool kick = Context.MatchParameter(0, "kick", "remove", "k");
+        bool enter = !kick && Context.MatchParameter(0, "enter", "swap", "e");
+        if (kick || enter || Context.MatchParameter(0, "give", "transfer", "g"))
         {
-            if (!ctx.HasArgs(2))
-                throw ctx.SendCorrectUsage(Syntax);
+            if (!Context.HasArgs(2))
+                throw Context.SendCorrectUsage(Syntax);
 
-            VehicleSpawner spawner = VehicleSpawner.GetSingletonQuick() ?? throw ctx.SendGamemodeError();
-            if (!ctx.TryGetTarget(out InteractableVehicle? vehicleTarget))
+            if (kick || enter)
             {
-                ulong callerTeam = ctx.Caller.GetTeam();
+                await Context.AssertPermissions(PermissionKick, token);
+            }
+            else
+            {
+                await Context.AssertPermissions(PermissionGive, token);
+            }
+
+
+            VehicleSpawner spawner = VehicleSpawner.GetSingletonQuick() ?? throw Context.SendGamemodeError();
+            if (!Context.TryGetVehicleTarget(out InteractableVehicle? vehicleTarget))
+            {
+                ulong callerTeam = Context.Player.GetTeam();
                 // find one linked vehicle owned by the player
                 await spawner.WaitAsync(token);
                 try
@@ -136,20 +140,20 @@ public class VCommand : AsyncCommand
                     {
                         foreach (SqlItem<Vehicles.VehicleSpawn> proxy in spawner.Items)
                         {
-                            if (proxy.Item is { } spawn)
+                            if (proxy.Item is not { } spawn)
+                                continue;
+                            
+                            if (spawn.HasLinkedVehicle(out InteractableVehicle linked) && linked.lockedOwner.m_SteamID == Context.CallerId.m_SteamID &&
+                                // ground assets can be anywhere, air assets need to be near main
+                                (linked.asset.engine is not EEngine.HELICOPTER and not EEngine.PLANE && (Context.Player.Position - linked.transform.position).sqrMagnitude < 300 * 300
+                                 || TeamManager.IsInMainOrAMC(callerTeam, Context.Player.Position) && TeamManager.IsInMainOrAMC(callerTeam, linked.transform.position)))
                             {
-                                if (spawn.HasLinkedVehicle(out InteractableVehicle linked) && linked.lockedOwner.m_SteamID == ctx.CallerID &&
-                                    // ground assets can be anywhere, air assets need to be near main
-                                    (linked.asset.engine is not EEngine.HELICOPTER and not EEngine.PLANE && (ctx.Caller.Position - linked.transform.position).sqrMagnitude < 300 * 300
-                                     || TeamManager.IsInMainOrAMC(callerTeam, ctx.Caller.Position) && TeamManager.IsInMainOrAMC(callerTeam, linked.transform.position)))
+                                if (vehicleTarget == null)
+                                    vehicleTarget = linked;
+                                else
                                 {
-                                    if (vehicleTarget == null)
-                                        vehicleTarget = linked;
-                                    else
-                                    {
-                                        vehicleTarget = null;
-                                        break;
-                                    }
+                                    vehicleTarget = null;
+                                    break;
                                 }
                             }
                         }
@@ -168,48 +172,48 @@ public class VCommand : AsyncCommand
             }
 
             if (vehicleTarget == null)
-                throw ctx.Reply(T.VehicleMustBeLookingAtLinkedVehicle);
+                throw Context.Reply(T.VehicleMustBeLookingAtLinkedVehicle);
             bool owned = true;
             ulong team = vehicleTarget.lockedGroup.m_SteamID.GetTeam();
             if (team is not 1 and not 2)
             {
-                team = ctx.Caller.GetTeam();
+                team = Context.Player.GetTeam();
                 if (team is not 1 and not 2)
-                    throw ctx.Reply(T.NotOnCaptureTeam);
+                    throw Context.Reply(T.NotOnCaptureTeam);
             }
-            else if (team != ctx.Caller.GetTeam())
-                throw ctx.Reply(T.VehicleNotOnSameTeam, TeamManager.GetFaction(team));
-            if (vehicleTarget.lockedOwner.m_SteamID != ctx.CallerID)
+            else if (team != Context.Player.GetTeam())
+                throw Context.Reply(T.VehicleNotOnSameTeam, TeamManager.GetFaction(team));
+            if (vehicleTarget.lockedOwner.m_SteamID != Context.CallerId.m_SteamID)
             {
                 if (!enter)
                 {
                     OfflinePlayer pl = new OfflinePlayer(vehicleTarget.lockedOwner.m_SteamID);
                     await pl.CacheUsernames(token).ConfigureAwait(false);
-                    throw ctx.Reply(T.VehicleLinkedVehicleNotOwnedByCaller, pl);
+                    throw Context.Reply(T.VehicleLinkedVehicleNotOwnedByCaller, pl);
                 }
 
-                owned = ctx.Caller.OnDuty();
+                owned = Context.Player.OnDuty();
             }
 
             // vehicle give <player>
             if (!enter && !kick)
             {
-                if (!ctx.TryGet(1, out _, out UCPlayer? onlinePlayer, TeamManager.EnumerateTeam(team), true, UCPlayer.NameSearch.NickName) || onlinePlayer == null)
-                    throw ctx.SendPlayerNotFound();
+                if (!Context.TryGet(1, out _, out UCPlayer? onlinePlayer, TeamManager.EnumerateTeam(team), true, UCPlayer.NameSearch.NickName) || onlinePlayer == null)
+                    throw Context.SendPlayerNotFound();
 
                 VehicleManager.ServerSetVehicleLock(vehicleTarget, onlinePlayer.CSteamID, new CSteamID(TeamManager.GetGroupID(team)), true);
                 VehicleComponent.TryAddOwnerToHistory(vehicleTarget, onlinePlayer.Steam64);
                 if (Gamemode.Config.EffectUnlockVehicle.ValidReference(out EffectAsset effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicleTarget.transform.position);
-                onlinePlayer.SendChat(T.VehicleGivenDm, vehicleTarget.asset, ctx.Caller);
-                throw ctx.Reply(T.VehicleGiven, vehicleTarget.asset, onlinePlayer);
+                onlinePlayer.SendChat(T.VehicleGivenDm, vehicleTarget.asset, Context.Player);
+                throw Context.Reply(T.VehicleGiven, vehicleTarget.asset, onlinePlayer);
             }
 
             // find seat reference
             int seatIndex = -1;
-            if (ctx.MatchParameter(1, "driver", "pilot", "drive"))
+            if (Context.MatchParameter(1, "driver", "pilot", "drive"))
                 seatIndex = 0;
-            else if (ctx.HasArgsExact(1) && ctx.MatchParameter(1, "turret", "gunner", "gun"))
+            else if (Context.HasArgsExact(1) && Context.MatchParameter(1, "turret", "gunner", "gun"))
             {
                 for (int i = 0; i < vehicleTarget.turrets.Length; ++i)
                 {
@@ -227,7 +231,7 @@ public class VCommand : AsyncCommand
                 }
             }
             // turret 1, gun 1, etc.
-            else if (ctx.TryGetRange(1, out string val) && (val.StartsWith("turret", StringComparison.InvariantCultureIgnoreCase) || val.StartsWith("gun", StringComparison.InvariantCultureIgnoreCase)))
+            else if (Context.TryGetRange(1, out string? val) && (val.StartsWith("turret", StringComparison.InvariantCultureIgnoreCase) || val.StartsWith("gun", StringComparison.InvariantCultureIgnoreCase)))
             {
                 int st = -1;
                 for (int i = 3; i < val.Length; ++i)
@@ -238,7 +242,7 @@ public class VCommand : AsyncCommand
                         break;
                     }
                 }
-                if (st >= 0 && int.TryParse(val[st..], NumberStyles.Number, ctx.CultureInfo, out int seat))
+                if (st >= 0 && int.TryParse(val[st..], NumberStyles.Number, Context.Culture, out int seat))
                 {
                     if (seat > 0)
                         --seat;
@@ -247,26 +251,26 @@ public class VCommand : AsyncCommand
                         seatIndex = vehicleTarget.turrets[seat].turret.seatIndex;
                 }
             }
-            else if (ctx.TryGet(1, out _, out UCPlayer? onlinePlayer, TeamManager.EnumerateTeam(team), true, UCPlayer.NameSearch.NickName) && onlinePlayer != null)
+            else if (Context.TryGet(1, out _, out UCPlayer? onlinePlayer, TeamManager.EnumerateTeam(team), true, UCPlayer.NameSearch.NickName) && onlinePlayer != null)
             {
                 if (onlinePlayer.CurrentVehicle == vehicleTarget)
                     seatIndex = onlinePlayer.Player.movement.getSeat();
                 else
-                    throw ctx.Reply(T.VehicleTargetNotInVehicle, onlinePlayer);
+                    throw Context.Reply(T.VehicleTargetNotInVehicle, onlinePlayer);
             }
-            else if (ctx.TryGet(1, out int seat))
+            else if (Context.TryGet(1, out int seat))
             {
                 if (seat > 0)
                     --seat;
                 if (seat is >= 0 and <= byte.MaxValue)
                     seatIndex = (byte)seat;
             }
-            else throw ctx.SendCorrectUsage($"/vehicle {(kick ? "kick" : (owned ? "enter" : "swap"))} <player or seat>");
+            else throw Context.SendCorrectUsage($"/vehicle {(kick ? "kick" : (owned ? "enter" : "swap"))} <player or seat>");
 
             if (vehicleTarget.passengers.Length <= seatIndex)
-                throw ctx.Reply(T.VehicleSeatNotValidOutOfRange, seatIndex + 1);
+                throw Context.Reply(T.VehicleSeatNotValidOutOfRange, seatIndex + 1);
             if (seatIndex == -1)
-                throw ctx.Reply(T.VehicleSeatNotValidText, ctx.Get(1)!);
+                throw Context.Reply(T.VehicleSeatNotValidText, Context.Get(1)!);
 
             Passenger targetSeat = vehicleTarget.passengers[seatIndex];
             UCPlayer? target = targetSeat.player == null ? null : UCPlayer.FromSteamPlayer(targetSeat.player);
@@ -276,9 +280,9 @@ public class VCommand : AsyncCommand
             if (kick)
             {
                 if (target is not { IsOnline: true })
-                    throw ctx.Reply(T.VehicleSeatNotOccupied, seatIndex + 1);
+                    throw Context.Reply(T.VehicleSeatNotOccupied, seatIndex + 1);
                 
-                bool wantsFullKick = ctx.MatchFlag("r", "k") && (vehicleTarget.asset.engine is not EEngine.PLANE and not EEngine.HELICOPTER ||
+                bool wantsFullKick = Context.MatchFlag("r", "k") && (vehicleTarget.asset.engine is not EEngine.PLANE and not EEngine.HELICOPTER ||
                                                             Mathf.Abs(vehicleTarget.speed) <= 0.15f || TeamManager.IsInMain(team, vehicleTarget.transform.position));
                 if (wantsFullKick || !UCVehicleManager.TryMovePlayerToEmptySeat(target.Player))
                 {
@@ -288,31 +292,32 @@ public class VCommand : AsyncCommand
                 vehicleTarget.lastSeat = time;
                 if (CooldownManager.IsLoaded)
                     CooldownManager.StartCooldown(target, CooldownType.InteractVehicleSeats, 5f, vehicleTarget);
-                target.SendChat(T.VehicleOwnerKickedDM, vehicleTarget.asset, ctx.Caller, seatIndex + 1);
-                throw ctx.Reply(T.VehicleKickedPlayer, vehicleTarget.asset, target, seatIndex + 1);
+                target.SendChat(T.VehicleOwnerKickedDM, vehicleTarget.asset, Context.Player, seatIndex + 1);
+                throw Context.Reply(T.VehicleKickedPlayer, vehicleTarget.asset, target, seatIndex + 1);
             }
 
-            throw ctx.SendNotImplemented();
+            throw Context.SendNotImplemented();
         }
 
-        bool deny = ctx.MatchParameter(0, "deny", "no", "n");
-        if (deny || ctx.MatchParameter(0, "accept", "yes", "y"))
+        bool deny = Context.MatchParameter(0, "deny", "no", "n");
+        if (deny || Context.MatchParameter(0, "accept", "yes", "y"))
         {
-            throw ctx.SendNotImplemented();
+            throw Context.SendNotImplemented();
         }
 
-        ctx.AssertPermissions(EAdminType.ADMIN_ON_DUTY);
-        enter = ctx.MatchFlag("e", "enter");
+        await Context.AssertPermissions(PermissionSpawn, token);
 
-        ctx.AssertArgs(1, AdminSyntax);
+        enter = Context.MatchFlag("e", "enter");
 
-        ctx.AssertOnDuty();
+        Context.AssertArgs(1, AdminSyntax);
 
-        if (!ctx.TryGet(0, out VehicleAsset asset, out _, true, allowMultipleResults: true))
-            throw ctx.ReplyString("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + ctx.GetRange(0) + "</color>.</color>");
+        Context.AssertOnDuty();
 
-        Vector3 ppos = ctx.Caller.Position;
-        Vector3 v = ctx.Caller.Player.look.aim.forward.normalized with { y = 0 };
+        if (!Context.TryGet(0, out VehicleAsset? asset, out _, true, allowMultipleResults: true))
+            throw Context.ReplyString("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + Context.GetRange(0) + "</color>.</color>");
+
+        Vector3 ppos = Context.Player.Position;
+        Vector3 v = Context.Player.Player.look.aim.forward.normalized with { y = 0 };
         Vector3 targetPos = ppos + v * 6.5f;
         RaycastHit hit;
         targetPos.y += 500f;
@@ -347,7 +352,7 @@ public class VCommand : AsyncCommand
             0,
             0f,
             targetPos,
-            Quaternion.Euler(ctx.Caller.Player.look.aim.rotation.eulerAngles with { x = 0, z = 0 }),
+            Quaternion.Euler(Context.Player.Player.look.aim.rotation.eulerAngles with { x = 0, z = 0 }),
             false,
             false,
             false,
@@ -355,14 +360,16 @@ public class VCommand : AsyncCommand
             asset.fuel,
             asset.health,
             10000,
-            ctx.CallerCSteamID,
-            ctx.Caller.Player.quests.groupID,
+            Context.CallerId,
+            Context.Player.Player.quests.groupID,
             true,
             turrets,
             255);
+        
         if (enter)
-            VehicleManager.ServerForcePassengerIntoVehicle(ctx.Caller.Player, vehicle);
-        ctx.ReplyString($"Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).", "bfb9ac");
+            VehicleManager.ServerForcePassengerIntoVehicle(Context.Player.Player, vehicle);
+
+        Context.ReplyString($"Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).", "bfb9ac");
     }
 }
 

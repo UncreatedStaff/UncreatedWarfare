@@ -438,7 +438,7 @@ public static class DailyQuests
     }
     public static void SaveQuests()
     {
-        using FileStream stream = new FileStream(Path.Combine(QuestManager.QUEST_FOLDER, "daily_quests.json"), FileMode.Create, FileAccess.Write, FileShare.Read);
+        using FileStream stream = new FileStream(Path.Combine(QuestManager.QuestFolder, "daily_quests.json"), FileMode.Create, FileAccess.Write, FileShare.Read);
         Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
         writer.WriteStartObject();
         writer.WritePropertyName("index");
@@ -494,7 +494,7 @@ public static class DailyQuests
     private static bool _needsCreate;
     public static void ReadQuests()
     {
-        string p = Path.Combine(QuestManager.QUEST_FOLDER, "daily_quests.json");
+        string p = Path.Combine(QuestManager.QuestFolder, "daily_quests.json");
         if (!File.Exists(p))
         {
             _needsCreate = true;
@@ -753,7 +753,7 @@ public static class DailyQuests
     }
     public static void LoadAssets()
     {
-        string p = Path.Combine(QuestManager.QUEST_FOLDER, "DailyQuests", DailyQuest.WORKSHOP_FILE_NAME) + Path.DirectorySeparatorChar;
+        string p = Path.Combine(QuestManager.QuestFolder, "DailyQuests", DailyQuest.WORKSHOP_FILE_NAME) + Path.DirectorySeparatorChar;
         L.Log("Loading assets from \"" + p + "\"...", ConsoleColor.Magenta);
         if (!Directory.Exists(p))
         {
@@ -785,7 +785,7 @@ public static class DailyQuests
         {
             try
             {
-                string p = Path.Combine(QuestManager.QUEST_FOLDER, "DailyQuests") + Path.DirectorySeparatorChar;
+                string p = Path.Combine(QuestManager.QuestFolder, "DailyQuests") + Path.DirectorySeparatorChar;
                 L.Log("Received mod folder: " + folder.name, ConsoleColor.Magenta);
                 if (Directory.Exists(p))
                     Directory.Delete(p, true);

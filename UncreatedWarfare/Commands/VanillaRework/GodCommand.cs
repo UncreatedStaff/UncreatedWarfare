@@ -1,43 +1,51 @@
-﻿using Uncreated.Framework;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class GodCommand : Command
-{
-    private const string SYNTAX = "/god";
-    private const string HELP = "Toggles your ability to take damage.";
 
-    public GodCommand() : base("god", EAdminType.TRIAL_ADMIN_ON_DUTY)
+[Command("god")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class GodCommand : IExecutableCommand
+{
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Toggles your ability to take damage."
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertHelpCheck(0, "/god - Toggles your ability to take damage.");
 
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
-        if (!ctx.HasPermission(EAdminType.VANILLA_ADMIN, PermissionComparison.Exact))
-            ctx.AssertOnDuty();
+        Context.AssertOnDuty();
 
-        ctx.Caller.GodMode = !ctx.Caller.GodMode;
+        Context.Player.GodMode = !Context.Player.GodMode;
 
-        if (ctx.Caller.GodMode)
+        if (Context.Player.GodMode)
         {
-            ctx.Caller.Player.life.sendRevive();
+            Context.Player.Player.life.sendRevive();
             if (Data.Is(out IRevives rev))
-                rev.ReviveManager.RevivePlayer(ctx.Caller);
-            ctx.Reply(T.GodModeEnabled);
+                rev.ReviveManager.RevivePlayer(Context.Player);
+            Context.Reply(T.GodModeEnabled);
         }
         else
         {
-            ctx.Reply(T.GodModeDisabled);
+            Context.Reply(T.GodModeDisabled);
         }
+
+        return default;
     }
 }

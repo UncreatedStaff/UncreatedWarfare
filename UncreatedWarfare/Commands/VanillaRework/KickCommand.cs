@@ -1,37 +1,50 @@
-﻿using Uncreated.Framework;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands.VanillaRework;
-public class KickCommand : Command
+namespace Uncreated.Warfare.Commands;
+
+[Command("kick"), Priority(1)]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class KickCommand : IExecutableCommand
 {
+#if false
     private const string Syntax = "/kick <player> <reason>";
     private const string Help = "Kick players who are misbehaving.";
+#endif
 
-    public KickCommand() : base("kick", EAdminType.MODERATOR, 1)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Temporarily removes a player from the server.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Player", typeof(IPlayer))
                 {
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Reason", typeof(string))
                         {
                             IsRemainder = true
                         }
-                    }
+                    ]
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        throw ctx.SendNotImplemented();
+        throw Context.SendNotImplemented();
 #if false
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 

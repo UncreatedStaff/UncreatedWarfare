@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Reflection;
 using System.Threading;
@@ -6,7 +7,7 @@ using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("help", "commands", "tutorial", "h")]
+[Command("help", "commands", "tutorial", "h"), Priority(1)]
 [HelpMetadata(nameof(GetHelpMetadata))]
 public sealed class HelpCommand : IExecutableCommand
 {

@@ -1,38 +1,48 @@
-﻿using Uncreated.Framework;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class VanishCommand : Command
-{
-    private const string SYNTAX = "/vanish";
-    private const string HELP = "Toggle your visibility to other players.";
 
-    public VanishCommand() : base("vanish", EAdminType.TRIAL_ADMIN_ON_DUTY)
+[Command("vanish")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class VanishCommand : IExecutableCommand
+{
+    private const string Syntax = "/vanish";
+    private const string Help = "Toggle your visibility to other players.";
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Toggle your visibility to other players."
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
-        if (!ctx.HasPermission(EAdminType.VANILLA_ADMIN, PermissionComparison.Exact))
-            ctx.AssertOnDuty();
-        bool isUnvanished = ctx.Player.Player.movement.canAddSimulationResultsToUpdates;
-        ctx.Player.VanishMode = isUnvanished;
+        Context.AssertOnDuty();
+
+        bool isUnvanished = Context.Player.Player.movement.canAddSimulationResultsToUpdates;
+        Context.Player.VanishMode = isUnvanished;
         if (isUnvanished)
         {
-            ctx.Reply(T.VanishModeEnabled);
+            Context.Reply(T.VanishModeEnabled);
         }
         else
         {
-            ctx.Reply(T.VanishModeDisabled);
+            Context.Reply(T.VanishModeDisabled);
         }
     }
 }

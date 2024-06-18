@@ -1,59 +1,72 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 
-namespace Uncreated.Warfare.Commands.VanillaRework;
+namespace Uncreated.Warfare.Commands;
 
-public class UnbanCommand : AsyncCommand
+[Command("unban"), Priority(1)]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class UnbanCommand : IExecutableCommand
 {
+#if false
     private const string Syntax = "/unban <player>";
     private const string Help = "Unban players who have served their time.";
+#endif
 
-    public UnbanCommand() : base("unban", Framework.EAdminType.MODERATOR, 1)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Unban players who have served their time.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Player", typeof(IPlayer))
-            }
+            ]
         };
     }
-    public override Task Execute(CommandContext ctx, CancellationToken token)
+
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        throw ctx.SendNotImplemented();
+        throw Context.SendNotImplemented();
 #if false
-        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        if (!ctx.HasArgs(1))
-            throw ctx.SendCorrectUsage(Syntax);
+        if (!Context.HasArgs(1))
+            throw Context.SendCorrectUsage(Syntax);
 
-        if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target))
-            throw ctx.Reply(T.PlayerNotFound);
+        if (!Context.TryGet(0, out ulong targetId, out UCPlayer? target))
+            throw Context.Reply(T.PlayerNotFound);
 
         PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(targetId, token);
         await UniTask.SwitchToMainThread(token);
-        if (target is not null || !Provider.requestUnbanPlayer(ctx.CallerCSteamID, new CSteamID(targetId)))
+        if (target is not null || !Provider.requestUnbanPlayer(Context.CallerCSteamID, new CSteamID(targetId)))
         {
-            ctx.Reply(T.UnbanNotBanned, targetNames);
+            Context.Reply(T.UnbanNotBanned, targetNames);
             return;
         }
 
-        OffenseManager.LogUnbanPlayer(targetId, ctx.CallerID, DateTime.Now);
+        OffenseManager.LogUnbanPlayer(targetId, Context.CallerID, DateTime.Now);
 
         string tid = targetId.ToString(Data.AdminLocale);
-        ActionLog.Add(ActionLogType.UnbanPlayer, $"UNBANNED {tid}", ctx.CallerID);
-        if (ctx.IsConsole)
+        ActionLog.Add(ActionLogType.UnbanPlayer, $"UNBANNED {tid}", Context.CallerID);
+        if (Context.IsConsole)
         {
             L.Log($"{targetNames.PlayerName} ({tid}) was successfully unbanned.", ConsoleColor.Cyan);
             Chat.Broadcast(T.UnbanSuccessBroadcastOperator, targetNames);
         }
         else
         {
-            L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {ctx.Caller.Name.PlayerName} ({ctx.CallerID.ToString(Data.AdminLocale)}).", ConsoleColor.Cyan);
-            ctx.Reply(T.UnbanSuccessFeedback, targetNames);
-            Chat.Broadcast(LanguageSet.AllBut(ctx.CallerID), T.UnbanSuccessBroadcast, targetNames, ctx.Caller);
+            L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {Context.Caller.Name.PlayerName} ({Context.CallerID.ToString(Data.AdminLocale)}).", ConsoleColor.Cyan);
+            Context.Reply(T.UnbanSuccessFeedback, targetNames);
+            Chat.Broadcast(LanguageSet.AllBut(Context.CallerID), T.UnbanSuccessBroadcast, targetNames, Context.Caller);
         }
 #endif
     }

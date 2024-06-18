@@ -306,7 +306,7 @@ public class StructureCommand : IExecutableCommand
 
             await UniTask.SwitchToMainThread(token);
             bool saved = data?.Item?.Buildable?.Drop is not null;
-            if (!Context.TryGet(2, out ulong s64) || s64 != 0 && (!grp && new CSteamID(s64).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)))
+            if (!Context.TryGet(2, out ulong s64) || s64 != 0 && (!grp && new CSteamID(s64).GetEAccountType() != EAccountType.k_EAccountTypeIndividual))
             {
                 if (Context.MatchParameter(2, "me"))
                     s64 = grp ? Context.Player.Player.quests.groupID.m_SteamID : Context.CallerId.m_SteamID;

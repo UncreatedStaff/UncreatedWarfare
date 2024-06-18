@@ -23,8 +23,6 @@ using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Commands.Permissions;
-using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;

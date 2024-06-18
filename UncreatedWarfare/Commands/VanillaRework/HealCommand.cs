@@ -1,59 +1,65 @@
-﻿using Uncreated.Framework;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class HealCommand : Command
-{
-    private const string SYNTAX = "/heal [player]";
-    private const string HELP = "Heal yourself or someone else to max health and revive them if they're injured.";
 
-    public HealCommand() : base("heal", EAdminType.ADMIN)
+[Command("heal")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class HealCommand : IExecutableCommand
+{
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
-            Description = HELP,
-            Parameters = new CommandParameter[]
-            {
+            Description = "Heal yourself or someone else to max health and revive them if they're injured.",
+            Parameters =
+            [
                 new CommandParameter("Player", typeof(IPlayer))
                 {
                     IsOptional = true,
                     IsRemainder = true
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertHelpCheck(0, "/heal [player] - Heal yourself or someone else to max health and revive them if they're injured.");
 
-        if (!ctx.HasPermission(EAdminType.VANILLA_ADMIN, PermissionComparison.Exact))
-            ctx.AssertOnDuty();
+        Context.AssertOnDuty();
 
-        if (ctx.TryGet(0, out _, out UCPlayer? onlinePlayer) && onlinePlayer is not null)
+        if (Context.TryGet(0, out _, out UCPlayer? onlinePlayer) && onlinePlayer is not null)
         {
             onlinePlayer.Player.life.sendRevive();
 
             if (Data.Is(out IRevives rev))
                 rev.ReviveManager.RevivePlayer(onlinePlayer);
 
-            ctx.Reply(T.HealPlayer, onlinePlayer);
+            Context.Reply(T.HealPlayer, onlinePlayer);
 
-            if (onlinePlayer.Steam64 != ctx.CallerID)
+            if (onlinePlayer.Steam64 != Context.CallerId.m_SteamID)
                 onlinePlayer.SendChat(T.HealSelf);
         }
         else
         {
-            ctx.AssertRanByPlayer();
+            Context.AssertRanByPlayer();
 
-            ctx.Caller.Player.life.sendRevive();
+            Context.Player.Player.life.sendRevive();
 
             if (Data.Is(out IRevives rev))
-                rev.ReviveManager.RevivePlayer(ctx.Caller);
+                rev.ReviveManager.RevivePlayer(Context.Player);
 
-            ctx.Reply(T.HealSelf);
+            Context.Reply(T.HealSelf);
         }
     }
 }
