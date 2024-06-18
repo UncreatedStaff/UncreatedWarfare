@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -307,119 +309,4 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
             L.LogError(ex);
         }
     }
-    internal ESetFieldResult SetProperty(Func<T, bool> selector, ref string property, string value)
-    {
-        return ObjectExists(selector, out T selected) ? SetProperty(selected, ref property, value) : ESetFieldResult.OBJECT_NOT_FOUND;
-    }
-    internal ESetFieldResult SetProperty<TValue>(Func<T, bool> selector, ref string property, TValue value)
-    {
-        return ObjectExists(selector, out T selected) ? SetProperty(selected, ref property, value) : ESetFieldResult.OBJECT_NOT_FOUND;
-    }
-    internal ESetFieldResult SetProperty(T obj, ref string property, string value)
-    {
-        if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
-        if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
-        FieldInfo? field = GetField(property, out ESetFieldResult reason);
-        if (field is not null)
-        {
-            property = field.Name;
-            if (reason == ESetFieldResult.SUCCESS)
-            {
-                if (Util.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsInstanceOfType(val))
-                {
-                    try
-                    {
-                        field.SetValue(obj, val);
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogError(ex);
-                        return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
-                    }
-                    return ESetFieldResult.SUCCESS;
-                }
-                return ESetFieldResult.INVALID_INPUT;
-            }
-        }
-        return reason;
-    }
-    protected ESetFieldResult SetProperty<TValue>(T obj, ref string property, TValue value)
-    {
-        if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
-        if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
-        FieldInfo? field = GetField(property, out ESetFieldResult reason);
-        if (field is not null)
-        {
-            property = field.Name;
-            if (reason == ESetFieldResult.SUCCESS)
-            {
-                if (field.FieldType.IsInstanceOfType(value))
-                {
-                    try
-                    {
-                        field.SetValue(obj, value);
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogError(ex);
-                        return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
-                    }
-                    return ESetFieldResult.SUCCESS;
-                }
-                return ESetFieldResult.INVALID_INPUT;
-            }
-        }
-        return reason;
-    }
-    private FieldInfo? GetField(string property, out ESetFieldResult reason)
-    {
-        for (int i = 0; i < fields.Length; i++)
-        {
-            FieldInfo fi = fields[i];
-            if (fi.Name.Equals(property, StringComparison.Ordinal))
-            {
-                ValidateField(fi, out reason);
-                return fi;
-            }
-        }
-        for (int i = 0; i < fields.Length; i++)
-        {
-            FieldInfo fi = fields[i];
-            if (fi.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
-            {
-                ValidateField(fi, out reason);
-                return fi;
-            }
-        }
-        reason = ESetFieldResult.FIELD_NOT_FOUND;
-        return default;
-    }
-    private static bool ValidateField(FieldInfo field, out ESetFieldResult reason)
-    {
-        if (field == null || field.IsStatic || field.IsInitOnly)
-        {
-            reason = ESetFieldResult.FIELD_NOT_FOUND;
-            return false;
-        }
-        Attribute atr = Attribute.GetCustomAttribute(field, typeof(CommandSettable));
-        if (atr is not null)
-        {
-            reason = ESetFieldResult.SUCCESS;
-            return true;
-        }
-        else
-        {
-            reason = ESetFieldResult.FIELD_PROTECTED;
-            return false;
-        }
-    }
-}
-public enum ESetFieldResult : byte
-{
-    SUCCESS = 0,
-    FIELD_NOT_FOUND = 1,
-    FIELD_NOT_SERIALIZABLE = 2,
-    FIELD_PROTECTED = 3,
-    OBJECT_NOT_FOUND = 4,
-    INVALID_INPUT = 5
 }

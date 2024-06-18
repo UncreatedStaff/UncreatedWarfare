@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
@@ -16,162 +16,196 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ReloadCommand : AsyncCommand
+[Command("reload")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class ReloadCommand : IExecutableCommand
 {
-    public const string Syntax = "/reload [help|module]";
-    public const string Help = "Reload certain parts of UCWarfare.";
+    private readonly UserPermissionStore _permissions;
     public static event VoidDelegate OnTranslationsReloaded;
     public static event VoidDelegate OnFlagsReloaded;
 
-    public static Dictionary<string, IConfigurationHolder> ReloadableConfigs = new Dictionary<string, IConfigurationHolder>();
+    public static Dictionary<string, IConfigurationHolder> ReloadableConfigs = new Dictionary<string, IConfigurationHolder>(StringComparer.InvariantCultureIgnoreCase);
 
-    public ReloadCommand() : base("reload", EAdminType.ADMIN, 1)
+    private static readonly PermissionLeaf PermissionReloadTranslations = new PermissionLeaf("commands.reload.translations", unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionReloadFlags        = new PermissionLeaf("commands.reload.flags",        unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionReloadPermissions  = new PermissionLeaf("commands.reload.permissions",  unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionReloadColors       = new PermissionLeaf("commands.reload.colors",       unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionReloadHomebase     = new PermissionLeaf("commands.reload.homebase",     unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionReloadDatabase     = new PermissionLeaf("commands.reload.database",     unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionReloadTeams        = new PermissionLeaf("commands.reload.teams",        unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionReloadModules      = new PermissionLeaf("commands.reload.module",       unturned: false, warfare: true);
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    public ReloadCommand(UserPermissionStore permissions)
     {
-        Structure = new CommandStructure
+        _permissions = permissions;
+    }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
+    {
+        return new CommandStructure
         {
-            Description = Help,
-            Parameters = new CommandParameter[]
-            {
+            Description = "Reload a part of Uncreated Warfare.",
+            Parameters =
+            [
                 new CommandParameter("Translations")
                 {
-                    Aliases = new string[] { "lang" },
+                    Permission = PermissionReloadTranslations,
+                    Aliases = [ "lang" ],
                 },
-                new CommandParameter("Flags"),
-                new CommandParameter("Permissions"),
-                new CommandParameter("Colors"),
-                new CommandParameter("TCP"),
-                new CommandParameter("SQL"),
+                new CommandParameter("Flags")
+                {
+                    Permission = PermissionReloadFlags
+                },
+                new CommandParameter("Permissions")
+                {
+                    Permission = PermissionReloadPermissions,
+                },
+                new CommandParameter("Colors")
+                {
+                    Permission = PermissionReloadColors,
+                },
+                new CommandParameter("Homebase")
+                {
+                    Permission = PermissionReloadHomebase,
+                    Aliases = [ "tcp" ]
+                },
+                new CommandParameter("SQL")
+                {
+                    Permission = PermissionReloadDatabase
+                },
                 new CommandParameter("Teams")
                 {
-                    Aliases = new string[] { "factions" },
+                    Aliases = [ "factions" ],
+                    Permission = PermissionReloadTeams
                 },
                 new CommandParameter("Module", typeof(string))
                 {
-                    Description = "Reload a module with a reload key."
+                    Description = "Reload a module with a reload key.",
+                    Permission = PermissionReloadModules,
                 }
-            }
+            ]
         };
     }
-    public override async Task Execute(CommandContext ctx, CancellationToken token)
-    {
-        if (!ctx.IsConsole && !ctx.Caller.IsAdmin)
-            ctx.AssertOnDuty();
 
-        if (!ctx.TryGet(0, out string module))
-            throw ctx.SendCorrectUsage(Syntax);
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
+    {
+        if (!Context.Caller.IsSuperUser)
+            Context.AssertOnDuty();
+
+        if (!Context.TryGet(0, out string module))
+            throw Context.SendCorrectUsage("/reload <module>");
 
         if (module.Equals("help", StringComparison.InvariantCultureIgnoreCase))
-            throw ctx.SendNotImplemented();
+            throw Context.SendCorrectUsage("/reload <module> - Reload a part of Uncreated Warfare.");
 
         if (module.Equals("translations", StringComparison.InvariantCultureIgnoreCase) || module.Equals("lang", StringComparison.InvariantCultureIgnoreCase))
         {
+            await Context.AssertPermissions(PermissionReloadTranslations, token);
+
             await ReloadTranslations(token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
-            ctx.Reply(T.ReloadedTranslations, Localization.TotalDefaultTranslations);
-            ctx.LogAction(ActionLogType.ReloadComponent, "TRANSLATIONS");
+            await UniTask.SwitchToMainThread(token);
+            Context.Reply(T.ReloadedTranslations, Localization.TotalDefaultTranslations);
+            Context.LogAction(ActionLogType.ReloadComponent, "TRANSLATIONS");
         }
         else if (module.Equals("flags", StringComparison.InvariantCultureIgnoreCase))
         {
+            await Context.AssertPermissions(PermissionReloadFlags, token);
+            await UniTask.SwitchToMainThread(token);
+
             ReloadFlags();
-            ctx.Reply(T.ReloadedFlags);
-            ctx.LogAction(ActionLogType.ReloadComponent, "FLAGS");
+            Context.Reply(T.ReloadedFlags);
+            Context.LogAction(ActionLogType.ReloadComponent, "FLAGS");
         }
         else if (module.Equals("permissions", StringComparison.InvariantCultureIgnoreCase))
         {
-            ReloadPermissions();
-            ctx.Reply(T.ReloadedPermissions);
-            ctx.LogAction(ActionLogType.ReloadComponent, "PERMISSIONS");
+            await Context.AssertPermissions(PermissionReloadPermissions, token);
+            await UniTask.SwitchToMainThread(token);
+
+            _permissions.ClearCachedPermissions(0ul);
+            Context.Reply(T.ReloadedPermissions);
+            Context.LogAction(ActionLogType.ReloadComponent, "PERMISSIONS");
         }
         else if (module.Equals("colors", StringComparison.InvariantCultureIgnoreCase))
         {
+            await Context.AssertPermissions(PermissionReloadColors, token);
+            await UniTask.SwitchToMainThread(token);
+
             ReloadColors();
-            ctx.Reply(T.ReloadedGeneric, "colors");
-            ctx.LogAction(ActionLogType.ReloadComponent, "COLORS");
+            Context.Reply(T.ReloadedGeneric, "colors");
+            Context.LogAction(ActionLogType.ReloadComponent, "COLORS");
         }
         else if (module.Equals("homebase", StringComparison.InvariantCultureIgnoreCase)
                  || module.Equals("tcp", StringComparison.InvariantCultureIgnoreCase))
         {
-            await ReloadHomebase(ctx).ConfigureAwait(false);
-            ctx.LogAction(ActionLogType.ReloadComponent, "TCP SERVER");
+            await Context.AssertPermissions(PermissionReloadHomebase, token);
+            await UniTask.SwitchToMainThread(token);
+
+            await ReloadHomebase(token);
+            Context.LogAction(ActionLogType.ReloadComponent, "TCP SERVER");
         }
         else if (module.Equals("sql", StringComparison.InvariantCultureIgnoreCase))
         {
-            await ReloadSQLServer(ctx, token).ConfigureAwait(false);
-            ctx.LogAction(ActionLogType.ReloadComponent, "MYSQL CONNECTION");
+            await Context.AssertPermissions(PermissionReloadDatabase, token);
+            await UniTask.SwitchToMainThread(token);
+
+            await ReloadSQLServer(token);
+            Context.LogAction(ActionLogType.ReloadComponent, "MYSQL CONNECTION");
         }
         else if (module.Equals("teams", StringComparison.InvariantCultureIgnoreCase) || module.Equals("factions", StringComparison.InvariantCultureIgnoreCase))
         {
+            await Context.AssertPermissions(PermissionReloadTeams, token);
+            await UniTask.SwitchToMainThread(token);
+
             await TeamManager.ReloadFactions(token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             TeamManager.SetupConfig();
-            ctx.Reply(T.ReloadedGeneric, "teams and factions");
-            ctx.LogAction(ActionLogType.ReloadComponent, "TEAMS & FACTIONS");
+            Context.Reply(T.ReloadedGeneric, "teams and factions");
+            Context.LogAction(ActionLogType.ReloadComponent, "TEAMS & FACTIONS");
         }
         else
         {
             module = module.ToLowerInvariant();
+
+            await Context.AssertPermissions(new PermissionLeaf("commands.reload.module." + module), token);
+            await UniTask.SwitchToMainThread(token);
+
             if (ReloadableConfigs.TryGetValue(module, out IConfigurationHolder config))
             {
                 config.Reload();
-                ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
-                ctx.LogAction(ActionLogType.ReloadComponent, module.ToUpperInvariant());
+                Context.Reply(T.ReloadedGeneric, module);
+                Context.LogAction(ActionLogType.ReloadComponent, module.ToUpperInvariant());
             }
             else
             {
                 IReloadableSingleton? reloadable = await Data.Singletons.ReloadSingletonAsync(module, token).ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
 
                 if (reloadable is null)
-                    throw ctx.SendCorrectUsage(Syntax);
+                    throw Context.SendCorrectUsage("/reload <module>");
 
-                ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
-                ctx.LogAction(ActionLogType.ReloadComponent, module.ToUpperInvariant());
+                Context.Reply(T.ReloadedGeneric, module);
+                Context.LogAction(ActionLogType.ReloadComponent, module.ToUpperInvariant());
             }
         }
     }
 
-    private void ReloadColors()
+    private static void ReloadColors()
     {
         Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
         Translation.OnColorsReloaded();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             UCWarfare.I.UpdateLangs(PlayerManager.OnlinePlayers[i], false);
     }
-    public static void ReloadPermissions()
-    {
-        PermissionSaver.Instance.Read();
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-        {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            EAdminType old = pl.PermissionLevel;
-            pl.ResetPermissionLevel();
-            EAdminType @new = pl.PermissionLevel;
-            if (old == @new) continue;
-            if (@new is EAdminType.MEMBER or EAdminType.ADMIN_OFF_DUTY or EAdminType.TRIAL_ADMIN_OFF_DUTY)
-            {
-                switch (old)
-                {
-                    case EAdminType.ADMIN_ON_DUTY:
-                        DutyCommand.AdminOnToOff(pl);
-                        break;
-                    case EAdminType.TRIAL_ADMIN_ON_DUTY:
-                        DutyCommand.InternOnToOff(pl);
-                        break;
-                }
-            }
-            else if (@new is EAdminType.TRIAL_ADMIN_ON_DUTY)
-            {
-                DutyCommand.InternOffToOn(pl);
-            }
-            else if (@new is EAdminType.ADMIN_ON_DUTY)
-            {
-                DutyCommand.AdminOffToOn(pl);
-            }
-        }
-    }
     internal static async Task ReloadTranslations(CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         try
         {
             await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);
@@ -182,7 +216,7 @@ public class ReloadCommand : AsyncCommand
             await Translation.ReadTranslations(token);
             foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToArray())
                 player.Locale.Preferences = await Data.LanguageDataStore.GetLanguagePreferences(player.Steam64, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             OnTranslationsReloaded?.Invoke();
         }
         catch (Exception ex)
@@ -267,26 +301,26 @@ public class ReloadCommand : AsyncCommand
             L.LogError(ex);
         }
     }
-    internal static async Task ReloadHomebase(CommandContext? ctx)
+    internal async UniTask ReloadHomebase(CancellationToken token)
     {
         if (Data.RpcConnection is { IsClosed: false })
         {
-            await Data.RpcConnection.CloseAsync();
+            await Data.RpcConnection.CloseAsync(token);
         }
 
-        if (await HomebaseConnector.ConnectAsync())
+        if (await HomebaseConnector.ConnectAsync(CancellationToken.None))
         {
-            ctx?.Reply(T.ReloadedTCP);
+            Context.Reply(T.ReloadedTCP);
         }
         else
         {
-            ctx?.SendUnknownError();
+            Context.SendUnknownError();
         }
     }
-    internal static async Task ReloadSQLServer(CommandContext? ctx, CancellationToken token = default)
+    internal async UniTask ReloadSQLServer(CancellationToken token = default)
     {
         L.Log("Reloading SQL...");
-        List<UCSemaphore> players = PlayerManager.GetAllSemaphores();
+        List<SemaphoreSlim> players = PlayerManager.GetAllSemaphores();
         try
         {
             List<Task> tasks = new List<Task>(players.Count);
@@ -304,7 +338,7 @@ public class ReloadCommand : AsyncCommand
                 L.LogError("Local database failed to reopen.");
             if (Data.RemoteSQL != null)
             {
-                await UCWarfare.SkipFrame();
+                await UniTask.SwitchToMainThread();
                 Data.RemoteSQL.CloseAsync(token).Wait(token);
                 Data.RemoteSQL.Dispose();
                 if (UCWarfare.Config.RemoteSQL != null)
@@ -316,13 +350,13 @@ public class ReloadCommand : AsyncCommand
                         L.LogError("Remote database failed to reopen.");
                 }
             }
-            ctx?.Reply(T.ReloadedSQL);
+            Context?.Reply(T.ReloadedSQL);
         }
         catch (Exception ex)
         {
             L.LogError("Failed to reload SQL.");
             L.LogError(ex);
-            ctx?.Reply(T.UnknownError);
+            Context?.Reply(T.UnknownError);
         }
         finally
         {

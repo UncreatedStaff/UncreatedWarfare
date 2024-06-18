@@ -1,7 +1,10 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SDG.Unturned;
+using Uncreated.Warfare.Models.Localization;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -13,7 +16,7 @@ namespace Uncreated.Warfare.Commands.Permissions;
 /// </summary>
 /// <remarks>Stolen from DevkitServer.</remarks>
 [JsonConverter(typeof(PermissionBranchJsonConverter))]
-public readonly struct PermissionBranch : IEquatable<PermissionBranch>, IEquatable<PermissionLeaf>
+public readonly struct PermissionBranch : IEquatable<PermissionBranch>, IEquatable<PermissionLeaf>, ITranslationArgument
 {
     /// <summary>
     /// Additive superuser branch. Unlocks all permissions.
@@ -140,6 +143,24 @@ public readonly struct PermissionBranch : IEquatable<PermissionBranch>, IEquatab
             str = "-" + str;
         
         return str;
+    }
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    {
+        if ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
+            return ToString();
+
+        if (IsSuperuser)
+            return "<color=#fa3219>*</color>";
+
+        string prefix = GetPrefix();
+        string prefixColor = Unturned ? "637b63" : Warfare ? "9cb6a4" : "dddddd";
+
+        bool hasStar = Path.EndsWith('*');
+        string pathEnd = hasStar ? Path[..^1] : Path;
+        string pathStar = hasStar ? "<color=#737373>*</color>" : string.Empty;
+        string subPrefix = Mode == PermissionMode.Subtractive ? "<color=#ff704d>-</color>" : string.Empty;
+
+        return subPrefix + prefix.Colorize(prefixColor) + "<color=#737373>::</color>" + pathEnd.Colorize("d3ded6") + pathStar;
     }
     public bool Equals(PermissionLeaf leaf)
     {

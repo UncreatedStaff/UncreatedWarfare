@@ -56,13 +56,15 @@
     <DebugType>portable</DebugType>
     <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <Compile Remove="Commands\_BlankCommand.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
     <None Include="..\README.md" Pack="true" PackagePath="\" />
     <None Include="..\LICENSE.txt" Pack="true" PackagePath="\" />
-    <None Remove="Command_blank.txt" />
-    <Compile Remove="Commands\Command_blank.txt" />
   </ItemGroup>
 
   <!-- Base U3DS installation -->
@@ -86,6 +88,10 @@
   <ItemDefinitionGroup Condition="'$(CopyToModule)' != 'False'">
     <Reference Private="false" />
   </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <None Include="Commands\_BlankCommand.cs" />
+  </ItemGroup>
 
 
   <ItemGroup>

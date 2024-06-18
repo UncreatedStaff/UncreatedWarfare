@@ -1,36 +1,45 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class SpeedCommand : Command
+
+[Command("speed")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class SpeedCommand : IExecutableCommand
 {
     private const string Syntax = "/speed [player] <multiplier>";
     private const string Help = "Sets a player's speed modifier.";
 
-    public SpeedCommand() : base("speed", EAdminType.MODERATOR)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Set admin movement speed.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("player", typeof(IPlayer))
                 {
                     Description = "The player whose speed multiplier changes. Omit to target yourself.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("mulitplier", typeof(float))
                         {
                             Description = "Change the speed multiplier of the target player."
                         },
                         new CommandParameter("default")
                         {
-                            Aliases = new string[] { "reset" },
+                            Aliases = [ "reset" ],
                             Description = "Set the speed multiplier to 1x."
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("mulitplier", typeof(float))
                 {
@@ -38,33 +47,38 @@ public class SpeedCommand : Command
                 },
                 new CommandParameter("default")
                 {
-                    Aliases = new string[] { "reset" },
+                    Aliases = [ "reset" ],
                     Description = "Set the speed multiplier to 1x."
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertArgs(1, Syntax);
-        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
+        Context.AssertArgs(1, Syntax);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        ctx.AssertOnDuty();
+        Context.AssertOnDuty();
 
-        UCPlayer? target = ctx.Caller;
+        UCPlayer? target = Context.Player;
 
-        if (ctx.HasArgs(2) && (!ctx.TryGet(0, out _, out target) || target == null))
-            throw ctx.Reply(T.PlayerNotFound);
+        if (Context.HasArgs(2) && (!Context.TryGet(0, out _, out target) || target == null))
+        {
+            throw Context.Reply(T.PlayerNotFound);
+        }
 
         if (target == null) // ran by console
-            throw ctx.SendPlayerOnlyError();
-
-        int multParamIndex = ctx.HasArgs(2) ? 1 : 0;
-        if (!ctx.TryGet(multParamIndex, out float multiplier))
         {
-            if (!ctx.MatchParameter(multParamIndex, "reset", "default"))
-                throw ctx.Reply(T.SpeedMultiplierInvalidValue, ctx.Get(multParamIndex)!);
+            throw Context.SendPlayerOnlyError();
+        }
+
+        int multParamIndex = Context.HasArgs(2) ? 1 : 0;
+        if (!Context.TryGet(multParamIndex, out float multiplier))
+        {
+            if (!Context.MatchParameter(multParamIndex, "reset", "default"))
+                throw Context.Reply(T.SpeedMultiplierInvalidValue, Context.Get(multParamIndex)!);
 
             multiplier = 1f;
         }
@@ -72,9 +86,12 @@ public class SpeedCommand : Command
         multiplier = Mathf.Clamp(multiplier, 0f, 10f);
 
         if (target.Player.movement.pluginSpeedMultiplier == multiplier)
-            throw ctx.Reply(T.SpeedMultiplierAlreadySet, multiplier);
+        {
+            throw Context.Reply(T.SpeedMultiplierAlreadySet, multiplier);
+        }
 
         target.Player.movement.sendPluginSpeedMultiplier(multiplier);
-        ctx.Reply(T.SetSpeedMultiplier, multiplier, target);
+        Context.Reply(T.SetSpeedMultiplier, multiplier, target);
+        return default;
     }
 }

@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
@@ -164,7 +164,7 @@ public class VCommand : AsyncCommand
                     spawner.Release();
                 }
 
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
             }
 
             if (vehicleTarget == null)

@@ -30,9 +30,6 @@ public class WarfareUserData
 
     [MaxLength(30)]
     public string? DisplayName { get; set; }
-    
-    [Required]
-    public PermissionLevel PermissionLevel { get; set; } = PermissionLevel.Member;
 
     /// <remarks>UTC</remarks>
     public DateTimeOffset? FirstJoined { get; set; }

@@ -1,39 +1,60 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ConfirmCommand : Command
+[Command("confirm", "c")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+[Priority(-1)]
+public class ConfirmCommand : IExecutableCommand
 {
-    public ConfirmCommand() : base("confirm", EAdminType.MEMBER, priority: -1)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        AddAlias("c");
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Confirm a pending action."
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.Defer();
+        Context.Defer();
+        return default;
     }
 }
 
-public class DenyCommand : Command
+[Command("deny")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+[Priority(-1)]
+public class DenyCommand : IExecutableCommand
 {
-    public DenyCommand() : base("deny", EAdminType.MEMBER, priority: -1)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        AddAlias("cancel");
-        AddAlias("d");
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Cancel a pending action."
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.Defer();
+        Context.Defer();
+        return default;
     }
 }

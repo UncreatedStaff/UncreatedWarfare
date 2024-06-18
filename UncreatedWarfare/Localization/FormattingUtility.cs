@@ -1,19 +1,424 @@
-﻿using Steamworks;
+﻿using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
-public static class ParserTool
+public static class FormattingUtility
 {
     private static char[][]? _tags;
     private static RemoveRichTextOptions[]? _tagFlags;
     private static readonly char[] SplitChars = [ ',' ];
     private static KeyValuePair<string, Color>[]? _presets;
+    public static Regex TimeRegex { get; } = new Regex(@"([\d\.]+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Parses a timespan string in the form '3d 4hr 21min etc'. Can also be 'perm[anent]'.
+    /// </summary>
+    /// <returns>Total amount of time. <see cref="Timeout.InfiniteTimeSpan"/> is returned if <paramref name="input"/> is permanent.</returns>
+    public static TimeSpan ParseTimespan(string input)
+    {
+        if (input.StartsWith("perm", StringComparison.OrdinalIgnoreCase))
+            return Timeout.InfiniteTimeSpan;
+
+        if (int.TryParse(input, NumberStyles.Number, CultureInfo.InvariantCulture, out int mins) && mins > -1)
+            return TimeSpan.FromMinutes(mins);
+
+        TimeSpan time = TimeSpan.Zero;
+        foreach (Match match in TimeRegex.Matches(input))
+        {
+            if (match.Groups.Count != 3) continue;
+
+            if (!double.TryParse(match.Groups[1].Value, NumberStyles.Number, CultureInfo.InvariantCulture, out double t))
+                continue;
+
+            string key = match.Groups[2].Value;
+
+            if (key.StartsWith("ms", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromMilliseconds(t);
+            else if (key.StartsWith("s", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromSeconds(t);
+            else if (key.StartsWith("mo", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromSeconds(t * 2565000); // 29.6875 days (356.25 / 12)
+            else if (key.StartsWith("m", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromMinutes(t);
+            else if (key.StartsWith("h", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromHours(t);
+            else if (key.StartsWith("d", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromDays(t);
+            else if (key.StartsWith("w", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromDays(t * 7);
+            else if (key.StartsWith("y", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromDays(t * 365.25);
+        }
+        return time;
+    }
+
+    /// <summary>
+    /// Converts a timespan to a string in the form '3d 4hr 21min etc'. Will be 'perm[anent]' if <paramref name="timeSpan"/> is <see cref="Timeout.InfiniteTimeSpan"/> (or any negative <see cref="TimeSpan"/>).
+    /// </summary>
+    public static string ToTimeString(TimeSpan timeSpan, int figures = -1)
+    {
+        if (timeSpan.Ticks < 0L)
+            return "permanent";
+        
+        if (timeSpan.Ticks == 0)
+            return "0s";
+
+        StringBuilder sb = new StringBuilder(12);
+        sb.Clear();
+        int seconds = (int)Math.Round(timeSpan.TotalSeconds);
+        int m = seconds / 60;
+        int h = m / 60;
+        int d = h / 24;
+        int mo = (int)Math.Floor(d / 29.6875);
+        int y = (int)Math.Floor(d / 356.25);
+        seconds %= 60;
+        m %= 60;
+        h %= 24;
+        mo %= 12;
+        if (y != 0)
+        {
+            sb.Append(y).Append('y');
+            if (figures != -1 && --figures <= 0)
+                return sb.ToString();
+        }
+        if (mo > 0)
+        {
+            sb.Append(mo).Append("mo");
+            if (figures != -1 && --figures <= 0)
+                return sb.ToString();
+            d %= 30;
+            if (d != 0)
+            {
+                sb.Append(d).Append('d');
+                if (figures != -1 && --figures <= 0)
+                    return sb.ToString();
+            }
+        }
+        else
+        {
+            int w = (d / 7) % 52;
+            d %= 7;
+            if (w != 0)
+            {
+                sb.Append(w).Append('w');
+                if (figures != -1 && --figures <= 0)
+                    return sb.ToString();
+            }
+            if (d != 0)
+            {
+                sb.Append(d).Append('d');
+                if (figures != -1 && --figures <= 0)
+                    return sb.ToString();
+            }
+        }
+        if (h != 0)
+        {
+            sb.Append(h).Append('h');
+            if (figures != -1 && --figures <= 0)
+                return sb.ToString();
+        }
+        if (m != 0)
+        {
+            sb.Append(m).Append('m');
+            if (figures != -1 && --figures <= 0)
+                return sb.ToString();
+        }
+        if (seconds != 0)
+        {
+            sb.Append(seconds).Append('s');
+            if (figures != -1 && --figures <= 0)
+                return sb.ToString();
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Parse any common type.
+    /// </summary>
+    public static bool TryParseAny(string input, CultureInfo culture, Type type, out object? value)
+    {
+        value = null!;
+        if (input is null || type is null || string.IsNullOrEmpty(input)) return false;
+        if (type.IsClass)
+        {
+            if (type == typeof(string))
+            {
+                value = input;
+                return true;
+            }
+            
+            if (typeof(Asset).IsAssignableFrom(type))
+            {
+                if (Guid.TryParse(input, out Guid guid))
+                {
+                    value = Assets.find(guid);
+                    if (!type.IsInstanceOfType(value))
+                        value = null!;
+                    return value is not null;
+                }
+
+                if (ushort.TryParse(input, NumberStyles.Any, culture, out ushort id))
+                {
+                    value = Assets.find(UCAssetManager.GetAssetCategory(type), id);
+                    if (!type.IsInstanceOfType(value))
+                        value = null!;
+                    return value is not null;
+                }
+
+                if (!input.Equals("null", StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                value = Activator.CreateInstance(type);
+                return true;
+            }
+            return false;
+        }
+
+        if (type.IsEnum)
+        {
+            try
+            {
+                value = Enum.Parse(type, input, true);
+                return value is not null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        if (type.IsPrimitive)
+        {
+            if (type == typeof(ulong))
+            {
+                bool res = ulong.TryParse(input, NumberStyles.Any, culture, out ulong v2);
+                value = v2;
+                return res;
+            }
+
+            if (type == typeof(float))
+            {
+                bool res = float.TryParse(input, NumberStyles.Any, culture, out float v2);
+                value = v2;
+                return res;
+            }
+
+            if (type == typeof(long))
+            {
+                bool res = long.TryParse(input, NumberStyles.Any, culture, out long v2);
+                value = v2;
+                return res;
+            }
+
+            if (type == typeof(ushort))
+            {
+                bool res = ushort.TryParse(input, NumberStyles.Any, culture, out ushort v2);
+                value = v2;
+                return res;
+            }
+
+            if (type == typeof(short))
+            {
+                bool res = short.TryParse(input, NumberStyles.Any, culture, out short v2);
+                value = v2;
+                return res;
+            }
+
+            if (type == typeof(byte))
+            {
+                bool res = byte.TryParse(input, NumberStyles.Any, culture, out byte v2);
+                value = v2;
+                return res;
+            }
+
+            if (type == typeof(int))
+            {
+                bool res = int.TryParse(input, NumberStyles.Any, culture, out int v2);
+                value = v2;
+                return res;
+            }
+
+            if (type == typeof(uint))
+            {
+                bool res = uint.TryParse(input, NumberStyles.Any, culture, out uint v2);
+                value = v2;
+                return res;
+            }
+
+            if (type == typeof(bool))
+            {
+                if (
+                    input.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("y", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("t", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("yes", StringComparison.OrdinalIgnoreCase))
+                {
+                    value = true;
+                    return true;
+                }
+                if (
+                    input.Equals("false", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("0", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("n", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("f", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("no", StringComparison.OrdinalIgnoreCase))
+                {
+                    value = false;
+                    return true;
+                }
+                return false;
+            }
+
+            if (type == typeof(char))
+            {
+                if (input.Length == 1)
+                {
+                    value = input[0];
+                    return true;
+                }
+                return false;
+            }
+
+            if (type == typeof(sbyte))
+            {
+                bool res = sbyte.TryParse(input, NumberStyles.Any, culture, out sbyte v2);
+                value = v2;
+                return res;
+            }
+
+            if (type == typeof(double))
+            {
+                bool res = double.TryParse(input, NumberStyles.Any, culture, out double v2);
+                value = v2;
+                return res;
+            }
+            return false;
+        }
+
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+        {
+            if (input.Equals("null", StringComparison.OrdinalIgnoreCase))
+            {
+                value = Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(type));
+                return value is not null;
+            }
+            
+            Type @internal = type.GenericTypeArguments[0];
+            if (!@internal.IsGenericType && TryParseAny(input, culture, @internal, out object? val) && val is not null)
+            {
+                value = Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(type), val);
+                return value is not null;
+            }
+
+            return false;
+        }
+        if (type == typeof(decimal))
+        {
+            bool res = decimal.TryParse(input, NumberStyles.Any, culture, out decimal v2);
+            value = v2;
+            return res;
+        }
+        
+        if (type == typeof(DateTime))
+        {
+            bool res = DateTime.TryParse(input, culture, DateTimeStyles.AssumeLocal, out DateTime v2);
+            value = v2;
+            return res;
+        }
+        
+        if (type == typeof(TimeSpan))
+        {
+            bool res = TimeSpan.TryParse(input, culture, out TimeSpan v2);
+            value = v2;
+            return res;
+        }
+        
+        if (type == typeof(Guid))
+        {
+            bool res = Guid.TryParse(input, out Guid v2);
+            value = v2;
+            return res;
+        }
+        
+        if (type == typeof(Vector2))
+        {
+            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, culture, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            if (vals.Length == 2)
+            {
+                value = new Vector2(vals[0], vals[1]);
+                return true;
+            }
+            return false;
+        }
+        
+        if (type == typeof(Vector3))
+        {
+            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, culture, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            if (vals.Length == 3)
+            {
+                value = new Vector3(vals[0], vals[1], vals[2]);
+                return true;
+            }
+            return false;
+        }
+        
+        if (type == typeof(Vector4))
+        {
+            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, culture, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            if (vals.Length == 4)
+            {
+                value = new Vector4(vals[0], vals[1], vals[2], vals[3]);
+                return true;
+            }
+            return false;
+        }
+        
+        if (type == typeof(Quaternion))
+        {
+            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, culture, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            if (vals.Length == 4)
+            {
+                value = new Quaternion(vals[0], vals[1], vals[2], vals[3]);
+                return true;
+            }
+            return false;
+        }
+        
+        if (type == typeof(Color))
+        {
+            if (!TryParseColor(input, out Color color))
+                return false;
+            
+            value = color;
+            return true;
+        }
+        
+        if (type == typeof(Color32))
+        {
+            if (!TryParseColor32(input, out Color32 color))
+                return false;
+            
+            value = color;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Parse a Steam ID in any form.
+    /// </summary>
     public static bool TryParseSteamId(string str, out CSteamID steamId)
     {
         if (str.Length > 2 && str[0] is 'N' or 'n' or 'O' or 'o' or 'L' or 'l' or 'z' or 'Z')
@@ -171,6 +576,10 @@ public static class ParserTool
         steamId = CSteamID.Nil;
         return false;
     }
+
+    /// <summary>
+    /// Parse a <see cref="Color32"/> from hex with an optional '#' prefix.
+    /// </summary>
     public static unsafe bool TryParseHexColor32(string hex, out Color32 color)
     {
         if (string.IsNullOrWhiteSpace(hex))
@@ -279,6 +688,10 @@ public static class ParserTool
         for (int i = 0; i < props.Length; ++i)
             _presets[i] = new KeyValuePair<string, Color>(props[i].Name.ToLowerInvariant(), (Color)props[i].GetMethod.Invoke(null, Array.Empty<object>()));
     }
+
+    /// <summary>
+    /// Parse a <see cref="Color"/> from hex with an optional '#' prefix, common color name, rgb(r,g,b,a) or hsv(h,s,v).
+    /// </summary>
     [Pure]
     public static bool TryParseColor(string str, out Color color)
     {
@@ -348,6 +761,9 @@ public static class ParserTool
         return false;
     }
 
+    /// <summary>
+    /// Parse a <see cref="Color"/> from hex with an optional '#' prefix, common color name, rgb(r,g,b,a) or hsv(h,s,v).
+    /// </summary>
     [Pure]
     public static bool TryParseColor32(string str, out Color32 color)
     {

@@ -22,6 +22,7 @@ using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -301,7 +302,18 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool VanishMode
     {
         get => IsOnline && !Player.movement.canAddSimulationResultsToUpdates;
-        set => DutyCommand.SetVanishMode(Player, value);
+        set
+        {
+            if (Player.movement.canAddSimulationResultsToUpdates != value)
+                return;
+
+            Player.movement.canAddSimulationResultsToUpdates = !value;
+            Vector3 pos = TeamManager.LobbySpawn;
+            float angle = TeamManager.LobbySpawnAngle;
+            Player.movement.updates.Add(value
+                ? new PlayerStateUpdate(pos, 0, MeasurementTool.angleToByte(angle))
+                : new PlayerStateUpdate(Player.transform.position, Player.look.angle, Player.look.rot));
+        }
     }
 
     public bool IsActionMenuOpen { get; internal set; }
@@ -1172,7 +1184,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
 
     public async Task FlushDamages(IStatsDbContext dbContext, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         dbContext.DamageRecords.AddRange(DamageRecords);
         DamageRecords.Clear();
     }

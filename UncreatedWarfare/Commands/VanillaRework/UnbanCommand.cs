@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
 
@@ -33,7 +33,7 @@ public class UnbanCommand : AsyncCommand
             throw ctx.Reply(T.PlayerNotFound);
 
         PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(targetId, token);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (target is not null || !Provider.requestUnbanPlayer(ctx.CallerCSteamID, new CSteamID(targetId)))
         {
             ctx.Reply(T.UnbanNotBanned, targetNames);

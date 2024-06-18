@@ -1,13 +1,12 @@
 ﻿using Cysharp.Threading.Tasks;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("moderate", "mod", "m")]
+[Command("blank")]
 [HelpMetadata(nameof(GetHelpMetadata))]
-public sealed class ModerateCommand : IExecutableCommand
+public sealed class BlankCommand : IExecutableCommand
 {
     /// <inheritdoc />
     public CommandContext Context { get; set; }
@@ -19,18 +18,13 @@ public sealed class ModerateCommand : IExecutableCommand
     {
         return new CommandStructure
         {
-            Description = "Opens the moderation menu."
+            Description = "Does nothing."
         };
     }
 
     /// <inheritdoc />
-    public async UniTask ExecuteAsync(CancellationToken token)
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertOnDuty();
-
-        Context.AssertRanByPlayer();
-        
-        await ModerationUI.Instance.Open(Context.Player, token).ConfigureAwait(false);
-        Context.Defer();
+        throw Context.SendNotImplemented();
     }
 }

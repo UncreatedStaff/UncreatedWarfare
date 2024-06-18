@@ -72,7 +72,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
                 lockpSync &= await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 await using IGameDataDbContext dbContext = new WarfareDbContext();
                 SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
                 player.CurrentSession = record;
@@ -107,7 +107,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             UCPlayer[] onlinePlayers = PlayerManager.OnlinePlayers.ToArray();
             BitArray waitMask = new BitArray(onlinePlayers.Length);

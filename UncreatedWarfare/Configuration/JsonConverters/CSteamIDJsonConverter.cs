@@ -15,7 +15,7 @@ public sealed class CSteamIDJsonConverter : JsonConverter<CSteamID>
 
             case JsonTokenType.String:
                 string str = reader.GetString()!;
-                if (!ParserTool.TryParseSteamId(str, out CSteamID steamId))
+                if (!FormattingUtility.TryParseSteamId(str, out CSteamID steamId))
                     throw new JsonException("Unknown string notation for CSteamID. Valid formats: Steam64 ID, Steam2 ID, Steam3 ID, common strings.");
                 return steamId;
 
@@ -38,7 +38,7 @@ public sealed class CSteamIDJsonConverter : JsonConverter<CSteamID>
                             if (reader.TokenType == JsonTokenType.String)
                             {
                                 str = reader.GetString()!;
-                                if (!ParserTool.TryParseSteamId(str, out steamId))
+                                if (!FormattingUtility.TryParseSteamId(str, out steamId))
                                 {
                                     csteamid = steamId.m_SteamID;
                                     continue;

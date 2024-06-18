@@ -34,7 +34,7 @@ public class KitBoosting(KitManager manager) : ITCPConnectedListener
             throw new TimeoutException("Timed out while checking nitro status.");
 
         int len = Math.Min(state.Length, rtn.Length);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         for (int i = 0; i < len; ++i)
         {
             byte b = state[i];
@@ -91,7 +91,7 @@ public class KitBoosting(KitManager manager) : ITCPConnectedListener
 
         int v = Interlocked.Increment(ref _v) - 1;
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         CheckLoaded();
 
         ulong[] players = new ulong[PlayerManager.OnlinePlayers.Count];
@@ -105,7 +105,7 @@ public class KitBoosting(KitManager manager) : ITCPConnectedListener
         CheckLoaded();
         if (response.Responded && response.TryGetParameter(0, out byte[] bytes))
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             int len = Math.Min(bytes.Length, players.Length);
             for (int i = 0; i < len; ++i)
                 OnNitroBoostingUpdated(players[i], bytes[i]);

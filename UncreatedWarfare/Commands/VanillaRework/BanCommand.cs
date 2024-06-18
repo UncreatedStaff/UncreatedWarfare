@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
 
@@ -56,7 +56,7 @@ public class BanCommand : AsyncCommand
         PlayerNames name;
         uint ipv4;
         List<byte[]> hwids = await OffenseManager.GetAllHWIDs(targetId, token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         if (target is not null && target.IsOnline) // player is online
         {
@@ -69,7 +69,7 @@ public class BanCommand : AsyncCommand
         {
             ipv4 = await Data.DatabaseManager.TryGetPackedIPAsync(targetId, token).ConfigureAwait(false);
             name = await F.GetPlayerOriginalNamesAsync(targetId, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             F.OfflineBan(targetId, ipv4, ctx.Caller == null ? CSteamID.Nil : ctx.Caller.Player.channel.owner.playerID.steamID,
                 reason!, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration), hwids.ToArray());
         }

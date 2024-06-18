@@ -774,7 +774,7 @@ public static class EventFunctions
                             {
                                 Kit? kit = await kitTask.ConfigureAwait(false);
 
-                                await UCWarfare.ToUpdate(token);
+                                await UniTask.SwitchToMainThread(token);
                                 ucplayer.ChangeKit(kit);
                                 // create a squad or give unarmed kit
                                 if (kit.Class == Class.Squadleader && SquadManager.Loaded)
@@ -786,7 +786,7 @@ public static class EventFunctions
                                         if (manager != null)
                                         {
                                             await manager.TryGiveUnarmedKit(ucplayer, manual: false, token);
-                                            await UCWarfare.ToUpdate(token);
+                                            await UniTask.SwitchToMainThread(token);
                                         }
                                         L.LogDebug("  Tried to give unarmed kit.");
                                     }
@@ -798,7 +798,7 @@ public static class EventFunctions
                                 }
                             }
                             else
-                                await UCWarfare.ToUpdate(token);
+                                await UniTask.SwitchToMainThread(token);
                         }
                         else if (forceLastKitRemoval || ucplayer.Save.KitId != 0)
                         {
@@ -809,7 +809,7 @@ public static class EventFunctions
                                 await manager.Requests.GiveKit(ucplayer, kit: null, manual: false, tip: false, token, psLock: false).ConfigureAwait(false);
                             }
 
-                            await UCWarfare.ToUpdate(token);
+                            await UniTask.SwitchToMainThread(token);
                         }
 
                         await Data.Gamemode.OnPlayerJoined(ucplayer, tkn).ConfigureAwait(false);

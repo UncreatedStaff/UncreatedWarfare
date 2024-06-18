@@ -6,6 +6,7 @@ using System.Reflection;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -122,6 +123,9 @@ internal static class T
 
     [TranslationData(SectionCommonErrors, "The caller of a command is not allowed to use the command.")]
     public static readonly Translation NoPermissions = new Translation("<#ff8c69>You do not have permission to use this command.");
+
+    [TranslationData(SectionCommonErrors, "The caller of a command is not allowed to use the command.")]
+    public static readonly Translation<PermissionLeaf> NoPermissionsSpecific = new Translation<PermissionLeaf>("<#ff8c69>You do not have the permission {0} to use this command.");
 
     [TranslationData(SectionCommonErrors, "A command or feature is turned off in the configuration.")]
     public static readonly Translation NotEnabled = new Translation("<#ff8c69>This feature is not currently enabled.");
@@ -2101,7 +2105,7 @@ internal static class T
     [TranslationData(SectionTraitCommand, "Shown when someone enteres an invalid property name to /trait set.", "Input text")]
     public static readonly Translation<string> TraitInvalidProperty = new Translation<string>("<#ff8c69><uppercase><#cedcde>{0}</color></uppercase> is not a valid property name for traits.");
     [TranslationData(SectionTraitCommand, "Shown when someone enteres an invalid property name to /trait set.", "Value", "Property name")]
-    public static readonly Translation<string, string> TraitInvalidSetValue = new Translation<string, string>("<#ff8c69><uppercase><#cedcde>{0}</color></uppercase> is not a valid value for <#fff>{1}</color>.");
+    public static readonly Translation<string, string, Type> TraitInvalidSetValue = new Translation<string, string, Type>("<#ff8c69><uppercase><#cedcde>{0}</color></uppercase> is not a valid value for <#fff>{1}</color> (expected {2}).");
     [TranslationData(SectionTraitCommand, "Shown when someone enteres an invalid property name to /trait set.", "Property name")]
     public static readonly Translation<string> TraitNotJsonSettable = new Translation<string>("<#ff8c69><#fff>{0}</color> is not a property that can be changed in-game.");
     #endregion
@@ -2436,7 +2440,7 @@ internal static class T
     #region Report Command
     private const string SectionReport = "Reporting";
     [TranslationData(SectionReport, Description = "Possible report arguments, do not translate the reasons.")]
-    public static readonly Translation ReportReasons = new Translation("<#9cffb3>Report reasons: -none-, \"chat abuse\", \"voice chat abuse\", \"soloing vehicles\", \"wasteing assets\", \"teamkilling\", \"fob greifing\", \"cheating\".");
+    public static readonly Translation ReportReasons = new Translation("<#9cffb3>Report reasons: -none-, \"chat abuse\", \"voice chat abuse\", \"soloing vehicles\", \"wasteing assets\", \"teamkilling\", \"fob griefing\", \"cheating\".");
     [TranslationData(SectionReport)]
     public static readonly Translation ReportPlayerNotFound = new Translation("<#9cffb3>Unable to find a player with that name, you can use their <color=#ffffff>Steam64 ID</color> instead, as names are only stored until they've been offline for 20 minutes.");
     [TranslationData(SectionReport)]
@@ -3367,6 +3371,9 @@ internal static class T
     
     [TranslationData(SectionHelp, "Output from help describing how to use /deploy.")]
     public static readonly Translation HelpOutputCombined = new Translation("<#b3ffb3>To get gear, look at a sign in the barracks and type <#fff>/request</color> (or <#fff>/req</color>). To deploy to battle, type <#fff>/deploy <location></color> with any of the FOBs listed on the left of your screen. For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");
+
+    [TranslationData(SectionCommonErrors, "A player tried to get help with an unknown command.")]
+    public static readonly Translation UnknownCommandHelp = new Translation("<#ff8c69>Unknown command. <#b3ffb3>Type <#fff>/help <command name></color> to look up a command.");
     #endregion
 
     [FormatDisplay(typeof(object), "Plural")]

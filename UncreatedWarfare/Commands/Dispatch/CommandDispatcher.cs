@@ -171,18 +171,13 @@ public class CommandDispatcher : IDisposable
 
             ctx.CheckIsolatedCooldown();
 
-            if (!await cmdInstance.CheckPermission(token))
-            {
-                await UniTask.SwitchToMainThread();
-                user.SendMessage(T.NoPermissions.Translate(user as UCPlayer));
-                return;
-            }
+            await AssertPermissions(command, ctx, token);
 
             await UniTask.SwitchToMainThread();
 
             try
             {
-                await cmdInstance.Execute(token);
+                await cmdInstance.ExecuteAsync(token);
                 await UniTask.SwitchToMainThread();
 
                 if (!ctx.Responded)
@@ -221,6 +216,42 @@ public class CommandDispatcher : IDisposable
         finally
         {
             lockTaken?.Release();
+        }
+    }
+
+    /// <summary>
+    /// Throw a <see cref="CommandContext"/> if a command doesn't have permission to be ran by <paramref name="ctx"/>.
+    /// </summary>
+    public static async UniTask AssertPermissions(CommandType command, CommandContext ctx, CancellationToken token = default)
+    {
+        if (command.OtherPermissionsAreAnd)
+        {
+            if (command.DefaultPermission.Valid)
+            {
+                await ctx.AssertPermissions(command.DefaultPermission, token);
+            }
+
+            if (command.OtherPermissions.Length > 0)
+            {
+                await ctx.AssertPermissionsAnd(token, command.OtherPermissions);
+            }
+        }
+        else
+        {
+            if (command.DefaultPermission.Valid)
+            {
+                if (!await ctx.HasPermission(command.DefaultPermission, token))
+                {
+                    if (command.OtherPermissions.Length == 0)
+                        throw ctx.SendNoPermission(command.DefaultPermission);
+
+                    await ctx.AssertPermissionsOr(token, command.OtherPermissions);
+                }
+            }
+            else
+            {
+                await ctx.AssertPermissionsOr(token, command.OtherPermissions);
+            }
         }
     }
     private void OnChatProcessing(SteamPlayer player, string text, ref bool shouldExecuteCommand, ref bool shouldList)
@@ -292,5 +323,10 @@ public class CommandDispatcher : IDisposable
     {
         ChatManager.onCheckPermissions -= OnChatProcessing;
         CommandWindow.onCommandWindowInputted -= OnCommandInput;
+
+        foreach (CommandType commandInfo in Commands)
+        {
+            commandInfo.SynchronizedSemaphore?.Dispose();
+        }
     }
 }

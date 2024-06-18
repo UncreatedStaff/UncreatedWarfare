@@ -1,263 +1,312 @@
-﻿using SDG.NetTransport;
+﻿using System.Collections;
+using Cysharp.Threading.Tasks;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System.Collections.Generic;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class ZeCommand : Command
-{
-    private const string SYNTAX = "/ze <existing|maxheight|minheight|finalize|cancel|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|shortname|type> [value]";
-    private const string HELP = "Shortcut for /zone edit.";
 
-    public ZeCommand() : base("ze", EAdminType.MODERATOR)
+[Command("ze", PermissionOverride = "commands.zone.edit")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class ZeCommand : IExecutableCommand
+{
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
-            Description = HELP,
-            Parameters = new CommandParameter[]
-            {
+            Description = "Edit zones.",
+            Parameters =
+            [
                 new CommandParameter("Parameter", typeof(string))
                 {
                     Aliases = ZonePlayerComponent.EditCommands,
                     ChainDisplayCount = 2,
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Value", typeof(object))
                         {
                             IsRemainder = true
                         }
-                    }
+                    ]
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertRanByPlayer();
 
-        ctx.AssertRanByPlayer();
+        Context.AssertOnDuty();
 
-        ctx.AssertOnDuty();
+        Context.AssertArgs(1, "edit_zone_syntax");
 
-        ctx.AssertArgs(1, "edit_zone_syntax");
-
-        if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
-            comp.EditCommand(ctx);
+        if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            comp.EditCommand(Context);
         else
-            ctx.SendUnknownError();
+            Context.SendUnknownError();
+
+        return default;
     }
 }
 
-public class ZoneCommand : Command
+[Command("zone")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class ZoneCommand : IExecutableCommand
 {
-    private const string SYNTAX = "/zone <visualize|go|delete|create|util>";
-    private const string HELP = "Manage zones.";
+    private const string Syntax = "/zone <visualize|go|delete|create|util>";
+    private const string Help = "Manage zones.";
 
-    public ZoneCommand() : base("zone", EAdminType.MEMBER)
+    internal static readonly PermissionLeaf PermissionVisualize = new PermissionLeaf("commands.zone.visualize", unturned: false, warfare: true);
+    internal static readonly PermissionLeaf PermissionGo        = new PermissionLeaf("commands.zone.go", unturned: false, warfare: true);
+    internal static readonly PermissionLeaf PermissionDelete    = new PermissionLeaf("commands.zone.delete", unturned: false, warfare: true);
+    internal static readonly PermissionLeaf PermissionEdit      = new PermissionLeaf("commands.zone.edit", unturned: false, warfare: true);
+    internal static readonly PermissionLeaf PermissionCreate    = new PermissionLeaf("commands.zone.create", unturned: false, warfare: true);
+    internal static readonly PermissionLeaf PermissionUtil      = new PermissionLeaf("commands.zone.util", unturned: false, warfare: true);
+    internal static readonly PermissionLeaf PermissionLocation  = new PermissionLeaf("commands.zone.util.location", unturned: false, warfare: true);
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
-            Description = HELP,
-            Parameters = new CommandParameter[]
-            {
+            Description = Help,
+            Parameters =
+            [
                 new CommandParameter("Visualize")
                 {
-                    Aliases = new string[] { "vis" },
+                    Aliases = [ "vis" ],
                     Description = "Spawns particles highlighting the zone border.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Permission = PermissionVisualize,
+                    Parameters =
+                    [
                         new CommandParameter("Zone", typeof(Zone))
-                    }
+                    ]
                 },
                 new CommandParameter("Go")
                 {
                     Description = "Teleport to the spawn of a zone.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Permission = PermissionGo,
+                    Parameters =
+                    [
                         new CommandParameter("Zone", typeof(Zone))
-                    },
-                    Permission = EAdminType.MODERATOR
+                    ],
                 },
                 new CommandParameter("Delete")
                 {
                     Description = "Deletes a zone.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Permission = PermissionDelete,
+                    Parameters =
+                    [
                         new CommandParameter("Zone", typeof(Zone))
-                    },
-                    Permission = EAdminType.MODERATOR
+                    ]
                 },
                 new CommandParameter("Edit")
                 {
                     Description = "Modify a zone.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Permission = PermissionEdit,
+                    Parameters =
+                    [
                         new CommandParameter("Parameter", typeof(string))
                         {
                             Aliases = ZonePlayerComponent.EditCommands,
                             ChainDisplayCount = 2,
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Value", typeof(object))
                                 {
                                     IsRemainder = true
                                 }
-                            }
+                            ]
                         }
-                    },
-                    Permission = EAdminType.MODERATOR
+                    ]
                 },
                 new CommandParameter("Create")
                 {
                     Description = "Starts creating a zone.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Permission = PermissionCreate,
+                    Parameters =
+                    [
                         new CommandParameter("Type", "Rectangle", "Polygon", "Circle")
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Name", typeof(string))
-                            }
+                            ]
                         }
-                    },
-                    Permission = EAdminType.MODERATOR
+                    ]
                 },
                 new CommandParameter("Util")
                 {
                     Description = "Random zone utilities.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Permission = PermissionUtil,
+                    Parameters =
+                    [
                         new CommandParameter("Location")
                         {
-                            Description = "Responds with the player's coordinates and yaw."
+                            Aliases = [ "position", "loc", "pos" ],
+                            Description = "Responds with the player's coordinates and yaw.",
+                            Permission = PermissionLocation
                         }
-                    }
+                    ]
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        ctx.AssertArgs(1, "zone_syntax");
+        Context.AssertArgs(1, "zone_syntax");
 
-        if (ctx.MatchParameter(0, "visualize", "vis"))
+        if (Context.MatchParameter(0, "visualize", "vis"))
         {
-            ctx.AssertRanByPlayer();
+            Context.AssertRanByPlayer();
 
-            ctx.Offset = 1;
-            Visualize(ctx);
-            ctx.Offset = 0;
+            await Context.AssertPermissions(PermissionVisualize, token);
+            await UniTask.SwitchToMainThread(token);
+
+            Context.ArgumentOffset = 1;
+            Visualize();
+            Context.ArgumentOffset = 0;
         }
-        else if (ctx.MatchParameter(0, "go", "tp", "goto", "teleport"))
+        else if (Context.MatchParameter(0, "go", "tp", "goto", "teleport"))
         {
-            ctx.AssertRanByPlayer();
+            Context.AssertRanByPlayer();
 
-            ctx.AssertOnDuty();
+            Context.AssertOnDuty();
 
-            ctx.Offset = 1;
-            Go(ctx);
-            ctx.Offset = 0;
+            await Context.AssertPermissions(PermissionGo, token);
+            await UniTask.SwitchToMainThread(token);
+
+            Context.ArgumentOffset = 1;
+            Go();
+            Context.ArgumentOffset = 0;
         }
-        else if (ctx.MatchParameter(0, "edit", "e"))
+        else if (Context.MatchParameter(0, "edit", "e"))
         {
-            ctx.AssertRanByPlayer();
+            Context.AssertRanByPlayer();
 
-            ctx.AssertOnDuty();
+            Context.AssertOnDuty();
 
-            if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
+            await Context.AssertPermissions(PermissionEdit, token);
+            await UniTask.SwitchToMainThread(token);
+
+            if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
-                ctx.Offset = 1;
+                Context.ArgumentOffset = 1;
                 try
                 {
-                    comp.EditCommand(ctx);
+                    comp.EditCommand(Context);
                 }
-                finally { ctx.Offset = 0; }
+                finally { Context.ArgumentOffset = 0; }
             }
             else
-                throw ctx.SendUnknownError();
+                throw Context.SendUnknownError();
         }
-        else if (ctx.MatchParameter(0, "create", "c"))
+        else if (Context.MatchParameter(0, "create", "c"))
         {
-            ctx.AssertRanByPlayer();
+            Context.AssertRanByPlayer();
 
-            ctx.AssertOnDuty();
+            Context.AssertOnDuty();
 
-            if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
+            await Context.AssertPermissions(PermissionCreate, token);
+            await UniTask.SwitchToMainThread(token);
+
+            if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
-                ctx.Offset = 1;
+                Context.ArgumentOffset = 1;
                 try
                 {
-                    comp.CreateCommand(ctx);
+                    comp.CreateCommand(Context);
                 }
-                finally { ctx.Offset = 0; }
+                finally { Context.ArgumentOffset = 0; }
             }
             else
-                throw ctx.SendUnknownError();
+                throw Context.SendUnknownError();
         }
-        else if (ctx.MatchParameter(0, "delete", "remove", "d"))
+        else if (Context.MatchParameter(0, "delete", "remove", "d"))
         {
-            ctx.AssertRanByPlayer();
+            Context.AssertRanByPlayer();
 
-            ctx.AssertOnDuty();
+            Context.AssertOnDuty();
 
-            if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
+            await Context.AssertPermissions(PermissionDelete, token);
+            await UniTask.SwitchToMainThread(token);
+
+            if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
-                ctx.Offset = 1;
+                Context.ArgumentOffset = 1;
                 try
                 {
-                    comp.DeleteCommand(ctx);
+                    comp.DeleteCommand(Context);
                 }
-                finally { ctx.Offset = 0; }
+                finally { Context.ArgumentOffset = 0; }
             }
             else
-                throw ctx.SendUnknownError();
+                throw Context.SendUnknownError();
         }
-        else if (ctx.MatchParameter(0, "util", "u", "tools"))
+        else if (Context.MatchParameter(0, "util", "u", "tools"))
         {
-            ctx.AssertRanByPlayer();
+            Context.AssertRanByPlayer();
 
-            if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
+            await Context.AssertPermissions(PermissionUtil, token);
+            await UniTask.SwitchToMainThread(token);
+
+            if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
-                ctx.Offset = 1;
+                Context.ArgumentOffset = 1;
                 try
                 {
-                    comp.UtilCommand(ctx);
+                    await comp.UtilCommand(Context, token);
                 }
-                finally { ctx.Offset = 0; }
+                finally { Context.ArgumentOffset = 0; }
             }
             else
-                throw ctx.SendUnknownError();
+                throw Context.SendUnknownError();
         }
-        else throw ctx.SendCorrectUsage(SYNTAX);
+        else throw Context.SendCorrectUsage(Syntax);
     }
-    private void Visualize(CommandContext ctx)
+    private void Visualize()
     {
         Zone? zone;
-        if (ctx.TryGetRange(0, out string zname))
+        if (Context.TryGetRange(0, out string? zname))
             zone = GetZone(zname);
         else
         {
-            Vector3 plpos = ctx.Caller.Position;
-            if (!ctx.Caller.IsOnline) return; // player got kicked
+            Vector3 plpos = Context.Player.Position;
+            if (!Context.Player.IsOnline) return; // player got kicked
             zone = GetZone(plpos);
         }
 
-        if (zone == null) throw ctx.Reply(T.ZoneNoResults);
+        if (zone == null) throw Context.Reply(T.ZoneNoResults);
 
         Vector2[] points = zone.GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center);
-        ITransportConnection channel = ctx.Caller.Player.channel.owner.transportConnection;
+        ITransportConnection channel = Context.Player.Player.channel.owner.transportConnection;
         bool hasui = ZonePlayerComponent.Airdrop != null;
+
         foreach (Vector2 point in points)
         {   // Border
             Vector3 pos = new Vector3(point.x, 0f, point.y);
@@ -266,6 +315,7 @@ public class ZoneCommand : Command
             if (hasui)
                 F.TriggerEffectReliable(ZonePlayerComponent.Airdrop!, channel, pos);
         }
+
         foreach (Vector2 point in corners)
         {   // Corners
             Vector3 pos = new Vector3(point.x, 0f, point.y);
@@ -274,6 +324,7 @@ public class ZoneCommand : Command
             if (hasui)
                 F.TriggerEffectReliable(ZonePlayerComponent.Airdrop!, channel, pos);
         }
+
         {   // Center
             Vector3 pos = new Vector3(center.x, 0f, center.y);
             pos.y = F.GetHeight(pos, zone.MinHeight);
@@ -281,12 +332,13 @@ public class ZoneCommand : Command
             if (hasui)
                 F.TriggerEffectReliable(ZonePlayerComponent.Airdrop!, channel, pos);
         }
-        ctx.Caller.Player.StartCoroutine(ClearPoints(ctx.Caller));
-        ctx.Reply(T.ZoneVisualizeSuccess, points.Length + corners.Length + 1, zone);
+
+        Context.Player.Player.StartCoroutine(ClearPoints(Context.Player));
+        Context.Reply(T.ZoneVisualizeSuccess, points.Length + corners.Length + 1, zone);
     }
-    private IEnumerator<WaitForSeconds> ClearPoints(UCPlayer player)
+    private IEnumerator ClearPoints(UCPlayer player)
     {
-        yield return new WaitForSeconds(60f);
+        yield return new WaitForSecondsRealtime(60f);
         if (player == null) yield break;
         ITransportConnection channel = player.Player.channel.owner.transportConnection;
         if (ZonePlayerComponent.Airdrop != null)
@@ -295,20 +347,21 @@ public class ZoneCommand : Command
         EffectManager.askEffectClearByID(ZonePlayerComponent.Corner.id, channel);
         EffectManager.askEffectClearByID(ZonePlayerComponent.Center.id, channel);
     }
-    private void Go(CommandContext ctx)
+    private void Go()
     {
         Zone? zone;
-        if (ctx.TryGetRange(0, out string zname))
+        if (Context.TryGetRange(0, out string? zname))
             zone = GetZone(zname);
         else
         {
-            Vector3 plpos = ctx.Caller.Position;
-            if (!ctx.Caller.IsOnline) return; // player got kicked
+            Vector3 plpos = Context.Player.Position;
+            if (!Context.Player.IsOnline) return; // player got kicked
             zone = GetZone(plpos);
+            zname = zone?.Name;
         }
 
         Vector2 pos;
-        float yaw = ctx.Caller.Player.transform.rotation.eulerAngles.y;
+        float yaw = Context.Player.Player.transform.rotation.eulerAngles.y;
         GridLocation location = default;
         IDeployable? deployable = null;
         LocationDevkitNode? loc = null;
@@ -318,18 +371,18 @@ public class ZoneCommand : Command
             {
                 pos = location.Center;
             }
-            else if (Data.Singletons.GetSingleton<FOBManager>() != null && FOBManager.TryFindFOB(zname, ctx.Caller.GetTeam(), out deployable))
+            else if (Data.Singletons.GetSingleton<FOBManager>() != null && FOBManager.TryFindFOB(zname!, Context.Player.GetTeam(), out deployable))
             {
                 pos = deployable.SpawnPosition;
                 yaw = deployable.Yaw;
             }
-            else if (F.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes(), loc => loc.locationName, loc => loc.locationName.Length, zname) is { } location2)
+            else if (F.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes(), loc => loc.locationName, loc => loc.locationName.Length, zname!) is { } location2)
             {
                 pos = location2.transform.position;
                 yaw = location2.transform.rotation.eulerAngles.y;
                 loc = location2;
             }
-            else throw ctx.Reply(T.ZoneNoResultsName);
+            else throw Context.Reply(T.ZoneNoResultsName);
         }
         else
         {
@@ -344,24 +397,24 @@ public class ZoneCommand : Command
 
         if (deployable != null)
         {
-            Deployment.ForceDeploy(ctx.Caller, null, deployable, false, false);
-            ctx.Reply(T.DeploySuccess, deployable);
-            ctx.LogAction(ActionLogType.Teleport, deployable.Translate(Localization.GetDefaultLanguage(), ctx.Caller.GetTeam(), FOB.FormatLocationName));
+            Deployment.ForceDeploy(Context.Player, null, deployable, false, false);
+            Context.Reply(T.DeploySuccess, deployable);
+            Context.LogAction(ActionLogType.Teleport, deployable.Translate(Localization.GetDefaultLanguage(), Context.Player.GetTeam(), FOB.FormatLocationName));
         }
         else if (Physics.Raycast(new Ray(new Vector3(pos.x, Level.HEIGHT, pos.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
         {
-            ctx.Caller.Player.teleportToLocationUnsafe(hit.point, yaw);
+            Context.Player.Player.teleportToLocationUnsafe(hit.point, yaw);
             if (zone != null)
-                ctx.Reply(T.ZoneGoSuccess, zone);
+                Context.Reply(T.ZoneGoSuccess, zone);
             else if (loc != null)
-                ctx.Reply(T.ZoneGoSuccessRaw, loc.locationName);
+                Context.Reply(T.ZoneGoSuccessRaw, loc.locationName);
             else
-                ctx.Reply(T.ZoneGoSuccessGridLocation, location);
-            ctx.LogAction(ActionLogType.Teleport, loc == null ? (zone == null ? location.ToString() : zone.Name.ToUpper()) : loc.locationName);
+                Context.Reply(T.ZoneGoSuccessGridLocation, location);
+            Context.LogAction(ActionLogType.Teleport, loc == null ? (zone == null ? location.ToString() : zone.Name.ToUpper()) : loc.locationName);
         }
         else
         {
-            ctx.SendUnknownError();
+            Context.SendUnknownError();
             L.LogWarning("Tried to teleport to " + (zone == null ? location.ToString() : zone.Name.ToUpper()) + " and there was no terrain to teleport to at " + pos + ".");
         }
     }

@@ -1,40 +1,51 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
-public class UnmuteCommand : Command
+
+[Command("unmute")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class UnmuteCommand : IExecutableCommand
 {
+#if false
     private const string SYNTAX = "/unmute";
     private const string HELP = "Lift a mute offense from a player.";
+#endif
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
 
-    public UnmuteCommand() : base("unmute", EAdminType.MODERATOR)
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
-            Description = HELP,
-            Parameters = new CommandParameter[]
-            {
+            Description = "Lift a mute offense from a player",
+            Parameters =
+            [
                 new CommandParameter("Player", typeof(IPlayer))
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        throw ctx.SendNotImplemented();
+        throw Context.SendNotImplemented();
 #if false
-        ctx.AssertArgs(1, SYNTAX);
+        Context.AssertArgs(1, SYNTAX);
 
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
-        if (ctx.TryGet(0, out ulong playerId, out UCPlayer? onlinePlayer))
+        if (Context.TryGet(0, out ulong playerId, out UCPlayer? onlinePlayer))
         {
             if (onlinePlayer is not null)
             {
                 if (onlinePlayer.MuteType == MuteType.None || onlinePlayer.TimeUnmuted < DateTime.Now)
                 {
-                    ctx.Reply(T.UnmuteNotMuted, onlinePlayer);
+                    Context.Reply(T.UnmuteNotMuted, onlinePlayer);
                     return;
                 }
             }
@@ -43,7 +54,7 @@ public class UnmuteCommand : Command
             {
                 try
                 {
-                    await OffenseManager.UnmutePlayerAsync(playerId, ctx.CallerID, DateTimeOffset.UtcNow);
+                    await OffenseManager.UnmutePlayerAsync(playerId, Context.CallerID, DateTimeOffset.UtcNow);
                 }
                 catch (Exception ex)
                 {
@@ -51,9 +62,9 @@ public class UnmuteCommand : Command
                     L.LogError(ex);
                 }
             });
-            ctx.Defer();
+            Context.Defer();
         }
-        else ctx.Reply(T.PlayerNotFound);
+        else Context.Reply(T.PlayerNotFound);
 #endif
     }
 }

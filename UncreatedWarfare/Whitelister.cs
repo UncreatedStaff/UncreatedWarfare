@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Structures;

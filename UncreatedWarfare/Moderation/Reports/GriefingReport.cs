@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.SpeedBytes;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -6,9 +7,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Moderation.Reports;
@@ -32,7 +30,7 @@ public class GriefingReport : Report
 
     [JsonPropertyName("vehicle_teamkills")]
     public VehicleTeamkillRecord[] VehicleTeamkillRecord { get; set; } = Array.Empty<VehicleTeamkillRecord>();
-    public override string GetDisplayName() => "Greifing Report";
+    public override string GetDisplayName() => "Griefing Report";
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
         base.ReadIntl(reader, version);

@@ -347,7 +347,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         VehicleData? data = spawnItem?.Vehicle?.Item;
         await spawn.Delete(token).ConfigureAwait(false);
         if (data is null && spawnItem is null) return;
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (data != null)
         {
             Signs.UpdateVehicleBaySigns(null, spawnItem);
@@ -479,7 +479,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public async Task RespawnAllVehicles(CancellationToken token = default)
     {
         L.Log("Respawning vehicles...", ConsoleColor.Magenta);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         DeleteAllVehiclesFromWorld();
 
         WriteWait();
@@ -919,7 +919,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                                         {
                                             OfflinePlayer pl2 = pl;
                                             await pl2.CacheUsernames(token).ConfigureAwait(false);
-                                            await UCWarfare.ToUpdate(token);
+                                            await UniTask.SwitchToMainThread(token);
                                             e.Player.SendChat(T.VehicleWaitForOwner, pl);
                                         }, UCWarfare.UnloadCancel);
                                     }
@@ -976,7 +976,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public static async Task<InteractableVehicle?> SpawnLockedVehicle(Guid vehicleId, Vector3 position, Quaternion rotation, ulong owner = 0ul, ulong groupOwner = 0ul, bool @lock = true, bool checkExisting = false, CancellationToken token = default)
     {
         await UCWarfare.ToLevelLoad();
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         ThreadUtil.assertIsGameThread();
         if (checkExisting)
         {
@@ -1135,7 +1135,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             if (spawn != null)
                 await AddOrUpdate(spawn, token).ConfigureAwait(false);
             await save.Delete(token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             Signs.SetSignTextServerOnly(sign, string.Empty);
             Signs.CheckSign(drop);
             return true;
@@ -1152,7 +1152,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         {
             VehicleData? data = spawn.Item?.Vehicle?.Item;
             Guid vehId = data == null ? Guid.Empty : data.VehicleID;
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             Signs.SetSignTextServerOnly(sign, Signs.Prefix + Signs.VBSPrefix + vehId.ToString("N"));
             (SqlItem<SavedStructure> save, _) = await saver.AddBarricade(drop, token).ConfigureAwait(false);
             await spawn.Enter(token).ConfigureAwait(false);
@@ -1168,7 +1168,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             {
                 spawn.Release();
             }
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             Signs.CheckSign(drop);
             return true;
         }
@@ -1487,7 +1487,7 @@ public class VehicleSpawn : IListItem
     }
     internal async Task<InteractableVehicle?> SpawnVehicle(CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (HasLinkedVehicle(out InteractableVehicle vehicle))
         {
             ReportError("Vehicle already linked: {#" + vehicle.instanceID + "}.");
@@ -1540,7 +1540,7 @@ public class VehicleSpawn : IListItem
             Quaternion rotation = Quaternion.Euler(euler);
             Vector3 offset = structure.Buildable.Model.position + new Vector3(0f, VehicleSpawner.VehicleHeightOffset, 0f);
             InteractableVehicle? veh = await VehicleSpawner.SpawnLockedVehicle(data.VehicleID, offset, rotation, checkExisting: true, token: token, @lock: false).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             if (veh == null)
                 return null;
             LinkNewVehicle(veh);

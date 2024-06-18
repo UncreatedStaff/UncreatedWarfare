@@ -4,9 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Networking;
-using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using UnityEngine;
@@ -100,12 +97,12 @@ public class Reporter : MonoBehaviour
         }
         return null;
     }
-    public GreifingFOBsReport? CreateGreifingFOBsReport(ulong reporter, ulong violator, string message)
+    public GriefingFOBsReport? CreateGriefingFOBsReport(ulong reporter, ulong violator, string message)
     {
         for (int i = 0; i < data.Count; ++i)
         {
             if (data[i].Steam64 == violator)
-                return data[i].GreifingFOBsReport(message, reporter);
+                return data[i].GriefingFOBsReport(message, reporter);
         }
         return null;
     }
@@ -695,13 +692,13 @@ public class Reporter : MonoBehaviour
                 RecentTeamkills = ConvertRecentTeamkills()
             };
 
-        public GreifingFOBsReport.StructureDamage[] ConvertRecentFOBDamage()
+        public GriefingReportfingFOBsReport.StructureDamage[] ConvertRecentFOBDamage()
         {
-            GreifingFOBsReport.StructureDamage[] damages = new GreifingFOBsReport.StructureDamage[vehicleTeamkills.Count];
+            GriefingReportfingFOBsReport.StructureDamage[] damages = new GriefingReportfingFOBsReport.StructureDamage[vehicleTeamkills.Count];
             for (int i = 0; i < recentFriendlyDamages.Count; i++)
             {
                 StructureDamageData data = recentFriendlyDamages[i];
-                damages[i] = new GreifingFOBsReport.StructureDamage()
+                damages[i] = new GriefingReportfingFOBsReport.StructureDamage()
                 {
                     Damage = data.damage,
                     DamageOrigin = Localization.TranslateEnum(data.origin),
@@ -712,8 +709,8 @@ public class Reporter : MonoBehaviour
             }
             return damages;
         }
-        public GreifingFOBsReport GreifingFOBsReport(string message, ulong reporter) =>
-            new GreifingFOBsReport()
+        public GriefingReportfingFOBsReport GreifingFOBsReport(string message, ulong reporter) =>
+            new GriefingReportfingFOBsReport()
             {
                 Message = message,
                 Reporter = reporter,

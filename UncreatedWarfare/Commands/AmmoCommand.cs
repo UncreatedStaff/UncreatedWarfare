@@ -1,12 +1,11 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.SQL;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
@@ -21,40 +20,52 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
-public class AmmoCommand : AsyncCommand
+[Command("ammo")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class AmmoCommand : IExecutableCommand
 {
-    public AmmoCommand() : base("ammo", EAdminType.MEMBER, sync: true)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Refill your kit while looking at an ammo crate or ammo bag or your vehicle's trunk while in main."
         };
     }
-    public override async Task Execute(CommandContext ctx, CancellationToken token)
+
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
         VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
         if (bay == null || !bay.IsLoaded)
-            throw ctx.SendGamemodeError();
+            throw Context.SendGamemodeError();
 
-        if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+        if (Context.TryGetVehicleTarget(out InteractableVehicle? vehicle))
         {
-            if (!Util.IsValidSteam64Id(vehicle.lockedOwner.m_SteamID))
-                throw ctx.Reply(T.AmmoVehicleCantRearm);
+            if (vehicle.lockedOwner.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+                throw Context.Reply(T.AmmoVehicleCantRearm);
 
-            ctx.AssertGamemode<IVehicles>();
+            Context.AssertGamemode<IVehicles>();
 
             SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
             if (data?.Item == null)
-                throw ctx.Reply(T.AmmoVehicleCantRearm);
+                throw Context.Reply(T.AmmoVehicleCantRearm);
             await data.Enter(token).ConfigureAwait(false);
             try
             {
-                await UCWarfare.ToUpdate();
+                await UniTask.SwitchToMainThread(token);
                 VehicleData vehicleData = data.Item;
-                if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && vehicleData.Items.Length == 0 && (vehicleData.Type == VehicleType.LogisticsGround || vehicleData.Type == VehicleType.TransportAir))
-                    throw ctx.Reply(T.AmmoAutoSupply);
+                if (vehicleData.Metadata is { TrunkItems: not null } && vehicleData.Items.Length == 0 && vehicleData.Type is VehicleType.LogisticsGround or VehicleType.TransportAir)
+                {
+                    throw Context.Reply(T.AmmoAutoSupply);
+                }
 
                 bool isInMain = F.IsInMain(vehicle.transform.position);
                 if (!VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
@@ -62,23 +73,23 @@ public class AmmoCommand : AsyncCommand
                     BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.BarricadeRepairStation.Value.Guid,
                     10,
                     vehicle.transform.position,
-                    ctx.Caller.GetTeam(),
+                    Context.Player.GetTeam(),
                     false).FirstOrDefault();
 
                     if (repairStation == null)
-                        throw ctx.Reply(T.AmmoNotNearRepairStation);
+                        throw Context.Reply(T.AmmoNotNearRepairStation);
                 }
 
                 FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(vehicle.transform.position, vehicle.lockedGroup.m_SteamID.GetTeam());
 
                 if (fob == null && !isInMain)
-                    throw ctx.Reply(T.AmmoNotNearFOB);
+                    throw Context.Reply(T.AmmoNotNearFOB);
 
                 if (!isInMain && fob!.AmmoSupply < vehicleData.RearmCost)
-                    throw ctx.Reply(T.AmmoOutOfStock, fob.AmmoSupply, vehicleData.RearmCost);
+                    throw Context.Reply(T.AmmoOutOfStock, fob.AmmoSupply, vehicleData.RearmCost);
 
-                if (vehicle.lockedGroup.m_SteamID != 0 && vehicle.lockedGroup.m_SteamID != ctx.Caller.GetTeam())
-                    throw ctx.Reply(T.AmmoVehicleCantRearm);
+                if (vehicle.lockedGroup.m_SteamID != 0 && vehicle.lockedGroup.m_SteamID != Context.Player.GetTeam())
+                    throw Context.Reply(T.AmmoVehicleCantRearm);
 
                 vehicle.TryGetComponent(out VehicleComponent? vcomp);
                 if (VehicleData.IsFlyingEngine(vehicle.asset.engine) && (vehicle.isDriven ||
@@ -108,18 +119,18 @@ public class AmmoCommand : AsyncCommand
                             }
                         }
                         else if (lastDriver.CurrentVehicle == vehicle)
-                            throw ctx.Reply(T.AmmoInVehicle);
+                            throw Context.Reply(T.AmmoInVehicle);
                     }
                 }
 
                 if (vehicleData.Items.Length == 0)
-                    throw ctx.Reply(T.AmmoVehicleFullAlready);
+                    throw Context.Reply(T.AmmoVehicleFullAlready);
                 if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
 
                 foreach (Guid item in vehicleData.Items)
                     if (Assets.find(item) is ItemAsset a)
-                        ItemManager.dropItem(new Item(a.id, true), ctx.Caller.Position, true, true, true);
+                        ItemManager.dropItem(new Item(a.id, true), Context.Player.Position, true, true, true);
 
                 if (vcomp != null)
                     vcomp.ReloadCountermeasures();
@@ -128,18 +139,18 @@ public class AmmoCommand : AsyncCommand
                 {
                     fob!.ModifyAmmo(-vehicleData.RearmCost);
 
-                    FOBManager.ShowResourceToast(new LanguageSet(ctx.Caller), ammo: -vehicleData.RearmCost, message: T.FOBResourceToastRearmVehicle.Translate(ctx.Caller));
+                    FOBManager.ShowResourceToast(new LanguageSet(Context.Player), ammo: -vehicleData.RearmCost, message: T.FOBResourceToastRearmVehicle.Translate(Context.Player));
 
-                    if (vehicle.TryGetComponent(out VehicleComponent comp) && UCPlayer.FromID(comp.LastDriver) is { } lastDriver && lastDriver.Steam64 != ctx.CallerID)
+                    if (vehicle.TryGetComponent(out VehicleComponent comp) && UCPlayer.FromID(comp.LastDriver) is { } lastDriver && lastDriver.Steam64 != Context.CallerId.m_SteamID)
                         FOBManager.ShowResourceToast(new LanguageSet(lastDriver), ammo: -vehicleData.RearmCost, message: T.FOBResourceToastRearmVehicle.Translate(lastDriver));
 
-                    ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.AmmoSupply);
-                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE");
+                    Context.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.AmmoSupply);
+                    Context.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE");
                 }
                 else
                 {
-                    ctx.Reply(T.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
-                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE IN MAIN");
+                    Context.Reply(T.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
+                    Context.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE IN MAIN");
                 }
             }
             finally
@@ -147,18 +158,18 @@ public class AmmoCommand : AsyncCommand
                 data.Release();
             }
         }
-        else if (ctx.TryGetTarget(out BarricadeDrop barricade))
+        else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
         {
-            ctx.AssertGamemode(out IKitRequests req);
+            Context.AssertGamemode(out IKitRequests req);
 
-            if (!ctx.Caller.IsOnTeam)
-                throw ctx.Reply(T.NotOnCaptureTeam);
+            if (!Context.Player.IsOnTeam)
+                throw Context.Reply(T.NotOnCaptureTeam);
 
-            Kit? kit = await ctx.Caller.GetActiveKit(token).ConfigureAwait(false);
+            Kit? kit = await Context.Player.GetActiveKit(token).ConfigureAwait(false);
             if (kit == null)
-                throw ctx.Reply(T.AmmoNoKit);
+                throw Context.Reply(T.AmmoNoKit);
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             FOBManager? fobManager = Data.Singletons.GetSingleton<FOBManager>();
 
@@ -178,79 +189,79 @@ public class AmmoCommand : AsyncCommand
                             isInMain = true;
                         }
                         else
-                            throw ctx.Reply(T.AmmoNotNearFOB);
+                            throw Context.Reply(T.AmmoNotNearFOB);
                     }
                 }
-                if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(ctx.Caller, CooldownType.Ammo, out Cooldown cooldown))
-                    throw ctx.Reply(T.AmmoCooldown, cooldown);
+                if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(Context.Player, CooldownType.Ammo, out Cooldown cooldown))
+                    throw Context.Reply(T.AmmoCooldown, cooldown);
 
                 if (!isInMain && !isCache && fob.AmmoSupply < ammoCost)
-                    throw ctx.Reply(T.AmmoOutOfStock, fob.AmmoSupply, ammoCost);
+                    throw Context.Reply(T.AmmoOutOfStock, fob.AmmoSupply, ammoCost);
 
-                if (barricade.GetServersideData().group != ctx.Caller.GetTeam())
-                    throw ctx.Reply(T.AmmoWrongTeam);
+                if (barricade.GetServersideData().group != Context.Player.GetTeam())
+                    throw Context.Reply(T.AmmoWrongTeam);
 
                 if (!isInMain && !isCache)
                 {
-                    ctx.AssertNotOnPortionCooldown();
-                    ctx.PortionCommandCooldownTime = 15f;
+                    Context.AssertCommandNotOnIsolatedCooldown();
+                    Context.IsolatedCommandCooldownTime = 15f;
                 }
 
-                WipeDroppedItems(ctx.CallerID);
-                await req.KitManager.Requests.ResupplyKit(ctx.Caller, kit, token: token).ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
+                WipeDroppedItems(Context.CallerId.m_SteamID);
+                await req.KitManager.Requests.ResupplyKit(Context.Player, kit, token: token).ConfigureAwait(false);
+                await UniTask.SwitchToMainThread(token);
 
                 if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
-                    F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
+                    F.TriggerEffectReliable(effect, EffectManager.SMALL, Context.Player.Position);
 
                 if (isInMain)
                 {
-                    ctx.Reply(T.AmmoResuppliedKitMain, ammoCost);
-                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT IN MAIN");
+                    Context.Reply(T.AmmoResuppliedKitMain, ammoCost);
+                    Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT IN MAIN");
 
                     if (FOBManager.Config.AmmoCommandCooldown > 0)
-                        CooldownManager.StartCooldown(ctx.Caller, CooldownType.Ammo, FOBManager.Config.AmmoCommandCooldown);
+                        CooldownManager.StartCooldown(Context.Player, CooldownType.Ammo, FOBManager.Config.AmmoCommandCooldown);
                 }
                 else if (isCache)
                 {
-                    ctx.Reply(T.AmmoResuppliedKitMain, ammoCost);
-                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM CACHE");
+                    Context.Reply(T.AmmoResuppliedKitMain, ammoCost);
+                    Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM CACHE");
                 }
                 else
                 {
                     fob.ModifyAmmo(-ammoCost);
-                    FOBManager.ShowResourceToast(new LanguageSet(ctx.Caller), ammo: -ammoCost, message: T.FOBResourceToastRearmPlayer.Translate(ctx.Caller));
-                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BOX");
-                    ctx.Reply(T.AmmoResuppliedKit, ammoCost, fob.AmmoSupply);
+                    FOBManager.ShowResourceToast(new LanguageSet(Context.Player), ammo: -ammoCost, message: T.FOBResourceToastRearmPlayer.Translate(Context.Player));
+                    Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BOX");
+                    Context.Reply(T.AmmoResuppliedKit, ammoCost, fob.AmmoSupply);
                 }
             }
             else if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(barricade.asset.GUID))
             {
                 if (barricade.model.TryGetComponent(out AmmoBagComponent ammobag))
                 {
-                    if (barricade.GetServersideData().group != ctx.Caller.GetTeam())
-                        throw ctx.Reply(T.AmmoWrongTeam);
+                    if (barricade.GetServersideData().group != Context.Player.GetTeam())
+                        throw Context.Reply(T.AmmoWrongTeam);
 
                     if (ammobag.Ammo < ammoCost)
-                        throw ctx.Reply(T.AmmoOutOfStock, ammobag.Ammo, ammoCost);
+                        throw Context.Reply(T.AmmoOutOfStock, ammobag.Ammo, ammoCost);
 
-                    await ammobag.ResupplyPlayer(ctx.Caller, kit, ammoCost, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    await ammobag.ResupplyPlayer(Context.Player, kit, ammoCost, token).ConfigureAwait(false);
+                    await UniTask.SwitchToMainThread(token);
 
                     if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
-                        F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
+                        F.TriggerEffectReliable(effect, EffectManager.SMALL, Context.Player.Position);
 
-                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BAG");
+                    Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BAG");
 
-                    WipeDroppedItems(ctx.CallerID);
-                    ctx.Reply(T.AmmoResuppliedKit, ammoCost, ammobag.Ammo);
+                    WipeDroppedItems(Context.CallerId.m_SteamID);
+                    Context.Reply(T.AmmoResuppliedKit, ammoCost, ammobag.Ammo);
                 }
                 else
                     L.LogError("ERROR: Missing AmmoBagComponent on an ammo bag");
             }
-            else throw ctx.Reply(T.AmmoNoTarget);
+            else throw Context.Reply(T.AmmoNoTarget);
         }
-        else throw ctx.Reply(T.AmmoNoTarget);
+        else throw Context.Reply(T.AmmoNoTarget);
     }
     internal static void WipeDroppedItems(ulong player)
     {

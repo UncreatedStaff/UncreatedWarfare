@@ -1,96 +1,102 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
-using Steamworks;
-using Uncreated.Framework;
-using Uncreated.Networking.Async;
 using Uncreated.Players;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Players;
-using Uncreated.Warfare.ReportSystem;
+using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Moderation.Reports;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ReportCommand : AsyncCommand
+[Command("report")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class ReportCommand : IExecutableCommand
 {
     private const string Syntax = "/report <\"reasons\" | player> <reason> <custom message...>";
     private const string Help = "Use to report a player for specific actions.";
-    public ReportCommand() : base("report", EAdminType.MEMBER)
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = Help,
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Reasons")
                 {
-                    Aliases = new string[] { "reports", "types" },
+                    Aliases = [ "reports", "types" ],
                     Description = "Lists the various report types."
                 },
                 new CommandParameter("Player", typeof(IPlayer))
                 {
                     Description = "Report a player for breaking the rules.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Reason", typeof(string))
                         {
                             IsRemainder = false,
                             Description = "Report a player for a special reason (do <#fff>/report reasons</color> for examples).",
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Message", typeof(string))
                                 {
                                     IsRemainder = true,
                                     Description = "Report a player for breaking the rules. Message is only required for custom reports."
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 }
-            }
+            ]
         };
     }
-    public override async Task Execute(CommandContext ctx, CancellationToken token)
-    {
-        if (Data.Reporter == null)
-            throw ctx.Reply(T.ReportNotConnected);
 
-        // /report john greifing keeps using the mortar on the fobs 
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
+    {
+        throw Context.SendNotImplemented();
+#if false
+        if (Data.Reporter == null)
+            throw Context.Reply(T.ReportNotConnected);
+
+        // /report john griefing keeps using the mortar on the fobs 
         // /report john teamkilling teamkilled 5 teammates
 
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
-        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
-        ctx.AssertArgs(2, Syntax);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
+        Context.AssertArgs(2, Syntax);
 
         if (!UCWarfare.CanUseNetCall || !UCWarfare.Config.EnableReporter)
-            throw ctx.Reply(T.ReportNotConnected);
+            throw Context.Reply(T.ReportNotConnected);
 
-        EReportType type;
+        ReportType type;
         string message;
         ulong target;
-        if (ctx.HasArgsExact(2))
+        if (Context.HasArgsExact(2))
         {
-            string inPlayer = ctx.Get(0)!;
+            string inPlayer = Context.Get(0)!;
 
-            if (ctx.MatchParameter(1, "help"))
+            if (Context.MatchParameter(1, "help"))
                 goto Help;
-            if (ctx.MatchParameter(1, "reports", "reasons", "types"))
+            if (Context.MatchParameter(1, "reports", "reasons", "types"))
                 goto Types;
 
-            bool linked = await CheckLinked(ctx.Caller, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
+            bool linked = await CheckLinked(Context.Player, token).ConfigureAwait(false);
+            await UniTask.SwitchToMainThread(token);
             if (!linked)
                 goto DiscordNotLinked;
 
             message = string.Empty;
-            type = GetReportType(ctx.Get(1)!);
-            if (type == EReportType.CUSTOM)
-                goto Help;
-            if (Util.TryParseSteamId(inPlayer, out CSteamID id) && id.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            type = GetReportType(Context.Get(1)!);
+            if (FormattingUtility.TryParseSteamId(inPlayer, out CSteamID id) && id.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
                 target = id.m_SteamID;
             else
             {
@@ -103,17 +109,17 @@ public class ReportCommand : AsyncCommand
         }
         else
         {
-            string inPlayer = ctx.Get(0)!;
+            string inPlayer = Context.Get(0)!;
 
-            bool linked = await CheckLinked(ctx.Caller, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
+            bool linked = await CheckLinked(Context.Caller, token).ConfigureAwait(false);
+            await UniTask.SwitchToMainThread(token);
             if (!linked)
                 goto DiscordNotLinked;
 
-            type = GetReportType(ctx.Get(1)!);
-            message = type == EReportType.CUSTOM ? ctx.GetRange(1)! : ctx.GetRange(2)!;
+            type = GetReportType(Context.Get(1)!);
+            message = type == ReportType.Custom ? Context.GetRange(1)! : Context.GetRange(2)!;
 
-            if (Util.TryParseSteamId(inPlayer, out CSteamID id) && id.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            if (FormattingUtility.TryParseSteamId(inPlayer, out CSteamID id) && id.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
                 target = id.m_SteamID;
             else
             {
@@ -134,38 +140,38 @@ public class ReportCommand : AsyncCommand
         
         if (!UCWarfare.CanUseNetCall)
         {
-            ctx.Reply(T.ReportNotConnected);
+            Context.Reply(T.ReportNotConnected);
             return;
         }
 
         PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(target, token);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
-        if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, CooldownType.Report, out Cooldown cd) && cd.Parameters.Length > 0 && cd.Parameters[0] is ulong ul && ul == target)
+        if (CooldownManager.HasCooldownNoStateCheck(Context.Caller, CooldownType.Report, out Cooldown cd) && cd.Parameters.Length > 0 && cd.Parameters[0] is ulong ul && ul == target)
         {
-            ctx.Reply(T.ReportCooldown, targetNames);
+            Context.Reply(T.ReportCooldown, targetNames);
             return;
         }
 
-        ctx.Reply(T.ReportConfirm, target, targetNames);
-        ctx.LogAction(ActionLogType.StartReport, string.Join(", ", ctx.Parameters));
-        bool didConfirm = await CommandWaiter.WaitAsync(ctx.Caller, "confirm", 10000);
+        Context.Reply(T.ReportConfirm, target, targetNames);
+        Context.LogAction(ActionLogType.StartReport, string.Join(", ", Context.Parameters));
+        bool didConfirm = await CommandWaiter.WaitAsync(Context.Caller, "confirm", 10000);
         await UCWarfare.ToUpdate();
         if (!didConfirm)
         {
-            ctx.Reply(T.ReportCancelled);
+            Context.Reply(T.ReportCancelled);
             return;
         }
         if (!UCWarfare.CanUseNetCall)
         {
-            ctx.Reply(T.ReportNotConnected);
+            Context.Reply(T.ReportNotConnected);
             return;
         }
-        CooldownManager.StartCooldown(ctx.Caller, CooldownType.Report, 3600f, target);
-        Report? report = Data.Reporter.CreateReport(ctx.CallerID, target, message, type);
+        CooldownManager.StartCooldown(Context.Caller, CooldownType.Report, 3600f, target);
+        Report? report = Data.Reporter.CreateReport(Context.CallerID, target, message, type);
         if (report == null)
         {
-            ctx.SendUnknownError();
+            Context.SendUnknownError();
             return;
         }
 
@@ -173,17 +179,17 @@ public class ReportCommand : AsyncCommand
         await Data.DatabaseManager.AddReport(report, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate();
         string typename = GetName(type);
-        NotifyAdminsOfReport(targetNames, ctx.Caller.Name, report, typename);
-        if (!T.ReportSuccessMessage.HasLanguage(ctx.LanguageInfo) || ctx.IMGUI)
+        NotifyAdminsOfReport(targetNames, Context.Caller.Name, report, typename);
+        if (!T.ReportSuccessMessage.HasLanguage(Context.LanguageInfo) || Context.IMGUI)
         {
-            ctx.Reply(T.ReportSuccessMessage1, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
-            ctx.Reply(T.ReportSuccessMessage2);
+            Context.Reply(T.ReportSuccessMessage1, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
+            Context.Reply(T.ReportSuccessMessage2);
         }
         else
         {
-            ctx.Reply(T.ReportSuccessMessage, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
+            Context.Reply(T.ReportSuccessMessage, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
         }
-        L.Log($"{ctx.Caller.Name.PlayerName} ({ctx.CallerID}) reported {targetNames.PlayerName} ({target}) for \"{report.Message}\" as a {typename} report.", ConsoleColor.Cyan);
+        L.Log($"{Context.Caller.Name.PlayerName} ({Context.CallerID}) reported {targetNames.PlayerName} ({target}) for \"{report.Message}\" as a {typename} report.", ConsoleColor.Cyan);
         byte[] jpgData =
             targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE)
                 ? Array.Empty<byte>()
@@ -191,7 +197,7 @@ public class ReportCommand : AsyncCommand
         report.JpgData = jpgData;
         if (!UCWarfare.CanUseNetCall)
         {
-            ctx.Reply(T.ReportNotConnected);
+            Context.Reply(T.ReportNotConnected);
             return;
         }
         RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(
@@ -220,109 +226,105 @@ public class ReportCommand : AsyncCommand
             //await UCWarfare.ToUpdate();
             //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
             L.Log($"Report against {names.PlayerName} ({target}) record: \"{messageUrl}\".", ConsoleColor.Cyan);
-            ActionLog.Add(ActionLogType.ConfirmReport, report + ", Report URL: " + messageUrl, ctx.Caller);
+            ActionLog.Add(ActionLogType.ConfirmReport, report + ", Report URL: " + messageUrl, Context.Caller);
         }
         else
         {
             L.Log($"Report against {names.PlayerName} ({target}) failed to send to UCHB.", ConsoleColor.Cyan);
-            ActionLog.Add(ActionLogType.ConfirmReport, report + ", Report did not reach the discord bot.", ctx.Caller);
+            ActionLog.Add(ActionLogType.ConfirmReport, report + ", Report did not reach the discord bot.", Context.Caller);
         }
         return;
     PlayerNotFound:
-        throw ctx.Reply(T.PlayerNotFound);
+        throw Context.Reply(T.PlayerNotFound);
     DiscordNotLinked:
-        ctx.Reply(T.DiscordNotLinked);
-        throw ctx.Reply(T.DiscordNotLinked2, ctx.Caller);
+        Context.Reply(T.DiscordNotLinked);
+        throw Context.Reply(T.DiscordNotLinked2, Context.Caller);
     Help:
-        ctx.SendCorrectUsage(Syntax + " - " + Help);
+        Context.SendCorrectUsage(Syntax + " - " + Help);
     Types: // not returning here is intentional
-        throw ctx.Reply(T.ReportReasons);
+        throw Context.Reply(T.ReportReasons);
+#endif
     }
 
-    public static readonly KeyValuePair<string, EReportType>[] ReportTypeAliases =
+    public static readonly KeyValuePair<string, ReportType>[] ReportTypeAliases =
     {
-        new KeyValuePair<string, EReportType>("custom",                  EReportType.CUSTOM),
-        new KeyValuePair<string, EReportType>("none",                    EReportType.CUSTOM),
-        new KeyValuePair<string, EReportType>("chat abuse",              EReportType.CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("racism",                  EReportType.CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("n word",                  EReportType.CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("chat",                    EReportType.CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("chat racism",             EReportType.CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("voice chat abuse",        EReportType.VOICE_CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("voice chat",              EReportType.VOICE_CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("voice chat racism",       EReportType.VOICE_CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("vc abuse",                EReportType.VOICE_CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("vc racism",               EReportType.VOICE_CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("vc",                      EReportType.VOICE_CHAT_ABUSE),
-        new KeyValuePair<string, EReportType>("soloing",                 EReportType.SOLOING_VEHICLE),
-        new KeyValuePair<string, EReportType>("solo",                    EReportType.SOLOING_VEHICLE),
-        new KeyValuePair<string, EReportType>("soloing vehicles",        EReportType.SOLOING_VEHICLE),
-        new KeyValuePair<string, EReportType>("asset waste",             EReportType.WASTING_ASSETS),
-        new KeyValuePair<string, EReportType>("asset wasteing",          EReportType.WASTING_ASSETS),
-        new KeyValuePair<string, EReportType>("wasteing assets",         EReportType.WASTING_ASSETS),
-        new KeyValuePair<string, EReportType>("asset wasting",           EReportType.WASTING_ASSETS),
-        new KeyValuePair<string, EReportType>("wasting assets",          EReportType.WASTING_ASSETS),
-        new KeyValuePair<string, EReportType>("intentional teamkilling", EReportType.INTENTIONAL_TEAMKILL),
-        new KeyValuePair<string, EReportType>("teamkilling",             EReportType.INTENTIONAL_TEAMKILL),
-        new KeyValuePair<string, EReportType>("teamkill",                EReportType.INTENTIONAL_TEAMKILL),
-        new KeyValuePair<string, EReportType>("tk",                      EReportType.INTENTIONAL_TEAMKILL),
-        new KeyValuePair<string, EReportType>("tking",                   EReportType.INTENTIONAL_TEAMKILL),
-        new KeyValuePair<string, EReportType>("intentional",             EReportType.INTENTIONAL_TEAMKILL),
-        new KeyValuePair<string, EReportType>("fob greifing",            EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("structure greifing",      EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("base greifing",           EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("hab greifing",            EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("greifing",                EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("fob griefing",            EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("structure griefing",      EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("base griefing",           EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("hab griefing",            EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("griefing",                EReportType.GREIFING_FOBS),
-        new KeyValuePair<string, EReportType>("cheating",                EReportType.CHEATING),
-        new KeyValuePair<string, EReportType>("hacking",                 EReportType.CHEATING),
-        new KeyValuePair<string, EReportType>("wallhacks",               EReportType.CHEATING),
-        new KeyValuePair<string, EReportType>("hacks",                   EReportType.CHEATING),
-        new KeyValuePair<string, EReportType>("cheats",                  EReportType.CHEATING),
-        new KeyValuePair<string, EReportType>("hacker",                  EReportType.CHEATING),
-        new KeyValuePair<string, EReportType>("cheater",                 EReportType.CHEATING)
+        new KeyValuePair<string, ReportType>("custom",                  ReportType.Custom),
+        new KeyValuePair<string, ReportType>("none",                    ReportType.Custom),
+        new KeyValuePair<string, ReportType>("chat abuse",              ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("racism",                  ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("n word",                  ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("chat",                    ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("chat racism",             ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("voice chat abuse",        ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("voice chat",              ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("voice chat racism",       ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("vc abuse",                ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("vc racism",               ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("vc",                      ReportType.ChatAbuse),
+        new KeyValuePair<string, ReportType>("soloing",                 ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("solo",                    ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("soloing vehicles",        ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("asset waste",             ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("asset wasteing",          ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("wasteing assets",         ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("asset wasting",           ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("wasting assets",          ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("intentional teamkilling", ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("teamkilling",             ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("teamkill",                ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("tk",                      ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("tking",                   ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("intentional",             ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("fob greifing",            ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("structure greifing",      ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("base greifing",           ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("hab greifing",            ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("greifing",                ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("fob griefing",            ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("structure griefing",      ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("base griefing",           ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("hab griefing",            ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("griefing",                ReportType.Griefing),
+        new KeyValuePair<string, ReportType>("cheating",                ReportType.Custom),
+        new KeyValuePair<string, ReportType>("hacking",                 ReportType.Custom),
+        new KeyValuePair<string, ReportType>("wallhacks",               ReportType.Custom),
+        new KeyValuePair<string, ReportType>("hacks",                   ReportType.Custom),
+        new KeyValuePair<string, ReportType>("cheats",                  ReportType.Custom),
+        new KeyValuePair<string, ReportType>("hacker",                  ReportType.Custom),
+        new KeyValuePair<string, ReportType>("cheater",                 ReportType.Custom)
     };
-    public UCPlayer.NameSearch GetNameType(EReportType type)
+    public UCPlayer.NameSearch GetNameType(ReportType type)
     {
         return type switch
         {
-            EReportType.CUSTOM or EReportType.INTENTIONAL_TEAMKILL or EReportType.GREIFING_FOBS or EReportType.SOLOING_VEHICLE or EReportType.VOICE_CHAT_ABUSE or EReportType.WASTING_ASSETS or EReportType.CHEATING => UCPlayer.NameSearch.NickName,
-            EReportType.CHAT_ABUSE => UCPlayer.NameSearch.CharacterName,
+            ReportType.Custom or ReportType.Griefing => UCPlayer.NameSearch.NickName,
+            ReportType.ChatAbuse => UCPlayer.NameSearch.CharacterName,
             _ => UCPlayer.NameSearch.CharacterName,
         };
     }
-    public string GetName(EReportType type)
+    public string GetName(ReportType type)
     {
         return type switch
         {
-            EReportType.CHAT_ABUSE => "Chat Abuse / Racism",
-            EReportType.VOICE_CHAT_ABUSE => "Voice Chat Abuse / Racism",
-            EReportType.SOLOING_VEHICLE => "Soloing Vehicle",
-            EReportType.WASTING_ASSETS => "Wasting Assets / Vehicle Greifing",
-            EReportType.INTENTIONAL_TEAMKILL => "Intentional Teamkilling",
-            EReportType.GREIFING_FOBS => "FOB / Friendly Structure Greifing",
-            EReportType.CHEATING => "Cheating",
-            _ => "Custom",
+            ReportType.Griefing => "Greifing",
+            ReportType.ChatAbuse => "Chat Abuse",
+            _ => "Other",
         };
     }
-    public EReportType GetReportType(string input)
+    public ReportType GetReportType(string input)
     {
         for (int i = 0; i < ReportTypeAliases.Length; ++i)
         {
-            ref KeyValuePair<string, EReportType> type = ref ReportTypeAliases[i];
+            ref KeyValuePair<string, ReportType> type = ref ReportTypeAliases[i];
             if (type.Key.Equals(input, StringComparison.OrdinalIgnoreCase))
                 return type.Value;
         }
-        return EReportType.CUSTOM;
+        return ReportType.Custom;
     }
     public async Task<bool> CheckLinked(UCPlayer player, CancellationToken token) =>
         (await Data.DatabaseManager.GetDiscordID(player.Steam64, token).ConfigureAwait(false)) != 0;
     public void NotifyAdminsOfReport(PlayerNames violator, PlayerNames reporter, Report report, string typename)
     {
-        Chat.Broadcast(LanguageSet.OfPermission(EAdminType.MODERATOR), T.ReportNotifyAdmin, reporter, violator, report.Message!, typename);
+        Chat.Broadcast(LanguageSet.AllStaff(), T.ReportNotifyAdmin, reporter, violator, report.Message!, typename);
     }
 }

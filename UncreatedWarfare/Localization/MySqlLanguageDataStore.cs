@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -19,8 +17,8 @@ public interface ILanguageDataStore
     void WriteWait();
     void WriteRelease();
     Task<LanguageInfo?> GetInfo(string name, bool exactOnly, bool allowCache, CancellationToken token = default);
-    Task<LanguageInfo?> GetInfo(PrimaryKey key, bool allowCache, CancellationToken token = default);
-    Task<bool> WriteWaitAsync(CancellationToken token = default);
+    Task<LanguageInfo?> GetInfo(uint key, bool allowCache, CancellationToken token = default);
+    Task WriteWaitAsync(CancellationToken token = default);
     Task AddOrUpdateInfo(LanguageInfo info, CancellationToken token = default);
     Task UpdateLanguagePreferences(LanguagePreferences preferences, CancellationToken token = default);
     Task<LanguagePreferences> GetLanguagePreferences(ulong steam64, CancellationToken token = default);
@@ -30,7 +28,7 @@ public interface ICachableLanguageDataStore : ILanguageDataStore
 {
     IReadOnlyList<LanguageInfo> Languages { get; }
     LanguageInfo? GetInfoCached(string name, bool exactOnly = true);
-    LanguageInfo? GetInfoCached(PrimaryKey key);
+    LanguageInfo? GetInfoCached(uint key);
     Task ReloadCache(CancellationToken token = default);
 }
 
@@ -38,10 +36,10 @@ public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageData
 {
     private List<LanguageInfo>? _langs;
     private Dictionary<string, LanguageInfo>? _codes;
-    private readonly UCSemaphore _semaphore = new UCSemaphore();
+    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     public IReadOnlyList<LanguageInfo> Languages { get; private set; }
     public Task Initialize(CancellationToken token = default) => Task.CompletedTask;
-    public Task<bool> WriteWaitAsync(CancellationToken token = default) => _semaphore.WaitAsync(token);
+    public Task WriteWaitAsync(CancellationToken token = default) => _semaphore.WaitAsync(token);
     public void WriteWait() => _semaphore.Wait();
     public void WriteRelease() => _semaphore.Release();
     public LanguageInfo? GetInfoCached(string name, bool exactOnly = true)
@@ -95,12 +93,12 @@ public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageData
             _semaphore.Release();
         }
     }
-    public LanguageInfo? GetInfoCached(PrimaryKey key)
+    public LanguageInfo? GetInfoCached(uint key)
     {
         _semaphore.Wait();
         try
         {
-            return _langs?.Find(x => x.Key == key.Key);
+            return _langs?.Find(x => x.Key == key);
         }
         finally
         {
@@ -114,7 +112,7 @@ public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageData
 
         return GetInfoCached(name, exactOnly);
     }
-    public async Task<LanguageInfo?> GetInfo(PrimaryKey key, bool allowCache, CancellationToken token = default)
+    public async Task<LanguageInfo?> GetInfo(uint key, bool allowCache, CancellationToken token = default)
     {
         if (_langs == null || !allowCache)
             await ReloadCache(token).ConfigureAwait(false);

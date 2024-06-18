@@ -1,36 +1,45 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class JumpCommand : Command
+
+[Command("jump", "jmp")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class JumpCommand : IExecutableCommand
 {
     private const string Syntax = "/jump [player] <multiplier>";
     private const string Help = "Sets a player's jump modifier.";
 
-    public JumpCommand() : base("jump", EAdminType.MODERATOR)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = Help,
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("player", typeof(IPlayer))
                 {
                     Description = "The player whose jump multiplier changes. Omit to target yourself.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("mulitplier", typeof(float))
                         {
                             Description = "Change the jump multiplier of the target player."
                         },
                         new CommandParameter("default")
                         {
-                            Aliases = new string[] { "reset" },
+                            Aliases = [ "reset" ],
                             Description = "Set the jump multiplier to 1x."
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("mulitplier", typeof(float))
                 {
@@ -38,33 +47,38 @@ public class JumpCommand : Command
                 },
                 new CommandParameter("default")
                 {
-                    Aliases = new string[] { "reset" },
+                    Aliases = [ "reset" ],
                     Description = "Set the jump multiplier to 1x."
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertArgs(1, Syntax);
-        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
+        Context.AssertArgs(1, Syntax);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        ctx.AssertOnDuty();
+        Context.AssertOnDuty();
 
-        UCPlayer? target = ctx.Caller;
+        UCPlayer? target = Context.Player;
         
-        if (ctx.HasArgs(2) && (!ctx.TryGet(0, out ulong Id, out target) || target == null))
-            throw ctx.Reply(T.PlayerNotFound);
+        if (Context.HasArgs(2) && (!Context.TryGet(0, out _, out target) || target == null))
+        {
+            throw Context.Reply(T.PlayerNotFound);
+        }
 
         if (target == null)
-            throw ctx.SendPlayerOnlyError();
-
-        int multParamIndex = ctx.HasArgs(2) ? 1 : 0;
-        if (!ctx.TryGet(multParamIndex, out float multiplier))
         {
-            if (!ctx.MatchParameter(multParamIndex, "reset", "default"))
-                throw ctx.Reply(T.JumpMultiplierInvalidValue, ctx.Get(multParamIndex)!);
+            throw Context.SendPlayerOnlyError();
+        }
+
+        int multParamIndex = Context.HasArgs(2) ? 1 : 0;
+        if (!Context.TryGet(multParamIndex, out float multiplier))
+        {
+            if (!Context.MatchParameter(multParamIndex, "reset", "default"))
+                throw Context.Reply(T.JumpMultiplierInvalidValue, Context.Get(multParamIndex)!);
 
             multiplier = 1f;
         }
@@ -72,9 +86,12 @@ public class JumpCommand : Command
         multiplier = Mathf.Clamp(multiplier, 0f, 10f);
 
         if (target.Player.movement.pluginJumpMultiplier == multiplier)
-            throw ctx.Reply(T.JumpMultiplierAlreadySet, multiplier);
+        {
+            throw Context.Reply(T.JumpMultiplierAlreadySet, multiplier);
+        }
 
         target.Player.movement.sendPluginJumpMultiplier(multiplier);
-        ctx.Reply(T.SetJumpMultiplier, multiplier, target);
+        Context.Reply(T.SetJumpMultiplier, multiplier, target);
+        return default;
     }
 } 

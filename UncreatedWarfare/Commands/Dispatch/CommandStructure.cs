@@ -1,14 +1,13 @@
-﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Uncreated.Warfare.Commands.Dispatch;
+using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Models.Localization;
 
-namespace Uncreated.Warfare.Commands.CommandSystem;
+namespace Uncreated.Warfare.Commands.Dispatch;
 public sealed class CommandStructure
 {
     private const string NoTypeColor = "ddd";
@@ -41,6 +40,7 @@ public sealed class CommandStructure
         new KeyValuePair<Type, string>(typeof(Asset), "4dffb8"),
     };
     public string Description { get; set; }
+    public PermissionLeaf? Permission { get; set; }
     public TranslationList? DescriptionTranslations { get; set; }
     public CommandParameter[] Parameters { get; set; } = Array.Empty<CommandParameter>();
     public string? GetDescription(LanguageInfo? language)

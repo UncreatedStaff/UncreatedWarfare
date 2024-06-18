@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -240,7 +239,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     public async Task<Kit?> GetKitFromSign(BarricadeDrop drop, UCPlayer looker, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         Kit? kit = Warfare.Signs.GetKitFromSign(drop, out int loadoutId);
         if (kit is null && loadoutId > 0)
         {
@@ -252,7 +251,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     public async Task SaveAllPlayerFavorites(CancellationToken token)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         List<Task> tasks = new List<Task>(4);
         foreach (UCPlayer player in PlayerManager.OnlinePlayers)
         {
@@ -297,7 +296,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             .Where(x => x.Type == KitType.Public || x.Type == KitType.Elite)
             .ToListAsync(token).ConfigureAwait(false);
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         Localization.ClearSection(TranslationSection.Kits);
         int ct = 0;
@@ -395,7 +394,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     public async Task<IPageKitItem?> GetHeldItemFromKit(UCPlayer player, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         ItemJar? held = player.GetHeldItem(out byte page);
         return held != null ? await GetItemFromKit(player, held, (Page)page, token).ConfigureAwait(false) : null;
     }
@@ -408,7 +407,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     {
         if (player.CachedActiveKitInfo is { ItemModels.Count: > 0 })
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             if (player.CachedActiveKitInfo is { ItemModels.Count: > 0 })
                 return GetItemFromKit(player, player.CachedActiveKitInfo, x, y, item, page);
         }
@@ -418,7 +417,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         if (kit is null)
             return null;
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         return GetItemFromKit(player, kit, x, y, item, page);
     }
@@ -823,7 +822,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         if (kit == null)
         {
             L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             UCInventoryManager.ClearInventoryAndSlots(player);
             return;
         }

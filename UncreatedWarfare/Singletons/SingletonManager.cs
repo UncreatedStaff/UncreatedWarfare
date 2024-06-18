@@ -57,7 +57,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <returns>The loaded singleton.</returns>
     public async Task<T> LoadSingletonAsync<T>(bool throwErrors = true, bool @lock = true, CancellationToken token = default) where T : class, IUncreatedSingleton
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         Type inputType = typeof(T);
         T singleton = null!;
         PopulateSingleton(ref singleton, throwErrors);
@@ -66,7 +66,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
             await WaitOrThrow(info, token).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             for (int i = 0; i < _singletons.Count; ++i)
             {
                 if (_singletons[i].SingletonType == inputType)
@@ -75,7 +75,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
                     if (ucs.IsLoaded)
                     {
                         await UnloadIntlAsync(ucs, throwErrors, token).ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                     }
                     _singletons[i] = info;
                     goto load;
@@ -101,7 +101,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <returns>The loaded singleton.</returns>
     public async Task<IUncreatedSingleton> LoadSingletonAsync(Type type, bool throwErrors = true, bool @lock = true, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         IUncreatedSingleton singleton = null!;
         PopulateSingleton(ref singleton, type, throwErrors);
         SingletonInformation info = new SingletonInformation(singleton);
@@ -109,7 +109,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
             await WaitOrThrow(info, token).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             for (int i = 0; i < _singletons.Count; ++i)
             {
                 if (_singletons[i].SingletonType == type)
@@ -118,7 +118,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
                     if (ucs.IsLoaded)
                     {
                         await UnloadIntlAsync(ucs, throwErrors, token).ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                     }
                     _singletons[i] = info;
                     goto load;
@@ -156,7 +156,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
             await WaitOrThrow(info, token).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             for (int i = 0; i < _singletons.Count; ++i)
             {
                 if (_singletons[i].SingletonType == inputType)
@@ -168,7 +168,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
                         try
                         {
                             await UnloadIntlAsync(ucs, throwErrors, token).ConfigureAwait(false);
-                            await UCWarfare.ToUpdate(token);
+                            await UniTask.SwitchToMainThread(token);
                         }
                         finally
                         {
@@ -390,7 +390,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
             singleton.IsLoaded = singleton.Singleton.IsLoaded;
             if (OnSingletonLoaded != null)
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 OnSingletonLoaded.Invoke(singleton.Singleton, singleton.IsLoaded);
             }
         }
@@ -400,7 +400,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
             L.LogError(ex);
             if (OnSingletonLoaded != null)
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 OnSingletonLoaded.Invoke(singleton.Singleton, false);
             }
             if (rethrow)
@@ -427,7 +427,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     public async Task<bool> UnloadSingletonAsync(Type type, bool throwErrors = false, bool @lock = true, CancellationToken token = default)
     {
         SingletonInformation? info = null;
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         for (int i = _singletons.Count - 1; i >= 0; --i)
         {
             if (_singletons[i].SingletonType == type)
@@ -446,7 +446,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
             bool state = await UnloadIntlAsync(info, throwErrors, token).ConfigureAwait(false);
             if (OnSingletonUnloaded != null)
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 OnSingletonUnloaded.Invoke(info.Singleton, state);
             }
             info.Singleton = null!;
@@ -471,7 +471,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     {
         Type inputType = field?.GetType() ?? typeof(T);
         SingletonInformation? info = null;
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         for (int i = _singletons.Count - 1; i >= 0; --i)
         {
             if (_singletons[i].SingletonType == inputType)
@@ -490,7 +490,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
             bool state = await UnloadIntlAsync(info, throwErrors, token).ConfigureAwait(false);
             if (OnSingletonUnloaded != null)
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 OnSingletonUnloaded.Invoke(info.Singleton, state);
             }
             info.Singleton = null!;
@@ -513,7 +513,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
             await singleton.UnloadAsync(token).ConfigureAwait(false);
             if (singleton.Singleton is Component comp)
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 Destroy(comp);
             }
             return true;
@@ -534,7 +534,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// <returns>The singleton if it was found, otherwise <see langword="null"/>.</returns>
     public async Task<IReloadableSingleton?> ReloadSingletonAsync(string key, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         for (int i = 0; i < _singletons.Count; ++i)
         {
             string? k1 = _singletons[i].ReloadKey;
@@ -558,8 +558,8 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
 
     public async Task<IReloadableSingleton?> ReloadSingletonAsync(IReloadableSingleton singleton, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
+        await UniTask.SwitchToMainThread(token);
         for (int i = 0; i < _singletons.Count; ++i)
         {
             if (ReferenceEquals(_singletons[i].Singleton, singleton))
@@ -591,7 +591,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
                 singleton.IsLoaded = true;
                 if (OnSingletonReloaded != null)
                 {
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     OnSingletonReloaded.Invoke(reloadable, true);
                 }
             }
@@ -601,7 +601,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
                 L.LogError(ex);
                 if (OnSingletonReloaded != null)
                 {
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     OnSingletonReloaded.Invoke(reloadable, false);
                 }
                 if (rethrow)
@@ -665,7 +665,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
     /// </summary>
     public async Task UnloadAllAsync(CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         List<SingletonInformation> list = new List<SingletonInformation>(_singletons);
         _singletons.Clear();
         foreach (SingletonInformation info in list)
@@ -704,7 +704,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
         /// <exception cref="SingletonLoadException"/>
         public async Task UnloadAsync(CancellationToken token = default)
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             if (Singleton.LoadAsynchrounously)
             {
                 await Singleton.UnloadAsync(token).ConfigureAwait(false);
@@ -712,7 +712,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
             }
             else
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                 Singleton.Unload();
             }
@@ -720,7 +720,7 @@ internal class SingletonManager : MonoBehaviour, IServiceProvider
         /// <exception cref="SingletonLoadException"/>
         public async Task LoadAsync(CancellationToken token = default)
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             if (RequiresLevel && !Level.isLoaded)
             {
                 await UCWarfare.ToLevelLoad(token);

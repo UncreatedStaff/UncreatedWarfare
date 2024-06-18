@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Teams;

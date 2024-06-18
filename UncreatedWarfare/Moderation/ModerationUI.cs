@@ -499,7 +499,7 @@ internal partial class ModerationUI : UnturnedUI
     public async Task Open(UCPlayer player, CancellationToken token = default)
     {
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         if (TeamSelector.Instance != null)
             TeamSelector.Instance.Close(player);
@@ -536,7 +536,7 @@ internal partial class ModerationUI : UnturnedUI
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
         if (page is not Page.Moderation and not Page.Players and not Page.Tickets and not Page.Logs)
             throw new ArgumentOutOfRangeException(nameof(page));
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (!isAlreadyInView)
         {
             PageLogic[(int)page].Show(player);
@@ -551,12 +551,12 @@ internal partial class ModerationUI : UnturnedUI
     }
     private async Task PrepareModerationPage(UCPlayer player, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         UpdateSelectedPlayer(player);
 
         await PlayerManager.TryDownloadAllPlayerSummaries(token: token);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         ModerationData data = GetOrAddModerationData(player);
         
@@ -796,7 +796,7 @@ internal partial class ModerationUI : UnturnedUI
                     return;
                 token.ThrowIfCancellationRequested();
 
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
 
                 int ct = Math.Min(ModerationPlayerList.Length, names.Count);
                 int i2 = 0;
@@ -1089,7 +1089,7 @@ internal partial class ModerationUI : UnturnedUI
             List<string> extraInfo = new List<string>();
             await entry.AddExtraInfo(Data.ModerationSql, extraInfo, player.Locale.CultureInfo, token);
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             if (data.InfoVersion != v)
                 return;
@@ -1177,7 +1177,7 @@ internal partial class ModerationUI : UnturnedUI
     }
     private async Task RefreshModerationHistory(UCPlayer player, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         ModerationHistoryNextButton.Disable(player.Connection);
         ModerationHistoryBackButton.Disable(player.Connection);
@@ -1297,7 +1297,7 @@ internal partial class ModerationUI : UnturnedUI
             entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, false, true, start, end, condition, orderBy, conditionArgs, token);
         }
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         data.HistoryView = entries;
         int pgCt = data.PageCount;
@@ -1323,7 +1323,7 @@ internal partial class ModerationUI : UnturnedUI
             await Data.ModerationSql.CacheAvatars(steam64Ids, token);
             await usernames;
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             SetHistoryPage(player, data, newPage);
 
         }, player.DisconnectToken);

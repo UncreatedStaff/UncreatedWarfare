@@ -488,12 +488,12 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
 
         UCWarfare.RunTask(async token =>
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             CultureInfo? culture = player.TeamSelectorData.Cultures[index];
             if (culture == null) return;
 
             await player.Locale.Update(null, culture, holdSave: true, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             for (int i = 1; i < JoinUI.Cultures.Length; ++i)
             {
                 JoinUI.Cultures[i].Root.SetVisibility(player.Connection, false);
@@ -512,7 +512,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
 
         UCWarfare.RunTask(async token =>
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             LanguageInfo? language = player.TeamSelectorData.Languages[index];
             if (language == null) return;
             CultureInfo? culture = null;
@@ -522,7 +522,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
                 Localization.TryGetCultureInfo(language.DefaultCultureCode!, out culture);
 
             await player.Locale.Update(language.Code, culture, holdSave: true, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             JoinUI.CultureSearchBox.SetText(player.Connection, string.Empty);
             JoinUI.LanguageSearchBox.SetText(player.Connection, language.Code);
@@ -643,7 +643,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             }
             else results.AddRange(cultures);
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             results.RemoveAt(0);
             LanguageInfo lang = player.Locale.LanguageInfo;
@@ -764,7 +764,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
                 Data.LanguageDataStore.WriteRelease();
             }
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             L.LogDebug($"Found {results.Count} matching languages.");
 
             if (results.Count == 0)

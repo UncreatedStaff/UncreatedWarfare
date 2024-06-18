@@ -506,7 +506,7 @@ public abstract class DatabaseInterface
         bool anyPunishments = false;
         bool anyAppeals = false;
         bool anyAssetBans = false;
-        bool anyGreifingReports = false;
+        bool anyGriefingReports = false;
         bool anyChatAbuseReports = false;
         bool anyCheatingReports = false;
         for (int i = 0; i < entries.Length; ++i)
@@ -523,7 +523,7 @@ public abstract class DatabaseInterface
             else if (entry is Appeal)
                 anyAppeals = true;
             else if (entry is GriefingReport)
-                anyGreifingReports = true;
+                anyGriefingReports = true;
             else if (entry is ChatAbuseReport)
                 anyChatAbuseReports = true;
             else if (entry is CheatingReport)
@@ -744,7 +744,7 @@ public abstract class DatabaseInterface
             }, false);
         }
 
-        if (!baseOnly && anyGreifingReports)
+        if (!baseOnly && anyGriefingReports)
         {
             List<PrimaryKeyPair<StructureDamageRecord>> damages = new List<PrimaryKeyPair<StructureDamageRecord>>();
 

@@ -5,6 +5,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -302,6 +303,13 @@ public static class F
         height = 0f;
         return false;
     }
+    [return: NotNullIfNotNull(nameof(str))]
+    public static string? MaxLength(this string? str, int length)
+    {
+        if (str is null)
+            return null;
+        return str.Length <= length ? str : str.Substring(0, length);
+    }
     public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
@@ -559,7 +567,7 @@ public static class F
             return new ValueTask<PlayerNames>(pl.Name);
         }
 
-        return Util.IsValidSteam64Id(player)
+        return new CSteamID(player).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
             ? new ValueTask<PlayerNames>(Data.DatabaseManager.GetUsernamesAsync(player, token))
             : new ValueTask<PlayerNames>(PlayerNames.Nil);
     }

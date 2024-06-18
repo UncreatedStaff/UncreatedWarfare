@@ -1,5 +1,5 @@
 ﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
@@ -24,9 +24,9 @@ public class VanishCommand : Command
 
         if (!ctx.HasPermission(EAdminType.VANILLA_ADMIN, PermissionComparison.Exact))
             ctx.AssertOnDuty();
-        bool v = ctx.Caller.Player.movement.canAddSimulationResultsToUpdates;
-        DutyCommand.SetVanishMode(ctx.Caller.Player, v);
-        if (v)
+        bool isUnvanished = ctx.Player.Player.movement.canAddSimulationResultsToUpdates;
+        ctx.Player.VanishMode = isUnvanished;
+        if (isUnvanished)
         {
             ctx.Reply(T.VanishModeEnabled);
         }

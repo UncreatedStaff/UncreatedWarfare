@@ -1,86 +1,97 @@
-﻿using System;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+﻿using Cysharp.Threading.Tasks;
+using System;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
-public class MuteCommand : Command
+
+[Command("mute")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class MuteCommand : IExecutableCommand
 {
+#if false
     private const string SYNTAX = "/mute <voice|text|both> <name or steam64> <permanent | duration in minutes> <reason...>";
     private const string HELP = "Mute players in either voice chat or text chat.";
+#endif
 
-    public MuteCommand() : base("mute", EAdminType.MODERATOR)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Mute players in either voice chat or text chat.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Type", "Voice", "Text", "Both")
                 {
                     ChainDisplayCount = 4,
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer))
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Duration", typeof(TimeSpan), "Permanent")
                                 {
-                                    Parameters = new CommandParameter[]
-                                    {
+                                    Parameters =
+                                    [
                                         new CommandParameter("Reason", typeof(string))
                                         {
                                             IsRemainder = true
                                         }
-                                    }
+                                    ]
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        throw ctx.SendNotImplemented();
+        throw Context.SendNotImplemented();
 #if false
-        ctx.AssertHelpCheck(0, SYNTAX + HELP);
-        ctx.AssertHelpCheck(1, SYNTAX + HELP);
+        Context.AssertHelpCheck(0, SYNTAX + HELP);
+        Context.AssertHelpCheck(1, SYNTAX + HELP);
 
-        if (!ctx.HasArgs(4))
-            throw ctx.SendCorrectUsage(SYNTAX);
+        if (!Context.HasArgs(4))
+            throw Context.SendCorrectUsage(SYNTAX);
 
-        MuteType type = ctx.MatchParameter(0, "voice")
+        MuteType type = Context.MatchParameter(0, "voice")
             ? MuteType.Voice
-            : (ctx.MatchParameter(0, "text")
+            : (Context.MatchParameter(0, "text")
                 ? MuteType.Text
-                : (ctx.MatchParameter(0, "both")
+                : (Context.MatchParameter(0, "both")
                     ? MuteType.Both
-                    : throw ctx.SendCorrectUsage(SYNTAX)));
+                    : throw Context.SendCorrectUsage(SYNTAX)));
 
-        int duration = Util.ParseTime(ctx.Get(2)!);
+        int duration = Util.ParseTime(Context.Get(2)!);
 
         if (duration < -1 || duration == 0)
-            throw ctx.Reply(T.InvalidTime);
+            throw Context.Reply(T.InvalidTime);
 
-        if (!ctx.TryGet(1, out ulong targetId, out _))
-            throw ctx.Reply(T.PlayerNotFound);
-        Task.Run(async () =>
+        if (!Context.TryGet(1, out ulong targetId, out _))
+            throw Context.Reply(T.PlayerNotFound);
+
+        try
         {
-            try
-            {
-                await OffenseManager.MutePlayerAsync(targetId, ctx.CallerID, type, duration, ctx.GetRange(3)!, DateTimeOffset.UtcNow);
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Error muting " + targetId + ".");
-                L.LogError(ex);
-            }
-        });
-        ctx.Defer();
+            await OffenseManager.MutePlayerAsync(targetId, Context.CallerID, type, duration, Context.GetRange(3)!, DateTimeOffset.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Error muting " + targetId + ".");
+            L.LogError(ex);
+        }
+
+        Context.Defer();
 #endif
     }
 }

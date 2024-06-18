@@ -44,7 +44,7 @@ partial class KitManager
         List<KitLayoutTransformation>? layoutsToDelete = null;
 
         await using IKitsDbContext dbContext = new WarfareDbContext();
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         if (lockPurchaseSync)
         {
@@ -64,7 +64,7 @@ partial class KitManager
                 tknSources[i].Dispose();
         }
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         try
         {
@@ -261,7 +261,7 @@ partial class KitManager
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
         }
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         Signs.UpdateSigns();
     }
 
@@ -456,7 +456,7 @@ partial class KitManager
     }
     public async Task SaveLayout(UCPlayer player, Kit kit, bool lockPurchaseSync, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         List<LayoutTransformation> active = Layouts.GetLayoutTransformations(player, kit.PrimaryKey);
         List<(Page Page, Item Item, byte X, byte Y, byte Rotation, byte SizeX, byte SizeY)> inventory = new List<(Page, Item, byte, byte, byte, byte, byte)>(24);
         for (int pageIndex = 0; pageIndex < PlayerInventory.STORAGE; ++pageIndex)
@@ -632,7 +632,7 @@ partial class KitManager
 
     internal async Task OnItemsChangedLayoutHandler(IKitItem[] oldItems, Kit kit, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (kit.PrimaryKey == 0)
             return;
         IKitItem[] newItems = kit.Items;

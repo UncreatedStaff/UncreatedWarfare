@@ -8,7 +8,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
@@ -158,7 +157,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         _tokenSrc = new CancellationTokenSource();
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (!isActiveAndEnabled)
             throw new Exception("Gamemode object has been destroyed!");
 
@@ -177,7 +176,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         _isPreLoading = false;
         await Data.Singletons.LoadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         ThreadUtil.assertIsGameThread();
 
         InternalSubscribe();
@@ -187,7 +186,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!task.IsCompleted)
         {
             await task.ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             ThreadUtil.assertIsGameThread();
         }
         Type[] interfaces = GetType().GetInterfaces();
@@ -206,52 +205,52 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             await InvokeSingletonEvent<ILevelStartListener, ILevelStartListenerAsync>
                 (x => x.OnLevelReady(), x => x.OnLevelReady(token), token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             ThreadUtil.assertIsGameThread();
             await InternalOnReady(token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             task = OnReady(token);
             if (!task.IsCompleted)
             {
                 await task.ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 ThreadUtil.assertIsGameThread();
             }
             await PostOnReady(token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             _hasOnReadyRan = true;
         }
     }
     public async Task ReloadAsync(CancellationToken token)
     {
         await UnloadAsync(token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         ConfigObj.Reload();
         await LoadAsync(token).ConfigureAwait(false);
     }
     public void Reload() => throw new NotImplementedException();
     public override async Task UnloadAsync(CancellationToken token)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         Unsubscribe();
         InternalUnsubscribe();
         Task task = PreDispose(token);
         if (!task.IsCompleted)
         {
             await task.ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             ThreadUtil.assertIsGameThread();
         }
         InternalPreDispose();
         await Data.Singletons.UnloadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         ThreadUtil.assertIsGameThread();
         InternalPostDispose();
         task = PostDispose(token);
         if (!task.IsCompleted)
         {
             await task.ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             ThreadUtil.assertIsGameThread();
         }
 
@@ -348,7 +347,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 x => x.OnPrePlayerInit(player, wasAlreadyOnline, token), token, onlineCheck: player)
             .ConfigureAwait(false);
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         if (player.PendingVehicleSwapRequest.RespondToken is { IsCancellationRequested: false })
             player.PendingVehicleSwapRequest.RespondToken.Cancel();
@@ -365,7 +364,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             if (t3 != null)
                 await t3.ConfigureAwait(false);
         }
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
@@ -373,7 +372,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         Task task = PlayerInit(player, wasAlreadyOnline, token);
         if (!task.IsCompleted)
             await task.ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         await InvokeSingletonEvent<IPlayerPostInitListener, IPlayerPostInitListenerAsync>
                 (x => x.OnPostPlayerInit(player, wasAlreadyOnline), x => x.OnPostPlayerInit(player, wasAlreadyOnline, token), token, onlineCheck: player)
             .ConfigureAwait(false);
@@ -416,7 +415,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (Data.Singletons.TryGetSingleton(out ZoneList list))
         {
             await list.DownloadAll(token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
         }
 
         if (this is ISquads)
@@ -465,18 +464,18 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UnloadToken);
         if (!_wasLevelLoadedOnStart)
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             await InvokeSingletonEvent<ILevelStartListener, ILevelStartListenerAsync>
                 (x => x.OnLevelReady(), x => x.OnLevelReady(token), token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             ThreadUtil.assertIsGameThread();
             await InternalOnReady(token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             Task task = OnReady(token);
             if (!task.IsCompleted)
             {
                 await task.ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 ThreadUtil.assertIsGameThread();
             }
 
@@ -642,7 +641,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 await dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
             }
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             ThreadUtil.assertIsGameThread();
 
@@ -718,7 +717,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 Data.Gamemode.State = State.Discarded;
                 await Data.Singletons.UnloadSingletonAsync(Data.Gamemode, token: token).ConfigureAwait(false);
                 Data.Gamemode = null!;
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
             }
             SingletonLoadException? ex = null;
             try
@@ -758,7 +757,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     internal static async Task FailToLoadGame(Exception? ex, CancellationToken token)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         L.LogError("Failed to load gamemode , shutting down in 10 seconds.");
         if (ex is not null)
         {
@@ -775,7 +774,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         EffectManager.askEffectClearAll();
         await Data.Singletons.UnloadAllAsync(token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         Data.Gamemode = null!;
         UCWarfare.ForceUnload();
     }
@@ -807,7 +806,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             if (!task.IsCompleted)
             {
                 await task.ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 ThreadUtil.assertIsGameThread();
             }
             if (!onLoad)
@@ -826,7 +825,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             }
             await InvokeSingletonEvent<IGameStartListener, IGameStartListenerAsync>
                 (x => x.OnGameStarting(onLoad), x => x.OnGameStarting(onLoad, token), token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             ThreadUtil.assertIsGameThread();
             CooldownManager.OnGameStarting();
@@ -859,27 +858,27 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             }
 
             GameId = GameRecord.GameId;
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             if (!onLoad)
             {
                 await InvokeSingletonEvent<ILevelStartListener, ILevelStartListenerAsync>
                     (x => x.OnLevelReady(), x => x.OnLevelReady(token), token).ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
             }
             task = PostGameStarting(onLoad, token);
             if (!task.IsCompleted)
             {
                 await task;
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
             }
             ThreadUtil.assertIsGameThread();
             await Points.UpdateAllPointsAsync(token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             if (KitManager.GetSingletonQuick() is { IsLoaded: true } manager)
             {
                 await manager.DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token).ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
             }
 
             List<Task> initTasks = new List<Task>();
@@ -922,7 +921,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 L.LogError(ex);
             }
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             ThreadUtil.assertIsGameThread();
             if (!onLoad)
             {
@@ -956,9 +955,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         await InvokeSingletonEvent<IPlayerConnectListener, IPlayerConnectListenerAsync>
             (x => x.OnPlayerConnecting(player), x => x.OnPlayerConnecting(player, token), token, onlineCheck: player)
             .ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         await InternalPlayerInit(player, false, token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (player is { IsOnline: true, ModalNeeded: false })
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
         player.Save.Apply(player);
@@ -1368,7 +1367,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         // L.LogDebug("Invoke async singleton event " + typeof(TSync).Name + "/" + typeof(TAsync).Name);
         if (!UCWarfare.IsMainThread)
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
         ThreadUtil.assertIsGameThread();
         bool tmFound = false;
         
@@ -1403,7 +1402,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 if (!task.IsCompleted)
                 {
                     await task.ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     if (onlineCheck is { IsOnline: false })
                         return;
                     CheckContinue(args, onlineCheck);
@@ -1423,7 +1422,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 if (!task.IsCompleted)
                 {
                     await task.ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     CheckContinue(args, onlineCheck);
                 }
             }
@@ -1441,7 +1440,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 if (!task.IsCompleted)
                 {
                     await task.ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     CheckContinue(args, onlineCheck);
                 }
             }
@@ -1460,7 +1459,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                         if (!task.IsCompleted)
                         {
                             await task.ConfigureAwait(false);
-                            await UCWarfare.ToUpdate(token);
+                            await UniTask.SwitchToMainThread(token);
                             CheckContinue(args, onlineCheck);
                         }
                     }
@@ -1481,7 +1480,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 if (!task.IsCompleted)
                 {
                     await task.ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     CheckContinue(args, onlineCheck);
                 }
             }

@@ -507,7 +507,7 @@ public static class OffenseManager
         {
             UCPlayer? callerPlayer = UCPlayer.FromID(callerId);
             PlayerNames callerNames = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             L.Log($"{names.PlayerName} ({targetId}) was kicked by {callerNames.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(callerId), T.KickSuccessBroadcast, target, callerPlayer as IPlayer ?? callerNames);
             callerPlayer?.SendChat(T.KickSuccessFeedback, target);
@@ -519,7 +519,7 @@ public static class OffenseManager
     internal static async Task<StandardErrorCode> UnbanPlayer(ulong targetId, ulong callerId, DateTimeOffset timestamp, CancellationToken token = default)
     {
         PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(targetId, token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (!Provider.requestUnbanPlayer(callerId == 0 ? CSteamID.Nil : new CSteamID(callerId), new CSteamID(targetId)))
         {
             L.Log(callerId + " not banned.", ConsoleColor.Cyan);
@@ -539,7 +539,7 @@ public static class OffenseManager
         {
             UCPlayer? caller = UCPlayer.FromID(callerId);
             PlayerNames callerNames = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {callerNames.PlayerName} ({callerId}).", ConsoleColor.Cyan);
             caller?.SendChat(T.UnbanSuccessFeedback, targetNames);
             Chat.Broadcast(LanguageSet.AllBut(callerId), T.UnbanSuccessBroadcast, targetNames, caller as IPlayer ?? callerNames);
@@ -572,7 +572,7 @@ public static class OffenseManager
         else
         {
             PlayerNames callerNames = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             L.Log($"{targetNames.PlayerName} ({targetId}) was warned by {callerNames.PlayerName} ({caller}) because {reason}.", ConsoleColor.Cyan);
             IPlayer caller2 = caller as IPlayer ?? callerNames;
             Chat.Broadcast(LanguageSet.AllBut(callerId, targetId), T.WarnSuccessBroadcast, target, caller2);

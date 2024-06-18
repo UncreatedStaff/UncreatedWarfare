@@ -1,7 +1,9 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Models.Localization;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -13,7 +15,7 @@ namespace Uncreated.Warfare.Commands.Permissions;
 /// </summary>
 /// <remarks>Stolen from DevkitServer.</remarks>
 [JsonConverter(typeof(PermissionLeafJsonConverter))]
-public readonly struct PermissionLeaf : IEquatable<PermissionLeaf>, IEquatable<PermissionBranch>
+public readonly struct PermissionLeaf : IEquatable<PermissionLeaf>, IEquatable<PermissionBranch>, ITranslationArgument
 {
     /// <summary>
     /// A permission that can never be met.
@@ -114,6 +116,17 @@ public readonly struct PermissionLeaf : IEquatable<PermissionLeaf>, IEquatable<P
     }
 
     public override string ToString() => GetPrefix() + "::" + Path;
+
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    {
+        if ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
+            return ToString();
+
+        string prefix = GetPrefix();
+        string prefixColor = Unturned ? "637b63" : Warfare ? "9cb6a4" : "dddddd";
+        return prefix.Colorize(prefixColor) + "<color=#737373>::</color>" + Path.Colorize("d3ded6");
+    }
+
     public bool Equals(PermissionBranch branch) => branch.Equals((PermissionBranch)this);
     public bool Equals(PermissionLeaf leaf)
     {

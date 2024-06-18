@@ -162,7 +162,7 @@ public static class EventDispatcher
         {
             if (mainThread && !UCWarfare.IsMainThread)
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 ThreadUtil.assertIsGameThread();
             }
 
@@ -992,7 +992,7 @@ public static class EventDispatcher
                 await TryInvoke(inv, args, nameof(PlayerPendingAsync), token).ConfigureAwait(true);
             }
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             if (args.CanContinue)
             {
@@ -1005,7 +1005,7 @@ public static class EventDispatcher
         catch (Exception ex)
         {
             L.LogError(ex);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             EventPatches.ContinueSendingVerifyPacket(args.PendingPlayer);
         }
         finally

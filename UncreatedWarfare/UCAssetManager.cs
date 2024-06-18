@@ -3,6 +3,7 @@ using SDG.Framework.Utilities;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
@@ -71,11 +72,61 @@ public static class UCAssetManager
     }
 
     /// <summary>
-    /// Returns the asset category (<see cref="EAssetType"/>) of <typeparamref name="TAsset"/>. Effeciently cached.
+    /// Returns the asset category (<see cref="EAssetType"/>) of <typeparamref name="TAsset"/>. Efficiently cached.
     /// </summary>
     [Pure]
     public static EAssetType GetAssetCategory<TAsset>() where TAsset : Asset => GetAssetCategoryCache<TAsset>.Category;
-    public static bool TryGetAsset<TAsset>(string assetName, out TAsset asset, out bool multipleResultsFound, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
+
+    /// <summary>
+    /// Returns the asset category (<see cref="EAssetType"/>) of <paramref name="assetType"/>.
+    /// </summary>
+    [Pure]
+    public static EAssetType GetAssetCategory(Type assetType)
+    {
+        if (typeof(ItemAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.ITEM;
+        }
+        if (typeof(VehicleAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.VEHICLE;
+        }
+        if (typeof(ObjectAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.OBJECT;
+        }
+        if (typeof(EffectAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.EFFECT;
+        }
+        if (typeof(AnimalAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.ANIMAL;
+        }
+        if (typeof(SpawnAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.SPAWN;
+        }
+        if (typeof(SkinAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.SKIN;
+        }
+        if (typeof(MythicAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.MYTHIC;
+        }
+        if (typeof(ResourceAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.RESOURCE;
+        }
+        if (typeof(DialogueAsset).IsAssignableFrom(assetType) || typeof(QuestAsset).IsAssignableFrom(assetType) || typeof(VendorAsset).IsAssignableFrom(assetType))
+        {
+            return EAssetType.NPC;
+        }
+
+        return EAssetType.NONE;
+    }
+    public static bool TryGetAsset<TAsset>(string assetName, [NotNullWhen(true)] out TAsset? asset, out bool multipleResultsFound, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
     {
         if (Guid.TryParse(assetName, out Guid guid))
         {
@@ -83,6 +134,7 @@ public static class UCAssetManager
             multipleResultsFound = false;
             return asset is not null && (selector is null || selector(asset));
         }
+
         EAssetType type = GetAssetCategory<TAsset>();
         if (type != EAssetType.NONE)
         {
@@ -92,7 +144,7 @@ public static class UCAssetManager
                 {
                     if (selector is not null && !selector(asset2))
                     {
-                        asset = null!;
+                        asset = null;
                         multipleResultsFound = false;
                         return false;
                     }
@@ -190,7 +242,7 @@ public static class UCAssetManager
             }
         }
         multipleResultsFound = false;
-        asset = null!;
+        asset = null;
         return false;
     }
     public static List<TAsset> TryGetAssets<TAsset>(string assetName, Predicate<TAsset>? selector = null, bool pool = false) where TAsset : Asset
@@ -520,53 +572,7 @@ public static class UCAssetManager
     }
     private static class GetAssetCategoryCache<TAsset> where TAsset : Asset
     {
-        public static readonly EAssetType Category;
-        static GetAssetCategoryCache()
-        {
-            Type type = typeof(TAsset);
-            if (typeof(ItemAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.ITEM;
-            }
-            else if (typeof(VehicleAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.VEHICLE;
-            }
-            else if (typeof(ObjectAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.OBJECT;
-            }
-            else if (typeof(EffectAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.EFFECT;
-            }
-            else if (typeof(AnimalAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.ANIMAL;
-            }
-            else if (typeof(SpawnAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.SPAWN;
-            }
-            else if (typeof(SkinAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.SKIN;
-            }
-            else if (typeof(MythicAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.MYTHIC;
-            }
-            else if (typeof(ResourceAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.RESOURCE;
-            }
-            else if (typeof(DialogueAsset).IsAssignableFrom(type) || typeof(QuestAsset).IsAssignableFrom(type) || typeof(VendorAsset).IsAssignableFrom(type))
-            {
-                Category = EAssetType.NPC;
-            }
-            else
-                Category = EAssetType.NONE;
-        }
+        public static readonly EAssetType Category = GetAssetCategory(typeof(TAsset));
     }
 }
 

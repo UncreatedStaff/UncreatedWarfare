@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
@@ -113,7 +113,7 @@ public class ICommand : AsyncCommand
             {
                 FactionInfo? kitFaction = (await ctx.Caller.GetActiveKit(token))?.FactionInfo;
 
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
 
                 asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                 if (asset != null)
@@ -155,7 +155,7 @@ public class ICommand : AsyncCommand
                 {
                     FactionInfo? kitFaction = (await ctx.Caller.GetActiveKit(token))?.FactionInfo;
 
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
 
                     asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                     if (asset != null)
@@ -186,7 +186,7 @@ public class ICommand : AsyncCommand
                 {
                     FactionInfo? kitFaction = (await ctx.Caller.GetActiveKit(token))?.FactionInfo;
 
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
 
                     asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                     if (asset != null)
@@ -208,7 +208,7 @@ public class ICommand : AsyncCommand
                 {
                     FactionInfo? kitFaction = (await ctx.Caller.GetActiveKit(token))?.FactionInfo;
 
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
 
                     asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, ctx.Caller.Faction, out byte[] state, out byte amt);
                     if (asset != null)

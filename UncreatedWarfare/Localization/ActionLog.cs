@@ -155,7 +155,7 @@ public class ActionLog : MonoBehaviour
             {
                 byte[] bytes;
                 if (meta == _current) // switch to main thread if sending current so it's not overwritten by the update loop.
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                 token.ThrowIfCancellationRequested();
                 using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {

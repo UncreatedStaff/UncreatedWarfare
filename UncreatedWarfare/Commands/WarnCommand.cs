@@ -1,68 +1,81 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
-public class WarnCommand : Command
-{
-    private const string SYNTAX = "/warn";
-    private const string HELP = "Warn misbehaving players.";
 
-    public WarnCommand() : base("warn", EAdminType.MODERATOR)
+[Command("warn")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class WarnCommand : IExecutableCommand
+{
+#if false
+    private const string Syntax = "/warn";
+    private const string Help = "Warn misbehaving players.";
+#endif
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Send a warning to a player.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Player", typeof(IPlayer))
                 {
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Reason", typeof(string))
                         {
                             IsRemainder = true
                         }
-                    }
+                    ]
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        throw ctx.SendNotImplemented();
+        throw Context.SendNotImplemented();
 #if false
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        ctx.AssertArgs(2, "warn_syntax");
+        Context.AssertArgs(2, "warn_syntax");
 
-        if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target) || target is null)
-            throw ctx.Reply(T.PlayerNotFound);
+        if (!Context.TryGet(0, out ulong targetId, out UCPlayer? target) || target is null)
+            throw Context.Reply(T.PlayerNotFound);
 
-        string? reason = ctx.GetRange(1);
+        string? reason = Context.GetRange(1);
         if (string.IsNullOrEmpty(reason))
-            throw ctx.Reply(T.NoReasonProvided);
+            throw Context.Reply(T.NoReasonProvided);
 
         PlayerNames targetNames = target.Name;
 
-        OffenseManager.LogWarnPlayer(targetId, ctx.CallerID, reason!, DateTime.Now);
+        OffenseManager.LogWarnPlayer(targetId, Context.CallerID, reason!, DateTime.Now);
 
         string tid = targetId.ToString(Data.AdminLocale);
-        ActionLog.Add(ActionLogType.WarnPlayer, $"WARNED {tid} FOR \"{reason}\"", ctx.CallerID);
-        if (ctx.IsConsole)
+        ActionLog.Add(ActionLogType.WarnPlayer, $"WARNED {tid} FOR \"{reason}\"", Context.CallerID);
+        if (Context.IsConsole)
         {
             L.Log($"{targetNames.PlayerName} ({tid}) was warned for: {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(targetId), T.WarnSuccessBroadcastOperator, targetNames);
-            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(ctx.Caller), T.WarnSuccessDMOperator.Translate(ctx.Caller, false, reason!)));
+            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(Context.Caller), T.WarnSuccessDMOperator.Translate(Context.Caller, false, reason!)));
             target.SendChat(T.WarnSuccessDMOperator, reason!);
         }
         else
         {
-            PlayerNames callerNames = ctx.Caller.Name;
-            L.Log($"{targetNames.PlayerName} ({tid}) was warned by {callerNames.PlayerName} ({ctx.CallerID}) for: {reason}.", ConsoleColor.Cyan);
-            Chat.Broadcast(LanguageSet.AllBut(targetId, ctx.CallerID), T.WarnSuccessBroadcast, targetNames, ctx.Caller);
-            ctx.Reply(T.WarnSuccessFeedback, targetNames);
-            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(ctx.Caller), T.WarnSuccessDM.Translate(ctx.Caller, false, callerNames, reason!)));
+            PlayerNames callerNames = Context.Caller.Name;
+            L.Log($"{targetNames.PlayerName} ({tid}) was warned by {callerNames.PlayerName} ({Context.CallerID}) for: {reason}.", ConsoleColor.Cyan);
+            Chat.Broadcast(LanguageSet.AllBut(targetId, Context.CallerID), T.WarnSuccessBroadcast, targetNames, Context.Caller);
+            Context.Reply(T.WarnSuccessFeedback, targetNames);
+            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(Context.Caller), T.WarnSuccessDM.Translate(Context.Caller, false, callerNames, reason!)));
             target.SendChat(T.WarnSuccessDM, callerNames, reason!);
         }
 #endif

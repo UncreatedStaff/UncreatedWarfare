@@ -1,45 +1,74 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
+using System;
 using System.Reflection;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Commands.Permissions;
 
 namespace Uncreated.Warfare.Commands;
-public class HolidayCommand : Command
+
+[Command("holiday")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class HolidayCommand : IExecutableCommand
 {
-    public HolidayCommand() : base("holiday", EAdminType.MEMBER)
+    private static readonly PermissionLeaf PermissionSetHoliday = new PermissionLeaf("commands.holiday.set", unturned: false, warfare: true);
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
-            Description = "Prints the current holiday.",
+            Description = "View or set the current holiday.",
             Parameters =
             [
                 new CommandParameter("holiday", typeof(ENPCHoliday))
                 {
                     Description = "Set the current holiday manually.",
-                    Permission = EAdminType.VANILLA_ADMIN,
+                    Permission = PermissionSetHoliday,
                     IsOptional = true
                 }
             ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (ctx.ArgumentCount == 0)
-            throw ctx.ReplyString("Current holiday: \"" + HolidayUtil.getActiveHoliday() + "\".");
+        if (Context.ArgumentCount == 0)
+        {
+            throw Context.ReplyString($"Current holiday: \"{HolidayUtil.getActiveHoliday()}\".");
+        }
 
-        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        await Context.AssertPermissions(PermissionSetHoliday, token);
 
-        if (!ctx.TryGet(0, out ENPCHoliday holiday))
-            throw ctx.ReplyString("Bad holiday.");
+        if (!Context.TryGet(0, out ENPCHoliday holiday))
+        {
+            throw Context.ReplyString("Invalid holiday. Must be field in ENPCHoliday.");
+        }
 
-        FieldInfo? field = typeof(Provider).GetField("authorityHoliday",
-            BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-
+        FieldInfo? field = typeof(HolidayUtil).GetField("holidayOverride", BindingFlags.Static | BindingFlags.NonPublic);
         if (field == null)
-            throw ctx.SendUnknownError();
+        {
+            throw Context.ReplyString("Unable to find 'HolidayUtil.holidayOverride' field.");
+        }
 
         field.SetValue(null, holiday);
+        Context.ReplyString("Set active holiday to " + Localization.TranslateEnum(holiday, Context.Language));
+
+        field = typeof(Provider).GetField("authorityHoliday", BindingFlags.Static | BindingFlags.NonPublic);
+        if (holiday == ENPCHoliday.NONE)
+        {
+            MethodInfo? method = typeof(HolidayUtil).GetMethod("BackendGetActiveHoliday", BindingFlags.Static | BindingFlags.NonPublic);
+            if (method != null)
+                holiday = (ENPCHoliday)method.Invoke(null, Array.Empty<object>());
+        }
+
+        field?.SetValue(null, holiday);
     }
 }

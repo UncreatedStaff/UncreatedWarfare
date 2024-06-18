@@ -5,9 +5,10 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Models.Localization;
@@ -158,7 +159,7 @@ public class CommandContext : ControlException
         int flags = 0;
         for (int i = 0; i < Parameters.Length; ++i)
         {
-            if (CommandHandler.IsFlag(Parameters[i]))
+            if (IsFlag(Parameters[i]))
                 ++flags;
         }
 
@@ -169,13 +170,13 @@ public class CommandContext : ControlException
             Flags = new string[flags];
             for (int i = Parameters.Length - 1; i >= 0; --i)
             {
-                if (CommandHandler.IsFlag(Parameters[i]))
-                    Flags[--flags] = Parameters[i].Substring(1);
+                if (IsFlag(Parameters[i]))
+                    Flags[--flags] = Parameters[i][1..];
             }
             flags = Parameters.Length - Flags.Length;
             for (int i = Parameters.Length - 1; i >= 0; --i)
             {
-                if (!CommandHandler.IsFlag(Parameters[i]))
+                if (!IsFlag(Parameters[i]))
                     NonFlagParameters[--flags] = Parameters[i];
             }
         }
@@ -183,16 +184,16 @@ public class CommandContext : ControlException
 
         for (int i = 0; i < Parameters.Length; ++i)
         {
-            if (CommandHandler.IsEscapedFlag(Parameters[i]))
-                Parameters[i] = Parameters[i].Substring(1);
+            if (IsEscapedFlag(Parameters[i]))
+                Parameters[i] = Parameters[i][1..];
         }
 
         if (flags != 0)
         {
             for (int i = 0; i < NonFlagParameters.Length; ++i)
             {
-                if (CommandHandler.IsEscapedFlag(NonFlagParameters[i]))
-                    NonFlagParameters[i] = NonFlagParameters[i].Substring(1);
+                if (IsEscapedFlag(NonFlagParameters[i]))
+                    NonFlagParameters[i] = NonFlagParameters[i][1..];
             }
         }
 
@@ -222,6 +223,14 @@ public class CommandContext : ControlException
             ParseFormat = Player.Locale.ParseFormat;
             IMGUI = Player is { Save.IMGUI: true };
         }
+    }
+    private static bool IsFlag(string arg)
+    {
+        return arg.Length > 1 && arg[0] == '-' && !char.IsDigit(arg[1]) && arg[1] != '.';
+    }
+    private static bool IsEscapedFlag(string arg)
+    {
+        return arg.Length > 2 && arg[0] == '\\' && arg[1] == '-' && !char.IsDigit(arg[2]) && arg[2] != '.';
     }
 
     /// <summary>
@@ -536,7 +545,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        return ParserTool.TryParseColor(NonFlagParameters[parameter], out value);
+        return FormattingUtility.TryParseColor(NonFlagParameters[parameter], out value);
     }
 
     /// <summary>
@@ -552,7 +561,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        return ParserTool.TryParseColor32(NonFlagParameters[parameter], out value);
+        return FormattingUtility.TryParseColor32(NonFlagParameters[parameter], out value);
     }
 
     /// <summary>
@@ -1005,7 +1014,7 @@ public class CommandContext : ControlException
         string? s = remainder ? GetRange(parameter - ArgumentOffset) : NonFlagParameters[parameter];
         if (s != null)
         {
-            if (ParserTool.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
             {
                 steam64 = steamId.m_SteamID;
                 onlinePlayer = UCPlayer.FromID(steam64);
@@ -1055,7 +1064,7 @@ public class CommandContext : ControlException
             onlinePlayer = default;
             return false;
         }
-        if (ParserTool.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             steam64 = steamId.m_SteamID;
             foreach (UCPlayer player in selection)
@@ -1089,7 +1098,7 @@ public class CommandContext : ControlException
     /// <param name="selector">Filter assets to pick from.</param>
     /// <remarks>Zero based indexing. Do not use <see cref="ushort"/>s to search for objects, this is a deprecated feature by Unturned.</remarks>
     /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>
-    public bool TryGet<TAsset>(int parameter, [MaybeNullWhen(false)] out TAsset asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
+    public bool TryGet<TAsset>(int parameter, [NotNullWhen(true)] out TAsset? asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
     {
         if (!TryGetRange(parameter, out string? p, remainder ? -1 : len) || p.Length == 0)
         {
@@ -1111,7 +1120,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
-    public bool TryGetTarget([MaybeNullWhen(false)] out Transform transform, int mask = 0, float distance = 4)
+    public bool TryGetTargetTransform([MaybeNullWhen(false)] out Transform transform, int mask = 0, float distance = 4)
     {
         if (IsConsole || Player is null || !Player.IsOnline)
         {
@@ -1130,7 +1139,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
-    public bool TryRaycast([MaybeNullWhen(false)] out RaycastInfo info, int mask, float distance = 4)
+    public bool TryGetTargetInfo([MaybeNullWhen(false)] out RaycastInfo info, int mask, float distance = 4)
     {
         if (IsConsole || Player is null || !Player.IsOnline)
         {
@@ -1148,7 +1157,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
-    public bool TryGetTarget<T>([MaybeNullWhen(false)] out T interactable, int mask = 0, float distance = 4f) where T : Interactable
+    public bool TryGetInteractableTarget<T>([MaybeNullWhen(false)] out T interactable, int mask = 0, float distance = 4f) where T : Interactable
     {
         if (IsConsole || Player is null || !Player.IsOnline)
         {
@@ -1195,7 +1204,7 @@ public class CommandContext : ControlException
     /// Get the <see cref="BarricadeDrop"/> the user is looking at.
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
-    public bool TryGetTarget([MaybeNullWhen(false)] out BarricadeDrop drop, float distance = 4f)
+    public bool TryGetBarricadeTarget([MaybeNullWhen(false)] out BarricadeDrop drop, float distance = 4f)
     {
         if (IsConsole || Player is null || !Player.IsOnline)
         {
@@ -1219,7 +1228,7 @@ public class CommandContext : ControlException
     /// Get the <see cref="StructureDrop"/> the user is looking at.
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
-    public bool TryGetTarget([MaybeNullWhen(false)] out StructureDrop drop, float distance = 4f)
+    public bool TryGetStructureTarget([MaybeNullWhen(false)] out StructureDrop drop, float distance = 4f)
     {
         if (IsConsole || Player is null || !Player.IsOnline)
         {
@@ -1243,7 +1252,7 @@ public class CommandContext : ControlException
     /// Get the <see cref="InteractableVehicle"/> the user is looking at.
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
-    public bool TryGetTarget([MaybeNullWhen(false)] out InteractableVehicle vehicle, float distance = 4f, bool tryCallersVehicleFirst = true, bool allowDead = false)
+    public bool TryGetVehicleTarget([MaybeNullWhen(false)] out InteractableVehicle vehicle, float distance = 4f, bool tryCallersVehicleFirst = true, bool allowDead = false)
     {
         if (IsConsole || Player is null || !Player.IsOnline)
         {
@@ -1269,7 +1278,7 @@ public class CommandContext : ControlException
         vehicle = info.vehicle;
         return vehicle != null && (allowDead || !vehicle.isDead);
     }
-    public bool TryGetTarget([MaybeNullWhen(false)] out UCPlayer player, float distance = 4f)
+    public bool TryGetPlayerTarget([MaybeNullWhen(false)] out UCPlayer player, float distance = 4f)
     {
         if (IsConsole || Player is null || !Player.IsOnline)
         {
@@ -1294,33 +1303,33 @@ public class CommandContext : ControlException
     /// <summary>
     /// Check if <see cref="Caller"/> has <paramref name="permission"/>. Always returns <see langword="true"/> when ran with console.
     /// </summary>
-    public ValueTask<bool> HasPermission(PermissionLeaf permission)
+    public ValueTask<bool> HasPermission(PermissionLeaf permission, CancellationToken token = default)
     {
-        return _permissionsStore.HasPermissionAsync(Caller, permission);
+        return _permissionsStore.HasPermissionAsync(Caller, permission, token);
     }
 
     /// <summary>
     /// Throws an exception and sends the generic 'no permission' message if the caller doesn't have <paramref name="permission"/>.
     /// </summary>
     /// <exception cref="CommandContext"/>
-    public ValueTask AssertPermissions(PermissionLeaf permission)
+    public ValueTask AssertPermissions(PermissionLeaf permission, CancellationToken token = default)
     {
-        ValueTask<bool> vt = HasPermission(permission);
+        ValueTask<bool> vt = HasPermission(permission, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt));
+            return new ValueTask(Core(vt, permission));
         }
 
         if (!vt.Result)
-            throw SendNoPermission();
+            throw SendNoPermission(permission);
             
         return default;
 
-        async Task Core(ValueTask<bool> vt)
+        async Task Core(ValueTask<bool> vt, PermissionLeaf permission)
         {
             bool hasPerm = await vt.ConfigureAwait(false);
             if (!hasPerm)
-                throw SendNoPermission();
+                throw SendNoPermission(permission);
         }
     }
 
@@ -1328,29 +1337,29 @@ public class CommandContext : ControlException
     /// Throws an exception and sends the generic 'no permission' message if the caller doesn't have at least one of the provided permissions.
     /// </summary>
     /// <exception cref="CommandContext"/>
-    public ValueTask AssertPermissionsOr(PermissionLeaf permission1, PermissionLeaf permission2)
+    public ValueTask AssertPermissionsOr(PermissionLeaf permission1, PermissionLeaf permission2, CancellationToken token = default)
     {
-        ValueTask<bool> vt = HasPermission(permission1);
+        ValueTask<bool> vt = HasPermission(permission1, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, true, permission2));
+            return new ValueTask(Core(vt, true, permission1, permission2, token));
         }
 
         if (vt.Result)
             return default;
 
-        vt = HasPermission(permission2);
+        vt = HasPermission(permission2, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, false, default));
+            return new ValueTask(Core(vt, false, permission1, permission2, token));
         }
 
         if (vt.Result)
             return default;
 
-        throw SendNoPermission();
+        throw SendNoPermission(permission1);
 
-        async Task Core(ValueTask<bool> vt, bool isFirst, PermissionLeaf permission2)
+        async Task Core(ValueTask<bool> vt, bool isFirst, PermissionLeaf permission1, PermissionLeaf permission2, CancellationToken token)
         {
             bool hasPerm = await vt.ConfigureAwait(false);
             if (hasPerm)
@@ -1359,9 +1368,9 @@ public class CommandContext : ControlException
             if (!isFirst)
                 return;
 
-            hasPerm = await HasPermission(permission2);
+            hasPerm = await HasPermission(permission2, token);
             if (!hasPerm)
-                throw SendNoPermission();
+                throw SendNoPermission(permission1);
         }
     }
 
@@ -1369,38 +1378,38 @@ public class CommandContext : ControlException
     /// Throws an exception and sends the generic 'no permission' message if the caller doesn't have at least one of the provided permissions.
     /// </summary>
     /// <exception cref="CommandContext"/>
-    public ValueTask AssertPermissionsOr(PermissionLeaf permission1, PermissionLeaf permission2, PermissionLeaf permission3)
+    public ValueTask AssertPermissionsOr(PermissionLeaf permission1, PermissionLeaf permission2, PermissionLeaf permission3, CancellationToken token = default)
     {
-        ValueTask<bool> vt = HasPermission(permission1);
+        ValueTask<bool> vt = HasPermission(permission1, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, 0, permission2, permission3));
+            return new ValueTask(Core(vt, 0, permission1, permission2, permission3, token));
         }
 
         if (vt.Result)
             return default;
 
-        vt = HasPermission(permission2);
+        vt = HasPermission(permission2, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, 1, default, permission3));
+            return new ValueTask(Core(vt, 1, permission1, permission2, permission3, token));
         }
 
         if (vt.Result)
             return default;
 
-        vt = HasPermission(permission3);
+        vt = HasPermission(permission3, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, 2, default, default));
+            return new ValueTask(Core(vt, 2, permission1, permission2, permission3, token));
         }
 
         if (vt.Result)
             return default;
 
-        throw SendNoPermission();
+        throw SendNoPermission(permission1);
 
-        async Task Core(ValueTask<bool> vt, int ctDone, PermissionLeaf permission2, PermissionLeaf permission3)
+        async Task Core(ValueTask<bool> vt, int ctDone, PermissionLeaf permission1, PermissionLeaf permission2, PermissionLeaf permission3, CancellationToken token)
         {
             bool hasPerm = await vt.ConfigureAwait(false);
             if (hasPerm)
@@ -1409,72 +1418,83 @@ public class CommandContext : ControlException
             if (ctDone == 2)
                 return;
 
-            hasPerm = await HasPermission(ctDone == 1 ? permission3 : permission2);
+            hasPerm = await HasPermission(ctDone == 1 ? permission3 : permission2, token);
             if (hasPerm)
                 return;
 
             if (ctDone == 1)
                 return;
 
-            hasPerm = await HasPermission(permission3);
+            hasPerm = await HasPermission(permission3, token);
             if (!hasPerm)
-                throw SendNoPermission();
+                throw SendNoPermission(permission1);
         }
     }
 
     /// <summary>
     /// Throws an exception and sends the generic 'no permission' message if the caller doesn't have at least one of the provided <paramref name="permissions"/>.
     /// </summary>
+    /// <remarks>If <paramref name="permissions"/> is empty, nothing will happen.</remarks>
     /// <exception cref="CommandContext"/>
-    public async ValueTask AssertPermissionsOr(params PermissionLeaf[] permissions)
+    public ValueTask AssertPermissionsOr(params PermissionLeaf[] permissions) => AssertPermissionsOr(default, permissions);
+
+    /// <summary>
+    /// Throws an exception and sends the generic 'no permission' message if the caller doesn't have at least one of the provided <paramref name="permissions"/>.
+    /// </summary>
+    /// <remarks>If <paramref name="permissions"/> is empty, nothing will happen.</remarks>
+    /// <exception cref="CommandContext"/>
+    public async ValueTask AssertPermissionsOr(CancellationToken token, params PermissionLeaf[] permissions)
     {
+        if (permissions.Length == 0)
+            return;
+
         for (int i = 0; i < permissions.Length; i++)
         {
-            if (await HasPermission(permissions[i]))
+            if (await HasPermission(permissions[i], token))
                 return;
         }
 
-        throw SendNoPermission();
+        throw SendNoPermission(permissions[0]);
     }
 
     /// <summary>
     /// Throws an exception and sends the generic 'no permission' message if the caller doesn't have all of the provided permissions.
     /// </summary>
     /// <exception cref="CommandContext"/>
-    public ValueTask AssertPermissionsAnd(PermissionLeaf permission1, PermissionLeaf permission2)
+    public ValueTask AssertPermissionsAnd(PermissionLeaf permission1, PermissionLeaf permission2, CancellationToken token = default)
     {
-        ValueTask<bool> vt = HasPermission(permission1);
+        ValueTask<bool> vt = HasPermission(permission1, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, true, permission2));
+            return new ValueTask(Core(vt, true, permission1, permission2, token));
         }
 
         if (!vt.Result)
-            throw SendNoPermission();
+            throw SendNoPermission(permission1);
 
-        vt = HasPermission(permission2);
+        vt = HasPermission(permission2, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, false, default));
+            return new ValueTask(Core(vt, false, permission1, permission2, token));
         }
 
         if (!vt.Result)
-            throw SendNoPermission();
+            throw SendNoPermission(permission2);
 
         return default;
 
-        async Task Core(ValueTask<bool> vt, bool isFirst, PermissionLeaf permission2)
+        async Task Core(ValueTask<bool> vt, bool isFirst, PermissionLeaf permission1, PermissionLeaf permission2, CancellationToken token)
         {
             bool hasPerm = await vt.ConfigureAwait(false);
             if (!hasPerm)
-                throw SendNoPermission();
+                throw SendNoPermission(permission1);
 
             if (!isFirst)
                 return;
 
-            hasPerm = await HasPermission(permission2);
+            hasPerm = await HasPermission(permission2, token);
             if (!hasPerm)
-                throw SendNoPermission();
+                throw SendNoPermission(permission2);
         }
     }
 
@@ -1482,56 +1502,56 @@ public class CommandContext : ControlException
     /// Throws an exception and sends the generic 'no permission' message if the caller doesn't have all of the provided permissions.
     /// </summary>
     /// <exception cref="CommandContext"/>
-    public ValueTask AssertPermissionsAnd(PermissionLeaf permission1, PermissionLeaf permission2, PermissionLeaf permission3)
+    public ValueTask AssertPermissionsAnd(PermissionLeaf permission1, PermissionLeaf permission2, PermissionLeaf permission3, CancellationToken token = default)
     {
-        ValueTask<bool> vt = HasPermission(permission1);
+        ValueTask<bool> vt = HasPermission(permission1, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, 0, permission2, permission3));
+            return new ValueTask(Core(vt, 0, permission1, permission2, permission3, token));
         }
 
         if (!vt.Result)
-            throw SendNoPermission();
+            throw SendNoPermission(permission1);
 
-        vt = HasPermission(permission2);
+        vt = HasPermission(permission2, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, 1, default, permission3));
+            return new ValueTask(Core(vt, 1, permission1, permission2, permission3, token));
         }
 
         if (!vt.Result)
-            throw SendNoPermission();
+            throw SendNoPermission(permission2);
 
-        vt = HasPermission(permission3);
+        vt = HasPermission(permission3, token);
         if (!vt.IsCompleted)
         {
-            return new ValueTask(Core(vt, 2, default, default));
+            return new ValueTask(Core(vt, 2, permission1, permission2, permission3, token));
         }
 
         if (!vt.Result)
-            throw SendNoPermission();
+            throw SendNoPermission(permission3);
 
         return default;
 
-        async Task Core(ValueTask<bool> vt, int ctDone, PermissionLeaf permission2, PermissionLeaf permission3)
+        async Task Core(ValueTask<bool> vt, int ctDone, PermissionLeaf permission1, PermissionLeaf permission2, PermissionLeaf permission3, CancellationToken token)
         {
             bool hasPerm = await vt.ConfigureAwait(false);
             if (!hasPerm)
-                throw SendNoPermission();
+                throw SendNoPermission(permission1);
 
             if (ctDone == 2)
                 return;
 
-            hasPerm = await HasPermission(ctDone == 1 ? permission3 : permission2);
+            hasPerm = await HasPermission(ctDone == 1 ? permission3 : permission2, token);
             if (!hasPerm)
-                throw SendNoPermission();
+                throw SendNoPermission(permission2);
 
             if (ctDone == 1)
                 return;
 
-            hasPerm = await HasPermission(permission3);
+            hasPerm = await HasPermission(permission3, token);
             if (!hasPerm)
-                throw SendNoPermission();
+                throw SendNoPermission(permission3);
         }
     }
 
@@ -1539,15 +1559,25 @@ public class CommandContext : ControlException
     /// Throws an exception and sends the generic 'no permission' message if the caller doesn't have all of the provided <paramref name="permissions"/>.
     /// </summary>
     /// <exception cref="CommandContext"/>
-    public async ValueTask AssertPermissionsAnd(params PermissionLeaf[] permissions)
+    public ValueTask AssertPermissionsAnd(params PermissionLeaf[] permissions) => AssertPermissionsAnd(default, permissions);
+
+    /// <summary>
+    /// Throws an exception and sends the generic 'no permission' message if the caller doesn't have all of the provided <paramref name="permissions"/>.
+    /// </summary>
+    /// <exception cref="CommandContext"/>
+    public async ValueTask AssertPermissionsAnd(CancellationToken token, params PermissionLeaf[] permissions)
     {
         for (int i = 0; i < permissions.Length; i++)
         {
-            if (!await HasPermission(permissions[i]))
-                throw SendNoPermission();
+            if (!await HasPermission(permissions[i], token))
+                throw SendNoPermission(permissions[i]);
         }
     }
-    public void AssertCommandNotOnPortionCooldown()
+
+    /// <summary>
+    /// Throws an exception if the isolated cooldown was still active on <see cref="Player"/> when the command was first started.
+    /// </summary>
+    public void AssertCommandNotOnIsolatedCooldown()
     {
         if (!OnIsolatedCooldown)
             return;
@@ -1661,6 +1691,9 @@ public class CommandContext : ControlException
     public Exception SendNoPermission() => Reply(T.NoPermissions);
 
     /// <remarks>Thread Safe</remarks>
+    public Exception SendNoPermission(PermissionLeaf permission) => Reply(T.NoPermissionsSpecific, permission);
+
+    /// <remarks>Thread Safe</remarks>
     public Exception SendPlayerNotFound() => Reply(T.PlayerNotFound);
 
     /// <remarks>Thread Safe</remarks>
@@ -1674,7 +1707,7 @@ public class CommandContext : ControlException
 
         if (IsConsole || Caller is null)
         {
-            message = ParserTool.RemoveRichText(message);
+            message = FormattingUtility.RemoveRichText(message);
             L.Log(message, ConsoleColor.Gray);
         }
         else
@@ -1693,8 +1726,8 @@ public class CommandContext : ControlException
 
         if (IsConsole || Player is null)
         {
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1714,12 +1747,12 @@ public class CommandContext : ControlException
 
         if (IsConsole || Caller is null)
         {
-            message = ParserTool.RemoveRichText(message);
+            message = FormattingUtility.RemoveRichText(message);
             L.Log(message, color);
         }
         else
         {
-            Player.SendString(message, ParserTool.FromConsoleColor(color));
+            Player.SendString(message, FormattingUtility.FromConsoleColor(color));
         }
         Responded = true;
         return this;
@@ -1728,7 +1761,7 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, string hex)
     {
-        ParserTool.TryParseColor(hex, out Color color);
+        FormattingUtility.TryParseColor(hex, out Color color);
         return ReplyString(message, color);
     }
 
@@ -1739,8 +1772,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, Culture, out Color color, false);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1758,8 +1791,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1777,8 +1810,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg0, arg1, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1796,8 +1829,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg0, arg1, arg2, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1815,8 +1848,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg0, arg1, arg2, arg3, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1834,8 +1867,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1853,8 +1886,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1872,8 +1905,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1891,8 +1924,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1910,8 +1943,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1929,8 +1962,8 @@ public class CommandContext : ControlException
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color color);
-            message = ParserTool.RemoveRichText(message);
-            ConsoleColor clr = ParserTool.ToConsoleColor(ParserTool.ToArgb(color));
+            message = FormattingUtility.RemoveRichText(message);
+            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
             L.Log(message, clr);
         }
         else
@@ -1939,6 +1972,20 @@ public class CommandContext : ControlException
         }
         Responded = true;
         return this;
+    }
+
+    /// <summary>
+    /// Parse <paramref name="value"/> into the type of <paramref name="property"/> using <see cref="Culture"/> (a field or property in <see cref="TItem"/>) and set the property if it has the <see cref="CommandSettableAttribute"/>.
+    /// </summary>
+    /// <param name="instance">Object to set the property for.</param>
+    /// <param name="property">Name of a property, field, custom handler, or an alias defined in <see cref="CommandSettableAttribute"/>.</param>
+    /// <param name="value">The value to set in string format.</param>
+    /// <param name="actualPropertyName">Actual name of the discovered member. Never <see langword="null"/> unless <paramref name="property"/> is <see langword="null"/>.</param>
+    /// <param name="propertyType">Actual type of the discovered member. Never <see langword="null"/>, defaults to <see cref="string"/> if a property isn't found..</param>
+    /// <returns>A success/error code.</returns>
+    public SetPropertyResult SetProperty<TItem>(TItem instance, string property, string value, [NotNullIfNotNull(nameof(property))] out string? actualPropertyName, out Type propertyType) where TItem : class
+    {
+        return SettableUtil<TItem>.SetProperty(instance, property, value, Culture, out actualPropertyName, out propertyType);
     }
 
     internal void CheckIsolatedCooldown()

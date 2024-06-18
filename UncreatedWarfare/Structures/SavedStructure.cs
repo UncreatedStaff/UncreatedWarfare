@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Models.Localization;
 using UnityEngine;
 

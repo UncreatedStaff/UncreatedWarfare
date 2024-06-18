@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using SDG.Unturned;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;

@@ -10,7 +10,8 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -413,7 +414,7 @@ public sealed class KitCommand : AsyncCommand
                     if (add)
                     {
                         IPageKitItem? item = await manager.GetHeldItemFromKit(ctx.Caller, token).ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
 
                         if (item == null)
                             throw ctx.Reply(T.KitHotkeyNotHoldingItem);
@@ -428,7 +429,7 @@ public sealed class KitCommand : AsyncCommand
                             throw ctx.Reply(T.KitHotkeyNotHoldingValidItem, asset);
 
                         await manager.AddHotkey(kit.PrimaryKey, ctx.CallerID, slot, item, token).ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         if (ctx.Caller.HotkeyBindings != null)
                         {
                             // remove duplicates / conflicts
@@ -465,7 +466,7 @@ public sealed class KitCommand : AsyncCommand
                     else
                     {
                         bool removed = await manager.RemoveHotkey(kit.PrimaryKey, ctx.CallerID, slot, token).ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         if (!removed)
                             throw ctx.Reply(T.KitHotkeyNotFound, slot, kit);
 
@@ -497,7 +498,7 @@ public sealed class KitCommand : AsyncCommand
                         throw ctx.Reply(T.AmmoNoKit);
                     
                     await manager.SaveLayout(ctx.Caller, kit, false, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     throw ctx.Reply(T.KitLayoutSaved, kit);
                 }
                 finally
@@ -517,12 +518,12 @@ public sealed class KitCommand : AsyncCommand
                     
                     if (kit.Items != null)
                     {
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         manager.Layouts.TryReverseLayoutTransformations(ctx.Caller, kit.Items, kit.PrimaryKey);
                     }
 
                     await manager.ResetLayout(ctx.Caller, kit.PrimaryKey, false, token);
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     throw ctx.Reply(T.KitLayoutReset, kit);
                 }
                 finally
@@ -619,7 +620,7 @@ public sealed class KitCommand : AsyncCommand
             
             if (kit == null)
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 throw ctx.Reply(T.KitNotFound, kitName.Replace(Signs.Prefix, string.Empty));
             }
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
@@ -627,12 +628,12 @@ public sealed class KitCommand : AsyncCommand
             {
                 if (fav && manager.IsFavoritedQuick(kit.PrimaryKey, player))
                 {
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     throw ctx.Reply(T.KitFavoriteAlreadyFavorited, kit);
                 }
                 else if (!fav && !manager.IsFavoritedQuick(kit.PrimaryKey, player))
                 {
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     throw ctx.Reply(T.KitFavoriteAlreadyUnfavorited, kit);
                 }
                 else
@@ -645,7 +646,7 @@ public sealed class KitCommand : AsyncCommand
                     
                     await manager.SaveFavorites(player, (IReadOnlyList<uint>?)player.KitMenuData.FavoriteKits ?? Array.Empty<uint>(), token).ConfigureAwait(false);
                 }
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
 
                 ctx.Reply(fav ? T.KitFavorited : T.KitUnfavorited, kit);
             }
@@ -654,7 +655,7 @@ public sealed class KitCommand : AsyncCommand
                 player.PurchaseSync.Release();
             }
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             Signs.UpdateKitSigns(player, null);
             return;
         }
@@ -673,12 +674,12 @@ public sealed class KitCommand : AsyncCommand
                 Kit? kit = await manager.FindKit(kitName, token, true);
                 if (kit != null) // overwrite
                 {
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     ctx.Reply(T.KitConfirmOverride, kit, kit);
                     bool didConfirm = await CommandWaiter.WaitAsync(ctx.Caller, typeof(ConfirmCommand), 10000);
                     if (!didConfirm)
                     {
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         throw ctx.Reply(T.KitCancelOverride);
                     }
 
@@ -729,7 +730,7 @@ public sealed class KitCommand : AsyncCommand
                 await dbContext2.AddAsync(kit, token).ConfigureAwait(false);
                 await dbContext2.SaveChangesAsync(token).ConfigureAwait(false);
 
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
 
                 kit.SetItemArray(UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true), dbContext2);
 
@@ -739,7 +740,7 @@ public sealed class KitCommand : AsyncCommand
                 await dbContext2.SaveChangesAsync(token).ConfigureAwait(false);
                 ctx.LogAction(ActionLogType.CreateKit, kitName);
 
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 manager.Signs.UpdateSigns(kit);
                 ctx.Reply(T.KitCreated, kit);
             }
@@ -756,12 +757,12 @@ public sealed class KitCommand : AsyncCommand
                 if (kit != null)
                 {
                     bool ld = kit.Type == KitType.Loadout;
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     ctx.Reply(T.KitConfirmDelete, kit, kit);
                     bool didConfirm = await CommandWaiter.WaitAsync(ctx.Caller, typeof(ConfirmCommand), 10000);
                     if (!didConfirm)
                     {
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         throw ctx.Reply(T.KitCancelDelete);
                     }
                     
@@ -810,7 +811,7 @@ public sealed class KitCommand : AsyncCommand
                             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                             throw ctx.Reply(T.KitUpgraded, kit);
                         }
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         throw ctx.Reply(T.DoesNotNeedUpgrade, kit);
                     }
 
@@ -850,7 +851,7 @@ public sealed class KitCommand : AsyncCommand
                             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                             throw ctx.Reply(T.KitUnlocked, kit);
                         }
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         throw ctx.Reply(T.DoesNotNeedUnlock, kit);
                     }
                 }
@@ -889,7 +890,7 @@ public sealed class KitCommand : AsyncCommand
                             throw ctx.Reply(T.KitLocked, kit);
                         }
 
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         throw ctx.Reply(T.DoesNotNeedLock, kit);
                     }
                 }
@@ -932,7 +933,7 @@ public sealed class KitCommand : AsyncCommand
                 {
                     Class @class = kit.Class;
                     await manager.Requests.GiveKit(ctx.Caller, kit, true, true, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     ctx.LogAction(ActionLogType.GiveKit, kitName);
                     ctx.Reply(T.RequestSignGiven, @class);
                 }
@@ -996,7 +997,7 @@ public sealed class KitCommand : AsyncCommand
                             dbContext.Update(kit);
                             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
-                            await UCWarfare.ToUpdate(token);
+                            await UniTask.SwitchToMainThread(token);
 
                             ctx.Reply(T.KitPropertySet, property, kit, newValue);
                             ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": LEVEL >> " + newValue.ToUpper());
@@ -1018,7 +1019,7 @@ public sealed class KitCommand : AsyncCommand
                             newValue = KitEx.ReplaceNewLineSubstrings(newValue);
                             kit.SetSignText(dbContext, ctx.CallerID, kit, newValue, language);
                             await dbContext.SaveChangesAsync(token);
-                            await UCWarfare.ToUpdate(token);
+                            await UniTask.SwitchToMainThread(token);
                             newValue = newValue.Replace("\n", "<br>");
                             ctx.Reply(T.KitPropertySet, "sign text", kit, language + " : " + newValue);
                             ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
@@ -1038,7 +1039,7 @@ public sealed class KitCommand : AsyncCommand
                             kit.UpdateLastEdited(ctx.CallerID);
                             dbContext.Update(kit);
                             await dbContext.SaveChangesAsync(token);
-                            await UCWarfare.ToUpdate(token);
+                            await UniTask.SwitchToMainThread(token);
                             ctx.Reply(T.KitPropertySet, "faction", kit, faction?.GetName(Localization.GetDefaultLanguage())!);
                             ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": FACTION >> " +
                                                                            (faction?.Name.ToUpper() ?? Translation.Null(TranslationFlags.NoRichText)));
@@ -1095,14 +1096,14 @@ public sealed class KitCommand : AsyncCommand
                                 kit.UpdateLastEdited(ctx.CallerID);
                                 dbContext.Update(kit);
                                 await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-                                await UCWarfare.ToUpdate(token);
+                                await UniTask.SwitchToMainThread(token);
                                 manager.Signs.UpdateSigns(kit);
                                 ctx.Reply(T.KitPropertySet, property, kit, newValue);
                                 ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
                                 if (oldbranch != kit.Branch || oldclass != kit.Class || prevType != kit.Type)
                                 {
                                     kit = await manager.GetKit(kit.PrimaryKey, token, x => KitManager.RequestableSet(x, false));
-                                    await UCWarfare.ToUpdate(token);
+                                    await UniTask.SwitchToMainThread(token);
                                     manager.InvokeAfterMajorKitUpdate(kit, true);
                                 }
                                 return;
@@ -1131,7 +1132,7 @@ public sealed class KitCommand : AsyncCommand
                     PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
                     if (hasAccess)
                     {
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         ctx.Reply(T.KitAlreadyHasAccess, onlinePlayer as IPlayer ?? names, kit);
                         return;
                     }
@@ -1166,7 +1167,7 @@ public sealed class KitCommand : AsyncCommand
                     PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
                     if (!hasAccess)
                     {
-                        await UCWarfare.ToUpdate(token);
+                        await UniTask.SwitchToMainThread(token);
                         ctx.Reply(T.KitAlreadyMissingAccess, onlinePlayer as IPlayer ?? names, kit);
                         return;
                     }
@@ -1259,7 +1260,7 @@ public sealed class KitCommand : AsyncCommand
                 string loadoutId = await manager.Loadouts.GetFreeLoadoutName(playerId).ConfigureAwait(false);
                 if (!ctx.TryGetRange(3, out string? signText) || string.IsNullOrWhiteSpace(signText))
                     signText = null;
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 Kit loadout = new Kit(loadoutId, @class, signText)
                 {
                     Creator = ctx.CallerID,
@@ -1276,7 +1277,7 @@ public sealed class KitCommand : AsyncCommand
 
                     await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                     loadout.SetItemArray(UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true), dbContext);
 
                     await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
@@ -1370,7 +1371,7 @@ public sealed class KitCommand : AsyncCommand
                 dbContext.Update(kit);
                 await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                 ctx.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.InternalName);
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 ctx.Reply(add ? T.KitSkillsetAdded : T.KitSkillsetRemoved, set, kit);
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 {

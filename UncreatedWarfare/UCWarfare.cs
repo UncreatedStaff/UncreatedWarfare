@@ -23,7 +23,6 @@ using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
@@ -472,8 +471,11 @@ public class UCWarfare : MonoBehaviour
         Data.ShowAllUI(player);
     }
 
+    [Obsolete]
     public static MainThreadTask ToUpdate(CancellationToken token = default) => ThreadQueue.ToMainThread(false, token);
+    [Obsolete]
     public static MainThreadTask SkipFrame(CancellationToken token = default) => ThreadQueue.ToMainThread(true, token);
+    [Obsolete]
     public static LevelLoadTask ToLevelLoad(CancellationToken token = default) => new LevelLoadTask(token);
 
     // 'fire and forget' functions that will report errors once the task completes.

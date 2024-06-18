@@ -1,16 +1,18 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
-public class BuildCommand : Command
+
+[HideFromHelp, Command("build")]
+public class BuildCommand : IExecutableCommand
 {
-    public BuildCommand() : base("build", EAdminType.MEMBER)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        Structure = new CommandStructure
-        {
-            Description = "Legacy command, tells you to use your shovel."
-        };
+        throw Context.Reply(T.BuildLegacyExplanation);
     }
-    public override void Execute(CommandContext ctx) => ctx.Reply(T.BuildLegacyExplanation);
 }

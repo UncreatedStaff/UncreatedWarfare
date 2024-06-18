@@ -1,137 +1,170 @@
-﻿using SDG.Unturned;
-using System;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using System.Collections.Generic;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ClearCommand : Command
+[Command("clear")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class ClearCommand : IExecutableCommand
 {
     private const string Syntax = "/clear <inventory|items|vehicles|structures> [player for inventory]";
     private const string Help = "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
-    public ClearCommand() : base("clear", EAdminType.MODERATOR)
+    private static readonly PermissionLeaf PermissionClearInventory  = new PermissionLeaf("commands.clear.inventory",  unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionClearItems      = new PermissionLeaf("commands.clear.items",      unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionClearVehicles   = new PermissionLeaf("commands.clear.vehicles",   unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionClearStructures = new PermissionLeaf("commands.clear.structures", unturned: false, warfare: true);
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = Help,
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("inventory")
                 {
-                    Aliases = new string[] { "inv" },
+                    Aliases = [ "inv" ],
                     Description = "Clear you or another player's inventory.",
                     ChainDisplayCount = 1,
-                    Parameters = new CommandParameter[]
-                    {
+                    Permission = PermissionClearInventory,
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer))
                         {
                             Description = "Clear another player's inventory.",
                             IsOptional = true
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("items")
                 {
-                    Aliases = new string[] { "item", "i" },
+                    Aliases = [ "item", "i" ],
                     Description = "Clear all dropped items.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Permission = PermissionClearItems,
+                    Parameters =
+                    [
                         new CommandParameter("Range", typeof(IPlayer))
                         {
                             Description = "Clear all items with a certain range (in meters).",
                             IsOptional = true
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("vehicles")
                 {
-                    Aliases = new string[] { "vehicle", "v" },
+                    Aliases = [ "vehicle", "v" ],
                     Description = "Clear all spawned vehicles.",
+                    Permission = PermissionClearVehicles
                 },
                 new CommandParameter("structures")
                 {
-                    Aliases = new string[] { "structure", "struct", "s", "barricades", "barricade", "b" },
+                    Aliases = [ "structure", "struct", "s", "barricades", "barricade", "b" ],
                     Description = "Clear all barricades and structures.",
+                    Permission = PermissionClearStructures
                 }
-            }
+            ]
         };
     }
-    public override void Execute(CommandContext ctx)
+
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertArgs(1, Syntax);
+        Context.AssertArgs(1, Syntax);
 
-        if (ctx.MatchParameter(0, "help"))
-            throw ctx.SendCorrectUsage(Syntax + " - " + Help);
+        if (Context.MatchParameter(0, "help"))
+            throw Context.SendCorrectUsage(Syntax + " - " + Help);
 
-        if (ctx.MatchParameter(0, "inventory", "inv"))
+        if (Context.MatchParameter(0, "inventory", "inv"))
         {
-            if (ctx.TryGet(1, out _, out UCPlayer? pl) || ctx.HasArgs(2))
+            await Context.AssertPermissions(PermissionClearInventory, token);
+            await UniTask.SwitchToMainThread(token);
+
+            if (Context.TryGet(1, out _, out UCPlayer? pl) || Context.HasArgs(2))
             {
                 if (pl is not null)
                 {
                     Kits.UCInventoryManager.ClearInventoryAndSlots(pl);
 
-                    ctx.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.AdminLocale));
-                    ctx.Reply(T.ClearInventoryOther, pl);
+                    Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.AdminLocale));
+                    Context.Reply(T.ClearInventoryOther, pl);
                 }
-                else throw ctx.Reply(T.PlayerNotFound);
+                else throw Context.Reply(T.PlayerNotFound);
             }
-            else if (ctx.IsConsole)
-                throw ctx.Reply(T.ClearNoPlayerConsole);
+            else if (Context.IsConsole)
+                throw Context.Reply(T.ClearNoPlayerConsole);
             else
             {
-                Kits.UCInventoryManager.ClearInventoryAndSlots(ctx.Caller);
-                ctx.LogAction(ActionLogType.ClearInventory, "CLEARED PERSONAL INVENTORY");
-                ctx.Reply(T.ClearInventorySelf);
+                Kits.UCInventoryManager.ClearInventoryAndSlots(Context.Player);
+                Context.LogAction(ActionLogType.ClearInventory, "CLEARED PERSONAL INVENTORY");
+                Context.Reply(T.ClearInventorySelf);
             }
         }
-        else if (ctx.MatchParameter(0, "items", "item", "i"))
+        else if (Context.MatchParameter(0, "items", "item", "i"))
         {
-            if (ctx.TryGet(1, out float range))
+            await Context.AssertPermissions(PermissionClearItems, token);
+            await UniTask.SwitchToMainThread(token);
+
+            if (!Context.TryGet(1, out float range))
             {
-                ctx.AssertRanByPlayer();
-                Vector3 pos = ctx.Caller.Position;
-                List<RegionCoordinate> c = new List<RegionCoordinate>(8);
-                Regions.getRegionsInRadius(pos, range, c);
-                float r2 = range * range;
-                for (int i = 0; i < c.Count; ++i)
-                {
-                    RegionCoordinate c2 = c[i];
-                    ItemRegion region = ItemManager.regions[c2.x, c2.y];
-                    for (int j = region.items.Count - 1; j >= 0; --j)
-                    {
-                        ItemData item = region.items[j];
-                        if ((item.point - pos).sqrMagnitude <= r2)
-                            EventFunctions.OnItemRemoved(item);
-                    }
-                }
-                ItemManager.ServerClearItemsInSphere(pos, range);
-                ctx.LogAction(ActionLogType.ClearItems, "RANGE: " + range.ToString("F0") + "m");
-                throw ctx.Reply(T.ClearItemsInRange, range);
+                ClearItems();
+                Context.LogAction(ActionLogType.ClearItems);
+                throw Context.Reply(T.ClearItems);
             }
-            ClearItems();
-            ctx.LogAction(ActionLogType.ClearItems);
-            ctx.Reply(T.ClearItems);
+
+            Context.AssertRanByPlayer();
+            Vector3 pos = Context.Player.Position;
+            List<RegionCoordinate> c = new List<RegionCoordinate>(8);
+            Regions.getRegionsInRadius(pos, range, c);
+            float r2 = range * range;
+            for (int i = 0; i < c.Count; ++i)
+            {
+                RegionCoordinate c2 = c[i];
+                ItemRegion region = ItemManager.regions[c2.x, c2.y];
+                for (int j = region.items.Count - 1; j >= 0; --j)
+                {
+                    ItemData item = region.items[j];
+                    if ((item.point - pos).sqrMagnitude <= r2)
+                        EventFunctions.OnItemRemoved(item);
+                }
+            }
+
+            ItemManager.ServerClearItemsInSphere(pos, range);
+            Context.LogAction(ActionLogType.ClearItems, "RANGE: " + range.ToString("F0") + "m");
+            Context.Reply(T.ClearItemsInRange, range);
         }
-        else if (ctx.MatchParameter(0, "vehicles", "vehicle", "v"))
+        else if (Context.MatchParameter(0, "vehicles", "vehicle", "v"))
         {
+            await Context.AssertPermissions(PermissionClearVehicles, token);
+            await UniTask.SwitchToMainThread(token);
+
             WipeVehiclesAndRespawn();
-            ctx.LogAction(ActionLogType.ClearVehicles);
-            ctx.Reply(T.ClearVehicles);
+            Context.LogAction(ActionLogType.ClearVehicles);
+            Context.Reply(T.ClearVehicles);
         }
-        else if (ctx.MatchParameter(0, "structures", "structure", "struct") ||
-                 ctx.MatchParameter(0, "barricades", "barricade", "b") || ctx.MatchParameter(0, "s"))
+        else if (Context.MatchParameter(0, "structures", "structure", "struct") ||
+                 Context.MatchParameter(0, "barricades", "barricade", "b") || Context.MatchParameter(0, "s"))
         {
+            await Context.AssertPermissions(PermissionClearStructures, token);
+            await UniTask.SwitchToMainThread(token);
+
             Data.Gamemode.ReplaceBarricadesAndStructures();
-            ctx.LogAction(ActionLogType.ClearStructures);
-            ctx.Reply(T.ClearStructures);
+            Context.LogAction(ActionLogType.ClearStructures);
+            Context.Reply(T.ClearStructures);
         }
-        else throw ctx.SendCorrectUsage(Syntax);
+        else throw Context.SendCorrectUsage(Syntax);
     }
     public static void WipeVehicles()
     {
@@ -142,7 +175,9 @@ public class ClearCommand : Command
         WipeVehicles();
         
         if (Data.Is(out IVehicles vgm))
+        {
             UCWarfare.RunTask(vgm.VehicleSpawner.RespawnAllVehicles, ctx: "Wipe and respawn all vehicles.");
+        }
     }
     public static void ClearItems()
     {

@@ -423,7 +423,7 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
         UCWarfare.RunTask(async token =>
         {
             await Task.Delay(500, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             QuestManager.OnQuestCompleted(this);
         }, tkn, ctx: "Compelte quest for " + Player + ".");
     }

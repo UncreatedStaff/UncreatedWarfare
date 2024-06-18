@@ -1,159 +1,173 @@
-﻿using SDG.Unturned;
-using System;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
-public class WhitelistCommand : Command
-{
-    private const string SYNTAX = "/whitelist <add|remove|set amount>";
-    private const string SET_AMOUNT_SYNTAX = "/whitelist set amount <item> <amount>";
-    private const string HELP = "Add or remove items from the global whitelist.";
 
-    public WhitelistCommand() : base("whitelist", EAdminType.STAFF)
+[Command("whitelist", "wh")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class WhitelistCommand : IExecutableCommand
+{
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        AddAlias("wh");
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Add or remove items from the global whitelist.",
-            Parameters = new CommandParameter[]
-            {
+            Parameters =
+            [
                 new CommandParameter("Add")
                 {
-                    Aliases = new string[] { "whitelist", "create" },
+                    Aliases = [ "whitelist", "create" ],
                     Description = "Add an item to the global whitelist.",
                     ChainDisplayCount = 3,
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Item", typeof(ItemAsset))
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Amount", typeof(int))
                                 {
                                     IsOptional = true
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Remove")
                 {
-                    Aliases = new string[] { "delete", "rem" },
+                    Aliases = [ "delete", "rem" ],
                     Description = "Remove an item from the global whitelist.",
                     ChainDisplayCount = 2,
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Item", typeof(ItemAsset))
                         {
                             IsRemainder = true
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Set")
                 {
                     Description = "Set the whitelist amount for an item.",
                     ChainDisplayCount = 3,
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Amount")
                         {
-                            Aliases = new string[] { "maxamount", "amt" },
+                            Aliases = [ "maxamount", "amt" ],
                             IsRemainder = true,
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("Amount", typeof(byte))
-                            }
+                            ]
                         }
-                    }
+                    ]
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Data.Gamemode.UseWhitelist || !Whitelister.Loaded) throw ctx.SendGamemodeError();
+        if (!Data.Gamemode.UseWhitelist || !Whitelister.Loaded)
+            throw Context.SendGamemodeError();
 
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertHelpCheck(0, "/whitelist <add|remove|set amount> - Add or remove items from the global whitelist.");
 
-        ctx.AssertArgs(2, SYNTAX);
+        Context.AssertArgs(2, "/whitelist <add|remove|set amount>");
 
-        if (ctx.MatchParameter(0, "add", "whitelist", "create"))
+        if (Context.MatchParameter(0, "add", "whitelist", "create"))
         {
-            ctx.AssertHelpCheck(1, "/whitelist add <item> [amount]");
-            if (!ctx.TryGet(ctx.ArgumentCount - 1, out byte amount))
+            Context.AssertHelpCheck(1, "/whitelist add <item> [amount]");
+            if (!Context.TryGet(Context.ArgumentCount - 1, out byte amount))
                 amount = 255;
-            if (ctx.TryGet(1, out ItemAsset asset, out bool multiple, amount == 255, ctx.ArgumentCount - (amount == 255 ? 1 : 2), false))
+            if (Context.TryGet(1, out ItemAsset? asset, out bool multiple, amount == 255, Context.ArgumentCount - (amount == 255 ? 1 : 2), false))
             {
                 if (!Whitelister.IsWhitelisted(asset.GUID, out _))
                 {
                     Whitelister.AddItem(asset.GUID, amount);
-                    ctx.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                    Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
                     if (amount != 255)
-                        ctx.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
-                    ctx.Reply(T.WhitelistAdded, asset);
+                        Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                    Context.Reply(T.WhitelistAdded, asset);
                 }
                 else
-                    throw ctx.Reply(T.WhitelistAlreadyAdded, asset);
+                    throw Context.Reply(T.WhitelistAlreadyAdded, asset);
             }
             else if (multiple)
-                throw ctx.Reply(T.WhitelistMultipleResults, ctx.Get(1)!);
+                throw Context.Reply(T.WhitelistMultipleResults, Context.Get(1)!);
             else
-                throw ctx.Reply(T.WhitelistItemNotID, ctx.Get(1)!);
+                throw Context.Reply(T.WhitelistItemNotID, Context.Get(1)!);
+
+            return default;
         }
-        else if (ctx.MatchParameter(0, "remove", "delete", "rem"))
+        
+        if (Context.MatchParameter(0, "remove", "delete", "rem"))
         {
-            ctx.AssertHelpCheck(1, "/whitelist remove <item>");
-            if (ctx.TryGet(1, out ItemAsset asset, out bool multiple, true, selector: x => Whitelister.IsWhitelistedFast(x.GUID)))
+            Context.AssertHelpCheck(1, "/whitelist remove <item>");
+            if (Context.TryGet(1, out ItemAsset? asset, out bool multiple, true, selector: x => Whitelister.IsWhitelistedFast(x.GUID)))
             {
                 Whitelister.RemoveItem(asset.GUID);
-                ctx.LogAction(ActionLogType.RemoveWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
-                ctx.Reply(T.WhitelistRemoved, asset);
+                Context.LogAction(ActionLogType.RemoveWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                Context.Reply(T.WhitelistRemoved, asset);
             }
             else if (multiple)
-                throw ctx.Reply(T.WhitelistMultipleResults, ctx.Get(1)!);
+                throw Context.Reply(T.WhitelistMultipleResults, Context.Get(1)!);
             else
-                throw ctx.Reply(T.WhitelistItemNotID, ctx.Get(1)!);
+                throw Context.Reply(T.WhitelistItemNotID, Context.Get(1)!);
+
+            return default;
         }
-        else if (ctx.MatchParameter(0, "set"))
+        
+        if (Context.MatchParameter(0, "set"))
         {
-            ctx.AssertArgs(4, SET_AMOUNT_SYNTAX);
-            ctx.AssertHelpCheck(1, SET_AMOUNT_SYNTAX);
+            Context.AssertArgs(4, "/whitelist set amount <item> <amount>");
+            Context.AssertHelpCheck(1, "/whitelist set amount <item> <amount>");
 
-            if (!ctx.TryGet(ctx.ArgumentCount - 1, out byte amount))
-                throw ctx.SendCorrectUsage(SET_AMOUNT_SYNTAX);
+            if (!Context.TryGet(Context.ArgumentCount - 1, out byte amount))
+                throw Context.SendCorrectUsage("/whitelist set amount <item> <amount>");
 
-            if (ctx.MatchParameter(1, "maxamount", "amount", "amt"))
+            if (!Context.MatchParameter(1, "maxamount", "amount", "amt"))
+                throw Context.SendCorrectUsage("/whitelist <add|remove|set amount>");
+
+            Context.AssertHelpCheck(2, "/whitelist set amount <item> <amount>");
+
+            if (Context.TryGet(2, out ItemAsset? asset, out bool multiple, false, Context.ArgumentCount - 2, false))
             {
-                ctx.AssertHelpCheck(2, SET_AMOUNT_SYNTAX);
-
-                if (ctx.TryGet(2, out ItemAsset asset, out bool multiple, false, ctx.ArgumentCount - 2, false))
+                if (!Whitelister.IsWhitelisted(asset.GUID, out _))
                 {
-                    if (!Whitelister.IsWhitelisted(asset.GUID, out _))
-                    {
-                        Whitelister.AddItem(asset.GUID, amount);
-                        ctx.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
-                        if (amount != 255)
-                            ctx.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
-                        ctx.Reply(T.WhitelistAdded, asset);
-                        ctx.Reply(T.WhitelistSetAmount, asset, amount);
-                    }
-                    else
-                    {
-                        if (amount != 255)
-                            ctx.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
-                        Whitelister.SetAmount(asset.GUID, amount);
-                        ctx.Reply(T.WhitelistSetAmount, asset, amount);
-                    }
+                    Whitelister.AddItem(asset.GUID, amount);
+                    Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                    if (amount != 255)
+                        Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                    Context.Reply(T.WhitelistAdded, asset);
+                    Context.Reply(T.WhitelistSetAmount, asset, amount);
                 }
-                else if (multiple)
-                    throw ctx.Reply(T.WhitelistMultipleResults, ctx.Get(1)!);
                 else
-                    throw ctx.Reply(T.WhitelistItemNotID, ctx.Get(1)!);
+                {
+                    if (amount != 255)
+                        Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                    Whitelister.SetAmount(asset.GUID, amount);
+                    Context.Reply(T.WhitelistSetAmount, asset, amount);
+                }
             }
+            else if (multiple)
+                throw Context.Reply(T.WhitelistMultipleResults, Context.Get(1)!);
+            else
+                throw Context.Reply(T.WhitelistItemNotID, Context.Get(1)!);
+
+            return default;
         }
-        else throw ctx.SendCorrectUsage(SYNTAX);
+        
+        throw Context.SendCorrectUsage("/whitelist <add|remove|set amount>");
     }
 }

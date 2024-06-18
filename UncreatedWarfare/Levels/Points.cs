@@ -236,7 +236,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 remote = Data.RemoteSQL.AddCredits(parameters.Steam64, team, amount, token);
             }
             int oldamt = currentAmount - amount;
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             if (player != null)
                 player.CachedCredits = currentAmount;
@@ -358,7 +358,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             // cancel on unload
             using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
             Task? remote = null;
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
 
             int origAmt = parameters.Amount;
             PointsConfig.XPData.TryGetValue(parameters.Reward.ToString(), out PointsConfig.XPRewardData? data);
@@ -483,7 +483,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                                                                     + Math.Abs(credits).ToString(Data.AdminLocale) +
                                                                     ") (With XP: " + parameters.Reward + ")", parameters.Steam64);
                     }
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
 
                     if (player.IsOnline)
                     {
@@ -537,12 +537,12 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     }
                     else
                         currentAmount = (await Data.DatabaseManager.AddCreditsAndXP(parameters.Steam64, team, credits, amtXp, token).ConfigureAwait(false)).Item2;
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                 }
                 else
                 {
                     currentAmount = await Data.DatabaseManager.AddXP(parameters.Steam64, team, amtXp, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                 }
 
                 if (player == null)
@@ -966,7 +966,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             caller.IsDownloadingXP = false;
             caller.HasDownloadedXP = true;
         }
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         caller.PointsDirtyMask |= 0b00001011;
         XPUI.Update(caller, false);
         CreditsUI.Update(caller, false);

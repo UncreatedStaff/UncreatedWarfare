@@ -2,7 +2,7 @@
 using System;
 using System.Globalization;
 using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Locations;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;

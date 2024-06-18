@@ -1,86 +1,91 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Networking;
 using Uncreated.Players;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands;
-public class IPWhitelistCommand : AsyncCommand
+
+[Command("ipwhitelist", "whitelistip", "whip", "ipwh", "iw")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class IPWhitelistCommand : IExecutableCommand
 {
-    private const string SYNTAX = "/ipwhitelist <add|remove> <steam64> [ip = any]";
-    private const string HELP = "Whitelist a player's IP to not be IP banned.";
+    private const string Syntax = "/ipwhitelist <add|remove> <steam64> [ip = any]";
+    private const string Help = "Whitelist a player's IP to not be IP banned.";
     private static readonly string[] RemArgs = { "remove", "delete", "rem", "blacklist" };
 
-    public IPWhitelistCommand() : base("ipwhitelist", EAdminType.STAFF)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        AddAlias("whitelistip");
-        AddAlias("whip");
-        AddAlias("ipwh");
-        AddAlias("iw");
-        Structure = new CommandStructure
+        return new CommandStructure
         {
-            Description = HELP,
-            Parameters = new CommandParameter[]
-            {
+            Description = Help,
+            Parameters =
+            [
                 new CommandParameter("Add")
                 {
-                    Aliases = new string[] { "whitelist", "create" },
+                    Aliases = [ "whitelist", "create" ],
                     Description = "Add an IP range to the IP whitelist.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer))
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("IP", typeof(IPv4Range))
                                 {
                                     IsOptional = true
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 },
                 new CommandParameter("Remove")
                 {
-                    Aliases = new string[] { "delete", "rem", "blacklist" },
+                    Aliases = [ "delete", "rem", "blacklist" ],
                     Description = "Remove an ip range from the IP whitelist.",
-                    Parameters = new CommandParameter[]
-                    {
+                    Parameters =
+                    [
                         new CommandParameter("Player", typeof(IPlayer))
                         {
-                            Parameters = new CommandParameter[]
-                            {
+                            Parameters =
+                            [
                                 new CommandParameter("IP", typeof(IPv4Range))
                                 {
                                     IsOptional = true
                                 }
-                            }
+                            ]
                         }
-                    }
+                    ]
                 }
-            }
+            ]
         };
     }
 
-    public override async Task Execute(CommandContext ctx, CancellationToken token)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        bool remove = ctx.MatchParameter(0, RemArgs);
-        if (remove || ctx.MatchParameter(0, "add", "whitelist", "create"))
+        bool remove = Context.MatchParameter(0, RemArgs);
+        if (remove || Context.MatchParameter(0, "add", "whitelist", "create"))
         {
             IPv4Range range = default;
-            if (!ctx.TryGet(1, out ulong player, out _) || ctx.TryGet(2, out string str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
-                throw ctx.SendCorrectUsage(SYNTAX);
+            if (!Context.TryGet(1, out ulong player, out _) || Context.TryGet(2, out string str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
+                throw Context.SendCorrectUsage(Syntax);
 
             PlayerNames names = await F.GetPlayerOriginalNamesAsync(player, token).ConfigureAwait(false);
-            if (await Data.ModerationSql.WhitelistIP(player, ctx.CallerID, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false) == StandardErrorCode.Success)
-                ctx.Reply(remove ? T.IPUnwhitelistSuccess : T.IPWhitelistSuccess, names, range);
+            if (await Data.ModerationSql.WhitelistIP(player, Context.CallerId.m_SteamID, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false) == StandardErrorCode.Success)
+                Context.Reply(remove ? T.IPUnwhitelistSuccess : T.IPWhitelistSuccess, names, range);
             else
-                ctx.Reply(T.IPWhitelistNotFound, names, range);
+                Context.Reply(T.IPWhitelistNotFound, names, range);
         }
-        else ctx.SendCorrectUsage(SYNTAX);
+        else Context.SendCorrectUsage(Syntax);
     }
 }

@@ -19,7 +19,7 @@ using Uncreated.Warfare.Models.Users;
 namespace Uncreated.Warfare.Commands.Permissions;
 
 [RpcClass]
-public class UserPermissionStore : IDisposable
+public class UserPermissionStore : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionBranch>> _individualPermissionCache = new ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionBranch>>();
     private readonly ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionGroup>> _permissionGroupCache = new ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionGroup>>();
@@ -44,11 +44,278 @@ public class UserPermissionStore : IDisposable
         _permissionGroupFileWatcher = ConfigurationHelper.ListenForFileUpdate(_permissionGroupFilePath, ReadPermissionGroups);
     }
 
+    /// <summary>
+    /// Clear all cached permissions for a player. If <paramref name="steam64"/> is 0, all cached permissions will be cleared.
+    /// </summary>
     [RpcReceive]
     public void ClearCachedPermissions(ulong steam64)
     {
-        _individualPermissionCache.TryRemove(steam64, out _);
-        _permissionGroupCache.TryRemove(steam64, out _);
+        if (steam64 == 0)
+        {
+            _individualPermissionCache.Clear();
+            _permissionGroupCache.Clear();
+        }
+        else
+        {
+            _individualPermissionCache.TryRemove(steam64, out _);
+            _permissionGroupCache.TryRemove(steam64, out _);
+        }
+    }
+
+    /// <summary>
+    /// Remove a permission group from <paramref name="player"/>.
+    /// </summary>
+    /// <returns><see langword="true"/> if more than zero groups were removed.</returns>
+    public virtual async Task<bool> RemovePermissionGroupAsync(CSteamID player, string permissionGroupId, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<Permission> dbPerms = await _dbContext.Permissions
+                .Where(perm => perm.Steam64 == player.m_SteamID && perm.IsGroup && perm.PermissionOrGroup == permissionGroupId)
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+
+            _dbContext.Permissions.RemoveRange(dbPerms);
+            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            ClearCachedPermissions(player.m_SteamID);
+            return dbPerms.Count > 0;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Remove an individual permission from <paramref name="player"/>.
+    /// </summary>
+    /// <returns><see langword="true"/> if more than zero permissions were removed.</returns>
+    public virtual async Task<bool> RemovePermissionAsync(CSteamID player, PermissionBranch permission, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            string permissionStr = permission.ToString();
+            List<Permission> dbPerms = await _dbContext.Permissions
+                .Where(perm => perm.Steam64 == player.m_SteamID && !perm.IsGroup && perm.PermissionOrGroup == permissionStr)
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+
+            _dbContext.Permissions.RemoveRange(dbPerms);
+            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            ClearCachedPermissions(player.m_SteamID);
+            return dbPerms.Count > 0;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Remove multiple permission groups from <paramref name="player"/>.
+    /// </summary>
+    /// <returns>Number of groups that were removed.</returns>
+    public virtual async Task<int> RemovePermissionGroupsAsync(CSteamID player, IEnumerable<string> permissionGroupIds, CancellationToken token = default)
+    {
+        List<string> permGroups = permissionGroupIds.ToList();
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<Permission> dbPerms = await _dbContext.Permissions
+                .Where(perm => perm.Steam64 == player.m_SteamID && perm.IsGroup && permGroups.Contains(perm.PermissionOrGroup))
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+
+            _dbContext.Permissions.RemoveRange(dbPerms);
+            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            ClearCachedPermissions(player.m_SteamID);
+            return dbPerms.Count;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Remove multiple individual permissions from <paramref name="player"/>.
+    /// </summary>
+    /// <returns>Number of permissions that were removed.</returns>
+    public virtual async Task<int> RemovePermissionsAsync(CSteamID player, IEnumerable<PermissionBranch> permissions, CancellationToken token = default)
+    {
+        List<string> perms = permissions.Select(perm => perm.ToString()).ToList();
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<Permission> dbPerms = await _dbContext.Permissions
+                .Where(perm => perm.Steam64 == player.m_SteamID && !perm.IsGroup && perms.Contains(perm.PermissionOrGroup))
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+
+            _dbContext.Permissions.RemoveRange(dbPerms);
+            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            ClearCachedPermissions(player.m_SteamID);
+            return dbPerms.Count;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Add a permission group to <paramref name="player"/>.
+    /// </summary>
+    /// <returns><see langword="true"/> if the group wasn't already there.</returns>
+    public virtual async Task<bool> AddPermissionGroupAsync(CSteamID player, string permissionGroupId, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<Permission> dbPerms = await _dbContext.Permissions
+                .Where(perm => perm.Steam64 == player.m_SteamID && perm.IsGroup && perm.PermissionOrGroup == permissionGroupId)
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+
+            if (dbPerms.Count > 0)
+            {
+                return false;
+            }
+
+            _dbContext.Permissions.Add(new Permission
+            {
+                IsGroup = true,
+                PermissionOrGroup = permissionGroupId,
+                Steam64 = player.m_SteamID
+            });
+
+            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            ClearCachedPermissions(player.m_SteamID);
+            return true;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Add an individual permission to <paramref name="player"/>.
+    /// </summary>
+    /// <returns><see langword="true"/> if the permission wasn't already there.</returns>
+    public virtual async Task<bool> AddPermissionAsync(CSteamID player, PermissionBranch permission, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            string permissionStr = permission.ToString();
+            List<Permission> dbPerms = await _dbContext.Permissions
+                .Where(perm => perm.Steam64 == player.m_SteamID && !perm.IsGroup && perm.PermissionOrGroup == permissionStr)
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+
+            if (dbPerms.Count > 0)
+            {
+                return false;
+            }
+
+            _dbContext.Permissions.Add(new Permission
+            {
+                IsGroup = false,
+                PermissionOrGroup = permissionStr,
+                Steam64 = player.m_SteamID
+            });
+
+            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            ClearCachedPermissions(player.m_SteamID);
+            return true;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Add multiple permission groups to <paramref name="player"/>.
+    /// </summary>
+    /// <returns>Number of groups that weren't already present.</returns>
+    public virtual async Task<int> AddPermissionGroupsAsync(CSteamID player, IEnumerable<string> permissionGroupIds, CancellationToken token = default)
+    {
+        List<string> permGroups = permissionGroupIds.ToList();
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<Permission> dbPerms = await _dbContext.Permissions
+                .Where(perm => perm.Steam64 == player.m_SteamID && perm.IsGroup && permGroups.Contains(perm.PermissionOrGroup))
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+
+            int ct = 0;
+            foreach (string permGroup in permGroups)
+            {
+                if (dbPerms.Any(perm => perm.PermissionOrGroup.Equals(permGroup, StringComparison.Ordinal)))
+                    continue;
+
+                ++ct;
+                _dbContext.Permissions.Add(new Permission
+                {
+                    IsGroup = true,
+                    PermissionOrGroup = permGroup,
+                    Steam64 = player.m_SteamID
+                });
+            }
+
+            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            ClearCachedPermissions(player.m_SteamID);
+            return ct;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Add multiple individual permissions to <paramref name="player"/>.
+    /// </summary>
+    /// <returns>Number of permissions that weren't already present.</returns>
+    public virtual async Task<int> AddPermissionsAsync(CSteamID player, IEnumerable<PermissionBranch> permissions, CancellationToken token = default)
+    {
+        List<string> perms = permissions.Select(perm => perm.ToString()).ToList();
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            List<Permission> dbPerms = await _dbContext.Permissions
+                .Where(perm => perm.Steam64 == player.m_SteamID && !perm.IsGroup && perms.Contains(perm.PermissionOrGroup))
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+
+            int ct = 0;
+            foreach (string permGroup in perms)
+            {
+                if (dbPerms.Any(perm => perm.PermissionOrGroup.Equals(permGroup, StringComparison.Ordinal)))
+                    continue;
+
+                ++ct;
+                _dbContext.Permissions.Add(new Permission
+                {
+                    IsGroup = false,
+                    PermissionOrGroup = permGroup,
+                    Steam64 = player.m_SteamID
+                });
+            }
+
+            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            ClearCachedPermissions(player.m_SteamID);
+            return ct;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
     /// <summary>
@@ -180,7 +447,8 @@ public class UserPermissionStore : IDisposable
     {
         List<Permission> dbPerms = await _dbContext.Permissions
             .Where(perm => perm.Steam64 == player.m_SteamID)
-            .ToListAsync(token);
+            .ToListAsync(token)
+            .ConfigureAwait(false);
 
         int groupCt = dbPerms.Count(x => x.IsGroup);
 
@@ -223,8 +491,10 @@ public class UserPermissionStore : IDisposable
         PermissionGroups = new ReadOnlyCollection<PermissionGroup>(config.Groups);
     }
 
-    void IDisposable.Dispose()
+    async ValueTask IAsyncDisposable.DisposeAsync()
     {
         _permissionGroupFileWatcher?.Dispose();
+
+        await _semaphore.WaitAsync(TimeSpan.FromSeconds(3d));
     }
 }

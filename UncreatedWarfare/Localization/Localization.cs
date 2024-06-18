@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Json;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -131,11 +131,13 @@ public static class Localization
     public static string Translate<T>(this T translatable, CommandContext ctx, string? fmt = null) where T : ITranslationArgument
     {
         TranslationFlags flags = TranslationFlags.ForChat;
+
         if (ctx.IMGUI)
             flags |= TranslationFlags.UseUnityRichText;
+
         if (!ctx.IsConsole)
         {
-            switch (ctx.Caller.GetTeam())
+            switch (ctx.Player.GetTeam())
             {
                 case 1:
                     flags |= TranslationFlags.Team1;
@@ -145,7 +147,8 @@ public static class Localization
                     break;
             }
         }
-        return translatable.Translate(ctx.LanguageInfo, fmt, ctx.Caller, ctx.CultureInfo, ref flags);
+
+        return translatable.Translate(ctx.Language, fmt, ctx.Player, ctx.Culture, ref flags);
     }
     public static string Translate<T0>(this Translation<T0> translation, UCPlayer? player, T0 arg0)
     {

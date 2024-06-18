@@ -1,95 +1,137 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using Steamworks;
 using System;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class GroupCommand : Command
+
+[Command("group")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class GroupCommand : IExecutableCommand
 {
     private const string Syntax = "/group [join <team>]";
     private const string Help = "View or manage your current group/team.";
 
-    public GroupCommand() : base("group", EAdminType.MEMBER)
+    private static readonly PermissionLeaf PermissionJoin = new PermissionLeaf("commands.group.join", unturned: false, warfare: true);
+
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "View your current group or join a different one.",
-            Parameters = new CommandParameter[]
-            {
-                new CommandParameter("join", typeof(int))
+            Parameters =
+            [
+                new CommandParameter("join", typeof(int), "1", "2", "3")
                 {
-                    Permission = EAdminType.MODERATOR,
+                    Permission = PermissionJoin,
                     Description = "Join a group with a team number.",
                     IsOptional = true
                 }
-            }
+            ]
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
-        ctx.AssertGamemode(out ITeams gm);
+        Context.AssertGamemode(out ITeams gm);
 
-        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        if (ctx.MatchParameter(0, "join"))
+        if (Context.MatchParameter(0, "join"))
         {
-            ctx.AssertHelpCheck(1, "/group join <team>");
+            Context.AssertHelpCheck(1, "/group join <team>");
 
-            ctx.AssertPermissions(EAdminType.MODERATOR);
+            Context.AssertArgs(2, "/group join <team>");
 
-            if (!ctx.TryGet(1, out ulong groupId))
-                throw ctx.Reply(T.GroupNotFound, ctx.Get(1)!);
+            await Context.AssertPermissions(PermissionJoin, token);
+            await UniTask.SwitchToMainThread(token);
+
+            if (!Context.TryGet(1, out ulong groupId))
+            {
+                string groupInput = Context.Get(1)!;
+                FactionInfo? faction = TeamManager.FindFactionInfo(groupInput);
+                
+                if (faction == null)
+                    throw Context.Reply(T.GroupNotFound, groupInput);
+
+                if (faction.FactionId.Equals(TeamManager.Team1Faction.FactionId, StringComparison.Ordinal))
+                    groupId = TeamManager.Team1ID;
+                else if (faction.FactionId.Equals(TeamManager.Team2Faction.FactionId, StringComparison.Ordinal))
+                    groupId = TeamManager.Team2ID;
+                else if (faction.FactionId.Equals(TeamManager.AdminFaction.FactionId, StringComparison.Ordinal))
+                    groupId = TeamManager.AdminID;
+                else
+                    throw Context.Reply(T.GroupNotFound, groupInput);
+            }
 
             if (groupId is > 0 and < 4)
+            {
                 groupId = TeamManager.GetGroupID(groupId);
+            }
 
-            if (ctx.Caller.Player.quests.groupID.m_SteamID == groupId)
-                throw ctx.Reply(T.AlreadyInGroup);
+            if (Context.Player.Player.quests.groupID.m_SteamID == groupId)
+            {
+                throw Context.Reply(T.AlreadyInGroup);
+            }
 
             GroupInfo groupInfo = GroupManager.getGroupInfo(new CSteamID(groupId));
 
             if (groupInfo == null)
             {
-                ctx.Reply(T.GroupNotFound, groupId.ToString(Data.LocalLocale));
-                return;
+                throw Context.Reply(T.GroupNotFound, groupId.ToString(Data.LocalLocale));
             }
-            if (ctx.Caller.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
+
+            if (!Context.Player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
             {
-                GroupManager.save();
-                ulong team = ctx.Caller.GetTeam();
-                if (gm.TeamSelector != null)
-                    gm.TeamSelector.ForceUpdate();
-                if (team == 0) team = ctx.Caller.Player.quests.groupID.m_SteamID;
-                if (team is > 0 and < 4)
-                {
-                    ctx.Reply(T.JoinedGroup, team, TeamManager.TranslateName(team, ctx.Caller, true), TeamManager.GetTeamColor(team));
-                    L.Log($"{ctx.Caller.Name.PlayerName} ({ctx.CallerID}) joined group \"{TeamManager.TranslateName(team)}\": {team} (ID {groupInfo.groupID}).", ConsoleColor.Cyan);
-                    ctx.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + TeamManager.TranslateName(team).ToUpper());
-                }
-                else
-                {
-                    ctx.Reply(T.GroupNotFound, groupId.ToString(Data.LocalLocale));
-                }
+                throw Context.Reply(T.GroupNotFound, groupId.ToString(Data.LocalLocale));
+            }
+
+            GroupManager.save();
+
+            ulong team = Context.Player.GetTeam();
+            if (gm.TeamSelector != null)
+            {
+                gm.TeamSelector.ForceUpdate();
+            }
+
+            if (team == 0)
+            {
+                team = Context.Player.Player.quests.groupID.m_SteamID;
+            }
+
+            if (team is > 0 and < 4)
+            {
+                Context.Reply(T.JoinedGroup, team, TeamManager.TranslateName(team, Context.Player, true),
+                    TeamManager.GetTeamColor(team));
+                L.Log($"{Context.Player.Name.PlayerName} ({Context.CallerId.m_SteamID}) joined group \"{TeamManager.TranslateName(team)}\": {team} (ID {groupInfo.groupID}).", ConsoleColor.Cyan);
+                Context.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + TeamManager.TranslateName(team).ToUpper());
             }
             else
             {
-                ctx.Reply(T.GroupNotFound, groupId.ToString(Data.LocalLocale));
+                Context.Reply(T.GroupNotFound, groupId.ToString(Data.LocalLocale));
             }
         }
-        else if (ctx.ArgumentCount == 0)
+        else if (Context.ArgumentCount == 0)
         {
-            GroupInfo info = GroupManager.getGroupInfo(ctx.Caller.Player.quests.groupID);
+            GroupInfo info = GroupManager.getGroupInfo(Context.Player.Player.quests.groupID);
             if (info == null)
-                throw ctx.Reply(T.NotInGroup);
-            ctx.Reply(T.CurrentGroup, ctx.CallerID, info.name, TeamManager.GetTeamColor(info.groupID.m_SteamID.GetTeam()));
+                throw Context.Reply(T.NotInGroup);
+            Context.Reply(T.CurrentGroup, Context.CallerId.m_SteamID, info.name, TeamManager.GetTeamColor(info.groupID.m_SteamID.GetTeam()));
         }
-        else throw ctx.SendCorrectUsage(Syntax + " - " + Help);
+        else throw Context.SendCorrectUsage(Syntax + " - " + Help);
     }
 }

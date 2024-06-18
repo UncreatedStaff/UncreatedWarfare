@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Commands;
@@ -20,7 +20,7 @@ public sealed class KitsCommand : AsyncCommand
 
     public override async Task Execute(CommandContext ctx, CancellationToken token)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         ctx.AssertRanByPlayer();
 
         if (UCWarfare.Config.DisableKitMenu)

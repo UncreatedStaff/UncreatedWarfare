@@ -1,29 +1,40 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
 
-public class DiscordCommand : Command
+[Command("discord", "dicsord")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class DiscordCommand : IExecutableCommand
 {
-    const string HELP = "Sends the Discord link to the Uncreated Network server.";
-    const string SYNTAX = "/discord";
-    public DiscordCommand() : base("discord", EAdminType.MEMBER)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
-            Description = "Sends a link to our discord server."
+            Description = "Sends the Discord link to the Uncreated Network server."
         };
     }
-    public override void Execute(CommandContext ctx)
-    {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
-        if (ctx.Caller is not null)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
+    {
+        if (Context.Caller is not null)
         {
-            ctx.Caller.Player.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
-            ctx.Defer();
+            Context.Player.Player.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+            Context.Defer();
         }
         else
-            ctx.ReplyString("https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+        {
+            Context.ReplyString("https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+        }
+
+        return default;
     }
 }

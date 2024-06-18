@@ -129,7 +129,6 @@ public static class Data
     internal static WarfareMySqlLanguageDataStore LanguageDataStore;
     internal static PurchaseRecordsInterface<WarfareDbContext> PurchasingDataStore;
     public static Gamemode Gamemode;
-    public static bool TrackStats = true;
     public static bool UseFastKits;
     public static bool UseElectricalGrid;
     internal static MethodInfo ReplicateStance;
@@ -315,7 +314,7 @@ public static class Data
         //L.Log("Connection string: " + UCWarfare.Config.SQL.GetConnectionString(), ConsoleColor.DarkGray);
 #endif
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         Gamemode.ReadGamemodes();
 
         if (UCWarfare.Config.EnableReporter)
@@ -327,7 +326,7 @@ public static class Data
         GamemodeListeners[0] = Points = await Singletons.LoadSingletonAsync<Points>(true, token: token);
         GamemodeListeners[1] = Sessions = await Singletons.LoadSingletonAsync<SessionManager>(true, token: token);
         await Singletons.LoadSingletonAsync<PlayerList>(true, token: token);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         /* REFLECT PRIVATE VARIABLES */
         L.Log("Getting RPCs...", ConsoleColor.Magenta);
@@ -425,7 +424,7 @@ public static class Data
         indent.Dispose();
 
         await SessionManager.CheckForTerminatedSessions(token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         L.Log("Loading first gamemode...", ConsoleColor.Magenta);
         if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF), true, token).ConfigureAwait(false))

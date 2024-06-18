@@ -1,12 +1,10 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -27,7 +25,7 @@ public class Report : ModerationEntry
         base.ReadIntl(reader, version);
 
         Type = (ReportType)reader.ReadUInt16();
-        ScreenshotJpgData = reader.ReadBool() ? reader.ReadLongBytes() : null;
+        ScreenshotJpgData = reader.ReadBool() ? reader.ReadLongUInt8Array() : null;
     }
 
     protected override void WriteIntl(ByteWriter writer)
@@ -58,21 +56,18 @@ public class Report : ModerationEntry
 
                 throw new JsonException($"Invalid integer for ReportType: {num}.");
             }
+
             string str = reader.GetString()!;
             if (!Enum.TryParse(str, true, out ReportType type))
             {
-                if (Enum.TryParse(str, true, out EReportType legacyReportType))
+                // parse legacy report type
+                type = str.ToUpperInvariant() switch
                 {
-                    Type = legacyReportType switch
-                    {
-                        EReportType.CHAT_ABUSE => ReportType.ChatAbuse,
-                        EReportType.GREIFING_FOBS or EReportType.INTENTIONAL_TEAMKILL or EReportType.SOLOING_VEHICLE or EReportType.WASTING_ASSETS => ReportType.Greifing,
-                        _ => ReportType.Custom
-                    };
-                    return;
-                }
-
-                throw new JsonException("Invalid string value for ReportType.");
+                    "CHAT_ABUSE" or "VOICE_CHAT_ABUSE" => ReportType.ChatAbuse,
+                    "GREIFING_FOBS" or "INTENTIONAL_TEAMKILL" or "SOLOING_VEHICLE" or "WASTING_ASSETS" => ReportType.Griefing,
+                    "CUSTOM" or "CHEATING" => ReportType.Custom,
+                    _ => throw new JsonException("Invalid string value for ReportType.")
+                };
             }
             Type = type;
         }
@@ -153,7 +148,7 @@ public class Report : ModerationEntry
 public enum ReportType
 {
     Custom,
-    Greifing,
+    Griefing,
     ChatAbuse
 }
 public sealed class ReportTypeLegacyConverter : JsonConverter<ReportType>
@@ -168,15 +163,17 @@ public sealed class ReportTypeLegacyConverter : JsonConverter<ReportType>
         
         if (reader.TokenType == JsonTokenType.String)
         {
-            if (Enum.TryParse(reader.GetString()!, true, out ReportType reportType))
+            string str = reader.GetString()!;
+            if (Enum.TryParse(str, true, out ReportType reportType))
                 return reportType;
-            if (Enum.TryParse(reader.GetString()!, true, out EReportType reportTypeOld))
-                return reportTypeOld switch
-                {
-                    EReportType.CHAT_ABUSE => ReportType.ChatAbuse,
-                    EReportType.GREIFING_FOBS or EReportType.INTENTIONAL_TEAMKILL or EReportType.SOLOING_VEHICLE or EReportType.WASTING_ASSETS => ReportType.Greifing,
-                    _ => ReportType.Custom
-                };
+
+            return str.ToUpperInvariant() switch
+            {
+                "CHAT_ABUSE" or "VOICE_CHAT_ABUSE" => ReportType.ChatAbuse,
+                "GREIFING_FOBS" or "INTENTIONAL_TEAMKILL" or "SOLOING_VEHICLE" or "WASTING_ASSETS" => ReportType.Griefing,
+                "CUSTOM" or "CHEATING" => ReportType.Custom,
+                _ => throw new JsonException("Invalid string value for ReportType.")
+            };
         }
 
         if (reader.TokenType is not JsonTokenType.String and not JsonTokenType.Null)

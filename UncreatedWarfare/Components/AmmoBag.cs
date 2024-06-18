@@ -33,7 +33,7 @@ public class AmmoBagComponent : MonoBehaviour
         if (Data.Is(out IKitRequests req))
         {
             await req.KitManager.Requests.ResupplyKit(player, kit, true, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
         }
         else
         {

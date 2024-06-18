@@ -170,7 +170,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         try
         {
             List<SavedStructure>? toSave = null;
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             WriteWait();
             try
             {
@@ -621,7 +621,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             WriteRelease();
         }
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         StructureData data = drop.GetServersideData();
         structure = new SavedStructure()
@@ -669,7 +669,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             WriteRelease();
         }
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         BarricadeData data = drop.GetServersideData();
         structure = new SavedStructure()

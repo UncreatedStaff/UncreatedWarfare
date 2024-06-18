@@ -8,7 +8,6 @@ using System.Text.Json;
 using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
 using Uncreated.Json;
-using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;

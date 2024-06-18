@@ -171,7 +171,7 @@ public class StripeEliteKit
         {
             stripeService.Semaphore.Release();
         }
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         eliteKit.Product = newProduct;
         return eliteKit;
     }

@@ -181,7 +181,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
             ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
         }
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (UCPlayer.FromID(player) is { } pl)
             Signs.UpdateLoadoutSigns(pl);
 
@@ -213,7 +213,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
         dbContext.Update(existing);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (UCPlayer.FromID(player) is { } pl)
         {
             Signs.UpdateLoadoutSigns(pl);
@@ -246,7 +246,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
         if (kit.InternalName.Length >= 17)
             ulong.TryParse(kit.InternalName.AsSpan(0, 17), NumberStyles.Number, Data.AdminLocale, out player);
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (UCPlayer.FromID(player) is { } pl)
             Signs.UpdateLoadoutSigns(pl);
 
@@ -280,7 +280,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
         await Manager.GiveAccess(kit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
         ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
         KitSync.OnAccessChanged(player);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (UCPlayer.FromID(player) is { } pl)
             Signs.UpdateLoadoutSigns(pl);
         return (kit, StandardErrorCode.Success);

@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;

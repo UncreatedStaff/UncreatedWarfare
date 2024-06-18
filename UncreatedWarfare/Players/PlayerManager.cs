@@ -31,14 +31,14 @@ public static class PlayerManager
 
     public static readonly List<UCPlayer> OnlinePlayers;
     private static readonly Dictionary<ulong, UCPlayer> _dict;
-    private static readonly Dictionary<ulong, UCSemaphore> _semaphores;
+    private static readonly Dictionary<ulong, SemaphoreSlim> _semaphores;
     internal static List<KeyValuePair<ulong, CancellationTokenSource>> PlayerConnectCancellationTokenSources = new List<KeyValuePair<ulong, CancellationTokenSource>>(Provider.queueSize);
 
     static PlayerManager()
     {
         OnlinePlayers = new List<UCPlayer>(50);
         _dict = new Dictionary<ulong, UCPlayer>(50);
-        _semaphores = new Dictionary<ulong, UCSemaphore>(128);
+        _semaphores = new Dictionary<ulong, SemaphoreSlim>(128);
         EventDispatcher.GroupChanged += OnGroupChagned;
         Provider.onRejectingPlayer += OnRejectingPlayer;
         EventDispatcher.PlayerPending += OnPlayerPending;
@@ -57,7 +57,7 @@ public static class PlayerManager
             return output;
         }
     }
-    internal static List<UCSemaphore> GetAllSemaphores()
+    internal static List<SemaphoreSlim> GetAllSemaphores()
     {
         lock (_semaphores)
         {
@@ -68,7 +68,7 @@ public static class PlayerManager
     {
         lock (_semaphores)
         {
-            if (FromID(player) == null && _semaphores.TryGetValue(player, out UCSemaphore semaphore))
+            if (FromID(player) == null && _semaphores.TryGetValue(player, out SemaphoreSlim semaphore))
             {
                 _semaphores.Remove(player);
                 semaphore.Dispose();

@@ -230,7 +230,7 @@ internal partial class ModerationUI
                 if (data.PendingPreset == PresetType.None || !PunishmentPresets.TryGetPreset(data.PendingPreset, out PunishmentPreset[] presets))
                     return;
                 int nextLevel = await Data.ModerationSql.GetNextPresetLevel(data.SelectedPlayer, data.PendingPreset, token).ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 if (data.ActionModeVersion != v)
                     return;
                 int index = nextLevel;
@@ -990,7 +990,7 @@ internal partial class ModerationUI
             }
 
             token = player.DisconnectToken;
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             if (!player.IsOnline)
                 return;
             EndEditInActionMenu(player);
@@ -1204,7 +1204,7 @@ internal partial class ModerationUI
                 }
             }
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             EndEditInActionMenu(player);
             SelectEntry(player, select);
             await RefreshModerationHistory(player, token);
@@ -1279,7 +1279,7 @@ internal partial class ModerationUI
             }
             if (sel)
             {
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 SelectEntry(player, data.PrimaryEditingEntry);
                 LoadActionMenu(player, true);
                 await RefreshModerationHistory(player, token);

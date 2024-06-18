@@ -1,38 +1,45 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class UnstuckCommand : Command
-{
-    private const string SYNTAX = "/unstuck";
-    private const string HELP = "Run this command if you're somehow stuck in the lobby.";
 
-    public UnstuckCommand() : base("unstuck", EAdminType.MEMBER)
+[Command("unstuck")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class UnstuckCommand : IExecutableCommand
+{
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
-            Description = HELP
+            Description = "Run this command if you're somehow stuck in the lobby."
         };
     }
 
-    public override void Execute(CommandContext ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        Context.AssertGamemode(out ITeams t);
 
-        ctx.AssertGamemode(out ITeams t);
+        if (!t.UseTeamSelector) throw Context.SendGamemodeError();
 
-        if (!t.UseTeamSelector) throw ctx.SendGamemodeError();
-
-        if (TeamManager.LobbyZone.IsInside(ctx.Caller.Position))
+        if (TeamManager.LobbyZone.IsInside(Context.Player.Position))
         {
-            t.TeamSelector?.ResetState(ctx.Caller);
-            ctx.ReplyString("Reset lobby state.");
+            t.TeamSelector?.ResetState(Context.Player);
+            Context.ReplyString("Reset lobby state.");
         }
-        else ctx.ReplyString("You're not in the lobby.");
+        else Context.ReplyString("You're not in the lobby.");
+
+        return default;
     }
 }

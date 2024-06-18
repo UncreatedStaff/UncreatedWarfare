@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;

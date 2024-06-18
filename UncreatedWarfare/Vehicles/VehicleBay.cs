@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -90,7 +91,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             if (Whitelister.Loaded && !_hasWhitelisted) // whitelist all vehicle bay items
             {
                 if (!UCWarfare.IsMainThread)
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(token);
                 WhitelistItems();
             }
         }
@@ -106,7 +107,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         try
         {
             if (!UCWarfare.IsMainThread)
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
             VehicleSpawner.GetSingletonQuick()?.AbandonAllVehicles(true);
         }
         finally
@@ -124,7 +125,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             WriteWait();
             try
             {
@@ -784,7 +785,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     }
                 }, token).ConfigureAwait(false);
                 builder.Clear();
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 if (storages != null)
                 {
                     List<ItemJarData> jars = new List<ItemJarData>(storages.Count * 8);

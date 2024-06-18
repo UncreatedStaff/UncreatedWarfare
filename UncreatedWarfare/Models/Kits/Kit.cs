@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits;

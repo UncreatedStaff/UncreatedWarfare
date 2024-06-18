@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Framework;
 using Uncreated.Networking;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 

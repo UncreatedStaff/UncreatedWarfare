@@ -6,10 +6,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -111,22 +111,28 @@ internal class ZonePlayerComponent : MonoBehaviour
         if (old > -1 && old < _currentPoints!.Count)
             EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + old, PointText(old));
     }
-    internal void UtilCommand(CommandContext ctx)
+    internal async UniTask UtilCommand(CommandContext ctx, CancellationToken token)
     {
         ThreadUtil.assertIsGameThread();
+
         if (!ctx.HasArgs(1))
         {
             throw ctx.SendCorrectUsage("/zone util <location>");
         }
-        if (ctx.MatchParameter(0, "location", "position", "loc", "pos"))
-        {
-            Vector3 p = _player.Player.transform.position;
-            throw ctx.Reply(T.ZoneUtilLocation,
-                p.x,
-                p.y,
-                p.z,
-                _player.Player.transform.rotation.eulerAngles.y);
-        }
+
+        if (!ctx.MatchParameter(0, "location", "position", "loc", "pos"))
+            throw ctx.SendCorrectUsage("/zone util <location>");
+
+        await ctx.AssertPermissions(ZoneCommand.PermissionLocation, token);
+        await UniTask.SwitchToMainThread(token);
+
+        Vector3 p = _player.Player.transform.position;
+        throw ctx.Reply(T.ZoneUtilLocation,
+            p.x,
+            p.y,
+            p.z,
+            _player.Player.transform.rotation.eulerAngles.y);
+
     }
     internal void DeleteCommand(CommandContext ctx)
     {
@@ -1129,7 +1135,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             }
             else if (ctx.MatchParameter(0, "addgobj", "addgridobj", "addobject"))
             {
-                if (Physics.Raycast(new Ray(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward), out RaycastHit hit, 4f,
+                if (Physics.Raycast(new Ray(ctx.Player.Player.look.aim.position, ctx.Player.Player.look.aim.forward), out RaycastHit hit, 4f,
                         RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL) && hit.transform != null)
                 {
                     LevelObject? @object = UCBarricadeManager.FindObject(hit.transform);
@@ -1147,7 +1153,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 {
                     AddTransaction(new AddDelGridObjTransaction(null, true, true, RemoveAllGridObjects()));
                 }
-                else if (Physics.Raycast(new Ray(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward),
+                else if (Physics.Raycast(new Ray(ctx.Player.Player.look.aim.position, ctx.Player.Player.look.aim.forward),
                              out RaycastHit hit, 4f, RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL) && hit.transform != null)
                 {
                     LevelObject? @object = UCBarricadeManager.FindObject(hit.transform);
@@ -1383,7 +1389,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         sb.Append(", ");
                     sb.Append(fl.Key.ShortName ?? fl.Key.Name);
                     if (Mathf.Abs(fl.Value - 1f) > 0.0005f)
-                        sb.Append(" (").Append(fl.Value.ToString("0.##", ctx.Caller.Locale.CultureInfo)).Append(')');
+                        sb.Append(" (").Append(fl.Value.ToString("0.##", ctx.Culture)).Append(')');
                 }
 
                 string adjt = sb.ToString();
@@ -1403,7 +1409,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         sb.Append(", ");
                     sb.Append(adjacency.Key.ShortName ?? adjacency.Key.Name);
                     if (Mathf.Abs(adjacency.Value - 1f) > 0.0005f)
-                        sb.Append(" (").Append(adjacency.Value.ToString("0.##", ctx.Caller.Locale.CultureInfo)).Append(')');
+                        sb.Append(" (").Append(adjacency.Value.ToString("0.##", ctx.Culture)).Append(')');
                 }
 
                 ctx.Reply(T.ZoneEditSeeAdjacencies);
@@ -1579,7 +1585,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     private List<KeyValuePair<Vector3, GridObject>> RemoveAllGridObjects(bool prev = true)
     {
         List<KeyValuePair<Vector3, GridObject>> old = _currentGridObjects?.ToList() ?? new List<KeyValuePair<Vector3, GridObject>>(0);
-        _player.SendChat(T.ZoneEditDelGridObjAllSuccess, old.Count, old.Count.S());
+        _player.SendChat(T.ZoneEditDelGridObjAllSuccess, old.Count, old.Count == 1 ? string.Empty : "s");
         if (old.Count > 0)
             _currentGridObjects!.Clear();
         if (prev)
@@ -1593,7 +1599,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             _currentGridObjects = objs;
         else
             _currentGridObjects.AddRange(objs);
-        _player.SendChat(T.ZoneEditAddGridObjAllSuccess, c, c.S());
+        _player.SendChat(T.ZoneEditAddGridObjAllSuccess, c, c == 1 ? string.Empty : "s");
         if (prev)
             RefreshPreview();
     }
@@ -2186,7 +2192,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     component.RefreshPreview();
                 }
-                component._player.SendChat(T.ZoneEditUnclearedSuccess, component._currentPoints.Count, component._currentPoints.Count.S());
+                component._player.SendChat(T.ZoneEditUnclearedSuccess, component._currentPoints.Count, component._currentPoints.Count == 1 ? string.Empty : "s");
             }
             else
                 component._player.SendChat(T.ZoneEditUnclearedSuccess, 0, string.Empty);

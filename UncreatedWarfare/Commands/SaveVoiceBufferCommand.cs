@@ -1,17 +1,25 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Commands;
-public class SaveVoiceBufferCommand : AsyncCommand
+
+[SynchronizedCommand, Command("savevoice")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class SaveVoiceBufferCommand : IExecutableCommand
 {
-    public SaveVoiceBufferCommand() : base("savevoice", EAdminType.ADMIN_ON_DUTY, sync: true)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        Structure = new CommandStructure
+        return new CommandStructure
         {
             Description = "Save a player's voice history.",
             Parameters =
@@ -20,14 +28,14 @@ public class SaveVoiceBufferCommand : AsyncCommand
             ]
         };
     }
-    public override async Task Execute(CommandContext ctx, CancellationToken token)
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!ctx.TryGet(0, out _, out UCPlayer? onlinePlayer, true) || onlinePlayer == null)
-            throw ctx.SendPlayerNotFound();
+        if (!Context.TryGet(0, out _, out UCPlayer? onlinePlayer, true) || onlinePlayer == null)
+            throw Context.SendPlayerNotFound();
 
         AudioRecordPlayerComponent? playerComp = AudioRecordPlayerComponent.Get(onlinePlayer);
         if (playerComp == null)
-            throw ctx.SendUnknownError();
+            throw Context.SendUnknownError();
 
         FileStream fs = new FileStream(
             Path.Combine(Data.Paths.BaseDirectory, "Voice", onlinePlayer.Steam64 + "_" + DateTime.UtcNow.ToString("s").Replace(':', '_') + ".wav"),
@@ -36,8 +44,7 @@ public class SaveVoiceBufferCommand : AsyncCommand
         );
 
         AudioRecordManager.AudioConvertResult status = await playerComp.TryConvert(fs, false, token);
-        ctx.ReplyString($"Converted audio for {onlinePlayer}. Status: {status}.");
-
+        Context.ReplyString($"Converted audio for {onlinePlayer}. Status: {status}.");
         playerComp.Reset();
     }
 }

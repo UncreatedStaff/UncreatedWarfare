@@ -1,14 +1,10 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Networking;
-using Uncreated.Networking.Async;
-using Uncreated.SQL;
-using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -22,260 +18,273 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
+using DelayType = Uncreated.Warfare.Vehicles.DelayType;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands;
-public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
+
+[SynchronizedCommand, Command("request", "req")]
+[HelpMetadata(nameof(GetHelpMetadata))]
+public class RequestCommand : ICompoundingCooldownCommand
 {
     private static readonly Guid KitSign = new Guid("275dd81d60ae443e91f0655b8b7aa920");
+
+    private static readonly PermissionLeaf PermissionUpgrade    = new PermissionLeaf("commands.request.upgrade", unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionRequest    = new PermissionLeaf("commands.request.look", unturned: false, warfare: true);
     public float CompoundMultiplier => 2f;
     public float MaxCooldown => 900f; // 15 mins
 
-    private const string Syntax = "/request [save|remove]";
-    private const string Help = "Request a kit by targeting a sign or request a vehicle by targeting the vehicle or it's sign while doing /request.";
+    private const string Syntax = "/request [upgrade]";
+    private const string Help = "Request a kit or a vehicle by looking at their respective signs (or the actual vehicle).";
 
-    public RequestCommand() : base("request", EAdminType.MEMBER, sync: true)
+    /// <inheritdoc />
+    public CommandContext Context { get; set; }
+
+    /// <summary>
+    /// Get /help metadata about this command.
+    /// </summary>
+    public static CommandStructure GetHelpMetadata()
     {
-        AddAlias("req");
-        Structure = new CommandStructure
+        return new CommandStructure
         {
-            Description = "Request a kit or a vehicle by looking at their respective signs (or the actual vehicle).",
-            Parameters = new CommandParameter[]
-            {
+            Description = Help,
+            Parameters =
+            [
                 new CommandParameter("Upgrade")
                 {
+                    Permission = PermissionUpgrade,
                     Description = "Use to upgrade old loadouts.",
-                    Aliases = new string[] { "update" },
+                    Aliases = [ "update" ],
                     IsOptional = true
                 }
-            }
+            ]
         };
     }
 
-    public override async Task Execute(CommandContext ctx, CancellationToken token)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
+        Context.AssertHelpCheck(0, Syntax + " - " + Help);
         BarricadeDrop? drop;
         string? kitId = null;
-        if (ctx.HasArg(0))
+        if (Context.HasArgs(1))
         {
-            if (ctx.MatchParameter(0, "save"))
+            if (!Context.MatchParameter(0, "upgrade", "update"))
             {
-                ctx.AssertPermissions(EAdminType.STAFF);
-                throw ctx.ReplyString("Saving request signs should now be done using the structure command.");
+                throw Context.SendCorrectUsage(Syntax + " - " + Help);
             }
-            if (ctx.MatchParameter(0, "remove", "delete"))
-            {
-                ctx.AssertPermissions(EAdminType.STAFF);
-                throw ctx.ReplyString("Removing request signs should now be done using the structure command.");
-            }
-            if (ctx.MatchParameter(0, "upgrade", "update"))
-            {
-                if (ctx.TryGetTarget(out drop) || ctx.TryGet(1, out kitId))
-                {
-                    ctx.AssertRanByPlayer();
-                    ulong discordId = await Data.AdminSql.GetDiscordID(ctx.CallerID, token).ConfigureAwait(false);
-                    if (discordId == 0)
-                    {
-                        await UCWarfare.ToUpdate(token);
-                        ctx.Reply(T.DiscordNotLinked);
-                        throw ctx.Reply(T.DiscordNotLinked2, ctx.Caller);
-                    }
 
-                    bool? inDiscordServer = await PlayerManager.IsUserInDiscordServer(discordId).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
-                    if (inDiscordServer.HasValue)
-                    {
-                        if (!inDiscordServer.Value)
-                            throw ctx.Reply(T.RequestUpgradeNotInDiscordServer);
-                    }
-                    else
-                        throw ctx.Reply(T.RequestUpgradeNotConnected);
+            await Context.AssertPermissions(PermissionUpgrade, token);
+            await UniTask.SwitchToMainThread(token);
+
+            if (!Context.TryGetBarricadeTarget(out drop) && !Context.TryGet(1, out kitId))
+            {
+                throw Context.Reply(T.RequestNoTarget);
+            }
+
+            Context.AssertRanByPlayer();
+            ulong discordId = await Data.AdminSql.GetDiscordID(Context.CallerId.m_SteamID, token).ConfigureAwait(false);
+            if (discordId == 0)
+            {
+                await UniTask.SwitchToMainThread(token);
+                Context.Reply(T.DiscordNotLinked);
+                throw Context.Reply(T.DiscordNotLinked2, Context.Player);
+            }
+
+            bool? inDiscordServer = await PlayerManager.IsUserInDiscordServer(discordId).ConfigureAwait(false);
+            await UniTask.SwitchToMainThread(token);
+            if (inDiscordServer.HasValue)
+            {
+                if (!inDiscordServer.Value)
+                    throw Context.Reply(T.RequestUpgradeNotInDiscordServer);
+            }
+            else
+                throw Context.Reply(T.RequestUpgradeNotConnected);
                     
-                    KitManager? manager = KitManager.GetSingletonQuick();
-                    if (manager == null)
-                        throw ctx.SendGamemodeError();
+            KitManager? manager = KitManager.GetSingletonQuick();
+            if (manager == null)
+                throw Context.SendGamemodeError();
 
-                    Kit? kit;
-                    if (drop != null && kitId == null)
-                    {
-                        StructureSaver? saver = StructureSaver.GetSingletonQuick();
-                        InteractableSign? sign = drop.interactable as InteractableSign;
-                        if (saver != null && await saver.GetSave(drop, token).ConfigureAwait(false) == null)
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.RequestKitNotRegistered);
-                        }
-                        await UCWarfare.ToUpdate(token);
-                        if (sign != null)
-                        {
-                            kit = await manager.GetKitFromSign(drop, ctx.Caller, token);
-                        }
-                        else throw ctx.Reply(T.RequestNoTarget);
-                    }
-                    else if (kitId != null)
-                    {
-                        kit = await manager.FindKit(kitId, token, false);
-                    }
-                    else throw ctx.SendUnknownError();
-
-                    if (kit == null)
-                        throw ctx.Reply(T.KitNotFound, kitId ?? "???");
-
-                    if (kit.Type != KitType.Loadout)
-                        throw ctx.Reply(T.RequestUpgradeOnKit, kit);
-
-                    if (!kit.NeedsUpgrade)
-                        throw ctx.Reply(T.DoesNotNeedUpgrade, kit);
-
-                    int id = KitEx.ParseStandardLoadoutId(kit.InternalName, out ulong playerId);
-                    if (ctx.CallerID != playerId)
-                    {
-                        // requesting upgrade for a different player's kit
-                        ctx.AssertOnDuty();
-
-                        discordId = await Data.AdminSql.GetDiscordID(playerId, token).ConfigureAwait(false);
-                        if (discordId == 0)
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.DiscordNotLinked);
-                        }
-                        inDiscordServer = await PlayerManager.IsUserInDiscordServer(discordId).ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
-                        if (inDiscordServer.HasValue)
-                        {
-                            if (!inDiscordServer.Value)
-                                throw ctx.Reply(T.RequestUpgradeNotInDiscordServer);
-                        }
-                        else
-                            throw ctx.Reply(T.RequestUpgradeNotConnected);
-                    }
-                    if (UCWarfare.CanUseNetCall)
-                    {
-                        RequestResponse response = await KitEx.NetCalls.RequestIsModifyLoadoutTicketOpen.RequestAck(UCWarfare.I.NetClient!, discordId, id, 7500);
-                        if (!response.Responded)
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.RequestUpgradeNotConnected);
-                        }
-                        if (response.ErrorCode is not (int)StandardErrorCode.NotFound)
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            if (response.ErrorCode is (int)StandardErrorCode.Success)
-                            {
-                                throw ctx.Reply(T.RequestUpgradeAlreadyOpen, kit);
-                            }
-
-                            if (response.ErrorCode is (int)StandardErrorCode.NotSupported)
-                            {
-                                throw ctx.Reply(T.RequestUpgradeTooManyTicketsOpen);
-                            }
-
-                            throw ctx.Reply(T.RequestUpgradeError, response.ErrorCode.HasValue ? ((StandardErrorCode)response.ErrorCode.Value).ToString() : "NULL");
-                        }
-                    }
-                    else
-                    {
-                        await UCWarfare.ToUpdate(token);
-                        throw ctx.Reply(T.RequestUpgradeNotConnected);
-                    }
-                    if (!kit.NeedsUpgrade)
-                    {
-                        await UCWarfare.ToUpdate(token);
-                        throw ctx.Reply(T.DoesNotNeedUpgrade, kit);
-                    }
-
-                    bool success = await KitEx.OpenUpgradeTicket(kit.GetDisplayName(), kit.Class, id, playerId, discordId, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
-                    if (!success)
-                        throw ctx.Reply(T.RequestUpgradeNotConnected);
-
-                    throw ctx.Reply(T.TicketOpened, kit);
+            Kit? kit;
+            if (drop != null && kitId == null)
+            {
+                StructureSaver? saver = StructureSaver.GetSingletonQuick();
+                InteractableSign? sign = drop.interactable as InteractableSign;
+                if (saver != null && await saver.GetSave(drop, token).ConfigureAwait(false) == null)
+                {
+                    await UniTask.SwitchToMainThread(token);
+                    throw Context.Reply(T.RequestKitNotRegistered);
                 }
+                await UniTask.SwitchToMainThread(token);
+                if (sign != null)
+                {
+                    kit = await manager.GetKitFromSign(drop, Context.Player, token);
+                }
+                else throw Context.Reply(T.RequestNoTarget);
+            }
+            else if (kitId != null)
+            {
+                kit = await manager.FindKit(kitId, token, false);
+            }
+            else throw Context.SendUnknownError();
 
-                throw ctx.Reply(T.RequestNoTarget);
+            if (kit == null)
+                throw Context.Reply(T.KitNotFound, kitId ?? "???");
+
+            if (kit.Type != KitType.Loadout)
+                throw Context.Reply(T.RequestUpgradeOnKit, kit);
+
+            if (!kit.NeedsUpgrade)
+                throw Context.Reply(T.DoesNotNeedUpgrade, kit);
+
+            int id = KitEx.ParseStandardLoadoutId(kit.InternalName, out ulong playerId);
+            if (Context.CallerId.m_SteamID != playerId)
+            {
+                // requesting upgrade for a different player's kit
+                Context.AssertOnDuty();
+
+                discordId = await Data.AdminSql.GetDiscordID(playerId, token).ConfigureAwait(false);
+                if (discordId == 0)
+                {
+                    await UniTask.SwitchToMainThread(token);
+                    throw Context.Reply(T.DiscordNotLinked);
+                }
+                inDiscordServer = await PlayerManager.IsUserInDiscordServer(discordId).ConfigureAwait(false);
+                await UniTask.SwitchToMainThread(token);
+                if (inDiscordServer.HasValue)
+                {
+                    if (!inDiscordServer.Value)
+                        throw Context.Reply(T.RequestUpgradeNotInDiscordServer);
+                }
+                else
+                    throw Context.Reply(T.RequestUpgradeNotConnected);
+            }
+            if (UCWarfare.CanUseNetCall)
+            {
+#if false // todo
+                RequestResponse response = await KitEx.NetCalls.RequestIsModifyLoadoutTicketOpen.RequestAck(UCWarfare.I.NetClient!, discordId, id, 7500);
+                if (!response.Responded)
+                {
+                    await UniTask.SwitchToMainThread(token);
+                    throw Context.Reply(T.RequestUpgradeNotConnected);
+                }
+                if (response.ErrorCode is not (int)StandardErrorCode.NotFound)
+                {
+                    await UniTask.SwitchToMainThread(token);
+                    if (response.ErrorCode is (int)StandardErrorCode.Success)
+                    {
+                        throw Context.Reply(T.RequestUpgradeAlreadyOpen, kit);
+                    }
+
+                    if (response.ErrorCode is (int)StandardErrorCode.NotSupported)
+                    {
+                        throw Context.Reply(T.RequestUpgradeTooManyTicketsOpen);
+                    }
+
+                    throw Context.Reply(T.RequestUpgradeError, response.ErrorCode.HasValue ? ((StandardErrorCode)response.ErrorCode.Value).ToString() : "NULL");
+                }
+#endif
+            }
+            else
+            {
+                await UniTask.SwitchToMainThread(token);
+                throw Context.Reply(T.RequestUpgradeNotConnected);
+            }
+            if (!kit.NeedsUpgrade)
+            {
+                await UniTask.SwitchToMainThread(token);
+                throw Context.Reply(T.DoesNotNeedUpgrade, kit);
             }
 
-            throw ctx.SendCorrectUsage(Syntax + " - " + Help);
+            bool success = await KitEx.OpenUpgradeTicket(kit.GetDisplayName(), kit.Class, id, playerId, discordId, token).ConfigureAwait(false);
+            await UniTask.SwitchToMainThread(token);
+            if (!success)
+                throw Context.Reply(T.RequestUpgradeNotConnected);
+
+            throw Context.Reply(T.TicketOpened, kit);
+
         }
 
-        InteractableVehicle vehicle;
-        ctx.AssertRanByPlayer();
-        if (ctx.TryGetTarget(out drop))
+        await Context.AssertPermissions(PermissionRequest, token);
+        await UniTask.SwitchToMainThread(token);
+
+        InteractableVehicle? vehicle;
+        Context.AssertRanByPlayer();
+        if (Context.TryGetBarricadeTarget(out drop))
         {
             StructureSaver? saver = StructureSaver.GetSingletonQuick();
             InteractableSign? sign = drop.interactable as InteractableSign;
             if (saver != null && await saver.GetSave(drop, token).ConfigureAwait(false) == null)
             {
-                await UCWarfare.ToUpdate(token);
-                throw ctx.Reply(T.RequestKitNotRegistered);
+                await UniTask.SwitchToMainThread(token);
+                throw Context.Reply(T.RequestKitNotRegistered);
             }
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             if (sign != null)
             {
                 Kit? kit = Signs.GetKitFromSign(drop, out int loadoutId);
                 if (kit != null || loadoutId > 0)
                 {
-                    ctx.AssertGamemode(out IKitRequests gm);
+                    Context.AssertGamemode(out IKitRequests gm);
                     KitManager manager = gm.KitManager;
 
                     if (loadoutId > 0)
-                        await manager.Requests.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
+                        await manager.Requests.RequestLoadout(loadoutId, Context, token).ConfigureAwait(false);
                     else
                     {
                         kit = await manager.GetKit(kit!.PrimaryKey, token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
 
                         if (kit == null)
-                            throw ctx.Reply(T.RequestNoTarget);
+                            throw Context.Reply(T.RequestNoTarget);
 
-                        await manager.Requests.RequestKit(kit, ctx, token).ConfigureAwait(false);
+                        await manager.Requests.RequestKit(kit, Context, token).ConfigureAwait(false);
                     }
                     return;
                 }
                 if (TraitManager.Loaded && sign.text.StartsWith(Signs.Prefix + Signs.TraitPrefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    ctx.AssertGamemode<ITraits>();
+                    Context.AssertGamemode<ITraits>();
 
                     if (!TraitManager.Loaded)
-                        throw ctx.SendGamemodeError();
+                        throw Context.SendGamemodeError();
 
                     TraitData? d = TraitManager.GetData(sign.text.Substring(Signs.Prefix.Length + Signs.TraitPrefix.Length));
                     if (d == null)
-                        throw ctx.Reply(T.RequestNoTarget);
+                        throw Context.Reply(T.RequestNoTarget);
 
-                    TraitManager.RequestTrait(d, ctx);
+                    TraitManager.RequestTrait(d, Context);
                     return;
                 }
             }
 
             if (!Data.Is(out IVehicles vgm) || !vgm.VehicleSpawner.TryGetSpawn(drop, out SqlItem<VehicleSpawn> vbsign))
-                throw ctx.Reply(T.RequestNoTarget);
+                throw Context.Reply(T.RequestNoTarget);
             
             VehicleSpawn? spawn = vbsign.Item;
             if (spawn == null)
-                throw ctx.Reply(T.RequestNoTarget);
+                throw Context.Reply(T.RequestNoTarget);
                 
-            ctx.AssertNotOnPortionCooldown();
+            Context.AssertCommandNotOnIsolatedCooldown();
             if (!spawn.HasLinkedVehicle(out vehicle))
             {
-                ctx.PortionCommandCooldownTime = 5f;
-                throw ctx.Reply(T.RequestVehicleDead, spawn.Vehicle?.Item!);
+                Context.IsolatedCommandCooldownTime = 5f;
+                throw Context.Reply(T.RequestVehicleDead, spawn.Vehicle?.Item!);
             }
 
             VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
             if (bay is not { IsLoaded: true })
-                throw ctx.SendGamemodeError();
+                throw Context.SendGamemodeError();
 
             SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
+            await UniTask.SwitchToMainThread(token);
             if (data?.Item == null)
-                throw ctx.Reply(T.RequestNoTarget);
+                throw Context.Reply(T.RequestNoTarget);
 
             await data.Enter(token).ConfigureAwait(false);
             try
             {
-                await RequestVehicle(ctx, vehicle, data.Item, token);
-                ctx.Defer();
+                await RequestVehicle(Context, vehicle, data.Item, token);
+                Context.Defer();
             }
             finally
             {
@@ -285,59 +294,59 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
 
         }
 
-        if (ctx.TryGetTarget(out vehicle))
+        if (Context.TryGetVehicleTarget(out vehicle))
         {
-            await UCWarfare.ToUpdate();
+            await UniTask.SwitchToMainThread(token);
             VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
             if (bay is { IsLoaded: true })
             {
                 SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
-                await UCWarfare.ToUpdate();
+                await UniTask.SwitchToMainThread(token);
                 if (data?.Item != null)
                 {
-                    ctx.AssertNotOnPortionCooldown();
+                    Context.AssertNotOnPortionCooldown();
                     await data.Enter(token).ConfigureAwait(false);
                     try
                     {
-                        await RequestVehicle(ctx, vehicle, data.Item, token).ConfigureAwait(false);
-                        ctx.Defer();
+                        await RequestVehicle(Context, vehicle, data.Item, token).ConfigureAwait(false);
+                        Context.Defer();
                     }
                     finally
                     {
                         data.Release();
                     }
                 }
-                else throw ctx.Reply(T.RequestNoTarget);
+                else throw Context.Reply(T.RequestNoTarget);
             }
-            else throw ctx.SendGamemodeError();
+            else throw Context.SendGamemodeError();
         }
-        else if (ctx.TryGetTarget(out StructureDrop structure))
+        else if (Context.TryGetStructureTarget(out StructureDrop? structure))
         {
             if (Data.Is(out IVehicles vgm) && vgm.VehicleSpawner.TryGetSpawn(structure, out SqlItem<VehicleSpawn> spawnProxy))
             {
                 VehicleSpawn? spawn = spawnProxy.Item;
                 if (spawn == null)
-                    throw ctx.Reply(T.RequestNoTarget);
+                    throw Context.Reply(T.RequestNoTarget);
 
-                ctx.AssertNotOnPortionCooldown();
+                Context.AssertCommandNotOnIsolatedCooldown();
                 if (!spawn.HasLinkedVehicle(out vehicle))
                 {
-                    ctx.PortionCommandCooldownTime = 5f;
-                    throw ctx.Reply(T.RequestVehicleDead, spawn.Vehicle?.Item!);
+                    Context.IsolatedCommandCooldownTime = 5f;
+                    throw Context.Reply(T.RequestVehicleDead, spawn.Vehicle?.Item!);
                 }
 
                 VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
                 if (bay is { IsLoaded: true })
                 {
                     SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate();
+                    await UniTask.SwitchToMainThread(token);
                     if (data?.Item != null)
                     {
                         await data.Enter(token).ConfigureAwait(false);
                         try
                         {
-                            await RequestVehicle(ctx, vehicle, data.Item, token);
-                            ctx.Defer();
+                            await RequestVehicle(Context, vehicle, data.Item, token);
+                            Context.Defer();
                         }
                         finally
                         {
@@ -347,56 +356,55 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                         return;
                     }
                 }
-                else throw ctx.SendGamemodeError();
+                else throw Context.SendGamemodeError();
             }
         }
         else
         {
             // checks for spamming /req where the vehicle will be once it spawns
             if (Gamemode.Config.StructureVehicleBay.ValidReference(out Guid guid) &&
-                UCBarricadeManager.IsStructureNearby(guid, 20f, ctx.Caller.Position, out _) &&
-                UCBarricadeManager.CountNearbyBarricades(KitSign, 8f, ctx.Caller.Position) < 5)
+                UCBarricadeManager.IsStructureNearby(guid, 20f, Context.Player.Position, out _) &&
+                UCBarricadeManager.CountNearbyBarricades(KitSign, 8f, Context.Player.Position) < 5)
             {
-                ctx.PortionCommandCooldownTime = 5f;
+                Context.IsolatedCommandCooldownTime = 5f;
             }
 
-            await UCWarfare.ToUpdate(token);
-            throw ctx.Reply(T.RequestNoTarget);
+            await UniTask.SwitchToMainThread(token);
+            throw Context.Reply(T.RequestNoTarget);
         }
     }
     /// <remarks>Thread Safe</remarks>
-    internal Task RequestVehicle(CommandContext ctx, InteractableVehicle vehicle, VehicleData data, CancellationToken token = default) => RequestVehicle(ctx, vehicle, data, ctx.Caller.GetTeam(), token);
+    internal UniTask RequestVehicle(InteractableVehicle vehicle, VehicleData data, CancellationToken token = default) => RequestVehicle(vehicle, data, Context.Player.GetTeam(), token);
     /// <remarks>Thread Safe</remarks>
-    internal async Task RequestVehicle(CommandContext ctx, InteractableVehicle vehicle, VehicleData data, ulong team, CancellationToken token = default)
+    internal async UniTask RequestVehicle(InteractableVehicle vehicle, VehicleData data, ulong team, CancellationToken token = default)
     {
-        if (!UCWarfare.IsMainThread)
-            await UCWarfare.ToUpdate();
+        await UniTask.SwitchToMainThread(token);
         if (vehicle.lockedOwner != CSteamID.Nil || vehicle.lockedGroup != CSteamID.Nil)
         {
             IPlayer names = await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
-            throw ctx.Reply(T.RequestVehicleAlreadyRequested, names);
+            await UniTask.SwitchToMainThread(token);
+            throw Context.Reply(T.RequestVehicleAlreadyRequested, names);
         }
 
         if (data.Team != 0 && data.Team != team)
-            throw ctx.Reply(T.RequestVehicleOtherTeam, TeamManager.GetFactionSafe(data.Team)!);
-        if (data.RequiresSL && ctx.Caller.Squad == null)
-            throw ctx.Reply(T.RequestVehicleNotSquadLeader);
+            throw Context.Reply(T.RequestVehicleOtherTeam, TeamManager.GetFactionSafe(data.Team)!);
+        if (data.RequiresSL && Context.Player.Squad == null)
+            throw Context.Reply(T.RequestVehicleNotSquadLeader);
 
-        Kit? kit = await ctx.Caller.GetActiveKit(token).ConfigureAwait(false);
+        Kit? kit = await Context.Player.GetActiveKit(token).ConfigureAwait(false);
         if (kit == null)
-            throw ctx.Reply(T.RequestVehicleNoKit);
+            throw Context.Reply(T.RequestVehicleNoKit);
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
-        if (ctx.Caller.Level.Level < data.UnlockLevel)
-            throw ctx.Reply(T.RequestVehicleMissingLevels, new LevelData(Points.GetLevelXP(data.UnlockLevel)));
+        if (Context.Player.Level.Level < data.UnlockLevel)
+            throw Context.Reply(T.RequestVehicleMissingLevels, new LevelData(Points.GetLevelXP(data.UnlockLevel)));
         if (data.RequiredClass != Class.None && kit.Class != data.RequiredClass)
-            throw ctx.Reply(T.RequestVehicleWrongClass, data.RequiredClass);
-        if (ctx.Caller.CachedCredits < data.CreditCost)
-            throw ctx.Reply(T.RequestVehicleCantAfford, ctx.Caller.CachedCredits, data.CreditCost);
-        if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestVehicle, out Cooldown cooldown, vehicle.id))
-            throw ctx.Reply(T.RequestVehicleCooldown, cooldown);
+            throw Context.Reply(T.RequestVehicleWrongClass, data.RequiredClass);
+        if (Context.Player.CachedCredits < data.CreditCost)
+            throw Context.Reply(T.RequestVehicleCantAfford, Context.Player.CachedCredits, data.CreditCost);
+        if (CooldownManager.HasCooldown(Context.Player, CooldownType.RequestVehicle, out Cooldown cooldown, vehicle.id))
+            throw Context.Reply(T.RequestVehicleCooldown, cooldown);
         // check if an owned vehicle is nearby
         if (Data.Is(out IVehicles vgm))
         {
@@ -409,9 +417,9 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                     {
                         if (veh == null || veh.isDead || veh.isExploded)
                             continue;
-                        if (veh.lockedOwner.m_SteamID == ctx.CallerID && (veh.transform.position - vehicle.transform.position).sqrMagnitude <
+                        if (veh.lockedOwner.m_SteamID == Context.CallerId.m_SteamID && (veh.transform.position - vehicle.transform.position).sqrMagnitude <
                             UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
-                            throw ctx.Reply(T.RequestVehicleAlreadyOwned, veh);
+                            throw Context.Reply(T.RequestVehicleAlreadyOwned, veh);
                     }
                 }
             }
@@ -422,74 +430,78 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
         }
         if (data.IsDelayed(out Delay delay) && delay.Type != DelayType.None)
         {
-            ctx.PortionCommandCooldownTime = 5f;
+            Context.IsolatedCommandCooldownTime = 5f;
 
-            Localization.SendDelayRequestText(in delay, ctx.Caller, team, Localization.DelayTarget.VehicleBay);
-            ctx.Defer();
+            Localization.SendDelayRequestText(in delay, Context.Player, team, Localization.DelayTarget.VehicleBay);
+            Context.Defer();
             return;
         }
 
         for (int i = 0; i < data.UnlockRequirements.Length; i++)
         {
             UnlockRequirement req = data.UnlockRequirements[i];
-            if (req.CanAccess(ctx.Caller))
+            if (req.CanAccess(Context.Player))
                 continue;
-            throw req.RequestVehicleFailureToMeet(ctx, data);
+            throw req.RequestVehicleFailureToMeet(Context, data);
         }
 
-        if (vehicle.asset.canBeLocked)
+        if (!vehicle.asset.canBeLocked)
         {
-            AssetBan? assetBan = await Data.ModerationSql.GetActiveAssetBan(ctx.CallerID, data.Type, token: token).ConfigureAwait(false);
-            if (assetBan != null)
+            Context.Player.SendChat(T.RequestVehicleAlreadyRequested);
+            return;
+        }
+
+        AssetBan? assetBan = await Data.ModerationSql.GetActiveAssetBan(Context.CallerId.m_SteamID, data.Type, token: token).ConfigureAwait(false);
+        if (assetBan != null)
+        {
+            if (assetBan.VehicleTypeFilter.Length == 0)
             {
-                if (assetBan.VehicleTypeFilter.Length == 0)
-                {
-                    if (assetBan.IsPermanent)
-                        throw ctx.Reply(T.RequestVehicleAssetBannedGlobalPermanent);
-
-                    throw ctx.Reply(T.RequestVehicleAssetBannedGlobal, assetBan.GetTimeUntilExpiry(false));
-                }
-
                 if (assetBan.IsPermanent)
-                    throw ctx.Reply(T.RequestVehicleAssetBannedPermanent, assetBan.GetCommaList(false));
+                    throw Context.Reply(T.RequestVehicleAssetBannedGlobalPermanent);
 
-                throw ctx.Reply(T.RequestVehicleAssetBanned, assetBan.GetTimeUntilExpiry(false), assetBan.GetCommaList(false));
+                throw Context.Reply(T.RequestVehicleAssetBannedGlobal, assetBan.GetTimeUntilExpiry(false));
             }
 
-            if (data.CreditCost > 0)
-            {
-                await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    await Points.UpdatePointsAsync(ctx.Caller, false, token).ConfigureAwait(false);
-                    if (ctx.Caller.CachedCredits >= data.CreditCost)
-                    {
-                        await Points.AwardCreditsAsync(ctx.Caller, -data.CreditCost, isPurchase: true, @lock: false, token: token).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await UCWarfare.ToUpdate(token);
-                        ctx.Caller.SendChat(T.RequestVehicleCantAfford, ctx.Caller.CachedCredits, data.CreditCost);
-                        return;
-                    }
-                }
-                finally
-                {
-                    ctx.Caller.PurchaseSync.Release();
-                }
-            }
+            if (assetBan.IsPermanent)
+                throw Context.Reply(T.RequestVehicleAssetBannedPermanent, assetBan.GetCommaList(false));
 
-            await UCWarfare.ToUpdate(token);
-            GiveVehicle(ctx.Caller, vehicle, data);
-            // Stats.StatsManager.ModifyStats(ctx.Caller.Steam64, x => x.VehiclesRequested++, false);
-            // Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
-            // Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
-            CooldownManager.StartCooldown(ctx.Caller, CooldownType.RequestVehicle, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
+            throw Context.Reply(T.RequestVehicleAssetBanned, assetBan.GetTimeUntilExpiry(false),
+                assetBan.GetCommaList(false));
         }
-        else
+
+        if (data.CreditCost > 0)
         {
-            ctx.Caller.SendChat(T.RequestVehicleAlreadyRequested);
+            await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                await Points.UpdatePointsAsync(Context.Player, false, token).ConfigureAwait(false);
+                if (Context.Player.CachedCredits >= data.CreditCost)
+                {
+                    await Points.AwardCreditsAsync(Context.Player, -data.CreditCost, isPurchase: true, @lock: false,
+                        token: token).ConfigureAwait(false);
+                }
+                else
+                {
+                    await UniTask.SwitchToMainThread(token);
+                    Context.Player.SendChat(T.RequestVehicleCantAfford, Context.Player.CachedCredits,
+                        data.CreditCost);
+                    return;
+                }
+            }
+            finally
+            {
+                Context.Player.PurchaseSync.Release();
+            }
         }
+
+        await UniTask.SwitchToMainThread(token);
+        GiveVehicle(Context.Player, vehicle, data);
+
+        // Stats.StatsManager.ModifyStats(Context.CallerId.m_SteamID, x => x.VehiclesRequested++, false);
+        // Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
+        // Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
+
+        CooldownManager.StartCooldown(Context.Player, CooldownType.RequestVehicle, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
     }
 
     internal static void GiveVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data)

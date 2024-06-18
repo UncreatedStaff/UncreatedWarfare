@@ -1491,7 +1491,7 @@ public class Translation
     }
     internal static async Task ReadTranslations(CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         L.Log("Detected " + T.Translations.Length + " translations.", ConsoleColor.Magenta);
         DateTime start = DateTime.Now;
         if (!_first)
@@ -1577,7 +1577,7 @@ public class Translation
                             {
                                 languageInfo.HasTranslationSupport = true;
                                 await Data.LanguageDataStore.AddOrUpdateInfo(languageInfo, token).ConfigureAwait(false);
-                                await UCWarfare.ToUpdate(token);
+                                await UniTask.SwitchToMainThread(token);
                             }
 
                             goto n;
@@ -1822,7 +1822,7 @@ Please leave in-game terms such as **FOB**, **Rally**, **Build**, **Ammo**, and 
     {
         language ??= Localization.GetDefaultLanguage();
         await ReloadCommand.ReloadTranslations(token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, "Export"));
         if (dir.Exists)
@@ -1834,7 +1834,7 @@ Please leave in-game terms such as **FOB**, **Rally**, **Build**, **Ammo**, and 
         Localization.WriteEnums(language, Path.Combine(dir.FullName, "Enums"), true, true);
 
         await KitEx.WriteKitLocalization(language, Path.Combine(dir.FullName, "kits.properties"), true, token);
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         TeamManager.WriteFactionLocalization(language, Path.Combine(dir.FullName, "factions.properties"), true);
         TraitManager.WriteTraitLocalization(language, Path.Combine(dir.FullName, "traits.properties"), true);

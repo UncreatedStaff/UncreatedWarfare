@@ -2,9 +2,6 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Framework;
-using Uncreated.Json;
-using Uncreated.SQL;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -12,7 +9,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 public class GridObject : IJsonReadWrite, IListItem
 {
     [JsonPropertyName("flag_id")]
-    public PrimaryKey PrimaryKey { get; set; }
+    public uint PrimaryKey { get; set; }
 
     [JsonPropertyName("instance_id")]
     public uint ObjectInstanceId { get; set; }
@@ -32,7 +29,7 @@ public class GridObject : IJsonReadWrite, IListItem
     [JsonIgnore]
     public LevelObject? Object { get; set; }
 
-    public GridObject(PrimaryKey primaryKey, uint objectInstanceId, Guid guid, float x, float y, float z, LevelObject? @object = null)
+    public GridObject(uint primaryKey, uint objectInstanceId, Guid guid, float x, float y, float z, LevelObject? @object = null)
     {
         PrimaryKey = primaryKey;
         ObjectInstanceId = objectInstanceId;
@@ -45,7 +42,7 @@ public class GridObject : IJsonReadWrite, IListItem
             Object = UCBarricadeManager.FindObject(objectInstanceId, new Vector3(x, y, z));
     }
 
-    public GridObject() : this (PrimaryKey.NotAssigned, uint.MaxValue, Guid.Empty, 0f, 0f, 0f) { }
+    public GridObject() : this (0, uint.MaxValue, Guid.Empty, 0f, 0f, 0f) { }
     public override string ToString() => $"Flag: {PrimaryKey}, Object: {ObjectInstanceId}.";
     public void WriteJson(Utf8JsonWriter writer)
     {

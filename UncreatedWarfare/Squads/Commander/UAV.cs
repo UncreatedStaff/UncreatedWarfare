@@ -89,7 +89,7 @@ public class UAV : MonoBehaviour, IBuff
             return;
         }
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         if (reqKit.Class != Class.Squadleader || !requester.IsSquadLeader())
             requester.SendChat(T.RequestUAVNotSquadleader);
