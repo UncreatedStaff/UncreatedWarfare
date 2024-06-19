@@ -8,12 +8,10 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Framework;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
@@ -23,7 +21,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Traits;
 public abstract class Trait : MonoBehaviour, ITranslationArgument
 {
-    protected static readonly char[] DataSplitChars = { ',' };
+    protected static readonly char[] DataSplitChars = [ ',' ];
     private TraitData _data;
     private UCPlayer _targetPlayer;
     private bool _inited;
@@ -148,8 +146,12 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     private void GiveItems(UCPlayer player)
     {
         for (int i = 0; i < Data.ItemsGiven.Length; ++i)
-            if (Data.ItemsGiven[i].ValidReference(out ItemAsset asset))
+        {
+            if (Data.ItemsGiven[i].TryGetAsset(out ItemAsset? asset))
+            {
                 player.Player.inventory.tryAddItem(new Item(asset.id, true), false, true);
+            }
+        }
     }
     private IEnumerator EffectCoroutine(float progressedTime = 0f)
     {
@@ -284,13 +286,13 @@ public class TraitData : ITranslationArgument
     public TranslationList DescriptionTranslations { get; set; }
 
     [JsonPropertyName("items_given")]
-    public RotatableConfig<JsonAssetReference<ItemAsset>>[] ItemsGiven { get; set; }
+    public IAssetLink<ItemAsset>[] ItemsGiven { get; set; }
 
     [JsonPropertyName("icon")]
-    public RotatableConfig<string> Icon { get; set; }
+    public string Icon { get; set; }
 
     [JsonPropertyName("request_cooldown")]
-    public RotatableConfig<float> Cooldown { get; set; }
+    public float Cooldown { get; set; }
 
     [JsonPropertyName("delays")]
     public Delay[] Delays { get; set; }
@@ -328,18 +330,23 @@ public class TraitData : ITranslationArgument
     [FormatDisplay(typeof(Trait), "Name")]
     [FormatDisplay("Name")]
     public const string FormatName = "n";
+
     [FormatDisplay(typeof(Trait), "Type Name")]
     [FormatDisplay("Type Name")]
     public const string FormatTypeName = "t";
+
     [FormatDisplay(typeof(Trait), "Colored Type Name")]
     [FormatDisplay("Colored Type Name")]
     public const string FormatColorTypeName = "ct";
+
     [FormatDisplay(typeof(Trait), "Description")]
     [FormatDisplay("Description")]
     public const string FormatDescription = "d";
+
     [FormatDisplay(typeof(Trait), "Colored Name")]
     [FormatDisplay("Colored Name")]
     public const string FormatColorName = "cn";
+
     [FormatDisplay(typeof(Trait), "Colored Description")]
     [FormatDisplay("Colored Description")]
     public const string FormatColorDescription = "cd";

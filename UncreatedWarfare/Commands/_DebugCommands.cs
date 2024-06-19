@@ -1451,13 +1451,13 @@ public class DebugCommand : IExecutableCommand
         if (kit == null)
             throw Context.ReplyString($"Kit not found: {Context.Get(0)}.");
 
-        Context.ReplyString(Environment.NewLine + JsonSerializer.Serialize(kit, JsonSettings.SerializerSettings));
+        Context.ReplyString(Environment.NewLine + JsonSerializer.Serialize(kit, ConfigurationSettings.JsonSerializerSettings));
     }
 
     private void dumpfactions()
     {
         Context.AssertRanByConsole();
 
-        Context.ReplyString(Environment.NewLine + JsonSerializer.Serialize(TeamManager.Factions, JsonSettings.SerializerSettings));
+        Context.ReplyString(Environment.NewLine + JsonSerializer.Serialize(TeamManager.Factions, ConfigurationSettings.JsonSerializerSettings));
     }
 }

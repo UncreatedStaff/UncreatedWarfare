@@ -470,7 +470,7 @@ public class UserPermissionStore : IAsyncDisposable
 
         using Utf8JsonPreProcessingStream stream = new Utf8JsonPreProcessingStream(_permissionGroupFilePath);
 
-        PermissionGroupConfig config = JsonSerializer.Deserialize<PermissionGroupConfig>(stream.ReadAllBytes(), JsonSettings.SerializerSettings);
+        PermissionGroupConfig config = JsonSerializer.Deserialize<PermissionGroupConfig>(stream.ReadAllBytes(), ConfigurationSettings.JsonSerializerSettings);
         config.Groups.Sort((a, b) => b.Priority.CompareTo(a.Priority));
 
         if (PermissionGroups != null)

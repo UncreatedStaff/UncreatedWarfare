@@ -1,14 +1,16 @@
-﻿using SDG.Unturned;
+﻿using Microsoft.Extensions.Configuration;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
-using Uncreated.Framework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Players;
@@ -19,7 +21,6 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
@@ -34,9 +35,13 @@ using Object = UnityEngine.Object;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.FOBs;
+
 [SingletonDependency(typeof(Whitelister))]
-public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener, IGameTickListener, IJoinedTeamListener, IUIListener
+public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener, IGameTickListener, IJoinedTeamListener, IUIListener, IDisposable
 {
+    private readonly IConfigurationRoot _config;
+    private readonly IDisposable? _configListener;
+
     private static readonly List<InteractableVehicle> WorkingNearbyVehicles = new List<InteractableVehicle>(16);
 
     private const float InsideFOBRangeSqr = 2f * 2f;
@@ -46,21 +51,34 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     private List<IFOBItem> _floatingItems;
     private List<IFOB> _fobs;
     private static FOBManager _singleton;
-    private static readonly FOBConfig ConfigFile = new FOBConfig(); 
     public static readonly FOBListUI ListUI = new FOBListUI();
     public static readonly NearbyResourceUI ResourceUI = new NearbyResourceUI();
     private readonly IFOB?[] _team1List = new IFOB?[ListUI.FOBs.Length * 2];
     private readonly IFOB?[] _team2List = new IFOB?[ListUI.FOBs.Length * 2];
 
-    public static FOBConfigData Config => ConfigFile.Data;
+    public static FOBConfigData Config { get; private set; }
     public static bool Loaded => _singleton.IsLoaded();
     public IReadOnlyList<IFOBItem> FloatingItems { get; private set; }
     public IReadOnlyList<IFOB> FOBs { get; private set; }
     public IReadOnlyList<IFOB?> Team1ListEntries { get; private set; }
     public IReadOnlyList<IFOB?> Team2ListEntries { get; private set; }
 
+    public FOBManager(WarfareModule warfare)
+    {
+        ConfigurationBuilder configBuilder = new ConfigurationBuilder();
+        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, Path.Join(warfare.HomeDirectory, "FOBs.yml"));
+
+        _config = configBuilder.Build();
+        _configListener = _config.GetReloadToken().RegisterChangeCallback(_ => ReloadConfig(), null);
+        ReloadConfig();
+    }
+    public void ReloadConfig()
+    {
+        Config = _config.ParseConfigData<FOBConfigData>();
+    }
     public override void Load()
     {
+        ReloadConfig();
         EventDispatcher.PlayerDied += OnPlayerDied;
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.BarricadePlaced += OnBarricadePlaced;
@@ -86,24 +104,24 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             BuildableData data = Config.Buildables[i];
             if (data.DontAutoWhitelist) continue;
-            if (data.Foundation.ValidReference(out Guid guid))
+            if (data.Foundation.TryGetGuid(out Guid guid))
                 Whitelister.AddItem(guid);
             if (data.Emplacement != null)
             {
-                if (data.Emplacement.Ammo.ValidReference(out guid))
+                if (data.Emplacement.Ammo.TryGetGuid(out guid))
                     Whitelister.AddItem(guid);
             }
         }
         for (int i = 1; i <= 2; ++i)
         {
             FactionInfo f = TeamManager.GetFaction((ulong)i);
-            if (f.Ammo.ValidReference(out Guid guid))
+            if (f.Ammo.TryGetGuid(out Guid guid))
                 Whitelister.AddItem(guid);
-            if (f.Build.ValidReference(out guid))
+            if (f.Build.TryGetGuid(out guid))
                 Whitelister.AddItem(guid);
-            if (f.FOBRadio.ValidReference(out guid))
+            if (f.FOBRadio.TryGetGuid(out guid))
                 Whitelister.AddItem(guid);
-            if (f.RallyPoint.ValidReference(out guid))
+            if (f.RallyPoint.TryGetGuid(out guid))
                 Whitelister.AddItem(guid);
         }
         _singleton = this;
@@ -202,7 +220,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     };
     public static void TriggerBuildEffect(Vector3 pos)
     {
-        if (Gamemode.Config.EffectDig.ValidReference(out EffectAsset effect))
+        if (Gamemode.Config.EffectDig.TryGetAsset(out EffectAsset effect))
             F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pos);
     }
     public static float GetBuildIncrementMultiplier(UCPlayer player)
@@ -409,13 +427,14 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         }
 
         Kit? kit = player.CachedActiveKitInfo;
-        if (kit == null || !kit.ContainsItem(buildable.Foundation.Value.Guid, player.GetTeam()) || _floatingItems == null)
+        if (kit == null || !kit.ContainsItem(buildable.Foundation, player.GetTeam()) || _floatingItems == null)
         {
             player.SendChat(T.BuildNoRadio, buildable.Type == BuildableType.Bunker ? Config.FOBBuildPickupRadiusNoBunker : Config.FOBBuildPickupRadius);
             return false;
         }
+
         ulong team = player.GetTeam();
-        int limit = kit.CountItems(buildable.Foundation.Value.Guid);
+        int limit = kit.CountItems(buildable.Foundation);
         int count = 0;
         for (int i = 0; i < _floatingItems.Count; ++i)
         {
@@ -423,7 +442,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (ignoreFoundation is not null && item.Equals(ignoreFoundation))
                 continue;
             BuildableData? b = item.Buildable;
-            if (b != null && item.Team == team && item.Owner == player.Steam64 && b.Foundation == buildable.Foundation && (item is not ShovelableComponent sh || sh.ActiveVehicle == null || !sh.ActiveVehicle.isDead))
+            if (b != null && item.Team == team && item.Owner == player.Steam64 && b.Foundation.MatchAsset(buildable.Foundation) && (item is not ShovelableComponent sh || sh.ActiveVehicle == null || !sh.ActiveVehicle.isDead))
             {
                 ++count;
                 if (count < limit)
@@ -447,7 +466,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                     if (_floatingItems[i] is IDisposable d)
                         d.Dispose();
                     IFOBItem newItem = (IFOBItem)Activator.CreateInstance(item.GetType());
-                    if (newItem.Icon.ValidReference(out Guid icon))
+                    if (newItem.Icon.TryGetAsset(out Guid icon))
                         IconManager.AttachIcon(icon, newObj, newItem.Team, newItem.IconOffset);
                     _floatingItems[i] = newItem;
                     return newItem;
@@ -463,7 +482,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             {
                 IFOBItem newItem = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
                 _floatingItems[i] = newItem;
-                if (newItem.Icon.ValidReference(out Guid icon))
+                if (newItem.Icon.TryGetAsset(out Guid icon))
                     IconManager.AttachIcon(icon, newObj, newItem.Team, newItem.IconOffset);
                 if (itemMb is IDisposable d)
                     d.Dispose();
@@ -480,13 +499,17 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     {
         foreach (BuildableData b in Config.Buildables)
         {
-            if (b.Foundation.ValidReference(out Guid guid) && !Whitelister.IsWhitelisted(guid, out _))
-                Whitelister.AddItem(guid);
-
-            if (b.Emplacement != null)
+            if (b.Foundation.TryGetGuid(out Guid guid) && !Whitelister.IsWhitelisted(guid, out _))
             {
-                if (!Whitelister.IsWhitelisted(b.Emplacement.Ammo, out _))
-                    Whitelister.AddItem(b.Emplacement.Ammo);
+                Whitelister.AddItem(guid);
+            }
+
+            if (b.Emplacement == null)
+                continue;
+
+            if (!Whitelister.IsWhitelisted(b.Emplacement.Ammo, out _))
+            {
+                Whitelister.AddItem(b.Emplacement.Ammo);
             }
         }
 
@@ -743,9 +766,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (e.Owner == null)
                 return;
 
-            if (Gamemode.Config.BarricadeFOBBunkerBase.ValidReference(out ItemBarricadeAsset fobBase))
+            if (Gamemode.Config.BarricadeFOBBunkerBase.TryGetAsset(out ItemBarricadeAsset fobBase))
                 ItemManager.dropItem(new Item(fobBase.id, true), e.Owner.Position, true, true, true);
-            if (Gamemode.Config.BarricadeAmmoCrateBase.ValidReference(out ItemBarricadeAsset ammoBase))
+            if (Gamemode.Config.BarricadeAmmoCrateBase.TryGetAsset(out ItemBarricadeAsset ammoBase))
                 ItemManager.dropItem(new Item(ammoBase.id, true), e.Owner.Position, true, true, true);
             QuestManager.OnFOBBuilt(e.Owner, fob);
             Tips.TryGiveTip(e.Owner, 3, T.TipPlaceBunker);
@@ -886,7 +909,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         _singleton.AddFOB(cache);
 
-        if (Data.Is(out IAttackDefense atk) && Gamemode.Config.EffectMarkerCacheDefend.ValidReference(out Guid effectGuid))
+        if (Data.Is(out IAttackDefense atk) && Gamemode.Config.EffectMarkerCacheDefend.TryGetAsset(out Guid effectGuid))
             IconManager.AttachIcon(effectGuid, drop.model, atk.DefendingTeam, 3.25f);
 
         return cache;
@@ -1172,6 +1195,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             }
         }
     }
+
+    public void Dispose()
+    {
+        _configListener?.Dispose();
+    }
 }
 
 public class FOBConfigData : JSONConfigData
@@ -1214,9 +1242,10 @@ public class FOBConfigData : JSONConfigData
     public ushort FirstFOBUiId { get; set; }
     public ushort BuildResourceUI { get; set; }
 
-    [JsonConverter(typeof(Base64Converter))]
+    [JsonConverter(typeof(ByteArrayJsonConverter))]
     public byte[] T1RadioState { get; set; }
-    [JsonConverter(typeof(Base64Converter))]
+
+    [JsonConverter(typeof(ByteArrayJsonConverter))]
     public byte[] T2RadioState { get; set; }
 
     public override void SetDefaults()
@@ -1244,12 +1273,12 @@ public class FOBConfigData : JSONConfigData
 
         AmmoBagMaxUses = 3;
 
-        Buildables = new List<BuildableData>()
-        {
+        Buildables =
+        [
             new BuildableData
             {
-                FullBuildable = new JsonAssetReference<ItemAsset>("61c349f10000498fa2b92c029d38e523"),
-                Foundation = new JsonAssetReference<ItemAsset>("1bb17277dd8148df9f4c53d1a19b2503"),
+                FullBuildable = AssetLink.Create<ItemAsset>("61c349f10000498fa2b92c029d38e523"),
+                Foundation = AssetLink.Create<ItemAsset>("1bb17277dd8148df9f4c53d1a19b2503"),
                 Type = BuildableType.Bunker,
                 RequiredHits = 30,
                 RequiredBuild = 15,
@@ -1259,8 +1288,8 @@ public class FOBConfigData : JSONConfigData
             },
             new BuildableData
             {
-                FullBuildable = new JsonAssetReference<ItemAsset>("6fe208519d7c45b0be38273118eea7fd"),
-                Foundation = new JsonAssetReference<ItemAsset>("eccfe06e53d041d5b83c614ffa62ee59"),
+                FullBuildable = AssetLink.Create<ItemAsset>("6fe208519d7c45b0be38273118eea7fd"),
+                Foundation = AssetLink.Create<ItemAsset>("eccfe06e53d041d5b83c614ffa62ee59"),
                 Type = BuildableType.AmmoCrate,
                 RequiredHits = 10,
                 RequiredBuild = 1,
@@ -1270,8 +1299,8 @@ public class FOBConfigData : JSONConfigData
             },
             new BuildableData
             {
-                FullBuildable = new JsonAssetReference<ItemAsset>("c0d11e0666694ddea667377b4c0580be"),
-                Foundation = new JsonAssetReference<ItemAsset>("26a6b91cd1944730a0f28e5f299cebf9"),
+                FullBuildable = AssetLink.Create<ItemAsset>("c0d11e0666694ddea667377b4c0580be"),
+                Foundation = AssetLink.Create<ItemAsset>("26a6b91cd1944730a0f28e5f299cebf9"),
                 Type = BuildableType.RepairStation,
                 RequiredHits = 25,
                 RequiredBuild = 15,
@@ -1282,8 +1311,8 @@ public class FOBConfigData : JSONConfigData
             new BuildableData
             {
                 // sandbag line
-                FullBuildable = new JsonAssetReference<ItemAsset>("ab702192eab4456ebb9f6d7cc74d4ba2"),
-                Foundation = new JsonAssetReference<ItemAsset>("15f674dcaf3f44e19a124c8bf7e19ca2"),
+                FullBuildable = AssetLink.Create<ItemAsset>("ab702192eab4456ebb9f6d7cc74d4ba2"),
+                Foundation = AssetLink.Create<ItemAsset>("15f674dcaf3f44e19a124c8bf7e19ca2"),
                 Type = BuildableType.Fortification,
                 RequiredHits = 10,
                 RequiredBuild = 1,
@@ -1294,8 +1323,8 @@ public class FOBConfigData : JSONConfigData
             new BuildableData
             {
                 // sandbag pillbox
-                FullBuildable = new JsonAssetReference<ItemAsset>("f3bd9ee2fa334faabc8fd9d5a3b84424"),
-                Foundation = new JsonAssetReference<ItemAsset>("a9294335d8e84b76b1cbcb7d70f66aaa"),
+                FullBuildable = AssetLink.Create<ItemAsset>("f3bd9ee2fa334faabc8fd9d5a3b84424"),
+                Foundation = AssetLink.Create<ItemAsset>("a9294335d8e84b76b1cbcb7d70f66aaa"),
                 Type = BuildableType.Fortification,
                 RequiredHits = 10,
                 RequiredBuild = 1,
@@ -1306,8 +1335,8 @@ public class FOBConfigData : JSONConfigData
             new BuildableData
             {
                 // sandbag crescent
-                FullBuildable = new JsonAssetReference<ItemAsset>("eefee76f077349e58359f5fd03cf311d"),
-                Foundation = new JsonAssetReference<ItemAsset>("920f8b30ae314406ab032a0c2efa753d"),
+                FullBuildable = AssetLink.Create<ItemAsset>("eefee76f077349e58359f5fd03cf311d"),
+                Foundation = AssetLink.Create<ItemAsset>("920f8b30ae314406ab032a0c2efa753d"),
                 Type = BuildableType.Fortification,
                 RequiredHits = 10,
                 RequiredBuild = 1,
@@ -1318,8 +1347,8 @@ public class FOBConfigData : JSONConfigData
             new BuildableData
             {
                 // sandbag foxhole
-                FullBuildable = new JsonAssetReference<ItemAsset>("a71e3e3d6bb54a36b7bd8bf5f25160aa"),
-                Foundation = new JsonAssetReference<ItemAsset>("12ea830dd9ab4f949893bbbbc5e9a5f6"),
+                FullBuildable = AssetLink.Create<ItemAsset>("a71e3e3d6bb54a36b7bd8bf5f25160aa"),
+                Foundation = AssetLink.Create<ItemAsset>("12ea830dd9ab4f949893bbbbc5e9a5f6"),
                 Type = BuildableType.Fortification,
                 RequiredHits = 12,
                 RequiredBuild = 2,
@@ -1330,8 +1359,8 @@ public class FOBConfigData : JSONConfigData
             new BuildableData
             {
                 // razorwire
-                FullBuildable = new JsonAssetReference<ItemAsset>("bc24bd85ff714ff7bb2f8b2dd5056395"),
-                Foundation = new JsonAssetReference<ItemAsset>("a2a8a01a58454816a6c9a047df0558ad"),
+                FullBuildable = AssetLink.Create<ItemAsset>("bc24bd85ff714ff7bb2f8b2dd5056395"),
+                Foundation = AssetLink.Create<ItemAsset>("a2a8a01a58454816a6c9a047df0558ad"),
                 Type = BuildableType.Fortification,
                 RequiredHits = 10,
                 RequiredBuild = 1,
@@ -1342,8 +1371,8 @@ public class FOBConfigData : JSONConfigData
             new BuildableData
             {
                 // hesco wall
-                FullBuildable = new JsonAssetReference<ItemAsset>("e1af3a3af31e4996bc5d6ffd9a0773ec"),
-                Foundation = new JsonAssetReference<ItemAsset>("baf23a8b514441ee8db891a3ddf32ef4"),
+                FullBuildable = AssetLink.Create<ItemAsset>("e1af3a3af31e4996bc5d6ffd9a0773ec"),
+                Foundation = AssetLink.Create<ItemAsset>("baf23a8b514441ee8db891a3ddf32ef4"),
                 Type = BuildableType.Fortification,
                 RequiredHits = 25,
                 RequiredBuild = 1,
@@ -1354,8 +1383,8 @@ public class FOBConfigData : JSONConfigData
             new BuildableData
             {
                 // hesco tower
-                FullBuildable = new JsonAssetReference<ItemAsset>("857c85161f254964a921700a69e215a9"),
-                Foundation = new JsonAssetReference<ItemAsset>("827d0ca8bfff43a39f750f191e16ea71"),
+                FullBuildable = AssetLink.Create<ItemAsset>("857c85161f254964a921700a69e215a9"),
+                Foundation = AssetLink.Create<ItemAsset>("827d0ca8bfff43a39f750f191e16ea71"),
                 Type = BuildableType.Fortification,
                 RequiredHits = 20,
                 RequiredBuild = 1,
@@ -1366,8 +1395,8 @@ public class FOBConfigData : JSONConfigData
             new BuildableData
             {
                 // M2A1
-                FullBuildable = new JsonAssetReference<ItemAsset>(),
-                Foundation = new JsonAssetReference<ItemAsset>("80396c361d3040d7beb3921964ec2997"),
+                FullBuildable = AssetLink.Create<ItemAsset>(Guid.Empty),
+                Foundation = AssetLink.Create<ItemAsset>("80396c361d3040d7beb3921964ec2997"),
                 Type = BuildableType.Emplacement,
                 RequiredHits = 16,
                 RequiredBuild = 6,
@@ -1375,17 +1404,17 @@ public class FOBConfigData : JSONConfigData
                 Limit = 2,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("aa3c6af4911243b5b5c9dc95ca1263bf"),
-                    BaseBarricade =  new JsonAssetReference<ItemAsset>(),
-                    Ammo = new JsonAssetReference<ItemAsset>("523c49ce4df44d46ba37be0dd6b4504b"),
+                    EmplacementVehicle = AssetLink.Create<VehicleAsset>("aa3c6af4911243b5b5c9dc95ca1263bf"),
+                    BaseBarricade =  AssetLink.Create<ItemAsset>(Guid.Empty),
+                    Ammo = AssetLink.Create<ItemAsset>("523c49ce4df44d46ba37be0dd6b4504b"),
                     AmmoCount = 2
                 }
             },
             new BuildableData
             {
                 // Kord
-                FullBuildable = new JsonAssetReference<ItemAsset>(),
-                Foundation = new JsonAssetReference<ItemAsset>("e44ba62f763c432e882ddc7eabaa9c77"),
+                FullBuildable = AssetLink.Create<ItemAsset>(Guid.Empty),
+                Foundation = AssetLink.Create<ItemAsset>("e44ba62f763c432e882ddc7eabaa9c77"),
                 Type = BuildableType.Emplacement,
                 RequiredHits = 16,
                 RequiredBuild = 6,
@@ -1393,17 +1422,17 @@ public class FOBConfigData : JSONConfigData
                 Limit = 2,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("86cfe1eb8be144aeae7659c9c74ff11a"),
-                    BaseBarricade = new JsonAssetReference<ItemAsset>(),
-                    Ammo = new JsonAssetReference<ItemAsset>("6e9bc2083a1246b49b1656c2ec6f535a"),
+                    EmplacementVehicle = AssetLink.Create<VehicleAsset>("86cfe1eb8be144aeae7659c9c74ff11a"),
+                    BaseBarricade = AssetLink.Create<ItemAsset>(Guid.Empty),
+                    Ammo = AssetLink.Create<ItemAsset>("6e9bc2083a1246b49b1656c2ec6f535a"),
                     AmmoCount = 2,
                 }
             },
             new BuildableData
             {
                 // QJC-88
-                FullBuildable = new JsonAssetReference<ItemAsset>(),
-                Foundation = new JsonAssetReference<ItemAsset>("beaa260d7f844724bd26993569d9e42a"),
+                FullBuildable = AssetLink.Create<ItemAsset>(Guid.Empty),
+                Foundation = AssetLink.Create<ItemAsset>("beaa260d7f844724bd26993569d9e42a"),
                 Type = BuildableType.Emplacement,
                 RequiredHits = 16,
                 RequiredBuild = 6,
@@ -1411,17 +1440,17 @@ public class FOBConfigData : JSONConfigData
                 Limit = 2,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("9525ef43b9674343bb9561b5db078c1b"),
-                    BaseBarricade = new JsonAssetReference<ItemAsset>(),
-                    Ammo = new JsonAssetReference<ItemAsset>("6e9bc2083a1246b49b1656c2ec6f535a"),
+                    EmplacementVehicle = AssetLink.Create<VehicleAsset>("9525ef43b9674343bb9561b5db078c1b"),
+                    BaseBarricade = AssetLink.Create<ItemAsset>(Guid.Empty),
+                    Ammo = AssetLink.Create<ItemAsset>("6e9bc2083a1246b49b1656c2ec6f535a"),
                     AmmoCount = 2,
                 }
             },
             new BuildableData
             {
                 // TOW
-                FullBuildable = new JsonAssetReference<ItemAsset>(),
-                Foundation = new JsonAssetReference<ItemAsset>("a68ae466fb804829a0eb0d4556071801"),
+                FullBuildable = AssetLink.Create<ItemAsset>(Guid.Empty),
+                Foundation = AssetLink.Create<ItemAsset>("a68ae466fb804829a0eb0d4556071801"),
                 Type = BuildableType.Emplacement,
                 RequiredHits = 25,
                 RequiredBuild = 14,
@@ -1429,17 +1458,17 @@ public class FOBConfigData : JSONConfigData
                 Limit = 1,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("9d305050a6a142349376d6c49fb38362"),
-                    BaseBarricade = new JsonAssetReference<ItemAsset>(),
-                    Ammo = new JsonAssetReference<ItemAsset>("3128a69d06ac4bbbbfddc992aa7185a6"),
+                    EmplacementVehicle = AssetLink.Create<VehicleAsset>("9d305050a6a142349376d6c49fb38362"),
+                    BaseBarricade = AssetLink.Create<ItemAsset>(Guid.Empty),
+                    Ammo = AssetLink.Create<ItemAsset>("3128a69d06ac4bbbbfddc992aa7185a6"),
                     AmmoCount = 1
                 }
             },
             new BuildableData
             {
                 // Kornet
-                FullBuildable = new JsonAssetReference<ItemAsset>(),
-                Foundation = new JsonAssetReference<ItemAsset>("37811b1847744c958fcb30a0b759874b"),
+                FullBuildable = AssetLink.Create<ItemAsset>(Guid.Empty),
+                Foundation = AssetLink.Create<ItemAsset>("37811b1847744c958fcb30a0b759874b"),
                 Type = BuildableType.Emplacement,
                 RequiredHits = 25,
                 RequiredBuild = 14,
@@ -1447,17 +1476,17 @@ public class FOBConfigData : JSONConfigData
                 Limit = 1,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("677b1084-dffa-4633-84d2-9167a3fae25b"),
-                    BaseBarricade = new JsonAssetReference<ItemAsset>(),
-                    Ammo = new JsonAssetReference<ItemAsset>("d7774b017c404adbb0a0fe8e902b9689"),
+                    EmplacementVehicle = AssetLink.Create<VehicleAsset>("677b1084-dffa-4633-84d2-9167a3fae25b"),
+                    BaseBarricade = AssetLink.Create<ItemAsset>(Guid.Empty),
+                    Ammo = AssetLink.Create<ItemAsset>("d7774b017c404adbb0a0fe8e902b9689"),
                     AmmoCount = 1
                 }
             },
             new BuildableData
             {
                 // HJ-8
-                FullBuildable = new JsonAssetReference<ItemAsset>(),
-                Foundation = new JsonAssetReference<ItemAsset>("f76572f13c214a138415f20bbc1a31c3"),
+                FullBuildable = AssetLink.Create<ItemAsset>(Guid.Empty),
+                Foundation = AssetLink.Create<ItemAsset>("f76572f13c214a138415f20bbc1a31c3"),
                 Type = BuildableType.Emplacement,
                 RequiredHits = 25,
                 RequiredBuild = 14,
@@ -1465,17 +1494,17 @@ public class FOBConfigData : JSONConfigData
                 Limit = 1,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("b63e9c2999c34ff3894138592dd9cb2e"),
-                    BaseBarricade = new JsonAssetReference<ItemAsset>(),
-                    Ammo = new JsonAssetReference<ItemAsset>("9ba5db5cbd2c4b51bc236122a4c6b205"),
+                    EmplacementVehicle = AssetLink.Create<VehicleAsset>("b63e9c2999c34ff3894138592dd9cb2e"),
+                    BaseBarricade = AssetLink.Create<ItemAsset>(Guid.Empty),
+                    Ammo = AssetLink.Create<ItemAsset>("9ba5db5cbd2c4b51bc236122a4c6b205"),
                     AmmoCount = 1
                 }
             },
             new BuildableData
             {
                 // Stinger
-                FullBuildable = new JsonAssetReference<ItemAsset>(),
-                Foundation = new JsonAssetReference<ItemAsset>("3c2dd7febc854b7f8859852b8c736c8e"),
+                FullBuildable = AssetLink.Create<ItemAsset>(Guid.Empty),
+                Foundation = AssetLink.Create<ItemAsset>("3c2dd7febc854b7f8859852b8c736c8e"),
                 Type = BuildableType.Emplacement,
                 RequiredHits = 25,
                 RequiredBuild = 14,
@@ -1483,34 +1512,34 @@ public class FOBConfigData : JSONConfigData
                 Limit = 1,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("1883345cbdad40aa81e49c84e6c872ef"),
-                    BaseBarricade = new JsonAssetReference<ItemAsset>(),
-                    Ammo = new JsonAssetReference<ItemAsset>("3c0a94af5af24901a9e3207f3e9ed0ba"),
+                    EmplacementVehicle = AssetLink.Create<VehicleAsset>("1883345cbdad40aa81e49c84e6c872ef"),
+                    BaseBarricade = AssetLink.Create<ItemAsset>(Guid.Empty),
+                    Ammo = AssetLink.Create<ItemAsset>("3c0a94af5af24901a9e3207f3e9ed0ba"),
                     AmmoCount = 1
                 }
             },
             new BuildableData
             {
                 // Igla
-                FullBuildable = new JsonAssetReference<ItemAsset>(),
-                Foundation = new JsonAssetReference<ItemAsset>("b50cb548734946ffa5f88d6691a2c7ce"),
+                FullBuildable = AssetLink.Create<ItemAsset>(Guid.Empty),
+                Foundation = AssetLink.Create<ItemAsset>("b50cb548734946ffa5f88d6691a2c7ce"),
                 Type = BuildableType.Emplacement,
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Limit = 1,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("8add59a2e2b94f93ab0d6b727d310097"),
-                    BaseBarricade = new JsonAssetReference<ItemAsset>(),
-                    Ammo = new JsonAssetReference<ItemAsset>("a54d571983c2432a9624eec39d602997"),
+                    EmplacementVehicle = AssetLink.Create<VehicleAsset>("8add59a2e2b94f93ab0d6b727d310097"),
+                    BaseBarricade = AssetLink.Create<ItemAsset>(Guid.Empty),
+                    Ammo = AssetLink.Create<ItemAsset>("a54d571983c2432a9624eec39d602997"),
                     AmmoCount = 1
                 }
             },
             new BuildableData
             {
                 // Mortar
-                FullBuildable = new JsonAssetReference<ItemAsset>(),
-                Foundation = new JsonAssetReference<ItemAsset>("6ff4826eaeb14c7cac1cf25a55d24bd3"),
+                FullBuildable = AssetLink.Create<ItemAsset>(Guid.Empty),
+                Foundation = AssetLink.Create<ItemAsset>("6ff4826eaeb14c7cac1cf25a55d24bd3"),
                 Type = BuildableType.Emplacement,
                 RequiredHits = 22,
                 RequiredBuild = 10,
@@ -1518,15 +1547,15 @@ public class FOBConfigData : JSONConfigData
                 Limit = 2,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("94bf8feb05bc4680ac26464bc175460c"),
-                    BaseBarricade = new JsonAssetReference<ItemAsset>("c3eb4dd3fd1d463993ec69c4c3de50d7"), // Mortar
-                    Ammo = new JsonAssetReference<ItemAsset>("66f4c76a119e4d6ca9d0b1a866c4d901"),
+                    EmplacementVehicle = AssetLink.Create<VehicleAsset>("94bf8feb05bc4680ac26464bc175460c"),
+                    BaseBarricade = AssetLink.Create<ItemAsset>("c3eb4dd3fd1d463993ec69c4c3de50d7"), // Mortar
+                    Ammo = AssetLink.Create<ItemAsset>("66f4c76a119e4d6ca9d0b1a866c4d901"),
                     AmmoCount = 3,
                     ShouldWarnFriendlies = true,
                     ShouldWarnEnemies = true
                 }
-            },
-        };
+            }
+        ];
 
         DeployMainDelay = 3;
         DeployFOBDelay = 5;
@@ -1544,62 +1573,71 @@ public class FOBConfigData : JSONConfigData
 public class BuildableData : ITranslationArgument
 {
     [JsonPropertyName("foundationID")]
-    public RotatableConfig<JsonAssetReference<ItemAsset>> Foundation { get; set; }
+    public IAssetLink<ItemAsset> Foundation { get; set; }
+
     [JsonPropertyName("structureID")]
-    public RotatableConfig<JsonAssetReference<ItemAsset>>? FullBuildable { get; set; }
+    public IAssetLink<ItemAsset>? FullBuildable { get; set; }
+
     [JsonPropertyName("type")]
     public BuildableType Type { get; set; }
+
     [JsonPropertyName("requiredHits")]
-    public RotatableConfig<int> RequiredHits { get; set; }
+    public int RequiredHits { get; set; }
+
     [JsonPropertyName("requiredBuild")]
-    public RotatableConfig<int> RequiredBuild { get; set; }
+    public int RequiredBuild { get; set; }
+
     [JsonPropertyName("team")]
     public int Team { get; set; }
+
     [JsonPropertyName("limit")]
     public int Limit { get; set; }
+
     [JsonPropertyName("disabled")]
-    public RotatableConfig<bool> Disabled { get; set; }
+    public bool Disabled { get; set; }
+
     [JsonPropertyName("emplacementData")]
     public EmplacementData? Emplacement { get; set; }
+
     [JsonPropertyName("dontAutoWhitelist")]
     public bool DontAutoWhitelist { get; set; }
 
     public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
-        if (Emplacement is not null && Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
+        if (Emplacement is not null && Emplacement.EmplacementVehicle.TryGetAsset(out VehicleAsset? vasset))
         {
             string name = vasset.vehicleName;
             if (format is not null && format.Equals(T.FormatRarityColor))
-                return Localization.Colorize(ItemTool.getRarityColorUI(vasset.rarity).Hex(), name, flags);
+                return Localization.Colorize(ColorUtility.ToHtmlStringRGB(ItemTool.getRarityColorUI(vasset.rarity)), name, flags);
 
             return name;
         }
 
-        if (Foundation.ValidReference(out ItemAsset iasset) || FullBuildable.ValidReference(out iasset))
+        if (Foundation.TryGetAsset(out ItemAsset? iasset) || FullBuildable.TryGetAsset(out iasset))
         {
             string name = GetItemName(iasset.itemName);
             if (format is not null && format.Equals(T.FormatRarityColor))
-                return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), name, flags);
+                return Localization.Colorize(ColorUtility.ToHtmlStringRGB(ItemTool.getRarityColorUI(iasset.rarity)), name, flags);
             else
                 return name;
         }
 
         if (Emplacement is not null)
         {
-            if (Emplacement.BaseBarricade.ValidReference(out iasset))
+            if (Emplacement.BaseBarricade.TryGetAsset(out iasset))
             {
                 string name = GetItemName(iasset.itemName);
                 if (format is not null && format.Equals(T.FormatRarityColor))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), name, flags);
+                    return Localization.Colorize(ColorUtility.ToHtmlStringRGB(ItemTool.getRarityColorUI(iasset.rarity)), name, flags);
                 else
                     return name;
             }
-            if (Emplacement.Ammo.ValidReference(out iasset))
+            if (Emplacement.Ammo.TryGetAsset(out iasset))
             {
                 string name = GetItemName(iasset.itemName);
                 if (format is not null && format.Equals(T.FormatRarityColor))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), name, flags);
+                    return Localization.Colorize(ColorUtility.ToHtmlStringRGB(ItemTool.getRarityColorUI(iasset.rarity)), name, flags);
                 else
                     return name;
             }
@@ -1626,15 +1664,20 @@ public class BuildableData : ITranslationArgument
 public class EmplacementData
 {
     [JsonPropertyName("vehicleID")]
-    public JsonAssetReference<VehicleAsset> EmplacementVehicle { get; set; }
+    public IAssetLink<VehicleAsset> EmplacementVehicle { get; set; }
+
     [JsonPropertyName("baseID")]
-    public JsonAssetReference<ItemAsset> BaseBarricade { get; set; }
+    public IAssetLink<ItemAsset> BaseBarricade { get; set; }
+
     [JsonPropertyName("ammoID")]
-    public JsonAssetReference<ItemAsset> Ammo { get; set; }
+    public IAssetLink<ItemAsset> Ammo { get; set; }
+
     [JsonPropertyName("ammoAmount")]
     public int AmmoCount { get; set; }
+
     [JsonPropertyName("warnFriendlyProjectiles")]
     public bool ShouldWarnFriendlies { get; set; }
+
     [JsonPropertyName("warnEnemyProjectiles")]
     public bool ShouldWarnEnemies { get; set; }
 }

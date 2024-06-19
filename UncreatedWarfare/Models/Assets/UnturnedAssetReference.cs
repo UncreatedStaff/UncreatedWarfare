@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Globalization;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Models.Assets;
 public readonly struct UnturnedAssetReference
@@ -47,7 +48,7 @@ public readonly struct UnturnedAssetReference
     {
         if (Id != 0)
         {
-            EAssetType type = AssetTypeHelper<TAsset>.Type;
+            EAssetType type = UCAssetManager.GetAssetCategory<TAsset>();
             if (type == EAssetType.NONE)
                 return null;
 
@@ -56,11 +57,11 @@ public readonly struct UnturnedAssetReference
 
         return SDG.Unturned.Assets.find<TAsset>(Guid);
     }
-    public JsonAssetReference<TAsset> GetJsonAssetReference<TAsset>() where TAsset : Asset
+    public IAssetLink<TAsset> GetAssetLink<TAsset>() where TAsset : Asset
     {
-        return Id != 0 ? new JsonAssetReference<TAsset>(Id) : new JsonAssetReference<TAsset>(Guid);
+        return Guid != Guid.Empty ? AssetLink.Create<TAsset>(Guid) : AssetLink.Create<TAsset>(Id);
     }
-    public static UnturnedAssetReference FromJsonAssetReference<TAsset>(JsonAssetReference<TAsset> assetReference) where TAsset : Asset
+    public static UnturnedAssetReference FromAssetLink<TAsset>(IAssetLink<TAsset> assetReference) where TAsset : Asset
     {
         return assetReference.Guid != Guid.Empty ? new UnturnedAssetReference(assetReference.Guid) : (assetReference.Id != 0 ? new UnturnedAssetReference(assetReference.Id) : default);
     }
@@ -73,28 +74,34 @@ public readonly struct UnturnedAssetReference
     public bool Equals(UnturnedAssetReference other) => other.Guid == Guid && other.Id == Id;
     public bool Equals(Guid guid) => Guid != Guid.Empty && guid == Guid;
     public bool Equals(ushort id) => Id != 0 && id == Id;
-    public override bool Equals(object obj) => obj switch
+    public override bool Equals(object? obj) => obj switch
     {
         Guid g => g == Guid,
         ushort i => i == Id,
         UnturnedAssetReference r => r.Guid == Guid && r.Id == Id,
+        IAssetLink<Asset> l => l.Guid == Guid && l.Id == Id,
         _ => false
     };
 
-    public override int GetHashCode() => Id != 0 ? Id.GetHashCode() : Guid.GetHashCode();
-
-    public static UnturnedAssetReference Parse(string text)
+    public override int GetHashCode() => Guid != Guid.Empty ? Guid.GetHashCode() : Id.GetHashCode();
+    public static UnturnedAssetReference Parse(string text) => Parse(text.AsSpan());
+    public static UnturnedAssetReference Parse(ReadOnlySpan<char> text)
     {
         if (TryParse(text, out UnturnedAssetReference result))
             return result;
 
         throw new FormatException("Failed to parse UnturnedAssetReference. Expected a UInt16 ID or Guid.");
     }
-    public static bool TryParse(string text, out UnturnedAssetReference result)
+
+    public static bool TryParse(string text, out UnturnedAssetReference result) => TryParse(text.AsSpan(), out result);
+    public static bool TryParse(ReadOnlySpan<char> text, out UnturnedAssetReference result)
     {
         int index = text.IndexOf('\0');
         if (index != -1)
-            text = text.Substring(0, index);
+        {
+            text = text[..index];
+        }
+
         if (ushort.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
         {
             result = new UnturnedAssetReference(id);

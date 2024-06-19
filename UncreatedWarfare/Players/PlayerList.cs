@@ -20,14 +20,13 @@ public class PlayerList : BaseSingletonComponent
     {
         Instance = this;
     }
-
     public override void Unload()
     {
         Instance = null;
     }
 
     [RpcSend, RpcTimeout(5 * Timeouts.Seconds)]
-    protected internal virtual RpcTask TickPlayerList(CancellationToken token = default) => RpcTask.NotImplemented;
+    protected internal virtual RpcTask<string> TickPlayerList(int num, CancellationToken token = default) => RpcTask<string>.NotImplemented;
 
     [UsedImplicitly]
     private void Update()
@@ -43,7 +42,7 @@ public class PlayerList : BaseSingletonComponent
         {
             try
             {
-                await TickPlayerList(token).IgnoreNoConnections();
+                L.Log("received: " + await TickPlayerList(1, token).IgnoreNoConnections());
             }
             catch (Exception ex)
             {

@@ -6,8 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
-using Uncreated.Framework;
-using Uncreated.Json;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Models.Localization;
@@ -36,84 +35,84 @@ internal static class Localization
     {
         new DeathCause(EDeathCause.ACID)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was burned by an acid zombie."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being burned by an acid zombie.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.ANIMAL)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was attacked by an animal."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being attacked by an animal.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.ARENA, new DeathTranslation(DeathFlags.None, "{0} stepped outside the arena boundary.")),
         new DeathCause(EDeathCause.BLEEDING)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} bled out."),
                 new DeathTranslation(DeathFlags.Killer, "{0} bled out because of {1}."),
                 new DeathTranslation(DeathFlags.Item, "{0} bled out from a {3}."),
                 new DeathTranslation(DeathFlags.Killer | DeathFlags.Item, "{0} bled out because of {1} from a {3}."),
                 new DeathTranslation(DeathFlags.Suicide, "{0} bled out by their own hand."),
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item, "{0} bled out by their own hand from a {3}."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.BONES)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} fell to their death."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after breaking their legs.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.BOULDER)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was crushed by a mega zombie."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being crushed by a mega zombie.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.BREATH, new DeathTranslation(DeathFlags.None, "{0} asphyxiated.")),
         new DeathCause(EDeathCause.BURNER)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was burned by a mega zombie."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being burned by a mega zombie.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.BURNING)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} burned to death."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being burned.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.CHARGE)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was blown up by a demolition charge."),
                 new DeathTranslation(DeathFlags.Item, "{0} was blown up by a {3}."),
                 new DeathTranslation(DeathFlags.Killer | DeathFlags.Item, "{1} blew up {0} with a {3}."),
                 new DeathTranslation(DeathFlags.Killer, "{1} blew up {0} with a demolition charge."),
                 new DeathTranslation(DeathFlags.Suicide, "{0} blew themselves up with a demolition charge."),
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item, "{0} blew themselves up with a {3}."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.FOOD, new DeathTranslation(DeathFlags.None, "{0} starved to death.")),
         new DeathCause(EDeathCause.FREEZING, new DeathTranslation(DeathFlags.None, "{0} froze to death.")),
         new DeathCause(EDeathCause.GRENADE)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was blown up by a grenade."),
                 new DeathTranslation(DeathFlags.Item, "{0} was blown up by a {3}."),
                 new DeathTranslation(DeathFlags.Killer, "{0} was blown up by {1} with a grenade."),
@@ -126,12 +125,12 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being blown up by {1} with a {3}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled out after blowing themselves up with a grenade."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after blowing themselves up with a {3}.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.GUN)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was shot in the {2}."),
                 new DeathTranslation(DeathFlags.Item, "{0} was shot with a {3} in the {2} from {4}m away."),
                 new DeathTranslation(DeathFlags.Killer, "{0} was shot by {1} in the {2} from {4}m away."),
@@ -153,12 +152,12 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Killer | DeathFlags.Item, "{1} shot {0} in the {2} with a {3} from {4}m away while in a {6} driven by {5}."),
                 new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Killer, "{0} bled out after being shot in the {2} by {1} in a {6} driven by {5} from {4}m away."),
                 new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being shot in the {2} by {1} while in a {6} driven by {5} with a {3} from {4}m away."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.INFECTION)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} died to an infection."),
                 new DeathTranslation(DeathFlags.Item, "{0} died to an infection from {3}."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out from an infection."),
@@ -167,21 +166,21 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{0} died to an infection from {3} caused by {1}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer, "{0} bled out from an infection caused by {1}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{0} bled out after {1} used a {3} on them.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.KILL)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was killed by an operator."), // tested
                 new DeathTranslation(DeathFlags.Killer, "{0} was killed by an admin, {1}."),
                 new DeathTranslation(DeathFlags.Suicide, "{0} killed themselves as an admin."), // tested
-            }
+            ]
         },
         new DeathCause(EDeathCause.LANDMINE)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was blown up by a landmine."),
                 new DeathTranslation(DeathFlags.Item2, "{0} was blown up by a landmine triggered by a {6}."),
                 new DeathTranslation(DeathFlags.Item, "{0} was blown up by a {3}."),
@@ -230,12 +229,12 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item2 | DeathFlags.Player3, "{0} bled out after being blown up by their landmine that was triggered by {5} using a {6}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item | DeathFlags.Player3, "{0} bled out after being blown up by their {3} that was triggered by {5}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item | DeathFlags.Item2 | DeathFlags.Player3, "{0} bled out after being blown up by their {3} that was triggered by {5} uing a {6}."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.MELEE)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was struck in the {2}."),
                 new DeathTranslation(DeathFlags.Item, "{0} was struck by a {3} in the {2}."),
                 new DeathTranslation(DeathFlags.Killer, "{0} was struck by {1} in the {2}."),
@@ -244,12 +243,12 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item, "{0} bled out after being struck by a {3} in the {2}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer, "{0} bled out after being struck by {1} in the {2}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being struck by {1} with a {3} in the {2}.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.MISSILE)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was hit by a missile."),
                 new DeathTranslation(DeathFlags.Item, "{0} was hit by a {3} from {4}m away."),
                 new DeathTranslation(DeathFlags.Killer, "{0} was hit by {1}'s missile from {4}m away."),
@@ -262,22 +261,22 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being hit by {1}'s {3} from {4}m away."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled out after blowing themselves up with a missile."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after blowing themselves up with a {3}."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.PUNCH)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was pummeled to death."),
                 new DeathTranslation(DeathFlags.Killer, "{1} punched {0} to death."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being pummeled."),
                 new DeathTranslation(DeathFlags.Killer | DeathFlags.Bleeding, "{0} bled out after being punched by {1}.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.ROADKILL)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was ran over."),
                 new DeathTranslation(DeathFlags.Item, "{0} was ran over by a {3}."),
                 new DeathTranslation(DeathFlags.Killer, "{0} was ran over by {1}."),
@@ -289,12 +288,12 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{0} bled out after being ran over by {1} using a {3} going {4} mph."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled out after running themselves over."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after running themselves over using a {3} going {4} mph."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.SENTRY)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was shot by a sentry."),
                 new DeathTranslation(DeathFlags.Item, "{0} was shot by a {3}."),
                 new DeathTranslation(DeathFlags.Killer | DeathFlags.Item, "{0} was shot by {1}'s {3}."),
@@ -315,12 +314,12 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item | DeathFlags.Item2, "{0} bled out after being shot by {1}'s {3}'s {6}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item2, "{0} bled out after being shot by their own sentry's {6}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item | DeathFlags.Item2, "{0} bled out after being shot by their own {3}'s {6}."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.SHRED)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was shredded by wire."),
                 new DeathTranslation(DeathFlags.Item, "{0} was shredded by {3}."),
                 new DeathTranslation(DeathFlags.Killer, "{0} was shredded by {1}'s wire."),
@@ -333,28 +332,28 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being shredded by {1}'s {3}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled out after being shredded by their own wire."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after being shredded by their own {3}."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.SPARK)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was shocked by a mega zombie."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being shocked by a mega zombie.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.SPIT)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was killed by a spitter zombie."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being spit on by a zombie.")
-            }
+            ]
         },
         new DeathCause(EDeathCause.SPLASH)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was killed by fragmentation."),
                 new DeathTranslation(DeathFlags.Item, "{0} was killed by {3} fragmentation from {4}m away."),
                 new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{0} was killed by {1}'s {3} fragmentation from {4}m away."),
@@ -387,13 +386,13 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Item, "{0} bled out after being hit by {3} fragmentation using a {6} driven by {5} from {4}m away."),
                 new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{0} bled out after being hit by {1}'s {3} fragmentation using a {6} driven by {5} from {4}m away."),
                 new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after hitting themselves with {3} fragmentation while in a {6} driven by {5}."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.SUICIDE, new DeathTranslation(DeathFlags.None, "{0} commited suicide.")),
         new DeathCause(EDeathCause.VEHICLE)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 // ITEM {3} = vehicle name, ITEM2 {6} = item name
                 new DeathTranslation(DeathFlags.None, "{0} was blown up inside a vehicle."),
                 new DeathTranslation(DeathFlags.Item, "{0} was blown up inside a {3}."),
@@ -416,22 +415,22 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item | DeathFlags.Item2 | DeathFlags.Player3, "{0} blew themselves up with {5}'s {3} using a {6}."),
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item | DeathFlags.Player3, "{0} blew themselves up with {5}'s {3}."),
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Player3, "{0} blew themselves up with {5}'s vehicle."),
-            }
+            ]
         },
         new DeathCause(EDeathCause.WATER, new DeathTranslation(DeathFlags.None, "{0} dehydrated.")),
         new DeathCause(EDeathCause.ZOMBIE)
         {
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was mauled by a zombie."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being mauled by a zombie.")
-            }
+            ]
         },
         new DeathCause
         {
             CustomKey = "maincamp",
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} died trying to main-camp."),
                 new DeathTranslation(DeathFlags.Item, "{0} tried to main-camp with a {3}."),
                 new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{0} tried to main-camp {1} with a {3} from {4}m away."),
@@ -440,31 +439,31 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item, "{0} bled out trying to main-camp with a {3}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{0} bled out trying to main-camp {1} with a {3} from {4}m away."),
                 new DeathTranslation(DeathFlags.NoDistance | DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{0} bled out trying to main-camp {1} with a {3}."),
-            }
+            ]
         },
         new DeathCause
         {
             CustomKey = "maindeath",
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} died trying to enter their enemy's base.")
-            }
+            ]
         },
         new DeathCause
         {
             CustomKey = "explosive-consumable",
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} tried to consume dangerous food."),
                 new DeathTranslation(DeathFlags.Item, "{0} tried to consume {3}."), // tested
                 new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{0} suicide bombed {1} with a {3}.") // tested
-            }
+            ]
         },
         new DeathCause // mortar override
         {
             ItemCause = new DynamicAssetValue<ItemAsset>(new Guid("d6424d034309417dbc5f17814af905a8")).GetValue(),
-            Translations = new DeathTranslation[]
-            {
+            Translations =
+            [
                 new DeathTranslation(DeathFlags.None, "{0} was blown up by a mortar shell."),
                 new DeathTranslation(DeathFlags.Item, "{0} was blown up by a mortar shell."),
                 new DeathTranslation(DeathFlags.Killer, "{0} was blown up by {1}'s mortar from {4}m away."),
@@ -477,7 +476,7 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being blown up by {1}'s mortar from {4}m away."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled out after blowing themselves up with a mortar shell."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after blowing themselves up with a mortar shell."),
-            }
+            ]
         }
     };
     public static void BroadcastDeath(PlayerDied e, DeathMessageArgs args)
@@ -512,8 +511,7 @@ internal static class Localization
         e.Message = str!;
         EventDispatcher.InvokeOnPlayerDied(e);
 
-        if (e.WasEffectiveKill && e.Killer is { PendingCheaterDeathBan: false } &&
-            Util.IsSuspiciousDeath(e.Killer.Player, e.Cause, e.PrimaryAsset, e.SecondaryItem, e.Limb,
+        if (e.WasEffectiveKill && e.Killer is { PendingCheaterDeathBan: false } && Util.IsSuspiciousDeath(e.Killer.Player, e.Cause, e.PrimaryAsset, e.SecondaryItem, e.Limb,
                 e.KillDistance, e.WasEffectiveKill, e.WasSuicide, e.WasTeamkill))
         {
             e.Killer.PendingCheaterDeathBan = true;
@@ -531,10 +529,10 @@ internal static class Localization
         Ban ban = new Ban
         {
             Player = steam64,
-            Actors = new RelatedActor[]
-            {
+            Actors =
+            [
                 new RelatedActor(RelatedActor.RolePrimaryAdmin, true, Actors.AntiCheat)
-            },
+            ],
             RelevantLogsBegin = now.Subtract(TimeSpan.FromSeconds(Time.realtimeSinceStartup - joined)),
             RelevantLogsEnd = now,
             StartedTimestamp = now,
@@ -668,7 +666,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         using FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
         byte[] comment = System.Text.Encoding.UTF8.GetBytes(JsonComment);
         stream.Write(comment, 0, comment.Length);
-        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+        Utf8JsonWriter writer = new Utf8JsonWriter(stream, ConfigurationSettings.JsonWriterOptions);
         writer.WriteStartArray();
         for (int i = 0; i < causesFull.Count; ++i)
         {
@@ -692,7 +690,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 using FileStream stream = File.Create(directory);
                 byte[] comment = System.Text.Encoding.UTF8.GetBytes(JsonComment);
                 stream.Write(comment, 0, comment.Length);
-                Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                Utf8JsonWriter writer = new Utf8JsonWriter(stream, ConfigurationSettings.JsonWriterOptions);
                 writer.WriteStartArray();
                 for (int i = 0; i < DefaultValues.Length; ++i)
                 {
@@ -718,7 +716,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                             continue;
                         byte[] bytes = new byte[stream.Length];
                         stream.Read(bytes, 0, bytes.Length);
-                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                        Utf8JsonReader reader = new Utf8JsonReader(bytes, ConfigurationSettings.JsonReaderOptions);
                         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                         {
                             if (reader.TokenType == JsonTokenType.StartObject)
@@ -931,7 +929,7 @@ public struct DeathMessageArgs
     }
 }
 
-public class DeathCause : IJsonReadWrite, IEquatable<DeathCause>, ICloneable
+public class DeathCause : IEquatable<DeathCause>, ICloneable
 {
     public EDeathCause? Cause;
     public DynamicAssetValue<ItemAsset>.Choice? ItemCause;
@@ -953,7 +951,7 @@ public class DeathCause : IJsonReadWrite, IEquatable<DeathCause>, ICloneable
     {
         Cause = cause;
     }
-    public DeathCause(EDeathCause cause, DeathTranslation translation) : this(cause, new DeathTranslation[] { translation }) { }
+    public DeathCause(EDeathCause cause, DeathTranslation translation) : this(cause, [ translation ]) { }
     public DeathCause(EDeathCause cause, DeathTranslation[] translations) : this(cause)
     {
         Translations = translations;
@@ -1054,7 +1052,8 @@ public class DeathCause : IJsonReadWrite, IEquatable<DeathCause>, ICloneable
         }
         else
         {
-            writer.WriteProperty("error", true);
+            writer.WritePropertyName("error");
+            writer.WriteBooleanValue(true);
             return;
         }
 
@@ -1069,7 +1068,7 @@ public class DeathCause : IJsonReadWrite, IEquatable<DeathCause>, ICloneable
         writer.WriteEndObject();
     }
 
-    public override bool Equals(object obj) => obj is DeathCause c && Equals(c);
+    public override bool Equals(object? obj) => obj is DeathCause c && Equals(c);
 
     // ReSharper disable NonReadonlyMemberInGetHashCode
     public override int GetHashCode() => HashCode.Combine(Cause, ItemCause, VehicleCause, CustomKey, Translations);

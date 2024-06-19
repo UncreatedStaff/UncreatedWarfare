@@ -2,6 +2,7 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using Uncreated.Framework;
@@ -294,6 +295,17 @@ public class Whitelister : ListSingleton<WhitelistItem>
             L.LogError(ex);
         }
     }
+
+    public static void AddItem(IAssetLink<ItemAsset>? assetLink, byte amount = 255)
+    {
+        if (assetLink == null)
+            return;
+
+        Guid guid = assetLink.Guid;
+        if (guid != Guid.Empty)
+            AddItem(guid, amount);
+    }
+
     public static void AddItem(Guid guid, byte amount = 255)
     {
         _singleton.AssertLoaded<Whitelister, WhitelistItem>();
@@ -307,6 +319,17 @@ public class Whitelister : ListSingleton<WhitelistItem>
         _singleton.AddObjectToSave(new WhitelistItem(guid, amount));
         L.Log($"[WHITELISTER] Whitelisted {F.AssetToString(guid)}.");
     }
+
+    public static void RemoveItem(IAssetLink<ItemAsset>? assetLink)
+    {
+        if (assetLink == null)
+            return;
+
+        Guid guid = assetLink.Guid;
+        if (guid != Guid.Empty)
+            RemoveItem(guid);
+    }
+
     public static void RemoveItem(Guid guid)
     {
         _singleton.AssertLoaded<Whitelister, WhitelistItem>();
@@ -321,8 +344,20 @@ public class Whitelister : ListSingleton<WhitelistItem>
         L.Log($"[WHITELISTER] Set whitelist amount: {F.AssetToString(guid)}.");
     }
 
-    public static bool IsWhitelisted(Guid guid, out WhitelistItem item)
+    public static bool IsWhitelisted(Guid guid, [MaybeNullWhen(false)] out WhitelistItem item)
     {
+        _singleton.AssertLoaded<Whitelister, WhitelistItem>();
+        return _singleton.ObjectExists(w => w.Item == guid, out item);
+    }
+    public static bool IsWhitelisted(IAssetLink<ItemAsset>? link, [MaybeNullWhen(false)] out WhitelistItem item)
+    {
+        if (link == null)
+        {
+            item = null;
+            return false;
+        }
+
+        Guid guid = link.Guid;
         _singleton.AssertLoaded<Whitelister, WhitelistItem>();
         return _singleton.ObjectExists(w => w.Item == guid, out item);
     }

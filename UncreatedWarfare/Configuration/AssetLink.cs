@@ -1,0 +1,956 @@
+﻿using DanielWillett.ReflectionTools;
+using JetBrains.Annotations;
+using SDG.Unturned;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Framework.UI;
+using YamlDotNet.Core;
+using YamlDotNet.Core.Events;
+using YamlDotNet.Serialization;
+
+namespace Uncreated.Warfare.Configuration;
+
+/// <summary>
+/// Caches a reference to an asset either by short ID or GUID.
+/// </summary>
+/// <typeparam name="TAsset">The type of asset to reference.</typeparam>
+[CannotApplyEqualityOperator]
+[TypeConverter(typeof(AssetLinkTypeConverter))]
+public interface IAssetLink<out TAsset> : IAssetContainer, IEquatable<IAssetLink<Asset>>, IAssetReference, ICloneable where TAsset : Asset
+{
+    /// <summary>
+    /// Guid of the asset, if known.
+    /// </summary>
+    new Guid Guid { get; set; }
+
+    /// <summary>
+    /// Short ID of the asset, if known.
+    /// </summary>
+    new ushort Id { get; set; }
+
+    /// <summary>
+    /// Get the actual asset from the stored info.
+    /// </summary>
+    TAsset? GetAsset();
+}
+
+public static class AssetLink
+{
+    /// <summary>
+    /// Create an asset link from a GUID in string form.
+    /// </summary>
+    public static IAssetLink<TAsset> Create<TAsset>(string guid) where TAsset : Asset
+    {
+        return new AssetLinkImpl<TAsset>(guid);
+    }
+
+    /// <summary>
+    /// Create an asset link from a GUID in string form.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="assetType"/> must derive from <see cref="Asset"/>.</exception>
+    public static IAssetLink<Asset> Create(string guid, Type assetType)
+    {
+        if (!typeof(Asset).IsAssignableFrom(assetType))
+            throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
+
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ guid ]);
+    }
+    
+    /// <summary>
+    /// Create an asset link from a GUID.
+    /// </summary>
+    public static IAssetLink<TAsset> Create<TAsset>(Guid guid) where TAsset : Asset
+    {
+        return new AssetLinkImpl<TAsset>(guid);
+    }
+
+    /// <summary>
+    /// Create an asset link from a GUID.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="assetType"/> must derive from <see cref="Asset"/>.</exception>
+    public static IAssetLink<Asset> Create(Guid guid, Type assetType)
+    {
+        if (!typeof(Asset).IsAssignableFrom(assetType))
+            throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
+
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ guid ]);
+    }
+    
+    /// <summary>
+    /// Create an asset link from a short ID.
+    /// </summary>
+    public static IAssetLink<TAsset> Create<TAsset>(ushort id) where TAsset : Asset
+    {
+        return new AssetLinkImpl<TAsset>(id);
+    }
+
+    /// <summary>
+    /// Create an asset link from a short ID.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="assetType"/> must derive from <see cref="Asset"/>.</exception>
+    public static IAssetLink<Asset> Create(ushort id, Type assetType)
+    {
+        if (!typeof(Asset).IsAssignableFrom(assetType))
+            throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
+
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ id ]);
+    }
+    
+    /// <summary>
+    /// Create an asset link from an asset.
+    /// </summary>
+    public static IAssetLink<TAsset> Create<TAsset>(TAsset? asset) where TAsset : Asset
+    {
+        return new AssetLinkImpl<TAsset>(asset);
+    }
+
+    /// <summary>
+    /// Create an asset link from an asset.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="assetType"/> must derive from <see cref="Asset"/>.</exception>
+    public static IAssetLink<Asset> Create(Asset? asset, Type assetType)
+    {
+        if (asset != null && !assetType.IsInstanceOfType(asset))
+            throw new ArgumentException("Asset is not of the type requested.", nameof(asset));
+
+        if (!typeof(Asset).IsAssignableFrom(assetType))
+            throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
+
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ asset ]);
+    }
+
+    /// <summary>
+    /// Create an asset link from an asset reference.
+    /// </summary>
+    public static IAssetLink<TAsset> Create<TAsset>(AssetReference<TAsset> assetReference) where TAsset : Asset
+    {
+        return new AssetLinkImpl<TAsset>(assetReference);
+    }
+
+    /// <summary>
+    /// Cast an asset link from one type to another.
+    /// </summary>
+    /// <exception cref="InvalidCastException"/>
+    public static IAssetLink<TToAsset> Cast<TFromAsset, TToAsset>(this IAssetLink<TFromAsset> assetLink) where TFromAsset : Asset where TToAsset : Asset
+    {
+        if (assetLink is IAssetLink<TToAsset> to)
+            return to;
+
+        TFromAsset? asset = assetLink.GetAsset();
+        if (asset is not null and not TToAsset)
+            throw new InvalidCastException($"Can not cast an asset of type {Accessor.ExceptionFormatter.Format(typeof(TFromAsset))} to {Accessor.ExceptionFormatter.Format(typeof(TToAsset))}.");
+
+        return new AssetLinkImpl<TToAsset>(assetLink);
+    }
+
+    /// <summary>
+    /// Cast an asset link from one type to another.
+    /// </summary>
+    /// <exception cref="InvalidCastException"/>
+    /// <exception cref="ArgumentException"><paramref name="toAssetType"/> must derive from <see cref="Asset"/>.</exception>
+    public static IAssetLink<Asset> Cast(IAssetLink<Asset> assetLink, Type toAssetType)
+    {
+        if (!typeof(Asset).IsAssignableFrom(toAssetType))
+            throw new ArgumentException("Must derive from type Asset.", nameof(toAssetType));
+
+        Type fromAssetType = assetLink.GetType().GetGenericArguments()[0];
+        if (toAssetType.IsAssignableFrom(fromAssetType))
+            return assetLink;
+
+        Asset? asset = assetLink.GetAsset();
+        if (asset != null && !toAssetType.IsInstanceOfType(asset))
+            throw new InvalidCastException($"Can not cast an asset of type {Accessor.ExceptionFormatter.Format(fromAssetType)} to {Accessor.ExceptionFormatter.Format(toAssetType)}.");
+
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(toAssetType), [ assetLink ]);
+    }
+
+    /// <summary>
+    /// Create an asset link from an asset container. May return itself if <paramref name="container"/> is <see cref="IAssetLink{TAsset}"/>.
+    /// </summary>
+    public static IAssetLink<TAsset> Create<TAsset>(IAssetContainer container) where TAsset : Asset
+    {
+        return container as IAssetLink<TAsset> ?? new AssetLinkImpl<TAsset>(container);
+    }
+
+    /// <summary>
+    /// Create an asset link from an asset.
+    /// </summary>
+    public static IAssetLink<TAsset> Parse<TAsset>(string? value) where TAsset : Asset
+    {
+        if (string.IsNullOrEmpty(value))
+            return new AssetLinkImpl<TAsset>(0);
+
+        if (Guid.TryParse(value, out Guid guid))
+            return new AssetLinkImpl<TAsset>(guid);
+
+        if (ushort.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
+            return new AssetLinkImpl<TAsset>(id);
+
+        Asset? pathAsset = Assets.findByAbsolutePath(value);
+        if (pathAsset is TAsset asset)
+            return Create(asset);
+
+        if (pathAsset != null)
+            throw new FormatException($"Asset path does not match asset of type {Accessor.ExceptionFormatter.Format(typeof(TAsset))} while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<TAsset>))} in string notation.");
+
+        throw new FormatException($"Invalid string value while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<TAsset>))} in string notation.");
+    }
+
+    /// <summary>
+    /// Create an asset link from an asset.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="assetType"/> must derive from <see cref="Asset"/>.</exception>
+    public static IAssetLink<Asset> Parse(string? value, Type assetType)
+    {
+        if (!typeof(Asset).IsAssignableFrom(assetType))
+            throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
+
+        if (string.IsNullOrEmpty(value))
+            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ 0 ]);
+
+        if (Guid.TryParse(value, out Guid guid))
+            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ guid ]);
+
+        if (ushort.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
+            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ id ]);
+
+        Asset? pathAsset = Assets.findByAbsolutePath(value);
+        if (pathAsset != null && assetType.IsInstanceOfType(pathAsset))
+            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ pathAsset ]);
+
+        if (pathAsset != null)
+            throw new FormatException($"Asset path does not match asset of type {Accessor.ExceptionFormatter.Format(assetType)} while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<>).MakeGenericType(assetType))} in string notation.");
+
+        throw new FormatException($"Invalid string value while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<>).MakeGenericType(assetType))} in string notation.");
+    }
+
+    /// <summary>
+    /// Create an asset link from a string.
+    /// </summary>
+    /// <returns><see langword="true"/> if parsing was successful or the string was null/empty (outputting an empty asset), otherwise <see langword="false"/>.</returns>s
+    public static bool TryParse<TAsset>(string? value, [MaybeNullWhen(false)] out IAssetLink<TAsset> asset) where TAsset : Asset
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            asset = new AssetLinkImpl<TAsset>(0);
+            return true;
+        }
+
+        if (Guid.TryParse(value, out Guid guid))
+        {
+            asset = new AssetLinkImpl<TAsset>(guid);
+            return true;
+        }
+
+        if (ushort.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
+        {
+            asset = new AssetLinkImpl<TAsset>(id);
+            return true;
+        }
+
+        Asset? pathAsset = Assets.findByAbsolutePath(value);
+        if (pathAsset is TAsset typedAsset)
+        {
+            asset = Create(typedAsset);
+            return true;
+        }
+
+        asset = null;
+        return false;
+    }
+    
+    /// <summary>
+    /// Create an asset link from a string.
+    /// </summary>
+    /// <returns><see langword="true"/> if parsing was successful or the string was null/empty (outputting an empty asset), otherwise <see langword="false"/>.</returns>
+    public static bool TryParse(string? value, Type assetType, [MaybeNullWhen(false)] out IAssetLink<Asset> asset)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ 0 ]);
+            return true;
+        }
+
+        if (Guid.TryParse(value, out Guid guid))
+        {
+            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ guid ]);
+            return true;
+        }
+
+        if (ushort.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
+        {
+            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ id ]);
+            return true;
+        }
+
+        Asset? pathAsset = Assets.findByAbsolutePath(value);
+        if (pathAsset != null && assetType.IsInstanceOfType(pathAsset))
+        {
+            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ pathAsset ]);
+            return true;
+        }
+
+        asset = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Attempt to resolve an asset from an asset link.
+    /// </summary>
+    public static bool TryGetAsset<TAsset>([NotNullWhen(true)] this IAssetLink<TAsset>? link, [NotNullWhen(true)] out TAsset? asset) where TAsset : Asset
+    {
+        asset = link?.GetAsset();
+        return asset != null;
+    }
+
+    /// <summary>
+    /// Attempt to resolve the short ID from an asset link.
+    /// </summary>
+    public static bool TryGetId([NotNullWhen(true)] this IAssetLink<Asset>? link, out ushort id)
+    {
+        if (link == null)
+        {
+            id = 0;
+            return false;
+        }
+
+        Asset? asset = link.GetAsset();
+
+        id = link.Id;
+        return id != 0 || asset is { id: 0 };
+    }
+
+    /// <summary>
+    /// Attempt to resolve the GUID from an asset link.
+    /// </summary>
+    public static bool TryGetGuid([NotNullWhen(true)] this IAssetLink<Asset>? link, out Guid guid)
+    {
+        if (link == null)
+        {
+            guid = default;
+            return false;
+        }
+
+        Asset? asset = link.GetAsset();
+
+        guid = link.Guid;
+        return guid != Guid.Empty || asset != null && asset.GUID == Guid.Empty;
+    }
+
+    /// <summary>
+    /// Attempt to resolve an asset from an asset variant dictionary.
+    /// </summary>
+    public static bool TryGetAsset<TAsset>([NotNullWhen(true)] this AssetVariantDictionary<TAsset>? reference, string? variant, [NotNullWhen(true)] out TAsset? asset) where TAsset : Asset
+    {
+        IAssetLink<TAsset>? ref2 = reference?.Resolve(variant);
+        if (ref2 is not null)
+            return ref2.TryGetAsset(out asset);
+
+        asset = default!;
+        return false;
+    }
+
+    /// <summary>
+    /// Attempt to resolve the short ID from an asset variant dictionary.
+    /// </summary>
+    public static bool TryGetId<TAsset>([NotNullWhen(true)] this AssetVariantDictionary<TAsset>? reference, string? variant, out ushort id) where TAsset : Asset
+    {
+        IAssetLink<TAsset>? ref2 = reference?.Resolve(variant);
+        if (ref2 is not null)
+            return ref2.TryGetId(out id);
+
+        id = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Attempt to resolve the GUID from an asset variant dictionary.
+    /// </summary>
+    public static bool TryGetGuid<TAsset>([NotNullWhen(true)] this AssetVariantDictionary<TAsset>? reference, string? variant, out Guid guid) where TAsset : Asset
+    {
+        IAssetLink<TAsset>? ref2 = reference?.Resolve(variant);
+        if (ref2 is not null)
+            return ref2.TryGetGuid(out guid);
+
+        guid = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Compare an asset link to an asset.
+    /// </summary>
+    public static bool MatchAsset<TAsset>(this IAssetLink<TAsset>? link, TAsset? asset) where TAsset : Asset
+    {
+        if (link == null)
+        {
+            return asset == null;
+        }
+
+        if (asset == null)
+            return link.Guid == Guid.Empty && link.Id == 0;
+
+        if (asset.GUID != Guid.Empty && link.Guid == asset.GUID)
+            return true;
+        
+        return asset.id != 0 && link.Id == asset.id;
+    }
+
+    /// <summary>
+    /// Compare an asset link to another asset link.
+    /// </summary>
+    public static bool MatchAsset(this IAssetLink<Asset>? link, IAssetLink<Asset>? asset)
+    {
+        if (ReferenceEquals(link, asset))
+            return true;
+
+        return !ReferenceEquals(link, null) && link.Equals(asset!);
+    }
+
+    /// <summary>
+    /// Compare an asset link to a short ID.
+    /// </summary>
+    public static bool MatchId(this IAssetLink<Asset>? link, ushort id)
+    {
+        if (link == null)
+        {
+            return id == 0;
+        }
+
+        return link.TryGetId(out ushort thisId) && thisId == id;
+    }
+
+    /// <summary>
+    /// Compare an asset link to a GUID.
+    /// </summary>
+    public static bool MatchGuid(this IAssetLink<Asset>? link, Guid guid)
+    {
+        if (link == null)
+        {
+            return guid == Guid.Empty;
+        }
+
+        return link.TryGetGuid(out Guid thisGuid) && thisGuid == guid;
+    }
+
+    /// <summary>
+    /// See if a list of asset links contains an asset.
+    /// </summary>
+    public static bool ContainsAsset<TAsset>([NotNullWhen(true)] this IEnumerable<IAssetLink<Asset>?>? links, TAsset? asset) where TAsset : Asset
+    {
+        if (links == null)
+        {
+            return false;
+        }
+
+        foreach (IAssetLink<Asset>? link in links)
+        {
+            if (link.MatchAsset(asset))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// See if a list of asset links contains an asset link.
+    /// </summary>
+    public static bool ContainsAsset([NotNullWhen(true)] this IEnumerable<IAssetLink<Asset>?>? links, IAssetLink<Asset>? asset)
+    {
+        if (links == null)
+        {
+            return false;
+        }
+
+        foreach (IAssetLink<Asset>? link in links)
+        {
+            if (link.MatchAsset(asset))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// See if a list of asset links contains a short ID.
+    /// </summary>
+    public static bool ContainsId([NotNullWhen(true)] this IEnumerable<IAssetLink<Asset>?>? links, ushort id)
+    {
+        if (links == null)
+        {
+            return false;
+        }
+
+        foreach (IAssetLink<Asset>? link in links)
+        {
+            if (link.MatchId(id))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// See if a list of asset links contains a GUID.
+    /// </summary>
+    public static bool ContainsGuid([NotNullWhen(true)] this IEnumerable<IAssetLink<Asset>?>? links, Guid guid)
+    {
+        if (links == null)
+        {
+            return false;
+        }
+
+        foreach (IAssetLink<Asset>? link in links)
+        {
+            if (link.MatchGuid(guid))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Write an <see cref="IAssetLink{TAsset}"/> to a json writer.
+    /// </summary>
+    internal static void WriteJson(Utf8JsonWriter writer, IAssetLink<Asset>? assetLink)
+    {
+        if (assetLink == null)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+
+        Guid guid = assetLink.Guid;
+        if (guid != Guid.Empty)
+        {
+            writer.WriteStringValue(guid);
+            return;
+        }
+
+        ushort id = assetLink.Id;
+        if (id == default)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+
+        writer.WriteNumberValue(id);
+    }
+
+    /// <summary>
+    /// Read an <see cref="IAssetLink{TAsset}"/> from a json reader.
+    /// </summary>
+    internal static IAssetLink<TAsset>? ReadJson<TAsset>(ref Utf8JsonReader reader) where TAsset : Asset
+    {
+        if (reader.TokenType == JsonTokenType.Null)
+        {
+            return null;
+        }
+
+        if (reader.TokenType == JsonTokenType.Number)
+        {
+            if (!reader.TryGetUInt16(out ushort id))
+                throw new JsonException($"Short ID out of range while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<TAsset>))} in number notation.");
+
+            return Create<TAsset>(id);
+        }
+
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            if (reader.TryGetGuid(out Guid guid))
+                return Create<TAsset>(guid);
+
+            string val = reader.GetString();
+
+            if (ushort.TryParse(reader.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
+                return Create<TAsset>(id);
+
+            Asset? pathAsset = Assets.findByAbsolutePath(val);
+            if (pathAsset is TAsset asset)
+                return Create(asset);
+
+            if (pathAsset != null)
+                throw new JsonException($"Asset path does not match asset of type {Accessor.ExceptionFormatter.Format(typeof(TAsset))} while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<TAsset>))} in string notation.");
+
+            throw new JsonException($"Invalid string value while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<TAsset>))} in string notation.");
+        }
+
+        if (reader.TokenType != JsonTokenType.StartObject)
+            throw new JsonException($"Unexpected token {reader.TokenType} while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<TAsset>))}.");
+
+        if (!reader.Read() || reader.TokenType != JsonTokenType.PropertyName || !string.Equals(reader.GetString(), "GUID", StringComparison.OrdinalIgnoreCase))
+            throw new JsonException($"Unexpected object layout while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<TAsset>))}.");
+
+        if (reader.TokenType == JsonTokenType.Null)
+            return Create<TAsset>(Guid.Empty);
+
+        if (reader.TryGetGuid(out Guid nestedGuid))
+            return Create<TAsset>(nestedGuid);
+
+        throw new JsonException($"Unable to parse GUID while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<TAsset>))} in object notation.");
+    }
+
+    /// <summary>
+    /// Write an <see cref="IAssetLink{TAsset}"/> to a yaml emitter.
+    /// </summary>
+    public static void WriteYaml(IEmitter emitter, IAssetLink<Asset>? assetLink)
+    {
+        if (assetLink == null)
+        {
+            emitter.Emit(new Scalar("null"));
+            return;
+        }
+        
+        Guid guid = assetLink.Guid;
+        if (guid != Guid.Empty)
+        {
+            emitter.Emit(new Scalar(guid.ToString("N")));
+            return;
+        }
+
+        ushort id = assetLink.Id;
+        if (id == default)
+        {
+            emitter.Emit(new Scalar("null"));
+            return;
+        }
+
+        emitter.Emit(new Scalar(id.ToString(CultureInfo.InvariantCulture)));
+    }
+
+    /// <summary>
+    /// Read an <see cref="IAssetLink{TAsset}"/> from a yaml parser.
+    /// </summary>
+    public static object? ReadYaml(IParser parser, Type type)
+    {
+        string value = parser.Consume<Scalar>().Value;
+        Type genType = type.GetGenericArguments()[0];
+
+        if (Guid.TryParse(value, out Guid guid))
+            return Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(genType), [ guid ]);
+
+        if (ushort.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
+            return Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(genType), [ id ]);
+
+        Asset? pathAsset = Assets.findByAbsolutePath(value);
+        if (pathAsset != null && genType.IsInstanceOfType(pathAsset))
+            return Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(genType), [ pathAsset ]);
+
+        if (pathAsset != null)
+            throw new JsonException($"Asset path does not match asset of type {Accessor.ExceptionFormatter.Format(genType)} while reading {Accessor.ExceptionFormatter.Format(type)} in string notation.");
+
+        throw new JsonException($"Invalid string value while reading {Accessor.ExceptionFormatter.Format(type)} in string notation.");
+    }
+
+    /// <summary>
+    /// Caches a reference to an asset either by short ID or GUID.
+    /// </summary>
+    /// <typeparam name="TAsset">The type of asset to reference.</typeparam>
+    private class AssetLinkImpl<TAsset> : IAssetLink<TAsset> where TAsset : Asset
+    {
+        private Guid _guid;
+        private ushort _id;
+        private TAsset? _cachedAsset;
+
+        public Guid Guid
+        {
+            get
+            {
+                if (_cachedAsset == null && _guid == Guid.Empty)
+                    GetAsset();
+
+                return _guid;
+            }
+            set
+            {
+                if (_guid == value)
+                    return;
+
+                _guid = value;
+                _id = default;
+                _cachedAsset = null;
+            }
+        }
+
+        public ushort Id
+        {
+            get
+            {
+                if (_cachedAsset == null && _id == 0)
+                    GetAsset();
+
+                return _id;
+            }
+            set
+            {
+                if (_id == value)
+                    return;
+
+                _id = value;
+                _guid = default;
+                _cachedAsset = null;
+            }
+        }
+
+        public TAsset? GetAsset()
+        {
+            if (_cachedAsset != null)
+                return _cachedAsset;
+
+            if (_guid != Guid.Empty)
+            {
+                _cachedAsset = Assets.find(_guid) as TAsset;
+            }
+            else if (_id != default)
+            {
+                _cachedAsset = Assets.find(UCAssetManager.GetAssetCategory<TAsset>(), _id) as TAsset;
+            }
+
+            if (_cachedAsset == null)
+                return null;
+
+            _id = _cachedAsset.id;
+            _guid = _cachedAsset.GUID;
+            return _cachedAsset;
+        }
+
+        Asset? IAssetContainer.Asset => GetAsset();
+
+        public AssetLinkImpl(string guid) : this(Guid.Parse(guid)) { }
+        public AssetLinkImpl(Guid guid)
+        {
+            _guid = guid;
+        }
+        public AssetLinkImpl(ushort id)
+        {
+            _id = id;
+        }
+        public AssetLinkImpl(TAsset? asset)
+        {
+            if (asset == null)
+                return;
+
+            _id = asset.id;
+            _guid = asset.GUID;
+            _cachedAsset = asset;
+        }
+
+        public AssetLinkImpl(AssetReference<TAsset> assetRef)
+        {
+            _guid = assetRef.GUID;
+        }
+
+        public AssetLinkImpl(IAssetContainer assetContainer)
+        {
+            if (assetContainer is AssetLinkImpl<TAsset> link)
+            {
+                _guid = link._guid;
+                _id = link._id;
+                _cachedAsset = link._cachedAsset;
+                return;
+            }
+
+            if (assetContainer == null)
+            {
+                _id = 0;
+                _guid = Guid.Empty;
+                return;
+            }
+
+            Asset? asset = assetContainer.Asset;
+            if (asset == null)
+                return;
+
+            if (asset is not TAsset typedAsset)
+                throw new ArgumentException($"Container's asset is not of type {Accessor.ExceptionFormatter.Format(typeof(TAsset))}.", nameof(assetContainer));
+
+            _id = asset.id;
+            _guid = asset.GUID;
+            _cachedAsset = typedAsset;
+        }
+
+        public bool Equals(IAssetLink<Asset>? other)
+        {
+            if (ReferenceEquals(null, other))
+                return false;
+
+            if (ReferenceEquals(this, other))
+                return true;
+
+            return Guid.Equals(other.Guid) && Id == other.Id;
+        }
+
+        public override string ToString()
+        {
+            if (Guid != Guid.Empty)
+                return Guid.ToString("N");
+
+            if (Id != 0)
+                return Id.ToString();
+
+            return _cachedAsset != null
+                ? Path.GetRelativePath(UnturnedPaths.RootDirectory.FullName, _cachedAsset.absoluteOriginFilePath)
+                : "0";
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return !ReferenceEquals(null, obj) && (ReferenceEquals(this, obj) || Guid.Equals(((IAssetLink<TAsset>)obj).Guid) && Id == ((IAssetLink<TAsset>)obj).Id);
+        }
+
+        public override int GetHashCode()
+        {
+            return Guid != Guid.Empty ? Guid.GetHashCode() : Id;
+        }
+
+        public object Clone()
+        {
+            return new AssetLinkImpl<TAsset>(this);
+        }
+
+        Guid IAssetReference.GUID { get => Guid; set => Guid = value; }
+        bool IAssetReference.isValid => _guid != Guid.Empty || _id != 0 || _cachedAsset != null;
+    }
+}
+
+public class AssetLinkTypeConverter : TypeConverter
+{
+    public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
+    {
+        return destinationType == typeof(string)
+               || destinationType == typeof(ushort)
+               || destinationType == typeof(Guid)
+               || destinationType.IsGenericType && destinationType.GetGenericTypeDefinition() == typeof(IAssetLink<>);
+    }
+
+    public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+    {
+        return sourceType == typeof(string)
+               || sourceType == typeof(ushort)
+               || sourceType == typeof(Guid)
+               || sourceType.IsGenericType && sourceType.GetGenericTypeDefinition() == typeof(IAssetLink<>)
+               || base.CanConvertFrom(context, sourceType);
+    }
+
+    public override bool IsValid(ITypeDescriptorContext context, object value)
+    {
+        if (value is string str)
+            return AssetLink.TryParse<Asset>(str, out _);
+
+        return value is Guid or IAssetLink<Asset> or ushort;
+    }
+
+    public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object? value)
+    {
+        bool hasType = context.PropertyDescriptor is { PropertyType.IsGenericType: true }
+                       && context.PropertyDescriptor.PropertyType.GetGenericTypeDefinition() == typeof(IAssetLink<>);
+
+        Type? assetType = hasType
+            ? context.PropertyDescriptor!.PropertyType.GetGenericArguments()[0]
+            : null;
+
+        return value switch
+        {
+            IAssetLink<Asset> => value,
+
+            string str when hasType => AssetLink.Parse(str, assetType!),
+            string str => AssetLink.Parse<Asset>(str),
+
+            Guid guid when hasType => AssetLink.Create(guid, assetType!),
+            Guid guid => AssetLink.Create<Asset>(guid),
+
+            ushort id when hasType => AssetLink.Create(id, assetType!),
+            ushort id => AssetLink.Create<Asset>(id),
+
+            _ => base.ConvertFrom(context, culture, value)!
+        };
+    }
+
+    public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
+    {
+        if (value is not IAssetLink<Asset> asset)
+            throw GetConvertToException(value, destinationType);
+
+        if (destinationType == typeof(string))
+        {
+            return asset.ToString();
+        }
+
+        if (destinationType == typeof(Guid))
+        {
+            return asset.Guid;
+        }
+
+        if (destinationType == typeof(ushort))
+        {
+            return asset.Id;
+        }
+
+        if (destinationType.IsGenericType && destinationType.GetGenericTypeDefinition() == typeof(IAssetLink<>))
+        {
+            return AssetLink.Cast(asset, destinationType.GetGenericArguments()[0]);
+        }
+
+        throw GetConvertToException(value, destinationType);
+    }
+}
+
+public class AssetLinkJsonFactory : JsonConverterFactory
+{
+    private static readonly ConcurrentDictionary<Type, JsonConverter> ConverterCache = new ConcurrentDictionary<Type, JsonConverter>();
+    public override bool CanConvert(Type typeToConvert)
+    {
+        return ConverterCache.ContainsKey(typeToConvert) || typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(IAssetLink<>);
+    }
+    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+    {
+        return ConverterCache.GetOrAdd(
+            typeToConvert,
+            typeToConvert =>
+            {
+                Type[] genTypes = typeToConvert.GetGenericArguments();
+                if (genTypes.Length == 0)
+                    return new AssetLinkJsonConverter<Asset>();
+
+                return (JsonConverter)Activator.CreateInstance(typeof(AssetLinkJsonConverter<>).MakeGenericType());
+            }
+        );
+    }
+}
+
+public class AssetLinkJsonConverter<TAsset> : JsonConverter<IAssetLink<TAsset>?> where TAsset : Asset
+{
+    public override IAssetLink<TAsset>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return AssetLink.ReadJson<TAsset>(ref reader);
+    }
+
+    public override void Write(Utf8JsonWriter writer, IAssetLink<TAsset>? value, JsonSerializerOptions options)
+    {
+        AssetLink.WriteJson(writer, value);
+    }
+}
+
+public class AssetLinkYamlConverter : IYamlTypeConverter
+{
+    public bool Accepts(Type type)
+    {
+        return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAssetLink<>);
+    }
+
+    public object? ReadYaml(IParser parser, Type type)
+    {
+        return AssetLink.ReadYaml(parser, type);
+    }
+
+    public void WriteYaml(IEmitter emitter, object? value, Type type)
+    {
+        AssetLink.WriteYaml(emitter, value as IAssetLink<Asset>);
+    }
+}

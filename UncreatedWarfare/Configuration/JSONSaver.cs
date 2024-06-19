@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
-using Uncreated.Framework;
-using Uncreated.Json;
 using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare.Configuration;
@@ -240,13 +237,13 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
         return this.Where(predicate);
     }
 
-    protected T GetObject(Func<T, bool> predicate, bool readFile = false)
+    protected T? GetObject(Func<T, bool> predicate)
     {
         if (!isInited) Init();
         return this.FirstOrDefault(predicate);
     }
 
-    protected bool ObjectExists(Func<T, bool> match, out T item)
+    protected bool ObjectExists(Func<T, bool> match, [NotNullWhen(true)] out T? item)
     {
         if (!isInited) Init();
         item = GetObject(match);

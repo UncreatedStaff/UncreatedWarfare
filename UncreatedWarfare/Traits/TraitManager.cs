@@ -42,7 +42,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
     };
     public static bool Loaded => Singleton.IsLoaded<TraitManager, TraitData>();
     public TraitManager() : base("traits", Data.Paths.TraitDataStorage) { }
-    protected override string LoadDefaults() => JsonSerializer.Serialize(DefaultTraits, JsonSettings.SerializerSettings);
+    protected override string LoadDefaults() => JsonSerializer.Serialize(DefaultTraits, ConfigurationSettings.JsonSerializerSettings);
     public override void Load()
     {
         Singleton = this;

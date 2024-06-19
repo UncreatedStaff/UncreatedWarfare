@@ -21,6 +21,11 @@ public sealed class WarfareModule : IModuleNexus
     private IServiceScope? _activeScope;
 
     /// <summary>
+    /// A path to the top-level 'Warfare' folder.
+    /// </summary>
+    public string HomeDirectory { get; private set; }
+
+    /// <summary>
     /// System Config.yml. Stores information not directly related to gameplay.
     /// </summary>
     public IConfiguration Configuration { get; private set; }
@@ -37,13 +42,12 @@ public sealed class WarfareModule : IModuleNexus
     void IModuleNexus.initialize()
     {
         // Set the environment directory to the folder now at U3DS/Servers/ServerId/Warfare/
-        string homeFolder = Path.Combine(UnturnedPaths.RootDirectory.Name, "Servers", Provider.serverID, "Warfare");
-        Directory.CreateDirectory(homeFolder);
-        Environment.CurrentDirectory = homeFolder;
+        HomeDirectory = Path.Combine(UnturnedPaths.RootDirectory.Name, "Servers", Provider.serverID, "Warfare");
+        Directory.CreateDirectory(HomeDirectory);
 
         // Add system configuration provider.
         IConfigurationBuilder configBuilder = new ConfigurationBuilder();
-        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, Path.Join(".", "System Config.yml"));
+        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, Path.Join(HomeDirectory, "System Config.yml"));
         Configuration = configBuilder.Build();
 
         IServiceCollection serviceCollection = new ServiceCollection();

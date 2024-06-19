@@ -4,6 +4,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -33,7 +34,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     public BarricadeDrop Barricade { get; private set; }
     public BuildableData? Buildable => null;
     public ulong Owner { get; private set; }
-    public JsonAssetReference<EffectAsset>? Icon { get; private set; }
+    public IAssetLink<EffectAsset>? Icon { get; private set; }
     public float IconOffset => 3.5f;
     public ulong Team { get; private set; }
     public bool IsSalvaged { get; set; }
@@ -56,16 +57,16 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
             goto destroy;
         }
         
-        if (!Gamemode.Config.FOBRadios.Value.HasGuid(Barricade.asset.GUID))
+        if (!Gamemode.Config.FOBRadios.ContainsGuid(Barricade.asset.GUID))
         {
-            if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchGuid(Barricade.asset))
+            if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchAsset(Barricade.asset))
             {
                 State = RadioState.Bleeding;
                 Icon = Gamemode.Config.EffectMarkerRadioDamaged;
             }
             else
             {
-                L.LogDebug($"[FOBS] RadioComponent unable to find a valid buildable: {(Buildable?.Foundation?.Value?.Asset?.itemName)}.");
+                L.LogDebug($"[FOBS] RadioComponent unable to find a valid buildable: {Buildable?.Foundation?.GetAsset()?.itemName}.");
                 goto destroy;
             }
         }
@@ -237,7 +238,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     public ulong Salvager { get; set; }
     public IBuildableDestroyedEvent? DestroyInfo { get; set; }
     public bool IsFloating { get; private set; }
-    public JsonAssetReference<EffectAsset>? Icon { get; protected set; }
+    public IAssetLink<EffectAsset>? Icon { get; protected set; }
     public float IconOffset { get; protected set; }
     public TickResponsibilityCollection Builders { get; } = new TickResponsibilityCollection();
     public Asset Asset { get; protected set; }
@@ -296,7 +297,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         if (Buildable is not { Type: not BuildableType.Radio })
         {
             L.LogWarning($"[FOBS] ShovelableComponent unable to find a valid buildable: " +
-                         $"{Buildable?.Foundation?.Value?.Asset?.itemName} ({Asset.FriendlyName}).");
+                         $"{Buildable?.Foundation?.GetAsset()?.itemName} ({Asset.FriendlyName}).");
             goto destroy;
         }
 
@@ -501,7 +502,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
                 if (FOB != null)
                 {
-                    build = (float)Buildable.RequiredBuild / (float)Buildable.RequiredHits * amount;
+                    build = Buildable.RequiredBuild / (float)Buildable.RequiredHits * amount;
                     _progressToBuild += build;
                     int build2 = Mathf.FloorToInt(_progressToBuild);
                     if (FOB.BuildSupply < _progressToBuild && Mathf.Abs(_progressToBuild - FOB.BuildSupply) >= 0.05)
@@ -812,7 +813,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
         ulong group = TeamManager.GetGroupID(Team);
         // base
-        if (Buildable.Emplacement != null && Buildable.Emplacement.BaseBarricade.ValidReference(out ItemAsset @base))
+        if (Buildable.Emplacement != null && Buildable.Emplacement.BaseBarricade.TryGetAsset(out ItemAsset? @base))
         {
             if (@base is ItemBarricadeAsset bAsset)
             {
@@ -859,7 +860,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         Transform? newTransform = null;
 
         // emplacement
-        if (Buildable.Emplacement != null && Buildable.Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vehicle))
+        if (Buildable.Emplacement != null && Buildable.Emplacement.EmplacementVehicle.TryGetAsset(out VehicleAsset? vehicle))
         {
             InteractableVehicle veh = FOBManager.SpawnEmplacement(vehicle, position, rotation, Owner, group);
 
@@ -873,7 +874,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         }
 
         // fortification
-        if (newTransform == null && Buildable.FullBuildable.ValidReference(out ItemAsset buildable))
+        if (newTransform == null && Buildable.FullBuildable.TryGetAsset(out ItemAsset? buildable))
         {
             if (buildable is ItemBarricadeAsset bAsset)
             {
@@ -1172,7 +1173,7 @@ public class RepairStationComponent : ShovelableComponent
         }
 
         VehicleManager.sendVehicleHealth(vehicle, newHealth);
-        if (Gamemode.Config.EffectRepair.ValidReference(out EffectAsset effect))
+        if (Gamemode.Config.EffectRepair.TryGetAsset(out EffectAsset? effect))
             F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
         vehicle.updateVehicle();
     }
@@ -1185,7 +1186,7 @@ public class RepairStationComponent : ShovelableComponent
 
         vehicle.askFillFuel(amount);
 
-        if (Gamemode.Config.EffectRefuel.ValidReference(out EffectAsset effect))
+        if (Gamemode.Config.EffectRefuel.TryGetAsset(out EffectAsset? effect))
             F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
         vehicle.updateVehicle();
     }
@@ -1206,7 +1207,7 @@ public interface IFOBItem
     ulong Team { get; }
     ulong Owner { get; }
     ulong RecordId { get; set; }
-    JsonAssetReference<EffectAsset>? Icon { get; }
+    IAssetLink<EffectAsset>? Icon { get; }
     float IconOffset { get; }
     Vector3 Position { get; }
     Quaternion Rotation { get; }

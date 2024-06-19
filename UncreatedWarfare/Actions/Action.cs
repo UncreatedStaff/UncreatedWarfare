@@ -1,7 +1,8 @@
-﻿using System.Collections;
-using SDG.Unturned;
+﻿using SDG.Unturned;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using UnityEngine;
 
@@ -9,7 +10,7 @@ namespace Uncreated.Warfare.Actions;
 
 public class Action
 {
-    private readonly EffectAsset _viewerEffect;
+    private readonly EffectAsset? _viewerEffect;
     private readonly EffectAsset? _callerEffect;
     private readonly List<UCPlayer> _viewers;
     private readonly List<UCPlayer> _toastReceivers;
@@ -24,14 +25,23 @@ public class Action
     private readonly Translation<Color>? _chatMessage;
     private readonly Translation? _toast;
     public UCPlayer Caller { get; }
-
-    public Action(UCPlayer caller, EffectAsset viewerEffect, EffectAsset? callerEffect, IEnumerable<UCPlayer> viewers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
+    public Vector3? InitialPosition => _initialPosition;
+    public Action(UCPlayer caller, IAssetLink<EffectAsset> viewerEffect, IAssetLink<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
         : this(caller, viewerEffect, callerEffect, viewers, viewers, updateFrequency, lifeTime, origin, type, chatMessage, toast, squadWide) { }
-    public Action(UCPlayer caller, EffectAsset viewerEffect, EffectAsset? callerEffect, IEnumerable<UCPlayer> viewers, IEnumerable<UCPlayer> toastReceivers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
+    public Action(UCPlayer caller, IAssetLink<EffectAsset> viewerEffect, IAssetLink<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, IEnumerable<UCPlayer> toastReceivers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
     {
         Caller = caller;
-        _viewerEffect = viewerEffect;
-        _callerEffect = callerEffect;
+
+        if (!viewerEffect.TryGetAsset(out _viewerEffect))
+        {
+            L.LogWarning($"Unable to find viewer effect for action {_type} {_origin} for {Caller}.");
+        }
+
+        if (callerEffect != null && !callerEffect.TryGetAsset(out _callerEffect))
+        {
+            L.LogWarning($"Unable to find caller effect for action {_type} {_origin} for {Caller}.");
+        }
+
         LifeTime = lifeTime;
         _viewers = viewers.ToList();
         _toastReceivers = ReferenceEquals(viewers, toastReceivers) ? _viewers : toastReceivers.ToList();
@@ -63,11 +73,6 @@ public class Action
                 break;
         }
 
-        if (_viewerEffect == null)
-        {
-            L.LogWarning("Action could not play viewer effect. Asset not found.");
-        }
-
         ActionComponent[] existing = Caller.Player.transform.gameObject.GetComponents<ActionComponent>();
         L.LogDebug("Existing actions: " + existing.Length);
         foreach (ActionComponent component in existing)
@@ -94,11 +99,12 @@ public class Action
         
         _component.Initialize(this);
 
-        if (CooldownManager.HasCooldown(Caller, CooldownType.AnnounceAction, out _, _viewerEffect.GUID))
+        if (_viewerEffect != null && CooldownManager.HasCooldown(Caller, CooldownType.AnnounceAction, out _, _viewerEffect.GUID))
             return;
 
         Announce();
-        CooldownManager.StartCooldown(Caller, CooldownType.AnnounceAction, 5, _viewerEffect.GUID);
+        if (_viewerEffect != null)
+            CooldownManager.StartCooldown(Caller, CooldownType.AnnounceAction, 5, _viewerEffect.GUID);
     }
     public void Cancel()
     {
@@ -166,10 +172,9 @@ public class Action
         private void SendMarkers()
         {
             Vector3 position = _action._origin == ActionOrigin.FollowCaller ? transform.position : _action._initialPosition!.Value;
-            if (_action._viewerEffect == null)
-                return;
+            if (_action._viewerEffect != null)
+                F.TriggerEffectReliable(_action._viewerEffect, Data.GetPooledTransportConnectionList(_action._viewers.Where(x => x.IsOnline).Select(x => x.Connection), _action._viewers.Count), position);
 
-            F.TriggerEffectReliable(_action._viewerEffect, Data.GetPooledTransportConnectionList(_action._viewers.Where(x => x.IsOnline).Select(x => x.Connection), _action._viewers.Count), position);
             if (_action._callerEffect == null)
                 return;
 

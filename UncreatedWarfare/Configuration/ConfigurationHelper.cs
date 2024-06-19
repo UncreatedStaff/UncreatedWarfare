@@ -7,6 +7,8 @@ using SDG.Unturned;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using DanielWillett.ReflectionTools;
+using JetBrains.Annotations;
 
 namespace Uncreated.Warfare.Configuration;
 public static class ConfigurationHelper
@@ -35,6 +37,7 @@ public static class ConfigurationHelper
     /// Watches for file updates on <paramref name="filePath"/>, and invokes <paramref name="onUpdated"/> when there is an update.
     /// </summary>
     /// <remarks><paramref name="filePath"/> must be in the Warfare folder.</remarks>
+    [MustUseReturnValue]
     public static IDisposable ListenForFileUpdate(string filePath, System.Action onUpdated)
     {
         return ChangeToken.OnChange(
@@ -48,6 +51,36 @@ public static class ConfigurationHelper
                 });
             }
         );
+    }
+
+    /// <summary>
+    /// Bind config data to a <see cref="IConfiguration"/> instance.
+    /// </summary>
+    [System.Diagnostics.Contracts.Pure]
+    public static TConfigData ParseConfigData<TConfigData>(this IConfiguration config) where TConfigData : JSONConfigData, new()
+    {
+        TConfigData? data;
+        try
+        {
+            data = config.Get<TConfigData>();
+            if (data == null)
+            {
+                L.LogWarning($"Couldn't parse {Accessor.Formatter.Format(typeof(TConfigData))} file.");
+            }
+        }
+        catch (Exception ex)
+        {
+            data = null;
+            L.LogError(ex);
+            L.LogError($"Errored while parsing {Accessor.Formatter.Format(typeof(TConfigData))} file.");
+        }
+
+        if (data != null)
+            return data;
+        
+        data = new TConfigData();
+        data.SetDefaults();
+        return data;
     }
 
     private static void AddJsonOrYamlFile(IConfigurationBuilder configBuilder, string path, bool optional = false, bool reloadOnChange = false)

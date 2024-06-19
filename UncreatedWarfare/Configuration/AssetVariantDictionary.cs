@@ -5,11 +5,11 @@ using System.Linq;
 
 namespace Uncreated.Warfare.Configuration;
 
-public class AssetVariantDictionary<TAsset> : Dictionary<string, JsonAssetReference<TAsset>>, ICloneable where TAsset : Asset
+public class AssetVariantDictionary<TAsset> : Dictionary<string, IAssetLink<TAsset>>, ICloneable where TAsset : Asset
 {
-    public JsonAssetReference<TAsset>? Default
+    public IAssetLink<TAsset>? Default
     {
-        get => TryGetValue(string.Empty, out JsonAssetReference<TAsset> asset) ? asset : null;
+        get => TryGetValue(string.Empty, out IAssetLink<TAsset> asset) ? asset : null;
         set { if (value is not null) this[string.Empty] = value; }
     }
 
@@ -17,20 +17,20 @@ public class AssetVariantDictionary<TAsset> : Dictionary<string, JsonAssetRefere
         : this(0) { }
     public AssetVariantDictionary(int capacity)
         : base(capacity, StringComparer.InvariantCultureIgnoreCase) { }
-    public AssetVariantDictionary(IDictionary<string, JsonAssetReference<TAsset>> dictionary)
+    public AssetVariantDictionary(IDictionary<string, IAssetLink<TAsset>> dictionary)
         : base(dictionary, StringComparer.InvariantCultureIgnoreCase) { }
 
 
-    public JsonAssetReference<TAsset> ResolveRandom()
+    public IAssetLink<TAsset> ResolveRandom()
     {
         int randomValue = UCWarfare.IsLoaded ? UnityEngine.Random.Range(0, Count) : new Random().Next(0, Count);
         return Values.ElementAt(randomValue);
     }
     public bool TryMatchVariant(Guid item, out string? variant)
     {
-        foreach (KeyValuePair<string, JsonAssetReference<TAsset>> reference in this)
+        foreach (KeyValuePair<string, IAssetLink<TAsset>> reference in this)
         {
-            if (!reference.Value.ValidReference(out Guid guid) || item != guid)
+            if (!reference.Value.TryGetGuid(out Guid guid) || item != guid)
                 continue;
 
             variant = reference.Key;
@@ -40,15 +40,15 @@ public class AssetVariantDictionary<TAsset> : Dictionary<string, JsonAssetRefere
         variant = null;
         return false;
     }
-    public bool TryResolve(string? variant, out JsonAssetReference<TAsset> reference)
+    public bool TryResolve(string? variant, out IAssetLink<TAsset> reference)
     {
         reference = Resolve(variant)!;
         return reference is not null;
     }
-    public JsonAssetReference<TAsset>? Resolve(string? variant = null)
+    public IAssetLink<TAsset>? Resolve(string? variant = null)
     {
         variant ??= string.Empty;
-        if (TryGetValue(variant, out JsonAssetReference<TAsset> asset))
+        if (TryGetValue(variant, out IAssetLink<TAsset> asset))
             return asset;
 
         if (variant.Length > 0 && TryGetValue(string.Empty, out asset))

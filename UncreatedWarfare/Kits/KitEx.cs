@@ -12,6 +12,7 @@ using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
@@ -141,6 +142,22 @@ public static class KitEx
             }
         }
         return false;
+    }
+    public static bool ContainsItem(this Kit kit, IAssetLink<ItemAsset>? assetLink, ulong team, bool checkClothes = false)
+    {
+        if (assetLink == null)
+            return false;
+
+        Guid guid = assetLink.Guid;
+        return kit.ContainsItem(guid, team, checkClothes);
+    }
+    public static int CountItems(this Kit kit, IAssetLink<ItemAsset>? assetLink, bool checkClothes = false)
+    {
+        if (assetLink == null)
+            return 0;
+
+        Guid guid = assetLink.Guid;
+        return kit.CountItems(guid, checkClothes);
     }
     public static int CountItems(this Kit kit, Guid guid, bool checkClothes = false)
     {

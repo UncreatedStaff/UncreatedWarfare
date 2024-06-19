@@ -1,7 +1,7 @@
 ﻿using JetBrains.Annotations;
 using SDG.Unturned;
-using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
 
@@ -102,19 +102,19 @@ internal class GuidedMissileComponent : MonoBehaviour
 
         while (_isActive) // this loop runs every 0.05 seconds. every iteration it will send a small smoke trail effect to all clients here
         {
-            JsonAssetReference<EffectAsset> id = Gamemode.Config.EffectGuidedMissileNoSound; // effect ids. this one has no sound effect
+            IAssetLink<EffectAsset> id = Gamemode.Config.EffectGuidedMissileNoSound; // effect ids. this one has no sound effect
 
-            if (count % 20 == 0 || !id.ValidReference(out ushort _))
+            if (count % 20 == 0 || !id.TryGetAsset(out _))
             {
                 id = Gamemode.Config.EffectGuidedMissileSound; // this one has a sound effect, so we will play it only after around 20 loops (1 second) have passed
-                if (!id.ValidReference(out ushort _))
+                if (!id.TryGetAsset(out _))
                     id = Gamemode.Config.EffectGuidedMissileNoSound;
 
                 count = 0;
             }
             yield return new WaitForSeconds(0.05f);
 
-            if (id.ValidReference(out EffectAsset effect))  // send the effect to all clients here
+            if (id.TryGetAsset(out EffectAsset? effect))  // send the effect to all clients here
             {
                 TriggerEffectParameters parameters = new TriggerEffectParameters(effect)
                 {

@@ -57,12 +57,12 @@ public sealed class ToastMessageInfo
         Inturrupt = inturrupt;
         Key = UI.Key;
         CanResend = false;
-        UpdateAsset(new JsonAssetContainer<EffectAsset>(ui.Asset));
+        UpdateAsset(AssetLink.Create(ui.Asset));
     }
-    public ToastMessageInfo(ToastMessageStyle style, int channel, JsonAssetReference<EffectAsset> asset, bool requiresClearing = false, bool inturrupt = false, bool canResend = false, bool requiresResend = false)
+    public ToastMessageInfo(ToastMessageStyle style, int channel, IAssetLink<EffectAsset> asset, bool requiresClearing = false, bool inturrupt = false, bool canResend = false, bool requiresResend = false)
         : this(style, channel, requiresClearing, inturrupt, canResend, requiresResend)
     {
-        UpdateAsset(new JsonAssetContainer<EffectAsset>(asset));
+        UpdateAsset(asset);
     }
     public ToastMessageInfo(ToastMessageStyle style, int channel, bool requiresClearing = false, bool inturrupt = false, bool canResend = false, bool requiresResend = false)
     {
@@ -74,7 +74,7 @@ public sealed class ToastMessageInfo
         RequiresResend = requiresResend && canResend;
         Key = requiresClearing || inturrupt || canResend ? UnturnedUIKeyPool.Claim() : (short)-1;
     }
-    public void UpdateAsset(JsonAssetContainer<EffectAsset> assetContainer)
+    public void UpdateAsset(IAssetContainer assetContainer)
     {
         Asset = assetContainer.Asset as EffectAsset;
         UI?.LoadFromConfig(assetContainer);

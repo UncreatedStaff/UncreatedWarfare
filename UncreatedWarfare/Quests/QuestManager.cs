@@ -519,7 +519,7 @@ public static class QuestManager
                 return;
             byte[] bytes = new byte[stream.Length];
             stream.Read(bytes, 0, bytes.Length);
-            Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonSettings.ReaderOptions);
+            Utf8JsonReader reader = new Utf8JsonReader(bytes, ConfigurationSettings.JsonReaderOptions);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndArray)
@@ -562,7 +562,7 @@ public static class QuestManager
         string dir = Path.GetDirectoryName(savePath);
         if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
         using FileStream stream = new FileStream(savePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
-        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonSettings.WriterOptions);
+        Utf8JsonWriter writer = new Utf8JsonWriter(stream, ConfigurationSettings.JsonWriterOptions);
         writer.WriteStartObject();
         t.WriteQuestProgress(writer);
         writer.WriteEndObject();
@@ -589,7 +589,7 @@ public static class QuestManager
                 return;
             byte[] bytes = new byte[stream.Length];
             stream.Read(bytes, 0, bytes.Length);
-            Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonSettings.ReaderOptions);
+            Utf8JsonReader reader = new Utf8JsonReader(bytes, ConfigurationSettings.JsonReaderOptions);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)

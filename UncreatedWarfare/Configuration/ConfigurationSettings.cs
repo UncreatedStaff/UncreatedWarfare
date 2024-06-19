@@ -2,20 +2,28 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration.JsonConverters;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Configuration;
-public static class JsonSettings
+public static class ConfigurationSettings
 {
     private static readonly JavaScriptEncoder TextEncoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+    
+    public static readonly JsonWriterOptions JsonWriterOptions = new JsonWriterOptions { Indented = true, Encoder = TextEncoder };
+    
+    public static readonly JsonWriterOptions JsonCondensedWriterOptions = new JsonWriterOptions { Indented = false, Encoder = TextEncoder };
 
-    public static readonly JsonSerializerOptions SerializerSettings = new JsonSerializerOptions
+    public static readonly JsonReaderOptions JsonReaderOptions = new JsonReaderOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip };
+    
+    public static readonly JsonSerializerOptions JsonSerializerSettings = new JsonSerializerOptions
     {
         WriteIndented = true,
         AllowTrailingCommas = true,
         Encoder = TextEncoder,
         ReadCommentHandling = JsonCommentHandling.Skip
     };
-    public static readonly JsonSerializerOptions CondensedSerializerSettings = new JsonSerializerOptions
+
+    public static readonly JsonSerializerOptions JsonCondensedSerializerSettings = new JsonSerializerOptions
     {
         WriteIndented = false,
         AllowTrailingCommas = true,
@@ -32,18 +40,19 @@ public static class JsonSettings
         new ColorJsonConverter(),
         new Color32JsonConverter(),
         new CSteamIDJsonConverter(),
+        new AssetLinkJsonFactory(),
+        new TranslationListConverter(),
+        new ByteArraySegmentJsonConverter(),
+        new ByteArrayConverter()
     };
 
-    public static readonly JsonWriterOptions WriterOptions = new JsonWriterOptions { Indented = true, Encoder = TextEncoder };
-    public static readonly JsonWriterOptions CondensedWriterOptions = new JsonWriterOptions { Indented = false, Encoder = TextEncoder };
-    public static readonly JsonReaderOptions ReaderOptions = new JsonReaderOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip };
-    static JsonSettings()
+    static ConfigurationSettings()
     {
         for (int i = 0; i < Converters.Length; ++i)
         {
             JsonConverter converter = Converters[i];
-            SerializerSettings.Converters.Add(converter);
-            CondensedSerializerSettings.Converters.Add(converter);
+            JsonSerializerSettings.Converters.Add(converter);
+            JsonCondensedSerializerSettings.Converters.Add(converter);
         }
     }
 

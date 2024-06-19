@@ -3,8 +3,8 @@ using JetBrains.Annotations;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Traits.Buffs;
@@ -53,6 +53,7 @@ public class SpottedComponent : MonoBehaviour
         _ownerTeam = ownerTeam;
         _vehicle = null;
         VehicleType = null;
+
 #if ENABLE_SPOTTED_BUFF
         if (!_statInit)
         {
@@ -61,11 +62,12 @@ public class SpottedComponent : MonoBehaviour
             _statInit = true;
         }
 #endif
+
         Type = type;
         CurrentSpotter = null;
         IsLaserTarget = type == Spotted.FOB;
 
-        RotatableConfig<JsonAssetReference<EffectAsset>>? effect;
+        IAssetLink<EffectAsset>? effect;
         switch (type)
         {
             case Spotted.Infantry:
@@ -73,11 +75,13 @@ public class SpottedComponent : MonoBehaviour
                 _defaultTimer = 12;
                 _frequency = 0.5f;
                 break;
+
             case Spotted.FOB:
                 effect = Gamemode.Config.EffectSpottedMarkerFOB;
                 _defaultTimer = 240;
                 _frequency = 1f;
                 break;
+
             default:
                 _vehicle = null;
                 L.LogWarning("Unknown spotted type: " + type + " in SpottedComponent.");
@@ -85,12 +89,14 @@ public class SpottedComponent : MonoBehaviour
                 return;
         }
 
-        if (effect.ValidReference(out EffectAsset asset))
+        if (effect.TryGetAsset(out EffectAsset? asset))
         {
             Effect = asset;
         }
         else
-            L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + type + ".");
+        {
+            L.LogWarning($"SpottedComponent could not initialize: Effect asset not found: {type}.");
+        }
 
         if (!AllMarkers.Contains(this))
             AllMarkers.Add(this);
@@ -103,7 +109,7 @@ public class SpottedComponent : MonoBehaviour
         IsLaserTarget = VehicleData.IsGroundVehicle(type);
         _vehicle = vehicle;
         VehicleType = type;
-        RotatableConfig<JsonAssetReference<EffectAsset>>? effect;
+        IAssetLink<EffectAsset>? effect;
         switch (type)
         {
             case Vehicles.VehicleType.AA:
@@ -112,84 +118,98 @@ public class SpottedComponent : MonoBehaviour
                 _frequency = 1f;
                 Type = Spotted.Emplacement;
                 break;
+
             case Vehicles.VehicleType.APC:
                 effect = Gamemode.Config.EffectSpottedMarkerAPC;
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.Emplacement;
                 break;
+
             case Vehicles.VehicleType.ATGM:
                 effect = Gamemode.Config.EffectSpottedMarkerATGM;
                 _defaultTimer = 240;
                 _frequency = 1f;
                 Type = Spotted.Emplacement;
                 break;
+
             case Vehicles.VehicleType.AttackHeli:
                 effect = Gamemode.Config.EffectSpottedMarkerAttackHeli;
                 _defaultTimer = 15;
                 _frequency = 0.5f;
                 Type = Spotted.Aircraft;
                 break;
+
             case Vehicles.VehicleType.HMG:
                 effect = Gamemode.Config.EffectSpottedMarkerHMG;
                 _defaultTimer = 240;
                 _frequency = 1f;
                 Type = Spotted.Emplacement;
                 break;
+
             case Vehicles.VehicleType.Humvee:
                 effect = Gamemode.Config.EffectSpottedMarkerHumvee;
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.LightVehicle;
                 break;
+
             case Vehicles.VehicleType.IFV:
                 effect = Gamemode.Config.EffectSpottedMarkerIFV;
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.Armor;
                 break;
+
             case Vehicles.VehicleType.Jet:
                 effect = Gamemode.Config.EffectSpottedMarkerJet;
                 _defaultTimer = 10;
                 _frequency = 0.5f;
                 Type = Spotted.Aircraft;
                 break;
+
             case Vehicles.VehicleType.MBT:
                 effect = Gamemode.Config.EffectSpottedMarkerMBT;
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.Armor;
                 break;
+
             case Vehicles.VehicleType.Mortar:
                 effect = Gamemode.Config.EffectSpottedMarkerMortar;
                 _defaultTimer = 240;
                 _frequency = 1f;
                 Type = Spotted.Emplacement;
                 break;
+
             case Vehicles.VehicleType.ScoutCar:
                 effect = Gamemode.Config.EffectSpottedMarkerScoutCar;
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.LightVehicle;
                 break;
+
             case Vehicles.VehicleType.TransportAir:
                 effect = Gamemode.Config.EffectSpottedMarkerTransportAir;
                 _defaultTimer = 15;
                 _frequency = 0.5f;
                 Type = Spotted.Aircraft;
                 break;
+
             case Vehicles.VehicleType.LogisticsGround:
                 effect = Gamemode.Config.EffectSpottedMarkerLogisticsGround;
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.LightVehicle;
                 break;
+
             case Vehicles.VehicleType.TransportGround:
                 effect = Gamemode.Config.EffectSpottedMarkerTransportGround;
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.LightVehicle;
                 break;
+
             default:
                 VehicleType = null;
                 _vehicle = null;
@@ -199,12 +219,14 @@ public class SpottedComponent : MonoBehaviour
                 return;
         }
 
-        if (effect.ValidReference(out EffectAsset asset))
+        if (effect.TryGetAsset(out EffectAsset? asset))
         {
             Effect = asset;
         }
         else
+        {
             L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + type + ".");
+        }
 
         if (!AllMarkers.Contains(this))
             AllMarkers.Add(this);
@@ -214,93 +236,78 @@ public class SpottedComponent : MonoBehaviour
 #if ENABLE_SPOTTED_BUFF
     private static void OnExitVehicle(ExitVehicle e)
     {
-        if (e.Vehicle.TryGetComponent(out SpottedComponent comp))
-        {
-            if (comp.IsActive)
-            {
-                if (e.Player.Player.TryGetComponent(out SpottedComponent pcomp) && pcomp.IsActive)
-                    StartOrUpdateBuff(e.Player, false);
-                else
-                    RemoveBuff(e.Player);
-            }
-        }
+        if (!e.Vehicle.TryGetComponent(out SpottedComponent comp) || !comp.IsActive)
+            return;
+
+        if (e.Player.Player.TryGetComponent(out SpottedComponent pcomp) && pcomp.IsActive)
+            StartOrUpdateBuff(e.Player, false);
+        else
+            RemoveBuff(e.Player);
     }
 
     private static void OnEnterVehicle(EnterVehicle e)
     {
-        if (e.Vehicle.TryGetComponent(out SpottedComponent comp))
-        {
-            if (comp.IsActive)
-                StartOrUpdateBuff(e.Player, true);
-        }
+        if (!e.Vehicle.TryGetComponent(out SpottedComponent comp) || !comp.IsActive)
+            return;
+
+        StartOrUpdateBuff(e.Player, true);
     }
 #endif
     public static void MarkTarget(Transform transform, UCPlayer spotter, bool isUav = false)
     {
-        if (transform.gameObject.TryGetComponent(out SpottedComponent spotted))
+        if (!transform.gameObject.TryGetComponent(out SpottedComponent spotted))
+            return;
+        
+        if (transform.TryGetComponent(out InteractableVehicle vehicle) && vehicle.lockedGroup.m_SteamID != spotter.GetTeam())
         {
-            if (transform.TryGetComponent(out InteractableVehicle vehicle) && vehicle.lockedGroup.m_SteamID != spotter.GetTeam())
-            {
-                if (vehicle.transform.TryGetComponent(out VehicleComponent vc) && vc.Data?.Item != null)
-                    spotted.TryAnnounce(spotter, Localization.TranslateEnum(vc.Data.Item.Type, Localization.GetDefaultLanguage()));
-                else
-                    spotted.TryAnnounce(spotter, vehicle.asset.vehicleName);
-
-                L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
-                spotted.Activate(spotter, isUav);
-            }
-            else if (transform.TryGetComponent(out Player player) && player.GetTeam() != spotter.GetTeam() && !Ghost.IsHidden(UCPlayer.FromPlayer(player)!))
-            {
-                spotted.TryAnnounce(spotter, T.SpottedTargetPlayer.Translate(Localization.GetDefaultLanguage()));
-                L.LogDebug("Spotting player " + player.name);
-
-                spotted.Activate(spotter, isUav);
-            }
-            else if (transform.TryGetComponent(out Cache cache) && cache.Team != spotter.GetTeam())
-            {
-                spotted.TryAnnounce(spotter, T.SpottedTargetCache.Translate(Localization.GetDefaultLanguage()));
-                L.LogDebug("Spotting cache " + cache.Name);
-
-                spotted.Activate(spotter, isUav);
-            }
+            if (vehicle.transform.TryGetComponent(out VehicleComponent vc) && vc.Data?.Item != null)
+                spotted.TryAnnounce(spotter, Localization.TranslateEnum(vc.Data.Item.Type, Localization.GetDefaultLanguage()));
             else
-            {
-                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(transform);
-                if (drop != null && drop.GetServersideData().group != spotter.GetTeam())
-                {
-                    spotted.TryAnnounce(spotter, T.SpottedTargetFOB.Translate(Localization.GetDefaultLanguage()));
-                    L.LogDebug("Spotting barricade " + drop.asset.itemName);
-                    spotted.Activate(spotter, isUav);
-                }
-            }
+                spotted.TryAnnounce(spotter, vehicle.asset.vehicleName);
+
+            L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
+            spotted.Activate(spotter, isUav);
+        }
+        else if (transform.TryGetComponent(out Player player) && player.GetTeam() != spotter.GetTeam() && !Ghost.IsHidden(UCPlayer.FromPlayer(player)!))
+        {
+            spotted.TryAnnounce(spotter, T.SpottedTargetPlayer.Translate(Localization.GetDefaultLanguage()));
+            L.LogDebug("Spotting player " + player.name);
+
+            spotted.Activate(spotter, isUav);
+        }
+        else if (transform.TryGetComponent(out Cache cache) && cache.Team != spotter.GetTeam())
+        {
+            spotted.TryAnnounce(spotter, T.SpottedTargetCache.Translate(Localization.GetDefaultLanguage()));
+            L.LogDebug("Spotting cache " + cache.Name);
+
+            spotted.Activate(spotter, isUav);
+        }
+        else
+        {
+            BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(transform);
+            if (drop == null || drop.GetServersideData().group == spotter.GetTeam())
+                return;
+
+            spotted.TryAnnounce(spotter, T.SpottedTargetFOB.Translate(Localization.GetDefaultLanguage()));
+            L.LogDebug("Spotting barricade " + drop.asset.itemName);
+            spotted.Activate(spotter, isUav);
         }
     }
 
     public void OnTargetKilled(int assistXP, int assistRep)
     {
-        if (CurrentSpotter != null)
+        if (CurrentSpotter == null)
+            return;
+
+        Points.AwardXP(new XPParameters(CurrentSpotter.Steam64, _team, assistXP)
         {
-            Points.AwardXP(new XPParameters(CurrentSpotter.Steam64, _team, assistXP)
-            {
-                OverrideReputationAmount = assistRep,
-                Multiplier = 1f,
-                Message = PointsConfig.GetDefaultTranslation(CurrentSpotter.Locale.LanguageInfo, CurrentSpotter.Locale.CultureInfo, XPReward.KillAssist),
-                Reward = XPReward.KillAssist
-            });
-        }
+            OverrideReputationAmount = assistRep,
+            Multiplier = 1f,
+            Message = PointsConfig.GetDefaultTranslation(CurrentSpotter.Locale.LanguageInfo, CurrentSpotter.Locale.CultureInfo, XPReward.KillAssist),
+            Reward = XPReward.KillAssist
+        });
     }
-    [UsedImplicitly]
-    private void OnDestroy()
-    {
-        Deactivate();
-        AllMarkers.Remove(this);
-        if (_statInit)
-        {
-            EventDispatcher.EnterVehicle -= OnEnterVehicle;
-            EventDispatcher.ExitVehicle -= OnExitVehicle;
-            _statInit = false;
-        }
-    }
+
     public void Activate(UCPlayer spotter, bool isUav) => Activate(spotter, _defaultTimer, isUav);
     public void Activate(UCPlayer spotter, float seconds, bool isUav)
     {
@@ -475,6 +482,20 @@ public class SpottedComponent : MonoBehaviour
 
         Deactivate();
     }
+
+    [UsedImplicitly]
+    private void OnDestroy()
+    {
+        Deactivate();
+        AllMarkers.Remove(this);
+        if (!_statInit)
+            return;
+        
+        EventDispatcher.EnterVehicle -= OnEnterVehicle;
+        EventDispatcher.ExitVehicle -= OnExitVehicle;
+        _statInit = false;
+    }
+
     public override string ToString()
     {
         return $"Spotter ({GetInstanceID()}) for {Type}: {(IsActive ? "Spotted" : "Not Spotted")}, CurrentSpotter: {(CurrentSpotter == null ? "null" : CurrentSpotter.Name.PlayerName)}. Under UAV: {(UAVMode ? "Yes" : "No")}, Spotting team: {SpottingTeam}, Owner Team: {OwnerTeam}";

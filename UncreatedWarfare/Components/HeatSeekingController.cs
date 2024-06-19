@@ -2,21 +2,22 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
 {
-    private const float AQUISITION_ANGLE = 65f;
-    private const float AQUISITION_FREQUENCY = 0.25f;
+    private const float AquisitionAngle = 65f;
+    private const float AquisitionFrequency = 0.25f;
 
 
     private float _horizontalRange = 700;
     private float? _verticalRange = 1500;
 
     private InteractableVehicle _vehicle;
-    private EffectAsset _effect;
+    private EffectAsset? _effect;
     private UCPlayer? _lastKnownGunner;
     public List<Transform> Hardpoints { get; set; }
     public List<HeatSeekingMissileComponent> MissilesInFlight { get; set; }
@@ -27,7 +28,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private float _timeOfAquisition;
     private float _timeOfLastScan;
-    public int _currentHardpoint;
+    public int CurrentHardpoint;
 
     public Transform? LockOnTarget { get; private set; }
     public ELockOnMode Status { get; private set; }
@@ -36,24 +37,24 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         if (Hardpoints.Count == 0)
             return null;
 
-        _currentHardpoint++;
-        if (_currentHardpoint >= Hardpoints.Count)
-            _currentHardpoint = 0;
+        CurrentHardpoint++;
+        if (CurrentHardpoint >= Hardpoints.Count)
+            CurrentHardpoint = 0;
 
-        return Hardpoints[_currentHardpoint];
+        return Hardpoints[CurrentHardpoint];
     }
 
 
     private void FixedUpdate()
     {
-        if (Time.time - _timeOfLastScan >= AQUISITION_FREQUENCY)
+        if (Time.time - _timeOfLastScan >= AquisitionFrequency)
         {
             ScanForTargets();
             _timeOfLastScan = Time.time;
         }
     }
 
-    public void Initialize(float horizontalRange, float verticalRange, JsonAssetReference<EffectAsset> lockOnEffect, float aquisitionTime, float timeOutTime)
+    public void Initialize(float horizontalRange, float verticalRange, IAssetLink<EffectAsset>? lockOnEffect, float aquisitionTime, float timeOutTime)
     {
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = horizontalRange;
@@ -63,7 +64,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         Hardpoints = new List<Transform>();
         MissilesInFlight = new List<HeatSeekingMissileComponent>();
-        _currentHardpoint = 0;
+        CurrentHardpoint = 0;
         for (int i = 0; i < 8; i++)
         {
             var hardpoint = _vehicle.transform.Find("Hardpoint_" + i);
@@ -71,12 +72,12 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
                 Hardpoints.Add(hardpoint);
         }
 
-        _effect = lockOnEffect;
-
-        if (!lockOnEffect.Exists)
-            L.LogWarning("HEATSEAKER ERROR: Lock on sound effect not found: " + lockOnEffect.Guid);
+        if (!lockOnEffect.TryGetAsset(out _effect))
+        {
+            L.LogWarning($"HEATSEAKER ERROR: Lock on sound effect not found: {lockOnEffect?.Guid.ToString() ?? "unknown"}.");
+        }
     }
-    public void Initialize(float range, JsonAssetReference<EffectAsset> lockOnEffect, float aquisitionTime, float timeOutTime)
+    public void Initialize(float range, IAssetLink<EffectAsset> lockOnEffect, float aquisitionTime, float timeOutTime)
     {
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = range;
@@ -85,7 +86,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         Hardpoints = new List<Transform>();
         MissilesInFlight = new List<HeatSeekingMissileComponent>();
-        _currentHardpoint = 0;
+        CurrentHardpoint = 0;
         for (int i = 0; i < 8; i++)
         {
             var hardpoint = _vehicle.transform.Find("Hardpoint_" + i);
@@ -94,7 +95,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         }
 
         Hardpoints = new List<Transform>();
-        _currentHardpoint = 0;
+        CurrentHardpoint = 0;
         for (int i = 0; i < 8; i++)
         {
             var hardpoint = _vehicle.transform.Find("Hardpoint_" + 0);
@@ -102,10 +103,10 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
                 Hardpoints.Add(hardpoint);
         }
 
-        _effect = lockOnEffect;
-
-        if (!lockOnEffect.Exists)
-            L.LogWarning("HEATSEAKER ERROR: Lock on sound effect not found: " + lockOnEffect.Guid);
+        if (!lockOnEffect.TryGetAsset(out _effect))
+        {
+            L.LogWarning($"HEATSEAKER ERROR: Lock on sound effect not found: {lockOnEffect?.Guid.ToString() ?? "unknown"}.");
+        }
     }
 
     public UCPlayer? GetGunner(InteractableVehicle vehicle)
@@ -136,7 +137,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             _lastKnownGunner = null;
         }
 
-        float bestTarget = AQUISITION_ANGLE;
+        float bestTarget = AquisitionAngle;
 
         foreach (InteractableVehicle v in VehicleManager.vehicles)
         {
@@ -162,7 +163,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             }
         }
 
-        bestTarget = AQUISITION_ANGLE;
+        bestTarget = AquisitionAngle;
 
         bool lockedOntoCountermeassure = LockOnTarget != null &&
             LockOnTarget.TryGetComponent(out Countermeasure countermeasure) &&

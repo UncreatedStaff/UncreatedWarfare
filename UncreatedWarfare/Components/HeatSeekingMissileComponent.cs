@@ -3,6 +3,7 @@ using System;
 #endif
 using JetBrains.Annotations;
 using SDG.Unturned;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
 using static Uncreated.Warfare.Components.HeatSeekingController;
@@ -154,26 +155,28 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
         float timeDifference = Time.time - _timeOfLastLoop;
 
-        if (timeDifference > 0.05f)
-        {
-            JsonAssetReference<EffectAsset> id = Gamemode.Config.EffectHeatSeekingMissileNoSound;
-            if (timeDifference > 0.4f)
-            {
-                id = Gamemode.Config.EffectHeatSeekingMissileSound;
+        if (timeDifference <= 0.05f)
+            return;
+        
 
-                _timeOfLastLoop = Time.time;
-            }
-            if (id.ValidReference(out EffectAsset effect))
-            {
-                TriggerEffectParameters parameters = new TriggerEffectParameters(effect)
-                {
-                    relevantDistance = 1200f,
-                    position = _projectile.transform.position,
-                    reliable = false
-                };
-                parameters.SetDirection(_projectile.transform.forward);
-                EffectManager.triggerEffect(parameters);
-            }
+        IAssetLink<EffectAsset> id = Gamemode.Config.EffectHeatSeekingMissileNoSound;
+        if (timeDifference > 0.4f)
+        {
+            id = Gamemode.Config.EffectHeatSeekingMissileSound;
+
+            _timeOfLastLoop = Time.time;
         }
+
+        if (!id.TryGetAsset(out EffectAsset? effect))
+            return;
+
+        TriggerEffectParameters parameters = new TriggerEffectParameters(effect)
+        {
+            relevantDistance = 1200f,
+            position = _projectile.transform.position,
+            reliable = false
+        };
+        parameters.SetDirection(_projectile.transform.forward);
+        EffectManager.triggerEffect(parameters);
     }
 }

@@ -1,0 +1,135 @@
+﻿using DanielWillett.SpeedBytes;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Models.Localization;
+
+namespace Uncreated.Warfare;
+
+/// <summary>
+/// Wrapper for a <see cref="Dictionary{TKey, TValue}"/>, has custom JSON reading to take a string or dictionary of translations.<br/><see langword="null"/> = empty list.
+/// </summary>
+/// <remarks>Extension methods located in <see cref="T"/>.</remarks>
+[JsonConverter(typeof(TranslationListConverter))]
+public sealed class TranslationList : Dictionary<string, string>, ICloneable
+{
+    public const int DefaultCharLength = 255;
+    public TranslationList() : this(0) { }
+    public TranslationList(int capacity) : base(capacity, StringComparer.Ordinal) { }
+    public TranslationList(IDictionary<string, string> dictionary) : base(dictionary, StringComparer.Ordinal) { }
+    public TranslationList(string @default) : base(StringComparer.Ordinal)
+    {
+        Add(Localization.GetDefaultLanguage().Code, @default);
+    }
+    public TranslationList(int capacity, string @default) : base(capacity, StringComparer.Ordinal)
+    {
+        Add(Localization.GetDefaultLanguage().Code, @default);
+    }
+    public TranslationList(TranslationList copy) : base(copy.Count, StringComparer.Ordinal)
+    {
+        foreach (KeyValuePair<string, string> pair in copy)
+        {
+            Add(pair.Key, pair.Value);
+        }
+    }
+
+    [return: NotNullIfNotNull(nameof(@default))]
+    public string? Translate(LanguageInfo? language, string? @default) => Translate(language) ?? @default;
+    public string? Translate(LanguageInfo? language)
+    {
+        language ??= Localization.GetDefaultLanguage();
+        if (TryGetValue(language.Code, out string value))
+            return value;
+
+        if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value))
+            return value;
+
+        if (!language.IsDefault && TryGetValue(L.Default, out value))
+            return value;
+
+        return Count > 0 ? Values.ElementAt(0) : null;
+    }
+
+    public TranslationList Clone() => new TranslationList(this);
+    object ICloneable.Clone() => Clone();
+    public void Read(ByteReader reader)
+    {
+        Clear();
+        int len = reader.ReadUInt16();
+        for (int i = 0; i < len; ++i)
+        {
+            Add(reader.ReadShortString(), reader.ReadNullableString()!);
+        }
+    }
+
+    public void Write(ByteWriter writer)
+    {
+        writer.Write((ushort)Count);
+        foreach (KeyValuePair<string, string> vals in this)
+        {
+            writer.WriteShort(vals.Key);
+            writer.WriteNullable(vals.Value);
+        }
+    }
+}
+
+public sealed class TranslationListConverter : JsonConverter<TranslationList>
+{
+    public override TranslationList Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        JsonTokenType token = reader.TokenType;
+        switch (token)
+        {
+            case JsonTokenType.Null:
+                return new TranslationList();
+
+            case JsonTokenType.String:
+                return new TranslationList(reader.GetString()!.Replace("\\n", "\n"));
+
+            case JsonTokenType.StartObject:
+                TranslationList list = new TranslationList(2);
+                while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    string? key = reader.GetString();
+                    if (!string.IsNullOrWhiteSpace(key) && reader.Read() && reader.TokenType == JsonTokenType.String)
+                    {
+                        string? val = reader.GetString();
+                        if (val is not null)
+                            list.Add(key, val.Replace("\\n", "\n"));
+                    }
+                    else throw new JsonException("Invalid token type for TranslationList at key \"" + (key ?? "null") + "\".");
+                }
+                return list;
+
+            default:
+                throw new JsonException("Invalid token type for TranslationList.");
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, TranslationList value, JsonSerializerOptions options)
+    {
+        if (value == null || value.Count == 0)
+        {
+            writer.WriteNullValue();
+        }
+        else if (value.Count == 1 && value.TryGetValue(L.Default, out string v))
+        {
+            writer.WriteStringValue(v.Replace("\n", "\\n"));
+        }
+        else
+        {
+            writer.WriteStartObject();
+
+            foreach (KeyValuePair<string, string> kvp in value)
+            {
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteStringValue(kvp.Value.Replace("\n", "\\n"));
+            }
+
+            writer.WriteEndObject();
+        }
+    }
+}

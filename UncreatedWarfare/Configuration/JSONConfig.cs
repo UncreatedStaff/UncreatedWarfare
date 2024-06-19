@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Json;
 using Uncreated.Warfare.Commands;
 
 namespace Uncreated.Warfare.Configuration;
@@ -14,34 +13,34 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
     public delegate TData CustomDeserializer(ref Utf8JsonReader reader);
     public delegate void CustomSerializer(TData obj, Utf8JsonWriter writer);
 
-    readonly string _dir;
     public Type Type = typeof(TData);
-    private readonly CustomDeserializer? customDeserializer;
-    private readonly bool useCustomDeserializer;
-    private readonly CustomSerializer? customSerializer;
-    private readonly bool useCustomSerializer;
+
+    private readonly string _dir;
+    private readonly CustomDeserializer? _customDeserializer;
+    private readonly bool _useCustomDeserializer;
+    private readonly CustomSerializer? _customSerializer;
+    private readonly bool _useCustomSerializer;
     private readonly bool _regReload;
-    private readonly string? reloadKey;
+    private readonly string? _reloadKey;
+    private readonly bool _isFirst = true;
     public string Directory => _dir;
-    public string? ReloadKey => reloadKey;
+    public string? ReloadKey => _reloadKey;
     public TData Data { get; private set; }
-    public Config(string directory, string filename, string reloadKey)
-        : this(directory, filename)
+    public Config(string directory, string filename, string reloadKey) : this(directory, filename)
     {
-        if (reloadKey is not null)
-        {
-            this.reloadKey = reloadKey;
-            _regReload = ReloadCommand.RegisterConfigForReload(this);
-        }
+        if (reloadKey == null)
+            return;
+
+        _reloadKey = reloadKey;
+        _regReload = ReloadCommand.RegisterConfigForReload(this);
     }
-    private readonly bool isFirst = true;
     public Config(string directory, string filename)
     {
         _dir = Path.Combine(directory, filename);
-        customDeserializer = null;
-        useCustomDeserializer = false;
-        customSerializer = null;
-        useCustomSerializer = false;
+        _customDeserializer = null;
+        _useCustomDeserializer = false;
+        _customSerializer = null;
+        _useCustomSerializer = false;
         if (!System.IO.Directory.Exists(directory))
         {
             try
@@ -59,20 +58,20 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             LoadDefaults();
         else
             Reload();
-        isFirst = false;
+        _isFirst = false;
     }
     public void DeregisterReload()
     {
-        if (_regReload && reloadKey is not null)
-            ReloadCommand.DeregisterConfigForReload(reloadKey);
+        if (_regReload && _reloadKey is not null)
+            ReloadCommand.DeregisterConfigForReload(_reloadKey);
     }
     public Config(string directory, string filename, CustomDeserializer deserializer, CustomSerializer serializer)
     {
         _dir = directory + filename;
-        customDeserializer = deserializer;
-        useCustomDeserializer = deserializer != null;
-        customSerializer = serializer;
-        useCustomSerializer = serializer != null;
+        _customDeserializer = deserializer;
+        _useCustomDeserializer = deserializer != null;
+        _customSerializer = serializer;
+        _useCustomSerializer = serializer != null;
         if (!System.IO.Directory.Exists(directory))
         {
             try
@@ -96,13 +95,13 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             File.Create(_dir)?.Close();
         using (FileStream stream = new FileStream(_dir, FileMode.Truncate, FileAccess.Write, FileShare.None))
         {
-            if (useCustomSerializer)
+            if (_useCustomSerializer)
             {
                 Utf8JsonWriter? writer = null;
                 try
                 {
-                    writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                    customSerializer!.Invoke(Data, writer);
+                    writer = new Utf8JsonWriter(stream, ConfigurationSettings.JsonWriterOptions);
+                    _customSerializer!.Invoke(Data, writer);
                 }
                 catch (Exception ex)
                 {
@@ -119,7 +118,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
         other:
             try
             {
-                byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Data, JsonEx.serializerSettings));
+                byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Data, ConfigurationSettings.JsonSerializerSettings));
                 stream.Write(utf8, 0, utf8.Length);
             }
             catch (Exception ex)
@@ -136,7 +135,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
         if (!File.Exists(_dir))
         {
             LoadDefaults();
-            if (!isFirst)
+            if (!_isFirst)
                 OnReload();
         }
         else
@@ -154,23 +153,23 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
                 stream.Read(bytes, 0, (int)len);
                 try
                 {
-                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                    if (useCustomDeserializer)
+                    Utf8JsonReader reader = new Utf8JsonReader(bytes, ConfigurationSettings.JsonReaderOptions);
+                    if (_useCustomDeserializer)
                     {
                         if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                         {
-                            Data = customDeserializer!.Invoke(ref reader);
+                            Data = _customDeserializer!.Invoke(ref reader);
                         }
                         if (Data is not null)
                         {
-                            if (!isFirst)
+                            if (!_isFirst)
                                 OnReload();
                             return;
                         }
                     }
 
-                    Data = JsonSerializer.Deserialize<TData>(ref reader, JsonEx.serializerSettings)!;
-                    if (!isFirst)
+                    Data = JsonSerializer.Deserialize<TData>(ref reader, ConfigurationSettings.JsonSerializerSettings)!;
+                    if (!_isFirst)
                         OnReload();
                 }
                 catch (Exception ex)
@@ -183,7 +182,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             return;
         loadDefaults:
             LoadDefaults();
-            if (!isFirst)
+            if (!_isFirst)
                 OnReload();
         }
     }
@@ -204,9 +203,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
                         x.AttributeType == typeof(PreventUpgradeAttribute)) > 0) continue;
                     object currentvalue = fields[i].GetValue(Data);
                     object defaultvalue = fields[i].GetValue(defaultConfig);
-                    if (currentvalue == defaultvalue) continue;
-                    else if (currentvalue != fields[i].FieldType.getDefaultValue()) continue;
-                    else
+                    if (currentvalue != defaultvalue && currentvalue == fields[i].FieldType.getDefaultValue())
                     {
                         fields[i].SetValue(Data, defaultvalue);
                         needsSaving = true;
@@ -221,7 +218,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             if (needsSaving)
             {
                 Save();
-                if (!isFirst)
+                if (!_isFirst)
                     OnReload();
             }
         }
@@ -237,13 +234,13 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
         Data.SetDefaults();
         using (FileStream stream = new FileStream(_dir, FileMode.Create, FileAccess.Write, FileShare.None))
         {
-            if (useCustomSerializer)
+            if (_useCustomSerializer)
             {
                 Utf8JsonWriter? writer = null;
                 try
                 {
-                    writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                    customSerializer!.Invoke(Data, writer);
+                    writer = new Utf8JsonWriter(stream, ConfigurationSettings.JsonWriterOptions);
+                    _customSerializer!.Invoke(Data, writer);
                 }
                 catch (Exception ex)
                 {
@@ -259,7 +256,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             }
 
         other:
-            byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Data, JsonEx.serializerSettings));
+            byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Data, ConfigurationSettings.JsonSerializerSettings));
             stream.Write(utf8, 0, utf8.Length);
         }
     }

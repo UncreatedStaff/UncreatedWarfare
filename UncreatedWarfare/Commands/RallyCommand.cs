@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Commands;
 public class RallyCommand : IExecutableCommand
 {
     private const string Syntax = "/rally";
-    private const string Help = "Deploys you to a rallypoint.";
+    private const string Help = "Teleports your squad to your current location after a delay if they don't opt out.";
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
