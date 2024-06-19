@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System.Collections.Generic;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -9,12 +10,16 @@ internal class Countermeasure : MonoBehaviour
     public bool Burning { get; private set; }
     private float _startTime;
     public static List<Countermeasure> ActiveCountermeasures = new List<Countermeasure>();
+
+    [UsedImplicitly]
     private void Start()
     {
         _startTime = Time.time;
         Burning = true;
         ActiveCountermeasures.Add(this);
     }
+
+    [UsedImplicitly]
     private void FixedUpdate()
     {
         float elapsed = Time.time - _startTime;
@@ -25,6 +30,8 @@ internal class Countermeasure : MonoBehaviour
         if (elapsed > 8)
             Destroy(this);
     }
+
+    [UsedImplicitly]
     private void OnDestroy()
     {
         ActiveCountermeasures.Remove(this);

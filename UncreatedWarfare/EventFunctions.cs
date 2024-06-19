@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
@@ -13,6 +14,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Deaths;
@@ -362,7 +364,7 @@ public static class EventFunctions
             RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angleX, ref angleY, ref angleZ, ref owner, ref group, ref shouldAllow);
             if (!shouldAllow) return;
 
-            if (Gamemode.Config.BarricadeAmmoBag.ValidReference(out Guid guid) && guid == barricade.asset.GUID)
+            if (Gamemode.Config.BarricadeAmmoBag.TryGetGuid(out Guid guid) && guid == barricade.asset.GUID)
             {
                 if (!perms && player.KitClass != Class.Rifleman)
                 {
@@ -482,8 +484,8 @@ public static class EventFunctions
                     FactionInfo? faction = TeamManager.GetFactionSafe(e.Player.GetTeam());
                     if (faction is not null && TeamManager.IsInMain(e.Player))
                     {
-                        faction.Build.ValidReference(out ItemAsset? buildAsset);
-                        faction.Ammo.ValidReference(out ItemAsset? ammoAsset);
+                        faction.Build.TryGetAsset(out ItemAsset? buildAsset);
+                        faction.Ammo.TryGetAsset(out ItemAsset? ammoAsset);
                         bool build = buildAsset is not null && buildAsset.GUID == itemAsset.GUID;
                         if (build || ammoAsset is not null && ammoAsset.GUID == itemAsset.GUID)
                         {
@@ -846,7 +848,7 @@ public static class EventFunctions
             if (UCWarfare.Config.EnablePlayerJoinLeaveMessages)
                 Chat.Broadcast(T.PlayerConnected, ucplayer);
             Data.Reporter?.OnPlayerJoin(ucplayer.SteamPlayer);
-            PlayerManager.NetCalls.SendPlayerJoined.NetInvoke(new PlayerListEntry
+            PlayerManager.NetCalls.SendPlayerJoined.NetInvoke(new ModerationUI.PlayerListEntry
             {
                 Duty = ucplayer.OnDuty(),
                 Name = names.CharacterName,
@@ -1020,13 +1022,13 @@ public static class EventFunctions
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
         if (drop == null) return;
 
-        if (Data.Gamemode is Insurgency { State: not State.Active } && Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out Guid guid) && guid == drop.asset.GUID)
+        if (Data.Gamemode is Insurgency { State: not State.Active } && Gamemode.Config.BarricadeInsurgencyCache.TryGetGuid(out Guid guid) && guid == drop.asset.GUID)
         {
             shouldAllow = false;
             return;
         }
 
-        if (Gamemode.Config.BarricadeFOBRadioDamaged.ValidReference(out guid) && guid == drop.asset.GUID && instigatorSteamID != CSteamID.Nil)
+        if (Gamemode.Config.BarricadeFOBRadioDamaged.TryGetGuid(out guid) && guid == drop.asset.GUID && instigatorSteamID != CSteamID.Nil)
         {
             shouldAllow = false;
             return;

@@ -13,15 +13,12 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Localization;
 using UnityEngine;
@@ -53,10 +50,10 @@ public static class TeamManager
         new FactionInfo(FactionInfo.USA, "United States", "USA", "USA", "78b2ff", null, "us", "https://i.imgur.com/P4JgkHB.png")
         {
             PrimaryKey = 2,
-            Build = "a70978a0b47e4017a0261e676af57042",
-            Ammo = "51e1e372bf5341e1b4b16a0eacce37eb",
-            FOBRadio = "7715ad81f1e24f60bb8f196dd09bd4ef",
-            RallyPoint = "5e1db525179341d3b0c7576876212a81",
+            Build = AssetLink.Create<ItemAsset>("a70978a0b47e4017a0261e676af57042"),
+            Ammo = AssetLink.Create<ItemAsset>("51e1e372bf5341e1b4b16a0eacce37eb"),
+            FOBRadio = AssetLink.Create<ItemBarricadeAsset>("7715ad81f1e24f60bb8f196dd09bd4ef"),
+            RallyPoint = AssetLink.Create<ItemBarricadeAsset>("5e1db525179341d3b0c7576876212a81"),
             NameTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "США" },
@@ -79,10 +76,10 @@ public static class TeamManager
         new FactionInfo(FactionInfo.Russia, "Russia", "RU", "Russia", "f53b3b", null, "ru", "https://i.imgur.com/YMWSUZC.png")
         {
             PrimaryKey = 3,
-            Build = "6a8b8b3c79604aeea97f53c235947a1f",
-            Ammo = "8dd66da5affa480ba324e270e52a46d7",
-            FOBRadio = "fb910102ad954169abd4b0cb06a112c8",
-            RallyPoint = "0d7895360c80440fbe4a45eba28b2007",
+            Build = AssetLink.Create<ItemAsset>("6a8b8b3c79604aeea97f53c235947a1f"),
+            Ammo = AssetLink.Create<ItemAsset>("8dd66da5affa480ba324e270e52a46d7"),
+            FOBRadio = AssetLink.Create<ItemBarricadeAsset>("fb910102ad954169abd4b0cb06a112c8"),
+            RallyPoint = AssetLink.Create<ItemBarricadeAsset>("0d7895360c80440fbe4a45eba28b2007"),
             NameTranslations = new TranslationList(4)
             {
                 { Languages.Russian, "РОССИЯ" },
@@ -109,10 +106,10 @@ public static class TeamManager
         new FactionInfo(FactionInfo.MEC, "Middle Eastern Coalition", "MEC", "MEC", "ffcd8c", null, "me", "https://i.imgur.com/rPmpNzz.png")
         {
             PrimaryKey = 4,
-            Build = "9c7122f7e70e4a4da26a49b871087f9f",
-            Ammo = "bfc9aed75a3245acbfd01bc78fcfc875",
-            FOBRadio = "c7754ac78083421da73006b12a56811a",
-            RallyPoint = "c03352d9e6bb4e2993917924b604ee76",
+            Build = AssetLink.Create<ItemAsset>("9c7122f7e70e4a4da26a49b871087f9f"),
+            Ammo = AssetLink.Create<ItemAsset>("bfc9aed75a3245acbfd01bc78fcfc875"),
+            FOBRadio = AssetLink.Create<ItemBarricadeAsset>("c7754ac78083421da73006b12a56811a"),
+            RallyPoint = AssetLink.Create<ItemBarricadeAsset>("c03352d9e6bb4e2993917924b604ee76"),
             TMProSpriteIndex = 3,
             Emoji = "938653900913901598|938654469518950410",
             NameTranslations = new TranslationList(4)
@@ -135,10 +132,10 @@ public static class TeamManager
         new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", null, "ge", "https://i.imgur.com/91Apxc5.png")
         {
             PrimaryKey = 5,
-            Build = "35eabf178e4e4d82aac34fcbf8e690e3",
-            Ammo = "15857c3f693b4209b7b92a0b8438be34",
-            FOBRadio = "439c32cced234f358e101294ea0ce3e4",
-            RallyPoint = "49663078b594410b98b8a51e8eff3609",
+            Build = AssetLink.Create<ItemAsset>("35eabf178e4e4d82aac34fcbf8e690e3"),
+            Ammo = AssetLink.Create<ItemAsset>("15857c3f693b4209b7b92a0b8438be34"),
+            FOBRadio = AssetLink.Create<ItemBarricadeAsset>("439c32cced234f358e101294ea0ce3e4"),
+            RallyPoint = AssetLink.Create<ItemBarricadeAsset>("49663078b594410b98b8a51e8eff3609"),
             TMProSpriteIndex = 4,
             Emoji = "🇩🇪",
             NameTranslations = new TranslationList(4)
@@ -162,10 +159,10 @@ public static class TeamManager
         new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", null, "ch", "https://i.imgur.com/Yns89Yk.png")
         {
             PrimaryKey = 6,
-            Build = "de7c4cafd0304848a7141e3860b2248a",
-            Ammo = "2f3cfa9c6bb645fbab8f49ce556d1a1a",
-            FOBRadio = "7bde55f70c494418bdd81926fb7d6359",
-            RallyPoint = "7720ced42dba4c1eac16d14453cd8bc4",
+            Build = AssetLink.Create<ItemAsset>("de7c4cafd0304848a7141e3860b2248a"),
+            Ammo = AssetLink.Create<ItemAsset>("2f3cfa9c6bb645fbab8f49ce556d1a1a"),
+            FOBRadio = AssetLink.Create<ItemBarricadeAsset>("7bde55f70c494418bdd81926fb7d6359"),
+            RallyPoint = AssetLink.Create<ItemBarricadeAsset>("7720ced42dba4c1eac16d14453cd8bc4"),
             TMProSpriteIndex = 5,
             Emoji = "🇨🇳",
             NameTranslations = new TranslationList(4)
@@ -422,7 +419,8 @@ public static class TeamManager
         {
             if (_t1Clr.HasValue)
                 return _t1Clr.Value;
-            _t1Clr = Team1ColorHex.Hex();
+
+            _t1Clr = FormattingUtility.TryParseColor(Team1ColorHex, out Color clr) ? clr : Color.white;
             return _t1Clr.Value;
         }
     }
@@ -432,7 +430,8 @@ public static class TeamManager
         {
             if (_t2Clr.HasValue)
                 return _t2Clr.Value;
-            _t2Clr = Team2ColorHex.Hex();
+
+            _t2Clr = FormattingUtility.TryParseColor(Team2ColorHex, out Color clr) ? clr : Color.white;
             return _t2Clr.Value;
         }
     }
@@ -442,7 +441,8 @@ public static class TeamManager
         {
             if (_t3Clr.HasValue)
                 return _t3Clr.Value;
-            _t3Clr = AdminColorHex.Hex();
+
+            _t3Clr = FormattingUtility.TryParseColor(AdminColorHex, out Color clr) ? clr : Color.white;
             return _t3Clr.Value;
         }
     }
@@ -457,7 +457,7 @@ public static class TeamManager
             {
                 for (int i = 0; i < FactionsIntl.Count; ++i)
                 {
-                    if (FactionsIntl[i].FactionId.Equals(_data.Data.Team1FactionId.Value))
+                    if (FactionsIntl[i].FactionId.Equals(_data.Data.Team1FactionId))
                     {
                         _t1Faction = FactionsIntl[i];
                         return _t1Faction;
@@ -479,7 +479,7 @@ public static class TeamManager
             {
                 for (int i = 0; i < FactionsIntl.Count; ++i)
                 {
-                    if (FactionsIntl[i].FactionId.Equals(_data.Data.Team2FactionId.Value))
+                    if (FactionsIntl[i].FactionId.Equals(_data.Data.Team2FactionId))
                     {
                         _t2Faction = FactionsIntl[i];
                         return _t2Faction;
@@ -501,7 +501,7 @@ public static class TeamManager
             {
                 for (int i = 0; i < FactionsIntl.Count; ++i)
                 {
-                    if (FactionsIntl[i].FactionId.Equals(_data.Data.AdminFactionId.Value))
+                    if (FactionsIntl[i].FactionId.Equals(_data.Data.AdminFactionId))
                     {
                         _t3Faction = FactionsIntl[i];
                         return _t3Faction;
@@ -702,17 +702,16 @@ public static class TeamManager
         };
     }
     public static FactionInfo? GetFactionInfo(uint? id) => id.HasValue ? GetFactionInfo(id.Value) : null;
-    public static FactionInfo? GetFactionInfo(PrimaryKey id)
+    public static FactionInfo? GetFactionInfo(uint id)
     {
         lock (FactionsIntl)
         {
-            uint pk = id.Key;
-            if (pk == 0) return null;
-            if (FactionsIntl.Count >= pk && FactionsIntl[(int)pk - 1].PrimaryKey.Key == pk)
-                return FactionsIntl[(int)pk - 1];
+            if (id == 0) return null;
+            if (FactionsIntl.Count >= id && FactionsIntl[(int)id - 1].PrimaryKey == id)
+                return FactionsIntl[(int)id - 1];
             for (int i = 0; i < FactionsIntl.Count; ++i)
             {
-                if (FactionsIntl[i].PrimaryKey.Key == pk)
+                if (FactionsIntl[i].PrimaryKey == id)
                     return FactionsIntl[i];
             }
         }
@@ -1446,42 +1445,42 @@ public static class TeamManager
                 if (faction.Glasses.TryMatchVariant(input, out variant))
                     return RedirectType.Glasses;
                 if (clothingOnly) continue;
-                if (faction.RallyPoint.ValidReference(out Guid guid) && guid == input)
+                if (faction.RallyPoint.TryGetGuid(out Guid guid) && guid == input)
                     return RedirectType.RallyPoint;
-                if (faction.FOBRadio.ValidReference(out guid) && guid == input)
+                if (faction.FOBRadio.TryGetGuid(out guid) && guid == input)
                     return RedirectType.Radio;
-                if (faction.Build.ValidReference(out guid) && guid == input)
+                if (faction.Build.TryGetGuid(out guid) && guid == input)
                     return RedirectType.BuildSupply;
-                if (faction.Ammo.ValidReference(out guid) && guid == input)
+                if (faction.Ammo.TryGetGuid(out guid) && guid == input)
                     return RedirectType.AmmoSupply;
             }
         }
         faction = null;
         if (!clothingOnly)
         {
-            if (Gamemode.Config.BarricadeAmmoBag.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(input))
                 return RedirectType.AmmoBag;
-            if (Gamemode.Config.BarricadeFOBBunkerBase.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeFOBBunkerBase.MatchGuid(input))
                 return RedirectType.Bunker;
-            if (Gamemode.Config.BarricadeFOBBunker.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeFOBBunker.MatchGuid(input))
                 return RedirectType.BunkerBuilt;
-            if (Gamemode.Config.BarricadeAmmoCrateBase.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeAmmoCrateBase.MatchGuid(input))
                 return RedirectType.AmmoCrate;
-            if (Gamemode.Config.BarricadeRepairStationBase.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeRepairStationBase.MatchGuid(input))
                 return RedirectType.RepairStation;
-            if (Gamemode.Config.BarricadeAmmoCrate.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeAmmoCrate.MatchGuid(input))
                 return RedirectType.AmmoCrateBuilt;
-            if (Gamemode.Config.BarricadeRepairStation.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeRepairStation.MatchGuid(input))
                 return RedirectType.RepairStationBuilt;
-            if (Gamemode.Config.BarricadeUAV.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeUAV.MatchGuid(input))
                 return RedirectType.UAV;
-            if (Gamemode.Config.BarricadeInsurgencyCache.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeInsurgencyCache.MatchGuid(input))
                 return RedirectType.Cache;
-            if (Gamemode.Config.ItemEntrenchingTool.AnyMapsContainGuid(input))
+            if (Gamemode.Config.ItemEntrenchingTool.MatchGuid(input))
                 return RedirectType.EntrenchingTool;
-            if (Gamemode.Config.ItemLaserDesignator.AnyMapsContainGuid(input))
+            if (Gamemode.Config.ItemLaserDesignator.MatchGuid(input))
                 return RedirectType.LaserDesignator;
-            if (Gamemode.Config.BarricadeFOBRadioDamaged.AnyMapsContainGuid(input))
+            if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchGuid(input))
                 return RedirectType.RadioDamaged;
         }
         
@@ -1496,6 +1495,7 @@ public static class TeamManager
         state = null!;
         byte amt2 = 0;
         ItemAsset? rtn;
+        IAssetLink<ItemAsset>? asset;
         switch (type)
         {
             case RedirectType.Shirt:
@@ -1503,160 +1503,200 @@ public static class TeamManager
                     rtn = null;
                 else
                 {
-                    ItemShirtAsset? sasset = kitFaction.Shirts.Resolve(variant)!;
-                    if (sasset == null && requesterTeam != null && requesterTeam != kitFaction)
-                        requesterTeam.Shirts.Resolve(variant);
-                    rtn = sasset;
+                    asset = kitFaction.Shirts.Resolve(variant);
+
+                    if (asset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        asset = requesterTeam.Shirts.Resolve(variant);
+
+                    asset.TryGetAsset(out rtn);
                 }
                 break;
+
             case RedirectType.Pants:
                 if (kitFaction == null)
                     rtn = null;
                 else
                 {
-                    ItemPantsAsset? passet = kitFaction.Pants.Resolve(variant)!;
-                    if (passet == null && requesterTeam != null && requesterTeam != kitFaction)
+                    asset = kitFaction.Pants.Resolve(variant);
+
+                    if (asset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Pants.Resolve(variant);
-                    rtn = passet;
+
+                    asset.TryGetAsset(out rtn);
                 }
                 break;
+
             case RedirectType.Vest:
                 if (kitFaction == null)
                     rtn = null;
                 else
                 {
-                    ItemVestAsset? vasset = kitFaction.Vests.Resolve(variant)!;
-                    if (vasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                    asset = kitFaction.Vests.Resolve(variant);
+
+                    if (asset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Vests.Resolve(variant);
-                    rtn = vasset;
+
+                    asset.TryGetAsset(out rtn);
                 }
                 break;
+
             case RedirectType.Backpack:
                 if (kitFaction == null)
                     rtn = null;
                 else
                 {
-                    ItemBackpackAsset? bkasset = kitFaction.Backpacks.Resolve(variant)!;
-                    if (bkasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                    asset = kitFaction.Backpacks.Resolve(variant);
+
+                    if (asset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Backpacks.Resolve(variant);
-                    rtn = bkasset;
+
+                    asset.TryGetAsset(out rtn);
                 }
                 break;
+
             case RedirectType.Glasses:
                 if (kitFaction == null)
                     rtn = null;
                 else
                 {
-                    ItemGlassesAsset? gasset = kitFaction.Glasses.Resolve(variant)!;
-                    if (gasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                    asset = kitFaction.Glasses.Resolve(variant);
+
+                    if (asset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Glasses.Resolve(variant);
-                    rtn = gasset;
+
+                    asset.TryGetAsset(out rtn);
                 }
                 break;
+
             case RedirectType.Mask:
                 if (kitFaction == null)
                     rtn = null;
                 else
                 {
-                    ItemMaskAsset? masset = kitFaction.Masks.Resolve(variant)!;
-                    if (masset == null && requesterTeam != null && requesterTeam != kitFaction)
+                    asset = kitFaction.Masks.Resolve(variant);
+
+                    if (asset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Masks.Resolve(variant);
-                    rtn = masset;
+
+                    asset.TryGetAsset(out rtn);
                 }
                 break;
+
             case RedirectType.Hat:
                 if (kitFaction == null)
                     rtn = null;
                 else
                 {
-                    ItemHatAsset? hasset = kitFaction.Hats.Resolve(variant)!;
-                    if (hasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                    asset = kitFaction.Hats.Resolve(variant);
+
+                    if (asset == null && requesterTeam != null && requesterTeam != kitFaction)
                         requesterTeam.Hats.Resolve(variant);
-                    rtn = hasset;
+
+                    asset.TryGetAsset(out rtn);
                 }
                 break;
+
             case RedirectType.BuildSupply:
                 if (requesterTeam == null)
                     rtn = null;
                 else
                 {
-                    requesterTeam.Build.ValidReference(out ItemAsset iasset);
+                    requesterTeam.Build.TryGetAsset(out ItemAsset? iasset);
                     rtn = iasset;
                 }
                 break;
+
             case RedirectType.AmmoSupply:
                 if (requesterTeam == null)
                     rtn = null;
                 else
                 {
-                    requesterTeam.Ammo.ValidReference(out ItemAsset iasset);
+                    requesterTeam.Ammo.TryGetAsset(out ItemAsset? iasset);
                     rtn = iasset;
                 }
                 break;
+
             case RedirectType.RallyPoint:
                 if (requesterTeam == null)
                     rtn = null;
                 else
                 {
-                    requesterTeam.RallyPoint.ValidReference(out ItemBarricadeAsset rasset);
+                    requesterTeam.RallyPoint.TryGetAsset(out ItemBarricadeAsset? rasset);
                     rtn = rasset;
                 }
                 break;
+
             case RedirectType.Radio:
                 if (requesterTeam == null)
                     rtn = null;
                 else
                 {
-                    requesterTeam.FOBRadio.ValidReference(out ItemBarricadeAsset rasset);
+                    requesterTeam.FOBRadio.TryGetAsset(out ItemBarricadeAsset? rasset);
                     rtn = rasset;
                 }
                 break;
+
             case RedirectType.RadioDamaged:
-                rtn = Gamemode.Config.BarricadeFOBRadioDamaged.GetAsset();
+                Gamemode.Config.BarricadeFOBRadioDamaged.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.AmmoBag:
-                rtn = Gamemode.Config.BarricadeAmmoBag.GetAsset();
+                Gamemode.Config.BarricadeAmmoBag.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.AmmoCrate:
-                rtn = Gamemode.Config.BarricadeAmmoCrateBase.GetAsset();
+                Gamemode.Config.BarricadeAmmoCrateBase.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.AmmoCrateBuilt:
-                rtn = Gamemode.Config.BarricadeAmmoCrate.GetAsset();
+                Gamemode.Config.BarricadeAmmoCrate.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.RepairStation:
-                rtn = Gamemode.Config.BarricadeRepairStationBase.GetAsset();
+                Gamemode.Config.BarricadeRepairStationBase.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.RepairStationBuilt:
-                rtn = Gamemode.Config.BarricadeRepairStation.GetAsset();
+                Gamemode.Config.BarricadeRepairStation.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.Bunker:
-                rtn = Gamemode.Config.BarricadeFOBBunkerBase.GetAsset();
+                Gamemode.Config.BarricadeFOBBunkerBase.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.BunkerBuilt:
-                rtn = Gamemode.Config.BarricadeFOBBunker.GetAsset();
+                Gamemode.Config.BarricadeFOBBunker.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.UAV:
-                rtn = Gamemode.Config.BarricadeUAV.GetAsset();
+                Gamemode.Config.BarricadeUAV.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.Cache:
-                rtn = Gamemode.Config.BarricadeInsurgencyCache.GetAsset();
+                Gamemode.Config.BarricadeInsurgencyCache.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.VehicleBay:
-                rtn = Gamemode.Config.StructureVehicleBay.GetAsset();
+                Gamemode.Config.StructureVehicleBay.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.LaserDesignator:
-                rtn = Gamemode.Config.ItemLaserDesignator.GetAsset();
+                Gamemode.Config.ItemLaserDesignator.TryGetAsset(out rtn);
                 break;
+
             case RedirectType.EntrenchingTool:
-                rtn = Gamemode.Config.ItemEntrenchingTool.GetAsset();
+                Gamemode.Config.ItemEntrenchingTool.TryGetAsset(out rtn);
                 break;
+
             default:
                 L.LogWarning("Unknown redirect: " + type + ".");
                 goto case RedirectType.None;
+
             case RedirectType.None:
                 rtn = null;
                 break;
         }
+
         if (rtn != null)
         {
             amount = amt2 == 0 ? rtn.amount : amt2;
@@ -1710,7 +1750,7 @@ public static class TeamManager
     }
     private static bool WriteFactionIntl(FactionInfo faction, LanguageInfo language, StreamWriter writer, bool writeMising)
     {
-        FactionInfo? defaultFaction = Array.Find(DefaultFactions, x => x.PrimaryKey.Key == faction.PrimaryKey.Key);
+        FactionInfo? defaultFaction = Array.Find(DefaultFactions, x => x.PrimaryKey == faction.PrimaryKey);
 
         GetValue(faction.NameTranslations, defaultFaction?.NameTranslations, out string? nameValue, out bool isNameValueDefault);
         GetValue(faction.ShortNameTranslations, defaultFaction?.ShortNameTranslations, out string? shortNameValue, out bool isShortNameValueDefault);
@@ -1719,7 +1759,7 @@ public static class TeamManager
         if (!writeMising && isNameValueDefault && isShortNameValueDefault && isAbbreviationNameValueDefault)
             return false;
 
-        writer.WriteLine("# " + faction.GetName(null) + " (ID: " + faction.FactionId + ", #" + faction.PrimaryKey.Key.ToString(CultureInfo.InvariantCulture) + ")");
+        writer.WriteLine("# " + faction.GetName(null) + " (ID: " + faction.FactionId + ", #" + faction.PrimaryKey.ToString(CultureInfo.InvariantCulture) + ")");
         if (faction.Name != null)
             writer.WriteLine("#  Name:         " + faction.Name);
         if (faction.ShortName != null)
@@ -1791,72 +1831,44 @@ public class TeamConfig : Config<TeamConfigData>
 public class TeamConfigData : JSONConfigData
 {
     [JsonPropertyName("t1Faction")]
-    public RotatableConfig<string> Team1FactionId { get; set; }
+    public string Team1FactionId { get; set; }
+
     [JsonPropertyName("t2Faction")]
-    public RotatableConfig<string> Team2FactionId { get; set; }
+    public string Team2FactionId { get; set; }
+
     [JsonPropertyName("adminFaction")]
-    public RotatableConfig<string> AdminFactionId { get; set; }
+    public string AdminFactionId { get; set; }
 
     [JsonPropertyName("defaultkit")]
-    public RotatableConfig<string> DefaultKit { get; set; }
+    public string DefaultKit { get; set; }
+
     [JsonPropertyName("team1spawnangle")]
-    public RotatableConfig<float> Team1SpawnYaw { get; set; }
+    public float Team1SpawnYaw { get; set; }
+
     [JsonPropertyName("team2spawnangle")]
-    public RotatableConfig<float> Team2SpawnYaw { get; set; }
+    public float Team2SpawnYaw { get; set; }
+
     [JsonPropertyName("lobbyspawnangle")]
-    public RotatableConfig<float> LobbySpawnpointYaw { get; set; }
+    public float LobbySpawnpointYaw { get; set; }
 
     [JsonPropertyName("team_switch_cooldown")]
     public float TeamSwitchCooldown { get; set; }
+
     [JsonPropertyName("allowedTeamGap")]
     public float AllowedDifferencePercent { get; set; }
+
     [JsonPropertyName("balanceTeams")]
     public bool BalanceTeams { get; set; }
     public override void SetDefaults()
     {
         // don't even think about leaking these
-        Team1FactionId = new RotatableConfig<string>(FactionInfo.USA, new RotatableDefaults<string>
-        {
-            { MapScheduler.FoolsRoad,       FactionInfo.USA },
-            { MapScheduler.Nuijamaa,        FactionInfo.USA },
-            { MapScheduler.GooseBay,        FactionInfo.USA },
-            { MapScheduler.GulfOfAqaba,     FactionInfo.USA },
-            { MapScheduler.ChangbaiShan,    FactionInfo.Germany },
-        });
-        Team2FactionId = new RotatableConfig<string>(FactionInfo.Russia, new RotatableDefaults<string>
-        {
-            { MapScheduler.FoolsRoad,       FactionInfo.Russia },
-            { MapScheduler.Nuijamaa,        FactionInfo.Russia },
-            { MapScheduler.GooseBay,        FactionInfo.Russia },
-            { MapScheduler.GulfOfAqaba,     FactionInfo.MEC },
-            { MapScheduler.ChangbaiShan,    FactionInfo.China },
-        });
+        Team1FactionId = FactionInfo.USA;
+        Team2FactionId = FactionInfo.Russia;
         AdminFactionId = FactionInfo.Admins;
         DefaultKit = "default";
-        Team1SpawnYaw = new RotatableConfig<float>(0f, new RotatableDefaults<float>
-        {
-            { MapScheduler.FoolsRoad,       180f },
-            { MapScheduler.Nuijamaa,        0f },
-            { MapScheduler.GooseBay,        0f },
-            { MapScheduler.GulfOfAqaba,     90f },
-            { MapScheduler.ChangbaiShan,    0f },
-        });
-        Team2SpawnYaw = new RotatableConfig<float>(0f, new RotatableDefaults<float>
-        {
-            { MapScheduler.FoolsRoad,       180f },
-            { MapScheduler.Nuijamaa,        0f },
-            { MapScheduler.GooseBay,        0f },
-            { MapScheduler.GulfOfAqaba,     90f },
-            { MapScheduler.ChangbaiShan,    0f },
-        });
-        LobbySpawnpointYaw = new RotatableConfig<float>(0f, new RotatableDefaults<float>
-        {
-            { MapScheduler.FoolsRoad,       0f },
-            { MapScheduler.Nuijamaa,        0f },
-            { MapScheduler.GooseBay,        0f },
-            { MapScheduler.GulfOfAqaba,     90f },
-            { MapScheduler.ChangbaiShan,    0f },
-        });
+        Team1SpawnYaw = 0f;
+        Team2SpawnYaw = 0f;
+        LobbySpawnpointYaw = 0f;
         TeamSwitchCooldown = 1200;
         BalanceTeams = true;
     }

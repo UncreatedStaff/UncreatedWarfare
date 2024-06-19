@@ -358,7 +358,7 @@ public static class F
     }
     public static void TryTriggerSupplyEffect(SupplyType type, Vector3 position)
     {
-        if ((type is SupplyType.Build ? Gamemode.Config.EffectUnloadBuild : Gamemode.Config.EffectUnloadAmmo).ValidReference(out EffectAsset effect))
+        if ((type is SupplyType.Build ? Gamemode.Config.EffectUnloadBuild : Gamemode.Config.EffectUnloadAmmo).TryGetAsset(out EffectAsset? effect))
             TriggerEffectReliable(effect, EffectManager.MEDIUM, position);
     }
     public static void TriggerEffectReliable(EffectAsset asset, ITransportConnection connection, Vector3 position)

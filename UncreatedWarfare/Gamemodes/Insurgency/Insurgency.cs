@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
@@ -326,7 +327,7 @@ public class Insurgency :
         }
         CacheLocation location = viableSpawns[Random.Range(0, viableSpawns.Length)];
 
-        if (!Config.BarricadeInsurgencyCache.ValidReference(out ItemBarricadeAsset asset))
+        if (!Config.BarricadeInsurgencyCache.TryGetAsset(out ItemBarricadeAsset? asset))
         {
             L.LogWarning("[INSURGENCY] Invalid barricade GUID for Insurgency Cache.");
             return;

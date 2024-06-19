@@ -10,8 +10,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
@@ -404,19 +406,19 @@ public class UAV : MonoBehaviour, IBuff
             }
         }
 #if DEBUG
-        if (time - _lastPing > 1.5f)
-        {
-            _lastPing = time;
-            if (_modelAnimTransform != null)
-            {
-                ClassConfig config = SquadManager.Config.Classes.FirstOrDefault(x => x.Class == Class.Sniper);
-                if (config.MarkerEffect.ValidReference(out EffectAsset asset))
-                {
-                    EffectManager.ClearEffectByGuid_AllPlayers(asset.GUID);
-                    F.TriggerEffectReliable(asset, Level.size * 2, _modelAnimTransform.position);
-                }
-            }
-        }
+        if (time - _lastPing <= 1.5f)
+            return;
+
+        _lastPing = time;
+        if (_modelAnimTransform == null)
+            return;
+
+        ClassConfig? config = SquadManager.Config.Classes.FirstOrDefault(x => x.Class == Class.Sniper);
+        if (!(config?.MarkerEffect).TryGetAsset(out EffectAsset? asset))
+            return;
+
+        EffectManager.ClearEffectByGuid_AllPlayers(asset.GUID);
+        F.TriggerEffectReliable(asset, Level.size * 2, _modelAnimTransform.position);
 #endif
     }
     private void Activate()
@@ -437,18 +439,19 @@ public class UAV : MonoBehaviour, IBuff
             }
         }
 #endif
-        if (_drop == null && Gamemode.Config.BarricadeUAV.ValidReference(out ItemBarricadeAsset asset))
-        {
-            Transform tr = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset, asset.health, asset.getState()),
-                _deployPosition, Quaternion.Euler(new Vector3(-90f, 0f, 0f)), _requester.Steam64,
-                TeamManager.GetGroupID(_team));
-            _drop = BarricadeManager.FindBarricadeByRootTransform(tr);
-            if (_drop != null)
-            {
-                _didDropExist = true;
-                _modelAnimTransform = _drop.model.Find("UAV");
-            }
-        }
+        if (_drop != null || !Gamemode.Config.BarricadeUAV.TryGetAsset(out ItemBarricadeAsset? asset))
+            return;
+        
+        Transform tr = BarricadeManager.dropNonPlantedBarricade(
+            new Barricade(asset, asset.health, asset.getState()), _deployPosition, Quaternion.Euler(new Vector3(-90f, 0f, 0f)), _requester.Steam64, TeamManager.GetGroupID(_team)
+        );
+
+        _drop = BarricadeManager.FindBarricadeByRootTransform(tr);
+        if (_drop == null)
+            return;
+
+        _didDropExist = true;
+        _modelAnimTransform = _drop.model.Find("UAV");
     }
     private void Scan()
     {

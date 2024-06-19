@@ -1,15 +1,17 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
 using UnityEngine;
 
-namespace Uncreated.Warfare.FOBs;
+namespace Uncreated.Warfare.Components;
 
 public class AmmoBagComponent : MonoBehaviour
 {
@@ -21,10 +23,11 @@ public class AmmoBagComponent : MonoBehaviour
         Drop = drop;
         Ammo = FOBManager.Config.AmmoBagMaxUses;
         
-        if (Gamemode.Config.EffectMarkerAmmo.ValidReference(out Guid guid))
+        if (Gamemode.Config.EffectMarkerAmmo.TryGetGuid(out Guid guid))
         {
             IconManager.AttachIcon(guid, drop.model, drop.GetServersideData().group.GetTeam(), 1f);
         }
+
         //ResuppliedPlayers = new Dictionary<ulong, int>();
     }
     public async Task ResupplyPlayer(UCPlayer player, Kit kit, int ammoCost, CancellationToken token = default)

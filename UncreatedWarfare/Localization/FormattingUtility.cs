@@ -9,6 +9,8 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -949,6 +951,23 @@ public static class FormattingUtility
         }
         for (int i = 0; i < length; ++i)
             arr[i + index] = data[i];
+    }
+    internal static void PrintTaskErrors(UniTask[] tasks, IReadOnlyList<object> hostedServices)
+    {
+        for (int i = 0; i < tasks.Length; ++i)
+        {
+            if (tasks[i].Status is not UniTaskStatus.Faulted and not UniTaskStatus.Canceled)
+                continue;
+
+            L.LogError(Accessor.Formatter.Format(hostedServices[i].GetType()));
+
+            if (tasks[i].AsTask().Exception is { } ex)
+            {
+                L.LogError(ex);
+            }
+
+            L.LogError(string.Empty);
+        }
     }
     private static unsafe bool CompareRichTextTag(char* data, int endIndex, int index, RemoveRichTextOptions options)
     {

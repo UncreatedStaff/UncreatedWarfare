@@ -1199,6 +1199,10 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public void Dispose()
     {
         _configListener?.Dispose();
+        if (_config is IDisposable disp)
+        {
+            disp.Dispose();
+        }
     }
 }
 

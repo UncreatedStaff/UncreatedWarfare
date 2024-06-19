@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Framework;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
@@ -288,7 +290,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         Radio.NeedsRestock = false;
         Radio.LastRestock = Time.realtimeSinceStartup;
         Vector3 pos = transform.position;
-        if (Gamemode.Config.EffectUnloadBuild.ValidReference(out EffectAsset asset))
+        if (Gamemode.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? asset))
             F.TriggerEffectReliable(asset, 40, pos);
 
         if (Radio.Barricade.interactable is not InteractableStorage storage)
@@ -336,7 +338,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public void RegisterItem(IFOBItem item)
     {
         item.FOB = this;
-        if (item is MonoBehaviour mb && item.Icon.ValidReference(out Guid icon))
+        if (item is MonoBehaviour mb && item.Icon.TryGetGuid(out Guid icon))
             IconManager.AttachIcon(icon, mb.transform, item.Team, item.IconOffset);
         if (item is RadioComponent c)
         {
@@ -372,11 +374,11 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
                 if (item.Buildable == null)
                     itemRef = default;
-                else if (item.Buildable.FullBuildable.ValidReference(out Guid guid))
+                else if (item.Buildable.FullBuildable.TryGetGuid(out Guid guid))
                     itemRef = new UnturnedAssetReference(guid);
-                else if (item.Buildable.Emplacement != null && item.Buildable.Emplacement.EmplacementVehicle.ValidReference(out guid))
+                else if (item.Buildable.Emplacement != null && item.Buildable.Emplacement.EmplacementVehicle.TryGetGuid(out guid))
                     itemRef = new UnturnedAssetReference(guid);
-                else if (item.Buildable.Foundation.ValidReference(out guid))
+                else if (item.Buildable.Foundation.TryGetGuid(out guid))
                     itemRef = new UnturnedAssetReference(guid);
                 else itemRef = default;
 
@@ -468,7 +470,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             case RadioComponent.RadioState.Bleeding:
                 if (Radio.State == RadioComponent.RadioState.Bleeding)
                     return;
-                if (!Gamemode.Config.BarricadeFOBRadioDamaged.ValidReference(out ItemBarricadeAsset damagedFobRadio))
+                if (!Gamemode.Config.BarricadeFOBRadioDamaged.TryGetAsset(out ItemBarricadeAsset? damagedFobRadio))
                 {
                     L.LogWarning($"[FOBS] [{Name}] Can't replace with damaged fob, asset not found from config.");
                     return;
@@ -479,7 +481,13 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 EDamageOrigin oldOrigin = EDamageOrigin.Unknown;
                 if (Radio.State == RadioComponent.RadioState.Alive)
                 {
-                    _originalState = Util.CloneBytes(Radio.Barricade.GetServersideData().barricade.state);
+                    byte[] oldState = Radio.Barricade.GetServersideData().barricade.state;
+                    _originalState = new byte[oldState.Length];
+                    if (oldState.Length != 0)
+                    {
+                        Buffer.BlockCopy(oldState, 0, _originalState, 0, oldState.Length);
+                    }
+
                     oldKiller = DestroyerComponent.GetDestroyer(Radio.Barricade.model.gameObject, out oldOrigin, out oldKillerTime);
                 }
 
@@ -789,7 +797,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     }
                     ++index;
                 }
-                if (Gamemode.Config.EffectUnloadBuild.ValidReference(out EffectAsset effect))
+                if (Gamemode.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? effect))
                     F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
                 UpdateResourceUI(true, false, false);
                 update = true;
@@ -810,7 +818,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     }
                     ++index;
                 }
-                if (Gamemode.Config.EffectUnloadAmmo.ValidReference(out EffectAsset effect))
+                if (Gamemode.Config.EffectUnloadAmmo.TryGetAsset(out EffectAsset? effect))
                     F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
                 UpdateResourceUI(false, true, false);
                 update = true;
@@ -940,7 +948,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             
             Bunker.FOB = this;
             Destroy(b);
-            if (Bunker.Icon.ValidReference(out Guid icon))
+            if (Bunker.Icon.TryGetGuid(out Guid icon))
                 IconManager.AttachIcon(icon, newObj, Bunker.Team, Bunker.IconOffset);
             return Bunker;
         }
@@ -952,7 +960,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
             IFOBItem comp = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
             comp.FOB = this;
-            if (comp.Icon.ValidReference(out Guid icon))
+            if (comp.Icon.TryGetGuid(out Guid icon))
                 IconManager.AttachIcon(icon, newObj, comp.Team, comp.IconOffset);
             Destroy(itemMb);
             _items[i] = comp;
@@ -1143,7 +1151,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             L.Log($"Bunker State: {Bunker.State}.");
             TrySpawnMarker(Bunker.Position);
         }
-        L.Log($"{_items.Count} Item{_items.Count.S()}:");
+        L.Log($"{_items.Count} Item(s):");
         using (L.IndentLog(1))
         {
             for (int i = 0; i < _items.Count; ++i)
@@ -1162,7 +1170,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 TrySpawnMarker(item.Position);
             }
         }
-        L.Log($"{_friendlies.Count} Friendly Player{_friendlies.Count.S()}:");
+        L.Log($"{_friendlies.Count} Friendly Player(s):");
         using (L.IndentLog(1))
         {
             for (int i = 0; i < _friendlies.Count; ++i)

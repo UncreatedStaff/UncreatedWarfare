@@ -47,7 +47,7 @@ namespace Uncreated.Warfare.Gamemodes;
 [SingletonDependency(typeof(VehicleSpawner))]
 [SingletonDependency(typeof(TraitManager))]
 [SingletonDependency(typeof(KitManager))]
-public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelStartListenerAsync, IReloadableSingleton, ITranslationArgument
+public abstract class GamemodeOld : BaseAsyncSingletonComponent, IGamemode, ILevelStartListenerAsync, IReloadableSingleton, ITranslationArgument
 {
     public const float MatchPresentThreshold = 0.65f;
     public const string GamemodeReloadKey = "gamemode";

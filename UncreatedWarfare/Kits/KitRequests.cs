@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
@@ -405,7 +406,7 @@ public class KitRequests(KitManager manager)
         L.Log(ctx.Player.Name.PlayerName + " (" + ctx.Player.Steam64 + ") bought " + kit.InternalName);
 
         Manager.Signs.UpdateSigns(kit, ctx.Player);
-        if (Gamemode.Config.EffectPurchase.ValidReference(out EffectAsset effect))
+        if (Gamemode.Config.EffectPurchase.TryGetAsset(out EffectAsset? effect))
         {
             F.TriggerEffectReliable(effect, EffectManager.SMALL, effectPos ?? (ctx.Player.Player.look.aim.position + ctx.Player.Player.look.aim.forward * 0.25f));
         }

@@ -6,6 +6,7 @@ using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -304,7 +305,7 @@ public class RequestCommand : ICompoundingCooldownCommand
                 await UniTask.SwitchToMainThread(token);
                 if (data?.Item != null)
                 {
-                    Context.AssertNotOnPortionCooldown();
+                    Context.AssertCommandNotOnIsolatedCooldown();
                     await data.Enter(token).ConfigureAwait(false);
                     try
                     {
@@ -362,7 +363,7 @@ public class RequestCommand : ICompoundingCooldownCommand
         else
         {
             // checks for spamming /req where the vehicle will be once it spawns
-            if (Gamemode.Config.StructureVehicleBay.ValidReference(out Guid guid) &&
+            if (Gamemode.Config.StructureVehicleBay.TryGetGuid(out Guid guid) &&
                 UCBarricadeManager.IsStructureNearby(guid, 20f, Context.Player.Position, out _) &&
                 UCBarricadeManager.CountNearbyBarricades(KitSign, 8f, Context.Player.Position) < 5)
             {
@@ -526,7 +527,7 @@ public class RequestCommand : ICompoundingCooldownCommand
         vehicle.updateVehicle();
         vehicle.updatePhysics();
 
-        if (Gamemode.Config.EffectUnlockVehicle.ValidReference(out EffectAsset effect))
+        if (Gamemode.Config.EffectUnlockVehicle.TryGetAsset(out EffectAsset? effect))
             F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
 
         ucplayer.SendChat(T.RequestVehicleSuccess, data);

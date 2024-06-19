@@ -1,8 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Text.Json;
-using Uncreated.Framework;
-using Uncreated.Json;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
@@ -59,7 +58,8 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
         }
         public override void WriteQuestProgress(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("fobs_built", _fobsBuilt);
+            writer.WritePropertyName("fobs_built");
+            writer.WriteNumberValue(_fobsBuilt);
         }
         public void OnFOBBuilt(UCPlayer constructor, FOB fob)
         {
@@ -148,7 +148,8 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         }
         public override void WriteQuestProgress(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("fobs_built", _fobsBuilt);
+            writer.WritePropertyName("fobs_built");
+            writer.WriteNumberValue(_fobsBuilt);
         }
         public void OnFOBBuilt(UCPlayer constructor, FOB fob)
         {
@@ -249,7 +250,8 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
         }
         public override void WriteQuestProgress(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("fobs_built", _fobsBuilt);
+            writer.WritePropertyName("fobs_built");
+            writer.WriteNumberValue(_fobsBuilt);
         }
         public void OnFOBBuilt(UCPlayer constructor, FOB fob)
         {
@@ -351,7 +353,8 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
         }
         public override void WriteQuestProgress(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("supplies_delivered", _suppliesDelivered);
+            writer.WritePropertyName("supplies_delivered");
+            writer.WriteNumberValue(_suppliesDelivered);
         }
         public void OnSuppliesConsumed(FOB fob, ulong player, int amount)
         {
@@ -457,13 +460,14 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         }
         public override void WriteQuestProgress(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("buildables_built", _built);
+            writer.WritePropertyName("buildables_built");
+            writer.WriteNumberValue(_built);
         }
         // TODO redo this
         [Obsolete("redo this function plz")]
         public void OnBuildableBuilt(UCPlayer player, BuildableData buildable)
         {
-            if (player.Steam64 == Player!.Steam64 && _buildableType.IsMatch(buildable.Type) && buildable.Foundation.ValidReference(out Guid guid) && _baseIds.IsMatch(guid))
+            if (player.Steam64 == Player!.Steam64 && _buildableType.IsMatch(buildable.Type) && buildable.Foundation.TryGetGuid(out Guid guid) && _baseIds.IsMatch(guid))
             {
                 _built++;
                 if (_built >= _amount)
@@ -541,7 +545,8 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
         }
         public override void WriteQuestProgress(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("deployments", _fobUses);
+            writer.WritePropertyName("deployments");
+            writer.WriteNumberValue(_fobUses);
         }
         public override void ResetToDefaults() => _fobUses = 0;
         public void OnPlayerSpawnedAtBunker(BunkerComponent component, UCPlayer spawner)

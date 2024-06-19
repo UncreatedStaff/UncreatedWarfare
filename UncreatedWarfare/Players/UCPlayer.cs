@@ -432,7 +432,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         get
         {
-            EffectAsset asset;
+            EffectAsset? asset;
             if (SquadManager.Config?.Classes == null || SquadManager.Config.Classes.Length == 0)
                 return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
             for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
@@ -440,14 +440,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                 ref ClassConfig c = ref SquadManager.Config.Classes[i];
                 if (c.Class == KitClass)
                 {
-                    if (c.MarkerEffect.ValidReference(out asset))
+                    if (c.MarkerEffect.TryGetAsset(out asset))
                         return asset;
                     else break;
                 }
             }
 
-            if (SquadManager.Config.Classes[0].MarkerEffect.ValidReference(out asset))
+            if (SquadManager.Config.Classes[0].MarkerEffect.TryGetAsset(out asset))
                 return asset;
+
             return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
         }
     }
@@ -455,7 +456,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         get
         {
-            EffectAsset asset;
+            EffectAsset? asset;
             if (SquadManager.Config?.Classes == null || SquadManager.Config.Classes.Length == 0)
                 return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
             for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
@@ -463,14 +464,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                 ref ClassConfig c = ref SquadManager.Config.Classes[i];
                 if (c.Class == KitClass)
                 {
-                    if (c.SquadLeaderMarkerEffect.ValidReference(out asset))
+                    if (c.SquadLeaderMarkerEffect.TryGetAsset(out asset))
                         return asset;
                     else break;
                 }
             }
 
-            if (SquadManager.Config.Classes[0].SquadLeaderMarkerEffect.ValidReference(out asset))
+            if (SquadManager.Config.Classes[0].SquadLeaderMarkerEffect.TryGetAsset(out asset))
                 return asset;
+
             return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
         }
     }

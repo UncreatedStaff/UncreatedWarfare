@@ -8,6 +8,7 @@ using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -203,7 +204,7 @@ public class VehicleCommand : IExecutableCommand
 
                 VehicleManager.ServerSetVehicleLock(vehicleTarget, onlinePlayer.CSteamID, new CSteamID(TeamManager.GetGroupID(team)), true);
                 VehicleComponent.TryAddOwnerToHistory(vehicleTarget, onlinePlayer.Steam64);
-                if (Gamemode.Config.EffectUnlockVehicle.ValidReference(out EffectAsset effect))
+                if (Gamemode.Config.EffectUnlockVehicle.TryGetAsset(out EffectAsset? effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicleTarget.transform.position);
                 onlinePlayer.SendChat(T.VehicleGivenDm, vehicleTarget.asset, Context.Player);
                 throw Context.Reply(T.VehicleGiven, vehicleTarget.asset, onlinePlayer);

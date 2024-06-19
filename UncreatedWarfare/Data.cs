@@ -9,6 +9,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -16,6 +17,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
@@ -225,7 +227,7 @@ public static class Data
     public static WarfareSQL AdminSql => RemoteSQL ?? DatabaseManager;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Is<TGamemode>(out TGamemode gamemode) where TGamemode : class, IGamemode => (gamemode = (Gamemode as TGamemode)!) is not null;
+    public static bool Is<TGamemode>([NotNullWhen(true)] out TGamemode? gamemode) where TGamemode : class, IGamemode => (gamemode = Gamemode as TGamemode) is not null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Is<TGamemode>() where TGamemode : class, IGamemode => Gamemode is TGamemode;

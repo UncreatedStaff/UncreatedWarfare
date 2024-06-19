@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -68,13 +69,21 @@ public class AmmoCommand : IExecutableCommand
                 }
 
                 bool isInMain = F.IsInMain(vehicle.transform.position);
+
+                if (!Gamemode.Config.BarricadeRepairStation.TryGetGuid(out Guid repairGuid))
+                {
+                    Context.ReplyString("No asset for repair station. Contact admin.");
+                    throw Context.Reply(T.AmmoNotNearRepairStation);
+                }
+
                 if (!VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
                 {
-                    BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.BarricadeRepairStation.Value.Guid,
-                    10,
-                    vehicle.transform.position,
-                    Context.Player.GetTeam(),
-                    false).FirstOrDefault();
+                    BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(repairGuid,
+                        10,
+                        vehicle.transform.position,
+                        Context.Player.GetTeam(),
+                        false)
+                    .FirstOrDefault();
 
                     if (repairStation == null)
                         throw Context.Reply(T.AmmoNotNearRepairStation);
@@ -125,7 +134,7 @@ public class AmmoCommand : IExecutableCommand
 
                 if (vehicleData.Items.Length == 0)
                     throw Context.Reply(T.AmmoVehicleFullAlready);
-                if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+                if (Gamemode.Config.EffectAmmo.TryGetAsset(out EffectAsset? effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
 
                 foreach (Guid item in vehicleData.Items)
@@ -211,7 +220,7 @@ public class AmmoCommand : IExecutableCommand
                 await req.KitManager.Requests.ResupplyKit(Context.Player, kit, token: token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
 
-                if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+                if (Gamemode.Config.EffectAmmo.TryGetAsset(out EffectAsset? effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, Context.Player.Position);
 
                 if (isInMain)
@@ -248,7 +257,7 @@ public class AmmoCommand : IExecutableCommand
                     await ammobag.ResupplyPlayer(Context.Player, kit, ammoCost, token).ConfigureAwait(false);
                     await UniTask.SwitchToMainThread(token);
 
-                    if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+                    if (Gamemode.Config.EffectAmmo.TryGetAsset(out EffectAsset? effect))
                         F.TriggerEffectReliable(effect, EffectManager.SMALL, Context.Player.Position);
 
                     Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BAG");
@@ -268,10 +277,10 @@ public class AmmoCommand : IExecutableCommand
         ThreadUtil.assertIsGameThread();
         if (!EventFunctions.DroppedItems.TryGetValue(player, out List<uint> instances))
             return;
-        ushort build1 = TeamManager.Team1Faction.Build is null || !TeamManager.Team1Faction.Build.Exists ? (ushort)0 : TeamManager.Team1Faction.Build.Id;
-        ushort build2 = TeamManager.Team2Faction.Build is null || !TeamManager.Team2Faction.Build.Exists ? (ushort)0 : TeamManager.Team2Faction.Build.Id;
-        ushort ammo1 = TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists ? (ushort)0 : TeamManager.Team1Faction.Ammo.Id;
-        ushort ammo2 = TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists ? (ushort)0 : TeamManager.Team2Faction.Ammo.Id;
+        TeamManager.Team1Faction.Build.TryGetId(out ushort build1);
+        TeamManager.Team2Faction.Build.TryGetId(out ushort build2);
+        TeamManager.Team1Faction.Ammo.TryGetId(out ushort ammo1);
+        TeamManager.Team2Faction.Ammo.TryGetId(out ushort ammo2);
         for (byte x = 0; x < Regions.WORLD_SIZE; x++)
         {
             for (byte y = 0; y < Regions.WORLD_SIZE; y++)

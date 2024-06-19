@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Encoding;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
@@ -175,16 +175,10 @@ public class KitDistribution(KitManager manager)
                     && asset is ItemGunAsset
                     && !UCWarfare.Config.DisableAprilFools
                     && HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS)
-                    && Gamemode.Config.ItemAprilFoolsBarrel.ValidReference(out ItemBarrelAsset barrel))
+                    && Gamemode.Config.ItemAprilFoolsBarrel.TryGetAsset(out ItemBarrelAsset? barrel))
                 {
-                    unsafe
-                    {
-                        fixed (byte* ptr = state)
-                        {
-                            UnsafeBitConverter.GetBytes(ptr, barrel.id, (int)AttachmentType.Barrel);
-                            ptr[(int)AttachmentType.Barrel / 2 + 13] = 100;
-                        }
-                    }
+                    BitConverter.TryWriteBytes(state.AsSpan((int)AttachmentType.Barrel), barrel.id);
+                    state[(int)AttachmentType.Barrel / 2 + 13] = 100;
                 }
 
                 // ignore ammo bag if enabled

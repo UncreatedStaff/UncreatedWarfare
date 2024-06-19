@@ -1,7 +1,7 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System;
 using System.Reflection;
-using JetBrains.Annotations;
 using Uncreated.Warfare.Events;
 using UnityEngine;
 
@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Components;
 internal class ProjectileComponent : MonoBehaviour
 {
     internal ulong Owner;
-    internal Guid GunID;
+    internal Guid GunId;
     internal int UnityInstanceID;
     internal Rocket RocketComponent;
     private bool _isExploded;
@@ -45,6 +45,8 @@ internal class ProjectileComponent : MonoBehaviour
     internal float PredictedImpactTime;
     internal Vector3 PredictedLandingPosition;
     private Vector3 _lastpos;
+
+    [UsedImplicitly]
     void FixedUpdate()
     {
         if (!_isExploded && Physics.Linecast(_lastpos, transform.position, out RaycastHit hit, /*RayMasks.VEHICLE | */RayMasks.GROUND | RayMasks.GROUND2 | RayMasks.LARGE))
@@ -56,9 +58,9 @@ internal class ProjectileComponent : MonoBehaviour
                 goto rtn;
             if (TryGetComponent(out Rocket rocket) && ExplodeMethod != null)
             {
-                ExplodeMethod.Invoke(rocket, new object[] { other });
+                ExplodeMethod.Invoke(rocket, [ other ]);
 #if DEBUG
-                string gun = Assets.find(GunID)?.FriendlyName ?? GunID.ToString("N");
+                string gun = Assets.find(GunId)?.FriendlyName ?? GunId.ToString("N");
                 L.LogWarning("Ghost rocket prevented: " + gun);
                 //foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 //    player.SteamPlayer.SendString("Ghost Rocket Prevented for " + gun + "!", Color.green);
@@ -68,7 +70,7 @@ internal class ProjectileComponent : MonoBehaviour
         rtn:
         _lastpos = transform.position;
     }
-    
+
 #if false && DEBUG
     private float _lastSpawn;
     [UsedImplicitly]
@@ -78,7 +80,7 @@ internal class ProjectileComponent : MonoBehaviour
 
         if (time - _lastSpawn > 0.25f)
         {
-            if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+            if (Gamemode.Config.EffectAmmo.TryGetAsset(out EffectAsset? effect))
                 F.TriggerEffectReliable(effect, Level.size * 2, this.transform.position);
             _lastSpawn = time;
         }

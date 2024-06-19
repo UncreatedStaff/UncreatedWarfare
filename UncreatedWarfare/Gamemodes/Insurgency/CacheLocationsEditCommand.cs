@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Locations;
 using UnityEngine;
 
@@ -193,7 +194,7 @@ internal static class CacheLocationsEditCommand
                 location.Rotation = ctx.Player.Player.transform.rotation.eulerAngles;
                 if (Drops.TryGetValue(location, out BarricadeDrop? drop) && !drop.GetServersideData().barricade.isDead)
                     BarricadeManager.ServerSetBarricadeTransform(drop.model, location.Position, location.GetBarricadeAngle());
-                else if (Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out ItemBarricadeAsset asset))
+                else if (Gamemode.Config.BarricadeInsurgencyCache.TryGetAsset(out ItemBarricadeAsset? asset))
                 {
                     Transform? t = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset), location.Position, location.GetBarricadeAngle(), ctx.CallerId.m_SteamID, ctx.Player.Player.quests.groupID.m_SteamID);
                     if (t != null)
@@ -247,7 +248,7 @@ internal static class CacheLocationsEditCommand
         if (index >= 0 && index < locations.Locations.Count)
         {
             CacheLocation newLocation = locations.Locations[index];
-            if (Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out ItemBarricadeAsset asset) && (!Drops.TryGetValue(newLocation, out BarricadeDrop drop) || drop.GetServersideData().barricade.isDead))
+            if (Gamemode.Config.BarricadeInsurgencyCache.TryGetAsset(out ItemBarricadeAsset? asset) && (!Drops.TryGetValue(newLocation, out BarricadeDrop drop) || drop.GetServersideData().barricade.isDead))
             {
                 Transform? barricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset), newLocation.Position, newLocation.GetBarricadeAngle(), player.Steam64, player.Player.quests.groupID.m_SteamID);
                 if (barricade == null)
@@ -259,7 +260,7 @@ internal static class CacheLocationsEditCommand
                     Drops.Remove(newLocation);
             }
 
-            if (Drops.TryGetValue(newLocation, out BarricadeDrop drop2) && !drop2.GetServersideData().barricade.isDead && Gamemode.Config.EffectMarkerCacheAttack.ValidReference(out EffectAsset effect))
+            if (Drops.TryGetValue(newLocation, out BarricadeDrop drop2) && !drop2.GetServersideData().barricade.isDead && Gamemode.Config.EffectMarkerCacheAttack.TryGetAsset(out EffectAsset? effect))
                 IconManager.AttachIcon(effect.GUID, drop2.model, player: player.Steam64);
         }
     }

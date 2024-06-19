@@ -1,11 +1,11 @@
-﻿// #define DEBUG_LOGGING
+﻿//#define DEBUG_LOGGING
 using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using JetBrains.Annotations;
 using Uncreated.Warfare.Events;
 using UnityEngine;
 
@@ -13,13 +13,15 @@ namespace Uncreated.Warfare.Components;
 internal class DebugComponent : MonoBehaviour
 {
     public uint Updates;
-    private float _startRt;
+#if DEBUG && DEBUG_LOGGING
     private float _lastDt;
     private float _lastFixed;
-    private float _frmRt;
-    private float _avgFrameRate;
     private float _maxUpdateSpeed;
     private float _maxFixedUpdateSpeed;
+#endif
+    private float _startRt;
+    private float _frmRt;
+    private float _avgFrameRate;
     private int _ttlBytesPlayers;
     private int _ttlBytesPending;
     private int _ttlBytesOther;
@@ -81,10 +83,12 @@ internal class DebugComponent : MonoBehaviour
             Dump();
         Updates = 0;
         _startRt = Time.realtimeSinceStartup;
-        _lastFixed = _startRt;
         _frmRt = 1f / Application.targetFrameRate;
+#if DEBUG && DEBUG_LOGGING
+        _lastFixed = _startRt;
         _maxUpdateSpeed = _frmRt * 1.75f;
         _maxFixedUpdateSpeed = Time.fixedDeltaTime * 1.75f;
+#endif
         _ttlBytesPlayers = 0;
         _ttlBytesOther = 0;
         _ttlBytesPending = 0;
@@ -94,8 +98,8 @@ internal class DebugComponent : MonoBehaviour
     private void Update()
     {
         _avgFrameRate = (_avgFrameRate * Updates + Time.deltaTime) / ++Updates;
-        _lastDt = Time.deltaTime;
 #if DEBUG && DEBUG_LOGGING
+        _lastDt = Time.deltaTime;
         if (_lastDt > _maxUpdateSpeed && Level.isLoaded && UCWarfare.I is not null && UCWarfare.I.FullyLoaded)
             L.LogWarning("Update took " + _lastDt.ToString("F6", Data.AdminLocale) + " seconds, higher than the max: " + _maxUpdateSpeed.ToString("F3", Data.AdminLocale) + "!!", ConsoleColor.Yellow);
 #endif
@@ -107,8 +111,8 @@ internal class DebugComponent : MonoBehaviour
 #if DEBUG && DEBUG_LOGGING
         if (t - _lastFixed > _maxFixedUpdateSpeed && Level.isLoaded && UCWarfare.I is not null && UCWarfare.I.FullyLoaded)
             L.LogWarning("FixedUpdate took " + (t - _lastFixed).ToString("F6", Data.AdminLocale) + " seconds, higher than the max: " + _maxFixedUpdateSpeed.ToString("F3", Data.AdminLocale) + "!!", ConsoleColor.Yellow);
-#endif
         _lastFixed = t;
+#endif
     }
     [UsedImplicitly]
     private void LateUpdate()
@@ -233,10 +237,10 @@ internal class DebugComponent : MonoBehaviour
     {
         if (UCWarfare.I != null && UCWarfare.I.Debugger != null)
         {
-            UCWarfare.I.Debugger.OnMessageReceived(transportConnection, packet, offset, size);
+            UCWarfare.I.Debugger.OnMessageReceived(transportConnection, size);
         }
     }
-    private void OnMessageReceived(ITransportConnection transportConnection, byte[] packet, int offset, int size)
+    private void OnMessageReceived(ITransportConnection transportConnection, int size)
     {
         SteamPlayerID? owner = null;
         bool pending = false;

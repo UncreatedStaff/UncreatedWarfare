@@ -6,6 +6,7 @@ using Steamworks;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 
@@ -115,9 +116,9 @@ public class LoadCommand : IExecutableCommand
             ItemAsset? supplyAsset;
             ulong team = vehicle.lockedGroup.m_SteamID.GetTeam();
             if (type == SupplyType.Build)
-                TeamManager.GetFaction(team).Build.ValidReference(out supplyAsset);
+                TeamManager.GetFaction(team).Build.TryGetAsset(out supplyAsset);
             else
-                TeamManager.GetFaction(team).Ammo.ValidReference(out supplyAsset);
+                TeamManager.GetFaction(team).Ammo.TryGetAsset(out supplyAsset);
 
             if (supplyAsset == null)
             {

@@ -151,7 +151,7 @@ internal class ProjectileSolver : MonoBehaviour
             seconds = i * Time.fixedDeltaTime;
             if (seconds - lastSent > 0.25f)
             {
-                if (Gamemode.Config.EffectActionSuppliesAmmo.ValidReference(out EffectAsset asset))
+                if (Gamemode.Config.EffectActionSuppliesAmmo.TryGetAsset(out EffectAsset? asset))
                     F.TriggerEffectReliable(asset, Level.size * 2, transform.gameObject.transform.position);
                 lastSent = seconds;
             }

@@ -5,11 +5,9 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Database;
-using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -17,8 +15,6 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -313,10 +309,10 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 
         UCPlayer? player = UCPlayer.FromPlayer(parameters.player);
 
-        short key = unchecked((short)Gamemode.Config.UIInjured.Value.Id);
-        if (key != 0)
+        if (Gamemode.Config.UIInjured.TryGetId(out ushort uiInjuredId))
         {
-            EffectManager.sendUIEffect(Gamemode.Config.UIInjured.Value, key, parameters.player.channel.owner.transportConnection, true, T.InjuredUIHeader.Translate(player), string.Empty);
+            short key = unchecked( (short)uiInjuredId );
+            EffectManager.sendUIEffect(Gamemode.Config.UIInjured.Id, key, parameters.player.channel.owner.transportConnection, true, T.InjuredUIHeader.Translate(player), string.Empty);
             EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", T.InjuredUIGiveUp.Translate(player));
         }
         parameters.player.SendChat(T.InjuredUIGiveUpChat);
@@ -344,24 +340,27 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     {
         //L.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
         SetStanceBetter(e.Player, EPlayerStance.STAND);
-        if (_injuredPlayers.ContainsKey(e.Steam64))
-        {
-            if (e.Player.Player.transform.TryGetComponent(out Reviver reviver))
-            {
-                reviver.FinishKillingPlayer(true);
-            }
-            else
-            {
-                _injuredPlayers.Remove(e.Steam64);
-                DeathTracker.RemovePlayerInfo(e.Steam64);
-                e.Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
-                e.Player.Player.movement.sendPluginJumpMultiplier(1.0f);
-                e.Player.Player.life.serverSetBleeding(false);
-            }
+        if (!_injuredPlayers.ContainsKey(e.Steam64))
+            return;
 
-            EffectManager.askEffectClearByID(Gamemode.Config.UIInjured.Value, e.Player.Player.channel.owner.transportConnection);
-            EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, e.Player.Player.channel.owner.transportConnection);
+        if (e.Player.Player.transform.TryGetComponent(out Reviver reviver))
+        {
+            reviver.FinishKillingPlayer(true);
         }
+        else
+        {
+            _injuredPlayers.Remove(e.Steam64);
+            DeathTracker.RemovePlayerInfo(e.Steam64);
+            e.Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
+            e.Player.Player.movement.sendPluginJumpMultiplier(1.0f);
+            e.Player.Player.life.serverSetBleeding(false);
+        }
+
+        if (Gamemode.Config.UIInjured.TryGetId(out ushort id))
+            EffectManager.askEffectClearByID(id, e.Player.Player.channel.owner.transportConnection);
+
+        if (SquadManager.Config.MedicMarker.TryGetId(out id))
+            EffectManager.askEffectClearByID(id, e.Player.Player.channel.owner.transportConnection);
     }
     public IEnumerable<Vector3> GetPositionsOfTeam(ulong team)
     {
@@ -388,8 +387,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
 
 
-
-    private float _timeSinceLastMarkers = 0;
+    private float _timeSinceLastMarkers;
     private bool _lastHadInjuredPlayers;
     private void OnUpdate()
     {
@@ -397,8 +395,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         {
             _timeSinceLastMarkers = Time.time;
 
-            SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset injuredMarker);
-            SquadManager.Config.MedicMarker.ValidReference(out EffectAsset medicMarker);
+            SquadManager.Config.InjuredMarker.TryGetAsset(out EffectAsset? injuredMarker);
+            SquadManager.Config.MedicMarker.TryGetAsset(out EffectAsset? medicMarker);
 
             if (_lastHadInjuredPlayers)
             {
@@ -409,26 +407,36 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             }
 
             _lastHadInjuredPlayers = false;
-
-            foreach (var player in PlayerManager.OnlinePlayers)
+            List<UCPlayer> list = ListPool<UCPlayer>.claim();
+            try
             {
-                if (IsInjured(player))
+                foreach (UCPlayer? player in PlayerManager.OnlinePlayers)
                 {
-                    var medics = GetAvailableMedics(player);
+                    if (!IsInjured(player))
+                        continue;
+
+                    list.AddRange(GetAvailableMedics(player));
 
                     // for all nearby medics, spawn an injured marker at this player's position 
                     if (injuredMarker != null)
-                        F.TriggerEffectReliable(injuredMarker, Data.GetPooledTransportConnectionList(medics.Select(x => x.Connection), medics.Count()), player.Position);
+                    {
+                        F.TriggerEffectReliable(injuredMarker, Data.GetPooledTransportConnectionList(list.Select(x => x.Connection)), player.Position);
+                    }
 
                     // for this player only, spawn a medic marker at every nearby medic's position
                     if (medicMarker != null)
                     {
-                        foreach (var medic in medics)
+                        foreach (UCPlayer? medic in list)
                             F.TriggerEffectReliable(medicMarker, player.Connection, medic.Position);
                     }
 
                     _lastHadInjuredPlayers = true;
+                    list.Clear();
                 }
+            }
+            finally
+            {
+                ListPool<UCPlayer>.release(list);
             }
         }
     }
@@ -533,26 +541,33 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         public void RevivePlayer(IRevives? g = default, bool remove = true)
         {
-            if (g == default) Data.Is<IRevives>(out g);
-            if (g != default)
+            if (g == default)
             {
-                if (Gamemode.Config.UIInjured.ValidReference(out Guid id))
-                    EffectManager.ClearEffectByGuid(id, _player.Player.channel.owner.transportConnection);
-
-                if (Squads.SquadManager.Config.MedicMarker.ValidReference(out id))
-                    EffectManager.ClearEffectByGuid(id, _player.Player.channel.owner.transportConnection);
-
-                _player.Player.movement.sendPluginSpeedMultiplier(1.0f);
-                _player.Player.movement.sendPluginJumpMultiplier(1.0f);
-                _player.Player.life.serverSetBleeding(false);
-
-                CancelStance();
-                if (remove)
-                {
-                    g.ReviveManager._injuredPlayers.Remove(_player.Player.channel.owner.playerID.steamID.m_SteamID);
-                    DeathTracker.RemovePlayerInfo(_player.Player.channel.owner.playerID.steamID.m_SteamID);
-                }
+                if (!Data.Is(out g))
+                    return;
             }
+
+            if (g == default)
+            {
+                return;
+            }
+
+            if (Gamemode.Config.UIInjured.TryGetGuid(out Guid id))
+                EffectManager.ClearEffectByGuid(id, _player.Player.channel.owner.transportConnection);
+
+            if (SquadManager.Config.MedicMarker.TryGetGuid(out id))
+                EffectManager.ClearEffectByGuid(id, _player.Player.channel.owner.transportConnection);
+
+            _player.Player.movement.sendPluginSpeedMultiplier(1.0f);
+            _player.Player.movement.sendPluginJumpMultiplier(1.0f);
+            _player.Player.life.serverSetBleeding(false);
+
+            CancelStance();
+            if (!remove)
+                return;
+            
+            g.ReviveManager._injuredPlayers.Remove(_player.Player.channel.owner.playerID.steamID.m_SteamID);
+            DeathTracker.RemovePlayerInfo(_player.Player.channel.owner.playerID.steamID.m_SteamID);
         }
         public void SelfRevive()
         {
@@ -561,20 +576,22 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         public void FinishKillingPlayer(bool isDead = false)
         {
-            if (Data.Is(out IRevives g))
+            if (!Data.Is(out IRevives? g))
+                return;
+
+            RevivePlayer(g, false);
+
+            if (!isDead)
             {
-                RevivePlayer(g, false);
-                if (!isDead)
-                {
-                    DamagePlayerParameters parameters = g.ReviveManager._injuredPlayers[_player.Player.channel.owner.playerID.steamID.m_SteamID].Parameters;
-                    parameters.damage = 100.0f;
-                    parameters.respectArmor = false;
-                    parameters.applyGlobalArmorMultiplier = false;
-                    DamageTool.damagePlayer(parameters, out _);
-                }
-                g.ReviveManager._injuredPlayers.Remove(_player.Player.channel.owner.playerID.steamID.m_SteamID);
-                DeathTracker.RemovePlayerInfo(_player.Player.channel.owner.playerID.steamID.m_SteamID);
+                DamagePlayerParameters parameters = g.ReviveManager._injuredPlayers[_player.Player.channel.owner.playerID.steamID.m_SteamID].Parameters;
+                parameters.damage = 100.0f;
+                parameters.respectArmor = false;
+                parameters.applyGlobalArmorMultiplier = false;
+                DamageTool.damagePlayer(parameters, out _);
             }
+
+            g.ReviveManager._injuredPlayers.Remove(_player.Player.channel.owner.playerID.steamID.m_SteamID);
+            DeathTracker.RemovePlayerInfo(_player.Player.channel.owner.playerID.steamID.m_SteamID);
         }
     }
     private class DownedPlayerData

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SDG.Framework.Utilities;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -82,11 +83,11 @@ public static class IconManager
             switch (buildableData.Type)
             {
                 case BuildableType.AmmoCrate:
-                    if (Gamemode.Config.EffectMarkerAmmo.ValidReference(out Guid guid))
+                    if (Gamemode.Config.EffectMarkerAmmo.TryGetGuid(out Guid guid))
                         AttachIcon(guid, transform, team, 1.75f);
                     break;
                 case BuildableType.RepairStation:
-                    if (Gamemode.Config.EffectMarkerRepair.ValidReference(out guid))
+                    if (Gamemode.Config.EffectMarkerRepair.TryGetGuid(out guid))
                         AttachIcon(guid, transform, team, 4.5f);
                     break;
             }

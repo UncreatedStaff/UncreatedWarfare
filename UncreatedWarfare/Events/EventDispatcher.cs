@@ -545,7 +545,7 @@ public static class EventDispatcher
         {
             ProjectileComponent c = rocket.gameObject.AddComponent<ProjectileComponent>();
 
-            c.GunID = gun.equippedGunAsset.GUID;
+            c.GunId = gun.equippedGunAsset.GUID;
             c.Owner = gun.player.channel.owner.playerID.steamID.m_SteamID;
             if (ProjectileSpawned == null) continue;
             UCPlayer? owner = UCPlayer.FromPlayer(gun.player);
@@ -567,7 +567,7 @@ public static class EventDispatcher
 
         if (ProjectileExploded == null) return;
         UCPlayer? owner = UCPlayer.FromID(projectileComponent.Owner);
-        if (Assets.find(projectileComponent.GunID) is not ItemGunAsset asset) return;
+        if (Assets.find(projectileComponent.GunId) is not ItemGunAsset asset) return;
         ProjectileSpawned args = new ProjectileSpawned(owner, asset, projectileComponent.gameObject, projectileComponent.RocketComponent);
 
         foreach (EventDelegate<ProjectileSpawned> inv in ProjectileExploded.GetInvocationList().Cast<EventDelegate<ProjectileSpawned>>())

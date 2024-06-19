@@ -3,6 +3,8 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
@@ -249,7 +251,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         }
         public void SpawnAttackIcon()
         {
-            if (Data.Is(out IAttackDefense ins) && Gamemode.Config.EffectMarkerCacheAttack.ValidReference(out Guid effect))
+            if (Data.Is(out IAttackDefense ins) && Gamemode.Config.EffectMarkerCacheAttack.TryGetGuid(out Guid effect))
             {
                 IconManager.AttachIcon(effect, _structure.model, ins.AttackingTeam, 30F);
             }

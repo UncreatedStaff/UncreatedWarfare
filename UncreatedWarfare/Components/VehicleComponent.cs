@@ -8,6 +8,7 @@ using System.Linq;
 using Cysharp.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -428,9 +429,9 @@ public class VehicleComponent : MonoBehaviour
         ItemAsset? supplyAsset;
 
         if (type is SupplyType.Build)
-            TeamManager.GetFaction(Team).Build.ValidReference(out supplyAsset);
+            TeamManager.GetFaction(Team).Build.TryGetAsset(out supplyAsset);
         else if (type is SupplyType.Ammo)
-            TeamManager.GetFaction(Team).Ammo.ValidReference(out supplyAsset);
+            TeamManager.GetFaction(Team).Ammo.TryGetAsset(out supplyAsset);
         else
         {
             caller.SendChat(T.UnknownError);
@@ -469,8 +470,8 @@ public class VehicleComponent : MonoBehaviour
     }
     private IEnumerator<WaitForSeconds> AutoSupplyLoop()
     {
-        TeamManager.GetFaction(Team).Build.ValidReference(out ItemAsset? build);
-        TeamManager.GetFaction(Team).Ammo.ValidReference(out ItemAsset? ammo);
+        TeamManager.GetFaction(Team).Build.TryGetAsset(out ItemAsset? build);
+        TeamManager.GetFaction(Team).Ammo.TryGetAsset(out ItemAsset? ammo);
 
         UCPlayer? driver = UCPlayer.FromID(LastDriver);
 
