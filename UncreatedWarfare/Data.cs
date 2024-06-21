@@ -127,7 +127,7 @@ public static class Data
     internal static DatabaseInterface ModerationSql;
     internal static WarfareMySqlLanguageDataStore LanguageDataStore;
     internal static PurchaseRecordsInterface<WarfareDbContext> PurchasingDataStore;
-    public static Gamemode Gamemode;
+    public static GamemodeOld Gamemode;
     public static bool UseFastKits;
     public static bool UseElectricalGrid;
     internal static MethodInfo ReplicateStance;

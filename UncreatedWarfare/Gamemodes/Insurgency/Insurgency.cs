@@ -1,6 +1,7 @@
 ﻿#if DEBUG
 using System;
 #endif
+using System.Collections;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System.Collections.Generic;
@@ -16,6 +17,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
@@ -28,6 +30,7 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
@@ -325,7 +328,7 @@ public class Insurgency :
             L.LogWarning("[INSURGENCY] No viable cache spawns.");
             return;
         }
-        CacheLocation location = viableSpawns[Random.Range(0, viableSpawns.Length)];
+        CacheLocation location = viableSpawns[RandomUtility.GetIndex((ICollection)viableSpawns)];
 
         if (!Config.BarricadeInsurgencyCache.TryGetAsset(out ItemBarricadeAsset? asset))
         {

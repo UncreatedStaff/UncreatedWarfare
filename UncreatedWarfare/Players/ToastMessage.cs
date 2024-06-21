@@ -55,6 +55,13 @@ public struct ToastMessage
 
         return new ToastMessage(state, ToastMessageStyle.Popup, args!);
     }
+    public static void QueueMessage(LanguageSet set, in ToastMessage message)
+    {
+        while (set.MoveNext())
+        {
+            set.Next.Toasts.Queue(in message);
+        }
+    }
     public static void QueueMessage(UCPlayer player, in ToastMessage message)
     {
         player.Toasts.Queue(in message);

@@ -4,6 +4,7 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SDG.Framework.Modules;
 using SDG.Unturned;
 using System;
@@ -20,14 +21,21 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Timing;
+using UnityEngine;
+using Module = SDG.Framework.Modules.Module;
 
 namespace Uncreated.Warfare;
 public sealed class WarfareModule : IModuleNexus
 {
+    internal static int GameThreadId = -1;
+
     private bool _unloadedHostedServices;
     private IServiceScope? _activeScope;
     private CancellationTokenSource _cancellationTokenSource;
     private GameSession? _activeGameSession;
+    private GameObject _gameObjectHost;
 
     /// <summary>
     /// A path to the top-level 'Warfare' folder.
@@ -69,7 +77,11 @@ public sealed class WarfareModule : IModuleNexus
 
     void IModuleNexus.initialize()
     {
+        GameThreadId = ThreadUtil.gameThread.ManagedThreadId;
+        _gameObjectHost = new GameObject("Uncreated.Warfare");
         _cancellationTokenSource = new CancellationTokenSource();
+
+        ConfigurationSettings.SetupTypeConverters();
 
         // Set the environment directory to the folder now at U3DS/Servers/ServerId/Warfare/
         HomeDirectory = Path.Combine(UnturnedPaths.RootDirectory.Name, "Servers", Provider.serverID, "Warfare");
@@ -82,6 +94,9 @@ public sealed class WarfareModule : IModuleNexus
 
         IServiceCollection serviceCollection = new ServiceCollection();
 
+        // todo rewrite logging
+        serviceCollection.AddSingleton<ILoggerFactory, L.UCLoggerFactory>();
+
         ConfigureServices(serviceCollection);
 
         ServiceProvider = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
@@ -89,6 +104,7 @@ public sealed class WarfareModule : IModuleNexus
             ValidateOnBuild = true,
             ValidateScopes = true
         });
+
 
         UniTask.Create(HostAsync);
     }
@@ -120,21 +136,30 @@ public sealed class WarfareModule : IModuleNexus
 
     private void ConfigureServices(IServiceCollection serviceCollection)
     {
+        Assembly thisAsm = Assembly.GetExecutingAssembly();
+
         serviceCollection.AddDbContext<WarfareDbContext>(contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Singleton);
 
         serviceCollection.AddReflectionTools();
         serviceCollection.AddModularRpcs(isServer: false, searchedAssemblies: [Assembly.GetExecutingAssembly()]);
+
+        serviceCollection.AddSingleton(this);
+        serviceCollection.AddSingleton(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)));
 
         serviceCollection.AddSingleton<GameSessionFactory>();
         serviceCollection.AddSingleton<ActionManager>();
         serviceCollection.AddSingleton<CommandDispatcher>();
         serviceCollection.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<CommandDispatcher>().Parser);
         serviceCollection.AddRpcSingleton<UserPermissionStore>();
+        serviceCollection.AddSingleton(_gameObjectHost);
 
-        serviceCollection.AddTransient(_ => GetActiveGameSession());
+        serviceCollection.AddTransient<ILoopTickerFactory, UnityLoopTickerFactory>();
+
+        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveGameSession());
+        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveGameSession().TeamManager);
 
         // add all game session types
-        foreach (Type type in Accessor.GetTypesSafe().Where(x => x.IsSubclassOf(typeof(GameSession))))
+        foreach (Type type in Accessor.GetTypesSafe(thisAsm).Where(x => x.IsSubclassOf(typeof(GameSession))))
         {
             serviceCollection.Add(new ServiceDescriptor(type, _ =>
             {
@@ -381,9 +406,8 @@ public sealed class WarfareModule : IModuleNexus
         return _activeGameSession ?? throw new InvalidOperationException("There is not an active game session.");
     }
 
-    private static void UnloadModule()
+    private void UnloadModule()
     {
-        Assembly thisAsm = Assembly.GetExecutingAssembly();
-        ModuleHook.modules.First(x => x.assemblies.Contains(thisAsm)).isEnabled = false;
+        ServiceProvider.GetRequiredService<Module>().isEnabled = false;
     }
 }

@@ -13,6 +13,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Gamemodes;
 public class GameSessionFactory : IHostedService
@@ -99,7 +100,7 @@ public class GameSessionFactory : IHostedService
         _warfare.SetActiveGameSession(session);
 
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(session.UnloadToken);
-        await session.InitializeSession(token);
+        await session.InitializeSessionAsync(token);
         await session.BeginSessionAsync(token);
     }
 
@@ -120,10 +121,7 @@ public class GameSessionFactory : IHostedService
             throw new InvalidOperationException("There are no layouts configured.");
         }
 
-        int index = Thread.CurrentThread.IsGameThread()
-            ? UnityEngine.Random.Range(0, sessions.Count)
-            : new Random().Next(0, sessions.Count);
-
+        int index = RandomUtility.GetIndex(sessions, x => x.Weight);
         return sessions[index];
     }
 
@@ -140,10 +138,10 @@ public class GameSessionFactory : IHostedService
         IConfigurationRoot root = configBuilder.Build();
 
         // read the full type name from the config file
-        string? sessionTypeName = root["session_type"];
+        string? sessionTypeName = root["Type"];
         if (sessionTypeName == null)
         {
-            L.LogError($"Layout config file missing \"session_type\" config value in \"{file}\".");
+            L.LogError($"Layout config file missing \"Type\" config value in \"{file}\".");
             return null;
         }
 
@@ -155,13 +153,13 @@ public class GameSessionFactory : IHostedService
         }
 
         // read the selection weight from the config file
-        if (!double.TryParse(root["weight"], NumberStyles.Number, CultureInfo.InvariantCulture, out double weight))
+        if (!double.TryParse(root["Weight"], NumberStyles.Number, CultureInfo.InvariantCulture, out double weight))
         {
             weight = 1;
         }
 
         // read display name
-        if (root["display_name"] is not { Length: > 0 } displayName)
+        if (root["Name"] is not { Length: > 0 } displayName)
         {
             displayName = Path.GetFileNameWithoutExtension(file);
         }
@@ -171,7 +169,8 @@ public class GameSessionFactory : IHostedService
             GameSessionType = sessionType,
             Layout = root,
             Weight = weight,
-            DisplayName = displayName
+            DisplayName = displayName,
+            FilePath = file
         };
     }
 

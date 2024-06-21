@@ -1,19 +1,25 @@
 ﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Physical;
 using Microsoft.Extensions.Primitives;
 using SDG.Unturned;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using DanielWillett.ReflectionTools;
-using JetBrains.Annotations;
 
 namespace Uncreated.Warfare.Configuration;
 public static class ConfigurationHelper
 {
     private static readonly IFileProvider FileProvider = new PhysicalFileProvider(Environment.CurrentDirectory, ExclusionFilters.Sensitive);
+
+    /// <summary>
+    /// An empty configuration section.
+    /// </summary>
+    public static IConfigurationSection EmptySection { get; } = new EmptyConfigurationSection();
 
     /// <summary>
     /// Adds a new <see cref="FileConfigurationSource"/> at <paramref name="path"/> with an optional file source with the map name appended.
@@ -112,5 +118,28 @@ public static class ConfigurationHelper
             .Replace("<",  string.Empty)
             .Replace(' ', '_')
             .Replace(">",  string.Empty);
+    }
+    private class EmptyConfigurationSection : IConfigurationSection, IChangeToken, IDisposable
+    {
+        public string Key => string.Empty;
+        public string Path => string.Empty;
+        public bool HasChanged => false;
+        public bool ActiveChangeCallbacks => false;
+        public string? Value
+        {
+            get => null;
+            set => throw new NotSupportedException();
+        }
+        public string? this[string key]
+        {
+            get => null;
+            set => throw new NotSupportedException();
+        }
+
+        public IConfigurationSection GetSection(string key) => this;
+        public IEnumerable<IConfigurationSection> GetChildren() => Array.Empty<IConfigurationSection>();
+        public IChangeToken GetReloadToken() => this;
+        public IDisposable RegisterChangeCallback(Action<object> callback, object state) => this;
+        public void Dispose() { }
     }
 }

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -79,7 +81,7 @@ public partial class Conquest
             if (l2.Length > 0)
             {
                 --amt;
-                l2Flag = l2[Random.Range(0, l2.Length)];
+                l2Flag = l2[RandomUtility.GetIndex((ICollection)l2)];
                 FlagRotation.Add(l2Flag);
             }
             l2 = AllFlags.OrderBy(x => Vector2.SqrMagnitude(x.Position2D - TeamManager.Team2Main.Center)).Where(x =>
@@ -96,7 +98,7 @@ public partial class Conquest
             if (l2.Length > 0)
             {
                 --amt;
-                l2Flag = l2[Random.Range(0, l2.Length)];
+                l2Flag = l2[RandomUtility.GetIndex((ICollection)l2)];
             }
             else l2Flag = null;
         }
@@ -129,7 +131,7 @@ public partial class Conquest
             ct = 0;
             do
             {
-                int ind = Random.Range(0, f.Length);
+                int ind = RandomUtility.GetIndex((ICollection)f);
                 f2 = f[ind];
                 L.LogDebug(ind.ToString() + " - " + (f2?.Name ?? "null"));
                 f[ind] = null;

@@ -1,7 +1,9 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -14,6 +16,7 @@ namespace Uncreated.Warfare;
 /// </summary>
 /// <remarks>Extension methods located in <see cref="T"/>.</remarks>
 [JsonConverter(typeof(TranslationListConverter))]
+[TypeConverter(typeof(TranslationListTypeConverter))]
 public sealed class TranslationList : Dictionary<string, string>, ICloneable
 {
     public const int DefaultCharLength = 255;
@@ -131,5 +134,44 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
 
             writer.WriteEndObject();
         }
+    }
+}
+
+public class TranslationListTypeConverter : TypeConverter
+{
+    public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+    {
+        return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+    }
+
+    public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
+    {
+        return destinationType == typeof(IDictionary<string, string>) || destinationType == typeof(Dictionary<string, string>) || destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
+    }
+
+    public override object? ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object? value)
+    {
+        if (value is string str)
+        {
+            return new TranslationList(str);
+        }
+
+        return base.ConvertFrom(context, culture, value);
+    }
+
+    public override object? ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
+    {
+        TranslationList? list = (TranslationList?)value;
+        if (destinationType == typeof(IDictionary<string, string>) || destinationType == typeof(Dictionary<string, string>))
+            return list;
+        
+        if (destinationType != typeof(string))
+            return base.ConvertTo(context, culture, value, destinationType);
+
+        if (list is not { Count: 1 })
+            throw GetConvertToException(value, destinationType);
+
+        return list.Translate(null, null);
+
     }
 }

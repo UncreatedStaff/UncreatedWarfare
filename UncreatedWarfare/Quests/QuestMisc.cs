@@ -15,6 +15,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Quests;
@@ -1061,7 +1062,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
             {
                 if (_behavior == ChoiceBehavior.Selective)
                 {
-                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[UnityEngine.Random.Range(0, value._set.Length)];
+                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[RandomUtility.GetIndex((ICollection)value._set.Set)];
                 }
                 else
                 {
@@ -1439,7 +1440,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<Dyna
             {
                 if (_behavior == ChoiceBehavior.Selective)
                 {
-                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[UnityEngine.Random.Range(0, value._set.Length)];
+                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[RandomUtility.GetIndex((ICollection)value._set.Set)];
                 }
                 else
                 {
@@ -1783,7 +1784,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
             {
                 if (_behavior == ChoiceBehavior.Selective)
                 {
-                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[UnityEngine.Random.Range(0, value._set.Length)];
+                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[RandomUtility.GetIndex((ICollection)value._set.Set)];
                 }
                 else
                 {
@@ -2066,7 +2067,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid>, IEquatab
         choice.Read(ref reader);
         return choice;
     }
-    private static EAssetType GetAssetType() => AssetTypeHelper<TAsset>.Type;
+    private static EAssetType GetAssetType() => UCAssetManager.GetAssetCategory<TAsset>();
     IDynamicValue<Guid>.IChoice IDynamicValue<Guid>.GetValue() => GetValue();
 
     public override string ToString()
@@ -2193,7 +2194,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid>, IEquatab
             {
                 if (_behavior == ChoiceBehavior.Selective)
                 {
-                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[UnityEngine.Random.Range(0, value._set.Length)];
+                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[RandomUtility.GetIndex((ICollection)value._set.Set)];
                     if (Level.isLoading)
                     {
                         _valueCache = Assets.find<TAsset>(_value);
@@ -2696,7 +2697,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
             {
                 if (_behavior == ChoiceBehavior.Selective)
                 {
-                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[UnityEngine.Random.Range(0, value._set.Length)];
+                    _value = value._set.Length == 1 ? value._set.Set[0] : value._set.Set[RandomUtility.GetIndex((ICollection)value._set.Set)];
                 }
                 else
                 {
@@ -2724,7 +2725,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
             else if (value._type == DynamicValueType.Wildcard && _behavior == ChoiceBehavior.Selective)
             {
                 Array arr = Enum.GetValues(typeof(TEnum));
-                int r = UnityEngine.Random.Range(0, arr.Length);
+                int r = RandomUtility.GetIndex(arr);
                 _value = (TEnum)arr.GetValue(r);
             }
             else

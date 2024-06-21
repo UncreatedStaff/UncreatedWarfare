@@ -1,4 +1,6 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -9,11 +11,9 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Cysharp.Threading.Tasks;
-using DanielWillett.ReflectionTools;
 using UnityEngine;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Util;
 public static class FormattingUtility
 {
     private static char[][]? _tags;
@@ -21,6 +21,11 @@ public static class FormattingUtility
     private static readonly char[] SplitChars = [ ',' ];
     private static KeyValuePair<string, Color>[]? _presets;
     public static Regex TimeRegex { get; } = new Regex(@"([\d\.]+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Format a minute/second timer using the specified culture.
+    /// </summary>
+    public static string GetTimerString(CultureInfo culture, TimeSpan timer) => timer.Minutes.ToString(culture) + culture.DateTimeFormat.TimeSeparator + timer.Seconds.ToString("D2", culture);
 
     /// <summary>
     /// Parses a timespan string in the form '3d 4hr 21min etc'. Can also be 'perm[anent]'.

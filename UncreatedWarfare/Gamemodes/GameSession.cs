@@ -2,12 +2,22 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
-using Uncreated.Warfare.Gamemodes.Layouts;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Gamemodes.Phases;
+using Uncreated.Warfare.Gamemodes.Teams;
+using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Util;
+using YamlDotNet.RepresentationModel;
 
 namespace Uncreated.Warfare.Gamemodes;
 
@@ -21,6 +31,9 @@ public class GameSession : IDisposable
     private readonly IDisposable _configListener;
     private readonly CancellationTokenSource _cancellationTokenSource;
     internal bool UnloadedHostedServices;
+    private readonly IList<IDisposable> _disposableVariationConfigurationRoots;
+
+    protected ILogger<GameSession> Logger;
 
     private readonly GameSessionFactory _factory;
 
@@ -43,6 +56,11 @@ public class GameSession : IDisposable
     /// Scoped service provider for this session.
     /// </summary>
     public IServiceProvider ServiceProvider { get; }
+
+    /// <summary>
+    /// Keeps track of all teams.
+    /// </summary>
+    public ITeamManager<Team> TeamManager { get; protected set; }
 
     /// <summary>
     /// Token that will cancel when the session ends.
@@ -82,6 +100,7 @@ public class GameSession : IDisposable
         ServiceProvider = serviceProvider;
         _sessionInfo = sessionInfo;
 
+        _disposableVariationConfigurationRoots = new List<IDisposable>();
         PhaseList = new List<ILayoutPhase>();
         Phases = new ReadOnlyCollection<ILayoutPhase>(PhaseList);
 
@@ -90,6 +109,7 @@ public class GameSession : IDisposable
 
         // inject services
         _factory = ServiceProvider.GetRequiredService<GameSessionFactory>();
+        Logger = (ILogger<GameSession>)ServiceProvider.GetRequiredService(typeof(ILogger<>).MakeGenericType(GetType()));
 
         // listens for changes to the config file
         _configListener = LayoutConfiguration.GetReloadToken().RegisterChangeCallback(_ =>
@@ -110,26 +130,170 @@ public class GameSession : IDisposable
     /// <summary>
     /// Parse a phase from the phases section of the config file.
     /// </summary>
-    protected virtual UniTask<ILayoutPhase?> ReadPhase(Type phaseType, IConfigurationSection configSection)
+    /// <returns>The new phase, or <see langword="null"/> to not use the phase. An error will be logged.</returns>
+    protected virtual UniTask<ILayoutPhase?> ReadPhaseAsync(Type phaseType, IConfigurationSection configSection, CancellationToken token = default)
     {
-        ILayoutPhase? phase = (ILayoutPhase?)ActivatorUtilities.CreateInstance(ServiceProvider, phaseType);
+        ILayoutPhase? phase;
+        List<PhaseVariationInfo>? variations = ReadPhaseVariations(phaseType, configSection);
 
-        if (phase != null)
+        if (variations is not { Count: > 0 })
         {
-            configSection.Bind(phase);
+            phase = (ILayoutPhase?)ActivatorUtilities.CreateInstance(ServiceProvider, phaseType, configSection);
+
+            if (phase != null)
+            {
+                configSection.Bind(phase);
+            }
+
+            return UniTask.FromResult(phase);
         }
 
-        return UniTask.FromResult(phase);
+
+        int index = RandomUtility.GetIndex(variations, info => info.Weight);
+        PhaseVariationInfo info = variations[index];
+
+        ConfigurationBuilder configBuilder = new ConfigurationBuilder();
+        
+        IConfigurationRoot root = configBuilder
+                                    .AddYamlFile(info.FileName, true, true)
+                                    .Add(new ChainedConfigurationSource { Configuration = configSection, ShouldDisposeConfiguration = false })
+                                    .Build();
+
+        if (root is IDisposable disposable)
+            _disposableVariationConfigurationRoots.Add(disposable);
+
+        try
+        {
+            phase = (ILayoutPhase?)ActivatorUtilities.CreateInstance(ServiceProvider, phaseType, root);
+
+            if (phase != null)
+            {
+                root.Bind(phase);
+            }
+
+            return UniTask.FromResult(phase);
+        }
+        catch
+        {
+            if (root is not IDisposable d)
+                throw;
+
+            d.Dispose();
+            _disposableVariationConfigurationRoots.Remove(d);
+            throw;
+        }
+    }
+
+    protected virtual List<PhaseVariationInfo>? ReadPhaseVariations(Type phaseType, IConfigurationSection configSection)
+    {
+        string? variationsPath = configSection["Variations"];
+        if (string.IsNullOrEmpty(variationsPath))
+            return null;
+
+        if (!Path.IsPathRooted(variationsPath))
+        {
+            string? fileDir = Path.GetDirectoryName(_sessionInfo.FilePath);
+            if (!string.IsNullOrEmpty(fileDir))
+                variationsPath = Path.Join(fileDir, variationsPath);
+        }
+
+        if (!Directory.Exists(variationsPath))
+        {
+            Logger.LogWarning("Variation directory {0} does not exist for phase {1}.", variationsPath, Accessor.Formatter.Format(phaseType));
+            return null;
+        }
+
+        // find variation files
+        List<PhaseVariationInfo> variationFiles = new List<PhaseVariationInfo>();
+        foreach (string variationFile in Directory.GetFiles(variationsPath, "*.yml", SearchOption.TopDirectoryOnly))
+        {
+            using StreamReader streamReader = new StreamReader(variationFile);
+            YamlStream stream = new YamlStream();
+            stream.Load(streamReader);
+
+            if (stream.Documents.FirstOrDefault()?.RootNode is not YamlMappingNode yaml)
+            {
+                Logger.LogWarning("Failed to read yaml from variation {0} wile reading variations for phase {1}.", variationFile, Accessor.Formatter.Format(phaseType));
+                continue;
+            }
+
+            PhaseVariationInfo variation = default;
+            variation.Weight = 1;
+            bool wasFilteredOut = false;
+            foreach (KeyValuePair<YamlNode, YamlNode> nodePair in yaml.Children)
+            {
+                if (nodePair.Key is not YamlScalarNode scalar)
+                    continue;
+
+                if (string.Equals(scalar.Value, "Map", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (nodePair.Value is not YamlScalarNode { Value: { } map })
+                    {
+                        Logger.LogWarning("Invalid map filter in {0} wile reading variations for phase {1}. Expected scalar value.", variationFile, Accessor.Formatter.Format(phaseType));
+                        continue;
+                    }
+
+                    if (!map.Equals("all", StringComparison.OrdinalIgnoreCase)
+                        && !map.Equals(Provider.map, StringComparison.OrdinalIgnoreCase)
+                        && (!int.TryParse(map, NumberStyles.Number, CultureInfo.InvariantCulture, out int mapId) || mapId != MapScheduler.Current))
+                    {
+                        wasFilteredOut = true;
+                        break;
+                    }
+                }
+                else if (string.Equals(scalar.Value, "Maps", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (nodePair.Value is not YamlSequenceNode sequence)
+                    {
+                        Logger.LogWarning("Invalid maps filter in {0} wile reading variations for phase {1}. Expected sequence of scalar values.", variationFile, Accessor.Formatter.Format(phaseType));
+                        continue;
+                    }
+
+                    if (!sequence.Any(val => val is YamlScalarNode { Value: { } map } &&
+                                            (map.Equals("all", StringComparison.OrdinalIgnoreCase)
+                                             || map.Equals(Provider.map, StringComparison.OrdinalIgnoreCase)
+                                             || int.TryParse(map, NumberStyles.Number, CultureInfo.InvariantCulture, out int mapId) && mapId == MapScheduler.Current)
+                                            ))
+                    {
+                        wasFilteredOut = true;
+                        break;
+                    }
+                }
+                else if (string.Equals(scalar.Value, "Weight", StringComparison.InvariantCultureIgnoreCase)
+                         && nodePair.Value is YamlScalarNode { Value: { } weightStr }
+                         && double.TryParse(weightStr, NumberStyles.Number, CultureInfo.InvariantCulture, out double weight))
+                {
+                    variation.Weight = weight;
+                }
+            }
+
+            if (wasFilteredOut)
+                continue;
+
+            variation.FileName = variationFile;
+            variationFiles.Add(variation);
+        }
+
+        return variationFiles;
     }
 
     /// <summary>
     /// Invoked just before <see cref="BeginSessionAsync"/> as a chance for values to be initialized from <see cref="LayoutConfiguration"/>.
     /// </summary>
-    protected internal virtual async UniTask InitializeSession(CancellationToken token = default)
+    protected internal virtual async UniTask InitializeSessionAsync(CancellationToken token = default)
     {
-        await ReadPhases();
+        await ReadTeamInfoAsync(token);
+
+        await ReadPhasesAsync(token);
 
         CheckEmptyPhases();
+
+        await TeamManager.InitializeAsync(token);
+
+        foreach (ILayoutPhase phase in PhaseList)
+        {
+            await phase.InitializePhaseAsync(token);
+        }
     }
 
 
@@ -140,14 +304,14 @@ public class GameSession : IDisposable
     {
         await _factory.HostSessionAsync(this, token);
 
+        IsActive = true;
+
         CheckEmptyPhases();
         _activePhase = -1;
         await MoveToNextPhase(token);
-
-        IsActive = true;
     }
 
-    protected virtual async UniTask MoveToNextPhase(CancellationToken token = default)
+    public virtual async UniTask<bool> MoveToNextPhase(CancellationToken token = default)
     {
         // keep moving to the next phase until one is activated by BeginPhase.
         ILayoutPhase newPhase;
@@ -169,15 +333,41 @@ public class GameSession : IDisposable
 
             if (oldPhase != null)
             {
-                L.LogDebug($"Ending phase: {Accessor.Formatter.Format(oldPhase.GetType())}.");
+                string phaseTypeFormat = Accessor.Formatter.Format(oldPhase.GetType());
+                Logger.LogDebug("Ending phase: {0}.", phaseTypeFormat);
                 await oldPhase.EndPhaseAsync(token);
+                if (oldPhase.IsActive)
+                {
+                    Logger.LogError("Failed to end phase {0}.", phaseTypeFormat);
+                    return false;
+                }
+
                 await UniTask.SwitchToMainThread(token);
+                try
+                {
+                    if (oldPhase is IAsyncDisposable asyncDisposable)
+                    {
+                        await asyncDisposable.DisposeAsync();
+                        await UniTask.SwitchToMainThread(token);
+                    }
+                    else if (oldPhase is IDisposable disposable)
+                    {
+                        disposable.Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await UniTask.SwitchToMainThread(token);
+                    Logger.LogError(ex, "Error disposing phase {0}.", phaseTypeFormat);
+                }
             }
 
-            L.LogDebug($"Starting next phase: {Accessor.Formatter.Format(newPhase.GetType())}.");
+            Logger.LogDebug("Starting next phase: {0}.", Accessor.Formatter.Format(newPhase.GetType()));
             await newPhase.BeginPhaseAsync(CancellationToken.None);
         }
         while (!newPhase.IsActive);
+
+        return true;
     }
 
     private void CheckEmptyPhases()
@@ -185,8 +375,8 @@ public class GameSession : IDisposable
         if (PhaseList.Count != 0)
             return;
 
-        L.LogWarning($"No phases available in layout {_sessionInfo.DisplayName}. Adding a null phase that will end the game instantly.");
-        PhaseList.Add(ActivatorUtilities.CreateInstance<NullPhase>(ServiceProvider));
+        Logger.LogWarning("No phases available in layout {0}. Adding a null phase that will end the game instantly.", _sessionInfo.DisplayName);
+        PhaseList.Add(ActivatorUtilities.CreateInstance<NullPhase>(ServiceProvider, ConfigurationHelper.EmptySection));
     }
 
     /// <summary>
@@ -204,19 +394,54 @@ public class GameSession : IDisposable
         }
         catch (AggregateException ex)
         {
-            L.LogError($"Error(s) while canceling game session cancellation token source in layout {_sessionInfo.DisplayName}.");
-            L.LogError(ex);
+            Logger.LogError(ex, "Error(s) while canceling game session cancellation token source in layout {0}.", _sessionInfo.DisplayName);
         }
 
         return _factory.UnhostSessionAsync(this, token);
     }
 
     /// <summary>
-    /// Read layout phases by calling <see cref="ReadPhase"/> for each phase in the <c>phases</c> config section.
+    /// Read information about which <see cref="ITeamManager{TTeam}"/> to use and create it.
     /// </summary>
-    private async UniTask ReadPhases()
+    protected virtual UniTask ReadTeamInfoAsync(CancellationToken token = default)
     {
-        IConfigurationSection phaseSection = LayoutConfiguration.GetSection("phases");
+        IConfigurationSection teamSection = LayoutConfiguration.GetSection("Teams");
+        if (!teamSection.GetChildren().Any())
+        {
+            Logger.LogInformation("Team section is not present in layout \"{0}\", assuming no teams should be loaded.", _sessionInfo.DisplayName);
+            TeamManager = ActivatorUtilities.CreateInstance<NullTeamManager>(ServiceProvider, ConfigurationHelper.EmptySection);
+            return UniTask.CompletedTask;
+        }
+
+        // read the full type name from the config file
+        string? managerTypeName = teamSection["ManagerType"];
+        if (managerTypeName == null)
+        {
+            Logger.LogError("Team section is missing the \"ManagerType\" config value in layout \"{0}\".", _sessionInfo.DisplayName);
+            TeamManager = ActivatorUtilities.CreateInstance<NullTeamManager>(ServiceProvider, ConfigurationHelper.EmptySection);
+            return UniTask.CompletedTask;
+        }
+
+        Type? managerType = Type.GetType(managerTypeName) ?? Assembly.GetExecutingAssembly().GetType(managerTypeName);
+        if (managerType == null || managerType.IsAbstract || !typeof(ILayoutPhase).IsAssignableFrom(managerType))
+        {
+            Logger.LogError("Unknown team manager type in layout \"{0}\".", _sessionInfo.DisplayName);
+            TeamManager = ActivatorUtilities.CreateInstance<NullTeamManager>(ServiceProvider, ConfigurationHelper.EmptySection);
+            return UniTask.CompletedTask;
+        }
+
+        ITeamManager<Team> manager = (ITeamManager<Team>)ActivatorUtilities.CreateInstance(ServiceProvider, managerType, teamSection);
+        teamSection.Bind(manager);
+        TeamManager = manager;
+        return UniTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Read layout phases by calling <see cref="ReadPhaseAsync"/> for each phase in the <c>phases</c> config section.
+    /// </summary>
+    private async UniTask ReadPhasesAsync(CancellationToken token = default)
+    {
+        IConfigurationSection phaseSection = LayoutConfiguration.GetSection("Phases");
 
         Assembly thisAsm = Assembly.GetExecutingAssembly();
 
@@ -226,21 +451,21 @@ public class GameSession : IDisposable
             ++index;
 
             // read the full type name from the config file
-            string? phaseTypeName = phaseConfig["type"];
+            string? phaseTypeName = phaseConfig["Type"];
             if (phaseTypeName == null)
             {
-                L.LogError($"Phase at index {index} is missing the \"type\" config value in layout \"{_sessionInfo.DisplayName}\" and will be skipped.");
+                Logger.LogError("Phase at index {0} is missing the \"Type\" config value in layout \"{1}\" and will be skipped.", index, _sessionInfo.DisplayName);
                 continue;
             }
 
             Type? phaseType = Type.GetType(phaseTypeName) ?? thisAsm.GetType(phaseTypeName);
-            if (phaseType == null)
+            if (phaseType == null || phaseType.IsAbstract || !typeof(ILayoutPhase).IsAssignableFrom(phaseType))
             {
-                L.LogError($"Unknown type in phase at index {index} in layout \"{_sessionInfo.DisplayName}\" and will be skipped.");
+                Logger.LogError("Unknown type in phase at index {0} in layout \"{1}\" and will be skipped.", index, _sessionInfo.DisplayName);
                 continue;
             }
 
-            ILayoutPhase? layoutPhase = await ReadPhase(phaseType, phaseConfig);
+            ILayoutPhase? layoutPhase = await ReadPhaseAsync(phaseType, phaseConfig, token);
 
             if (layoutPhase != null)
             {
@@ -248,7 +473,7 @@ public class GameSession : IDisposable
             }
             else
             {
-                L.LogWarning($"Failed to read phase at index {index} in layout \"{_sessionInfo.DisplayName}\".");
+                Logger.LogWarning("Failed to read phase at index {0} in layout \"{1}\".", index, _sessionInfo.DisplayName);
             }
         }
     }
@@ -262,6 +487,11 @@ public class GameSession : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        foreach (IDisposable disposable in _disposableVariationConfigurationRoots)
+        {
+            disposable.Dispose();
+        }
+
         _sessionInfo.Dispose();
         _configListener.Dispose();
 
@@ -271,8 +501,7 @@ public class GameSession : IDisposable
         }
         catch (AggregateException ex)
         {
-            L.LogError("Error(s) while disposing game session cancellation token source.");
-            L.LogError(ex);
+            Logger.LogError(ex, "Error(s) while disposing game session cancellation token source in layout \"{0}\".", _sessionInfo.DisplayName);
         }
 
         _cancellationTokenSource.Dispose();

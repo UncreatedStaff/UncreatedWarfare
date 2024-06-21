@@ -19,7 +19,7 @@ using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Database;
 #pragma warning disable CS8644
-public class WarfareDbContext : DbContext, IFactionDbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, ISeasonsDbContext, IGameDataDbContext
+public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext
 {
     internal static string? ConnStringOverride = null;
     

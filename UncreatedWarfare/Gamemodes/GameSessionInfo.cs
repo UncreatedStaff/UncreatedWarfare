@@ -11,22 +11,27 @@ public class GameSessionInfo : IDisposable
     /// <summary>
     /// Type of <see cref="GameSession"/> to create.
     /// </summary>
-    public Type GameSessionType { get; set; }
+    public required Type GameSessionType { get; init; }
 
     /// <summary>
     /// Configuration info about the layout of the game.
     /// </summary>
-    public IConfigurationRoot Layout { get; set; }
+    public required IConfigurationRoot Layout { get; init; }
+
+    /// <summary>
+    /// File path of the configuration file.
+    /// </summary>
+    public required string FilePath { get; init; }
 
     /// <summary>
     /// Weight of this session being picked. Defaults to 1.
     /// </summary>
-    public double Weight { get; set; }
+    public required double Weight { get; init; }
 
     /// <summary>
     /// Display name of the layout. Defaults to the file name.
     /// </summary>
-    public string DisplayName { get; set; }
+    public required string DisplayName { get; init; }
 
     /// <inheritdoc />
     public void Dispose()

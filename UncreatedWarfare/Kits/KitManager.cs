@@ -24,6 +24,7 @@ using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 // ReSharper disable ConstantConditionalAccessQualifier
 
@@ -907,7 +908,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         ThreadUtil.assertIsGameThread();
 
         List<Kit> kits = new List<Kit>(Cache.KitDataByKey.Values.Where(x => x is { IsPublicKit: true, Requestable: true }));
-        return kits.Count == 0 ? null : kits[UnityEngine.Random.Range(0, kits.Count)];
+        return kits.Count == 0 ? null : kits[RandomUtility.GetIndex((ICollection)kits)];
     }
     public bool TryCreateSquadOnRequestSquadleaderKit(CommandContext ctx)
     {

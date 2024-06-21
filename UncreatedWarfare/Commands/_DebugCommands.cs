@@ -36,6 +36,7 @@ using UnityEngine;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 #if DEBUG
@@ -880,7 +881,7 @@ public class DebugCommand : IExecutableCommand
                 if (h <= 0f)
                     continue;
                 pos = pos with { y = h + 10f };
-                VehicleData veh = data[UnityEngine.Random.Range(0, data.Length)];
+                VehicleData veh = data[RandomUtility.GetIndex((ICollection)data)];
                 if (VehicleData.IsEmplacement(veh.Type) && Assets.find(veh.VehicleID) is VehicleAsset asset)
                 {
                     FOBManager.SpawnEmplacement(asset, pos, Quaternion.identity, 0ul, other);

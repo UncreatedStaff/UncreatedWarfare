@@ -1,7 +1,9 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Configuration;
 
@@ -23,8 +25,7 @@ public class AssetVariantDictionary<TAsset> : Dictionary<string, IAssetLink<TAss
 
     public IAssetLink<TAsset> ResolveRandom()
     {
-        int randomValue = UCWarfare.IsLoaded ? UnityEngine.Random.Range(0, Count) : new Random().Next(0, Count);
-        return Values.ElementAt(randomValue);
+        return Values.ElementAt(RandomUtility.GetIndex((ICollection)Values));
     }
     public bool TryMatchVariant(Guid item, out string? variant)
     {

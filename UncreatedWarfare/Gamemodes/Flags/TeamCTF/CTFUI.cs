@@ -13,7 +13,6 @@ public static class CTFUI
 {
     public static readonly CaptureUI CaptureUI = new CaptureUI();
     public static readonly FlagListUI ListUI = new FlagListUI();
-    public static readonly StagingUI StagingUI = new StagingUI();
     public static int FromMax(int cap) => FromMax(cap, Mathf.RoundToInt(Flag.MaxPoints));
     public static int FromMax(int cap, int max) => Math.Abs(cap) >= max ? Gamemode.Config.UICircleFontCharacters.Length - 1 : (Gamemode.Config.UICircleFontCharacters.Length - 1) / max * Math.Abs(cap);
     public static CaptureUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle)
