@@ -1,12 +1,12 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Encoding;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Database.Manual;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 [ModerationEntry(ModerationEntryType.Mute)]
@@ -77,7 +77,7 @@ public class Mute : DurationPunishment
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableMutes}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableMutes}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnMutesType)}) VALUES " +
             $"(@0, @{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
             $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnMutesType}` = `t`.`{DatabaseInterface.ColumnMutesType}`;");

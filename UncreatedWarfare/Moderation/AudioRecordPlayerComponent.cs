@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using DanielWillett.SpeedBytes;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -7,15 +8,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Uncreated.Encoding;
-using Uncreated.Framework;
 using Unity.Collections;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Moderation;
 public class AudioRecordPlayerComponent : IPlayerComponent
 {
-    private static readonly ByteWriter MetaWriter = new ByteWriter(shouldPrepend: false, capacity: 0);
+    private static readonly ByteWriter MetaWriter = new ByteWriter(capacity: 0);
     private const ushort DataVersion = 1;
 
     private byte[]? _voiceBuffer;
@@ -219,7 +218,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
             }
             writer.Write(packetSize);
             writer.Write((ushort)i);
-            writer.Write(packet.TimeRelayed.FromUnityTime().ToUniversalTime());
+            writer.Write(DateTime.UtcNow - TimeSpan.FromSeconds(Time.realtimeSinceStartup) + TimeSpan.FromSeconds(packet.TimeRelayed));
             if (!includeData)
                 continue;
 

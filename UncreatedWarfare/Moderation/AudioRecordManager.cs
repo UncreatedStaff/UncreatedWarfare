@@ -11,7 +11,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
 using System.Threading;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Networking;
 using UnityEngine.Networking;
 

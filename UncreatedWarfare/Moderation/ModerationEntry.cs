@@ -24,7 +24,7 @@ public abstract class ModerationEntry : IModerationEntry
 
     /// <inheritdoc/>
     [JsonPropertyName("id")]
-    public PrimaryKey Id { get; set; } = PrimaryKey.NotAssigned;
+    public uint Id { get; set; }
 
     /// <inheritdoc/>
     [JsonPropertyName("target_steam_64")]
@@ -93,7 +93,7 @@ public abstract class ModerationEntry : IModerationEntry
 
     /// <inheritdoc/>
     [JsonPropertyName("related_entries")]
-    public PrimaryKey[] RelatedEntryKeys { get; set; } = Array.Empty<PrimaryKey>();
+    public uint[] RelatedEntryKeys { get; set; } = Array.Empty<uint>();
 
     /// <inheritdoc/>
     [JsonIgnore]
@@ -114,7 +114,7 @@ public abstract class ModerationEntry : IModerationEntry
     public virtual Guid? GetIcon() => null;
     public virtual async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
-        workingList.Add($"Entry ID: {Id.Key.ToString(formatter)}");
+        workingList.Add($"Entry ID: {Id.ToString(formatter)}");
         if (IsLegacy)
         {
             workingList.Add($"Legacy ID: {(LegacyId.HasValue ? LegacyId.Value.ToString(formatter) : "--")}");
@@ -227,7 +227,7 @@ public abstract class ModerationEntry : IModerationEntry
     }
     public virtual void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
-        writer.WriteNumber("id", Id.Key);
+        writer.WriteNumber("id", Id);
         writer.WriteNumber("target_steam_64", Player);
         writer.WriteString("message", Message);
 
@@ -321,7 +321,7 @@ public abstract class ModerationEntry : IModerationEntry
     {
         writer.Write(DataVersion);
 
-        writer.Write(Id.Key);
+        writer.Write(Id);
         writer.Write(Player);
         writer.WriteNullable(Message);
         byte flag = (byte)((IsLegacy ? 1 : 0) | (Removed ? 2 : 0));
@@ -386,7 +386,7 @@ public abstract class ModerationEntry : IModerationEntry
             for (int i = 0; i < Evidence.Length; ++i)
             {
                 ref Evidence evidence = ref Evidence[i];
-                if (evidence.Id.IsValid)
+                if (evidence.Id != 0u)
                     anyOld = true;
                 else
                     anyNew = true;
@@ -403,12 +403,12 @@ public abstract class ModerationEntry : IModerationEntry
                 for (int i = 0; i < Evidence.Length; ++i)
                 {
                     ref Evidence evidence = ref Evidence[i];
-                    if (!evidence.Id.IsValid)
+                    if (evidence.Id == 0u)
                         continue;
 
                     F.AppendPropertyList(builder, args.Count, 7, i, 1);
 
-                    args.Add(evidence.Id.Key);
+                    args.Add(evidence.Id);
                     args.Add(evidence.Actor == null ? DBNull.Value : evidence.Actor.Id);
                     args.Add(evidence.Image);
                     args.Add(evidence.URL.MaxLength(512)!);
@@ -438,7 +438,7 @@ public abstract class ModerationEntry : IModerationEntry
                 for (int i = 0; i < Evidence.Length; ++i)
                 {
                     ref Evidence evidence = ref Evidence[i];
-                    if (evidence.Id.IsValid)
+                    if (evidence.Id != 0u)
                         continue;
 
                     F.AppendPropertyList(builder, args.Count, 6, i, 1);
@@ -467,7 +467,7 @@ public interface IModerationEntry
     /// Unique ID to all types of entries.
     /// </summary>
     [JsonPropertyName("id")]
-    PrimaryKey Id { get; set; }
+    uint Id { get; set; }
 
     /// <summary>
     /// Steam64 ID for the target player.
@@ -570,7 +570,7 @@ public interface IModerationEntry
     /// The keys of related moderation entries.
     /// </summary>
     [JsonPropertyName("related_entries")]
-    PrimaryKey[] RelatedEntryKeys { get; set; }
+    uint[] RelatedEntryKeys { get; set; }
 
     /// <summary>
     /// Related moderation entries to this one.
@@ -648,13 +648,13 @@ public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
     }
     public void AddOrUpdate(IModerationEntry entry)
     {
-        if (entry.Id.IsValid)
-            this[entry.Id.Key] = entry;
+        if (entry.Id != 0u)
+            this[entry.Id] = entry;
     }
 
-    public bool TryGet<T>(PrimaryKey key, out T value) where T : ModerationEntry
+    public bool TryGet<T>(uint key, out T value) where T : ModerationEntry
     {
-        if (key.IsValid && TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
+        if (key != 0u && TryGetValue(key, out ModerationEntryCacheEntry entry))
         {
             value = (entry.Entry as T)!;
             return value != null;
@@ -663,9 +663,9 @@ public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
         value = null!;
         return false;
     }
-    public bool TryGet<T>(PrimaryKey key, out T value, TimeSpan timeout) where T : class, IModerationEntry
+    public bool TryGet<T>(uint key, out T value, TimeSpan timeout) where T : class, IModerationEntry
     {
-        if (key.IsValid && timeout.Ticks > 0 && TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
+        if (key != 0u && timeout.Ticks > 0 && TryGetValue(key, out ModerationEntryCacheEntry entry))
         {
             value = (entry.Entry as T)!;
             return value != null && (DateTime.UtcNow - entry.LastRefreshed) < timeout;

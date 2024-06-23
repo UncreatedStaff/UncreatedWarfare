@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Configuration.JsonConverters;
+using Uncreated.Warfare.Database.Manual;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Moderation.Reports;
@@ -194,7 +195,7 @@ public class CheatingReport : Report
 
         if (Shots.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportShotRecords}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportShotRecords}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsShotRecordAmmo, DatabaseInterface.ColumnReportsShotRecordAmmoName,
                 DatabaseInterface.ColumnReportsShotRecordItem, DatabaseInterface.ColumnReportsShotRecordItemName,
                 DatabaseInterface.ColumnReportsShotRecordDamageDone, DatabaseInterface.ColumnReportsShotRecordLimb,

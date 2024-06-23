@@ -1,13 +1,12 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 [ModerationEntry(ModerationEntryType.ChatAbuseReport)]
@@ -64,7 +63,7 @@ public class ChatAbuseReport : Report
 
         if (Messages.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportChatRecords}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportChatRecords}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsChatRecordsTimestamp,
                 DatabaseInterface.ColumnReportsChatRecordsIndex, DatabaseInterface.ColumnReportsChatRecordsMessage)}) VALUES ");
 

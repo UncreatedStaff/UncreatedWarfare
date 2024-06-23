@@ -1,11 +1,12 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Data;
 using System.Globalization;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Encoding;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Database.ValueConverters;
 
@@ -20,7 +21,7 @@ public readonly struct HWID : IEquatable<HWID>
 {
     public const int Size = 20;
 
-    public static readonly HWID Zero;
+    public static readonly HWID Zero = default;
 
     [FieldOffset(0)]
     private readonly long _b07;
@@ -39,22 +40,16 @@ public readonly struct HWID : IEquatable<HWID>
     }
     public unsafe HWID(byte* ptr)
     {
-        this = *(HWID*)ptr;
+        this = Unsafe.ReadUnaligned<HWID>(ptr);
     }
-    public unsafe HWID(Span<byte> span, int index = 0)
+    public HWID(Span<byte> span)
     {
-        if (index < 0)
-            index = 0;
-
-        if (span.Length - index < Size)
+        if (span.Length < Size)
             throw new ArgumentException("Span must have at least " + Size + " bytes.", nameof(span));
 
-        fixed (byte* ptr = &span[index])
-        {
-            this = *(HWID*)ptr;
-        }
+        this = MemoryMarshal.Read<HWID>(span);
     }
-    public unsafe HWID(byte[] bytes, int index = 0)
+    public HWID(byte[] bytes, int index = 0)
     {
         if (index < 0)
             index = 0;
@@ -64,10 +59,13 @@ public readonly struct HWID : IEquatable<HWID>
 
         if (BitConverter.IsLittleEndian)
         {
-            fixed (byte* ptr = &bytes[index])
-            {
-                this = *(HWID*)ptr;
-            }
+            this = MemoryMarshal.Read<HWID>(bytes);
+        }
+        else
+        {
+            _b07 = BitConverter.ToInt64(bytes.AsSpan(0));
+            _b815 = BitConverter.ToInt64(bytes.AsSpan(8));
+            _b1619 = BitConverter.ToInt32(bytes.AsSpan(16));
         }
     }
     public static unsafe HWID GenerateRandomHWID()
@@ -78,39 +76,36 @@ public readonly struct HWID : IEquatable<HWID>
         Guid* addr2 = &guid2;
         return new HWID(*(long*)addr, *(long*)addr2, *((int*)addr + 2));
     }
-    public unsafe byte[] ToByteArray()
+    public byte[] ToByteArray()
     {
         byte[] bytes = new byte[Size];
-        fixed (byte* ptr = bytes)
-        {
-            UnsafeBitConverter.GetBytes(ptr, _b07);
-            UnsafeBitConverter.GetBytes(ptr + 8, _b815);
-            UnsafeBitConverter.GetBytes(ptr + 16, _b1619);
-        }
+
+        BitConverter.TryWriteBytes(bytes, _b07);
+        BitConverter.TryWriteBytes(bytes.AsSpan(8), _b815);
+        BitConverter.TryWriteBytes(bytes.AsSpan(16), _b1619);
 
         return bytes;
     }
     public unsafe int CopyTo(byte* ptr)
     {
-        UnsafeBitConverter.GetBytes(ptr, _b07);
-        UnsafeBitConverter.GetBytes(ptr + 8, _b815);
-        UnsafeBitConverter.GetBytes(ptr + 16, _b1619);
+        Span<byte> span = new Span<byte>(ptr, 20);
+
+        BitConverter.TryWriteBytes(span, _b07);
+        BitConverter.TryWriteBytes(span[8..], _b815);
+        BitConverter.TryWriteBytes(span[16..], _b1619);
 
         return Size;
     }
-    public unsafe int CopyTo(byte[] array, int offset)
+    public int CopyTo(byte[] array, int offset)
     {
         if (offset < 0 || offset > array.Length)
             throw new ArgumentOutOfRangeException(nameof(offset));
         if (array.Length - offset < Size)
             throw new ArgumentException("Array must be at least " + Size + " elements.", nameof(array));
 
-        fixed (byte* ptr = &array[offset])
-        {
-            UnsafeBitConverter.GetBytes(ptr, _b07);
-            UnsafeBitConverter.GetBytes(ptr + 8, _b815);
-            UnsafeBitConverter.GetBytes(ptr + 16, _b1619);
-        }
+        BitConverter.TryWriteBytes(array.AsSpan(offset), _b07);
+        BitConverter.TryWriteBytes(array.AsSpan(offset + 8), _b815);
+        BitConverter.TryWriteBytes(array.AsSpan(offset + 16), _b1619);
 
         return Size;
     }
@@ -180,15 +175,13 @@ public readonly struct HWID : IEquatable<HWID>
         return true;
     }
 
-    public unsafe string ToBase10String()
+    public string ToBase10String()
     {
-        byte[] bytes = new byte[Size + 1];
-        fixed (byte* ptr = bytes)
-        {
-            UnsafeBitConverter.GetBytes(ptr, _b07);
-            UnsafeBitConverter.GetBytes(ptr + 8, _b815);
-            UnsafeBitConverter.GetBytes(ptr + 16, _b1619);
-        }
+        Span<byte> bytes = stackalloc byte[Size + 1];
+
+        BitConverter.TryWriteBytes(bytes, _b07);
+        BitConverter.TryWriteBytes(bytes[8..], _b815);
+        BitConverter.TryWriteBytes(bytes[16..], _b1619);
 
         return new BigInteger(bytes).ToString("D");
     }
@@ -282,8 +275,9 @@ public readonly struct HWID : IEquatable<HWID>
     }
     public static HWID ReadFromByteReader(ByteReader reader)
     {
-        reader.Skip(Size);
-        return new HWID(reader.InternalBuffer!, reader.BufferIndex - Size);
+        Span<byte> span = stackalloc byte[Size];
+        reader.ReadBlockTo(span);
+        return new HWID(span);
     }
     public static unsafe HWID ReadFromJsonReader(ref Utf8JsonReader reader)
     {

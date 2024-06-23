@@ -1,4 +1,5 @@
-﻿using SDG.Framework.Utilities;
+﻿using DanielWillett.SpeedBytes;
+using SDG.Framework.Utilities;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -7,8 +8,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.SQL;
+using Uncreated.Warfare.Configuration.JsonConverters;
+using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Vehicles;
 
@@ -24,7 +25,7 @@ public class AssetBan : DurationPunishment
     public override bool IsAppealable => true;
 
     [JsonPropertyName("vehicle_type_filter")]
-    [JsonConverter(typeof(ArrayConverter<VehicleType, JsonStringEnumConverter>))]
+    [JsonConverter(typeof(ArrayFactoryConverter<VehicleType, JsonStringEnumConverter>))]
     public VehicleType[] VehicleTypeFilter { get; set; } = Array.Empty<VehicleType>();
     internal void FillFromText(string? text)
     {
@@ -38,7 +39,7 @@ public class AssetBan : DurationPunishment
             return;
         }
 
-        _split ??= new char[] { ',' };
+        _split ??= [ ',' ];
         string[] splits = text.Split(_split, StringSplitOptions.RemoveEmptyEntries);
         List<VehicleType>? vehicleTypes = null;
         
@@ -82,30 +83,30 @@ public class AssetBan : DurationPunishment
 
         if (input.StartsWith("transport", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.TransportAir, VehicleType.TransportGround };
+            vehicleTypes = [ VehicleType.TransportAir, VehicleType.TransportGround ];
         }
         else if (input.StartsWith("air", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.TransportAir, VehicleType.Jet, VehicleType.AttackHeli };
+            vehicleTypes = [ VehicleType.TransportAir, VehicleType.Jet, VehicleType.AttackHeli ];
         }
         else if (input.StartsWith("armor", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.APC, VehicleType.IFV, VehicleType.MBT, VehicleType.ScoutCar };
+            vehicleTypes = [ VehicleType.APC, VehicleType.IFV, VehicleType.MBT, VehicleType.ScoutCar ];
         }
         else if (input.StartsWith("logi", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.LogisticsGround, VehicleType.TransportAir };
+            vehicleTypes = [ VehicleType.LogisticsGround, VehicleType.TransportAir ];
         }
         else if (input.StartsWith("assault air", StringComparison.InvariantCultureIgnoreCase)
                || input.StartsWith("assaultair", StringComparison.InvariantCultureIgnoreCase)
                || input.StartsWith("airassault", StringComparison.InvariantCultureIgnoreCase)
                || input.StartsWith("air assault", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.AttackHeli, VehicleType.Jet };
+            vehicleTypes = [ VehicleType.AttackHeli, VehicleType.Jet ];
         }
         else if (input.StartsWith("empl", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.HMG, VehicleType.ATGM, VehicleType.AA, VehicleType.Mortar };
+            vehicleTypes = [ VehicleType.HMG, VehicleType.ATGM, VehicleType.AA, VehicleType.Mortar ];
         }
     }
     public string GetCommaList(bool roundTrip, LanguageInfo? lang = null)
@@ -302,7 +303,7 @@ public class AssetBan : DurationPunishment
 
         if (VehicleTypeFilter.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableAssetBanTypeFilters}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableAssetBanTypeFilters}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAssetBanFiltersType)}) VALUES ");
 
             for (int i = 0; i < VehicleTypeFilter.Length; ++i)

@@ -1,11 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Cysharp.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.SQL;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
@@ -33,7 +33,7 @@ partial class KitManager
             if (player is { IsDownloadingKitData: true, HasDownloadedKitData: false })
             {
                 L.LogDebug("Spin-waiting for player kit data for " + player + "...");
-                UCWarfare.SpinWaitUntil(() => player.HasDownloadedKitData, 2500);
+                // todo
                 return;
             }
             
@@ -107,7 +107,7 @@ partial class KitManager
                 UnturnedAssetReference? reference = hotkey.Item;
                 if (reference.HasValue)
                 {
-                    jar = new SpecificPageKitItem(PrimaryKey.NotAssigned, reference.Value, hotkey.X, hotkey.Y, 0, hotkey.Page, 1, Array.Empty<byte>());
+                    jar = new SpecificPageKitItem(0u, reference.Value, hotkey.X, hotkey.Y, 0, hotkey.Page, 1, Array.Empty<byte>());
                 }
                 else
                 {
@@ -116,11 +116,11 @@ partial class KitManager
                     {
                         L.LogWarning("Failed to read redirect type and GUID from player " + hotkey.Steam64 + "'s hotkeys.");
                         del = true;
-                        jar = new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, hotkey.X, hotkey.Y, 0, hotkey.Page, RedirectType.None, null);
+                        jar = new AssetRedirectPageKitItem(0u, hotkey.X, hotkey.Y, 0, hotkey.Page, RedirectType.None, null);
                     }
                     else
                     {
-                        jar = new AssetRedirectPageKitItem(PrimaryKey.NotAssigned, hotkey.X, hotkey.Y, 0, hotkey.Page, redir.Value, null);
+                        jar = new AssetRedirectPageKitItem(0u, hotkey.X, hotkey.Y, 0, hotkey.Page, redir.Value, null);
                     }
                 }
 

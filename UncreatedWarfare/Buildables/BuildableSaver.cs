@@ -360,23 +360,7 @@ public class BuildableSaver : ISessionHostedService
             _semaphore.Release();
         }
     }
-    public static void FillHp(BarricadeDrop drop)
-    {
-        ThreadUtil.assertIsGameThread();
-        if (drop.asset.health > drop.GetServersideData().barricade.health)
-        {
-            BarricadeManager.repair(drop.model, drop.asset.health, 1f, Provider.server);
-        }
-    }
-    public static void FillHp(StructureDrop drop)
-    {
-        ThreadUtil.assertIsGameThread();
-        if (drop.asset.health > drop.GetServersideData().structure.health)
-        {
-            StructureManager.repair(drop.model, drop.asset.health, 1f, Provider.server);
-        }
-    }
-
+    
     /// <summary>
     /// Sync an exitsing buildable with a buildable save, or replace the buildable if it's missing.
     /// </summary>

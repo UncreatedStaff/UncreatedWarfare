@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.SpeedBytes;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -6,9 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
 
 namespace Uncreated.Warfare.Moderation.Records;
 [ModerationEntry(ModerationEntryType.VehicleTeamkill)]
@@ -125,7 +124,7 @@ public class VehicleTeamkill : ModerationEntry
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableVehicleTeamkills}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableVehicleTeamkills}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset,
             DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName, DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin)}) VALUES ");
 

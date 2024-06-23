@@ -1,11 +1,9 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
-using SDG.Unturned;
-using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Punishments;
@@ -52,7 +50,7 @@ internal static class Migration
     public static async Task MigrateKicks(DatabaseInterface db, CancellationToken token = default)
     {
         List<Kick> kicks = new List<Kick>();
-        await db.Sql.QueryAsync("SELECT `KickID`, `Kicked`, `Kicker`, `Reason`, `Timestamp` FROM `kicks` ORDER BY `KickID`;", null,
+        await db.Sql.QueryAsync("SELECT `KickID`, `Kicked`, `Kicker`, `Reason`, `Timestamp` FROM `kicks` ORDER BY `KickID`;", null, token,
             reader =>
             {
                 Kick kick = new Kick
@@ -73,18 +71,18 @@ internal static class Migration
                     RemovedMessage = null,
                     RemovedTimestamp = null,
                     Evidence = Array.Empty<Evidence>(),
-                    AppealKeys = Array.Empty<PrimaryKey>(),
+                    AppealKeys = Array.Empty<uint>(),
                     Appeals = Array.Empty<Appeal>(),
-                    ReportKeys = Array.Empty<PrimaryKey>(),
+                    ReportKeys = Array.Empty<uint>(),
                     Reports = Array.Empty<Report>(),
                     RelevantLogsBegin = null,
                     RelevantLogsEnd = null,
                     ResolvedTimestamp = null,
-                    Id = PrimaryKey.NotAssigned
+                    Id = 0u
                 };
                 kick.ResolvedTimestamp = kick.StartedTimestamp;
                 kicks.Add(kick);
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         for (int i = 0; i < kicks.Count; i++)
         {
@@ -98,7 +96,7 @@ internal static class Migration
     public static async Task MigrateWarnings(DatabaseInterface db, CancellationToken token = default)
     {
         List<Warning> warnings = new List<Warning>();
-        await db.Sql.QueryAsync("SELECT `WarnID`, `Warned`, `Warner`, `Reason`, `Timestamp` FROM `warnings` ORDER BY `WarnID`;", null,
+        await db.Sql.QueryAsync("SELECT `WarnID`, `Warned`, `Warner`, `Reason`, `Timestamp` FROM `warnings` ORDER BY `WarnID`;", null, token,
             reader =>
             {
                 Warning warning = new Warning
@@ -119,19 +117,19 @@ internal static class Migration
                     RemovedMessage = null,
                     RemovedTimestamp = null,
                     Evidence = Array.Empty<Evidence>(),
-                    AppealKeys = Array.Empty<PrimaryKey>(),
+                    AppealKeys = Array.Empty<uint>(),
                     Appeals = Array.Empty<Appeal>(),
-                    ReportKeys = Array.Empty<PrimaryKey>(),
+                    ReportKeys = Array.Empty<uint>(),
                     Reports = Array.Empty<Report>(),
                     RelevantLogsBegin = null,
                     RelevantLogsEnd = null,
                     ResolvedTimestamp = null,
-                    Id = PrimaryKey.NotAssigned,
+                    Id = 0u,
                     DisplayedTimestamp = null
                 };
                 warning.ResolvedTimestamp = warning.StartedTimestamp;
                 warnings.Add(warning);
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         for (int i = 0; i < warnings.Count; i++)
         {
@@ -145,7 +143,7 @@ internal static class Migration
     public static async Task MigrateBattlEyeKicks(DatabaseInterface db, CancellationToken token = default)
     {
         List<BattlEyeKick> kicks = new List<BattlEyeKick>();
-        await db.Sql.QueryAsync("SELECT `BattleyeID`, `Kicked`, `Reason`, `Timestamp` FROM `battleye_kicks` ORDER BY `BattleyeID`;", null,
+        await db.Sql.QueryAsync("SELECT `BattleyeID`, `Kicked`, `Reason`, `Timestamp` FROM `battleye_kicks` ORDER BY `BattleyeID`;", null, token,
             reader =>
             {
                 BattlEyeKick kick = new BattlEyeKick
@@ -169,11 +167,11 @@ internal static class Migration
                     RelevantLogsBegin = null,
                     RelevantLogsEnd = null,
                     ResolvedTimestamp = null,
-                    Id = PrimaryKey.NotAssigned
+                    Id = 0u
                 };
                 kick.ResolvedTimestamp = kick.StartedTimestamp;
                 kicks.Add(kick);
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         for (int i = 0; i < kicks.Count; i++)
         {
@@ -187,7 +185,7 @@ internal static class Migration
     public static async Task MigrateMutes(DatabaseInterface db, CancellationToken token = default)
     {
         List<Mute> mutes = new List<Mute>();
-        await db.Sql.QueryAsync("SELECT `ID`, `Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`, `Deactivated`, `DeactivateTimestamp` FROM `muted` ORDER BY `ID`;", null,
+        await db.Sql.QueryAsync("SELECT `ID`, `Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`, `Deactivated`, `DeactivateTimestamp` FROM `muted` ORDER BY `ID`;", null, token,
             reader =>
             {
                 int time = reader.GetInt32(4);
@@ -196,10 +194,10 @@ internal static class Migration
                     LegacyId = reader.GetUInt32(0),
                     IsLegacy = true,
                     Player = reader.GetUInt64(1),
-                    Actors = new RelatedActor[]
-                    {
+                    Actors =
+                    [
                         new RelatedActor(RelatedActor.RolePrimaryAdmin, true, Actors.GetActor(reader.GetUInt64(2)))
-                    },
+                    ],
                     Removed = false,
                     Message = reader.GetString(3),
                     Duration = time < 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(time),
@@ -210,14 +208,14 @@ internal static class Migration
                     RemovedMessage = null,
                     RemovedTimestamp = null,
                     Evidence = Array.Empty<Evidence>(),
-                    AppealKeys = Array.Empty<PrimaryKey>(),
+                    AppealKeys = Array.Empty<uint>(),
                     Appeals = Array.Empty<Appeal>(),
-                    ReportKeys = Array.Empty<PrimaryKey>(),
+                    ReportKeys = Array.Empty<uint>(),
                     Reports = Array.Empty<Report>(),
                     RelevantLogsBegin = null,
                     RelevantLogsEnd = null,
                     ResolvedTimestamp = null,
-                    Id = PrimaryKey.NotAssigned,
+                    Id = 0u,
                     Type = reader.GetByte(6) switch
                     {
                         1 => MuteType.Voice,
@@ -234,7 +232,7 @@ internal static class Migration
                     mute.ForgiveTimestamp = dt;
                 }
                 mutes.Add(mute);
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         for (int i = 0; i < mutes.Count; i++)
         {
@@ -248,7 +246,7 @@ internal static class Migration
     public static async Task MigrateBans(DatabaseInterface db, CancellationToken token = default)
     {
         List<Ban> bans = new List<Ban>();
-        await db.Sql.QueryAsync("SELECT `BanID`, `Banned`, `Banner`, `Duration`, `Reason`, `Timestamp` FROM `bans` ORDER BY `Banned`, `Timestamp`;", null,
+        await db.Sql.QueryAsync("SELECT `BanID`, `Banned`, `Banner`, `Duration`, `Reason`, `Timestamp` FROM `bans` ORDER BY `Banned`, `Timestamp`;", null, token,
             reader =>
             {
                 int time = reader.GetInt32(3);
@@ -257,10 +255,10 @@ internal static class Migration
                     LegacyId = reader.GetUInt32(0),
                     IsLegacy = true,
                     Player = reader.GetUInt64(1),
-                    Actors = new RelatedActor[]
-                    {
+                    Actors =
+                    [
                         new RelatedActor(RelatedActor.RolePrimaryAdmin, true, Actors.GetActor(reader.GetUInt64(2)))
-                    },
+                    ],
                     Removed = false,
                     Duration = time < 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(time),
                     Message = reader.GetString(4),
@@ -271,20 +269,20 @@ internal static class Migration
                     RemovedMessage = null,
                     RemovedTimestamp = null,
                     Evidence = Array.Empty<Evidence>(),
-                    AppealKeys = Array.Empty<PrimaryKey>(),
+                    AppealKeys = Array.Empty<uint>(),
                     Appeals = Array.Empty<Appeal>(),
-                    ReportKeys = Array.Empty<PrimaryKey>(),
+                    ReportKeys = Array.Empty<uint>(),
                     Reports = Array.Empty<Report>(),
                     RelevantLogsBegin = null,
                     RelevantLogsEnd = null,
                     ResolvedTimestamp = null,
-                    Id = PrimaryKey.NotAssigned
+                    Id = 0u
                 };
                 ban.ResolvedTimestamp = ban.StartedTimestamp;
                 bans.Add(ban);
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
-        await db.Sql.QueryAsync("SELECT `UnbanID`, `Pardoned`, `Pardoner`, `Timestamp` FROM `unbans` ORDER BY `Pardoned`, `Timestamp`;", null,
+        await db.Sql.QueryAsync("SELECT `UnbanID`, `Pardoned`, `Pardoner`, `Timestamp` FROM `unbans` ORDER BY `Pardoned`, `Timestamp`;", null, token,
             reader =>
             {
                 ulong steam64 = reader.GetUInt64(1);
@@ -302,11 +300,12 @@ internal static class Migration
                         ban.ForgivenBy = Actors.GetActor(admin);
                         ban.ForgiveTimestamp = unbanTime;
                         RelatedActor[] actors = ban.Actors;
-                        Util.AddToArray(ref actors!, new RelatedActor(RelatedActor.RoleRemovingAdmin, true, ban.ForgivenBy));
+                        Array.Resize(ref actors, (actors?.Length ?? 0) + 1);
+                        actors[^1] = new RelatedActor(RelatedActor.RoleRemovingAdmin, true, ban.ForgivenBy);
                         ban.Actors = actors;
                     }
                 }
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         bans.Sort((a, b) => a.LegacyId!.Value.CompareTo(b.LegacyId!.Value));
 
@@ -322,7 +321,7 @@ internal static class Migration
     public static async Task MigrateTeamkills(DatabaseInterface db, CancellationToken token = default)
     {
         List<Teamkill> teamkills = new List<Teamkill>();
-        await db.Sql.QueryAsync("SELECT `TeamkillID`, `Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp` FROM `teamkills` ORDER BY `TeamkillID`;", null,
+        await db.Sql.QueryAsync("SELECT `TeamkillID`, `Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp` FROM `teamkills` ORDER BY `TeamkillID`;", null, token,
             reader =>
             {
                 Teamkill teamkill = new Teamkill
@@ -346,7 +345,7 @@ internal static class Migration
                     RelevantLogsBegin = null,
                     RelevantLogsEnd = null,
                     ResolvedTimestamp = null,
-                    Id = PrimaryKey.NotAssigned,
+                    Id = 0u,
                     Limb = null,
                     Cause = reader.IsDBNull(3) ? null : (!int.TryParse(reader.GetString(3), NumberStyles.Number, CultureInfo.InvariantCulture, out _) && Enum.TryParse(reader.GetString(3), true, out EDeathCause cause)) ? cause : null,
                     Distance = reader.IsDBNull(6) ? null : reader.GetFloat(6)
@@ -364,7 +363,7 @@ internal static class Migration
 
                 teamkill.ResolvedTimestamp = teamkill.StartedTimestamp;
                 teamkills.Add(teamkill);
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         for (int i = 0; i < teamkills.Count; i++)
         {

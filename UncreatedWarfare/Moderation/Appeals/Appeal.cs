@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -7,9 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Moderation.Punishments;
 
 namespace Uncreated.Warfare.Moderation.Appeals;
@@ -45,7 +44,7 @@ public class Appeal : ModerationEntry
     /// Keys to the punishments being appealed.
     /// </summary>
     [JsonPropertyName("punishments")]
-    public PrimaryKey[] PunishmentKeys { get; set; } = Array.Empty<PrimaryKey>();
+    public uint[] PunishmentKeys { get; set; } = Array.Empty<uint>();
 
     /// <summary>
     /// Responses to the asked questions.
@@ -68,7 +67,7 @@ public class Appeal : ModerationEntry
         TicketId = reader.ReadGuid();
         AppealState = reader.ReadNullableBool();
         DiscordUserId = reader.ReadNullableUInt64();
-        PunishmentKeys = new PrimaryKey[reader.ReadInt32()];
+        PunishmentKeys = new uint[reader.ReadInt32()];
         for (int i = 0; i < PunishmentKeys.Length; ++i)
             PunishmentKeys[i] = reader.ReadUInt32();
         Responses = new AppealResponse[reader.ReadInt32()];
@@ -85,7 +84,7 @@ public class Appeal : ModerationEntry
         writer.WriteNullable(DiscordUserId);
         writer.Write(PunishmentKeys.Length);
         for (int i = 0; i < PunishmentKeys.Length; ++i)
-            writer.Write(PunishmentKeys[i].Key);
+            writer.Write(PunishmentKeys[i]);
         writer.Write(Responses.Length);
         for (int i = 0; i < Responses.Length; ++i)
         {
@@ -106,7 +105,7 @@ public class Appeal : ModerationEntry
         else if (propertyName.Equals("punishments_detail", StringComparison.InvariantCultureIgnoreCase))
             Punishments = JsonSerializer.Deserialize<Punishment?[]>(ref reader, options) ?? Array.Empty<Punishment>();
         else if (propertyName.Equals("punishments", StringComparison.InvariantCultureIgnoreCase))
-            PunishmentKeys = JsonSerializer.Deserialize<PrimaryKey[]>(ref reader, options) ?? Array.Empty<PrimaryKey>();
+            PunishmentKeys = JsonSerializer.Deserialize<uint[]>(ref reader, options) ?? Array.Empty<uint>();
         else if (propertyName.Equals("responses", StringComparison.InvariantCultureIgnoreCase))
             Responses = JsonSerializer.Deserialize<AppealResponse[]>(ref reader, options) ?? Array.Empty<AppealResponse>();
         else
@@ -158,7 +157,7 @@ public class Appeal : ModerationEntry
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableAppeals}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableAppeals}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAppealsTicketId, DatabaseInterface.ColumnAppealsState,
             DatabaseInterface.ColumnAppealsDiscordId)}) VALUES ");
 
@@ -176,7 +175,7 @@ public class Appeal : ModerationEntry
 
         if (PunishmentKeys.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableAppealPunishments}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableAppealPunishments}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAppealPunishmentsPunishment)}) VALUES ");
 
             for (int i = 0; i < PunishmentKeys.Length; ++i)
@@ -192,7 +191,7 @@ public class Appeal : ModerationEntry
 
         if (Responses.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableAppealResponses}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableAppealResponses}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAppealResponsesQuestion, DatabaseInterface.ColumnAppealResponsesResponse)}) VALUES ");
 
             for (int i = 0; i < Responses.Length; ++i)

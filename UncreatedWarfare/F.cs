@@ -1823,9 +1823,9 @@ public static class F
 }
 public readonly struct PrimaryKeyPair<T>
 {
-    public int Key { get; }
+    public uint Key { get; }
     public T Value { get; }
-    public PrimaryKeyPair(int key, T value)
+    public PrimaryKeyPair(uint key, T value)
     {
         Key = key;
         Value = value;

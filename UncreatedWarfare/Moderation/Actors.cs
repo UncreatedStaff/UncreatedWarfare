@@ -1,12 +1,14 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using SDG.Unturned;
+using Steamworks;
+using System;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Encoding;
 using Uncreated.Framework;
-using Uncreated.Warfare.Networking;
+using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
 namespace Uncreated.Warfare.Moderation;
 
@@ -16,9 +18,13 @@ public static class Actors
     public static IModerationActor AntiCheat => AntiCheatActor.Instance;
     public static IModerationActor Console => ConsoleActor.Instance;
 
+    /// <summary>
+    /// Try to create a standard actor from an ID.
+    /// </summary>
+    /// <remarks>Invalid steam IDs will be assumed to be Discord IDs. IDs 0-2 are reserved for Console, Anti-Cheat, and BattlEye in that order.</remarks>
     public static IModerationActor GetActor(ulong id)
     {
-        if (id == 0ul)
+        if (id == 0ul || id == Provider.server.m_SteamID)
             return ConsoleActor.Instance;
 
         if (id == 1ul)
@@ -27,15 +33,14 @@ public static class Actors
         if (id == 2ul)
             return BattlEyeActor.Instance;
 
-        if (Util.IsValidSteam64Id(id))
-        {
-            if (UCWarfare.IsLoaded && UCPlayer.FromID(id) is { IsOnline: true } pl)
-                return pl;
-            
-            return new PlayerActor(id);
-        }
+        if (new CSteamID(id).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            return new DiscordActor(id);
 
-        return new DiscordActor(id);
+        if (UCWarfare.IsLoaded && UCPlayer.FromID(id) is { IsOnline: true } pl)
+            return pl;
+            
+        return new PlayerActor(id);
+
     }
 }
 
@@ -84,6 +89,7 @@ public class PlayerActor : IModerationActor
         return null;
     }
 }
+
 [JsonConverter(typeof(ActorConverter))]
 public class DiscordActor : IModerationActor
 {
@@ -135,6 +141,7 @@ public class DiscordActor : IModerationActor
         return null;
     }
 }
+
 [JsonConverter(typeof(ActorConverter))]
 public class ConsoleActor : IModerationActor
 {
@@ -147,6 +154,7 @@ public class ConsoleActor : IModerationActor
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
         => new ValueTask<string?>(UCWarfare.IsLoaded ? "https://i.imgur.com/f2axLoQ.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
 }
+
 [JsonConverter(typeof(ActorConverter))]
 public class AntiCheatActor : IModerationActor
 {
@@ -158,6 +166,7 @@ public class AntiCheatActor : IModerationActor
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("Anti-Cheat");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default) => ConsoleActor.Instance.GetProfilePictureURL(database, size, token);
 }
+
 [JsonConverter(typeof(ActorConverter))]
 public class BattlEyeActor : IModerationActor
 {
@@ -220,22 +229,13 @@ public readonly struct RelatedActor : IEquatable<RelatedActor>
 
     public bool Equals(RelatedActor other)
     {
-        return Role == other.Role && Admin == other.Admin && (Actor == null && other.Actor == null || Actor != null && other.Actor != null && Actor.Id == other.Actor.Id);
+        return string.Equals(Role, other.Role, StringComparison.Ordinal) && Admin == other.Admin && (Actor == null && other.Actor == null || Actor != null && other.Actor != null && Actor.Id == other.Actor.Id);
     }
     public override bool Equals(object? obj)
     {
         return obj is RelatedActor other && Equals(other);
     }
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            int hashCode = Role.GetHashCode();
-            hashCode = (hashCode * 397) ^ Admin.GetHashCode();
-            hashCode = (hashCode * 397) ^ Actor.GetHashCode();
-            return hashCode;
-        }
-    }
+    public override int GetHashCode() => HashCode.Combine(Role, Admin, Actor.Id);
     public static bool operator ==(RelatedActor left, RelatedActor right)
     {
         return left.Equals(right);

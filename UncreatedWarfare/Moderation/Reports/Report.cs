@@ -5,6 +5,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration.JsonConverters;
+using Uncreated.Warfare.Database.Manual;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -17,7 +19,7 @@ public class Report : ModerationEntry
     public ReportType Type { get; set; }
 
     [JsonPropertyName("screenshot_data")]
-    [JsonConverter(typeof(Base64Converter))]
+    [JsonConverter(typeof(ByteArrayJsonConverter))]
     public byte[]? ScreenshotJpgData { get; set; }
     public override string GetDisplayName() => "Report";
     protected override void ReadIntl(ByteReader reader, ushort version)
@@ -131,7 +133,7 @@ public class Report : ModerationEntry
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableReports}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableReports}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsType)}) VALUES ");
 
         F.AppendPropertyList(builder, args.Count, 1, 0, 1);

@@ -1,13 +1,12 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Text.Json.Serialization;
-using Uncreated.Encoding;
-using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation;
 public struct Evidence : IEquatable<Evidence>
 {
     [JsonPropertyName("id")]
-    public PrimaryKey Id { get; set; }
+    public uint Id { get; set; }
 
     [JsonPropertyName("url")]
     public string URL { get; set; }
@@ -30,9 +29,9 @@ public struct Evidence : IEquatable<Evidence>
 
     public Evidence() { }
     public Evidence(string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
-        : this(PrimaryKey.NotAssigned, url, message, savedLocation, image, actor, timestamp) { }
+        : this(0u, url, message, savedLocation, image, actor, timestamp) { }
     
-    public Evidence(PrimaryKey id, string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
+    public Evidence(uint id, string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
     {
         Id = id;
         URL = url;
@@ -54,7 +53,7 @@ public struct Evidence : IEquatable<Evidence>
     }
     public void Write(ByteWriter writer)
     {
-        writer.Write(Id.Key);
+        writer.Write(Id);
         writer.Write(URL);
         writer.WriteNullable(SavedLocation);
         writer.WriteNullable(Message);
@@ -65,7 +64,7 @@ public struct Evidence : IEquatable<Evidence>
 
     public bool Equals(Evidence other)
     {
-        return Id.Key == other.Id.Key && string.Equals(URL, other.URL, StringComparison.Ordinal) &&
+        return Id == other.Id && string.Equals(URL, other.URL, StringComparison.Ordinal) &&
                string.Equals(SavedLocation, other.SavedLocation, StringComparison.Ordinal) &&
                string.Equals(Message, other.Message, StringComparison.Ordinal) &&
                Image == other.Image &&
@@ -78,21 +77,7 @@ public struct Evidence : IEquatable<Evidence>
         return obj is Evidence other && Equals(other);
     }
 
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            int hashCode = Id.GetHashCode();
-            hashCode = (hashCode * 397) ^ URL.GetHashCode();
-            hashCode = (hashCode * 397) ^ (SavedLocation != null ? SavedLocation.GetHashCode() : 0);
-            hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
-            hashCode = (hashCode * 397) ^ Image.GetHashCode();
-            hashCode = (hashCode * 397) ^ Actor.GetHashCode();
-            hashCode = (hashCode * 397) ^ Timestamp.GetHashCode();
-            return hashCode;
-        }
-    }
-
+    public override int GetHashCode() => HashCode.Combine(Id, URL, SavedLocation, Message, Image, Actor, Timestamp);
     public static bool operator ==(Evidence left, Evidence right)
     {
         return left.Equals(right);

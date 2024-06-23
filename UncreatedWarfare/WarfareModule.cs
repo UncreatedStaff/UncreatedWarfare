@@ -20,6 +20,7 @@ using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -153,6 +154,13 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<CommandDispatcher>().Parser);
         serviceCollection.AddRpcSingleton<UserPermissionStore>();
         serviceCollection.AddSingleton(_gameObjectHost);
+        serviceCollection.AddTransient<IManualMySqlProvider, ManualMySqlProvider>(_ =>
+        {
+            string connectionString = UCWarfare.Config.SqlConnectionString ??
+                                      (UCWarfare.Config.RemoteSQL ?? UCWarfare.Config.SQL).GetConnectionString("UCWarfare", true, true);
+
+            return new ManualMySqlProvider(connectionString);
+        });
 
         serviceCollection.AddScoped<BuildableSaver>();
 
