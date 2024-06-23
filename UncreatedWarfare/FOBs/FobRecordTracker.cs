@@ -14,7 +14,7 @@ public class FobRecordTracker<TDbContext> : IDisposable where TDbContext : IStat
 {
     private readonly Dictionary<IFOBItem, ulong> _itemPrimaryKeys = new Dictionary<IFOBItem, ulong>();
     private ulong _primaryKey;
-    private readonly UCSemaphore _semaphore = new UCSemaphore(0, 1);
+    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
     public FobRecord Record { get; private set; }
     public IReadOnlyDictionary<IFOBItem, ulong> Items { get; private set; }
     public FobRecordTracker(FobRecord record)

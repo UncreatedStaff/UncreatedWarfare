@@ -1,15 +1,13 @@
 ﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Async;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.Networking;
-using Uncreated.Networking.Async;
-using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -20,7 +18,8 @@ using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
 namespace Uncreated.Warfare;
 
-public static class PlayerManager
+// todo make non static.
+public class PlayerManager
 {
     
     // auto added on join and detroyed on leave
@@ -124,12 +123,12 @@ public static class PlayerManager
         player.Save.Apply(player);
         PlayerSave.WriteToSaveFile(player.Save);
     }
-    public static PlayerListEntry[] GetPlayerList()
+    public static ModerationUI.PlayerListEntry[] GetPlayerList()
     {
-        PlayerListEntry[] rtn = new PlayerListEntry[OnlinePlayers.Count];
+        ModerationUI.PlayerListEntry[] rtn = new ModerationUI.PlayerListEntry[OnlinePlayers.Count];
         for (int i = 0; i < OnlinePlayers.Count; i++)
         {
-            rtn[i] = new PlayerListEntry
+            rtn[i] = new ModerationUI.PlayerListEntry
             {
                 Duty = OnlinePlayers[i].OnDuty(),
                 Steam64 = OnlinePlayers[i].Steam64,
@@ -200,13 +199,9 @@ public static class PlayerManager
         UCPlayer ucplayer;
         lock (_semaphores)
         {
-            if (!_semaphores.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out UCSemaphore semaphore))
+            if (!_semaphores.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out SemaphoreSlim semaphore))
             {
-                semaphore = new UCSemaphore();
-#if DEBUG
-                semaphore.WaitCallback += () => L.LogDebug("Waiting for " + player.channel.owner.playerID.steamID.m_SteamID + " purchase sync."); 
-                semaphore.ReleaseCallback += amt => L.LogDebug("Released " + amt + " from " + player.channel.owner.playerID.steamID.m_SteamID + " purchase sync.");
-#endif
+                semaphore = new SemaphoreSlim(1, 1);
                 L.LogDebug("Semaphore for [" + player + "] has been created.");
                 _semaphores.Add(player.channel.owner.playerID.steamID.m_SteamID, semaphore);
             }
@@ -306,59 +301,9 @@ public static class PlayerManager
         float sqrRange = range * range;
         return !player.Player.life.isDead && (player.Position - point).sqrMagnitude < sqrRange;
     }
-    internal static async Task<bool?> IsUserInDiscordServer(ulong discordId)
-    {
-        if (!UCWarfare.CanUseNetCall)
-            return null;
-        RequestResponse response = await NetCalls.CheckUserInDiscordServerRequest.RequestAck(UCWarfare.I.NetClient!, discordId);
-        if (response.Responded)
-            return response.ErrorCode.HasValue && (StandardErrorCode)response.ErrorCode.Value == StandardErrorCode.Success;
-        return null;
-    }
-    public static class NetCalls
-    {
-        public static readonly NetCall<ulong, bool> SendSetQueueSkip = new NetCall<ulong, bool>(ReceiveSetQueueSkip);
-        public static readonly NetCall<ulong> RequestPermissions = new NetCall<ulong>(ReceivePermissionRequest);
-        public static readonly NetCall<ulong> CheckPlayerOnlineStatusRequest = new NetCall<ulong>(ReceivePlayerOnlineCheckRequest);
-        /// <summary>Ack: Success = yes, other = no.</summary>
-        public static readonly NetCall<ulong> CheckUserInDiscordServerRequest = new NetCall<ulong>(KnownNetMessage.CheckUserInDiscordServerRequest);
 
-        public static readonly NetCall<ulong, ulong, TicketType, string> RequestOpenTicket = new NetCall<ulong, ulong, TicketType, string>(KnownNetMessage.RequestOpenTicket);
-
-        public static readonly NetCallRaw<PlayerListEntry[]> SendPlayerList = new NetCallRaw<PlayerListEntry[]>(KnownNetMessage.SendPlayerList, PlayerListEntry.ReadArray, PlayerListEntry.WriteArray);
-        public static readonly NetCallRaw<PlayerListEntry> SendPlayerJoined = new NetCallRaw<PlayerListEntry>(KnownNetMessage.SendPlayerJoined, PlayerListEntry.Read, PlayerListEntry.Write);
-        public static readonly NetCall<ulong> SendPlayerLeft = new NetCall<ulong>(KnownNetMessage.SendPlayerLeft);
-        public static readonly NetCall<ulong, bool> SendDutyChanged = new NetCall<ulong, bool>(KnownNetMessage.SendDutyChanged);
-        public static readonly NetCall<ulong, byte> SendTeamChanged = new NetCall<ulong, byte>(KnownNetMessage.SendTeamChanged);
-        public static readonly NetCall<ulong, bool> SendPlayerOnlineStatus = new NetCall<ulong, bool>(KnownNetMessage.SendPlayerOnlineStatus);
-        public static readonly NetCall<ulong, EAdminType> SendPermissions = new NetCall<ulong, EAdminType>(KnownNetMessage.SendPermissions);
-
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendSetQueueSkip)]
-        internal static async Task ReceiveSetQueueSkip(MessageContext context, ulong player, bool status)
-        {
-            await UCWarfare.ToUpdate();
-            if (PlayerSave.TryReadSaveFile(player, out PlayerSave save))
-            {
-                save.HasQueueSkip = status;
-                PlayerSave.WriteToSaveFile(save);
-            }
-            else if (status)
-            {
-                save = new PlayerSave(player) { HasQueueSkip = status };
-                PlayerSave.WriteToSaveFile(save);
-            }
-        }
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestPermissions)]
-        internal static void ReceivePermissionRequest(MessageContext context, ulong target)
-        {
-            context.Reply(SendPermissions, target, PermissionSaver.Instance.GetPlayerPermissionLevel(target));
-        }
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.CheckPlayerOnlineStatusRequest)]
-        internal static void ReceivePlayerOnlineCheckRequest(MessageContext context, ulong target)
-        {
-            context.Reply(SendPlayerOnlineStatus, target, PlayerTool.getSteamPlayer(target) is not null);
-        }
-    }
+    [RpcSend]
+    internal RpcTask<bool> IsUserInDiscordServer(ulong discordId) => RpcTask<bool>.NotImplemented;
 }
 
 internal interface IPlayerComponent

@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
@@ -152,6 +153,8 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<CommandDispatcher>().Parser);
         serviceCollection.AddRpcSingleton<UserPermissionStore>();
         serviceCollection.AddSingleton(_gameObjectHost);
+
+        serviceCollection.AddScoped<BuildableSaver>();
 
         serviceCollection.AddTransient<ILoopTickerFactory, UnityLoopTickerFactory>();
 

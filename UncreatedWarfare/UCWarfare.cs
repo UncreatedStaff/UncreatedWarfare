@@ -5,7 +5,6 @@ using DanielWillett.ReflectionTools.IoC;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using SDG.Framework.Modules;
-using SDG.Framework.Utilities;
 using SDG.Unturned;
 using System;
 using System.Collections;
@@ -24,7 +23,6 @@ using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -52,7 +50,6 @@ public class UCWarfare : MonoBehaviour
     public static readonly TimeSpan RestartTime = new TimeSpan(6, 00, 0); // 2:00 AM EST
     public static readonly Version Version = new Version(3, 2, 6, 0);
     private readonly SystemConfig _config = UCWarfareNexus.Active ? new SystemConfig() : null!;
-    private readonly List<UCTask> _tasks = UCWarfareNexus.Active ? new List<UCTask>(16) : null!;
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public UCAnnouncer Announcer;
@@ -469,406 +466,25 @@ public class UCWarfare : MonoBehaviour
         Data.ShowAllUI(player);
     }
 
-    [Obsolete]
-    public static MainThreadTask ToUpdate(CancellationToken token = default) => ThreadQueue.ToMainThread(false, token);
-    [Obsolete]
-    public static MainThreadTask SkipFrame(CancellationToken token = default) => ThreadQueue.ToMainThread(true, token);
-    [Obsolete]
-    public static LevelLoadTask ToLevelLoad(CancellationToken token = default) => new LevelLoadTask(token);
-
-    // 'fire and forget' functions that will report errors once the task completes.
-
-    /// <exception cref="SingletonUnloadedException"/>
-    public static Task RunTask<T1, T2, T3>(Func<T1, T2, T3, CancellationToken, Task> task, T1 arg1, T2 arg2, T3 arg3, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
-    {
-        Task t;
-        try
-        {
-            L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task(arg1, arg2, arg3, token);
-            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
-        }
-        catch (Exception e)
-        {
-            t = Task.FromException(e);
-            if (string.IsNullOrEmpty(ctx))
-                ctx = member;
-            else
-                ctx += " Member: " + member;
-            RegisterErroredTask(t, ctx);
-        }
-
-        return t;
-    }
-    /// <exception cref="SingletonUnloadedException"/>
-    public static Task RunTask<T1, T2, T3>(Func<T1, T2, T3, Task> task, T1 arg1, T2 arg2, T3 arg3, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
-    {
-        Task t;
-        try
-        {
-            L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task(arg1, arg2, arg3);
-            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
-        }
-        catch (Exception e)
-        {
-            t = Task.FromException(e);
-            if (string.IsNullOrEmpty(ctx))
-                ctx = member;
-            else
-                ctx += " Member: " + member;
-            RegisterErroredTask(t, ctx);
-        }
-
-        return t;
-    }
-    /// <exception cref="SingletonUnloadedException"/>
-    public static Task RunTask<T1, T2>(Func<T1, T2, CancellationToken, Task> task, T1 arg1, T2 arg2, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
-    {
-        Task t;
-        try
-        {
-            L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task(arg1, arg2, token);
-            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
-        }
-        catch (Exception e)
-        {
-            t = Task.FromException(e);
-            if (string.IsNullOrEmpty(ctx))
-                ctx = member;
-            else
-                ctx += " Member: " + member;
-            RegisterErroredTask(t, ctx);
-        }
-
-        return t;
-    }
-    /// <exception cref="SingletonUnloadedException"/>
-    public static Task RunTask<T1, T2>(Func<T1, T2, Task> task, T1 arg1, T2 arg2, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
-    {
-        Task t;
-        try
-        {
-            L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task(arg1, arg2);
-            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
-        }
-        catch (Exception e)
-        {
-            t = Task.FromException(e);
-            if (string.IsNullOrEmpty(ctx))
-                ctx = member;
-            else
-                ctx += " Member: " + member;
-            RegisterErroredTask(t, ctx);
-        }
-
-        return t;
-    }
-    /// <exception cref="SingletonUnloadedException"/>
-    public static Task RunTask<T>(Func<T, CancellationToken, Task> task, T arg1, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
-    {
-        Task t;
-        try
-        {
-            L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task(arg1, token);
-            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
-        }
-        catch (Exception e)
-        {
-            t = Task.FromException(e);
-            if (string.IsNullOrEmpty(ctx))
-                ctx = member;
-            else
-                ctx += " Member: " + member;
-            RegisterErroredTask(t, ctx);
-        }
-
-        return t;
-    }
-    /// <exception cref="SingletonUnloadedException"/>
-    public static Task RunTask<T>(Func<T, Task> task, T arg1, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
-    {
-        Task t;
-        try
-        {
-            L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task(arg1);
-            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
-        }
-        catch (Exception e)
-        {
-            t = Task.FromException(e);
-            if (string.IsNullOrEmpty(ctx))
-                ctx = member;
-            else
-                ctx += " Member: " + member;
-            RegisterErroredTask(t, ctx);
-        }
-
-        return t;
-    }
-    /// <exception cref="SingletonUnloadedException"/>
-    public static Task RunTask(Func<CancellationToken, Task> task, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
-    {
-        Task t;
-        try
-        {
-            L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task(token);
-            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
-        }
-        catch (Exception e)
-        {
-            t = Task.FromException(e);
-            if (string.IsNullOrEmpty(ctx))
-                ctx = member;
-            else
-                ctx += " Member: " + member;
-            RegisterErroredTask(t, ctx);
-        }
-
-        return t;
-    }
-    /// <exception cref="SingletonUnloadedException"/>
-    public static Task RunTask(Func<Task> task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
-    {
-        Task t;
-        try
-        {
-            L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task();
-            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
-        }
-        catch (Exception e)
-        {
-            t = Task.FromException(e);
-            if (string.IsNullOrEmpty(ctx))
-                ctx = member;
-            else
-                ctx += " Member: " + member;
-            RegisterErroredTask(t, ctx);
-        }
-
-        return t;
-    }
-    /// <exception cref="SingletonUnloadedException"/>
-    public static Task RunTask(Task task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
-    {
-        if (!IsLoaded)
-            throw new SingletonUnloadedException(typeof(UCWarfare));
-
-        member = fp + " :: " + member;
-
-        if (string.IsNullOrEmpty(ctx))
-            ctx = member;
-        else
-            ctx += " Member: " + member;
-        if (task.IsCanceled)
-        {
-            L.LogDebug("Task cancelled: \"" + ctx + "\".");
-            return task;
-        }
-        if (task.IsFaulted)
-        {
-            RegisterErroredTask(task, ctx);
-            return task;
-        }
-        if (task.IsCompleted)
-        {
-            L.LogDebug("Task completed without awaiting: \"" + ctx + "\".");
-            return task;
-        }
-        L.LogDebug("Adding task \"" + ctx + "\".");
-        I._tasks.Add(new UCTask(task, ctx, awaitOnUnload
-#if DEBUG
-            , timeout
-#endif
-        ));
-
-        return task;
-    }
-    private static void RegisterErroredTask(Task task, string? ctx)
-    {
-        AggregateException? ex = task.Exception;
-        if (ex is null)
-        {
-            L.LogError("A registered task has failed without exception!" + (string.IsNullOrEmpty(ctx) ? string.Empty : (" Context: " + ctx)));
-        }
-        else
-        {
-            if (ex.InnerExceptions.All(x => x is OperationCanceledException))
-            {
-                L.LogDebug("A registered task was cancelled." + (string.IsNullOrEmpty(ctx) ? string.Empty : (" Context: " + ctx)));
-                return;
-            }
-            L.LogError("A registered task has failed!" + (string.IsNullOrEmpty(ctx) ? string.Empty : (" Context: " + ctx)));
-            L.LogError(ex);
-        }
-    }
     public static bool IsMainThread => Thread.CurrentThread == ThreadUtil.gameThread;
-    bool IThreadQueue.IsMainThread => Thread.CurrentThread == ThreadUtil.gameThread;
-    void IThreadQueue.RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
-    void IThreadQueue.RunOnMainThread(ThreadResult action) => ThreadQueueEntries.Enqueue(action);
-    void IThreadQueueWaitOverride.SpinWaitUntil(Func<bool> condition, int millisecondsTimeout, CancellationToken token) => SpinWaitUntil(condition, millisecondsTimeout, token);
-    public static bool RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
-    public static bool RunOnMainThread(System.Action action, CancellationToken token) => RunOnMainThread(action, false, token);
 
-    /// <param name="skipFrame">If this is called on the main thread it will queue it to be called next update or at the end of the current frame.</param>
-    public static bool RunOnMainThread(System.Action action, bool skipFrame, CancellationToken token = default)
-    {
-        token.ThrowIfCancellationRequested();
-        if (!skipFrame && IsMainThread)
-        {
-            action();
-            return false;
-        }
-
-        ThreadResult res = new MainThreadTask(skipFrame, token).GetAwaiter();
-        res.OnCompleted(action);
-        return true;
-    }
-    /// <summary>Continues to run main thread operations in between spins so that calls to <see cref="ToUpdate"/> are not blocked.</summary>
-    public static bool SpinWaitUntil(Func<bool> condition, int millisecondsTimeout = -1, CancellationToken token = default)
-    {
-        if (!IsMainThread)
-            return SpinWait.SpinUntil(condition, millisecondsTimeout);
-
-        uint stTime = 0;
-        if (millisecondsTimeout != 0 && millisecondsTimeout != -1)
-            stTime = (uint)Environment.TickCount;
-        SpinWait spinWait = new SpinWait();
-        while (!condition())
-        {
-            if (token.IsCancellationRequested)
-                throw new OperationCanceledException(token);
-            if (millisecondsTimeout == 0)
-                return false;
-            spinWait.SpinOnce();
-            ProcessQueues();
-            if (millisecondsTimeout != -1 && spinWait.NextSpinWillYield && millisecondsTimeout <= Environment.TickCount - stTime)
-                return false;
-        }
-        return true;
-    }
     [UsedImplicitly]
     private void Update()
     {
         if (LastUpdateDetected > 0 && (Provider.clients.Count == 0 || (Time.realtimeSinceStartup - LastUpdateDetected) > 3600))
             StartCoroutine(ShutdownIn("Unturned Update", 0f));
         
-        ProcessQueues();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             PlayerManager.OnlinePlayers[i].Update();
-        if (ProcessTasks)
-        {
-#if DEBUG
-            DateTime now = _tasks.Count > 0 ? DateTime.UtcNow : default;
-#endif
-            for (int i = _tasks.Count - 1; i >= 0; --i)
-            {
-                UCTask task = _tasks[i];
-#if DEBUG
-                double sec = (now - task.StartTime).TotalSeconds;
-#endif
-                if (!task.Task.IsCompleted)
-                {
-#if DEBUG
-                    if (task.TimeoutMs >= 0 && sec > task.TimeoutMs)
-                    {
-                        L.LogDebug($"Task not completed after a long time ({sec} seconds)." + (string.IsNullOrEmpty(task.Context) ? string.Empty : (" Context: " + task.Context)));
-                    }
-#endif
-                    continue;
-                }
-                if (task.Task.IsCanceled)
-                {
-                    L.LogDebug("Task cancelled." + (string.IsNullOrEmpty(task.Context) ? string.Empty : (" Context: " + task.Context)));
-                }
-                else if (task.Task.IsFaulted)
-                {
-                    _tasks.RemoveAtFast(i);
-                    RegisterErroredTask(task.Task, task.Context);
-                    return;
-                }
-                if (task.Task.IsCompleted)
-                {
-                    _tasks.RemoveAtFast(i);
-#if DEBUG
-                    L.LogDebug("Task complete in " + sec.ToString("0.#", Data.AdminLocale) + " seconds." + (string.IsNullOrEmpty(task.Context) ? string.Empty : (" Context: " + task.Context)));
-#endif
-                    return;
-                }
-            }
-        }
     }
-    private static void ProcessQueues()
-    {
-        if (_threadRequests != null)
-        {
-            List<ThreadResult>? threads = null;
-            while (_threadRequests.TryDequeue(out ThreadResult result))
-            {
-                try
-                {
-                    if (result.Condition != null && !result.Condition())
-                    {
-                        (threads ??= ListPool<ThreadResult>.claim()).Add(result);
-                        continue;
-                    }
 
-                    ThreadQueue.FulfillThreadTask(result);
-                }
-                catch (OperationCanceledException)
-                {
-                    L.LogDebug("Execution on update cancelled.");
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error executing queued thread operation.");
-                    L.LogError(ex);
-                }
-            }
-            if (threads != null)
-                ListPool<ThreadResult>.release(threads);
-        }
-    }
     /// <exception cref="SingletonUnloadedException"/>
     internal static void ForceUnload()
     {
         Nexus.UnloadNow();
         throw new SingletonUnloadedException(typeof(UCWarfare));
     }
-    internal async Task LetTasksUnload(CancellationToken token)
-    {
-        while (_tasks.Count > 0)
-        {
-            UCTask task = _tasks[0];
-            if (task.AwaitOnUnload && !task.Task.IsCompleted)
-            {
-                L.LogDebug("Letting task \"" + (task.Context ?? "null") + "\" finish for up to 10 seconds before unloading...");
-                try
-                {
-                    await Task.WhenAny(task.Task, Task.Delay(10000, token));
-                }
-                catch
-                {
-                    RegisterErroredTask(task.Task, task.Context);
-                    goto cont;
-                }
-                if (!task.Task.IsCompleted)
-                {
-                    L.LogWarning("Task \"" + (task.Context ?? "null") + "\" did not complete after 10 seconds of waiting.");
-                }
-                else L.LogDebug("  ... Done");
-            }
-            cont:
-            _tasks.RemoveAt(0);
-        }
-    }
-
+    
     public async Task UnloadAsync(CancellationToken token)
     {
         ThreadUtil.assertIsGameThread();
@@ -876,18 +492,12 @@ public class UCWarfare : MonoBehaviour
         try
         {
             ProcessTasks = false;
-            if (StatsRoutine != null)
-            {
-                StopCoroutine(StatsRoutine);
-                StatsRoutine = null;
-            }
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
 
             L.Log("Unloading Uncreated Warfare", ConsoleColor.Magenta);
 
             ServerHeartbeatTimer.Beat();
 
-            await LetTasksUnload(token).ConfigureAwait(false);
             if (Data.Singletons is not null)
             {
                 await Data.Singletons.UnloadSingletonAsync(Data.DeathTracker, false, token: token);
@@ -992,7 +602,7 @@ public class UCWarfare : MonoBehaviour
                     Data.RemoteSQL = null!;
                 }
             }
-            await LetTasksUnload(token).ConfigureAwait(false);
+
             await ToUpdate(token);
             ThreadUtil.assertIsGameThread();
             L.Log("Stopping Coroutines...", ConsoleColor.Magenta);
@@ -1000,16 +610,7 @@ public class UCWarfare : MonoBehaviour
             L.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
-            if (NetClient != null)
-            {
-                await NetClient.DisposeAsync().ConfigureAwait(false);
-                await ToUpdate(token);
-                NetClient = null;
-            }
-            Logging.OnLogInfo -= L.NetLogInfo;
-            Logging.OnLogWarning -= L.NetLogWarning;
-            Logging.OnLogError -= L.NetLogError;
-            Logging.OnLogException -= L.NetLogException;
+
             try
             {
                 LoadingQueueBlockerPatches.Unpatch();

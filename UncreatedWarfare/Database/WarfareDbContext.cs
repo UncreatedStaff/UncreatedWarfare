@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Storage;
 using System;
-using Newtonsoft.Json.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Authentication;
+using Uncreated.Warfare.Models.Buildables;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
@@ -19,7 +19,7 @@ using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Database;
 #pragma warning disable CS8644
-public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext
+public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext
 {
     internal static string? ConnStringOverride = null;
     
@@ -45,6 +45,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<DamageRecord> DamageRecords => Set<DamageRecord>();
     public DbSet<AidRecord> AidRecords => Set<AidRecord>();
     public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<BuildableSave> Saves => Set<BuildableSave>();
 
     /* configure database settings */
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -70,6 +71,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     {
         ILanguageDbContext.ConfigureModels(modelBuilder);
         IFactionDbContext.ConfigureModels(modelBuilder);
+        IBuildablesDbContext.ConfigureModels(modelBuilder);
         IUserDataDbContext.ConfigureModels(modelBuilder);
         IKitsDbContext.ConfigureModels(modelBuilder);
         IStatsDbContext.ConfigureModels(modelBuilder);
@@ -83,5 +85,6 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
 
         Console.WriteLine("Model created.");
     }
+
 }
 #pragma warning restore CS8644

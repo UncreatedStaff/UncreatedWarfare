@@ -74,7 +74,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
      * as this object will get reused until the finalizer runs, so don't save the semaphore outside of a sync local scope.
      * If you need it to stick around save the UCPlayer instead.
      */
-    public readonly UCSemaphore PurchaseSync;
+    public readonly SemaphoreSlim PurchaseSync;
     public readonly IReadOnlyCollection<object> Components;
     public readonly UCPlayerKeys Keys;
     public readonly UCPlayerEvents Events;
@@ -138,7 +138,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal int CacheLocationIndex = -1;
     internal List<DamageRecord> DamageRecords = new List<DamageRecord>(32);
     internal UCPlayer(CSteamID steamID, Player player, string characterName, string nickName,
-        bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore,
+        bool donator, CancellationTokenSource pendingSrc, PlayerSave save, SemaphoreSlim semaphore,
         PendingAsyncData data, object[] components
         )
     {

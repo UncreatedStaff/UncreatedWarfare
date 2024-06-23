@@ -775,20 +775,32 @@ public static class F
                 break;
         }
     }
-    public static void SetOwnerOrGroup(this IBuildable obj, ulong? owner = null, ulong? group = null)
+
+    /// <summary>
+    /// Set the owner or group of a buildable.
+    /// </summary>
+    /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
+    public static bool SetOwnerOrGroup(this IBuildable obj, ulong? owner = null, ulong? group = null)
     {
         if (obj.Drop is BarricadeDrop bdrop)
-            SetOwnerOrGroup(bdrop, owner, group);
-        else if (obj.Drop is StructureDrop sdrop)
+            return SetOwnerOrGroup(bdrop, owner, group);
+        if (obj.Drop is StructureDrop sdrop)
             SetOwnerOrGroup(sdrop, owner, group);
         else
             throw new InvalidOperationException("Unable to get drop from IBuildable of type " + obj.Type + ".");
+
+        return false;
     }
-    public static void SetOwnerOrGroup(BarricadeDrop drop, ulong? owner = null, ulong? group = null)
+
+    /// <summary>
+    /// Set the owner or group of a barricade.
+    /// </summary>
+    /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
+    public static bool SetOwnerOrGroup(BarricadeDrop drop, ulong? owner = null, ulong? group = null)
     {
         ThreadUtil.assertIsGameThread();
         if (!owner.HasValue && !group.HasValue)
-            return;
+            return false;
         BarricadeData bdata = drop.GetServersideData();
         ulong o = owner ?? bdata.owner;
         ulong g = group ?? bdata.group;
@@ -823,11 +835,13 @@ public static class F
                 else
                     state = new byte[sizeof(ulong) * 2];
                 Buffer.BlockCopy(oldSt, 0, state, 0, sizeof(ulong) * 2);
-                Data.SendUpdateBarricadeState.Invoke(drop.GetNetId(), ENetReliability.Reliable,
-                    BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
+                Data.SendUpdateBarricadeState.Invoke(drop.GetNetId(), ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
+                return true;
             }
+
+            return false;
         }
-        else if (drop.interactable is InteractableSign sign)
+        if (drop.interactable is InteractableSign sign)
         {
             if (oldSt.Length < sizeof(ulong) * 2 + 1)
                 oldSt = new byte[sizeof(ulong) * 2 + 1];
@@ -845,7 +859,7 @@ public static class F
                     if (plant != ushort.MaxValue || Regions.checkArea(x, y, pl.Player.movement.region_x,
                             pl.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
                     {
-                        byte[] text = System.Text.Encoding.UTF8.GetBytes(Signs.GetClientText(drop, pl));
+                        byte[] text = Encoding.UTF8.GetBytes(Signs.GetClientText(drop, pl));
                         int txtLen = Math.Min(text.Length, byte.MaxValue - 17);
                         if (state == null || state.Length != txtLen + 17)
                         {
@@ -863,64 +877,82 @@ public static class F
             {
                 BarricadeManager.updateReplicatedState(drop.model, oldSt, oldSt.Length);
             }
+
+            return true;
         }
-        else
+        
+        switch (drop.asset.build)
         {
-            switch (drop.asset.build)
+            case EBuild.DOOR:
+            case EBuild.GATE:
+            case EBuild.SHUTTER:
+            case EBuild.HATCH:
+                state = new byte[17];
+                Buffer.BlockCopy(BitConverter.GetBytes(o), 0, state, 0, sizeof(ulong));
+                Buffer.BlockCopy(BitConverter.GetBytes(g), 0, state, sizeof(ulong), sizeof(ulong));
+                state[16] = (byte)(oldSt[16] > 0 ? 1 : 0);
+                break;
+            case EBuild.BED:
+                state = BitConverter.GetBytes(o);
+                break;
+            case EBuild.STORAGE:
+            case EBuild.SENTRY:
+            case EBuild.SENTRY_FREEFORM:
+            case EBuild.SIGN:
+            case EBuild.SIGN_WALL:
+            case EBuild.NOTE:
+            case EBuild.LIBRARY:
+            case EBuild.MANNEQUIN:
+                state = oldSt.Length < sizeof(ulong) * 2
+                    ? new byte[sizeof(ulong) * 2]
+                    : Util.CloneBytes(oldSt);
+                Buffer.BlockCopy(BitConverter.GetBytes(o), 0, state, 0, sizeof(ulong));
+                Buffer.BlockCopy(BitConverter.GetBytes(g), 0, state, sizeof(ulong), sizeof(ulong));
+                break;
+            case EBuild.SPIKE:
+            case EBuild.WIRE:
+            case EBuild.CHARGE:
+            case EBuild.BEACON:
+            case EBuild.CLAIM:
+                state = oldSt.Length == 0 ? oldSt : Array.Empty<byte>();
+                if (drop.interactable is InteractableCharge charge)
+                {
+                    charge.owner = o;
+                    charge.group = g;
+                }
+                else if (drop.interactable is InteractableClaim claim)
+                {
+                    claim.owner = o;
+                    claim.group = g;
+                }
+                break;
+            default:
+                state = oldSt;
+                break;
+        }
+
+        bool isDifferent = state.Length != oldSt.Length;
+        if (!isDifferent)
+        {
+            for (int i = 0; i < state.Length; ++i)
             {
-                case EBuild.DOOR:
-                case EBuild.GATE:
-                case EBuild.SHUTTER:
-                case EBuild.HATCH:
-                    state = new byte[17];
-                    Buffer.BlockCopy(BitConverter.GetBytes(o), 0, state, 0, sizeof(ulong));
-                    Buffer.BlockCopy(BitConverter.GetBytes(g), 0, state, sizeof(ulong), sizeof(ulong));
-                    state[16] = (byte)(oldSt[16] > 0 ? 1 : 0);
-                    break;
-                case EBuild.BED:
-                    state = BitConverter.GetBytes(o);
-                    break;
-                case EBuild.STORAGE:
-                case EBuild.SENTRY:
-                case EBuild.SENTRY_FREEFORM:
-                case EBuild.SIGN:
-                case EBuild.SIGN_WALL:
-                case EBuild.NOTE:
-                case EBuild.LIBRARY:
-                case EBuild.MANNEQUIN:
-                    state = oldSt.Length < sizeof(ulong) * 2
-                        ? new byte[sizeof(ulong) * 2]
-                        : Util.CloneBytes(oldSt);
-                    Buffer.BlockCopy(BitConverter.GetBytes(o), 0, state, 0, sizeof(ulong));
-                    Buffer.BlockCopy(BitConverter.GetBytes(g), 0, state, sizeof(ulong), sizeof(ulong));
-                    break;
-                case EBuild.SPIKE:
-                case EBuild.WIRE:
-                case EBuild.CHARGE:
-                case EBuild.BEACON:
-                case EBuild.CLAIM:
-                    state = oldSt.Length == 0 ? oldSt : Array.Empty<byte>();
-                    if (drop.interactable is InteractableCharge charge)
-                    {
-                        charge.owner = o;
-                        charge.group = g;
-                    }
-                    else if (drop.interactable is InteractableClaim claim)
-                    {
-                        claim.owner = o;
-                        claim.group = g;
-                    }
-                    break;
-                default:
-                    state = oldSt;
-                    break;
-            }
-            if (!state.CompareBytes(oldSt))
-            {
-                BarricadeManager.updateReplicatedState(drop.model, state, state.Length);
+                if (state[i] == oldSt[i])
+                    continue;
+
+                isDifferent = true;
+                break;
             }
         }
+
+        if (isDifferent)
+            BarricadeManager.updateReplicatedState(drop.model, state, state.Length);
+        
+        return isDifferent;
     }
+
+    /// <summary>
+    /// Set the owner or group of a structure.
+    /// </summary>
     public static void SetOwnerOrGroup(StructureDrop drop, ulong? owner = null, ulong? group = null)
     {
         ThreadUtil.assertIsGameThread();

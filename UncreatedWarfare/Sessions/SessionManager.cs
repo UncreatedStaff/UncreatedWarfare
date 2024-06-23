@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -28,7 +27,7 @@ namespace Uncreated.Warfare.Sessions;
 public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPlayerPostInitListenerAsync
 {
     private readonly ConcurrentDictionary<ulong, SessionRecord> _sessions = new ConcurrentDictionary<ulong, SessionRecord>();
-    private readonly UCSemaphore _semaphore = new UCSemaphore(0, 1);
+    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
 
     public override bool AwaitLoad => true;
     protected override async Task LoadAsync(CancellationToken token)
@@ -39,11 +38,11 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
         SquadManager.SquadStatusUpdated += OnSquadChanged;
         KitManager.OnManualKitChanged += OnKitChanged;
         EventDispatcher.GroupChanged += OnGroupChanged;
-        Gamemode.OnGamemodeChanged += OnGamemodeChanged;
+        GamemodeOld.OnGamemodeChanged += OnGamemodeChanged;
     }
     protected override async Task UnloadAsync(CancellationToken token)
     {
-        Gamemode.OnGamemodeChanged -= OnGamemodeChanged;
+        GamemodeOld.OnGamemodeChanged -= OnGamemodeChanged;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         KitManager.OnManualKitChanged -= OnKitChanged;
         SquadManager.SquadStatusUpdated -= OnSquadChanged;

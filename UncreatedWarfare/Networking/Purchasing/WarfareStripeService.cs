@@ -1,15 +1,15 @@
-﻿using System;
+﻿using Stripe;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Stripe;
-using Uncreated.Framework;
+using System.Threading;
 
 namespace Uncreated.Warfare.Networking.Purchasing;
 public interface IStripeService
 {
     IStripeClient StripeClient { get; }
     ProductService ProductService { get; }
-    UCSemaphore Semaphore { get; }
+    SemaphoreSlim Semaphore { get; }
     CultureInfo PriceFormatting { get; }
     bool Available { get; }
 }
@@ -22,7 +22,7 @@ public class StripeService : IStripeService, IDisposable
     };
     public IStripeClient StripeClient { get; }
     public ProductService ProductService { get; }
-    public UCSemaphore Semaphore { get; }
+    public SemaphoreSlim Semaphore { get; }
     public CultureInfo PriceFormatting { get; }
     public bool Available => StripeClient != null;
     public StripeService() : this(StripeConfiguration.StripeClient) { }
@@ -30,7 +30,7 @@ public class StripeService : IStripeService, IDisposable
     {
         StripeClient = client;
         ProductService = new ProductService(StripeClient);
-        Semaphore = new UCSemaphore();
+        Semaphore = new SemaphoreSlim(1, 1);
         PriceFormatting = new CultureInfo("en-US");
     }
     public void Dispose()
@@ -45,7 +45,7 @@ public class WarfareStripeService : IStripeService
 {
     public IStripeClient StripeClient { get; }
     public ProductService ProductService { get; }
-    public UCSemaphore Semaphore { get; }
+    public SemaphoreSlim Semaphore { get; }
     public CultureInfo PriceFormatting { get; }
     public bool Available => StripeClient != null;
 
@@ -56,7 +56,7 @@ public class WarfareStripeService : IStripeService
 
         StripeClient = new StripeClient(UCWarfare.Config.StripeAPIKey, httpClient: new UnityWebRequestsHttpClient(), clientId: $"Uncreated Warfare/{UCWarfare.Version}");
         ProductService = new ProductService(StripeClient);
-        Semaphore = new UCSemaphore();
+        Semaphore = new SemaphoreSlim(1, 1);
         PriceFormatting = new CultureInfo("en-US");
     }
     public void Dispose()

@@ -2,12 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Json;
-using Uncreated.Networking;
-using Uncreated.Networking.Async;
-using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 
@@ -17,29 +13,15 @@ public static class KitSync
     private static readonly List<uint> PendingKits;
     private static readonly List<uint> PendingKitDeletions;
     private static readonly List<ulong> PendingAccessChanges;
-    private static readonly UCSemaphore Semaphore = new UCSemaphore();
+    private static readonly SemaphoreSlim Semaphore = new SemaphoreSlim(1, 1);
     private static volatile uint _deleting = uint.MaxValue;
     private static volatile uint _updating = uint.MaxValue;
     private static int _version;
-#if DEBUG
-    private static void SemaphoreWaitCallback()
-    {
-        L.LogDebug("Waiting in KitSync semaphore.");
-    }
-    private static void SemaphoreReleaseCallback(int ct)
-    {
-        L.LogDebug("Released " + ct.ToString(Data.AdminLocale) + " in KitSync semaphore.");
-    }
-#endif
     static KitSync()
     {
         PendingKits = new List<uint>(8);
         PendingKitDeletions = new List<uint>(2);
         PendingAccessChanges = new List<ulong>(64);
-#if DEBUG
-        Semaphore.WaitCallback += SemaphoreWaitCallback;
-        Semaphore.ReleaseCallback += SemaphoreReleaseCallback;
-#endif
     }
     internal static async Task Init()
     {

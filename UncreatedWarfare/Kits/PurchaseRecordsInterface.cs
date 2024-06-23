@@ -9,7 +9,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Kits;
@@ -22,7 +21,7 @@ public interface IPurchaseRecordsInterface
     IReadOnlyList<EliteBundle> Bundles { get; }
     IReadOnlyList<Kit> Kits { get; }
     Product LoadoutProduct { get; }
-    UCSemaphore Semaphore { get; }
+    SemaphoreSlim Semaphore { get; }
     Task RefreshAll(CancellationToken token = default);
     Task RefreshBundles(CancellationToken token = default);
     Task RefreshKits(CancellationToken token = default);
@@ -70,7 +69,7 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
     public Product LoadoutProduct { get; set; }
     public abstract IStripeService StripeService { get; }
     public bool FilterLoadouts { get; set; } = true;
-    public UCSemaphore Semaphore { get; } = new UCSemaphore();
+    public SemaphoreSlim Semaphore { get; } = new SemaphoreSlim(1, 1);
     public static async Task<T> Create<T>(bool createMissingProducts, CancellationToken token = default) where T : PurchaseRecordsInterface<TDbContext>, new()
     {
         T pri = new T();

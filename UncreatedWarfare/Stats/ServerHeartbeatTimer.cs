@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Stats;
 public static class ServerHeartbeatTimer
 {
     private static DateTimeOffset? _lastBeat;
-    private static readonly UCSemaphore Semaphore = new UCSemaphore();
+    private static readonly SemaphoreSlim Semaphore = new SemaphoreSlim(1, 1);
     public static void Beat()
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
