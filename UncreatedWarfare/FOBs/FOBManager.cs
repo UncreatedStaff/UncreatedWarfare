@@ -8,6 +8,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Configuration.JsonConverters;
@@ -26,7 +28,6 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -220,7 +221,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     };
     public static void TriggerBuildEffect(Vector3 pos)
     {
-        if (Gamemode.Config.EffectDig.TryGetAsset(out EffectAsset effect))
+        if (GamemodeOld.Config.EffectDig.TryGetAsset(out EffectAsset? effect))
             F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pos);
     }
     public static float GetBuildIncrementMultiplier(UCPlayer player)
@@ -466,7 +467,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                     if (_floatingItems[i] is IDisposable d)
                         d.Dispose();
                     IFOBItem newItem = (IFOBItem)Activator.CreateInstance(item.GetType());
-                    if (newItem.Icon.TryGetAsset(out Guid icon))
+                    if (newItem.Icon.TryGetGuid(out Guid icon))
                         IconManager.AttachIcon(icon, newObj, newItem.Team, newItem.IconOffset);
                     _floatingItems[i] = newItem;
                     return newItem;
@@ -482,7 +483,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             {
                 IFOBItem newItem = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
                 _floatingItems[i] = newItem;
-                if (newItem.Icon.TryGetAsset(out Guid icon))
+                if (newItem.Icon.TryGetGuid(out Guid icon))
                     IconManager.AttachIcon(icon, newObj, newItem.Team, newItem.IconOffset);
                 if (itemMb is IDisposable d)
                     d.Dispose();
@@ -558,14 +559,37 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (item?.FOB?.Record == null)
             return;
 
-        UCWarfare.RunTask(item.FOB.Record.Update(record =>
+        Task.Run(async () =>
         {
-            ++record.EmplacementPlayerKills;
-        }), ctx: "Update FOB record (emplacement player kills).");
-        UCWarfare.RunTask(item.FOB.Record.Update(item, record =>
+            try
+            {
+                await item.FOB.Record.Update(record =>
+                {
+                    ++record.EmplacementPlayerKills;
+                });
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"[FOBS] [{item.FOB.Name}] Failed to update FOB record tracker after getting an emplacement kill.");
+                L.LogError(ex);
+            }
+        });
+
+        Task.Run(async () =>
         {
-            ++record.PlayerKills;
-        }), ctx: "Update FOB item record (player kills).");
+            try
+            {
+                await item.FOB.Record.Update(item, record =>
+                {
+                    ++record.PlayerKills;
+                });
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"[FOBS] [{item.FOB.Name}] Failed to update FOB record item tracker after getting an emplacement kill.");
+                L.LogError(ex);
+            }
+        });
     }
     private void OnVehicleDestroyed(VehicleDestroyed e)
     {
@@ -581,14 +605,37 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (item?.FOB?.Record == null)
             return;
 
-        UCWarfare.RunTask(item.FOB.Record.Update(record =>
+        Task.Run(async () =>
         {
-            ++record.EmplacementVehicleKills;
-        }), ctx: "Update FOB record (emplacement vehicle kills).");
-        UCWarfare.RunTask(item.FOB.Record.Update(item, record =>
+            try
+            {
+                await item.FOB.Record.Update(record =>
+                {
+                    ++record.EmplacementVehicleKills;
+                });
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"[FOBS] [{item.FOB.Name}] Failed to update FOB record tracker after getting an emplacement vehicle kill.");
+                L.LogError(ex);
+            }
+        });
+
+        Task.Run(async () =>
         {
-            ++record.VehicleKills;
-        }), ctx: "Update FOB item record (vehicle kills).");
+            try
+            {
+                await item.FOB.Record.Update(item, record =>
+                {
+                    ++record.VehicleKills;
+                });
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"[FOBS] [{item.FOB.Name}] Failed to update FOB record item tracker after getting an emplacement vehicle kill.");
+                L.LogError(ex);
+            }
+        });
     }
     private void OnRequestedBarricadePlace(PlaceBarricadeRequested e)
     {
@@ -604,7 +651,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         bool isRadio = false;
         // radio, check team of radio
-        if (Gamemode.Config.FOBRadios.Value.Any(r => r.MatchGuid(e.Barricade.asset.GUID)))
+        if (GamemodeOld.Config.FOBRadios.Any(r => r.MatchGuid(e.Barricade.asset.GUID)))
         {
             FactionInfo? info = TeamManager.GetFactionSafe(e.GroupOwner.GetTeam());
             if (!(e.OriginalPlacer != null && e.OriginalPlacer.OnDuty()) && (info == null || !info.FOBRadio.MatchGuid(e.Barricade.asset.GUID)))
@@ -751,7 +798,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (IgnorePlacingBarricade) return;
         L.LogDebug("[FOBS] Placed barricade: " + (e.Owner?.ToString() ?? "null") + ".");
         Guid guid = e.ServersideData.barricade.asset.GUID;
-        bool isRadio = Gamemode.Config.FOBRadios.Value.Any(r => r.MatchGuid(guid));
+        bool isRadio = GamemodeOld.Config.FOBRadios.Any(r => r.MatchGuid(guid));
         ulong team = e.Barricade.GetServersideData().group.GetTeam();
         if (team is not 1 and not 2)
             return;
@@ -766,9 +813,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (e.Owner == null)
                 return;
 
-            if (Gamemode.Config.BarricadeFOBBunkerBase.TryGetAsset(out ItemBarricadeAsset fobBase))
+            if (GamemodeOld.Config.BarricadeFOBBunkerBase.TryGetAsset(out ItemBarricadeAsset? fobBase))
                 ItemManager.dropItem(new Item(fobBase.id, true), e.Owner.Position, true, true, true);
-            if (Gamemode.Config.BarricadeAmmoCrateBase.TryGetAsset(out ItemBarricadeAsset ammoBase))
+            if (GamemodeOld.Config.BarricadeAmmoCrateBase.TryGetAsset(out ItemBarricadeAsset? ammoBase))
                 ItemManager.dropItem(new Item(ammoBase.id, true), e.Owner.Position, true, true, true);
             QuestManager.OnFOBBuilt(e.Owner, fob);
             Tips.TryGiveTip(e.Owner, 3, T.TipPlaceBunker);
@@ -815,7 +862,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                     else
                         radio.FOB.UpdateRadioState(RadioComponent.RadioState.Bleeding);
                 }
-                else if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchGuid(e.ServersideData.barricade.asset.GUID))
+                else if (GamemodeOld.Config.BarricadeFOBRadioDamaged.MatchGuid(e.ServersideData.barricade.asset.GUID))
                 {
                     if (radio.State == RadioComponent.RadioState.Bleeding)
                         radio.FOB.Destroy();
@@ -895,7 +942,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         _singleton.AssertLoaded();
         
         int number;
-        if (Data.Is(out Insurgency insurgency))
+        if (Data.Is(out Insurgency? insurgency))
         {
             List<Insurgency.CacheData> caches = insurgency.ActiveCaches;
             if (caches.Count == 0)
@@ -909,7 +956,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         _singleton.AddFOB(cache);
 
-        if (Data.Is(out IAttackDefense atk) && Gamemode.Config.EffectMarkerCacheDefend.TryGetAsset(out Guid effectGuid))
+        if (Data.Is(out IAttackDefense? atk) && GamemodeOld.Config.EffectMarkerCacheDefend.TryGetGuid(out Guid effectGuid))
             IconManager.AttachIcon(effectGuid, drop.model, atk.DefendingTeam, 3.25f);
 
         return cache;
@@ -945,7 +992,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (Data.Gamemode is { State: State.Active } && fob is not ISalvageInfo { IsSalvaged: true })
         {
             // doesnt count destroying fobs after game ends
-            if (killer != null && killerteam != 0 && killerteam != team && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
+            if (killer != null && killerteam != 0 && killerteam != team && Data.Is(out IGameStats? w) && w.GameStats is IFobsTracker ft)
             {
                 if (team == 1)
                     ft.FOBsDestroyedT2++;
@@ -956,7 +1003,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             {
                 if (killer.Player.TryGetPlayerData(out UCPlayerData c) && c.Stats is IFOBStats f)
                     f.AddFOBDestroyed();
-                if (Data.Is(out ITickets tickets))
+                if (Data.Is(out ITickets? tickets))
                 {
                     if (team == 1) tickets.TicketManager.Team1Tickets += Config.TicketsFOBRadioLost;
                     else if (team == 2) tickets.TicketManager.Team2Tickets += Config.TicketsFOBRadioLost;

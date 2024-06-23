@@ -1,16 +1,17 @@
 ﻿using Cysharp.Threading.Tasks;
 using SDG.Unturned;
 using Steamworks;
-using System.Collections.Generic;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -21,6 +22,7 @@ namespace Uncreated.Warfare.Commands;
 [HelpMetadata(nameof(GetHelpMetadata))]
 public class StructureCommand : IExecutableCommand
 {
+    private readonly BuildableSaver _saver;
     private const string Syntax = "/structure <save|remove|examine|pop|set>";
     private const string Help = "Managed saved structures.";
 
@@ -32,6 +34,11 @@ public class StructureCommand : IExecutableCommand
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public StructureCommand(BuildableSaver saver)
+    {
+        _saver = saver;
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -106,10 +113,6 @@ public class StructureCommand : IExecutableCommand
 
         Context.Defer();
         
-        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        if (saver == null)
-            throw Context.SendNotEnabled();
-
         if (Context.MatchParameter(0, "save"))
         {
             Context.AssertGamemode<IStructureSaving>();
@@ -119,35 +122,29 @@ public class StructureCommand : IExecutableCommand
 
             if (Context.TryGetStructureTarget(out StructureDrop? structure))
             {
-                (SqlItem<SavedStructure> item, bool isNew) = await saver.AddStructure(structure, token).ConfigureAwait(false);
+                if (!await _saver.SaveStructureAsync(structure, token))
+                {
+                    throw Context.Reply(T.StructureAlreadySaved, structure.asset);
+                }
+
                 await UniTask.SwitchToMainThread(token);
 
-                if (isNew && item.Item != null)
-                {
-                    Context.Reply(T.StructureSaved, item.Item);
-                    Context.LogAction(ActionLogType.SaveStructure,
-                        $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {item.Item.Position:0:##} ({item.Item.InstanceID})");
-                }
-                else if (item.Item != null)
-                    throw Context.Reply(T.StructureAlreadySaved, item.Item);
-                else
-                    throw Context.SendUnknownError();
+                Context.Reply(T.StructureSaved, structure.asset);
+                Context.LogAction(ActionLogType.SaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
+                                                               $"at {structure.GetServersideData().point:0:##} ({structure.instanceID})");
             }
             else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
             {
-                (SqlItem<SavedStructure> item, bool isNew) = await saver.AddBarricade(barricade, token).ConfigureAwait(false);
+                if (!await _saver.SaveBarricadeAsync(barricade, token))
+                {
+                    throw Context.Reply(T.StructureAlreadySaved, barricade.asset);
+                }
+
                 await UniTask.SwitchToMainThread(token);
 
-                if (isNew && item.Item != null)
-                {
-                    Context.Reply(T.StructureSaved, item.Item);
-                    Context.LogAction(ActionLogType.SaveStructure,
-                        $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {item.Item.Position:0:##} ({item.Item.InstanceID})");
-                }
-                else if (item.Item != null)
-                    throw Context.Reply(T.StructureAlreadySaved, item.Item);
-                else
-                    throw Context.SendUnknownError();
+                Context.Reply(T.StructureSaved, barricade.asset);
+                Context.LogAction(ActionLogType.SaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
+                                                               $"at {barricade.GetServersideData().point:0:##} ({barricade.instanceID})");
             }
             else throw Context.Reply(T.StructureNoTarget);
         }
@@ -160,41 +157,29 @@ public class StructureCommand : IExecutableCommand
 
             if (Context.TryGetStructureTarget(out StructureDrop? structure))
             {
-                SqlItem<SavedStructure>? item = await saver.GetSaveItem(structure, token).ConfigureAwait(false);
-                if (item?.Item != null)
+                if (!await _saver.DiscardStructureAsync(structure.instanceID, token))
                 {
-                    SavedStructure oldItem = item.Item;
-                    await item.Delete(token).ConfigureAwait(false);
-                    await UniTask.SwitchToMainThread(token);
-
-                    Context.LogAction(ActionLogType.UnsaveStructure,
-                        $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID})");
-                    Context.Reply(T.StructureUnsaved, oldItem);
-                }
-                else
-                {
-                    await UniTask.SwitchToMainThread(token);
                     throw Context.Reply(T.StructureAlreadyUnsaved, structure.asset);
                 }
+
+                await UniTask.SwitchToMainThread(token);
+
+                Context.LogAction(ActionLogType.UnsaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
+                                                                 $"at {structure.GetServersideData().point} ({structure.instanceID})");
+                Context.Reply(T.StructureUnsaved, structure.asset);
             }
             else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
             {
-                SqlItem<SavedStructure>? item = await saver.GetSaveItem(barricade, token).ConfigureAwait(false);
-                if (item?.Item != null)
+                if (!await _saver.DiscardStructureAsync(barricade.instanceID, token))
                 {
-                    SavedStructure oldItem = item.Item;
-                    await item.Delete(token).ConfigureAwait(false);
-                    await UniTask.SwitchToMainThread(token);
-
-                    Context.LogAction(ActionLogType.UnsaveStructure,
-                        $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID})");
-                    Context.Reply(T.StructureUnsaved, oldItem);
-                }
-                else
-                {
-                    await UniTask.SwitchToMainThread(token);
                     throw Context.Reply(T.StructureAlreadyUnsaved, barricade.asset);
                 }
+
+                await UniTask.SwitchToMainThread(token);
+
+                Context.LogAction(ActionLogType.UnsaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
+                                                                 $"at {barricade.GetServersideData().point} ({barricade.instanceID})");
+                Context.Reply(T.StructureUnsaved, barricade.asset);
             }
             else throw Context.Reply(T.StructureNoTarget);
         }
@@ -214,39 +199,32 @@ public class StructureCommand : IExecutableCommand
             }
             else if (Context.TryGetStructureTarget(out StructureDrop? structure))
             {
-                SqlItem<SavedStructure>? item = await saver.GetSaveItem(structure, token).ConfigureAwait(false);
-                if (item?.Item != null)
+                bool removedSave = await _saver.DiscardStructureAsync(structure.instanceID, token);
+                await UniTask.SwitchToMainThread(token);
+                if (removedSave)
                 {
-                    SavedStructure oldItem = item.Item;
-                    await item.Delete(token).ConfigureAwait(false);
-                    await UniTask.SwitchToMainThread(token);
-                    Context.LogAction(ActionLogType.UnsaveStructure,
-                        $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID}) (Automatically unsaved before destroy)");
-                    Context.Reply(T.StructureUnsaved, oldItem);
+                    Context.LogAction(ActionLogType.UnsaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
+                                                                     $"at {structure.GetServersideData().point} ({structure.instanceID})");
+                    Context.Reply(T.StructureUnsaved, structure.asset);
                 }
-                else await UniTask.SwitchToMainThread(token);
 
-                DestroyStructure(structure, Context.Player);
+                await DestroyStructure(structure, Context.Player, token);
                 Context.LogAction(ActionLogType.PopStructure,
                     $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
                     $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2", Data.AdminLocale)} ({structure.instanceID})");
             }
             else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
             {
-                SqlItem<SavedStructure>? item = await saver.GetSaveItem(barricade, token).ConfigureAwait(false);
-                if (item?.Item != null)
+                bool removedSave = await _saver.DiscardStructureAsync(barricade.instanceID, token);
+                await UniTask.SwitchToMainThread(token);
+                if (removedSave)
                 {
-                    SavedStructure oldItem = item.Item;
-                    await item.Delete(token).ConfigureAwait(false);
-                    await UniTask.SwitchToMainThread(token);
-
-                    Context.LogAction(ActionLogType.UnsaveStructure,
-                        $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID}) (Autmoatically unsaved before destroy)");
-                    Context.Reply(T.StructureUnsaved, oldItem);
+                    Context.LogAction(ActionLogType.UnsaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
+                                                                     $"at {barricade.GetServersideData().point} ({barricade.instanceID})");
+                    Context.Reply(T.StructureUnsaved, barricade.asset);
                 }
-                else await UniTask.SwitchToMainThread(token);
 
-                DestroyBarricade(barricade, Context.Player);
+                await DestroyBarricade(barricade, Context.Player, token);
                 Context.LogAction(ActionLogType.PopStructure,
                     $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
                     $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2", Data.AdminLocale)} ({barricade.instanceID})");
@@ -289,23 +267,20 @@ public class StructureCommand : IExecutableCommand
             bool grp = Context.MatchParameter(1, "group");
             if (!grp && !Context.MatchParameter(1, "owner"))
                 throw Context.SendCorrectUsage("/structure <set|s> <group|owner> <value>");
-            SqlItem<SavedStructure>? data;
+
             BarricadeDrop? barricade = null;
             ItemAsset asset;
             if (Context.TryGetStructureTarget(out StructureDrop? structure))
             {
-                data = await saver.GetSaveItem(structure, token).ConfigureAwait(false);
                 asset = structure.asset;
             }
             else if (Context.TryGetBarricadeTarget(out barricade))
             {
-                data = await saver.GetSaveItem(barricade, token).ConfigureAwait(false);
                 asset = barricade.asset;
             }
             else throw Context.Reply(T.StructureNoTarget);
 
             await UniTask.SwitchToMainThread(token);
-            bool saved = data?.Item?.Buildable?.Drop is not null;
             if (!Context.TryGet(2, out ulong s64) || s64 != 0 && (!grp && new CSteamID(s64).GetEAccountType() != EAccountType.k_EAccountTypeIndividual))
             {
                 if (Context.MatchParameter(2, "me"))
@@ -317,39 +292,33 @@ public class StructureCommand : IExecutableCommand
 
             string str64 = s64.ToString(Data.AdminLocale);
 
-            if (saved)
+            ulong? group = grp ? s64 : null;
+            ulong? owner = grp ? null : s64;
+            uint instanceId;
+            if (structure != null)
             {
-                await data!.Enter(token).ConfigureAwait(false);
-                try
-                {
-                    await UniTask.SwitchToMainThread(token);
-                    if (grp)
-                        data.Item!.Group = s64;
-                    else // owner
-                        data.Item!.Owner = s64;
-
-                    data.Item!.Buildable!.SetOwnerOrGroup(data.Item.Owner, data.Item.Group);
-                    await data.SaveItem(token).ConfigureAwait(false);
-                }
-                finally
-                {
-                    data.Release();
-                }
-
-                await UniTask.SwitchToMainThread(token);
-                Context.LogAction(ActionLogType.SetSavedStructureProperty,
-                    $"{asset?.itemName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.ItemGuid:N} - SET " +
-                    (grp ? "GROUP" : "OWNER") + " >> " + str64);
+                instanceId = structure.instanceID;
+                F.SetOwnerOrGroup(structure, owner, group);
+            }
+            else if (barricade != null)
+            {
+                instanceId = barricade.instanceID;
+                F.SetOwnerOrGroup(barricade, owner, group);
             }
             else
+                throw Context.Reply(T.StructureNoTarget);
+
+            bool isSaved = await _saver.IsBuildableSavedAsync(instanceId, structure != null, token);
+            if (isSaved)
             {
-                ulong? group = grp ? s64 : null;
-                ulong? owner = grp ? null : s64;
                 if (structure != null)
-                    F.SetOwnerOrGroup(structure, owner, group);
-                else if (barricade != null)
-                    F.SetOwnerOrGroup(barricade, owner, group);
-                else throw Context.Reply(T.StructureNoTarget);
+                    await _saver.SaveStructureAsync(structure, token);
+                else
+                    await _saver.SaveBarricadeAsync(barricade!, token);
+
+                await UniTask.SwitchToMainThread(token);
+                Context.LogAction(ActionLogType.SetSavedStructureProperty, $"{asset?.itemName ?? "null"} / {asset?.id ?? 0} / {asset?.GUID ?? Guid.Empty:N} - " +
+                                                                           $"SET {(grp ? "GROUP" : "OWNER")} >> {str64}.");
             }
 
             if (grp)
@@ -365,111 +334,105 @@ public class StructureCommand : IExecutableCommand
             Context.SendCorrectUsage(Syntax);
     }
 
-    private static readonly List<ISalvageInfo> WorkingSalvageInfo = new List<ISalvageInfo>(2);
-    private static void DestroyBarricade(BarricadeDrop bdrop, UCPlayer player)
+    private async UniTask DestroyBarricade(BarricadeDrop bDrop, UCPlayer player, CancellationToken token = default)
     {
-        ThreadUtil.assertIsGameThread();
-        if (bdrop != null && BarricadeManager.tryGetRegion(bdrop.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region))
-        {
-            bdrop.model.GetComponents(WorkingSalvageInfo);
-            try
-            {
-                SalvageBarricadeRequested? args = null;
-                for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
-                {
-                    if (args == null)
-                    {
-                        StructureSaver? saver = StructureSaver.GetSingletonQuick();
-                        args = new SalvageBarricadeRequested(player, bdrop, bdrop.GetServersideData(), region, x, y, plant, saver?.GetSaveItemSync(bdrop.instanceID, StructType.Barricade), default, default);
-                    }
+        await UniTask.SwitchToMainThread(token);
 
-                    ISalvageInfo salvage = WorkingSalvageInfo[i];
-                    salvage.IsSalvaged = true;
-                    salvage.Salvager = player.Steam64;
-                    if (salvage is ISalvageListener listener)
-                    {
-                        listener.OnSalvageRequested(args);
-                        if (!args.CanContinue)
-                            break;
-                    }
-                }
-
-                if (args is { CanContinue: false })
-                {
-                    for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
-                    {
-                        ISalvageInfo salvage = WorkingSalvageInfo[i];
-                        salvage.IsSalvaged = false;
-                        salvage.Salvager = 0;
-                    }
-
-                    player.SendChat(T.WhitelistProhibitedSalvage, bdrop.asset);
-                    return;
-                }
-
-                BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);
-                player.SendChat(T.StructureDestroyed, bdrop.asset);
-            }
-            finally
-            {
-                WorkingSalvageInfo.Clear();
-            }
-        }
-        else
+        if (bDrop == null || !BarricadeManager.tryGetRegion(bDrop.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region))
         {
             player.SendChat(T.StructureNotDestroyable);
+            return;
         }
+
+        ISalvageInfo[] components = bDrop.model.GetComponents<ISalvageInfo>();
+        
+        if (components.Length == 0)
+            return;
+
+        SalvageBarricadeRequested args = new SalvageBarricadeRequested(player, bDrop, bDrop.GetServersideData(),
+            region, x, y, plant, await _saver.GetBarricadeSaveAsync(bDrop.instanceID, token), default, default);
+
+        await UniTask.SwitchToMainThread(token);
+
+        for (int i = 0; i < components.Length; ++i)
+        {
+            ISalvageInfo salvage = components[i];
+            salvage.IsSalvaged = true;
+            salvage.Salvager = player.Steam64;
+
+            if (salvage is not ISalvageListener listener)
+                continue;
+
+            listener.OnSalvageRequested(args);
+            if (!args.CanContinue)
+                break;
+        }
+
+        if (args is { CanContinue: false })
+        {
+            for (int i = 0; i < components.Length; ++i)
+            {
+                ISalvageInfo salvage = components[i];
+                salvage.IsSalvaged = false;
+                salvage.Salvager = 0;
+            }
+
+            player.SendChat(T.WhitelistProhibitedSalvage, bDrop.asset);
+            return;
+        }
+
+        BarricadeManager.destroyBarricade(bDrop, x, y, ushort.MaxValue);
+        player.SendChat(T.StructureDestroyed, bDrop.asset);
     }
-    private static void DestroyStructure(StructureDrop sdrop, UCPlayer player)
+    private async UniTask DestroyStructure(StructureDrop sDrop, UCPlayer player, CancellationToken token = default)
     {
-        ThreadUtil.assertIsGameThread();
-        if (sdrop != null && StructureManager.tryGetRegion(sdrop.model, out byte x, out byte y, out StructureRegion region))
-        {
-            sdrop.model.GetComponents(WorkingSalvageInfo);
-            try
-            {
-                SalvageStructureRequested? args = null;
-                for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
-                {
-                    if (args == null)
-                    {
-                        StructureSaver? saver = StructureSaver.GetSingletonQuick();
-                        args = new SalvageStructureRequested(player, sdrop, sdrop.GetServersideData(), region, x, y, saver?.GetSaveItemSync(sdrop.instanceID, StructType.Structure), default, default);
-                    }
-                    
-                    ISalvageInfo salvage = WorkingSalvageInfo[i];
-                    salvage.IsSalvaged = true;
-                    salvage.Salvager = player.Steam64;
-                    if (salvage is ISalvageListener listener)
-                    {
-                        listener.OnSalvageRequested(args);
-                        if (!args.CanContinue)
-                            break;
-                    }
-                }
-                if (args is { CanContinue: false })
-                {
-                    for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
-                    {
-                        ISalvageInfo salvage = WorkingSalvageInfo[i];
-                        salvage.IsSalvaged = false;
-                        salvage.Salvager = 0;
-                    }
-                    player.SendChat(T.WhitelistProhibitedSalvage, sdrop.asset);
-                    return;
-                }
-                StructureManager.destroyStructure(sdrop, x, y, Vector3.down);
-                player.SendChat(T.StructureDestroyed, sdrop.asset);
-            }
-            finally
-            {
-                WorkingSalvageInfo.Clear();
-            }
-        }
-        else
+        await UniTask.SwitchToMainThread(token);
+
+        if (sDrop == null || !StructureManager.tryGetRegion(sDrop.model, out byte x, out byte y, out StructureRegion region))
         {
             player.SendChat(T.StructureNotDestroyable);
+            return;
         }
+
+        ISalvageInfo[] components = sDrop.model.GetComponents<ISalvageInfo>();
+
+        if (components.Length == 0)
+            return;
+
+        SalvageStructureRequested args = new SalvageStructureRequested(player, sDrop, sDrop.GetServersideData(),
+            region, x, y, await _saver.GetStructureSaveAsync(sDrop.instanceID, token), default, default);
+
+        await UniTask.SwitchToMainThread(token);
+
+        for (int i = 0; i < components.Length; ++i)
+        {
+            ISalvageInfo salvage = components[i];
+            salvage.IsSalvaged = true;
+            salvage.Salvager = player.Steam64;
+
+            if (salvage is not ISalvageListener listener)
+                continue;
+
+            listener.OnSalvageRequested(args);
+            if (!args.CanContinue)
+                break;
+        }
+
+        if (args is { CanContinue: false })
+        {
+            for (int i = 0; i < components.Length; ++i)
+            {
+                ISalvageInfo salvage = components[i];
+                salvage.IsSalvaged = false;
+                salvage.Salvager = 0;
+            }
+
+            player.SendChat(T.WhitelistProhibitedSalvage, sDrop.asset);
+            return;
+        }
+
+        StructureManager.destroyStructure(sDrop, x, y, Vector3.Reflect(sDrop.GetServersideData().point - player.Position, Vector3.up).normalized * 4);
+        player.SendChat(T.StructureDestroyed, sDrop.asset);
     }
     private async Task ExamineVehicle(InteractableVehicle vehicle, UCPlayer player, bool sendurl, CancellationToken token = default)
     {

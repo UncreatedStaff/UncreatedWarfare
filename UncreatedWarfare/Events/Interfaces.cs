@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
-using Uncreated.SQL;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Models.Buildables;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events;
@@ -12,7 +12,7 @@ public interface IBuildableDestroyedEvent
     ulong InstigatorId { get; }
     Transform Transform { get; }
     IBuildable Buildable { get; }
-    SqlItem<SavedStructure>? Save { get; }
+    BuildableSave? Save { get; }
     bool IsSaved { get; }
     uint InstanceID { get; }
     byte RegionPosX { get; }

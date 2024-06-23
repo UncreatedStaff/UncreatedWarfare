@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -18,7 +18,7 @@ public static class UCBarricadeManager
         if (buildable == null) return other == null;
         if (other == null) return false;
 
-        return buildable.Type == other.Type && buildable.InstanceId == other.InstanceId;
+        return buildable.IsStructure == other.IsStructure && buildable.InstanceId == other.InstanceId;
     }
     public static bool Destroy(this IBuildable buildable)
     {
@@ -26,7 +26,7 @@ public static class UCBarricadeManager
         {
             if (buildable.Model != null)
             {
-                if (buildable.Type == StructType.Barricade)
+                if (!buildable.IsStructure)
                 {
                     if (buildable.Drop is BarricadeDrop d1 && !d1.GetServersideData().barricade.isDead
                                                            && BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _))
@@ -35,7 +35,7 @@ public static class UCBarricadeManager
                         return true;
                     }
                 }
-                else if (buildable.Type == StructType.Structure)
+                else
                 {
                     if (buildable.Drop is StructureDrop s1 && !s1.GetServersideData().structure.isDead
                                                            && StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _))

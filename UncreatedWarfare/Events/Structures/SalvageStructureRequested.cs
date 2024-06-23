@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
-using Uncreated.SQL;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Models.Buildables;
 
 namespace Uncreated.Warfare.Events.Structures;
 public sealed class SalvageStructureRequested : SalvageRequested
@@ -11,30 +11,14 @@ public sealed class SalvageStructureRequested : SalvageRequested
     public StructureDrop Structure => _drop;
     public StructureData ServersideData => _data;
     public StructureRegion Region => (StructureRegion)RegionObj;
-    public override IBuildable Buildable => BuildableCache ??= new UCStructure(Structure);
-    internal SalvageStructureRequested(UCPlayer instigator, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)
+    public override IBuildable Buildable => BuildableCache ??= new BuildableStructure(Structure);
+    internal SalvageStructureRequested(UCPlayer instigator, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, BuildableSave? save, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)
         : base(instigator, region, x, y, structure.instanceID, primaryAsset, secondaryAsset)
     {
         _drop = structure;
         _data = structureData;
         Transform = structure.model;
-        StructureSave = save;
-        ListSqlConfig<SavedStructure>? m = save?.Manager;
-        if (m is not null)
-        {
-            m.WriteWait();
-            try
-            {
-                if (save!.Item != null)
-                {
-                    BuildableCache = save.Item.Buildable;
-                    IsStructureSaved = true;
-                }
-            }
-            finally
-            {
-                m.WriteRelease();
-            }
-        }
+        BuildableSave = save;
+        BuildableCache = save?.Buildable;
     }
 }

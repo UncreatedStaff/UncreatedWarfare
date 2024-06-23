@@ -3,7 +3,8 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Uncreated.Framework;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
@@ -22,7 +23,6 @@ using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -191,7 +191,18 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         };
 
         _recordTracker = new FobRecordTracker<WarfareDbContext>(fobRecord);
-        UCWarfare.RunTask(_recordTracker.Create, ctx: "Create FOB record.");
+        Task.Run(async () =>
+        {
+            try
+            {
+                await _recordTracker.Create();
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"[FOBS] [{Name}] Failed to create FOB record tracker.");
+                L.LogError(ex);
+            }
+        });
 
         if (Bunker != null)
             Radius = FOBManager.Config.FOBBuildPickupRadius;
@@ -290,7 +301,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         Radio.NeedsRestock = false;
         Radio.LastRestock = Time.realtimeSinceStartup;
         Vector3 pos = transform.position;
-        if (Gamemode.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? asset))
+        if (GamemodeOld.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? asset))
             F.TriggerEffectReliable(asset, 40, pos);
 
         if (Radio.Barricade.interactable is not InteractableStorage storage)
@@ -347,11 +358,22 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             Radio = c;
             if (_recordTracker != null)
             {
-                UCWarfare.RunTask(_recordTracker.Update(r =>
+                Task.Run(async () =>
                 {
-                    r.Position = c.Position;
-                    r.FobAngle = c.transform.eulerAngles;
-                }), ctx: "Update FOB record.");
+                    try
+                    {
+                        await _recordTracker.Update(r =>
+                        {
+                            r.Position = c.Position;
+                            r.FobAngle = c.transform.eulerAngles;
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError($"[FOBS] [{Name}] Failed to update FOB record tracker after radio placed.");
+                        L.LogError(ex);
+                    }
+                });
             }
             L.LogDebug($"[FOBS] [{Name}] Registered radio: {item.Buildable}.");
             return;
@@ -368,40 +390,61 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 return;
             }
 
-            UCWarfare.RunTask(async () =>
+            Task.Run(async () =>
             {
-                UnturnedAssetReference itemRef;
-
-                if (item.Buildable == null)
-                    itemRef = default;
-                else if (item.Buildable.FullBuildable.TryGetGuid(out Guid guid))
-                    itemRef = new UnturnedAssetReference(guid);
-                else if (item.Buildable.Emplacement != null && item.Buildable.Emplacement.EmplacementVehicle.TryGetGuid(out guid))
-                    itemRef = new UnturnedAssetReference(guid);
-                else if (item.Buildable.Foundation.TryGetGuid(out guid))
-                    itemRef = new UnturnedAssetReference(guid);
-                else itemRef = default;
-
-                await _recordTracker.Create(item, new FobItemRecord
+                try
                 {
-                    Steam64 = item.Owner,
-                    Team = (byte)Team,
-                    FobId = await _recordTracker.GetRecordId(),
-                    FobItemAngle = item.Rotation.eulerAngles,
-                    FobItemPosition = item.Position,
-                    Item = itemRef,
-                    NearestLocation = ClosestLocation,
-                    Position = player!.Position,
-                    Timestamp = DateTimeOffset.UtcNow,
-                    SessionId = session.SessionId,
-                    Type = item.Type
-                });
-            }, ctx: "Create FOB item record.");
+                    UnturnedAssetReference itemRef;
+
+                    if (item.Buildable == null)
+                        itemRef = default;
+                    else if (item.Buildable.FullBuildable.TryGetGuid(out Guid guid))
+                        itemRef = new UnturnedAssetReference(guid);
+                    else if (item.Buildable.Emplacement != null && item.Buildable.Emplacement.EmplacementVehicle.TryGetGuid(out guid))
+                        itemRef = new UnturnedAssetReference(guid);
+                    else if (item.Buildable.Foundation.TryGetGuid(out guid))
+                        itemRef = new UnturnedAssetReference(guid);
+                    else itemRef = default;
+
+                    await _recordTracker.Create(item, new FobItemRecord
+                    {
+                        Steam64 = item.Owner,
+                        Team = (byte)Team,
+                        FobId = await _recordTracker.GetRecordId(),
+                        FobItemAngle = item.Rotation.eulerAngles,
+                        FobItemPosition = item.Position,
+                        Item = itemRef,
+                        NearestLocation = ClosestLocation,
+                        Position = player!.Position,
+                        Timestamp = DateTimeOffset.UtcNow,
+                        SessionId = session.SessionId,
+                        Type = item.Type
+                    });
+                }
+                catch (Exception ex)
+                {
+                    L.LogError($"[FOBS] [{Name}] Failed to create FOB record tracker for new buildable.");
+                    L.LogError(ex);
+                }
+            });
 
             item.UpdateRecord += action =>
             {
                 if (_recordTracker != null)
-                    UCWarfare.RunTask(_recordTracker.Update(item, action), ctx: "Update FOB item record.");
+                {
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _recordTracker.Update(item, action);
+                        }
+                        catch (Exception ex)
+                        {
+                            L.LogError($"[FOBS] [{Name}] Failed to update FOB record item tracker.");
+                            L.LogError(ex);
+                        }
+                    });
+                }
             };
         }
 
@@ -470,7 +513,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             case RadioComponent.RadioState.Bleeding:
                 if (Radio.State == RadioComponent.RadioState.Bleeding)
                     return;
-                if (!Gamemode.Config.BarricadeFOBRadioDamaged.TryGetAsset(out ItemBarricadeAsset? damagedFobRadio))
+                if (!GamemodeOld.Config.BarricadeFOBRadioDamaged.TryGetAsset(out ItemBarricadeAsset? damagedFobRadio))
                 {
                     L.LogWarning($"[FOBS] [{Name}] Can't replace with damaged fob, asset not found from config.");
                     return;
@@ -533,19 +576,30 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
             SessionRecord? session = DestroyInfo?.Instigator?.CurrentSession;
 
-            UCWarfare.RunTask(_recordTracker.Update(record =>
+            Task.Run(async () =>
             {
-                record.DestroyedAt = DateTimeOffset.UtcNow;
-                record.DestroyedByRoundEnd = destroyedByRoundEnd;
-                record.Teamkilled = teamkilled;
-                record.Instigator = DestroyInfo?.InstigatorId;
-                record.InstigatorSession = session;
-                record.InstigatorPosition = DestroyInfo?.Instigator?.Position;
-                record.BuildLoaded = _buildLoaded;
-                record.BuildSpent = _buildSpent;
-                record.AmmoLoaded = _ammoLoaded;
-                record.AmmoSpent = _ammoSpent;
-            }), ctx: "Update FOB record (destroyed).");
+                try
+                {
+                    await _recordTracker.Update(record =>
+                    {
+                        record.DestroyedAt = DateTimeOffset.UtcNow;
+                        record.DestroyedByRoundEnd = destroyedByRoundEnd;
+                        record.Teamkilled = teamkilled;
+                        record.Instigator = DestroyInfo?.InstigatorId;
+                        record.InstigatorSession = session;
+                        record.InstigatorPosition = DestroyInfo?.Instigator?.Position;
+                        record.BuildLoaded = _buildLoaded;
+                        record.BuildSpent = _buildSpent;
+                        record.AmmoLoaded = _ammoLoaded;
+                        record.AmmoSpent = _ammoSpent;
+                    });
+                }
+                catch (Exception ex)
+                {
+                    L.LogError($"[FOBS] [{Name}] Failed to update FOB record tracker after being destroyed.");
+                    L.LogError(ex);
+                }
+            });
         }
         for (int i = 0; i < _friendlies.Count; ++i)
         {
@@ -797,7 +851,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     }
                     ++index;
                 }
-                if (Gamemode.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? effect))
+                if (GamemodeOld.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? effect))
                     F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
                 UpdateResourceUI(true, false, false);
                 update = true;
@@ -818,7 +872,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     }
                     ++index;
                 }
-                if (Gamemode.Config.EffectUnloadAmmo.TryGetAsset(out EffectAsset? effect))
+                if (GamemodeOld.Config.EffectUnloadAmmo.TryGetAsset(out EffectAsset? effect))
                     F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
                 UpdateResourceUI(false, true, false);
                 update = true;
@@ -891,8 +945,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public bool ContainsVehicle(InteractableVehicle vehicle) => FindFOBItem(vehicle) != null;
     public IFOBItem? FindFOBItem(IBuildable buildable)
     {
-        if (Radio != null && Radio.Barricade.instanceID == buildable.InstanceId &&
-            buildable.Type == StructType.Barricade)
+        if (Radio != null && Radio.Barricade.instanceID == buildable.InstanceId && !buildable.IsStructure)
             return Radio;
         if (Bunker != null && (Bunker.ActiveStructure.BuildableEquals(buildable) || Bunker.Base.BuildableEquals(buildable)))
             return Bunker;

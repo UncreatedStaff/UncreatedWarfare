@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
-using Uncreated.SQL;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Models.Buildables;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events;
@@ -9,7 +9,7 @@ public abstract class SalvageRequested : BreakablePlayerEvent, IBuildableDestroy
 {
     protected IBuildable? BuildableCache;
     protected readonly object RegionObj;
-    protected SqlItem<SavedStructure>? StructureSave;
+    protected BuildableSave? BuildableSave;
     protected bool IsStructureSaved;
 
     private readonly byte _x;
@@ -20,7 +20,7 @@ public abstract class SalvageRequested : BreakablePlayerEvent, IBuildableDestroy
     public uint InstanceID => _instanceId;
     public bool IsSaved => IsStructureSaved;
     public abstract IBuildable Buildable { get; }
-    public SqlItem<SavedStructure>? Save => StructureSave;
+    public BuildableSave? Save => BuildableSave;
     public Transform Transform { get; protected set; }
     UCPlayer? IBuildableDestroyedEvent.Instigator => Player;
     object IBuildableDestroyedEvent.Region => RegionObj;

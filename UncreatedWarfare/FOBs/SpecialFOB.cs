@@ -1,6 +1,9 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Globalization;
-using SDG.Unturned;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -8,7 +11,6 @@ using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -71,33 +73,57 @@ public class SpecialFOB : IFOB, IGameTickListener, IDisposable
         };
 
         Record = new FobRecordTracker<WarfareDbContext>(fobRecord);
-        UCWarfare.RunTask(Record.Create, ctx: "Create FOB record.");
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Record.Create();
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"[FOBS] [{Name}] Failed to create FOB record tracker.");
+                L.LogError(ex);
+            }
+        });
     }
 
     void IGameTickListener.Tick()
     {
-        if (DisappearAroundEnemies && Data.Gamemode.EveryXSeconds(5f) && Data.Is(out IFOBs fobs))
+        if (!DisappearAroundEnemies || !Data.Gamemode.EveryXSeconds(5f) || !Data.Is(out IFOBs? fobs))
         {
-            Vector3 pos = SpawnPosition;
-            for (int i = 0; i < Provider.clients.Count; ++i)
+            return;
+        }
+
+        Vector3 pos = SpawnPosition;
+        for (int i = 0; i < Provider.clients.Count; ++i)
+        {
+            SteamPlayer pl = Provider.clients[i];
+            if (pl.GetTeam() == Team || !((pl.player.transform.position - pos).sqrMagnitude < 70 * 70))
+                continue;
+            
+            L.LogDebug($"[FOBS] [{Name}] Deleting FOB because of nearby enemies.", ConsoleColor.Green);
+            fobs.FOBManager.DeleteFOB(this);
+
+            if (Record == null)
+                return;
+            
+            Task.Run(async () =>
             {
-                SteamPlayer pl = Provider.clients[i];
-                if (pl.GetTeam() != Team && (pl.player.transform.position - pos).sqrMagnitude < 70 * 70)
+                try
                 {
-                    L.LogDebug($"[FOBS] [{Name}] Deleting FOB because of nearby enemies.", ConsoleColor.Green);
-                    fobs.FOBManager.DeleteFOB(this);
-                    
-                    if (Record != null)
+                    await Record.Update(record =>
                     {
-                        UCWarfare.RunTask(Record.Update(record =>
-                        {
-                            record.DestroyedByRoundEnd = false;
-                            record.DestroyedAt = DateTimeOffset.UtcNow;
-                        }), ctx: "Create FOB record.");
-                    }
-                    return;
+                        record.DestroyedByRoundEnd = false;
+                        record.DestroyedAt = DateTimeOffset.UtcNow;
+                    });
                 }
-            }
+                catch (Exception ex)
+                {
+                    L.LogError($"[FOBS] [{Name}] Failed to update FOB record tracker after disappearing around enemies.");
+                    L.LogError(ex);
+                }
+            });
+            return;
         }
     }
 

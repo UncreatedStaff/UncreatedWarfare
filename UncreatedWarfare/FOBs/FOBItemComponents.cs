@@ -3,6 +3,8 @@ using SDG.Framework.Utilities;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -13,7 +15,6 @@ using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
@@ -57,12 +58,12 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
             goto destroy;
         }
         
-        if (!Gamemode.Config.FOBRadios.ContainsGuid(Barricade.asset.GUID))
+        if (!GamemodeOld.Config.FOBRadios.ContainsGuid(Barricade.asset.GUID))
         {
-            if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchAsset(Barricade.asset))
+            if (GamemodeOld.Config.BarricadeFOBRadioDamaged.MatchAsset(Barricade.asset))
             {
                 State = RadioState.Bleeding;
-                Icon = Gamemode.Config.EffectMarkerRadioDamaged;
+                Icon = GamemodeOld.Config.EffectMarkerRadioDamaged;
             }
             else
             {
@@ -73,7 +74,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
         else
         {
             State = RadioState.Alive;
-            Icon = Gamemode.Config.EffectMarkerRadio;
+            Icon = GamemodeOld.Config.EffectMarkerRadio;
         }
 
         Owner = Barricade.GetServersideData().owner;
@@ -272,7 +273,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             }
             else
             {
-                ActiveStructure = new UCStructure(structure);
+                ActiveStructure = new BuildableStructure(structure);
                 Asset = structure.asset;
                 Position = structure.model.position;
                 Rotation = structure.model.rotation;
@@ -282,7 +283,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         }
         else
         {
-            ActiveStructure = new UCBarricade(barricade);
+            ActiveStructure = new BuildableBarricade(barricade);
             Asset = barricade.asset;
             Position = barricade.model.position;
             Rotation = barricade.model.rotation;
@@ -313,7 +314,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             Total = Buildable.RequiredHits;
             State = BuildableState.Foundation;
             if (Buildable.RequiredHits > 8)
-                Icon = Gamemode.Config.EffectMarkerBuildable;
+                Icon = GamemodeOld.Config.EffectMarkerBuildable;
             if (IconOffset == 0)
                 IconOffset = 1.5f;
         }
@@ -322,9 +323,9 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             State = BuildableState.Full;
             Icon = Buildable.Type switch
             {
-                BuildableType.Bunker => Gamemode.Config.EffectMarkerBunker,
-                BuildableType.AmmoCrate => Gamemode.Config.EffectMarkerAmmo,
-                BuildableType.RepairStation => Gamemode.Config.EffectMarkerRepair,
+                BuildableType.Bunker => GamemodeOld.Config.EffectMarkerBunker,
+                BuildableType.AmmoCrate => GamemodeOld.Config.EffectMarkerAmmo,
+                BuildableType.RepairStation => GamemodeOld.Config.EffectMarkerRepair,
                 _ => default
             };
         }
@@ -411,38 +412,60 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
         if (FOB?.Record != null && Buildable != null && State == BuildableState.Full && !destroyedByRoundEnd)
         {
-            UCWarfare.RunTask(FOB.Record.Update(record =>
+            Task.Run(async () =>
             {
-                if (Buildable.Emplacement != null)
-                    ++record.EmplacementsDestroyed;
-                else if (Buildable.Type == BuildableType.AmmoCrate)
-                    ++record.AmmoCratesDestroyed;
-                else if (Buildable.Type == BuildableType.RepairStation)
-                    ++record.RepairStationsDestroyed;
-                else if (Buildable.Type == BuildableType.Fortification)
-                    ++record.FortificationsDestroyed;
-                else if (Buildable.Type == BuildableType.Bunker)
-                    ++record.BunkersDestroyed;
-            }));
+                try
+                {
+                    await FOB.Record.Update(record =>
+                    {
+                        if (Buildable.Emplacement != null)
+                            ++record.EmplacementsDestroyed;
+                        else if (Buildable.Type == BuildableType.AmmoCrate)
+                            ++record.AmmoCratesDestroyed;
+                        else if (Buildable.Type == BuildableType.RepairStation)
+                            ++record.RepairStationsDestroyed;
+                        else if (Buildable.Type == BuildableType.Fortification)
+                            ++record.FortificationsDestroyed;
+                        else if (Buildable.Type == BuildableType.Bunker)
+                            ++record.BunkersDestroyed;
+                    });
+                }
+                catch (Exception ex)
+                {
+                    L.LogError($"[FOBS] [{FOB.Name}] Failed to update FOB record tracker after buildable destroyed.");
+                    L.LogError(ex);
+                }
+            });
         }
         if (FOB?.Record != null)
         {
             UCPlayer? instigator = DestroyInfo != null ? UCPlayer.FromID(DestroyInfo.InstigatorId) : null;
 
             SessionRecord? session = instigator?.CurrentSession;
-            
-            UCWarfare.RunTask(FOB.Record.Update(this, record =>
+
+            Task.Run(async () =>
             {
-                record.DestroyedAt = DateTime.UtcNow;
-                record.DestroyedByRoundEnd = destroyedByRoundEnd;
-                record.Teamkilled = teamkilled;
-                record.Instigator = instigator?.Steam64;
-                record.InstigatorPosition = instigator?.Position;
-                record.InstigatorSessionId = session?.SessionId;
-                record.PrimaryAsset = DestroyInfo?.PrimaryAsset;
-                record.SecondaryAsset = DestroyInfo?.SecondaryAsset;
-                record.UseTimeSeconds = _useTimeSeconds;
-            }));
+                try
+                {
+                    await FOB.Record.Update(this, record =>
+                    {
+                        record.DestroyedAt = DateTime.UtcNow;
+                        record.DestroyedByRoundEnd = destroyedByRoundEnd;
+                        record.Teamkilled = teamkilled;
+                        record.Instigator = instigator?.Steam64;
+                        record.InstigatorPosition = instigator?.Position;
+                        record.InstigatorSessionId = session?.SessionId;
+                        record.PrimaryAsset = DestroyInfo?.PrimaryAsset;
+                        record.SecondaryAsset = DestroyInfo?.SecondaryAsset;
+                        record.UseTimeSeconds = _useTimeSeconds;
+                    });
+                }
+                catch (Exception ex)
+                {
+                    L.LogError($"[FOBS] [{FOB.Name}] Failed to update FOB record tracker after buildable destroyed.");
+                    L.LogError(ex);
+                }
+            });
         }
 
         FOBManager.EnsureDisposed(this);
@@ -486,7 +509,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 return true;
             }
             if (!IsFloating && !FOB!.ValidatePlacement(Buildable, shoveler, this) ||
-                IsFloating && Data.Is(out IFOBs fobs) && !fobs.FOBManager.ValidateFloatingPlacement(Buildable, shoveler, transform.position, this))
+                IsFloating && Data.Is(out IFOBs? fobs) && !fobs.FOBManager.ValidateFloatingPlacement(Buildable, shoveler, transform.position, this))
             {
                 return false;
             }
@@ -612,7 +635,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
             if (ActiveStructure != null)
             {
-                if (ActiveStructure.Type == StructType.Barricade)
+                if (!ActiveStructure.IsStructure)
                     BarricadeManager.repair(ActiveStructure!.Model, amt, 1, shoveler.CSteamID);
                 else
                     StructureManager.repair(ActiveStructure!.Model, amt, 1, shoveler.CSteamID);
@@ -643,7 +666,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 float percent = (float)newHealth / maxHealth;
                 if (percent > 0.9f)
                     percent = 1f;
-                if (Base.Type == StructType.Barricade)
+                if (!Base.IsStructure)
                 {
                     maxHealth = (ushort)Mathf.Clamp(Mathf.RoundToInt(percent * ((ItemBarricadeAsset)Base.Asset).health), 0, ushort.MaxValue);
                     health = ((BarricadeDrop)Base.Drop).GetServersideData().barricade.health;
@@ -717,7 +740,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
             if (ActiveStructure != null)
             {
-                if (ActiveStructure.Type == StructType.Barricade)
+                if (!ActiveStructure.IsStructure)
                     BarricadeManager.repair(ActiveStructure!.Model, amt, 1, shoveler.CSteamID);
                 else
                     StructureManager.repair(ActiveStructure!.Model, amt, 1, shoveler.CSteamID);
@@ -730,7 +753,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             FOBManager.TriggerBuildEffect(transform.position);
             if (Base != null)
             {
-                if (Base.Type == StructType.Barricade)
+                if (!Base.IsStructure)
                 {
                     maxHealth = ((ItemBarricadeAsset)Base.Asset).health;
                     health = ((BarricadeDrop)Base.Drop).GetServersideData().barricade.health;
@@ -824,7 +847,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                     Transform? t = BarricadeManager.dropNonPlantedBarricade(b, position, rotation, Owner, group);
                     BarricadeDrop? drop = t == null ? null : BarricadeManager.FindBarricadeByRootTransform(t);
                     if (drop != null)
-                        newBase = new UCBarricade(drop);
+                        newBase = new BuildableBarricade(drop);
                 }
                 finally
                 {
@@ -841,7 +864,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                     if (success)
                     {
                         if (Regions.tryGetCoordinate(position, out byte x, out byte y) && StructureManager.tryGetRegion(x, y, out StructureRegion region))
-                            newBase = new UCStructure(region.drops.GetTail());
+                            newBase = new BuildableStructure(region.drops.GetTail());
                     }
                 }
                 finally
@@ -928,7 +951,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         IFOBItem? @new = null;
         if (FOB != null)
             @new = FOB.UpgradeItem(this, newTransform);
-        else if (Data.Is(out IFOBs fobs))
+        else if (Data.Is(out IFOBs? fobs))
             @new = fobs.FOBManager.UpgradeFloatingItem(this, newTransform);
         
         List<FobItemBuilderRecord> records = new List<FobItemBuilderRecord>(Builders.Count);
@@ -991,25 +1014,48 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         {
             if (Buildable != null)
             {
-                UCWarfare.RunTask(FOB.Record.Update(record =>
+                Task.Run(async () =>
                 {
-                    if (Buildable.Emplacement != null)
-                        ++record.EmplacementsBuilt;
-                    else if (Buildable.Type == BuildableType.Fortification)
-                        ++record.FortificationsBuilt;
-                    else if (Buildable.Type == BuildableType.AmmoCrate)
-                        ++record.AmmoCratesBuilt;
-                    else if (Buildable.Type == BuildableType.Bunker)
-                        ++record.BunkersBuilt;
-                    else if (Buildable.Type == BuildableType.RepairStation)
-                        ++record.RepairStationsBuilt;
-                }), ctx: "Update FOB record (increment built count).");
+                    try
+                    {
+                        await FOB.Record.Update(record =>
+                        {
+                            if (Buildable.Emplacement != null)
+                                ++record.EmplacementsBuilt;
+                            else if (Buildable.Type == BuildableType.Fortification)
+                                ++record.FortificationsBuilt;
+                            else if (Buildable.Type == BuildableType.AmmoCrate)
+                                ++record.AmmoCratesBuilt;
+                            else if (Buildable.Type == BuildableType.Bunker)
+                                ++record.BunkersBuilt;
+                            else if (Buildable.Type == BuildableType.RepairStation)
+                                ++record.RepairStationsBuilt;
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError($"[FOBS] [{FOB.Name}] Failed to update FOB record after building a buildable.");
+                        L.LogError(ex);
+                    }
+                });
             }
-            UCWarfare.RunTask(FOB.Record.Update(this, record =>
+
+            Task.Run(async () =>
             {
-                record.Builders = records;
-                record.BuiltAt = now;
-            }), ctx: "Update FOB item record (increment built count).");
+                try
+                {
+                    await FOB.Record.Update(this, record =>
+                    {
+                        record.Builders = records;
+                        record.BuiltAt = now;
+                    });
+                }
+                catch (Exception ex)
+                {
+                    L.LogError($"[FOBS] [{FOB.Name}] Failed to update FOB record after building a buildable.");
+                    L.LogError(ex);
+                }
+            });
         }
 
         if (@new == null)
@@ -1173,7 +1219,7 @@ public class RepairStationComponent : ShovelableComponent
         }
 
         VehicleManager.sendVehicleHealth(vehicle, newHealth);
-        if (Gamemode.Config.EffectRepair.TryGetAsset(out EffectAsset? effect))
+        if (GamemodeOld.Config.EffectRepair.TryGetAsset(out EffectAsset? effect))
             F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
         vehicle.updateVehicle();
     }
@@ -1186,7 +1232,7 @@ public class RepairStationComponent : ShovelableComponent
 
         vehicle.askFillFuel(amount);
 
-        if (Gamemode.Config.EffectRefuel.TryGetAsset(out EffectAsset? effect))
+        if (GamemodeOld.Config.EffectRefuel.TryGetAsset(out EffectAsset? effect))
             F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
         vehicle.updateVehicle();
     }

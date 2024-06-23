@@ -1,9 +1,9 @@
 ﻿using SDG.Unturned;
-using Uncreated.SQL;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Models.Buildables;
 
-namespace Uncreated.Warfare.Events.Structures;
+namespace Uncreated.Warfare.Events.Barricades;
 public sealed class SalvageBarricadeRequested : SalvageRequested
 {
     private readonly BarricadeDrop _drop;
@@ -13,31 +13,15 @@ public sealed class SalvageBarricadeRequested : SalvageRequested
     public BarricadeDrop Barricade => _drop;
     public BarricadeData ServersideData => _data;
     public BarricadeRegion Region => (BarricadeRegion)RegionObj;
-    public override IBuildable Buildable => BuildableCache ??= new UCBarricade(Barricade);
-    internal SalvageBarricadeRequested(UCPlayer instigator, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)
+    public override IBuildable Buildable => BuildableCache ??= new BuildableBarricade(Barricade);
+    internal SalvageBarricadeRequested(UCPlayer instigator, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, BuildableSave? save, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)
         : base(instigator, region, x, y, barricade.instanceID, primaryAsset, secondaryAsset)
     {
         _drop = barricade;
         _data = barricadeData;
         _plant = plant;
         Transform = barricade.model;
-        StructureSave = save;
-        ListSqlConfig<SavedStructure>? m = save?.Manager;
-        if (m is not null)
-        {
-            m.WriteWait();
-            try
-            {
-                if (save!.Item != null)
-                {
-                    BuildableCache = save.Item.Buildable;
-                    IsStructureSaved = true;
-                }
-            }
-            finally
-            {
-                m.WriteRelease();
-            }
-        }
+        BuildableSave = save;
+        BuildableCache = save?.Buildable;
     }
 }

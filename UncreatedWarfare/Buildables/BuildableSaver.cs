@@ -316,6 +316,84 @@ public class BuildableSaver : ISessionHostedService
     }
 
     /// <summary>
+    /// Check if a barricade is saved or not.
+    /// </summary>
+    public UniTask<bool> IsBarricadeSavedAsync(uint instanceId, CancellationToken token = default)
+    {
+        return IsBuildableSavedAsync(instanceId, false, token);
+    }
+
+    /// <summary>
+    /// Check if a structure is saved or not.
+    /// </summary>
+    public UniTask<bool> IsStructureSavedAsync(uint instanceId, CancellationToken token = default)
+    {
+        return IsBuildableSavedAsync(instanceId, true, token);
+    }
+    
+    /// <summary>
+    /// Check if a buildable is saved or not.
+    /// </summary>
+    public async UniTask<bool> IsBuildableSavedAsync(uint instanceId, bool isStructure, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token);
+        try
+        {
+            byte region = UCWarfare.Config.Region;
+            int mapId = MapScheduler.Current;
+
+            return await _dbContext.Saves
+                .Where(save => save.IsStructure == isStructure
+                               && save.MapId.HasValue && save.MapId.Value == mapId
+                               && save.InstanceIds!.Any(instId => instId.RegionId == region && instId.InstanceId == instanceId))
+                .AnyAsync(token);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Get the save info of a barricade, or <see langword="null"/> if it's not saved.
+    /// </summary>
+    public UniTask<BuildableSave?> GetBarricadeSaveAsync(uint instanceId, CancellationToken token = default)
+    {
+        return GetBuildableSaveAsync(instanceId, false, token);
+    }
+
+    /// <summary>
+    /// Get the save info of a structure, or <see langword="null"/> if it's not saved.
+    /// </summary>
+    public UniTask<BuildableSave?> GetStructureSaveAsync(uint instanceId, CancellationToken token = default)
+    {
+        return GetBuildableSaveAsync(instanceId, true, token);
+    }
+
+    /// <summary>
+    /// Get the save info of a buildable, or <see langword="null"/> if it's not saved.
+    /// </summary>
+    public async UniTask<BuildableSave?> GetBuildableSaveAsync(uint instanceId, bool isStructure, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token);
+        try
+        {
+            byte region = UCWarfare.Config.Region;
+            int mapId = MapScheduler.Current;
+
+            return await _dbContext.Saves
+                .Where(save => save.IsStructure == isStructure
+                               && save.MapId.HasValue && save.MapId.Value == mapId
+                               && save.InstanceIds!.Any(instId => instId.RegionId == region && instId.InstanceId == instanceId))
+                .FirstOrDefaultAsync(token);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
     /// Remove the save for a barricade.
     /// </summary>
     /// <returns><see langword="true"/> if the barricade's save was removed, otherwise <see langword="false"/>.</returns>
@@ -337,7 +415,7 @@ public class BuildableSaver : ISessionHostedService
     /// Remove the save for a buildable.
     /// </summary>
     /// <returns><see langword="true"/> if the buildable's save was removed, otherwise <see langword="false"/>.</returns>
-    public async UniTask<bool> DiscardBuildableAsync(uint instanceId, bool isStructure, CancellationToken token)
+    public async UniTask<bool> DiscardBuildableAsync(uint instanceId, bool isStructure, CancellationToken token = default)
     {
         await UniTask.SwitchToThreadPool();
 
@@ -348,7 +426,9 @@ public class BuildableSaver : ISessionHostedService
             int mapId = MapScheduler.Current;
 
             List<BuildableSave> saves = await _dbContext.Saves
-                .Where(save => save.IsStructure == isStructure && save.MapId.HasValue && save.MapId.Value == mapId && save.InstanceIds!.Any(instId => instId.RegionId == region && instId.InstanceId == instanceId))
+                .Where(save => save.IsStructure == isStructure
+                               && save.MapId.HasValue && save.MapId.Value == mapId
+                               && save.InstanceIds!.Any(instId => instId.RegionId == region && instId.InstanceId == instanceId))
                 .ToListAsync(token);
 
             _dbContext.RemoveRange(saves);
