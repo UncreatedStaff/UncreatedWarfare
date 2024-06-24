@@ -783,31 +783,43 @@ public static class QuestJsonEx
         writer.WritePropertyName(property);
         choice.Write(writer);
     }
-    public static int RoundNumber(int min, int round, int value)
+    public static int RoundNumber(int min, int max, int round, int value)
     {
-        if (round > 0)
+        if (round <= 0)
+            return value;
+
+        int val2 = value - min;
+        int mod = val2 % round;
+        if (mod == 0)
+            return value;
+            
+        if (mod > round / 2f)
         {
-            int val2 = value - min;
-            int mod = val2 % round;
-            if (mod == 0)
-                return value;
-            if (mod > round / 2f)
-                return value + (round - mod);
-            return value - mod;
+            int rounded = value + (round - mod);
+            if (rounded <= max)
+                return rounded;
         }
-        return value;
+
+        return value - mod;
     }
-    public static float RoundNumber(float min, int round, float value)
+    public static float RoundNumber(float min, float max, int round, float value)
     {
-        if (round == 0) return value;
+        if (round == 0)
+            return value;
         if (round > 0)
         {
             float val2 = value - min;
             float mod = val2 % round;
             if (mod == 0)
                 return value;
-            if (mod > round / 2f)
-                return value + (round - mod);
+
+            if (mod <= round / 2f)
+                return value - mod;
+
+            float rounded = value + (round - mod);
+            if (rounded <= max)
+                return rounded;
+
             return value - mod;
         }
         else
@@ -823,8 +835,13 @@ public static class QuestJsonEx
             float mod = val2 % m;
             if (mod == 0)
                 return value;
-            if (mod > m / 2f)
-                return value + (m - mod);
+            if (mod <= m / 2f)
+                return value - mod;
+
+            float rounded = value + (m - mod);
+            if (rounded <= max)
+                return rounded;
+
             return value - mod;
         }
     }
@@ -1074,7 +1091,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<Dyna
                 if (_behavior == ChoiceBehavior.Selective)
                 {
                     _value = UnityEngine.Random.Range(value._range.Minimum, value._range.Maximum + 1);
-                    _value = QuestJsonEx.RoundNumber(value._range.Minimum, value._range.Round, _value);
+                    _value = QuestJsonEx.RoundNumber(value._range.Minimum, value._range.Maximum, value._range.Round, _value);
                 }
                 else
                 {
@@ -1452,7 +1469,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<Dyna
                 if (_behavior == ChoiceBehavior.Selective)
                 {
                     _value = UnityEngine.Random.Range(value._range.Minimum, value._range.Maximum);
-                    _value = QuestJsonEx.RoundNumber(value._range.Minimum, value._range.Round, _value);
+                    _value = QuestJsonEx.RoundNumber(value._range.Minimum, value._range.Maximum, value._range.Round, _value);
                 }
                 else
                 {

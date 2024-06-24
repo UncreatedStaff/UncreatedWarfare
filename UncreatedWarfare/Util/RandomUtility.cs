@@ -31,6 +31,9 @@ public static class RandomUtility
     /// </summary>
     public static int GetInteger(int upperExclusive)
     {
+        if (upperExclusive == 1)
+            return 0;
+
         return Environment.CurrentManagedThreadId == WarfareModule.GameThreadId
             ? UnityEngine.Random.Range(0, upperExclusive)
             : GetNonGameThreadRandom().Next(upperExclusive);
@@ -41,6 +44,9 @@ public static class RandomUtility
     /// </summary>
     public static int GetInteger(int lowerInclusive, int upperExclusive)
     {
+        if (lowerInclusive == upperExclusive - 1)
+            return lowerInclusive;
+
         return Environment.CurrentManagedThreadId == WarfareModule.GameThreadId
             ? UnityEngine.Random.Range(lowerInclusive, upperExclusive)
             : GetNonGameThreadRandom().Next(lowerInclusive, upperExclusive);
