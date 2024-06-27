@@ -1586,21 +1586,20 @@ public class VehicleSpawn : IListItem
             SavedStructure? sign = signP?.Item;
             if (sign != null)
                 ReportInfo("Found sign: " + sign.PrimaryKey + ".");
-            Vector3 euler;
+            Quaternion rotation;
             if (structure.Buildable.Data is StructureData sdata)
             {
-                euler = F.BytesToEulerForVehicle(sdata.angle_x, sdata.angle_y, sdata.angle_z);
+                rotation = sdata.rotation;
             }
             else if (structure.Buildable.Data is BarricadeData bdata)
             {
-                euler = F.BytesToEulerForVehicle(bdata.angle_x, bdata.angle_y, bdata.angle_z);
+                rotation = bdata.rotation;
             }
             else
             {
                 ReportError("Invalid structure buildable.");
                 return null;
             }
-            Quaternion rotation = Quaternion.Euler(euler);
             Vector3 offset = structure.Buildable.Model.position + new Vector3(0f, VehicleSpawner.VehicleHeightOffset, 0f);
             InteractableVehicle? veh = await VehicleSpawner.SpawnLockedVehicle(data.VehicleID, offset, rotation, checkExisting: true, token: token, @lock: false).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);

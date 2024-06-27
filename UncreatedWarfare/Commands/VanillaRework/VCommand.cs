@@ -338,7 +338,7 @@ public class VCommand : AsyncCommand
                     throw ctx.Reply(T.VehicleSeatNotOccupied, seatIndex + 1);
                 
                 bool wantsFullKick = ctx.MatchFlag("k", "r") && (vehicleTarget.asset.engine is not EEngine.PLANE and not EEngine.HELICOPTER ||
-                                                            Mathf.Abs(vehicleTarget.speed) <= 0.15f || TeamManager.IsInMain(team, vehicleTarget.transform.position));
+                                                            Mathf.Abs(vehicleTarget.ReplicatedSpeed) <= 0.15f || TeamManager.IsInMain(team, vehicleTarget.transform.position));
                 if (wantsFullKick || !UCVehicleManager.TryMovePlayerToEmptySeat(target.Player))
                 {
                     VehicleManager.forceRemovePlayer(vehicleTarget, target.CSteamID);

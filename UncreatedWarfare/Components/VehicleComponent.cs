@@ -474,7 +474,7 @@ public class VehicleComponent : MonoBehaviour
             F.TryTriggerSupplyEffect(type, Vehicle.transform.position);
             yield return new WaitForSeconds(1);
 
-            while (!(Vehicle.speed >= -1 && Vehicle.speed <= 1))
+            while (!(Vehicle.ReplicatedSpeed >= -1 && Vehicle.ReplicatedSpeed <= 1))
                 yield return new WaitForSeconds(1);
         }
 
@@ -518,7 +518,7 @@ public class VehicleComponent : MonoBehaviour
                         shouldMessagePlayer = true;
 
                         yield return new WaitForSeconds(1);
-                        while (Vehicle.speed is < -1 or > 1)
+                        while (Vehicle.ReplicatedSpeed is < -1 or > 1)
                             yield return new WaitForSeconds(1);
                     }
                 }
@@ -546,7 +546,7 @@ public class VehicleComponent : MonoBehaviour
             if (F.IsInMain(Vehicle.transform.position))
             {
                 //var ammoCrate = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.AmmoCrateGUID, 30, Vehicle.transform.position, true).FirstOrDefault();
-                if (Vehicle.speed >= -1 && Vehicle.speed <= 1)
+                if (Vehicle.ReplicatedSpeed >= -1 && Vehicle.ReplicatedSpeed <= 1)
                 {
                     TryStartAutoLoadSupplies();
                 }
@@ -628,7 +628,7 @@ public class VehicleComponent : MonoBehaviour
                 if (_flareBurst % 2 == 0) sideforce = -sideforce;
 
                 Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
-                Vector3 velocity = Vehicle.transform.forward * Vehicle.speed * 0.9f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
+                Vector3 velocity = Vehicle.transform.forward * Vehicle.ReplicatedSpeed * 0.9f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
                 rigidbody.velocity = velocity;
 
                 var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();

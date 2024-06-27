@@ -96,7 +96,7 @@ public static partial class Patches
                         Player hit = DamageTool.getPlayer(other.transform);
                         if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
                     }
-                    else if (___vehicle.speed <= 10.0)
+                    else if (___vehicle.ReplicatedSpeed <= 10.0)
                     {
                         return false;
                     }

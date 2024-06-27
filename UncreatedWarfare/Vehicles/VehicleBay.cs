@@ -1031,8 +1031,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                          data.Metadata ??= new MetaSave();
                                          data.Metadata.Barricades ??= new List<VBarricade>(4);
                                          VBarricade barricade = new VBarricade(guid.Value, ushort.MaxValue,
-                                             reader.GetFloat(3), reader.GetFloat(4), reader.GetFloat(5),
-                                             reader.GetFloat(6), reader.GetFloat(7), reader.GetFloat(8),
+                                             new Vector3(reader.GetFloat(3), reader.GetFloat(4), reader.GetFloat(5)),
+                                             Quaternion.Euler(reader.GetFloat(6), reader.GetFloat(7), reader.GetFloat(8)),
                                              reader.ReadByteArray(9))
                                          {
                                              PrimaryKey = bpk,
@@ -1306,8 +1306,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                  obj.Metadata ??= new MetaSave();
                                  obj.Metadata.Barricades ??= new List<VBarricade>(4);
                                  VBarricade barricade = new VBarricade(guid.Value, reader.GetUInt16(2),
-                                     reader.GetFloat(3), reader.GetFloat(4), reader.GetFloat(5),
-                                     reader.GetFloat(6), reader.GetFloat(7), reader.GetFloat(8),
+                                     new Vector3(reader.GetFloat(3), reader.GetFloat(4), reader.GetFloat(5)),
+                                     Quaternion.Euler(reader.GetFloat(6), reader.GetFloat(7), reader.GetFloat(8)),
                                      reader.ReadByteArray(9))
                                  {
                                      PrimaryKey = bpk,

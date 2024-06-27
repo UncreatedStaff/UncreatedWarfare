@@ -19,6 +19,7 @@ public sealed class KitsCommand : AsyncCommand
         };
     }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertRanByPlayer();
@@ -52,4 +53,5 @@ public sealed class KitsCommand : AsyncCommand
         
         KitManager.MenuUI.OpenUI(ctx.Caller);
     }
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 }

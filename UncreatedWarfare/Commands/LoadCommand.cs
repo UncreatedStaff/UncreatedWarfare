@@ -71,7 +71,7 @@ public class LoadCommand : AsyncCommand
         if (!F.IsInMain(vehicle.transform.position))
             throw ctx.Reply(T.LoadNotInMain);
 
-        if (!(vehicle.speed >= -1) || !(vehicle.speed <= 1))
+        if (!(vehicle.ReplicatedSpeed >= -1) || !(vehicle.ReplicatedSpeed <= 1))
             throw ctx.Reply(T.LoadSpeed);
 
         int amount = 0;

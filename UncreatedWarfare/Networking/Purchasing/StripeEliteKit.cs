@@ -146,7 +146,7 @@ public class StripeEliteKit
 
             if (!create)
             {
-                eliteKit.Product = null;
+                eliteKit.Product = null!;
                 return null;
             }
             ProductCreateOptions product = new ProductCreateOptions

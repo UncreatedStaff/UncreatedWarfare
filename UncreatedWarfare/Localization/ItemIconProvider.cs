@@ -443,6 +443,7 @@ internal static class ItemIconProvider
         return;
 #endif
 
+#pragma warning disable CS0162 // Unreachable code detected
         List<ItemIconData> data2 = new List<ItemIconData>(Defaults.Length);
         await Data.AdminSql.QueryAsync(
             $"SELECT `{COLUMN_ITEM}`,`{COLUMN_REDIRECT_TYPE}`,`{COLUMN_ICON}`,`{COLUMN_COLOR}`,`{COLUMN_PARENT}` FROM `{TABLE_MAIN}`;", null,
@@ -547,6 +548,7 @@ internal static class ItemIconProvider
                 }
             }
         }
+#pragma warning restore CS0162 // Unreachable code detected
     }
     private static void AddDefaultsToData()
     {
