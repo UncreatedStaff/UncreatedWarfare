@@ -26,38 +26,55 @@ namespace Uncreated.Warfare.Vehicles;
 public class VehicleData : ITranslationArgument, IListItem
 {
     public const int VEHICLE_TYPE_MAX_CHAR_LIMIT = 20;
+
     [CommandSettable]
     public string Name { get; set; }
+
     [CommandSettable]
     public Guid VehicleID { get; set; }
+
     [CommandSettable]
     public PrimaryKey Faction { get; set; }
+
     [CommandSettable]
     public float RespawnTime { get; set; }
+
     [CommandSettable]
     public int TicketCost { get; set; }
+
     [CommandSettable]
     public int CreditCost { get; set; }
+
     [CommandSettable]
     public float Cooldown { get; set; }
+
     [CommandSettable]
     public Branch Branch { get; set; }
+
     [CommandSettable]
     public Class RequiredClass { get; set; }
+
     [CommandSettable]
     public int RearmCost { get; set; }
+
     [CommandSettable]
     public VehicleType Type { get; set; }
+
     [CommandSettable]
     public bool RequiresSL { get; set; }
+
     [CommandSettable]
     public ushort UnlockLevel { get; set; }
+
     [CommandSettable]
     public bool DisallowAbandons { get; set; }
+
     [CommandSettable]
     public bool CrewInvincible { get; set; }
+
     [CommandSettable]
     public bool PassengersInvincible { get; set; }
+
     [CommandSettable]
     public float AbandonValueLossSpeed { get; set; } = 0.125f;
     [CommandSettable]

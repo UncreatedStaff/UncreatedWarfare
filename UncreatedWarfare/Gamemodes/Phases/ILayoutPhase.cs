@@ -4,7 +4,7 @@ using System.Threading;
 namespace Uncreated.Warfare.Gamemodes.Phases;
 
 /// <summary>
-/// Represents a phase of a <see cref="GameSession"/>.
+/// Represents a phase of a <see cref="Layout"/>.
 /// </summary>
 public interface ILayoutPhase
 {
@@ -14,7 +14,7 @@ public interface ILayoutPhase
     bool IsActive { get; }
 
     /// <summary>
-    /// Invoked before the game session starts. Meant to be used for loading extra configuration information.
+    /// Invoked before the layout starts. Meant to be used for loading extra configuration information.
     /// </summary>
     UniTask InitializePhaseAsync(CancellationToken token = default);
 

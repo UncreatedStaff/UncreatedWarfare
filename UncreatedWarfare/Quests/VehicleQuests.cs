@@ -45,7 +45,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
 
         public readonly DynamicIntegerValue.Choice FlagValue => VehicleCount;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(DestroyVehiclesQuest data)
+        public void CreateFromTemplate(DestroyVehiclesQuest data)
         {
             VehicleCount = data.VehicleCount.GetValue();
             VehicleType = data.VehicleType.GetValue();
@@ -182,7 +182,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
         public DynamicAssetValue<VehicleAsset>.Choice Vehicles;
         public readonly DynamicIntegerValue.Choice FlagValue => Amount;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(DriveDistanceQuest data)
+        public void CreateFromTemplate(DriveDistanceQuest data)
         {
             Amount = data.Amount.GetValue();
             Vehicles = data.Vehicles.GetValue();
@@ -308,7 +308,7 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
         public IDynamicValue<VehicleType>.IChoice VehicleTypes;
         public readonly DynamicIntegerValue.Choice FlagValue => Amount;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(TransportPlayersQuest data)
+        public void CreateFromTemplate(TransportPlayersQuest data)
         {
             Amount = data.Amount.GetValue();
             Vehicles = data.Vehicles.GetValue();

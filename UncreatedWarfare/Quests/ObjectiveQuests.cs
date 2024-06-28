@@ -31,7 +31,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
 
         public readonly DynamicIntegerValue.Choice FlagValue => ObjectiveCount;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(CaptureObjectivesQuest data)
+        public void CreateFromTemplate(CaptureObjectivesQuest data)
         {
             ObjectiveCount = data.ObjectiveCount.GetValue();
         }
@@ -124,7 +124,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
 
         public readonly DynamicIntegerValue.Choice FlagValue => GameCount;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(XPInGamemodeQuest data)
+        public void CreateFromTemplate(XPInGamemodeQuest data)
         {
             XPCount = data.XPCount.GetValue();
             Gamemode = data.Gamemode.GetValue();
@@ -231,7 +231,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         public DynamicIntegerValue.Choice UseCount;
 
         public readonly DynamicIntegerValue.Choice FlagValue => UseCount;
-        public void Init(RallyUseQuest data)
+        public void CreateFromTemplate(RallyUseQuest data)
         {
             UseCount = data.UseCount.GetValue();
         }
@@ -314,7 +314,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         public DynamicEnumValue<GamemodeType>.Choice Gamemode;
         
         public readonly DynamicIntegerValue.Choice FlagValue => Wins;
-        public void Init(WinGamemodeQuest data)
+        public void CreateFromTemplate(WinGamemodeQuest data)
         {
             // get enabled gamemode based on weight.
             Type gamemodeType = Gamemodes.Gamemode.GetNextGamemode() ?? typeof(TeamCTF);
@@ -418,7 +418,7 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
         public DynamicIntegerValue.Choice Neutralizations;
 
         public readonly DynamicIntegerValue.Choice FlagValue => Neutralizations;
-        public void Init(NeutralizeFlagsQuest data)
+        public void CreateFromTemplate(NeutralizeFlagsQuest data)
         {
             Neutralizations = data.Neutralizations.GetValue();
         }

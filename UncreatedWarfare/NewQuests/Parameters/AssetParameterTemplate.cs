@@ -1,12 +1,14 @@
 ﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using JetBrains.Annotations;
 using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Threading;
-using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.NewQuests.Parameters;
@@ -15,13 +17,21 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
 /// </summary>
 /// <remarks>For kit names, use <see cref="KitNameParameterTemplate"/>.</remarks>
+[TypeConverter(typeof(AssetParameterTemplateTypeConverter))]
 public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid> where TAsset : Asset
 {
     private static List<TAsset>? _mainWorkingThreadList;
+
     /// <summary>
     /// Create a template of it's string representation.
     /// </summary>
     public AssetParameterTemplate(ReadOnlySpan<char> str) : base(str) { }
+
+    /// <summary>
+    /// Create a template of it's string representation.
+    /// </summary>
+    [UsedImplicitly]
+    public AssetParameterTemplate(string str) : base(str.AsSpan()) { }
 
     /// <summary>
     /// Create a template of a wildcard set of values.

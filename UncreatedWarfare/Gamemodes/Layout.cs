@@ -24,18 +24,18 @@ namespace Uncreated.Warfare.Gamemodes;
 /// <summary>
 /// Lasts for one game. Responsible for loading layouts.
 /// </summary>
-public class GameSession : IDisposable
+public class Layout : IDisposable
 {
     private int _activePhase = -1;
-    private readonly GameSessionInfo _sessionInfo;
+    private readonly LayoutInfo _sessionInfo;
     private readonly IDisposable _configListener;
     private readonly CancellationTokenSource _cancellationTokenSource;
     internal bool UnloadedHostedServices;
     private readonly IList<IDisposable> _disposableVariationConfigurationRoots;
 
-    protected ILogger<GameSession> Logger;
+    protected ILogger<Layout> Logger;
 
-    private readonly GameSessionFactory _factory;
+    private readonly LayoutFactory _factory;
 
     /// <summary>
     /// If the session is currently running.
@@ -91,10 +91,10 @@ public class GameSession : IDisposable
     public ILayoutPhase? ActivePhase => _activePhase == -1 ? null : Phases[_activePhase];
 
     /// <summary>
-    /// Create a new <see cref="GameSession"/>.
+    /// Create a new <see cref="Layout"/>.
     /// </summary>
     /// <remarks>For any classes overriding this class, any services injecting the session must be initialized using the <see cref="IServiceProvider"/> in the constructor.</remarks>
-    public GameSession(IServiceProvider serviceProvider, GameSessionInfo sessionInfo)
+    public Layout(IServiceProvider serviceProvider, LayoutInfo sessionInfo)
     {
         _cancellationTokenSource = new CancellationTokenSource();
         ServiceProvider = serviceProvider;
@@ -105,11 +105,11 @@ public class GameSession : IDisposable
         Phases = new ReadOnlyCollection<ILayoutPhase>(PhaseList);
 
         // this NEEDS to come before services are injected so they can inject this gamemode.
-        serviceProvider.GetRequiredService<WarfareModule>().SetActiveGameSession(this);
+        serviceProvider.GetRequiredService<WarfareModule>().SetActiveLayout(this);
 
         // inject services
-        _factory = ServiceProvider.GetRequiredService<GameSessionFactory>();
-        Logger = (ILogger<GameSession>)ServiceProvider.GetRequiredService(typeof(ILogger<>).MakeGenericType(GetType()));
+        _factory = ServiceProvider.GetRequiredService<LayoutFactory>();
+        Logger = (ILogger<Layout>)ServiceProvider.GetRequiredService(typeof(ILogger<>).MakeGenericType(GetType()));
 
         // listens for changes to the config file
         _configListener = LayoutConfiguration.GetReloadToken().RegisterChangeCallback(_ =>
@@ -321,7 +321,7 @@ public class GameSession : IDisposable
 
             if (_activePhase >= Phases.Count - 1)
             {
-                await _factory.StartNextGameSession(CancellationToken.None);
+                await _factory.StartNextLayout(CancellationToken.None);
                 throw new OperationCanceledException();
             }
 
@@ -394,7 +394,7 @@ public class GameSession : IDisposable
         }
         catch (AggregateException ex)
         {
-            Logger.LogError(ex, "Error(s) while canceling game session cancellation token source in layout {0}.", _sessionInfo.DisplayName);
+            Logger.LogError(ex, "Error(s) while canceling layout cancellation token source in layout {0}.", _sessionInfo.DisplayName);
         }
 
         return _factory.UnhostSessionAsync(this, token);
@@ -501,7 +501,7 @@ public class GameSession : IDisposable
         }
         catch (AggregateException ex)
         {
-            Logger.LogError(ex, "Error(s) while disposing game session cancellation token source in layout \"{0}\".", _sessionInfo.DisplayName);
+            Logger.LogError(ex, "Error(s) while disposing layout cancellation token source in layout \"{0}\".", _sessionInfo.DisplayName);
         }
 
         _cancellationTokenSource.Dispose();

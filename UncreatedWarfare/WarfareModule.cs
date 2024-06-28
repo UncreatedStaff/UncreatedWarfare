@@ -36,7 +36,7 @@ public sealed class WarfareModule : IModuleNexus
     private bool _unloadedHostedServices;
     private IServiceScope? _activeScope;
     private CancellationTokenSource _cancellationTokenSource;
-    private GameSession? _activeGameSession;
+    private Layout? _activeLayout;
     private GameObject _gameObjectHost;
 
     /// <summary>
@@ -107,7 +107,6 @@ public sealed class WarfareModule : IModuleNexus
             ValidateScopes = true
         });
 
-
         UniTask.Create(HostAsync);
     }
 
@@ -148,7 +147,7 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton(this);
         serviceCollection.AddSingleton(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)));
 
-        serviceCollection.AddSingleton<GameSessionFactory>();
+        serviceCollection.AddSingleton<LayoutFactory>();
         serviceCollection.AddSingleton<ActionManager>();
         serviceCollection.AddSingleton<CommandDispatcher>();
         serviceCollection.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<CommandDispatcher>().Parser);
@@ -166,18 +165,18 @@ public sealed class WarfareModule : IModuleNexus
 
         serviceCollection.AddTransient<ILoopTickerFactory, UnityLoopTickerFactory>();
 
-        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveGameSession());
-        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveGameSession().TeamManager);
+        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout());
+        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().TeamManager);
 
-        // add all game session types
-        foreach (Type type in Accessor.GetTypesSafe(thisAsm).Where(x => x.IsSubclassOf(typeof(GameSession))))
+        // add all layout types
+        foreach (Type type in Accessor.GetTypesSafe(thisAsm).Where(x => x.IsSubclassOf(typeof(Layout))))
         {
             serviceCollection.Add(new ServiceDescriptor(type, _ =>
             {
-                GameSession session = GetActiveGameSession();
+                Layout session = GetActiveLayout();
                 if (!type.IsInstanceOfType(session))
                 {
-                    throw new InvalidOperationException($"The current game session type is not {Accessor.ExceptionFormatter.Format(type)}.");
+                    throw new InvalidOperationException($"The current layout type is not {Accessor.ExceptionFormatter.Format(type)}.");
                 }
 
                 return session;
@@ -371,7 +370,7 @@ public sealed class WarfareModule : IModuleNexus
     {
         await UniTask.SwitchToMainThread(token);
 
-        _activeGameSession = null;
+        _activeLayout = null;
         if (_activeScope is IAsyncDisposable asyncDisposableScope)
         {
             ValueTask vt = asyncDisposableScope.DisposeAsync();
@@ -393,28 +392,28 @@ public sealed class WarfareModule : IModuleNexus
     /// <summary>
     /// Set the new game after calling <see cref="CreateScopeAsync"/>.
     /// </summary>
-    internal void SetActiveGameSession(GameSession? gameSession)
+    internal void SetActiveLayout(Layout? layout)
     {
-        GameSession? oldSession = Interlocked.Exchange(ref _activeGameSession, gameSession);
-        if (oldSession == null || gameSession == null)
+        Layout? oldLayout = Interlocked.Exchange(ref _activeLayout, layout);
+        if (oldLayout == null || layout == null)
             return;
 
-        L.LogError("A session was started while one was already active.");
-        oldSession.Dispose();
+        L.LogError("A layout was started while one was already active.");
+        oldLayout.Dispose();
     }
 
     /// <summary>
-    /// Check if there is an active game session.
+    /// Check if there is an active layout.
     /// </summary>
-    public bool IsGameSessionActive() => _activeGameSession != null;
+    public bool IsLayoutActive() => _activeLayout != null;
 
     /// <summary>
-    /// Get the active game session.
+    /// Get the active layout.
     /// </summary>
-    /// <exception cref="InvalidOperationException">There is not an active game session.</exception>
-    public GameSession GetActiveGameSession()
+    /// <exception cref="InvalidOperationException">There is not an active layout.</exception>
+    public Layout GetActiveLayout()
     {
-        return _activeGameSession ?? throw new InvalidOperationException("There is not an active game session.");
+        return _activeLayout ?? throw new InvalidOperationException("There is not an active layout.");
     }
 
     private void UnloadModule()

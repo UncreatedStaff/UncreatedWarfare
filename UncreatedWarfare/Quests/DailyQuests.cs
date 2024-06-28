@@ -264,7 +264,7 @@ public static class DailyQuests
             BaseQuestTracker? tempTracker = data.GetTracker(null, state);
             if (tempTracker != null)
             {
-                int val = preset.State.FlagValue.InsistValue();
+                int val = preset.State.FlagValue.GetSingleValue();
                 if (val < short.MinValue || val > short.MaxValue)
                 {
                     L.LogError("Invalid flag value from " + tempTracker.GetType().FullDescription() + ": " + val + ".");

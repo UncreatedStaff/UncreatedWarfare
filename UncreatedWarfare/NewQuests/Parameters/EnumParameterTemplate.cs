@@ -1,10 +1,12 @@
 ﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using JetBrains.Annotations;
 using System;
 using System.Collections;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
-using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.NewQuests.Parameters;
@@ -12,6 +14,7 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 /// <summary>
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
 /// </summary>
+[TypeConverter(typeof(EnumParameterTemplateTypeConverter))]
 public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum> where TEnum : unmanaged, Enum
 {
 
@@ -19,6 +22,12 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum> where 
     /// Create a template of it's string representation.
     /// </summary>
     public EnumParameterTemplate(ReadOnlySpan<char> str) : base(str) { }
+
+    /// <summary>
+    /// Create a template of it's string representation.
+    /// </summary>
+    [UsedImplicitly]
+    public EnumParameterTemplate(string str) : base(str.AsSpan()) { }
 
     /// <summary>
     /// Create a template of a wildcard set of values.

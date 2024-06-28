@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -124,7 +125,7 @@ public abstract class BaseQuestData<TTracker, TState, TQuestData> : BaseQuestDat
     public TState GetNewState()
     {
         TState state = new TState();
-        state.Init((TQuestData)this);
+        state.CreateFromTemplate((TQuestData)this);
         return state;
     }
     protected abstract TTracker CreateQuestTracker(UCPlayer? player, ref TState state, IQuestPreset? preset);

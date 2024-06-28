@@ -25,7 +25,7 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
 
         public readonly DynamicIntegerValue.Choice FlagValue => ReviveCount;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(RevivePlayersQuest data)
+        public void CreateFromTemplate(RevivePlayersQuest data)
         {
             ReviveCount = data.ReviveCount.GetValue();
         }

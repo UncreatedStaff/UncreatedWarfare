@@ -35,7 +35,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
         public DynamicStringValue.Choice ItemKey;
 
         public readonly DynamicIntegerValue.Choice FlagValue => DynamicIntegerValue.One;
-        public void Init(DiscordKeySetQuest data)
+        public void CreateFromTemplate(DiscordKeySetQuest data)
         {
             ItemDisplayName = data.ItemDisplayName.GetValue();
             ItemKey = data.ItemKey.GetValue();
@@ -142,7 +142,7 @@ public class PlaceholderQuest : BaseQuestData<PlaceholderQuest.Tracker, Placehol
     public readonly struct State : IQuestState<PlaceholderQuest>
     {
         public DynamicIntegerValue.Choice FlagValue => DynamicIntegerValue.One;
-        public void Init(PlaceholderQuest data) { }
+        public void CreateFromTemplate(PlaceholderQuest data) { }
         public bool IsEligable(UCPlayer player) => true;
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop) { }
         public void WriteQuestState(Utf8JsonWriter writer) { }

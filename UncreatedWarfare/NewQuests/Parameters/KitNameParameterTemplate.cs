@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Uncreated.Warfare.Kits;
@@ -13,9 +14,9 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 /// <summary>
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
 /// </summary>
+[TypeConverter(typeof(StringParameterTemplateTypeConverter))]
 public class KitNameParameterTemplate : StringParameterTemplate
 {
-
     /// <summary>
     /// Create a template of it's string representation.
     /// </summary>

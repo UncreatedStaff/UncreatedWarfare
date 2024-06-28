@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using System;
 using System.Collections;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
@@ -12,6 +13,7 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
 /// </summary>
 /// <remarks>For kit names, use <see cref="KitNameParameterTemplate"/>.</remarks>
+[TypeConverter(typeof(StringParameterTemplateTypeConverter))]
 public class StringParameterTemplate : QuestParameterTemplate<string>
 {
 

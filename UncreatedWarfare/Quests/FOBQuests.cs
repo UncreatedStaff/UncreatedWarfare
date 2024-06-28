@@ -27,7 +27,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
         public DynamicIntegerValue.Choice BuildCount;
 
         public readonly DynamicIntegerValue.Choice FlagValue => BuildCount;
-        public void Init(BuildFOBsQuest data)
+        public void CreateFromTemplate(BuildFOBsQuest data)
         {
             BuildCount = data.BuildCount.GetValue();
         }
@@ -109,7 +109,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         public DynamicFloatValue.Choice BuildRange;
 
         public readonly DynamicIntegerValue.Choice FlagValue => BuildCount;
-        public void Init(BuildFOBsNearObjQuest data)
+        public void CreateFromTemplate(BuildFOBsNearObjQuest data)
         {
             BuildCount = data.BuildCount.GetValue();
             BuildRange = data.BuildRange.GetValue();
@@ -221,7 +221,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
         public DynamicIntegerValue.Choice BuildCount;
 
         public readonly DynamicIntegerValue.Choice FlagValue => BuildCount;
-        public void Init(BuildFOBsOnObjQuest data)
+        public void CreateFromTemplate(BuildFOBsOnObjQuest data)
         {
             BuildCount = data.BuildCount.GetValue();
         }
@@ -323,7 +323,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
         public DynamicIntegerValue.Choice SupplyCount;
 
         public readonly DynamicIntegerValue.Choice FlagValue => SupplyCount;
-        public void Init(DeliverSuppliesQuest data)
+        public void CreateFromTemplate(DeliverSuppliesQuest data)
         {
             SupplyCount = data.SupplyCount.GetValue();
         }
@@ -411,7 +411,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         public DynamicEnumValue<BuildableType>.Choice BuildableType;
 
         public readonly DynamicIntegerValue.Choice FlagValue => Amount;
-        public void Init(HelpBuildQuest data)
+        public void CreateFromTemplate(HelpBuildQuest data)
         {
             Amount = data.Amount.GetValue();
             BaseIDs = data.BaseIDs.GetValue();
@@ -516,7 +516,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
         public DynamicIntegerValue.Choice UseCount;
 
         public readonly DynamicIntegerValue.Choice FlagValue => UseCount;
-        public void Init(FOBUseQuest data)
+        public void CreateFromTemplate(FOBUseQuest data)
         {
             UseCount = data.UseCount.GetValue();
         }

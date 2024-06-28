@@ -38,7 +38,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         public DynamicIntegerValue.Choice KillThreshold;
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
-        public void Init(KillEnemiesQuest data)
+        public void CreateFromTemplate(KillEnemiesQuest data)
         {
             KillThreshold = data.KillCount.GetValue(); // get value picks a random value if its a range or set, otherwise returns the constant.
         }
@@ -127,7 +127,7 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesRangeQuest data)
+        public void CreateFromTemplate(KillEnemiesRangeQuest data)
         {
             KillThreshold = data.KillCount.GetValue();
             Range = data.Range.GetValue();
@@ -217,7 +217,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestWeapon data)
+        public void CreateFromTemplate(KillEnemiesQuestWeapon data)
         {
             KillThreshold = data.KillCount.GetValue();
             Weapon = data.Weapon.GetValue();
@@ -321,7 +321,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesRangeQuestWeapon data)
+        public void CreateFromTemplate(KillEnemiesRangeQuestWeapon data)
         {
             KillThreshold = data.KillCount.GetValue();
             Weapon = data.Weapon.GetValue();
@@ -423,7 +423,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestKit data)
+        public void CreateFromTemplate(KillEnemiesQuestKit data)
         {
             KillThreshold = data.KillCount.GetValue();
             Kit = data.Kits.GetValue();
@@ -522,7 +522,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestKitRange data)
+        public void CreateFromTemplate(KillEnemiesQuestKitRange data)
         {
             KillThreshold = data.KillCount.GetValue();
             Kit = data.Kits.GetValue();
@@ -623,7 +623,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestKitClass data)
+        public void CreateFromTemplate(KillEnemiesQuestKitClass data)
         {
             KillThreshold = data.KillCount.GetValue();
             Class = data.Class.GetValue();
@@ -725,7 +725,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestKitClassRange data)
+        public void CreateFromTemplate(KillEnemiesQuestKitClassRange data)
         {
             KillThreshold = data.KillCount.GetValue();
             Class = data.Class.GetValue();
@@ -826,7 +826,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestWeaponClass data)
+        public void CreateFromTemplate(KillEnemiesQuestWeaponClass data)
         {
             KillThreshold = data.KillCount.GetValue();
             Class = data.Class.GetValue();
@@ -919,7 +919,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestBranch data)
+        public void CreateFromTemplate(KillEnemiesQuestBranch data)
         {
             KillThreshold = data.KillCount.GetValue();
             Branch = data.Branch.GetValue();
@@ -1011,7 +1011,7 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestTurret data)
+        public void CreateFromTemplate(KillEnemiesQuestTurret data)
         {
             KillThreshold = data.KillCount.GetValue();
             Weapon = data.Turrets.GetValue();
@@ -1119,7 +1119,7 @@ public class KillEnemiesQuestEmplacement : BaseQuestData<KillEnemiesQuestEmplace
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestEmplacement data)
+        public void CreateFromTemplate(KillEnemiesQuestEmplacement data)
         {
             KillThreshold = data.KillCount.GetValue();
             Weapon = data.Turrets.GetValue();
@@ -1223,7 +1223,7 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestSquad data)
+        public void CreateFromTemplate(KillEnemiesQuestSquad data)
         {
             KillThreshold = data.KillCount.GetValue();
         }
@@ -1294,7 +1294,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestFullSquad data)
+        public void CreateFromTemplate(KillEnemiesQuestFullSquad data)
         {
             KillThreshold = data.KillCount.GetValue();
         }
@@ -1365,7 +1365,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestDefense data)
+        public void CreateFromTemplate(KillEnemiesQuestDefense data)
         {
             KillThreshold = data.KillCount.GetValue();
         }
@@ -1481,7 +1481,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillEnemiesQuestAttack data)
+        public void CreateFromTemplate(KillEnemiesQuestAttack data)
         {
             KillThreshold = data.KillCount.GetValue();
         }
@@ -1597,7 +1597,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KingSlayerQuest data)
+        public void CreateFromTemplate(KingSlayerQuest data)
         {
             KillThreshold = data.KillCount.GetValue();
         }
@@ -1709,7 +1709,7 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
 
         public readonly DynamicIntegerValue.Choice FlagValue => StreakCount;
         public readonly bool IsEligable(UCPlayer player) => true;
-        public void Init(KillStreakQuest data)
+        public void CreateFromTemplate(KillStreakQuest data)
         {
             StreakCount = data.StreakCount.GetValue();
             StreakLength = data.StreakLength.GetValue();

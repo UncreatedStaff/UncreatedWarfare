@@ -246,19 +246,24 @@ public class Flag : IDisposable, IObjective, IZone
     }
     public PlayerChange GetUpdatedPlayers()
     {
-        Stopwatch sw = Stopwatch.StartNew();
         List<UCPlayer> prevPlayers = ListPool<UCPlayer>.claim();
+
         if (prevPlayers.Capacity < PlayersOnFlag.Count)
             prevPlayers.Capacity = PlayersOnFlag.Count;
+
         prevPlayers.AddRange(PlayersOnFlag);
         RecalcCappers();
+
         PlayerChange change = PlayerChange.Claim();
+
         List<UCPlayer> newPlayers = change.NewPlayers;
         if (newPlayers.Capacity < 2)
             newPlayers.Capacity = 2;
+
         List<UCPlayer> departingPlayers = change.DepartingPlayers;
         if (departingPlayers.Capacity < 2)
             departingPlayers.Capacity = 2;
+
         for (int i = 0; i < PlayersOnFlag.Count; i++)
         {
             UCPlayer player = PlayersOnFlag[i];
@@ -268,6 +273,7 @@ public class Flag : IDisposable, IObjective, IZone
             newPlayers.Add(player);
             done:;
         }
+
         for (int i = 0; i < prevPlayers.Count; i++)
         {
             UCPlayer player = prevPlayers[i];
@@ -278,7 +284,7 @@ public class Flag : IDisposable, IObjective, IZone
                 departingPlayers.Add(player);
             done:;
         }
-        sw.Stop();
+
         return change;
     }
     public readonly ref struct PlayerChange

@@ -4,14 +4,14 @@ using System;
 namespace Uncreated.Warfare.Gamemodes;
 
 /// <summary>
-/// Stores information from config about a game session.
+/// Stores information from config about a layout.
 /// </summary>
-public class GameSessionInfo : IDisposable
+public class LayoutInfo : IDisposable
 {
     /// <summary>
-    /// Type of <see cref="GameSession"/> to create.
+    /// Type of <see cref="Gamemodes.Layout"/> to create.
     /// </summary>
-    public required Type GameSessionType { get; init; }
+    public required Type LayoutType { get; init; }
 
     /// <summary>
     /// Configuration info about the layout of the game.

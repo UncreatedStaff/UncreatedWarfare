@@ -14,14 +14,14 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
 {
     protected static readonly StagingUI StagingUI = new StagingUI();
 
-    private readonly GameSession _session;
+    private readonly Layout _session;
     private readonly ILoopTickerFactory _tickerFactory;
     
     private ILoopTicker? _ticker;
     public PreparationPhase(IServiceProvider serviceProvider) : base(serviceProvider)
     {
         _tickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
-        _session = serviceProvider.GetRequiredService<GameSession>();
+        _session = serviceProvider.GetRequiredService<Layout>();
     }
 
     /// <inheritdoc />

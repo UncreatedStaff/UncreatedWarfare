@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Cysharp.Threading.Tasks;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.NewQuests.Parameters;
@@ -13,6 +13,7 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 /// <summary>
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
 /// </summary>
+[TypeConverter(typeof(SingleParameterTemplateTypeConverter))]
 public class SingleParameterTemplate : QuestParameterTemplate<float>
 {
     /// <summary>
@@ -385,7 +386,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
                         _value = RandomUtility.GetFloat(min, max);
                         if (range is SingleRangeSet round)
                         {
-                            _value = QuestJsonEx.RoundNumber(min, max, round.Round, _value);
+                            _value = MathUtility.RoundNumber(_value, round.Round, min, max);
                             _round = round.Round;
                         }
                         else
@@ -457,7 +458,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
                         val._value = RandomUtility.GetFloat(min, max);
                         if (round != 0)
                         {
-                            val._value = QuestJsonEx.RoundNumber(min, max, round, val._value);
+                            val._value = MathUtility.RoundNumber(val._value, round, min, max);
                         }
                     }
 

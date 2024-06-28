@@ -6,7 +6,7 @@ using Uncreated.Warfare.Gamemodes.Teams;
 namespace Uncreated.Warfare.Exceptions;
 
 /// <summary>
-/// Thrown when a component in a game session has invalid configuration data.
+/// Thrown when a component in a layout has invalid configuration data.
 /// </summary>
 public class LayoutConfigurationException : Exception
 {

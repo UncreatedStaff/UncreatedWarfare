@@ -1,200 +1,135 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
+﻿using Cysharp.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Sync;
 
 namespace Uncreated.Warfare.Quests;
-public static class QuestRewards
+
+public interface IQuestReward
 {
-    public static readonly Dictionary<QuestRewardType, Type> QuestRewardTypes = new Dictionary<QuestRewardType, Type>(8);
-    internal static void LoadTypes(List<Type> types)
-    {
-        foreach (Type type in types.Where(x => x != null && x.IsClass && typeof(IQuestReward).IsAssignableFrom(x)))
-        {
-            if (Attribute.GetCustomAttribute(type, typeof(QuestRewardAttribute)) is QuestRewardAttribute attr && attr.Type != QuestRewardType.None)
-            {
-                if (QuestRewardTypes.TryGetValue(attr.Type, out Type first))
-                {
-                    if (first != type)
-                        L.LogWarning("Duplicate reward type: " + attr.Type + " on type " + type.Name + " and " + first.Name + ".");
-                }
-                else
-                    QuestRewardTypes.Add(attr.Type, type);
-            }
-        }
-    }
-    public static IQuestReward? GetQuestReward(QuestRewardType type)
-    {
-        if (QuestRewardTypes.TryGetValue(type, out Type result))
-        {
-            try
-            {
-                if (Activator.CreateInstance(result) is IQuestReward data)
-                {
-                    data.Type = type;
-                    return data;
-                }
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Failed to create a quest reward of type " + type);
-                L.LogError(ex);
-            }
-        }
-        L.LogError("Failed to create a quest reward of type " + type);
-        return null;
-    }
+    /// <summary>
+    /// Dispatch the reward to the player.
+    /// </summary>
+    /// <param name="serviceProvider">The scoped service provider for the current layout.</param>
+    UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default);
 }
-public enum QuestRewardType
-{
-    None,
-    XP,
-    Rank,
-    Credits,
-    KitAccess
-}
-[QuestReward(QuestRewardType.XP, typeof(int))]
+
 public class XPReward : IQuestReward
 {
-    public QuestRewardType Type { get; set; }
-    public int XP { get; private set; }
-    public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
+    /// <summary>
+    /// Amount of XP to give the recipient.
+    /// </summary>
+    public int XP { get; }
+
+    public XPReward(int xp)
+    {
+        XP = xp;
+    }
+
+    public XPReward(IConfiguration configuration)
+    {
+        XP = configuration.GetValue<int>("XP");
+    }
+
+    /// <inheritdoc />
+    public async UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         XPParameters parameters = new XPParameters(player, player.GetTeam(), XP,
             // todo translation
             Localization.TranslateEnum(tracker.QuestData.QuestType, Localization.GetDefaultLanguage()).ToUpper() + " REWARD", false);
-        return Points.AwardXPAsync(parameters, token);
-    }
-    public void Init(object value)
-    {
-        if (value is not int i) throw new ArgumentException("Init value must be of type Int32.", nameof(value));
-        XP = i;
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        do
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string? prop = reader.GetString();
-                if (reader.Read() && prop is not null && prop.Equals("xp", StringComparison.OrdinalIgnoreCase) &&
-                    reader.TokenType == JsonTokenType.Number)
-                {
-                    if (reader.TryGetInt32(out int xp))
-                        XP = xp;
-                }
-            }
-        } while (reader.Read());
+
+        await Points.AwardXPAsync(parameters, token).ConfigureAwait(false);
     }
 
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WritePropertyName("xp");
-        writer.WriteNumberValue(XP);
-    }
-
+    /// <inheritdoc />
     public override string ToString() => "Reward: " + XP + " XP";
 }
-[QuestReward(QuestRewardType.Credits, typeof(int))]
+
 public class CreditsReward : IQuestReward
 {
-    public QuestRewardType Type { get; set; }
-    public int Credits { get; private set; }
-    public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
+    /// <summary>
+    /// Amount of credits to give the recipient.
+    /// </summary>
+    public int Credits { get; }
+
+    public CreditsReward(int credits)
+    {
+        Credits = credits;
+    }
+    
+    public CreditsReward(IConfiguration configuration)
+    {
+        Credits = configuration.GetValue<int>("Credits");
+    }
+
+    /// <inheritdoc />
+    public async UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         CreditsParameters parameters = new CreditsParameters(player, player.GetTeam(), Credits,
             // todo translation
             Localization.TranslateEnum(tracker.QuestData.QuestType, player.Locale.LanguageInfo).ToUpper() + " REWARD");
-        return Points.AwardCreditsAsync(parameters, token);
-    }
-    public void Init(object value)
-    {
-        if (value is not int i) throw new ArgumentException("Init value must be of type Int32.", nameof(value));
-        Credits = i;
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        do
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string? prop = reader.GetString();
-                if (reader.Read() && prop is not null && prop.Equals("credits", StringComparison.OrdinalIgnoreCase) &&
-                    reader.TokenType == JsonTokenType.Number)
-                {
-                    if (reader.TryGetInt32(out int credits))
-                        Credits = credits;
-                }
-            }
-        } while (reader.Read());
+        
+        await Points.AwardCreditsAsync(parameters, token).ConfigureAwait(false);
     }
 
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WritePropertyName("credits");
-        writer.WriteNumberValue(Credits);
-    }
-
+    /// <inheritdoc />
     public override string ToString() => "Reward: C " + Credits;
 }
-[QuestReward(QuestRewardType.Rank, typeof(int))]
+
 public class RankReward : IQuestReward
 {
-    public QuestRewardType Type { get; set; }
-    public int RankOrder { get; private set; }
-    public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
+    /// <summary>
+    /// Level number of the rank to give to the recipient.
+    /// </summary>
+    public int RankOrder { get; }
+
+    public RankReward(int rankOrder)
     {
-        Ranks.RankManager.SkipToRank(player, RankOrder);
-        return Task.CompletedTask;
-    }
-    public void Init(object value)
-    {
-        if (value is not int i) throw new ArgumentException("Init value must be of type Int32.", nameof(value));
-        RankOrder = i;
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        do
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string? prop = reader.GetString();
-                if (reader.Read() && prop is not null && prop.Equals("order", StringComparison.OrdinalIgnoreCase) &&
-                    reader.TokenType == JsonTokenType.Number)
-                {
-                    if (reader.TryGetInt32(out int order))
-                        RankOrder = order;
-                }
-            }
-        } while (reader.Read());
+        RankOrder = rankOrder;
     }
 
-    public void WriteJson(Utf8JsonWriter writer)
+    public RankReward(IConfiguration configuration)
     {
-        writer.WritePropertyName("order");
-        writer.WriteNumberValue(RankOrder);
+        RankOrder = configuration.GetValue<int>("RankOrder");
     }
+
+    /// <inheritdoc />
+    public UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
+    {
+        Ranks.RankManager.SkipToRank(player, RankOrder);
+        return UniTask.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public override string ToString()
     {
         ref Ranks.RankData d = ref Ranks.RankManager.GetRank(RankOrder, out bool success);
         return "Reward: Unlock " + (success ? d.GetName(Localization.GetDefaultLanguage(), Data.LocalLocale) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
     }
 }
-[QuestReward(QuestRewardType.KitAccess, typeof(string))]
+
 public class KitAccessReward : IQuestReward
 {
-    public QuestRewardType Type { get; set; }
-    public string KitId { get; private set; }
-    public async Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
+    /// <summary>
+    /// The internal kit name of the kit to give access for the recipient.
+    /// </summary>
+    public string? KitId { get; }
+
+    public KitAccessReward(string kitId)
+    {
+        KitId = kitId;
+    }
+
+    public KitAccessReward(IConfiguration configuration)
+    {
+        KitId = configuration["KitId"];
+    }
+
+    /// <inheritdoc />
+    public async UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         if (KitManager.GetSingletonQuick() is not { } kitManager)
         {
@@ -202,44 +137,18 @@ public class KitAccessReward : IQuestReward
             return;
         }
 
-        if (!string.IsNullOrEmpty(KitId))
-            await kitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token).ConfigureAwait(false);
+        if (string.IsNullOrEmpty(KitId))
+            return;
+
+        if (!await kitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token).ConfigureAwait(false))
+        {
+            L.LogWarning($"Unknown kit {KitId} when giving access reward to player {player}.");
+            return;
+        }
 
         KitSync.OnAccessChanged(player.Steam64);
     }
-    public void Init(object value)
-    {
-        if (value is not string str) throw new ArgumentException("Init value must be of type String.", nameof(value));
-        KitId = str;
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        do
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string? prop = reader.GetString();
-                if (reader.Read() && prop is not null && prop.Equals("kit_id", StringComparison.OrdinalIgnoreCase) &&
-                    reader.TokenType == JsonTokenType.String)
-                {
-                    KitId = reader.GetString()!;
-                }
-            }
-        } while (reader.Read());
-    }
 
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WritePropertyName("kit_id");
-        writer.WriteStringValue(KitId);
-    }
+    /// <inheritdoc />
     public override string ToString() => "Reward: Unlock \"" + KitId + "\"";
-}
-
-public interface IQuestReward : IJsonReadWrite
-{
-    QuestRewardType Type { get; set; }
-    void Init(object value);
-    Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default);
 }

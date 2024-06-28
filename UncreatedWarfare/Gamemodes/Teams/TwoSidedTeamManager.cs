@@ -41,13 +41,13 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// The attacking team.
     /// </summary>
     /// <exception cref="InvalidOperationException">There is no attacking team.</exception>
-    public Team Attacker => _attacker == -1 ? throw new InvalidOperationException("This game session does not have an attacker.") : _teams[_attacker];
+    public Team Attacker => _attacker == -1 ? throw new InvalidOperationException("This layout does not have an attacker.") : _teams[_attacker];
 
     /// <summary>
     /// The defending team.
     /// </summary>
     /// <exception cref="InvalidOperationException">There is no defending team.</exception>
-    public Team Defender => _defender == -1 ? throw new InvalidOperationException("This game session does not have an attacker.") : _teams[_defender];
+    public Team Defender => _defender == -1 ? throw new InvalidOperationException("This layout does not have an attacker.") : _teams[_defender];
 
     public TwoSidedTeamManager(ILogger<TwoSidedTeamManager> logger)
     {

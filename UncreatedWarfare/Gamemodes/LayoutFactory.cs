@@ -16,10 +16,10 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Gamemodes;
-public class GameSessionFactory : IHostedService
+public class LayoutFactory : IHostedService
 {
     private readonly WarfareModule _warfare;
-    public GameSessionFactory(WarfareModule warfare)
+    public LayoutFactory(WarfareModule warfare)
     {
         _warfare = warfare;
     }
@@ -36,17 +36,17 @@ public class GameSessionFactory : IHostedService
     {
         Level.onPostLevelLoaded -= OnLevelLoaded;
 
-        if (!_warfare.IsGameSessionActive())
+        if (!_warfare.IsLayoutActive())
             return;
         
-        GameSession session = _warfare.GetActiveGameSession();
+        Layout session = _warfare.GetActiveLayout();
         if (session.IsActive)
         {
             await session.EndSessionAsync(CancellationToken.None);
         }
 
         session.Dispose();
-        _warfare.SetActiveGameSession(null);
+        _warfare.SetActiveLayout(null);
     }
 
     private void OnLevelLoaded(int level)
@@ -54,50 +54,50 @@ public class GameSessionFactory : IHostedService
         if (level != Level.BUILD_INDEX_GAME)
             return;
 
-        UniTask.Create(() => StartNextGameSession(_warfare.UnloadToken));
+        UniTask.Create(() => StartNextLayout(_warfare.UnloadToken));
     }
 
     /// <summary>
-    /// Forcibly end the current game session and create a new random game session from the config files.
+    /// Forcibly end the current layout and create a new random layout from the config files.
     /// </summary>
-    public async UniTask StartNextGameSession(CancellationToken token = default)
+    public async UniTask StartNextLayout(CancellationToken token = default)
     {
         await UniTask.SwitchToThreadPool();
         
-        GameSessionInfo newSession = SelectRandomGameSession();
+        LayoutInfo newSession = SelectRandomLayouts();
 
         await UniTask.SwitchToMainThread(token);
 
-        if (_warfare.IsGameSessionActive())
+        if (_warfare.IsLayoutActive())
         {
-            GameSession session = _warfare.GetActiveGameSession();
+            Layout session = _warfare.GetActiveLayout();
             if (session.IsActive)
             {
                 await session.EndSessionAsync(CancellationToken.None);
             }
 
             session.Dispose();
-            _warfare.SetActiveGameSession(null);
+            _warfare.SetActiveLayout(null);
         }
 
-        await CreateGameSessionAsync(newSession, token);
+        await CreateLayoutAsync(newSession, token);
     }
 
     /// <summary>
-    /// Actually creates a new game session with <paramref name="sessionInfo"/> as it's startup args.
+    /// Actually creates a new layout with <paramref name="sessionInfo"/> as it's startup args.
     /// </summary>
-    public async UniTask CreateGameSessionAsync(GameSessionInfo sessionInfo, CancellationToken token = default)
+    public async UniTask CreateLayoutAsync(LayoutInfo sessionInfo, CancellationToken token = default)
     {
-        if (!typeof(GameSession).IsAssignableFrom(sessionInfo.GameSessionType))
+        if (!typeof(Layout).IsAssignableFrom(sessionInfo.LayoutType))
         {
-            throw new ArgumentException($"Type {Accessor.ExceptionFormatter.Format(sessionInfo.GameSessionType)} is not assignable to GameSession.", nameof(sessionInfo));
+            throw new ArgumentException($"Type {Accessor.ExceptionFormatter.Format(sessionInfo.LayoutType)} is not assignable to GameSession.", nameof(sessionInfo));
         }
 
         IServiceProvider scopedProvider = await _warfare.CreateScopeAsync(token);
         await UniTask.SwitchToMainThread(token);
 
-        GameSession session = (GameSession)ActivatorUtilities.CreateInstance(scopedProvider, sessionInfo.GameSessionType, [sessionInfo]);
-        _warfare.SetActiveGameSession(session);
+        Layout session = (Layout)ActivatorUtilities.CreateInstance(scopedProvider, sessionInfo.LayoutType, [ sessionInfo ]);
+        _warfare.SetActiveLayout(session);
 
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(session.UnloadToken);
         await session.InitializeSessionAsync(token);
@@ -105,14 +105,14 @@ public class GameSessionFactory : IHostedService
     }
 
     /// <summary>
-    /// Read all game sessions and select a random one.
+    /// Read all layouts and select a random one.
     /// </summary>
     /// <remarks>Reading them each time keeps us from having to reload config.</remarks>
     /// <exception cref="InvalidOperationException">No layouts are configured.</exception>
-    public GameSessionInfo SelectRandomGameSession()
+    public LayoutInfo SelectRandomLayouts()
     {
-        List<GameSessionInfo> sessions = GetBaseLayoutFiles()
-            .Select(x => ReadGameSessionInfo(x.FullName))
+        List<LayoutInfo> sessions = GetBaseLayoutFiles()
+            .Select(x => ReadLayoutInfo(x.FullName))
             .Where(x => x != null)
             .ToList()!;
 
@@ -126,9 +126,9 @@ public class GameSessionFactory : IHostedService
     }
 
     /// <summary>
-    /// Read a <see cref="GameSessionInfo"/> from the given file and open a configuration root for the file.
+    /// Read a <see cref="LayoutInfo"/> from the given file and open a configuration root for the file.
     /// </summary>
-    public GameSessionInfo? ReadGameSessionInfo(string file)
+    public LayoutInfo? ReadLayoutInfo(string file)
     {
         if (!File.Exists(file))
             return null;
@@ -164,9 +164,9 @@ public class GameSessionFactory : IHostedService
             displayName = Path.GetFileNameWithoutExtension(file);
         }
 
-        return new GameSessionInfo
+        return new LayoutInfo
         {
-            GameSessionType = sessionType,
+            LayoutType = sessionType,
             Layout = root,
             Weight = weight,
             DisplayName = displayName,
@@ -211,11 +211,11 @@ public class GameSessionFactory : IHostedService
     }
 
     /// <summary>
-    /// Host a new session, starting all <see cref="ISessionHostedService"/> services. Should only be called from <see cref="GameSession.BeginSessionAsync"/>.
+    /// Host a new session, starting all <see cref="ISessionHostedService"/> services. Should only be called from <see cref="Layout.BeginSessionAsync"/>.
     /// </summary>
     /// <exception cref="OperationCanceledException"/>
     /// <exception cref="Exception"/>
-    internal async UniTask HostSessionAsync(GameSession session, CancellationToken token)
+    internal async UniTask HostSessionAsync(Layout session, CancellationToken token)
     {
         // start any services implementing ISessionHostedService
         List<ISessionHostedService> hostedServices = session.ServiceProvider.GetServices<ISessionHostedService>().ToList();
@@ -289,9 +289,9 @@ public class GameSessionFactory : IHostedService
     }
 
     /// <summary>
-    /// Stop hosting a session, stopping all <see cref="ISessionHostedService"/> services. Should only be called from <see cref="GameSession.EndSessionAsync"/>.
+    /// Stop hosting a session, stopping all <see cref="ISessionHostedService"/> services. Should only be called from <see cref="Layout.EndSessionAsync"/>.
     /// </summary>
-    internal async UniTask UnhostSessionAsync(GameSession session, CancellationToken token)
+    internal async UniTask UnhostSessionAsync(Layout session, CancellationToken token)
     {
         if (session.UnloadedHostedServices)
             return;
