@@ -1380,7 +1380,7 @@ public abstract class GamemodeOld : BaseAsyncSingletonComponent, IGamemode, ILev
             if (args != null)
             {
                 if (!args.CanContinue ||
-                    args is PlayerEvent { Player.IsOnline: false } or BreakablePlayerEvent { Player.IsOnline: false })
+                    args is PlayerEvent { Player.IsOnline: false } or CancellablePlayerEvent { Player.IsOnline: false })
                     throw new OperationCanceledException();
             }
 

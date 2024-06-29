@@ -13,7 +13,7 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
 /// </summary>
 [TypeConverter(typeof(Int32ParameterTemplateTypeConverter))]
-public class Int32ParameterTemplate : QuestParameterTemplate<int>
+public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<Int32ParameterTemplate>
 {
 
     /// <summary>
@@ -51,6 +51,10 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>
     protected class Int32RangeSet(int minimum, int maximum, bool infinityMinimum, bool infinityMaximum, int round) : RangeSet(minimum, maximum, infinityMinimum, infinityMaximum)
     {
         public readonly int Round = round;
+        public override bool Equals(RangeSet other)
+        {
+            return other is Int32RangeSet r && r.Round == Round && base.Equals(other);
+        }
     }
 
     /// <inheritdoc />
@@ -118,7 +122,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>
     /// <summary>
     /// Read from a JSON reader.
     /// </summary>
-    public static SingleParameterTemplate? ReadJson(ref Utf8JsonReader reader)
+    public static Int32ParameterTemplate? ReadJson(ref Utf8JsonReader reader)
     {
         switch (reader.TokenType)
         {
@@ -126,14 +130,42 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>
                 return null;
 
             case JsonTokenType.Number:
-                if (!reader.TryGetSingle(out float constant))
+                if (!reader.TryGetInt32(out int constant))
                     throw new JsonException("Failed to get integer value from number value for a quest parameter.");
 
-                return new SingleParameterTemplate(constant);
+                return new Int32ParameterTemplate(constant);
 
             case JsonTokenType.String:
                 string str = reader.GetString()!;
-                return new SingleParameterTemplate(str.AsSpan());
+                return new Int32ParameterTemplate(str.AsSpan());
+
+            default:
+                throw new JsonException("Unexpected token while reading integer value for a quest parameter.");
+        }
+    }
+
+    /// <summary>
+    /// Read a value from a JSON reader.
+    /// </summary>
+    public static QuestParameterValue<int>? ReadValueJson(ref Utf8JsonReader reader)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+
+            case JsonTokenType.Number:
+                if (!reader.TryGetInt32(out int constant))
+                    throw new JsonException("Failed to get integer value from number value for a quest parameter.");
+
+                return new Int32ParameterValue(constant);
+
+            case JsonTokenType.String:
+                string str = reader.GetString()!;
+                if (!TryParseValue(str.AsSpan(), out QuestParameterValue<int>? value))
+                    throw new FormatException("Failed to parse quest parameter value.");
+
+                return value;
 
             default:
                 throw new JsonException("Unexpected token while reading integer value for a quest parameter.");
@@ -288,6 +320,9 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>
     }
 
     /// <inheritdoc />
+    public bool Equals(Int32ParameterTemplate other) => Equals((QuestParameterTemplate<int>)other);
+
+    /// <inheritdoc />
     public override string ToString()
     {
         switch (ValueType)
@@ -398,7 +433,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>
         }
     }
 
-    protected class Int32ParameterValue : QuestParameterValue<int>
+    protected class Int32ParameterValue : QuestParameterValue<int>, IEquatable<Int32ParameterValue>
     {
         private int _value;
         private int[]? _values;
@@ -408,6 +443,14 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>
         private bool _isEmptySet;
 
         private Int32ParameterValue() { }
+
+        public Int32ParameterValue(int constant)
+        {
+            _value = constant;
+            SelectionType = ParameterSelectionType.Selective;
+            ValueType = ParameterValueType.Constant;
+        }
+
         public Int32ParameterValue(Int32ParameterTemplate template)
         {
             ParameterValueType valType = template.ValueType;
@@ -576,6 +619,48 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>
             return _value;
         }
 
+        public override int GetSingleValueOrMaximum()
+        {
+            if (SelectionType == ParameterSelectionType.Selective || ValueType == ParameterValueType.Constant)
+                return _value;
+
+            if (ValueType == ParameterValueType.Range)
+                return _maxValue;
+
+            if (ValueType != ParameterValueType.List || _isEmptySet)
+                return int.MaxValue;
+
+            int max = int.MinValue;
+            for (int i = 0; i < _values!.Length; ++i)
+            {
+                if (max < _values[i])
+                    max = _values[i];
+            }
+
+            return max;
+        }
+
+        public override int GetSingleValueOrMinimum()
+        {
+            if (SelectionType == ParameterSelectionType.Selective || ValueType == ParameterValueType.Constant)
+                return _value;
+
+            if (ValueType == ParameterValueType.Range)
+                return _maxValue;
+
+            if (ValueType != ParameterValueType.List || _isEmptySet)
+                return int.MinValue;
+
+            int min = int.MaxValue;
+            for (int i = 0; i < _values!.Length; ++i)
+            {
+                if (min > _values[i])
+                    min = _values[i];
+            }
+
+            return min;
+        }
+
         public override void WriteJson(Utf8JsonWriter writer)
         {
             if (!_isEmptySet && (SelectionType == ParameterSelectionType.Selective || ValueType == ParameterValueType.Constant))
@@ -586,6 +671,49 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>
             {
                 writer.WriteStringValue(ToString());
             }
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(QuestParameterValue<int>? other)
+        {
+            return other is Int32ParameterValue v && Equals(v);
+        }
+
+        /// <inheritdoc />
+        public bool Equals(Int32ParameterValue? other)
+        {
+            if (other == null)
+                return false;
+
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+                return _value == other._value;
+
+            if (ValueType != other.ValueType)
+                return false;
+
+            if (ValueType == ParameterValueType.Wildcard && other.ValueType == ParameterValueType.Wildcard)
+                return true;
+
+            if (ValueType == ParameterValueType.Range)
+            {
+                return _maxValue == other._maxValue && _minValue == other._minValue;
+            }
+
+            if (_isEmptySet || _values == null || _values.Length == 0)
+            {
+                return other._isEmptySet || other._values == null || other._values.Length == 0;
+            }
+
+            if (other._isEmptySet || other._values == null || other._values.Length == 0)
+                return false;
+
+            for (int i = 0; i < _values.Length; ++i)
+            {
+                if (_values[i] != other._values[i])
+                    return false;
+            }
+
+            return true;
         }
 
         public override string ToString()

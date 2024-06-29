@@ -1,27 +1,45 @@
 ﻿using SDG.Unturned;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Buildables;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Barricades;
-public sealed class SalvageBarricadeRequested : SalvageRequested
+
+/// <summary>
+/// Event listener args which handles <see cref="BarricadeDrop.OnSalvageRequested_Global"/>.
+/// </summary>
+public sealed class SalvageBarricadeRequested(BarricadeRegion region) : SalvageRequested(region)
 {
-    private readonly BarricadeDrop _drop;
-    private readonly BarricadeData _data;
-    private readonly ushort _plant;
-    public ushort Plant => _plant;
-    public BarricadeDrop Barricade => _drop;
-    public BarricadeData ServersideData => _data;
+    /// <inheritdoc />
+    public override bool IsCancelled => base.IsCancelled || ServersideData.barricade.isDead;
+
+    /// <summary>
+    /// The index of the vehicle region in <see cref="BarricadeManager.vehicleRegions"/>. <see cref="ushort.MaxValue"/> if the barricade is not planted.
+    /// </summary>
+    /// <remarks>Also known as 'plant'.</remarks>
+    public required ushort VehicleRegionIndex { get; init; }
+
+    /// <summary>
+    /// The barricade's object and model data.
+    /// </summary>
+    public required BarricadeDrop Barricade { get; init; }
+
+    /// <summary>
+    /// The barricade's server-side data.
+    /// </summary>
+    public required BarricadeData ServersideData { get; init; }
+
+    /// <summary>
+    /// The region the barricade was placed in. This could be of type <see cref="VehicleBarricadeRegion"/>.
+    /// </summary>
     public BarricadeRegion Region => (BarricadeRegion)RegionObj;
+
+    /// <summary>
+    /// Abstracted <see cref="IBuildable"/> of the barricade.
+    /// </summary>
     public override IBuildable Buildable => BuildableCache ??= new BuildableBarricade(Barricade);
-    internal SalvageBarricadeRequested(UCPlayer instigator, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, BuildableSave? save, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)
-        : base(instigator, region, x, y, barricade.instanceID, primaryAsset, secondaryAsset)
-    {
-        _drop = barricade;
-        _data = barricadeData;
-        _plant = plant;
-        Transform = barricade.model;
-        BuildableSave = save;
-        BuildableCache = save?.Buildable;
-    }
+
+    /// <summary>
+    /// The Unity model of the barricade.
+    /// </summary>
+    public override Transform Transform => Barricade.model;
 }

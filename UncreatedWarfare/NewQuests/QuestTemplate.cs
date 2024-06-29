@@ -24,15 +24,24 @@ public abstract class QuestTemplate<TSelf, TTracker, TState> : QuestTemplate
     where TState : class, IQuestState<TSelf>, new()
 {
     protected QuestTemplate(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
+
+    /// <inheritdoc />
     protected override async UniTask<IQuestPreset?> ReadPreset(IConfiguration configuration, CancellationToken token)
     {
         TemplatePreset preset = configuration.Get<TemplatePreset>();
-        preset.StateIntl = await ReadState(configuration.GetSection("State"), token);
+        TState? state = await ReadState(configuration.GetSection("State"), token);
 
+        if (state == null)
+            return null;
+
+        preset.StateIntl = state;
         return preset;
     }
 
-    protected async UniTask<TState> ReadState(IConfiguration configuration, CancellationToken token)
+    /// <summary>
+    /// Read a state from configuration.
+    /// </summary>
+    protected virtual async UniTask<TState?> ReadState(IConfiguration configuration, CancellationToken token)
     {
         TState state = new TState();
         await state.CreateFromConfigurationAsync(configuration, token);
@@ -49,7 +58,7 @@ public abstract class QuestTemplate<TSelf, TTracker, TState> : QuestTemplate
 
     protected internal class TemplatePreset : IQuestPreset
     {
-        // field to keep it from being binded to
+        // this is a field to keep it from being binded to
         public TState StateIntl;
 
         public Guid Key { get; set; }
@@ -182,7 +191,14 @@ public abstract class QuestTemplate : ITranslationArgument
         }
     }
 
+    /// <summary>
+    /// Read a preset from configuration.
+    /// </summary>
     protected abstract UniTask<IQuestPreset?> ReadPreset(IConfiguration configuration, CancellationToken token);
+
+    /// <summary>
+    /// Read a reward and it's expression from configuration.
+    /// </summary>
     protected virtual UniTask<RewardExpression?> ReadReward(IConfiguration configuration, CancellationToken token)
     {
         string typeStr = configuration["Type"];

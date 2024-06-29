@@ -1,24 +1,63 @@
 ﻿using SDG.Unturned;
+using Steamworks;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Buildables;
+using Uncreated.Warfare.Configuration;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events;
 
+/// <summary>
+/// Represents all event args in which a barricade or structure was destroyed.
+/// </summary>
 public interface IBuildableDestroyedEvent
 {
+    /// <summary>
+    /// Player that destroyed the buildable.
+    /// </summary>
     UCPlayer? Instigator { get; }
-    ulong InstigatorId { get; }
+
+    /// <summary>
+    /// Steam64 ID of the player that destroyed the buildable.
+    /// </summary>
+    CSteamID InstigatorId { get; }
+
+    /// <summary>
+    /// The Unity model of the buildable.
+    /// </summary>
     Transform Transform { get; }
+
+    /// <summary>
+    /// Buildable that was destroyed.
+    /// </summary>
     IBuildable Buildable { get; }
-    BuildableSave? Save { get; }
-    bool IsSaved { get; }
-    uint InstanceID { get; }
-    byte RegionPosX { get; }
-    byte RegionPosY { get; }
+
+    /// <summary>
+    /// Instance Id of the buildable that was destroyed.
+    /// </summary>
+    uint InstanceId { get; }
+
+    /// <summary>
+    /// Coordinate of the buildable region in it's corresponding region list.
+    /// </summary>
+    RegionCoord RegionPosition { get; }
+
+    /// <summary>
+    /// Region in which the buildable was.
+    /// </summary>
     object Region { get; }
+
+    /// <summary>
+    /// Origin of the damage that caused the buildable to be destroyed.
+    /// </summary>
     EDamageOrigin DamageOrigin { get; }
-    UnturnedAssetReference PrimaryAsset { get; }
-    UnturnedAssetReference SecondaryAsset { get; }
+
+    /// <summary>
+    /// Primary item used to destroy the buildable.
+    /// </summary>
+    IAssetLink<ItemAsset>? PrimaryAsset { get; }
+
+    /// <summary>
+    /// Secondary item used to destroy the buildable.
+    /// </summary>
+    IAssetLink<ItemAsset>? SecondaryAsset { get; }
 }

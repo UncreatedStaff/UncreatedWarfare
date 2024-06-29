@@ -21,6 +21,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -32,6 +33,11 @@ namespace Uncreated.Warfare;
 public sealed class WarfareModule : IModuleNexus
 {
     internal static int GameThreadId = -1;
+
+    /// <summary>
+    /// Static instance of the event dispatcher singleton for harmony patches to access it.
+    /// </summary>
+    public static EventDispatcher2 EventDispatcher { get; private set; }
 
     private bool _unloadedHostedServices;
     private IServiceScope? _activeScope;
@@ -149,6 +155,7 @@ public sealed class WarfareModule : IModuleNexus
 
         serviceCollection.AddSingleton<LayoutFactory>();
         serviceCollection.AddSingleton<ActionManager>();
+        serviceCollection.AddSingleton<EventDispatcher2>();
         serviceCollection.AddSingleton<CommandDispatcher>();
         serviceCollection.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<CommandDispatcher>().Parser);
         serviceCollection.AddRpcSingleton<UserPermissionStore>();
@@ -224,6 +231,8 @@ public sealed class WarfareModule : IModuleNexus
                 break;
             }
         }
+
+        EventDispatcher = ServiceProvider.GetRequiredService<EventDispatcher2>();
 
         // one of the hosted services errored, unhost all that were hosted and shut down.
         if (errIndex == -1)

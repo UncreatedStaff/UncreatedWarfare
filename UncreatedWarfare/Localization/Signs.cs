@@ -9,6 +9,7 @@ using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
+using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;

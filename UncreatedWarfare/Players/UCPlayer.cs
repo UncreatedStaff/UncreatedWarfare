@@ -42,6 +42,7 @@ using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
@@ -536,17 +537,17 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         return await kitManager.GetKit(activeKit.Value, token, set);
     }
     public static UCPlayer? FromID(ulong steamID) => steamID == 0 ? null : PlayerManager.FromID(steamID);
-    public static UCPlayer? FromCSteamID(CSteamID steamID) => steamID.m_SteamID == 0 ? null : FromID(steamID.m_SteamID);
-    public static UCPlayer? FromPlayer(Player player) => player == null ? null : FromID(player.channel.owner.playerID.steamID.m_SteamID);
+    public static UCPlayer? FromCSteamID(CSteamID steamID) => steamID.m_SteamID == 0 ? null : PlayerManager.FromID(steamID.m_SteamID);
+    public static UCPlayer? FromPlayer(Player player) => player == null ? null : PlayerManager.FromID(player.channel.owner.playerID.steamID.m_SteamID);
     public static UCPlayer? FromSteamPlayer(SteamPlayer player)
     {
         if (player == null) return null;
-        return FromID(player.playerID.steamID.m_SteamID);
+        return PlayerManager.FromID(player.playerID.steamID.m_SteamID);
     }
     public static UCPlayer? FromName(string name, bool includeContains = false)
     {
-        if (Util.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
-            return FromCSteamID(steamId);
+        if (FormattingUtility.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            return PlayerManager.FromID(steamId.m_SteamID);
 
         if (name == null)
             return null;
@@ -570,8 +571,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     public static UCPlayer? FromName(string name, bool includeContains, IEnumerable<UCPlayer> selection)
     {
-        if (Util.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
-            return FromCSteamID(steamId);
+        if (FormattingUtility.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            return PlayerManager.FromID(steamId.m_SteamID);
 
         if (name == null) return null;
         UCPlayer? player = selection.FirstOrDefault(
@@ -593,8 +594,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public static UCPlayer? FromName(string name, NameSearch type) => FromName(name, PlayerManager.OnlinePlayers, type);
     public static UCPlayer? FromName(string name, IEnumerable<UCPlayer> selection, NameSearch type)
     {
-        if (Util.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
-            return FromCSteamID(steamId);
+        if (FormattingUtility.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            return PlayerManager.FromID(steamId.m_SteamID);
 
         switch (type)
         {
@@ -710,9 +711,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             return;
         }
 
-        if (Util.TryParseSteamId(input, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (FormattingUtility.TryParseSteamId(input, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            UCPlayer? s64 = FromCSteamID(steamId);
+            UCPlayer? s64 = PlayerManager.FromID(steamId.m_SteamID);
             if (s64 != null)
                 output.Add(s64);
             return;

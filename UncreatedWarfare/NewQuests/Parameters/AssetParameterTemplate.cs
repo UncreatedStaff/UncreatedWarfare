@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 /// </summary>
 /// <remarks>For kit names, use <see cref="KitNameParameterTemplate"/>.</remarks>
 [TypeConverter(typeof(AssetParameterTemplateTypeConverter))]
-public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid> where TAsset : Asset
+public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEquatable<AssetParameterTemplate<TAsset>> where TAsset : Asset
 {
     private static List<TAsset>? _mainWorkingThreadList;
 
@@ -123,6 +123,28 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid> where
         }
     }
 
+    /// <summary>
+    /// Read a value from a JSON reader.
+    /// </summary>
+    public static QuestParameterValue<Guid>? ReadValueJson(ref Utf8JsonReader reader)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+
+            case JsonTokenType.String:
+                string str = reader.GetString()!;
+                if (!TryParseValue(str.AsSpan(), out QuestParameterValue<Guid>? value))
+                    throw new FormatException("Failed to parse quest parameter value.");
+
+                return value;
+
+            default:
+                throw new JsonException($"Unexpected token while reading {Accessor.ExceptionFormatter.Format(typeof(TAsset))} GUID value for a quest parameter.");
+        }
+    }
+
     protected static bool TryParseIntl(ReadOnlySpan<char> str, out ParameterSelectionType selType, out ParameterValueType valType, out Guid constant, out Guid[]? list)
     {
         constant = default;
@@ -221,6 +243,10 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid> where
     }
 
     /// <inheritdoc />
+    public bool Equals(AssetParameterTemplate<TAsset> other) => Equals((QuestParameterTemplate<Guid>)other);
+
+
+    /// <inheritdoc />
     public override string ToString()
     {
         switch (ValueType)
@@ -268,7 +294,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid> where
         }
     }
 
-    protected class AssetParameterValue : QuestParameterValue<Guid>
+    protected class AssetParameterValue : QuestParameterValue<Guid>, IEquatable<AssetParameterValue>
     {
         private Guid _value;
         private Guid[]? _values;
@@ -425,6 +451,47 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid> where
                 throw new InvalidOperationException("Not a selective or constant parameter value.");
 
             return _value;
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(QuestParameterValue<Guid>? other)
+        {
+            return other is AssetParameterValue v && Equals(v);
+        }
+
+        /// <inheritdoc />
+        public bool Equals(AssetParameterValue? other)
+        {
+            if (other == null)
+                return false;
+
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+                return _value == other._value;
+
+            if (ValueType != other.ValueType)
+                return false;
+
+            if (ValueType == ParameterValueType.Wildcard && other.ValueType == ParameterValueType.Wildcard)
+                return true;
+
+            if (ValueType == ParameterValueType.Range)
+                return false;
+
+            if (_isEmptySet || _values == null || _values.Length == 0)
+            {
+                return other._isEmptySet || other._values == null || other._values.Length == 0;
+            }
+
+            if (other._isEmptySet || other._values == null || other._values.Length == 0)
+                return false;
+
+            for (int i = 0; i < _values.Length; ++i)
+            {
+                if (_values[i] != other._values[i])
+                    return false;
+            }
+
+            return true;
         }
 
         /// <inheritdoc />

@@ -88,6 +88,48 @@ public class KitNameParameterTemplate : StringParameterTemplate
         return false;
     }
 
+    /// <summary>
+    /// Read a saved value of this <see cref="StringParameterTemplate"/> from a string.
+    /// </summary>
+    /// <returns>The parsed value, or <see langword="null"/> if it failed.</returns>
+    public static UniTask<QuestParameterValue<string>?> TryParseValue(string str, IServiceProvider serviceProvider)
+    {
+        if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant, out string[]? list))
+        {
+            return UniTask.FromResult<QuestParameterValue<string>?>(null);
+        }
+
+        if (valType == ParameterValueType.Range)
+        {
+            return UniTask.FromResult<QuestParameterValue<string>?>(null);
+        }
+
+        string? value;
+        if (selType != ParameterSelectionType.Selective)
+        {
+            return new UniTask<QuestParameterValue<string>?>(new StringParameterValue(constant, list, valType));
+        }
+
+        switch (valType)
+        {
+            case ParameterValueType.Constant:
+                value = constant;
+                break;
+
+            case ParameterValueType.List:
+                value = list!.Length == 0 ? null : list[RandomUtility.GetIndex((ICollection)list)];
+                break;
+
+            default:
+                KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
+                Kit? kit = kitManager.GetRandomPublicKit();
+                value = kit?.InternalName ?? "default";
+                break;
+        }
+
+        return new UniTask<QuestParameterValue<string>?>(new StringParameterValue(value, valType));
+    }
+
     /// <inheritdoc />
     public override bool TryParseFrom(ReadOnlySpan<char> str)
     {
@@ -112,7 +154,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
     /// <summary>
     /// Read from a JSON reader.
     /// </summary>
-    public new static SingleParameterTemplate? ReadJson(ref Utf8JsonReader reader)
+    public new static KitNameParameterTemplate? ReadJson(ref Utf8JsonReader reader)
     {
         switch (reader.TokenType)
         {
@@ -121,10 +163,38 @@ public class KitNameParameterTemplate : StringParameterTemplate
 
             case JsonTokenType.String:
                 string str = reader.GetString()!;
-                return new SingleParameterTemplate(str.AsSpan());
+                return new KitNameParameterTemplate(str.AsSpan());
 
             default:
-                throw new JsonException($"Unexpected token while reading kit name for a quest parameter.");
+                throw new JsonException("Unexpected token while reading kit name for a quest parameter.");
+        }
+    }
+
+    /// <summary>
+    /// Read a value from a JSON reader.
+    /// </summary>
+    public static UniTask<QuestParameterValue<string>?> ReadValueJson(ref Utf8JsonReader reader, IServiceProvider serviceProvider)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return UniTask.FromResult<QuestParameterValue<string>?>(null);
+
+            case JsonTokenType.String:
+                string str = reader.GetString()!;
+                return ReadValueIntl(str, serviceProvider);
+
+            default:
+                throw new JsonException("Unexpected token while reading string value for a quest parameter.");
+        }
+
+        async UniTask<QuestParameterValue<string>?> ReadValueIntl(string str, IServiceProvider serviceProvider)
+        {
+            QuestParameterValue<string>? result = await TryParseValue(str, serviceProvider);
+            if (result == null)
+                throw new FormatException("Failed to parse quest parameter value.");
+
+            return result;
         }
     }
 }

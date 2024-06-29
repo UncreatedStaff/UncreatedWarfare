@@ -2,7 +2,7 @@
 using System.Text.Json;
 
 namespace Uncreated.Warfare.NewQuests.Parameters;
-public abstract class QuestParameterValue<TValue> : IFormattable
+public abstract class QuestParameterValue<TValue> : IFormattable, IEquatable<QuestParameterValue<TValue>>
 {
     /// <summary>
     /// Type of value set. Constant, list, wildcard, and sometimes range.
@@ -22,7 +22,29 @@ public abstract class QuestParameterValue<TValue> : IFormattable
     /// <summary>
     /// Get one value to use. Must either be a constant or selective.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Inclusive selection is not supported when getting a single value.</exception>
     public abstract TValue GetSingleValue();
+
+    /// <summary>
+    /// Get one value to use. If this is a range or list it'll return the maximum of the set.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Inclusive selection is not supported when getting a single value for this type.</exception>
+    public virtual TValue GetSingleValueOrMaximum()
+    {
+        return GetSingleValue();
+    }
+
+    /// <summary>
+    /// Get one value to use. If this is a range or list it'll return the minimum of the set.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Inclusive selection is not supported when getting a single value for this type.</exception>
+    public virtual TValue GetSingleValueOrMinimum()
+    {
+        return GetSingleValue();
+    }
+
+    /// <inheritdoc />
+    public abstract bool Equals(QuestParameterValue<TValue>? other);
 
     /// <summary>
     /// Convert a parameter value back to a string.

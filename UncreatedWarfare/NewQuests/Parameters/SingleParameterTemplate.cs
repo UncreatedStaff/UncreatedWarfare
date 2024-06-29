@@ -14,7 +14,7 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
 /// </summary>
 [TypeConverter(typeof(SingleParameterTemplateTypeConverter))]
-public class SingleParameterTemplate : QuestParameterTemplate<float>
+public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable<SingleParameterTemplate>
 {
     /// <summary>
     /// Create a template of it's string representation.
@@ -50,6 +50,10 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
     protected class SingleRangeSet(float minimum, float maximum, bool infinityMinimum, bool infinityMaximum, int round) : RangeSet(minimum, maximum, infinityMinimum, infinityMaximum)
     {
         public readonly int Round = round;
+        public override bool Equals(RangeSet other)
+        {
+            return other is SingleRangeSet r && r.Round == Round && base.Equals(other);
+        }
     }
 
     /// <inheritdoc />
@@ -126,7 +130,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
 
             case JsonTokenType.Number:
                 if (!reader.TryGetSingle(out float constant))
-                    throw new JsonException("Failed to get float value from number value for a quest parameter.");
+                    throw new JsonException("Failed to get decimal value from number value for a quest parameter.");
 
                 return new SingleParameterTemplate(constant);
 
@@ -135,7 +139,35 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
                 return new SingleParameterTemplate(str.AsSpan());
 
             default:
-                throw new JsonException("Unexpected token while reading float value for a quest parameter.");
+                throw new JsonException("Unexpected token while reading decimal value for a quest parameter.");
+        }
+    }
+
+    /// <summary>
+    /// Read a value from a JSON reader.
+    /// </summary>
+    public static QuestParameterValue<float>? ReadValueJson(ref Utf8JsonReader reader)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+
+            case JsonTokenType.Number:
+                if (!reader.TryGetInt32(out int constant))
+                    throw new JsonException("Failed to get decimal value from number value for a quest parameter.");
+
+                return new SingleParameterValue(constant);
+
+            case JsonTokenType.String:
+                string str = reader.GetString()!;
+                if (!TryParseValue(str.AsSpan(), out QuestParameterValue<float>? value))
+                    throw new FormatException("Failed to parse quest parameter value.");
+
+                return value;
+
+            default:
+                throw new JsonException("Unexpected token while reading decimal value for a quest parameter.");
         }
     }
 
@@ -287,6 +319,10 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
     }
 
     /// <inheritdoc />
+    public bool Equals(SingleParameterTemplate other) => Equals((QuestParameterTemplate<float>)other);
+
+
+    /// <inheritdoc />
     public override string ToString()
     {
         switch (ValueType)
@@ -336,7 +372,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
         }
     }
 
-    protected class SingleParameterValue : QuestParameterValue<float>
+    protected class SingleParameterValue : QuestParameterValue<float>, IEquatable<SingleParameterValue>
     {
         private float _value;
         private float[]? _values;
@@ -346,6 +382,13 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
         private bool _isEmptySet;
 
         private SingleParameterValue() { }
+
+        public SingleParameterValue(float constant)
+        {
+            _value = constant;
+            SelectionType = ParameterSelectionType.Selective;
+            ValueType = ParameterValueType.Constant;
+        }
 
         public SingleParameterValue(SingleParameterTemplate template)
         {
@@ -386,7 +429,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
                         _value = RandomUtility.GetFloat(min, max);
                         if (range is SingleRangeSet round)
                         {
-                            _value = MathUtility.RoundNumber(_value, round.Round, min, max);
+                            _value = (float)MathUtility.RoundNumber(_value, round.Round, min, max);
                             _round = round.Round;
                         }
                         else
@@ -458,7 +501,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
                         val._value = RandomUtility.GetFloat(min, max);
                         if (round != 0)
                         {
-                            val._value = MathUtility.RoundNumber(val._value, round, min, max);
+                            val._value = (float)MathUtility.RoundNumber(val._value, round, min, max);
                         }
                     }
 
@@ -525,6 +568,48 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
             return _value;
         }
 
+        public override float GetSingleValueOrMaximum()
+        {
+            if (SelectionType == ParameterSelectionType.Selective || ValueType == ParameterValueType.Constant)
+                return _value;
+
+            if (ValueType == ParameterValueType.Range)
+                return _maxValue;
+
+            if (ValueType != ParameterValueType.List || _isEmptySet)
+                return float.MaxValue;
+
+            float max = float.MinValue;
+            for (int i = 0; i < _values!.Length; ++i)
+            {
+                if (i == 0 || max < _values[i])
+                    max = _values[i];
+            }
+
+            return max;
+        }
+
+        public override float GetSingleValueOrMinimum()
+        {
+            if (SelectionType == ParameterSelectionType.Selective || ValueType == ParameterValueType.Constant)
+                return _value;
+
+            if (ValueType == ParameterValueType.Range)
+                return _maxValue;
+
+            if (ValueType != ParameterValueType.List || _isEmptySet)
+                return float.MinValue;
+
+            float min = float.MaxValue;
+            for (int i = 0; i < _values!.Length; ++i)
+            {
+                if (i == 0 || min > _values[i])
+                    min = _values[i];
+            }
+
+            return min;
+        }
+
         public override void WriteJson(Utf8JsonWriter writer)
         {
             if (!_isEmptySet && (SelectionType == ParameterSelectionType.Selective || ValueType == ParameterValueType.Constant))
@@ -535,6 +620,46 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>
             {
                 writer.WriteStringValue(ToString());
             }
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(QuestParameterValue<float> other)
+        {
+            return other is SingleParameterValue v && Equals(v);
+        }
+
+        /// <inheritdoc />
+        public bool Equals(SingleParameterValue other)
+        {
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+                return _value == other._value;
+
+            if (ValueType != other.ValueType)
+                return false;
+
+            if (ValueType == ParameterValueType.Wildcard && other.ValueType == ParameterValueType.Wildcard)
+                return true;
+
+            if (ValueType == ParameterValueType.Range)
+            {
+                return _maxValue == other._maxValue && _minValue == other._minValue;
+            }
+
+            if (_isEmptySet || _values == null || _values.Length == 0)
+            {
+                return other._isEmptySet || other._values == null || other._values.Length == 0;
+            }
+
+            if (other._isEmptySet || other._values == null || other._values.Length == 0)
+                return false;
+
+            for (int i = 0; i < _values.Length; ++i)
+            {
+                if (_values[i] != other._values[i])
+                    return false;
+            }
+
+            return true;
         }
 
         public override string ToString()

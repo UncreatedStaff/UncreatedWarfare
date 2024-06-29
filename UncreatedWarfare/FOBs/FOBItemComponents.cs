@@ -4,6 +4,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Steamworks;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
@@ -11,6 +12,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players;
@@ -39,7 +41,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     public float IconOffset => 3.5f;
     public ulong Team { get; private set; }
     public bool IsSalvaged { get; set; }
-    public ulong Salvager { get; set; }
+    public CSteamID Salvager { get; set; }
     public bool Destroyed => _destroyed;
     public TickResponsibilityCollection Builders { get; } = new TickResponsibilityCollection();
     public Vector3 Position => transform.position;
@@ -102,15 +104,17 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
             LastRestock = Time.realtimeSinceStartup - 40f;
         NeedsRestock = true;
     }
+
     void ISalvageListener.OnSalvageRequested(SalvageRequested e)
     {
-        if (!e.Player.OnDuty())
-        {
-            L.Log($"[FOBS] [{FOB?.Name ?? "FLOATING"}] {e.Player} tried to salvage the radio.");
-            e.Break();
-            e.Player.SendChat(T.WhitelistProhibitedSalvage, Barricade.asset);
-        }
+        if (e.Player.OnDuty())
+            return;
+        
+        L.Log($"[FOBS] [{FOB?.Name ?? "FLOATING"}] {e.Player} tried to salvage the radio.");
+        e.Player.SendChat(T.WhitelistProhibitedSalvage, Barricade.asset);
+        e.Cancel();
     }
+
     [UsedImplicitly]
     private void Start()
     {
@@ -211,7 +215,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     }
 }
 
-public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovelable, ISalvageListener
+public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovelable, ISalvageListener, IDestroyInfo
 {
     private bool _destroyed;
     private int _buildRemoved;
@@ -236,7 +240,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     public float Progress { get; private set; }
     public float Total { get; private set; }
     public bool IsSalvaged { get; set; }
-    public ulong Salvager { get; set; }
+    public CSteamID Salvager { get; set; }
     public IBuildableDestroyedEvent? DestroyInfo { get; set; }
     public bool IsFloating { get; private set; }
     public IAssetLink<EffectAsset>? Icon { get; protected set; }
@@ -455,8 +459,8 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                         record.Instigator = instigator?.Steam64;
                         record.InstigatorPosition = instigator?.Position;
                         record.InstigatorSessionId = session?.SessionId;
-                        record.PrimaryAsset = DestroyInfo?.PrimaryAsset;
-                        record.SecondaryAsset = DestroyInfo?.SecondaryAsset;
+                        record.PrimaryAsset = UnturnedAssetReference.FromAssetLink(DestroyInfo?.PrimaryAsset);
+                        record.SecondaryAsset = UnturnedAssetReference.FromAssetLink(DestroyInfo?.SecondaryAsset);
                         record.UseTimeSeconds = _useTimeSeconds;
                     });
                 }
@@ -480,12 +484,12 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     {
         if (State != BuildableState.Foundation)
         {
-            if (!e.Player.OnDuty())
-            {
-                L.Log($"[FOBS] [{FOB?.Name ?? "FLOATING"}] {e.Player} tried to salvage {Buildable}.");
-                e.Break();
-                e.Player.SendChat(T.WhitelistProhibitedSalvage, ActiveStructure?.Asset ?? Buildable.Foundation.GetAsset()!);
-            }
+            if (e.Player.OnDuty())
+                return;
+
+            L.Log($"[FOBS] [{FOB?.Name ?? "FLOATING"}] {e.Player} tried to salvage {Buildable}.");
+            e.Player.SendChat(T.WhitelistProhibitedSalvage, ActiveStructure?.Asset ?? Buildable.Foundation.GetAsset()!);
+            e.Cancel();
         }
         else if (_buildRemoved > 0 && FOB != null)
         {

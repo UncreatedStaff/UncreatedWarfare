@@ -61,9 +61,9 @@ public readonly struct UnturnedAssetReference
     {
         return Guid != Guid.Empty ? AssetLink.Create<TAsset>(Guid) : AssetLink.Create<TAsset>(Id);
     }
-    public static UnturnedAssetReference FromAssetLink<TAsset>(IAssetLink<TAsset> assetReference) where TAsset : Asset
+    public static UnturnedAssetReference FromAssetLink<TAsset>(IAssetLink<TAsset>? assetReference) where TAsset : Asset
     {
-        return assetReference.Guid != Guid.Empty ? new UnturnedAssetReference(assetReference.Guid) : (assetReference.Id != 0 ? new UnturnedAssetReference(assetReference.Id) : default);
+        return assetReference != null ? assetReference.Guid != Guid.Empty ? new UnturnedAssetReference(assetReference.Guid) : (assetReference.Id != 0 ? new UnturnedAssetReference(assetReference.Id) : default) : default;
     }
     public static bool operator !=(UnturnedAssetReference left, UnturnedAssetReference right) => !(left == right);
     public static bool operator ==(UnturnedAssetReference left, UnturnedAssetReference right)

@@ -1,7 +1,8 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.SpeedBytes;
+using SDG.Unturned;
 using System;
 using System.Globalization;
-using Uncreated.Encoding;
+using System.Linq;
 using Uncreated.Warfare;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Models.Localization;
@@ -271,16 +272,36 @@ public sealed class UCPlayerKeys : IDisposable
                     if (st == ost) continue;
                     if (st)
                     {
-                        EventDispatcher.OnKeyDown(Player, (PlayerKey)i, DownEvents[i]);
+                        OnKeyDown(Player, (PlayerKey)i, DownEvents[i]);
                         _keyDownTimes[i] = Time.realtimeSinceStartup;
                     }
                     else
                     {
-                        EventDispatcher.OnKeyUp(Player, (PlayerKey)i, Time.realtimeSinceStartup - _keyDownTimes[i], UpEvents[i]);
+                        OnKeyUp(Player, (PlayerKey)i, Time.realtimeSinceStartup - _keyDownTimes[i], UpEvents[i]);
                     }
                 }
                 _lastKeys[i] = st;
             }
+        }
+    }
+    private static void OnKeyDown(UCPlayer player, PlayerKey key, KeyDown? callback)
+    {
+        if (callback == null || !player.IsOnline) return;
+        bool handled = false;
+        foreach (KeyDown inv in callback.GetInvocationList().Cast<KeyDown>())
+        {
+            inv?.Invoke(player, ref handled);
+            if (handled) break;
+        }
+    }
+    private static void OnKeyUp(UCPlayer player, PlayerKey key, float timeDown, KeyUp? callback)
+    {
+        if (callback == null || !player.IsOnline) return;
+        bool handled = false;
+        foreach (KeyUp inv in callback.GetInvocationList().Cast<KeyUp>())
+        {
+            inv?.Invoke(player, timeDown, ref handled);
+            if (handled) break;
         }
     }
     public void Dispose()

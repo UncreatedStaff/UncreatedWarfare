@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
 /// </summary>
 [TypeConverter(typeof(EnumParameterTemplateTypeConverter))]
-public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum> where TEnum : unmanaged, Enum
+public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEquatable<EnumParameterTemplate<TEnum>> where TEnum : unmanaged, Enum
 {
 
     /// <summary>
@@ -116,6 +116,28 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum> where 
             case JsonTokenType.String:
                 string str = reader.GetString()!;
                 return new SingleParameterTemplate(str.AsSpan());
+
+            default:
+                throw new JsonException($"Unexpected token while reading {Accessor.ExceptionFormatter.Format(typeof(TEnum))} enum value for a quest parameter.");
+        }
+    }
+
+    /// <summary>
+    /// Read a value from a JSON reader.
+    /// </summary>
+    public static QuestParameterValue<TEnum>? ReadValueJson(ref Utf8JsonReader reader)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+
+            case JsonTokenType.String:
+                string str = reader.GetString()!;
+                if (!TryParseValue(str.AsSpan(), out QuestParameterValue<TEnum>? value))
+                    throw new FormatException("Failed to parse quest parameter value.");
+
+                return value;
 
             default:
                 throw new JsonException($"Unexpected token while reading {Accessor.ExceptionFormatter.Format(typeof(TEnum))} enum value for a quest parameter.");
@@ -260,6 +282,9 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum> where 
     }
 
     /// <inheritdoc />
+    public bool Equals(EnumParameterTemplate<TEnum> other) => Equals((QuestParameterTemplate<TEnum>)other);
+
+    /// <inheritdoc />
     public override string ToString()
     {
         switch (ValueType)
@@ -297,7 +322,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum> where 
         }
     }
 
-    protected class EnumParameterValue : QuestParameterValue<TEnum>
+    protected class EnumParameterValue : QuestParameterValue<TEnum>, IEquatable<EnumParameterValue>
     {
         private static TEnum[]? _valueList;
         private TEnum _value;
@@ -521,6 +546,50 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum> where 
                 throw new InvalidOperationException("Not a selective or constant parameter value.");
 
             return _value;
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(QuestParameterValue<TEnum>? other)
+        {
+            return other is EnumParameterValue v && Equals(v);
+        }
+
+        /// <inheritdoc />
+        public bool Equals(EnumParameterValue? other)
+        {
+            if (other == null)
+                return false;
+
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+                return _value.Equals(other._value);
+
+            if (ValueType != other.ValueType)
+                return false;
+
+            if (ValueType == ParameterValueType.Wildcard && other.ValueType == ParameterValueType.Wildcard)
+                return true;
+
+            if (ValueType == ParameterValueType.Range)
+            {
+                return _maxValueIsInf == other._maxValueIsInf && (other._maxValueIsInf || _maxValue.Equals(other._maxValue))
+                    && _minValueIsInf == other._minValueIsInf && (other._minValueIsInf || _minValue.Equals(other._minValue));
+            }
+
+            if (_isEmptySet || _values == null || _values.Length == 0)
+            {
+                return other._isEmptySet || other._values == null || other._values.Length == 0;
+            }
+
+            if (other._isEmptySet || other._values == null || other._values.Length == 0)
+                return false;
+
+            for (int i = 0; i < _values.Length; ++i)
+            {
+                if (!_values[i].Equals(other._values[i]))
+                    return false;
+            }
+
+            return true;
         }
 
         public override string ToString()

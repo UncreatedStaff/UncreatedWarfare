@@ -1,55 +1,117 @@
 ﻿using SDG.Unturned;
+using Steamworks;
+using System;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Barricades;
-public class PlaceBarricadeRequested : BreakableEvent
+
+/// <summary>
+/// Event listener args which handles <see cref="BarricadeManager.onDeployBarricadeRequested"/>.
+/// </summary>
+public class PlaceBarricadeRequested : CancellableEvent
 {
-    private readonly UCPlayer? _originalPlacer;
-    private readonly Barricade _barricade;
-    private readonly ItemBarricadeAsset _asset;
-    private readonly Transform? _hit;
-    private readonly InteractableVehicle? _vehicle;
     private Vector3 _position;
-    private Vector3 _rotation;
-    private ulong _owner;
-    private ulong _group;
-    public UCPlayer? OriginalPlacer => _originalPlacer;
-    public Barricade Barricade => _barricade;
-    public ItemBarricadeAsset Asset => _asset;
-    public Transform? HitTarget => _hit;
-    public InteractableVehicle? TargetVehicle => _vehicle;
-    public bool IsOnVehicle => _vehicle != null;
-    public Vector3 Position
+    private BarricadeRegion _region;
+    private RegionCoord _regionPosition;
+
+    /// <inheritdoc />
+    public override bool IsCancelled => base.IsCancelled || TargetVehicle is not null && TargetVehicle == null; // vehicle was destroyed mid-event
+
+    /// <summary>
+    /// The player that initially tried to place the barricade.
+    /// </summary>
+    public required UCPlayer? OriginalPlacer { get; init; }
+
+    /// <summary>
+    /// Barricade instantiation data.
+    /// </summary>
+    public required Barricade Barricade { get; init; }
+
+    /// <summary>
+    /// Barricade place target (where the player was looking). This could be a vehicle in which case the barricade will be planted.
+    /// </summary>
+    /// <remarks>If this is a vehicle, it will be stored in <see cref="TargetVehicle"/>.</remarks>
+    public required Transform? HitTarget { get; init; }
+
+    /// <summary>
+    /// The vehicle the player was placing the barricade on.
+    /// </summary>
+    public required InteractableVehicle? TargetVehicle { get; init; }
+
+    /// <summary>
+    /// The index of the vehicle region in <see cref="BarricadeManager.vehicleRegions"/>. <see cref="ushort.MaxValue"/> if the barricade is not planted.
+    /// </summary>
+    /// <remarks>Also known as 'plant'.</remarks>
+    public required ushort VehicleRegionIndex { get; init; }
+
+    /// <summary>
+    /// Coordinate of the barricade region in <see cref="BarricadeManager.regions"/>.
+    /// </summary>
+    public required RegionCoord RegionPosition
+    {
+        get => _regionPosition;
+        init => _regionPosition = value;
+    }
+
+    /// <summary>
+    /// The region the barricade will be placed in.
+    /// </summary>
+    public required BarricadeRegion Region
+    {
+        get => _region;
+        init => _region = value;
+    }
+
+    /// <summary>
+    /// The exact position of the barricade.
+    /// </summary>
+    /// <remarks>This can be changed.</remarks>
+    /// <exception cref="ArgumentException">Position is not in a region when not planted.</exception>
+    public required Vector3 Position
     {
         get => _position;
-        set => _position = value;
+        set
+        {
+            if (IsOnVehicle)
+            {
+                _position = value;
+                return;
+            }
+
+            if (!Regions.tryGetCoordinate(value, out byte x, out byte y))
+                throw new ArgumentException("This is not a valid position for a non-planted barricade. It must be in a region.", nameof(value));
+
+            _position = value;
+            _region = BarricadeManager.regions[x, y];
+            _regionPosition = new RegionCoord(x, y);
+        }
     }
-    public Vector3 Rotation
-    {
-        get => _rotation;
-        set => _rotation = value;
-    }
-    public ulong Owner
-    {
-        get => _owner;
-        set => _owner = value;
-    }
-    public ulong GroupOwner
-    {
-        get => _group;
-        set => _group = value;
-    }
-    public PlaceBarricadeRequested(UCPlayer? placer, InteractableVehicle? vehicle, Barricade barricade, ItemBarricadeAsset asset, Transform? hit, Vector3 point, Vector3 rotation, ulong ownerId, ulong group, bool shouldAllow)
-    {
-        _originalPlacer = placer;
-        _vehicle = vehicle;
-        _barricade = barricade;
-        _asset = asset;
-        _hit = hit;
-        _position = point;
-        _rotation = rotation;
-        _owner = ownerId;
-        _group = group;
-        if (!shouldAllow) Break();
-    }
+
+    /// <summary>
+    /// The exact euler rotation of the barricade.
+    /// </summary>
+    /// <remarks>This can be changed.</remarks>
+    public required Vector3 Rotation { get; set; }
+
+    /// <summary>
+    /// The player that owns the barricade's Steam ID, or <see cref="CSteamID.Nil"/>.
+    /// </summary>
+    /// <remarks>This can be changed.</remarks>
+    public required CSteamID Owner { get; set; }
+
+    /// <summary>
+    /// The group that owns the barricade's Steam ID, or <see cref="CSteamID.Nil"/>.
+    /// </summary>
+    /// <remarks>This can be changed.</remarks>
+    public required CSteamID GroupOwner { get; set; }
+
+    /// <summary>
+    /// Asset of the barricade being placed.
+    /// </summary>
+    public ItemBarricadeAsset Asset => Barricade.asset;
+
+    /// <summary>
+    /// If this barricade is being placed on a vehicle.
+    /// </summary>
+    public bool IsOnVehicle => TargetVehicle is not null;
 }

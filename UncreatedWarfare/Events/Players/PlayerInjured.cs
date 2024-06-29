@@ -11,7 +11,7 @@ public class PlayerInjured : PlayerEvent
         _parameters = Unsafe.AsPointer(ref Unsafe.AsRef(in parameters));
     }
 }
-public class PlayerInjuring : BreakablePlayerEvent
+public class PlayerInjuring : CancellablePlayerEvent
 {
     private readonly unsafe void* _parameters;
     public unsafe ref DamagePlayerParameters Parameters => ref Unsafe.AsRef<DamagePlayerParameters>(_parameters);

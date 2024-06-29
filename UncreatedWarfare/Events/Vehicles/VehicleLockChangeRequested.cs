@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
 
 namespace Uncreated.Warfare.Events.Vehicles;
-public class VehicleLockChangeRequested : BreakablePlayerEvent
+public class VehicleLockChangeRequested : CancellablePlayerEvent
 {
     private readonly InteractableVehicle _vehicle;
     public InteractableVehicle Vehicle => _vehicle;

@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
 
 namespace Uncreated.Warfare.Events.Items;
-public class ItemDropRequested : BreakablePlayerEvent
+public class ItemDropRequested : CancellablePlayerEvent
 {
     private readonly Item _item;
     private readonly ItemJar _itemJar;

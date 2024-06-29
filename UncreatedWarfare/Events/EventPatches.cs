@@ -1,21 +1,21 @@
 ﻿using HarmonyLib;
-using JetBrains.Annotations;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Threading;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
-using UnityEngine;
-using UnityEngine.Assertions;
-using Random = UnityEngine.Random;
 using Uncreated.Warfare.Kits.Items;
+using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Events;
 internal static class EventPatches
@@ -41,9 +41,6 @@ internal static class EventPatches
 
         PatchUtil.PatchMethod(typeof(InteractableSign).GetMethod("updateText", BindingFlags.Instance | BindingFlags.Public), ref _fail,
             postfix: PatchUtil.GetMethodInfo(OnTextUpdated));
-
-        PatchUtil.PatchMethod(typeof(InteractableSign).GetMethod("ReceiveChangeTextRequest", BindingFlags.Instance | BindingFlags.Public), ref _fail,
-            postfix: PatchUtil.GetMethodInfo(OnTextUpdateRequested));
 
         PatchUtil.PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public), ref _fail,
             prefix: PatchUtil.GetMethodInfo(PreDetonate), postfix: PatchUtil.GetMethodInfo(PostDetonate));
@@ -118,34 +115,49 @@ internal static class EventPatches
         PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapGlassesRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
             prefix: PatchUtil.GetMethodInfo(OnReceiveSwapGlassesRequest));
     }
-    [OperationTest("Event Patches")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestEventPatches() => Assert.IsFalse(_fail);
+
     // SDG.Unturned.InteractableSign
     /// <summary>
-    /// Postfix of <see cref="InteractableSign.updateText(string)"/> to invoke <see cref="EventDispatcher.SignTextUpdated"/>.
+    /// Postfix of <see cref="InteractableSign.updateText(string)"/> to invoke <see cref="SignTextChanged"/>.
     /// </summary>
-    private static void OnTextUpdated(InteractableSign __instance, string newText) => EventDispatcher.InvokeOnSignTextChanged(__instance);
-#pragma warning disable CS1580
-    // SDG.Unturned.InteractableSign
-    /// <summary>
-    /// Postfix of <see cref="InteractableSign.ReceiveChangeTextRequest(in ServerInvocationContext,string)"/>.
-    /// </summary>
-    private static void OnTextUpdateRequested(InteractableSign __instance, in ServerInvocationContext context, string newText)
+    private static void OnTextUpdated(InteractableSign __instance, string newText)
     {
-        Player pl = context.GetPlayer();
-        if (pl != null && __instance.transform.TryGetComponent(out BarricadeComponent bcomp))
+        if (!BarricadeManager.tryGetRegion(__instance.transform, out byte x, out byte y, out ushort plant, out BarricadeRegion region))
         {
-            bcomp.LastEditor = pl.channel.owner.playerID.steamID.m_SteamID;
-            bcomp.EditTick = UCWarfare.I.Debugger.Updates;
+            return;
         }
+
+        BarricadeDrop? drop = region.FindBarricadeByRootTransform(__instance.transform);
+        if (drop == null)
+        {
+            return;
+        }
+
+        BarricadeData data = drop.GetServersideData();
+
+        UCPlayer? instigator = null;
+        if (drop.model.TryGetComponent(out BarricadeComponent comp) && comp.EditTick >= UCWarfare.I.Debugger.Updates)
+        {
+            instigator = UCPlayer.FromCSteamID(comp.LastEditor);
+        }
+
+        SignTextChanged args = new SignTextChanged
+        {
+            Barricade = drop,
+            Instigator = instigator,
+            RegionPosition = new RegionCoord(x, y),
+            VehicleRegionIndex = plant,
+            Region = region,
+            Sign = __instance,
+            ServersideData = data
+        };
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, CancellationToken.None);
     }
-#pragma warning restore CS1580
 
     // SDG.Unturned.BarricadeManager
     /// <summary>
-    /// Transpiler for <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="EventDispatcher.BarricadeDestroyed"/>.
+    /// Transpiler for <see cref="BarricadeManager.destroyBarricade(BarricadeDrop, byte, byte, ushort)"/> to invoke <see cref="BarricadeDestroyed"/>.
     /// </summary>
     private static IEnumerable<CodeInstruction> DestroyBarricadeTranspiler(IEnumerable<CodeInstruction> instructions)
     {
@@ -178,37 +190,10 @@ internal static class EventPatches
             yield return instruction;
         }
     }
-    private static void DestroyBarricadeInvoker(BarricadeDrop barricade, byte x, byte y, ushort plant)
-    {
-        if (barricade is null) return;
-        BarricadeRegion region;
-        if (plant == ushort.MaxValue)
-        {
-            if (Regions.checkSafe(x, y))
-                region = BarricadeManager.regions[x, y];
-            else return;
-        }
-        else if (BarricadeManager.vehicleRegions.Count > plant)
-            region = BarricadeManager.vehicleRegions[plant];
-        else return;
 
-        ulong destroyer;
-        EDamageOrigin origin = EDamageOrigin.Unknown;
-        if (barricade.model.TryGetComponent(out DestroyerComponent comp))
-        {
-            destroyer = comp.Destroyer;
-            float time = comp.RelevantTime;
-            if (destroyer != 0 && Time.realtimeSinceStartup - time > 1f)
-                destroyer = 0ul;
-            else origin = comp.DamageOrigin;
-            UnityEngine.Object.Destroy(comp);
-        }
-        else destroyer = 0ul;
-        EventDispatcher.InvokeOnBarricadeDestroyed(barricade, barricade.GetServersideData(), destroyer, region, x, y, plant, origin);
-    }
-    // SDG.Unturned.BarricadeManager
+    // SDG.Unturned.StructureManager
     /// <summary>
-    /// Transpiler for <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="EventDispatcher.BarricadeDestroyed"/>.
+    /// Transpiler for <see cref="StructureManager.destroyStructure(StructureDrop, byte, byte, Vector3, bool)"/> to invoke <see cref="StructureDrop"/>.
     /// </summary>
     private static IEnumerable<CodeInstruction> DestroyStructureTranspiler(IEnumerable<CodeInstruction> instructions)
     {
@@ -229,7 +214,7 @@ internal static class EventPatches
                 yield return new CodeInstruction(OpCodes.Ldarg_1);
                 yield return new CodeInstruction(OpCodes.Ldarg_2);
                 yield return new CodeInstruction(OpCodes.Ldarg_3);
-                yield return new CodeInstruction(OpCodes.Ldarg_S, 4);
+                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4);
                 yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(DestroyStructureInvoker));
                 L.LogDebug("Inserted DestroyStructureInvoker call to StructureManager.destroyStructure.");
                 CodeInstruction old = new CodeInstruction(instruction);
@@ -243,12 +228,86 @@ internal static class EventPatches
         }
     }
 
+    private static void DestroyBarricadeInvoker(BarricadeDrop barricade, byte x, byte y, ushort plant)
+    {
+        if (barricade == null)
+            return;
+
+        BarricadeRegion region;
+        if (plant == ushort.MaxValue)
+        {
+            if (!Regions.checkSafe(x, y))
+                return;
+
+            region = BarricadeManager.regions[x, y];
+        }
+        else if (plant >= BarricadeManager.vehicleRegions.Count)
+        {
+            region = BarricadeManager.vehicleRegions[plant];
+        }
+        else
+        {
+            return;
+        }
+
+        ulong destroyer;
+        EDamageOrigin origin = EDamageOrigin.Unknown;
+        if (barricade.model.TryGetComponent(out DestroyerComponent comp))
+        {
+            destroyer = comp.Destroyer;
+            float time = comp.RelevantTime;
+            if (destroyer != 0 && Time.realtimeSinceStartup - time > 1f)
+                destroyer = 0ul;
+            else origin = comp.DamageOrigin;
+            UnityEngine.Object.Destroy(comp);
+        }
+        else
+        {
+            destroyer = 0ul;
+        }
+
+        UCPlayer? player = UCPlayer.FromID(destroyer);
+
+        BarricadeDestroyed args = new BarricadeDestroyed
+        {
+            Instigator = player,
+            Region = region,
+            Barricade = barricade,
+            ServersideData = barricade.GetServersideData(),
+            InstanceId = barricade.instanceID,
+            RegionPosition = new RegionCoord(x, y),
+            VehicleRegionIndex = plant,
+            DamageOrigin = origin,
+            InstigatorId = new CSteamID(destroyer),
+            // todo Primary and Secondary assets need filling
+        };
+
+        barricade.model.GetComponents(WarfareModule.EventDispatcher.WorkingDestroyInfo);
+        try
+        {
+            foreach (IDestroyInfo destroyInfo in WarfareModule.EventDispatcher.WorkingDestroyInfo)
+            {
+                destroyInfo.DestroyInfo = args;
+            }
+        }
+        finally
+        {
+            WarfareModule.EventDispatcher.WorkingDestroyInfo.Clear();
+        }
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
+    }
     
     private static void DestroyStructureInvoker(StructureDrop structure, byte x, byte y, Vector3 ragdoll, bool wasPickedUp)
     {
-        if (structure is null) return;
-        if (!StructureManager.tryGetRegion(x, y, out StructureRegion region))
+        if (structure == null)
             return;
+
+        if (!Regions.checkSafe(x, y))
+            return;
+
+        StructureRegion region = StructureManager.regions[x, y];
+
         ulong destroyer;
         EDamageOrigin origin = EDamageOrigin.Unknown;
         if (structure.model.TryGetComponent(out DestroyerComponent comp))
@@ -260,22 +319,56 @@ internal static class EventPatches
             else origin = comp.DamageOrigin;
             UnityEngine.Object.Destroy(comp);
         }
-        else destroyer = 0ul;
-        EventDispatcher.InvokeOnStructureDestroyed(structure, destroyer, ragdoll, wasPickedUp, region, x, y, origin);
+        else
+        {
+            destroyer = 0ul;
+        }
+
+        UCPlayer? player = UCPlayer.FromID(destroyer);
+
+        StructureDestroyed args = new StructureDestroyed
+        {
+            Instigator = player,
+            Region = region,
+            Structure = structure,
+            ServersideData = structure.GetServersideData(),
+            InstanceId = structure.instanceID,
+            RegionPosition = new RegionCoord(x, y),
+            DamageOrigin = origin,
+            InstigatorId = new CSteamID(destroyer)
+            // todo Primary and Secondary assets need filling
+        };
+
+        structure.model.GetComponents(WarfareModule.EventDispatcher.WorkingDestroyInfo);
+        try
+        {
+            foreach (IDestroyInfo destroyInfo in WarfareModule.EventDispatcher.WorkingDestroyInfo)
+            {
+                destroyInfo.DestroyInfo = args;
+            }
+        }
+        finally
+        {
+            WarfareModule.EventDispatcher.WorkingDestroyInfo.Clear();
+        }
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
     }
+
     // SDG.Unturned.VehicleManager.addVehicle
     /// <summary>
-    /// Postfix of <see cref="VehicleManager.addVehicle(Guid,ushort,ushort,float,Vector3,Quaternion,bool,bool,bool,bool,ushort,bool,ushort,ushort,CSteamID,CSteamID,bool,CSteamID[],byte[][],uint,byte,NetId)"/> to call OnVehicleSpawned
+    /// Postfix of <see cref="VehicleManager.addVehicle(Guid,ushort,ushort,float,Vector3,Quaternion,bool,bool,bool,bool,ushort,bool,ushort,ushort,CSteamID,CSteamID,bool,CSteamID[],byte[][],uint,byte,NetId,Color32)"/> to call OnVehicleSpawned
     /// </summary>
     private static void OnVehicleSpawned(Guid assetGuid, ushort skinID, ushort mythicID, float roadPosition, Vector3 point, Quaternion angle,
         bool sirens, bool blimp, bool headlights, bool taillights, ushort fuel, bool isExploded, ushort health, ushort batteryCharge, CSteamID owner,
-        CSteamID group, bool locked, CSteamID[] passengers, byte[][] turrets, uint instanceID, byte tireAliveMask, NetId netId, InteractableVehicle __result)
+        CSteamID group, bool locked, CSteamID[] passengers, byte[][] turrets, uint instanceID, byte tireAliveMask, NetId netId, Color32 paintColor, InteractableVehicle __result)
     {
         if (__result != null)
         {
             EventDispatcher.InvokeOnVehicleSpawned(__result);
         }
     }
+
     // SDG.Unturned.InteractableTrap.OnTriggerEnter
     /// <summary>
     /// Prefix of <see cref="InteractableTrap.OnTriggerEnter(Collider)"/> to change explosion behavior.

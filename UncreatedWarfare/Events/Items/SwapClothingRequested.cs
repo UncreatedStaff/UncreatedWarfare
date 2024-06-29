@@ -2,7 +2,7 @@
 using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Items;
-public class SwapClothingRequested : BreakablePlayerEvent
+public class SwapClothingRequested : CancellablePlayerEvent
 {
     public bool IsRemoving { get; }
     public ClothingType Type { get; }

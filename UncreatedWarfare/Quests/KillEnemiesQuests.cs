@@ -15,13 +15,9 @@ namespace Uncreated.Warfare.Quests.Types;
 [QuestData(QuestType.KillEnemies)]
 public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnemiesQuest.State, KillEnemiesQuest>
 {
-    // dynamic int allows for constants, ranges, or sets
     public DynamicIntegerValue KillCount;
-    // > 0 will run the Tick function in trackers
     public override int TickFrequencySeconds => 0;
-    // just copy paste this couldn't do it with generics.
     protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state, IQuestPreset? preset) => new Tracker(this, player, ref state, preset);
-    // used to read from JSON, add a case for each property.
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -30,41 +26,35 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
                 KillCount = new DynamicIntegerValue(20);
         }
     }
-    // States keep track of a set variation, used to keep quests synced between players and over restarts.
     public struct State : IQuestState<KillEnemiesQuest>
     {
-        // in this case we store the resulting value of kill threshold in Init(..)
         [RewardField("k")]
         public DynamicIntegerValue.Choice KillThreshold;
 
         public readonly DynamicIntegerValue.Choice FlagValue => KillThreshold;
         public void CreateFromTemplate(KillEnemiesQuest data)
         {
-            KillThreshold = data.KillCount.GetValue(); // get value picks a random value if its a range or set, otherwise returns the constant.
+            KillThreshold = data.KillCount.GetValue();
         }
         public readonly bool IsEligable(UCPlayer player) => true;
 
-        // same as above, reading from json, except we're reading the state this time.
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
             if (prop.Equals("kills", StringComparison.Ordinal))
                 KillThreshold = DynamicIntegerValue.ReadChoice(ref reader);
         }
-        // writing state, not sure if this will be used or not.
         public readonly void WriteQuestState(Utf8JsonWriter writer)
         {
             writer.WriteProperty("kills", KillThreshold);
         }
     }
 
-    // one tracker is created per player working on the quest. Add the notify interfaces defined in QuestsMisc.cs and add cases for them in QuestManager under the events region
     public class Tracker(BaseQuestData data, UCPlayer? target, ref State questState, IQuestPreset? preset) : BaseQuestTracker(data, target, questState, preset), INotifyOnKill
     {
-        private readonly int _killThreshold = questState.KillThreshold.InsistValue(); // insisting for a value asks for ONE value (defined with a $, otherwise it returns 0)
+        private readonly int _killThreshold = questState.KillThreshold.InsistValue();
         private int _kills;
         protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
-        // loads a tracker from a state instead of randomly picking values each time.
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
             if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
@@ -86,8 +76,6 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
             }
         }
         public override void ResetToDefaults() => _kills = 0;
-        // translate the description of the quest, pass any data that will show up in the description once we make them
-        //                                         in this case, "Kill {_kills}/{KillThreshold} enemies."
         protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, Player!, _kills, _killThreshold);
         public override void ManualComplete()
         {

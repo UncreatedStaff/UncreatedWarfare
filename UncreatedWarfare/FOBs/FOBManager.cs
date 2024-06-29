@@ -16,6 +16,7 @@ using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs.UI;
 using Uncreated.Warfare.Gamemodes;

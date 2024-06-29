@@ -2,7 +2,7 @@
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Vehicles;
-public class ExitVehicleRequested : BreakablePlayerEvent
+public class ExitVehicleRequested : CancellablePlayerEvent
 {
     private readonly InteractableVehicle _vehicle;
     private Vector3 pendingLocation;

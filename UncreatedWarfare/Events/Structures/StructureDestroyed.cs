@@ -1,73 +1,76 @@
 ﻿using SDG.Unturned;
-using Uncreated.SQL;
-using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Structures;
+using Steamworks;
+using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Structures;
-public class StructureDestroyed : EventState, IBuildableDestroyedEvent
+
+/// <summary>
+/// Event listener args which handles a patch on <see cref="StructureManager.destroyStructure(StructureDrop, byte, byte, Vector3, bool)"/>.
+/// </summary>
+public class StructureDestroyed : IBuildableDestroyedEvent
 {
-    private readonly UCPlayer? instigator;
-    private readonly ulong instigatorId;
-    private readonly StructureDrop drop;
-    private readonly StructureData data;
-    private readonly StructureRegion region;
-    private readonly byte x;
-    private readonly byte y;
-    private readonly bool _wasSaved;
-    private readonly bool _wasPickedUp;
-    private readonly Vector3 _ragdoll;
-    private readonly SqlItem<SavedStructure>? _save;
-    private IBuildable? _buildable;
-    public UCPlayer? Instigator => instigator;
-    public ulong InstigatorId => instigatorId;
-    public StructureDrop Structure => drop;
-    public StructureData ServersideData => data;
-    public StructureRegion Region => region;
-    public Transform Transform => drop.model;
-    public byte RegionPosX => x;
-    public byte RegionPosY => y;
-    public uint InstanceID => drop.instanceID;
-    public bool IsSaved => _wasSaved;
-    public bool WasPickedUp => _wasPickedUp;
-    public Vector3 Ragdoll => _ragdoll;
-    public SqlItem<SavedStructure>? Save => _save;
-    public IBuildable Buildable => _buildable ??= new UCStructure(Structure);
+    private IBuildable? _buildableCache;
+
+    /// <summary>
+    /// Player that destroyed the structure, if any.
+    /// </summary>
+    public required UCPlayer? Instigator { get; init; }
+
+    /// <summary>
+    /// Steam ID of the player that destroyed the structure, or <see cref="CSteamID.Nil"/>.
+    /// </summary>
+    public required CSteamID InstigatorId { get; init; }
+
+    /// <summary>
+    /// The structure's object and model data.
+    /// </summary>
+    public required StructureDrop Structure { get; init; }
+
+    /// <summary>
+    /// The structure's server-side data.
+    /// </summary>
+    public required StructureData ServersideData { get; init; }
+
+    /// <summary>
+    /// Coordinate of the structure region in <see cref="StructureManager.regions"/>.
+    /// </summary>
+    public required RegionCoord RegionPosition { get; init; }
+
+    /// <summary>
+    /// The region the structure was placed in.
+    /// </summary>
+    public required StructureRegion Region { get; init; }
+
+    /// <summary>
+    /// Origin of the damage that caused the structure to be destroyed.
+    /// </summary>
+    public required EDamageOrigin DamageOrigin { get; init; }
+
+    /// <summary>
+    /// Instance Id of the structure that was destroyed.
+    /// </summary>
+    public required uint InstanceId { get; init; }
+
+    /// <summary>
+    /// Primary item used to destroy the structure.
+    /// </summary>
+    public IAssetLink<ItemAsset>? PrimaryAsset { get; init; }
+
+    /// <summary>
+    /// Secondary item used to destroy the structure.
+    /// </summary>
+    public IAssetLink<ItemAsset>? SecondaryAsset { get; init; }
+
+    /// <summary>
+    /// The Unity model of the structure.
+    /// </summary>
+    public Transform Transform => Structure.model;
+
+    /// <summary>
+    /// Abstracted <see cref="IBuildable"/> of the structure.
+    /// </summary>
+    public IBuildable Buildable => _buildableCache ??= new BuildableStructure(Structure);
     object IBuildableDestroyedEvent.Region => Region;
-    public EDamageOrigin DamageOrigin { get; }
-    public UnturnedAssetReference PrimaryAsset { get; }
-    public UnturnedAssetReference SecondaryAsset { get; }
-    internal StructureDestroyed(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, Vector3 ragoll, bool wasPickedUp, EDamageOrigin damageOrigin, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset) : base()
-    {
-        this.instigator = instigator;
-        this.instigatorId = instigatorId;
-        drop = structure;
-        data = structureData;
-        this.region = region;
-        this.x = x;
-        this.y = y;
-        _ragdoll = ragoll;
-        _wasPickedUp = wasPickedUp;
-        _save = save;
-        ListSqlConfig<SavedStructure>? m = save?.Manager;
-        DamageOrigin = damageOrigin;
-        PrimaryAsset = primaryAsset;
-        SecondaryAsset = secondaryAsset;
-        if (m is not null)
-        {
-            m.WriteWait();
-            try
-            {
-                if (save!.Item != null)
-                {
-                    _buildable = save.Item.Buildable;
-                    _wasSaved = true;
-                }
-            }
-            finally
-            {
-                m.WriteRelease();
-            }
-        }
-    }
 }

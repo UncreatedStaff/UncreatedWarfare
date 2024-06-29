@@ -2,7 +2,7 @@
 using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Items;
-public class ItemMoveRequested : BreakablePlayerEvent
+public class ItemMoveRequested : CancellablePlayerEvent
 {
     public Page OldPage { get; }
     public Page NewPage { get; set; }

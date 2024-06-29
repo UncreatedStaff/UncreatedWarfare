@@ -1,40 +1,47 @@
 ﻿using SDG.Unturned;
+using Steamworks;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Models.Assets;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Models.Buildables;
+using Uncreated.Warfare.Events.Barricades;
+using Uncreated.Warfare.Events.Structures;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events;
-public abstract class SalvageRequested : BreakablePlayerEvent, IBuildableDestroyedEvent
-{
-    protected IBuildable? BuildableCache;
-    protected readonly object RegionObj;
-    protected BuildableSave? BuildableSave;
-    protected bool IsStructureSaved;
 
-    private readonly byte _x;
-    private readonly byte _y;
-    private readonly uint _instanceId;
-    public byte RegionPosX => _x;
-    public byte RegionPosY => _y;
-    public uint InstanceID => _instanceId;
-    public bool IsSaved => IsStructureSaved;
+/// <summary>
+/// Base class for <see cref="SalvageBarricadeRequested"/> and <see cref="SalvageStructureRequested"/>.
+/// </summary>
+public abstract class SalvageRequested(object region) : CancellablePlayerEvent, IBuildableDestroyedEvent
+{
+    protected readonly object RegionObj = region;
+    protected IBuildable? BuildableCache;
+    protected BuildableSave? SaveCache;
+
+    /// <summary>
+    /// Abstracted <see cref="IBuildable"/> of the buildable.
+    /// </summary>
     public abstract IBuildable Buildable { get; }
-    public BuildableSave? Save => BuildableSave;
-    public Transform Transform { get; protected set; }
-    UCPlayer? IBuildableDestroyedEvent.Instigator => Player;
+
+    /// <summary>
+    /// Coordinate of the barricade region in <see cref="BarricadeManager.regions"/>.
+    /// </summary>
+    public required RegionCoord RegionPosition { get; init; }
+
+    /// <summary>
+    /// Instance Id of the buildable.
+    /// </summary>
+    public required uint InstanceId { get; init; }
+
+    /// <summary>
+    /// The Unity model of the buildable.
+    /// </summary>
+    public abstract Transform Transform { get; }
+
+    EDamageOrigin IBuildableDestroyedEvent.DamageOrigin => EDamageOrigin.Unknown;
+    IAssetLink<ItemAsset>? IBuildableDestroyedEvent.PrimaryAsset => null;
+    IAssetLink<ItemAsset>? IBuildableDestroyedEvent.SecondaryAsset => null;
+    UCPlayer IBuildableDestroyedEvent.Instigator => Player;
     object IBuildableDestroyedEvent.Region => RegionObj;
-    ulong IBuildableDestroyedEvent.InstigatorId => Player.Steam64;
-    public EDamageOrigin DamageOrigin => EDamageOrigin.Unknown;
-    public UnturnedAssetReference PrimaryAsset { get; }
-    public UnturnedAssetReference SecondaryAsset { get; }
-    protected SalvageRequested(UCPlayer player, object region, byte x, byte y, uint instanceId, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset) : base(player)
-    {
-        RegionObj = region;
-        _x = x;
-        _y = y;
-        _instanceId = instanceId;
-        PrimaryAsset = primaryAsset;
-        SecondaryAsset = secondaryAsset;
-    }
+    CSteamID IBuildableDestroyedEvent.InstigatorId => Player.CSteamID;
 }

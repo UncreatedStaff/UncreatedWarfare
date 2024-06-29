@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
 
 namespace Uncreated.Warfare.Events.Players;
-public sealed class PlayerAided : BreakablePlayerEvent
+public sealed class PlayerAided : CancellablePlayerEvent
 {
     public UCPlayer Medic { get; }
     public ulong MedicId { get; }

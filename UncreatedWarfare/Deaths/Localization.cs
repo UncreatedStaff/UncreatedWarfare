@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -13,13 +15,19 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Deaths;
-internal static class Localization
+internal class Localization
 {
+    private readonly EventDispatcher2 _dispatcher;
+    public Localization(EventDispatcher2 dispatcher)
+    {
+        _dispatcher = dispatcher;
+    }
+
     /*
      * {0}  = Dead player's name
      * {1} ?= Killer's name
@@ -29,9 +37,9 @@ internal static class Localization
      * {5} ?= Player 3
      * {6} ?= Item 2
      */
-    private static readonly Dictionary<string, DeathCause[]> DeathTranslations = new Dictionary<string, DeathCause[]>(48);
+    private readonly Dictionary<string, DeathCause[]> DeathTranslations = new Dictionary<string, DeathCause[]>(48);
 
-    private static readonly DeathCause[] DefaultValues =
+    private readonly DeathCause[] DefaultValues =
     {
         new DeathCause(EDeathCause.ACID)
         {
@@ -461,7 +469,7 @@ internal static class Localization
         },
         new DeathCause // mortar override
         {
-            ItemCause = new DynamicAssetValue<ItemAsset>(new Guid("d6424d034309417dbc5f17814af905a8")).GetValue(),
+            ItemCause = new AssetParameterTemplate<ItemAsset>(new Guid("d6424d034309417dbc5f17814af905a8")).CreateValue(null!),
             Translations =
             [
                 new DeathTranslation(DeathFlags.None, "{0} was blown up by a mortar shell."),
@@ -479,7 +487,7 @@ internal static class Localization
             ]
         }
     };
-    public static void BroadcastDeath(PlayerDied e, DeathMessageArgs args)
+    public void BroadcastDeath(PlayerDied e, DeathMessageArgs args)
     {
         bool sentInConsole = false;
         // red if its a teamkill, otherwise white
@@ -509,14 +517,26 @@ internal static class Localization
 
         e.LocalizationArgs = args;
         e.Message = str!;
-        EventDispatcher.InvokeOnPlayerDied(e);
 
-        if (e.WasEffectiveKill && e.Killer is { PendingCheaterDeathBan: false } && Util.IsSuspiciousDeath(e.Killer.Player, e.Cause, e.PrimaryAsset, e.SecondaryItem, e.Limb,
-                e.KillDistance, e.WasEffectiveKill, e.WasSuicide, e.WasTeamkill))
+        // todo move to somewhere else
+        if (e.Player.Player.TryGetPlayerData(out UCPlayerData data))
+            data.CancelDeployment();
+
+        PlayerDied toDispatch = e;
+
+        // invoke PlayerDied event
+        UniTask.Create(async () =>
         {
-            e.Killer.PendingCheaterDeathBan = true;
-            UCWarfare.I.StartCoroutine(BanInRandomTime(e.Killer.Steam64, e.Killer.SteamPlayer.joined));
-        }
+            await _dispatcher.DispatchEventAsync(toDispatch);
+            await UniTask.SwitchToMainThread();
+
+            if (e.WasEffectiveKill && e.Killer is { PendingCheaterDeathBan: false } && Util.IsSuspiciousDeath(e.Killer.Player, e.Cause, e.PrimaryAsset, e.SecondaryItem, e.Limb,
+                    e.KillDistance, e.WasEffectiveKill, e.WasSuicide, e.WasTeamkill))
+            {
+                e.Killer.PendingCheaterDeathBan = true;
+                UCWarfare.I.StartCoroutine(BanInRandomTime(e.Killer.Steam64, e.Killer.SteamPlayer.joined));
+            }
+        });
     }
 
     private static IEnumerator<WaitForSecondsRealtime> BanInRandomTime(ulong steam64, float joined)
@@ -559,6 +579,7 @@ internal static class Localization
         else
             ActionLog.Add(ActionLogType.Death, log, e.Player.Steam64);
     }
+
     private const string JsonComment = @"/*
 This file details all the different combinations of attributes that form a death message.
 These attributes are represented by 6 formatting arguments:
@@ -606,7 +627,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
 */
 
 ";
-    public static void Write(string? path, LanguageInfo language, bool writeMissing)
+    public void Write(string? path, LanguageInfo language, bool writeMissing)
     {
         if (path == null)
         {
@@ -675,7 +696,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         writer.WriteEndArray();
         writer.Dispose();
     }
-    internal static void Reload()
+    internal void Reload()
     {
         Warfare.Localization.ClearSection(TranslationSection.Deaths);
         Warfare.Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(DefaultValues.SelectMany(x => x.Translations).Count()));
@@ -736,7 +757,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             }
         }
     }
-    public static string TranslateMessage(LanguageInfo language, CultureInfo culture, DeathMessageArgs args)
+    public string TranslateMessage(LanguageInfo language, CultureInfo culture, DeathMessageArgs args)
     {
         if (string.IsNullOrEmpty(args.ItemName)) args.Flags &= ~DeathFlags.Item;
         if (string.IsNullOrEmpty(args.Item2Name)) args.Flags &= ~DeathFlags.Item2;
@@ -767,7 +788,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         return val;
     }
 
-    private static int FindDeathCause(LanguageInfo language, DeathCause[] causes, ref DeathMessageArgs args)
+    private int FindDeathCause(LanguageInfo language, DeathCause[] causes, ref DeathMessageArgs args)
     {
         while (true)
         {
@@ -790,7 +811,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                     for (int i = 0; i < causes.Length; ++i)
                     {
                         DeathCause cause = causes[i];
-                        if (cause.VehicleCause.HasValue && cause.VehicleCause.Value.IsMatch(guid)) return i;
+                        if (cause.VehicleCause != null && cause.VehicleCause.IsMatch(guid)) return i;
                     }
                 }
                 else
@@ -798,7 +819,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                     for (int i = 0; i < causes.Length; ++i)
                     {
                         DeathCause cause = causes[i];
-                        if (cause.ItemCause.HasValue && cause.ItemCause.Value.IsMatch(guid)) return i;
+                        if (cause.ItemCause != null && cause.ItemCause.IsMatch(guid)) return i;
                     }
                 }
             }
@@ -824,7 +845,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         }
     }
 
-    private static string? Translate(LanguageInfo language, CultureInfo culture, DeathCause cause, DeathMessageArgs args)
+    private string? Translate(LanguageInfo language, CultureInfo culture, DeathCause cause, DeathMessageArgs args)
     {
         DeathFlags flags = args.Flags;
     redo:
@@ -932,14 +953,14 @@ public struct DeathMessageArgs
 public class DeathCause : IEquatable<DeathCause>, ICloneable
 {
     public EDeathCause? Cause;
-    public DynamicAssetValue<ItemAsset>.Choice? ItemCause;
-    public DynamicAssetValue<VehicleAsset>.Choice? VehicleCause;
+    public QuestParameterValue<Guid>? ItemCause;
+    public QuestParameterValue<Guid>? VehicleCause;
     public string? CustomKey;
     public DeathTranslation[] Translations;
 
     public DeathCause() { }
 
-    private DeathCause(EDeathCause? cause, DynamicAssetValue<ItemAsset>.Choice? itemCause, DynamicAssetValue<VehicleAsset>.Choice? vehicleCause, string? customKey, DeathTranslation[] translations)
+    private DeathCause(EDeathCause? cause, QuestParameterValue<Guid>? itemCause, QuestParameterValue<Guid>? vehicleCause, string? customKey, DeathTranslation[] translations)
     {
         Cause = cause;
         ItemCause = itemCause;
@@ -984,7 +1005,7 @@ public class DeathCause : IEquatable<DeathCause>, ICloneable
                     {
                         CustomKey = null;
                         Cause = null;
-                        ItemCause = DynamicAssetValue<ItemAsset>.ReadChoice(ref reader);
+                        ItemCause = AssetParameterTemplate<ItemAsset>.ReadValueJson(ref reader);
                         VehicleCause = null;
                     }
                     else if (prop.Equals("vehicle-cause", StringComparison.OrdinalIgnoreCase))
@@ -992,7 +1013,7 @@ public class DeathCause : IEquatable<DeathCause>, ICloneable
                         CustomKey = null;
                         Cause = null;
                         ItemCause = null;
-                        VehicleCause = DynamicAssetValue<VehicleAsset>.ReadChoice(ref reader);
+                        VehicleCause = AssetParameterTemplate<VehicleAsset>.ReadValueJson(ref reader);
                     }
                     else if (prop.Equals("custom-key", StringComparison.OrdinalIgnoreCase))
                     {
@@ -1036,15 +1057,15 @@ public class DeathCause : IEquatable<DeathCause>, ICloneable
         {
             writer.WriteString("death-cause", Cause.ToString().ToLower());
         }
-        else if (ItemCause.HasValue)
+        else if (ItemCause != null)
         {
             writer.WritePropertyName("item-cause");
-            ItemCause.Value.Write(writer);
+            ItemCause.WriteJson(writer);
         }
-        else if (VehicleCause.HasValue)
+        else if (VehicleCause != null)
         {
             writer.WritePropertyName("vehicle-cause");
-            VehicleCause.Value.Write(writer);
+            VehicleCause.WriteJson(writer);
         }
         else if (CustomKey is not null)
         {
@@ -1093,14 +1114,14 @@ public class DeathCause : IEquatable<DeathCause>, ICloneable
         if (other.Cause.HasValue && other.Cause.Value != Cause!.Value)
             return false;
 
-        if (other.ItemCause.HasValue != ItemCause.HasValue)
+        if ((other.ItemCause != null) != (ItemCause != null))
             return false;
-        if (other.ItemCause.HasValue && !other.ItemCause.Value.Equals(ItemCause!.Value))
+        if (other.ItemCause != null && !other.ItemCause.Equals(ItemCause))
             return false;
 
-        if (other.VehicleCause.HasValue != VehicleCause.HasValue)
+        if ((other.VehicleCause != null) != (VehicleCause != null))
             return false;
-        if (other.VehicleCause.HasValue && !other.VehicleCause.Value.Equals(VehicleCause!.Value))
+        if (other.VehicleCause != null && !other.VehicleCause.Equals(VehicleCause))
             return false;
 
         return string.Equals(other.CustomKey, CustomKey, StringComparison.Ordinal);

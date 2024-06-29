@@ -101,7 +101,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
     /// <summary>
     /// Read from a JSON reader.
     /// </summary>
-    public static SingleParameterTemplate? ReadJson(ref Utf8JsonReader reader)
+    public static StringParameterTemplate? ReadJson(ref Utf8JsonReader reader)
     {
         switch (reader.TokenType)
         {
@@ -110,10 +110,32 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
 
             case JsonTokenType.String:
                 string str = reader.GetString()!;
-                return new SingleParameterTemplate(str.AsSpan());
+                return new StringParameterTemplate(str.AsSpan());
 
             default:
-                throw new JsonException($"Unexpected token while reading string value for a quest parameter.");
+                throw new JsonException("Unexpected token while reading string value for a quest parameter.");
+        }
+    }
+
+    /// <summary>
+    /// Read a value from a JSON reader.
+    /// </summary>
+    public static QuestParameterValue<string>? ReadValueJson(ref Utf8JsonReader reader)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+
+            case JsonTokenType.String:
+                string str = reader.GetString()!;
+                if (!TryParseValue(str.AsSpan(), out QuestParameterValue<string>? value))
+                    throw new FormatException("Failed to parse quest parameter value.");
+
+                return value;
+
+            default:
+                throw new JsonException("Unexpected token while reading string value for a quest parameter.");
         }
     }
 
@@ -291,7 +313,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
         }
     }
 
-    protected class StringParameterValue : QuestParameterValue<string>
+    protected class StringParameterValue : QuestParameterValue<string>, IEquatable<StringParameterValue>
     {
         private string? _value;
         private string[]? _values;
@@ -333,6 +355,24 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
 
                     break;
             }
+        }
+
+        public StringParameterValue(string? value, ParameterValueType valType)
+        {
+            ValueType = valType;
+            SelectionType = ParameterSelectionType.Selective;
+
+            _value = value;
+        }
+
+        public StringParameterValue(string? value, string[]? list, ParameterValueType valType)
+        {
+            ValueType = valType;
+            SelectionType = ParameterSelectionType.Inclusive;
+
+            _value = value;
+            _values = list;
+            _isEmptySet = valType == ParameterValueType.List && list is not { Length: > 0 };
         }
 
         public StringParameterValue(string? value, StringParameterTemplate template)
@@ -452,6 +492,44 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
                 throw new InvalidOperationException("Not a selective or constant parameter value.");
 
             return _value!;
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(QuestParameterValue<string>? other)
+        {
+            return other is StringParameterValue v && Equals(v);
+        }
+
+        /// <inheritdoc />
+        public bool Equals(StringParameterValue other)
+        {
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+                return string.Equals(_value, other._value, StringComparison.Ordinal);
+
+            if (ValueType != other.ValueType)
+                return false;
+
+            if (ValueType == ParameterValueType.Wildcard && other.ValueType == ParameterValueType.Wildcard)
+                return true;
+
+            if (ValueType == ParameterValueType.Range)
+                return false;
+
+            if (_isEmptySet || _values == null || _values.Length == 0)
+            {
+                return other._isEmptySet || other._values == null || other._values.Length == 0;
+            }
+
+            if (other._isEmptySet || other._values == null || other._values.Length == 0)
+                return false;
+
+            for (int i = 0; i < _values.Length; ++i)
+            {
+                if (!string.Equals(_values[i], other._values[i], StringComparison.Ordinal))
+                    return false;
+            }
+
+            return true;
         }
 
         public override string ToString()

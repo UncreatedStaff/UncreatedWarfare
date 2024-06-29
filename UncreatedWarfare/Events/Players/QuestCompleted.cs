@@ -3,7 +3,7 @@ using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Events.Players;
 
-public class QuestCompleted : BreakablePlayerEvent
+public class QuestCompleted : CancellablePlayerEvent
 {
     private readonly BaseQuestTracker _tracker;
     public BaseQuestTracker Tracker => _tracker;

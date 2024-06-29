@@ -2,7 +2,7 @@
 using System;
 
 namespace Uncreated.Warfare.Events.Items;
-public class CraftRequested : BreakablePlayerEvent
+public class CraftRequested : CancellablePlayerEvent
 {
     private ItemAsset _item;
     private Blueprint _blueprint;

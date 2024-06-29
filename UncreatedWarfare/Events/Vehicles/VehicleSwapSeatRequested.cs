@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
 
 namespace Uncreated.Warfare.Events.Vehicles;
-public class VehicleSwapSeatRequested : BreakablePlayerEvent
+public class VehicleSwapSeatRequested : CancellablePlayerEvent
 {
     private readonly InteractableVehicle _vehicle;
     private readonly byte sourceSeat;
