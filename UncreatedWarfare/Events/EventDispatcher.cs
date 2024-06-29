@@ -37,7 +37,7 @@ public static class EventDispatcher
     public static event EventDelegate<ChangeVehicleLockRequested> VehicleLockChangeRequested;
 
     public static event EventDelegate<BarricadeDestroyed> BarricadeDestroyed;
-    public static event EventDelegate<LandmineExploding> LandmineExploding;
+    public static event EventDelegate<TriggerTrapRequested> LandmineExploding;
 
     public static event EventDelegate<StructureDestroyed> StructureDestroyed;
     public static event EventDelegate<DamageStructureRequested> DamageStructureRequested;
@@ -520,8 +520,8 @@ public static class EventDispatcher
     internal static void InvokeOnLandmineExploding(UCPlayer? owner, BarricadeDrop barricade, InteractableTrap trap, UCPlayer triggerer, GameObject triggerObject, ref bool shouldExplode)
     {
         if (LandmineExploding == null || !shouldExplode) return;
-        LandmineExploding request = new LandmineExploding(owner, barricade, trap, triggerer, triggerObject, shouldExplode);
-        foreach (EventDelegate<LandmineExploding> inv in LandmineExploding.GetInvocationList().Cast<EventDelegate<LandmineExploding>>())
+        TriggerTrapRequested request = new TriggerTrapRequested(owner, barricade, trap, triggerer, triggerObject, shouldExplode);
+        foreach (EventDelegate<TriggerTrapRequested> inv in LandmineExploding.GetInvocationList().Cast<EventDelegate<TriggerTrapRequested>>())
         {
             if (!request.CanContinue) break;
             TryInvoke(inv, request, nameof(LandmineExploding));

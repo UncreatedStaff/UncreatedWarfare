@@ -20,4 +20,14 @@ public interface ICancellable
     /// </summary>
     /// <param name="cancelAction">Also cancel whatever action the event represents, such as placing a structure.</param>
     void Cancel(bool cancelAction = true);
+
+    /// <summary>
+    /// Cancel only the action but allow more event handlers to be ran.
+    /// </summary>
+    void CancelAction();
+
+    /// <summary>
+    /// Resume (or un-cancel) the action.
+    /// </summary>
+    void ResumeAction();
 }

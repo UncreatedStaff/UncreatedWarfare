@@ -1,24 +1,20 @@
-﻿using HarmonyLib;
+﻿using DanielWillett.ReflectionTools;
+using HarmonyLib;
 using JetBrains.Annotations;
 using SDG.Unturned;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Sockets;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Module = SDG.Framework.Modules.Module;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable UnusedMember.Local
@@ -30,8 +26,33 @@ public static partial class Patches
 {
     public static HarmonyLib.Harmony Patcher = new HarmonyLib.Harmony("net.uncreated.warfare");
     /// <summary>Patch methods</summary>
-    public static void DoPatching()
+    public static void DoPatching(Module module)
     {
+        // patch all IHarmonyPatch instances in all referenced assemblies.
+        foreach (Type type in Accessor.GetTypesSafe(module.assemblies).Where(typeof(IHarmonyPatch).IsAssignableFrom))
+        {
+            if (type.IsAbstract)
+                continue;
+
+            ConstructorInfo? ctor = type.GetConstructor(Type.EmptyTypes);
+            if (ctor == null)
+            {
+                L.LogWarning($"IHarmonyPatch {Accessor.Formatter.Format(type)} does not have a parameter-less constructor.");
+                continue;
+            }
+
+            IHarmonyPatch patch = (IHarmonyPatch)ctor.Invoke(Array.Empty<object>());
+            try
+            {
+                patch.Patch();
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"Failed to patch {Accessor.Formatter.Format(type)}.");
+                L.LogError(ex);
+            }
+        }
+
         Patcher.PatchAll();
         if (!UCWarfare.Config.DisableMissingAssetKick)
             InternalPatches.ServerMessageHandler_ValidateAssets_Patch.Patch(Patcher);
@@ -39,6 +60,27 @@ public static partial class Patches
     /// <summary>Unpatch methods</summary>
     public static void Unpatch()
     {
+        foreach (Type type in Accessor.GetTypesSafe(AppDomain.CurrentDomain.GetAssemblies()).Where(typeof(IHarmonyPatch).IsAssignableFrom))
+        {
+            if (type.IsAbstract)
+                continue;
+
+            ConstructorInfo? ctor = type.GetConstructor(Type.EmptyTypes);
+            if (ctor == null)
+                continue;
+            
+            IHarmonyPatch patch = (IHarmonyPatch)ctor.Invoke(Array.Empty<object>());
+            try
+            {
+                patch.Unpatch();
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"Failed to unpatch {Accessor.Formatter.Format(type)}.");
+                L.LogError(ex);
+            }
+        }
+
         Patcher.UnpatchAll("net.uncreated.warfare");
     }
     public delegate void BarricadeDroppedEventArgs(BarricadeDrop drop, BarricadeRegion region, Barricade barricade, Vector3 point, Quaternion rotation, ulong owner, ulong group);

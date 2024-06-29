@@ -24,4 +24,16 @@ public class CancellableEvent : ICancellable
         IsCancelled = true;
         IsActionCancelled = cancelAction;
     }
+
+    /// <inheritdoc />
+    public virtual void CancelAction()
+    {
+        IsActionCancelled = true;
+    }
+
+    /// <inheritdoc />
+    public virtual void ResumeAction()
+    {
+        IsActionCancelled = true;
+    }
 }

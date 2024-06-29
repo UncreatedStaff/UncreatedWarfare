@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Events.Components;
 
 #pragma warning disable IDE0051
-internal class ThrowableComponent : MonoBehaviour
+public class ThrowableComponent : MonoBehaviour
 {
     internal ulong Owner;
     internal Guid Throwable;

@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections;
@@ -6,13 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
@@ -32,7 +29,6 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags.UI;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
@@ -44,7 +40,6 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
@@ -282,9 +277,9 @@ public static class EventFunctions
             UCWarfare.I.UpdateLangs(player, false);
     }
 
-    internal static void OnLandmineExploding(LandmineExploding e)
+    internal static void OnLandmineExploding(TriggerTrapRequested e)
     {
-        if (UCWarfare.Config.BlockLandmineFriendlyFire && e.Triggerer.GetTeam() == e.TrapBarricade.GetServersideData().group.GetTeam() || e.Triggerer.VanishMode)
+        if (UCWarfare.Config.BlockLandmineFriendlyFire && e.TriggeringPlayer.GetTeam() == e.TrapBarricade.GetServersideData().group.GetTeam() || e.TriggeringPlayer.VanishMode)
         {
             e.Break();
         }
