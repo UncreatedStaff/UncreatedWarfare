@@ -11,6 +11,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Structures;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits.Items;
@@ -363,10 +364,15 @@ internal static class EventPatches
         bool sirens, bool blimp, bool headlights, bool taillights, ushort fuel, bool isExploded, ushort health, ushort batteryCharge, CSteamID owner,
         CSteamID group, bool locked, CSteamID[] passengers, byte[][] turrets, uint instanceID, byte tireAliveMask, NetId netId, Color32 paintColor, InteractableVehicle __result)
     {
-        if (__result != null)
+        if (__result == null)
+            return;
+
+        VehicleSpawned args = new VehicleSpawned
         {
-            EventDispatcher.InvokeOnVehicleSpawned(__result);
-        }
+            Vehicle = __result
+        };
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
     }
 
     // SDG.Unturned.InteractableTrap.OnTriggerEnter

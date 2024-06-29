@@ -34,7 +34,7 @@ public static class EventDispatcher
     public static event EventDelegate<EnterVehicle> EnterVehicle;
     public static event EventDelegate<VehicleSwapSeat> VehicleSwapSeat;
     public static event EventDelegate<VehicleDestroyed> VehicleDestroyed;
-    public static event EventDelegate<VehicleLockChangeRequested> VehicleLockChangeRequested;
+    public static event EventDelegate<ChangeVehicleLockRequested> VehicleLockChangeRequested;
 
     public static event EventDelegate<BarricadeDestroyed> BarricadeDestroyed;
     public static event EventDelegate<LandmineExploding> LandmineExploding;
@@ -270,8 +270,8 @@ public static class EventDispatcher
         if (VehicleLockChangeRequested == null || vehicle == null || !vehicle.isDriven) return;
         UCPlayer? pl2 = UCPlayer.FromSteamPlayer(vehicle.passengers[0].player);
         if (pl2 is null) return;
-        VehicleLockChangeRequested request = new VehicleLockChangeRequested(pl2, vehicle, shouldallow);
-        foreach (EventDelegate<VehicleLockChangeRequested> inv in VehicleLockChangeRequested.GetInvocationList().Cast<EventDelegate<VehicleLockChangeRequested>>())
+        ChangeVehicleLockRequested request = new ChangeVehicleLockRequested(pl2, vehicle, shouldallow);
+        foreach (EventDelegate<ChangeVehicleLockRequested> inv in VehicleLockChangeRequested.GetInvocationList().Cast<EventDelegate<ChangeVehicleLockRequested>>())
         {
             if (!request.CanContinue) break;
             TryInvoke(inv, request, nameof(VehicleLockChangeRequested));
@@ -279,16 +279,6 @@ public static class EventDispatcher
 
         if (!request.CanContinue)
             shouldallow = false;
-    }
-    internal static void InvokeOnVehicleSpawned(InteractableVehicle result)
-    {
-        if (VehicleSpawned == null) return;
-        VehicleSpawned args = new VehicleSpawned(result);
-        foreach (EventDelegate<VehicleSpawned> inv in VehicleSpawned.GetInvocationList().Cast<EventDelegate<VehicleSpawned>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(VehicleSpawned));
-        }
     }
     internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, ulong instigator, BarricadeRegion region, byte x, byte y, ushort plant, EDamageOrigin origin)
     {

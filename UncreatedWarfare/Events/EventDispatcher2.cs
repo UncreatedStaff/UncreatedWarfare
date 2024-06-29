@@ -41,6 +41,10 @@ public partial class EventDispatcher2 : IHostedService
         StructureManager.onStructureSpawned += StructureManagerOnStructureSpawned;
         StructureDrop.OnSalvageRequested_Global += StructureDropOnSalvageRequested;
 
+        /* Vehicles */
+        VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnToggleVehicleLockRequested;
+        VehicleManager.OnToggledVehicleLock += VehicleManagerOnToggledVehicleLock;
+
         return UniTask.CompletedTask;
     }
 
@@ -59,6 +63,10 @@ public partial class EventDispatcher2 : IHostedService
         StructureManager.onDeployStructureRequested -= StructureManagerOnDeployStructureRequested;
         StructureManager.onStructureSpawned -= StructureManagerOnStructureSpawned;
         StructureDrop.OnSalvageRequested_Global -= StructureDropOnSalvageRequested;
+
+        /* Vehicles */
+        VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnToggleVehicleLockRequested;
+        VehicleManager.OnToggledVehicleLock -= VehicleManagerOnToggledVehicleLock;
 
         return UniTask.CompletedTask;
     }

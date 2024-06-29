@@ -40,6 +40,7 @@ public class VehicleComponent : MonoBehaviour
     public SqlItem<VehicleData>? Data;
     public EDamageOrigin LastDamageOrigin;
     public ulong LastInstigator;
+    public CSteamID LastLocker;
     private bool _isResupplied;
     private Coroutine? _quotaLoop;
     private Coroutine? _autoSupplyLoop;

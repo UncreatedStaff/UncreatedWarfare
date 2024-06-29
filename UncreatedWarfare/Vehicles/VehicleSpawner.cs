@@ -11,10 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
 using Uncreated.Players;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
@@ -31,7 +28,6 @@ using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -754,7 +750,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         }
         return count;
     }
-    private static void OnChangeLockRequested(VehicleLockChangeRequested e)
+    private static void OnChangeLockRequested(ChangeVehicleLockRequested e)
     {
         if (e.Vehicle == null ||
             e.IsLocking ||
