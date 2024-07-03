@@ -19,7 +19,7 @@ public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlay
     public KingSlayer(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : BaseState
     {
-        [RewardField("a")]
+        [RewardField("k")]
         public QuestParameterValue<int> Kills { get; set; }
         public override QuestParameterValue<int> FlagValue => Kills;
         public override UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
