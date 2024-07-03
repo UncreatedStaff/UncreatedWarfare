@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Singletons;
@@ -211,7 +210,7 @@ public class ReloadCommand : IExecutableCommand
             await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);
             
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-            Deaths.Localization.Reload();
+            Deaths.DeathMessageResolver.Reload();
             Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
             await Translation.ReadTranslations(token);
             foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToArray())

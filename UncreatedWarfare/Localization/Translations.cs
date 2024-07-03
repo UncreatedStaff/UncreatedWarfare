@@ -1830,7 +1830,7 @@ Please leave in-game terms such as **FOB**, **Rally**, **Build**, **Ammo**, and 
         dir.Create();
         FileInfo file = new FileInfo(Path.Combine(dir.FullName, LocalFileName));
         WriteLanguage(language, file.FullName, true, missingOnly, excludeNonPrioritized);
-        Deaths.Localization.Write(Path.Combine(dir.FullName, "deaths.json"), language, true);
+        Deaths.DeathMessageResolver.Write(Path.Combine(dir.FullName, "deaths.json"), language, true);
         Localization.WriteEnums(language, Path.Combine(dir.FullName, "Enums"), true, true);
 
         await KitEx.WriteKitLocalization(language, Path.Combine(dir.FullName, "kits.properties"), true, token);

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Networking;
-public static class HomebaseConnector
+internal static class HomebaseConnector
 {
     public static async Task<bool> ConnectAsync(CancellationToken token = default)
     {

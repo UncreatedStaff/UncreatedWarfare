@@ -17,6 +17,11 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable<SingleParameterTemplate>
 {
     /// <summary>
+    /// A parameter value that matches any integer.
+    /// </summary>
+    public static QuestParameterValue<float> WildcardInclusive { get; } = new SingleParameterValue(new SingleParameterTemplate(ParameterSelectionType.Inclusive));
+
+    /// <summary>
     /// Create a template of it's string representation.
     /// </summary>
     public SingleParameterTemplate(ReadOnlySpan<char> str) : base(str) { }

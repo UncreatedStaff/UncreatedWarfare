@@ -51,7 +51,7 @@ public abstract class QuestTemplate<TSelf, TTracker, TState> : QuestTemplate
     public abstract class BaseState : IQuestState<TSelf>
     {
         public abstract QuestParameterValue<int> FlagValue { get; }
-        public abstract UniTask CreateFromConfigurationAsync(IConfiguration configuration, CancellationToken token);
+        public abstract UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token);
         public abstract UniTask CreateFromTemplateAsync(TSelf data, CancellationToken token);
         public virtual bool IsEligible(UCPlayer player) => true;
     }

@@ -11,11 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Json;
-using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Models.Localization;
@@ -742,7 +738,7 @@ public static class OffenseManager
             RelevantLogsEnd = now,
             StartedTimestamp = now,
             ResolvedTimestamp = now,
-            Message = e.Message,
+            Message = e.DefaultMessage,
             Cause = e.Cause,
             Reputation = -40,
             Item = e.PrimaryAsset,

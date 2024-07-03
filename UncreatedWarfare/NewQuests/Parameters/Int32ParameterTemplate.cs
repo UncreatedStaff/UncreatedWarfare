@@ -15,6 +15,10 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 [TypeConverter(typeof(Int32ParameterTemplateTypeConverter))]
 public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<Int32ParameterTemplate>
 {
+    /// <summary>
+    /// A parameter value that matches any integer.
+    /// </summary>
+    public static QuestParameterValue<int> WildcardInclusive { get; } = new Int32ParameterValue(new Int32ParameterTemplate(ParameterSelectionType.Inclusive));
 
     /// <summary>
     /// Create a template of it's string representation.

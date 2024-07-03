@@ -1,184 +1,65 @@
-﻿using DanielWillett.ReflectionTools;
-using DanielWillett.SpeedBytes;
-using MySql.Data.MySqlClient;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 
-[JsonConverter(typeof(UnlockRequirementConverter))]
-public abstract class UnlockRequirement : ICloneable, IVersionableReadWrite
+public abstract class UnlockRequirement : ICloneable
 {
     public uint PrimaryKey { get; set; }
 
-    public const byte DataVersion = 0;
-    private static readonly Dictionary<byte, KeyValuePair<Type, string[]>> Types = new Dictionary<byte, KeyValuePair<Type, string[]>>(4);
-    private static readonly Dictionary<Type, byte> TypesInverse = new Dictionary<Type, byte>(4);
-    private static bool _hasReflected;
-    private static void Reflect()
+    private static readonly Dictionary<Type, string[]> LegacyInfo = new Dictionary<Type, string[]>()
     {
-        if (_hasReflected)
-            return;
-        Types.Clear();
-        foreach (Type type in Accessor.GetTypesSafe(true).Where(typeof(UnlockRequirement).IsAssignableFrom))
-        {
-            if (type.IsAbstract)
-                continue;
-            if (!TypesInverse.ContainsKey(type) && Attribute.GetCustomAttribute(type, typeof(UnlockRequirementAttribute)) is UnlockRequirementAttribute att && !Types.ContainsKey(att.Type))
-            {
-                Types.Add(att.Type, new KeyValuePair<Type, string[]>(type, att.Properties));
-                TypesInverse.Add(type, att.Type);
-            }
-        }
-        _hasReflected = true;
-    }
-    public abstract bool CanAccess(UCPlayer player);
-    public static UnlockRequirement? Read(ref Utf8JsonReader reader)
-    {
-        if (!_hasReflected) Reflect();
-        UnlockRequirement? t = null;
-        while (reader.TokenType == JsonTokenType.PropertyName || (reader.Read() && reader.TokenType == JsonTokenType.PropertyName))
-        {
-            string? property = reader.GetString();
-            if (reader.Read() && property != null)
-            {
-                if (t != null)
-                {
-                    t.ReadProperty(ref reader, property);
-                    continue;
-                }
+        { typeof(LevelUnlockRequirement), [ "unlock_level"               ] },
+        { typeof(RankUnlockRequirement),  [ "unlock_rank"                ] },
+        { typeof(QuestUnlockRequirement), [ "unlock_presets", "quest_id" ] }
+    };
 
-                foreach (KeyValuePair<byte, KeyValuePair<Type, string[]>> propertyList in Types)
-                {
-                    string[] values = propertyList.Value.Value;
-                    for (int i = 0; i < values.Length; i++)
-                    {
-                        if (property.Equals(values[i], StringComparison.OrdinalIgnoreCase))
-                        {
-                            t = Activator.CreateInstance(propertyList.Value.Key) as UnlockRequirement;
-                            goto done;
-                        }
-                    }
-                }
-                continue;
-            done:
-                if (t != null)
-                    t.ReadProperty(ref reader, property);
-                else
-                {
-                    L.LogWarning("Failed to find property \"" + property + "\" when parsing unlock requirements.");
-                }
-            }
-        }
-        return t;
-    }
-    public static UnlockRequirement? Read(MySqlDataReader reader, int colOffset = 0)
-    {
-        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(reader.GetString(colOffset + 1));
-        Utf8JsonReader reader2 = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-        return Read(ref reader2);
-    }
-    public static void Write(Utf8JsonWriter writer, UnlockRequirement requirement)
-    {
-        requirement.WriteProperties(writer);
-    }
-    public string ToJson(bool condensed = true)
-    {
-        using MemoryStream stream = new MemoryStream(32);
-        using Utf8JsonWriter writer = new Utf8JsonWriter(stream, condensed ? JsonEx.condensedWriterOptions : JsonEx.writerOptions);
-        writer.Flush();
-        return System.Text.Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Position);
-    }
-    protected abstract void ReadProperty(ref Utf8JsonReader reader, string property);
-    protected abstract void WriteProperties(Utf8JsonWriter writer);
+    /// <summary>
+    /// If a player passes the requirements. This check can do some caching, mainly for signs.
+    /// </summary>
+    public abstract bool CanAccessFast(UCPlayer player);
+
+    /// <summary>
+    /// Full check if a player passes the requirements.
+    /// </summary>
+    public virtual UniTask<bool> CanAccessAsync(UCPlayer player) => UniTask.FromResult(CanAccessFast(player));
+
+    /// <summary>
+    /// Get the text that shows on a sign when the player is missing the requirement.
+    /// </summary>
     public abstract string GetSignText(UCPlayer player);
+
+    /// <summary>
+    /// Read from JSON in the newer format, which does store the type.
+    /// </summary>
+    protected abstract bool ReadFromJson(ILogger? logger, ref Utf8JsonReader reader);
+
+    /// <summary>
+    /// For older formats that don't store type.
+    /// </summary>
+    protected virtual void ReadLegacyProperty(ILogger? logger, ref Utf8JsonReader reader, string property) { }
+
+    /// <summary>
+    /// Write all properties (not the type) to a JSON writer.
+    /// </summary>
+    protected abstract void WriteToJson(Utf8JsonWriter writer);
+
+    /// <inheritdoc />
     public abstract object Clone();
-    protected abstract void Read(ByteReader reader);
-    byte IVersionableReadWrite.Version { get; set; }
-    public static void WriteRequirement(ByteWriter writer, UnlockRequirement? req)
-    {
-        if (req == null)
-        {
-            writer.Write(false);
-            return;
-        }
 
-        writer.Write(true);
-        Reflect();
-        if (!TypesInverse.TryGetValue(req.GetType(), out byte val))
-            throw new ArgumentException("Unknown type: " + req.GetType().Name, nameof(req));
-        writer.Write(val);
-
-        req.Write(writer);
-    }
-    public static UnlockRequirement? ReadRequirement(ByteReader reader)
-    {
-        if (!reader.ReadBool())
-            return null;
-
-        byte type = reader.ReadUInt8();
-        if (Types.TryGetValue(type, out KeyValuePair<Type, string[]> typeData) && Activator.CreateInstance(typeData.Key) is UnlockRequirement t)
-        {
-            return t;
-        }
-
-        throw new Exception("Unable to create unlock requirement with type id " + type + "!");
-    }
-    void IReadWrite.Write(ByteWriter writer)
-    {
-        writer.Write(DataVersion);
-
-        Write(writer);
-    }
-    void IReadWrite.Read(ByteReader reader)
-    {
-        ((IVersionableReadWrite)this).Version = reader.ReadUInt8();
-
-        Read(reader);
-    }
-
-    protected abstract void Write(ByteWriter writer);
-    // ReSharper disable InconsistentNaming
-    public const string COLUMN_PK = "pk";
-    public const string COLUMN_JSON = "JSON";
-    // ReSharper restore InconsistentNaming
-    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
-    {
-        if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
-        int ct = 2;
-        if (!oneToOne && hasPk)
-            ++ct;
-        Schema.Column[] columns = new Schema.Column[ct];
-        int index = 0;
-        if (!oneToOne && hasPk)
-        {
-            columns[0] = new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            };
-        }
-        else index = -1;
-        columns[++index] = new Schema.Column(fkColumn, SqlTypes.INCREMENT_KEY)
-        {
-            PrimaryKey = oneToOne,
-            AutoIncrement = oneToOne,
-            ForeignKey = true,
-            ForeignKeyColumn = mainPkColumn,
-            ForeignKeyTable = mainTable
-        };
-        columns[++index] = new Schema.Column(COLUMN_JSON, SqlTypes.STRING_255);
-        return new Schema(tableName, columns, false, typeof(UnlockRequirement));
-    }
     public virtual Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
         L.LogWarning("Unhandled kit requirement type: " + GetType().Name);
@@ -194,31 +75,130 @@ public abstract class UnlockRequirement : ICloneable, IVersionableReadWrite
         L.LogWarning("Unhandled trait requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
-}
-public class UnlockRequirementConverter : JsonConverter<UnlockRequirement>
-{
-    public override UnlockRequirement Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        => UnlockRequirement.Read(ref reader)!;
-    public override void Write(Utf8JsonWriter writer, UnlockRequirement value, JsonSerializerOptions options)
+
+    /// <summary>
+    /// Write a <see cref="UnlockRequirement"/> to JSON.
+    /// </summary>
+    public static void Write(Utf8JsonWriter writer, UnlockRequirement requirement)
     {
-        writer.WriteStartObject();
-        UnlockRequirement.Write(writer, value);
-        writer.WriteEndObject();
+        requirement.WriteToJson(writer);
     }
-}
 
-[AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class UnlockRequirementAttribute : Attribute
-{
-    private readonly string[] _properties;
-    private readonly byte _type;
-    public string[] Properties => _properties;
-    public byte Type => _type;
-
-    /// <param name="properties">Must be unique among other unlock requirements.</param>
-    public UnlockRequirementAttribute(byte type, params string[] properties)
+    /// <summary>
+    /// Convert a <see cref="UnlockRequirement"/> to a JSON string.
+    /// </summary>
+    /// <param name="condensed">Don't add new lines and spacing for visibility.</param>
+    public string ToJson(bool condensed = true)
     {
-        _properties = properties;
-        _type = type;
+        using MemoryStream stream = new MemoryStream(32);
+        using Utf8JsonWriter writer = new Utf8JsonWriter(stream, condensed ? ConfigurationSettings.JsonCondensedWriterOptions : ConfigurationSettings.JsonWriterOptions);
+
+        WriteToJson(writer);
+
+        writer.Flush();
+        stream.TryGetBuffer(out ArraySegment<byte> buffer);
+        return Encoding.UTF8.GetString(buffer);
+    }
+
+    /// <summary>
+    /// Write an <see cref="UnlockRequirement"/> from JSON.
+    /// </summary>
+    public static UnlockRequirement? Read(ILogger? logger, IServiceProvider serviceProvider, ref Utf8JsonReader reader)
+    {
+        Utf8JsonReader typeSearcher = reader;
+
+        if (!JsonUtility.SkipToProperty(ref typeSearcher, "type"))
+        {
+            // read from legacy property lists (LegacyInfo)
+            if (reader.TokenType != JsonTokenType.PropertyName && !reader.Read())
+            {
+                logger?.LogError("JSON data ended before hitting a property.");
+                return null;
+            }
+
+            UnlockRequirement? obj = null;
+            do
+            {
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                    break;
+
+                string property = reader.GetString()!;
+                if (!reader.Read())
+                {
+                    break;
+                }
+
+                if (obj != null)
+                {
+                    obj.ReadLegacyProperty(logger, ref reader, property);
+                    continue;
+                }
+
+                foreach (KeyValuePair<Type, string[]> propertyList in LegacyInfo)
+                {
+                    if (Array.IndexOf(propertyList.Value, property) == -1)
+                        continue;
+
+                    try
+                    {
+                        obj = (UnlockRequirement)ActivatorUtilities.CreateInstance(serviceProvider, propertyList.Key);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        logger?.LogError(ex, "Unable to create an instance of {0}.", Accessor.Formatter.Format(propertyList.Key));
+                        return null;
+                    }
+
+                    break;
+                }
+
+                obj?.ReadLegacyProperty(logger, ref reader, property);
+            } while (reader.Read());
+
+            if (obj == null)
+                logger?.LogError("No 'type' property present in JSON data.");
+
+            return obj;
+        }
+
+        string? typeName = typeSearcher.GetString();
+        if (typeName == null)
+        {
+            logger?.LogError("Empty type name in unlock requirement.");
+            return null;
+        }
+
+        Type? type = Type.GetType(typeName, false, false) ?? typeof(WarfareModule).Assembly.GetType(typeName, false, false);
+        if (type == null || type.IsAbstract || !type.IsSubclassOf(typeof(UnlockRequirement)))
+        {
+            logger?.LogError("Unknown type name {0} in unlock requirement.", typeName);
+            return null;
+        }
+
+        try
+        {
+            UnlockRequirement req = (UnlockRequirement)ActivatorUtilities.CreateInstance(serviceProvider, type);
+            if (req.ReadFromJson(logger, ref reader))
+                return req;
+
+            if (req is not IDisposable d)
+                return null;
+            
+            try
+            {
+                d.Dispose();
+            }
+            catch (Exception ex)
+            {
+                logger?.LogInformation(ex, "Failed to dispose of {0} after failed reading.", Accessor.Formatter.Format(type));
+            }
+
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger?.LogError(ex, "Unable to create an instance of {0}.", Accessor.Formatter.Format(type));
+            return null;
+        }
     }
 }

@@ -1,21 +1,26 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Text.Json;
-using Uncreated.Encoding;
+using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 
-[UnlockRequirement(1, "unlock_level")]
 public class LevelUnlockRequirement : UnlockRequirement
 {
     public int UnlockLevel = -1;
-    public override bool CanAccess(UCPlayer player)
+
+    /// <inheritdoc />
+    public override bool CanAccessFast(UCPlayer player)
     {
         return player.Level.Level >= UnlockLevel;
     }
+
+    /// <inheritdoc />
     public override string GetSignText(UCPlayer player)
     {
         if (UnlockLevel == 0)
@@ -24,44 +29,76 @@ public class LevelUnlockRequirement : UnlockRequirement
         int lvl = Points.GetLevel(player.CachedXP);
         return T.KitRequiredLevel.Translate(player, false, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
     }
-    protected override void ReadProperty(ref Utf8JsonReader reader, string property)
+
+    /// <inheritdoc />
+    protected override void ReadLegacyProperty(ILogger? logger, ref Utf8JsonReader reader, string property)
     {
-        if (property.Equals("unlock_level", StringComparison.OrdinalIgnoreCase))
-        {
-            reader.TryGetInt32(out UnlockLevel);
-        }
+        if (!property.Equals("unlock_level", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (reader.TryGetInt32(out int unlockRank))
+            UnlockLevel = unlockRank;
     }
-    protected override void WriteProperties(Utf8JsonWriter writer)
+
+    /// <inheritdoc />
+    protected override bool ReadFromJson(ILogger? logger, ref Utf8JsonReader reader)
+    {
+        bool read = false;
+        JsonUtility.ReadTopLevelProperties(ref reader, ref read, (ref Utf8JsonReader reader, string property, ref bool read) =>
+        {
+            if (!property.Equals("unlock_level", StringComparison.OrdinalIgnoreCase) || !reader.TryGetInt32(out int unlockRank))
+                return;
+
+            UnlockLevel = unlockRank;
+            read = true;
+        });
+
+        return read;
+    }
+
+    /// <inheritdoc />
+    protected override void WriteToJson(Utf8JsonWriter writer)
     {
         writer.WriteNumber("unlock_level", UnlockLevel);
     }
-    public override object Clone() => new LevelUnlockRequirement { UnlockLevel = UnlockLevel };
-    protected override void Read(ByteReader reader)
+
+    /// <inheritdoc />
+    public override object Clone()
     {
-        UnlockLevel = reader.ReadInt32();
-    }
-    protected override void Write(ByteWriter writer)
-    {
-        writer.Write(UnlockLevel);
+        return new LevelUnlockRequirement { UnlockLevel = UnlockLevel };
     }
 
+    /// <inheritdoc />
     public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
         LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestKitLowLevel, data);
     }
+
+    /// <inheritdoc />
     public override Exception RequestVehicleFailureToMeet(CommandContext ctx, VehicleData data)
     {
         LevelData data2 = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestVehicleMissingLevels, data2);
     }
+
+    /// <inheritdoc />
     public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
         LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestTraitLowLevel, trait, data);
     }
 
-    public override bool Equals(object obj) => obj is LevelUnlockRequirement r && r.UnlockLevel == UnlockLevel;
-    // ReSharper disable once NonReadonlyMemberInGetHashCode
-    public override int GetHashCode() => UnlockLevel;
+    /// <inheritdoc />
+    public override bool Equals(object? obj)
+    {
+        return obj is LevelUnlockRequirement r && r.UnlockLevel == UnlockLevel;
+    }
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        // ReSharper disable once NonReadonlyMemberInGetHashCode
+        return UnlockLevel;
+    }
 }

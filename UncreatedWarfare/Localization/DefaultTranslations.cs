@@ -13,6 +13,7 @@ using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;

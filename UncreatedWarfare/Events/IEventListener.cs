@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Events;
 /// </summary>
 public interface IEventListener<in TEventArgs>
 {
-    void HandleEvent(TEventArgs e);
+    void HandleEvent(TEventArgs e, IServiceProvider serviceProvider);
 }
 
 /// <summary>
@@ -18,5 +18,5 @@ public interface IEventListener<in TEventArgs>
 /// </summary>
 public interface IAsyncEventListener<in TEventArgs>
 {
-    UniTask HandleEventAsync(TEventArgs e, CancellationToken token = default);
+    UniTask HandleEventAsync(TEventArgs e, IServiceProvider serviceProvider, CancellationToken token = default);
 }

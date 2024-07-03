@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using SDG.Unturned;
 using Steamworks;
@@ -17,7 +18,9 @@ using static Uncreated.Warfare.Harmony.Patches;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Uncreated.Warfare.Events.Patches;
-public class InteractableTrapOnTriggerEnter : IHarmonyPatch
+
+[UsedImplicitly]
+internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
 {
     private static MethodInfo? _target;
 

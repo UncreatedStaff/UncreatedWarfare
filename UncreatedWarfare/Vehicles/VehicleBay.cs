@@ -139,13 +139,13 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                         {
                             if (data.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets is { Length: > 0 } && !req.CanAccess(player))
                             {
-                                if (Assets.find(req.QuestID) is QuestAsset quest)
+                                if (Assets.find(req.QuestId) is QuestAsset quest)
                                 {
                                     QuestManager.TryAddQuest(player, quest);
                                 }
                                 else
                                 {
-                                    L.LogWarning("Unknown quest id " + req.QuestID + " in vehicle requirement for " + data.VehicleID.ToString("N"));
+                                    L.LogWarning("Unknown quest id " + req.QuestId + " in vehicle requirement for " + data.VehicleID.ToString("N"));
                                 }
                                 for (int r = 0; r < req.UnlockPresets.Length; r++)
                                 {

@@ -4,7 +4,7 @@ using DanielWillett.ModularRpcs.Async;
 using JetBrains.Annotations;
 using System;
 using System.Threading;
-using Uncreated.Networking;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
@@ -38,11 +38,11 @@ public class PlayerList : BaseSingletonComponent
 
         _lastTick = Time.realtimeSinceStartup;
 
-        UCWarfare.RunTask(async token =>
+        Task.Run(async () =>
         {
             try
             {
-                L.Log("received: " + await TickPlayerList(1, token).IgnoreNoConnections());
+                L.Log("received: " + await TickPlayerList(1).IgnoreNoConnections());
             }
             catch (Exception ex)
             {
@@ -50,7 +50,7 @@ public class PlayerList : BaseSingletonComponent
                 L.LogError("Error ticking player list.");
                 L.LogError(ex);
             }
-        }, UCWarfare.UnloadCancel);
+        });
     }
 
     [RpcReceive]
@@ -58,18 +58,5 @@ public class PlayerList : BaseSingletonComponent
     {
         _lastTick = Time.realtimeSinceStartup;
         L.Log("received update delay.");
-    }
-
-    public static class NetCalls
-    {
-        public static NetCall SendTickPlayerList = new NetCall(ReceivePlayerListTick);
-
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendTickPlayerList)]
-        private static void ReceivePlayerListTick(MessageContext ctx)
-        {
-            PlayerList? list = Instance;
-            if (list != null)
-                list._lastTick = Time.realtimeSinceStartup;
-        }
     }
 }

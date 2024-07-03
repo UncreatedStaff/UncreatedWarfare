@@ -33,11 +33,23 @@ namespace Uncreated.Warfare;
 public sealed class WarfareModule : IModuleNexus
 {
     internal static int GameThreadId = -1;
+    private static EventDispatcher2? _dispatcher;
+
+#nullable disable
 
     /// <summary>
     /// Static instance of the event dispatcher singleton for harmony patches to access it.
     /// </summary>
-    public static EventDispatcher2 EventDispatcher { get; private set; }
+    /// <remarks>Do not use unless in a patch.</remarks>
+    public static EventDispatcher2 EventDispatcher => _dispatcher ??= Singleton?.ScopedProvider.GetRequiredService<EventDispatcher2>();
+
+    /// <summary>
+    /// Static instance of this module singleton for harmony patches to access it.
+    /// </summary>
+    /// <remarks>Do not use unless in a patch.</remarks>
+    public static WarfareModule Singleton { get; private set; }
+
+#nullable restore
 
     private bool _unloadedHostedServices;
     private IServiceScope? _activeScope;
@@ -85,6 +97,7 @@ public sealed class WarfareModule : IModuleNexus
 
     void IModuleNexus.initialize()
     {
+        Singleton = this;
         GameThreadId = ThreadUtil.gameThread.ManagedThreadId;
         _gameObjectHost = new GameObject("Uncreated.Warfare");
         _cancellationTokenSource = new CancellationTokenSource();
@@ -118,6 +131,11 @@ public sealed class WarfareModule : IModuleNexus
 
     void IModuleNexus.shutdown()
     {
+        if (Singleton == this)
+            Singleton = null;
+
+        _dispatcher = null;
+
         if (Configuration is IDisposable disposableConfig)
             disposableConfig.Dispose();
 
@@ -163,7 +181,7 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddTransient<IManualMySqlProvider, ManualMySqlProvider>(_ =>
         {
             string connectionString = UCWarfare.Config.SqlConnectionString ??
-                                      (UCWarfare.Config.RemoteSQL ?? UCWarfare.Config.SQL).GetConnectionString("UCWarfare", true, true);
+                                      (UCWarfare.Config.RemoteSQL ?? UCWarfare.Config.SQL).GetConnectionString("Uncreated.Warfare", true, true);
 
             return new ManualMySqlProvider(connectionString);
         });
@@ -231,8 +249,6 @@ public sealed class WarfareModule : IModuleNexus
                 break;
             }
         }
-
-        EventDispatcher = ServiceProvider.GetRequiredService<EventDispatcher2>();
 
         // one of the hosted services errored, unhost all that were hosted and shut down.
         if (errIndex == -1)

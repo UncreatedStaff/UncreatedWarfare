@@ -7,7 +7,7 @@ public interface IBuildable
 {
     uint InstanceId { get; }
     bool IsStructure { get; }
-    ItemAsset Asset { get; }
+    ItemPlaceableAsset Asset { get; }
     Transform Model { get; }
     ulong Owner { get; }
     ulong Group { get; }
@@ -19,7 +19,7 @@ public class BuildableBarricade : IBuildable
 {
     public uint InstanceId => Drop.instanceID;
     public bool IsStructure => false;
-    public ItemAsset Asset => Drop.asset;
+    public ItemPlaceableAsset Asset => Drop.asset;
     public Transform Model => Drop.model == null || Data.barricade.isDead ? null! : Drop.model; // so you can use ? on it
     public ulong Owner => Data.owner;
     public ulong Group => Data.group;
@@ -39,7 +39,7 @@ public class BuildableStructure : IBuildable
 {
     public uint InstanceId => Drop.instanceID;
     public bool IsStructure => true;
-    public ItemAsset Asset => Drop.asset;
+    public ItemPlaceableAsset Asset => Drop.asset;
     public Transform Model => Drop.model == null || Data.structure.isDead ? null! : Drop.model; // so you can use ? on it
     public ulong Owner => Data.owner;
     public ulong Group => Data.group;

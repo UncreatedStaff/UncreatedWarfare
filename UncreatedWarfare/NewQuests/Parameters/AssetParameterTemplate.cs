@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Threading;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.NewQuests.Parameters;
@@ -21,6 +22,11 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEquatable<AssetParameterTemplate<TAsset>> where TAsset : Asset
 {
     private static List<TAsset>? _mainWorkingThreadList;
+
+    /// <summary>
+    /// A parameter value that matches any asset that is assignable to <typeparamref name="TAsset"/>.
+    /// </summary>
+    public static QuestParameterValue<Guid> WildcardInclusive { get; } = new AssetParameterValue(new AssetParameterTemplate<TAsset>(ParameterSelectionType.Inclusive));
 
     /// <summary>
     /// Create a template of it's string representation.
@@ -55,6 +61,17 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
     public override async UniTask<QuestParameterValue<Guid>> CreateValue(IServiceProvider serviceProvider)
     {
         await UniTask.SwitchToMainThread();
+
+        return new AssetParameterValue(this);
+    }
+
+    /// <summary>
+    /// Creates a random value from this selective set, or a set of values if this is an inclusive set.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on the game thread.</exception>
+    public QuestParameterValue<Guid> CreateValueOnGameThread()
+    {
+        ThreadUtil.assertIsGameThread();
 
         return new AssetParameterValue(this);
     }
@@ -294,7 +311,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
         }
     }
 
-    protected class AssetParameterValue : QuestParameterValue<Guid>, IEquatable<AssetParameterValue>
+    internal class AssetParameterValue : QuestParameterValue<Guid>, IEquatable<AssetParameterValue>
     {
         private Guid _value;
         private Guid[]? _values;
@@ -412,15 +429,51 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
             return true;
         }
 
-        public bool IsMatch(TAsset otherValue) => IsMatch(otherValue?.GUID ?? Guid.Empty);
-        public override bool IsMatch(Guid otherValue)
+        public bool IsMatch(Asset otherValue)
         {
             ParameterValueType valType = ValueType;
+
+            if (otherValue is not TAsset)
+                return false;
 
             // Wildcard
             if (valType is < ParameterValueType.Constant or > ParameterValueType.List)
             {
                 return true;
+            }
+
+            ParameterSelectionType selType = SelectionType;
+
+            if (valType == ParameterValueType.Constant || selType == ParameterSelectionType.Selective)
+            {
+                return !_isEmptySet && _value == otherValue.GUID;
+            }
+
+            if (valType == ParameterValueType.Range)
+            {
+                return false;
+            }
+
+            // List
+            for (int i = 0; i < _values!.Length; ++i)
+            {
+                if (_values[i] == otherValue.GUID)
+                    return true;
+            }
+
+            return false;
+        }
+        public override bool IsMatch(Guid otherValue)
+        {
+            ParameterValueType valType = ValueType;
+
+            if (Assets.find(otherValue) is not TAsset)
+                return false;
+
+            // Wildcard
+            if (valType is < ParameterValueType.Constant or > ParameterValueType.List)
+            {
+                return Assets.find(otherValue) is TAsset;
             }
 
             ParameterSelectionType selType = SelectionType;
@@ -543,5 +596,28 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                     });
             }
         }
+    }
+}
+
+public static class AssetParameterValueExtensions
+{
+    /// <summary>
+    /// Compare a value against the current value of this parameter. Best used with inclusive selection.
+    /// </summary>
+    public static bool IsMatch<TAssetType>(this QuestParameterValue<Guid> assetType, Asset asset) where TAssetType : Asset
+    {
+        return asset != null && (assetType is AssetParameterTemplate<TAssetType>.AssetParameterValue a
+            ? a.IsMatch(asset)
+            : assetType.IsMatch(asset.GUID));
+    }
+
+    /// <summary>
+    /// Compare a value against the current value of this parameter. Best used with inclusive selection.
+    /// </summary>
+    public static bool IsMatch<TAssetType>(this QuestParameterValue<Guid> assetType, IAssetLink<Asset>? asset) where TAssetType : Asset
+    {
+        return asset != null && (asset.GetAsset() is { } asset2 && assetType is AssetParameterTemplate<TAssetType>.AssetParameterValue a
+            ? a.IsMatch(asset2)
+            : assetType.IsMatch(asset.Guid));
     }
 }

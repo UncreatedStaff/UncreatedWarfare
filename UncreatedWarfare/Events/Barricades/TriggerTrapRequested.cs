@@ -68,19 +68,19 @@ public class TriggerTrapRequested : CancellableEvent
     /// Damage done to players by the trap.
     /// </summary>
     /// <remarks>This can be changed.</remarks>
-    public float PlayerDamage { get; set; }
+    public required float PlayerDamage { get; set; }
 
     /// <summary>
     /// Damage done to zombies by the trap.
     /// </summary>
     /// <remarks>This can be changed.</remarks>
-    public float ZombieDamage { get; set; }
+    public required float ZombieDamage { get; set; }
 
     /// <summary>
     /// Damage done to animals by the trap.
     /// </summary>
     /// <remarks>This can be changed.</remarks>
-    public float AnimalDamage { get; set; }
+    public required float AnimalDamage { get; set; }
 
     /// <summary>
     /// If the trap explodes.

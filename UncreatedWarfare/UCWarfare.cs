@@ -222,7 +222,7 @@ public class UCWarfare : MonoBehaviour
         /* LOAD LOCALIZATION ASSETS */
         L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
         Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-        Deaths.Localization.Reload();
+        Deaths.DeathMessageResolver.Reload();
         Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
         await Translation.ReadTranslations(token).ConfigureAwait(false);
         await ToUpdate(token);

@@ -443,7 +443,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         }
         if (FOB?.Record != null)
         {
-            UCPlayer? instigator = DestroyInfo != null ? UCPlayer.FromID(DestroyInfo.InstigatorId) : null;
+            UCPlayer? instigator = DestroyInfo != null ? UCPlayer.FromID(DestroyInfo.InstigatorId.m_SteamID) : null;
 
             SessionRecord? session = instigator?.CurrentSession;
 

@@ -426,7 +426,7 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
             await Task.Delay(500, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             QuestManager.OnQuestCompleted(this);
-        }, tkn, ctx: "Compelte quest for " + Player + ".");
+        }, tkn, ctx: "Complete quest for " + Player + ".");
     }
     public void TellUpdated(bool skipFlagUpdate = false)
     {

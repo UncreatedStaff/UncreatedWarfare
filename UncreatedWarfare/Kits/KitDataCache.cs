@@ -119,10 +119,10 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
                 if (kit.UnlockRequirements[j] is not QuestUnlockRequirement { UnlockPresets.Length: > 0 } req || req.CanAccess(player))
                     continue;
 
-                if (Assets.find(req.QuestID) is QuestAsset quest)
+                if (Assets.find(req.QuestId) is QuestAsset quest)
                     QuestManager.TryAddQuest(player, quest);
                 else
-                    L.LogWarning("Unknown quest id " + req.QuestID + " in kit requirement for " + kit.InternalName);
+                    L.LogWarning("Unknown quest id " + req.QuestId + " in kit requirement for " + kit.InternalName);
 
                 for (int r = 0; r < req.UnlockPresets.Length; r++)
                 {

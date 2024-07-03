@@ -19,7 +19,6 @@ using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -29,17 +28,12 @@ public static class EventDispatcher
     public static event EventDelegate<ExitVehicleRequested> ExitVehicleRequested;
     public static event EventDelegate<EnterVehicleRequested> EnterVehicleRequested;
     public static event EventDelegate<VehicleSwapSeatRequested> VehicleSwapSeatRequested;
-    public static event EventDelegate<VehicleSpawned> VehicleSpawned;
     public static event EventDelegate<ExitVehicle> ExitVehicle;
     public static event EventDelegate<EnterVehicle> EnterVehicle;
     public static event EventDelegate<VehicleSwapSeat> VehicleSwapSeat;
     public static event EventDelegate<VehicleDestroyed> VehicleDestroyed;
     public static event EventDelegate<ChangeVehicleLockRequested> VehicleLockChangeRequested;
 
-    public static event EventDelegate<BarricadeDestroyed> BarricadeDestroyed;
-    public static event EventDelegate<TriggerTrapRequested> LandmineExploding;
-
-    public static event EventDelegate<StructureDestroyed> StructureDestroyed;
     public static event EventDelegate<DamageStructureRequested> DamageStructureRequested;
 
     public static event EventDelegate<ItemDropRequested> ItemDropRequested;
@@ -57,12 +51,6 @@ public static class EventDispatcher
     public static event EventDelegate<ProjectileSpawned> ProjectileSpawned;
     public static event EventDelegate<ProjectileSpawned> ProjectileExploded;
 
-    public static event EventDelegate<PlayerPending> PlayerPending;
-    public static event AsyncEventDelegate<PlayerPending> PlayerPendingAsync;
-    public static event EventDelegate<PlayerJoined> PlayerJoined;
-    public static event EventDelegate<PlayerEvent> PlayerLeaving;
-    public static event EventDelegate<PlayerEvent> PlayerLeft;
-    public static event EventDelegate<BattlEyeKicked> PlayerBattlEyeKicked;
     public static event EventDelegate<PlayerDied> PlayerDied;
     public static event EventDelegate<GroupChanged> GroupChanged;
     public static event EventDelegate<PlayerInjured> PlayerInjuring;
@@ -81,10 +69,6 @@ public static class EventDispatcher
         InteractableVehicle.OnPassengerAdded_Global += InteractableVehicleOnPassengerAdded;
         InteractableVehicle.OnPassengerRemoved_Global += InteractableVehicleOnPassengerRemoved;
         InteractableVehicle.OnPassengerChangedSeats_Global += InteractableVehicleOnPassengerChangedSeats;
-        Provider.onServerConnected += ProviderOnServerConnected;
-        Provider.onServerDisconnected += ProviderOnServerDisconnected;
-        Provider.onCheckValidWithExplanation += ProviderOnCheckValidWithExplanation;
-        Provider.onBattlEyeKick += ProviderOnBattlEyeKick;
         UseableThrowable.onThrowableSpawned += UseableThrowableOnThrowableSpawned;
         UseableGun.onProjectileSpawned += ProjectileOnProjectileSpawned;
         UseableGun.onBulletHit += OnBulletHit;
@@ -93,11 +77,9 @@ public static class EventDispatcher
         StructureManager.onDamageStructureRequested += StructureManagerOnDamageStructureRequested;
         PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
         VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnOnToggleVehicleLockRequested;
-        EventPatches.OnStartVerifying += IntlOnStartVerifyingPlayerConnection;
     }
     internal static void UnsubscribeFromAll()
     {
-        EventPatches.OnStartVerifying -= IntlOnStartVerifyingPlayerConnection;
         VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnOnToggleVehicleLockRequested;
         PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
         StructureManager.onDamageStructureRequested -= StructureManagerOnDamageStructureRequested;
@@ -106,10 +88,6 @@ public static class EventDispatcher
         PlayerInput.onPluginKeyTick -= OnPluginKeyTick;
         UseableGun.onProjectileSpawned -= ProjectileOnProjectileSpawned;
         UseableThrowable.onThrowableSpawned -= UseableThrowableOnThrowableSpawned;
-        Provider.onBattlEyeKick -= ProviderOnBattlEyeKick;
-        Provider.onCheckValidWithExplanation -= ProviderOnCheckValidWithExplanation;
-        Provider.onServerDisconnected -= ProviderOnServerDisconnected;
-        Provider.onServerConnected -= ProviderOnServerConnected;
         InteractableVehicle.OnPassengerChangedSeats_Global -= InteractableVehicleOnPassengerChangedSeats;
         InteractableVehicle.OnPassengerRemoved_Global -= InteractableVehicleOnPassengerRemoved;
         InteractableVehicle.OnPassengerAdded_Global -= InteractableVehicleOnPassengerAdded;
@@ -312,125 +290,7 @@ public static class EventDispatcher
         }
         e.ActiveVehicle = null;
     }
-    private static void ProviderOnServerDisconnected(CSteamID steamID)
-    {
-        UCPlayer? player = UCPlayer.FromCSteamID(steamID);
-        if (player is null) return;
-        lock (player)
-            player.IsLeaving = true;
-        PlayerEvent args = new PlayerEvent(player);
-        if (PlayerLeaving != null)
-        {
-            foreach (EventDelegate<PlayerEvent> inv in PlayerLeaving.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
-            {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(PlayerLeaving));
-            }
-        }
-        try
-        {
-            PlayerManager.InvokePlayerDisconnected(player);
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Failed to remove a player from player manager.");
-            L.LogError(ex);
-        }
-        
-        if (PlayerLeft == null) return;
-        foreach (EventDelegate<PlayerEvent> inv in PlayerLeft.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerLeft));
-        }
 
-        GC.Collect(2, GCCollectionMode.Optimized, false, false);
-    }
-
-    private static List<PendingAsyncData> _pendingAsyncData = new List<PendingAsyncData>(4);
-    private static void ProviderOnServerConnected(CSteamID steamID)
-    {
-        if (PlayerJoined == null) return;
-        UCPlayer player;
-        bool newPlayer;
-        try
-        {
-            Player pl = PlayerTool.getPlayer(steamID);
-            if (pl is null)
-                goto error;
-            int index = _pendingAsyncData.FindIndex(x => x.Steam64 == steamID.m_SteamID);
-            if (index == -1)
-            {
-                Provider.kick(steamID, "Unable to find your async data.");
-                return;
-            }
-
-            PendingAsyncData data = _pendingAsyncData[index];
-
-            _pendingAsyncData.RemoveAt(index);
-            _pendingAsyncData.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Steam64));
-
-            player = PlayerManager.InvokePlayerConnected(pl, data, out newPlayer);
-
-
-            if (player is null)
-                goto error;
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Error in EventDispatcher.ProviderOnServerConnected loading player into OnlinePlayers:");
-            L.LogError(ex);
-            goto error;
-        }
-        PlayerJoined args = new PlayerJoined(player, newPlayer);
-        foreach (EventDelegate<PlayerJoined> inv in PlayerJoined.GetInvocationList().Cast<EventDelegate<PlayerJoined>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerJoined));
-        }
-
-        return;
-    error:
-        Provider.kick(steamID, "There was a fatal error connecting you to the server.");
-    }
-    private static void ProviderOnCheckValidWithExplanation(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
-    {
-        if (PlayerPending == null || !isValid) return;
-        SteamPending? pending = null;
-        for (int i = 0; i < Provider.pending.Count; ++i)
-        {
-            if (Provider.pending[i].playerID.steamID.m_SteamID != callback.m_SteamID.m_SteamID)
-                continue;
-            
-            pending = Provider.pending[i];
-            break;
-        }
-        if (pending is null) return;
-        PlayerSave.TryReadSaveFile(callback.m_SteamID.m_SteamID, out PlayerSave? save);
-        PlayerPending args = new PlayerPending(pending, save, null, isValid, explanation);
-        foreach (EventDelegate<PlayerPending> inv in PlayerPending.GetInvocationList().Cast<EventDelegate<PlayerPending>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerPending));
-        }
-        if (!args.CanContinue)
-        {
-            isValid = false;
-            explanation = args.RejectReason;
-        }
-    }
-    private static void ProviderOnBattlEyeKick(SteamPlayer client, string reason)
-    {
-        if (PlayerBattlEyeKicked == null) return;
-        UCPlayer? player = UCPlayer.FromSteamPlayer(client);
-        if (player is null) return;
-        BattlEyeKicked args = new BattlEyeKicked(player, reason);
-        foreach (EventDelegate<BattlEyeKicked> inv in PlayerBattlEyeKicked.GetInvocationList().Cast<EventDelegate<BattlEyeKicked>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerBattlEyeKicked));
-        }
-    }
     private static void UseableThrowableOnThrowableSpawned(UseableThrowable useable, GameObject throwable)
     {
         ThrowableComponent c = throwable.AddComponent<ThrowableComponent>();
@@ -720,78 +580,6 @@ public static class EventDispatcher
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(PlayerInjured));
-        }
-    }
-    internal static void IntlOnStartVerifyingPlayerConnection(SteamPending player, ref bool shouldDeferContinuation)
-    {
-        if (PlayerPendingAsync == null)
-            return;
-
-        ulong s64 = player.playerID.steamID.m_SteamID;
-        PlayerSave.TryReadSaveFile(s64, out PlayerSave? save);
-
-        PendingAsyncData data = new PendingAsyncData(player);
-        CancellationTokenSource? src = null;
-
-        for (int i = 0; i < PlayerManager.PlayerConnectCancellationTokenSources.Count; ++i)
-        {
-            KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerManager.PlayerConnectCancellationTokenSources[i];
-            if (kvp.Key == s64)
-            {
-                src = kvp.Value;
-                break;
-            }
-        }
-
-        PlayerPending args = new PlayerPending(player, save, data, true, string.Empty);
-        Task task = InvokePrePlayerConnectAsync(args, src == null ? CancellationToken.None : src.Token);
-        if (task.IsCompleted)
-        {
-            if (args.CanContinue)
-                return;
-
-            EventPatches.RemovePlayer(player, args.Rejection, args.RejectReason);
-            return;
-        }
-
-        UCWarfare.RunTask(task, ctx: "Player connecting: {" + player.playerID.steamID.m_SteamID.ToString(Data.AdminLocale) + "} [" + player.playerID.playerName + "].");
-        shouldDeferContinuation = true;
-    }
-    private static async Task InvokePrePlayerConnectAsync(PlayerPending args, CancellationToken token = default)
-    {
-        await UCWarfare.I.PlayerJoinLock.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            if (PlayerPendingAsync == null)
-                return;
-
-            foreach (AsyncEventDelegate<PlayerPending> inv in PlayerPendingAsync.GetInvocationList().Cast<AsyncEventDelegate<PlayerPending>>())
-            {
-                if (!args.CanContinue)
-                    break;
-
-                await TryInvoke(inv, args, nameof(PlayerPendingAsync), token).ConfigureAwait(true);
-            }
-
-            await UniTask.SwitchToMainThread(token);
-
-            if (args.CanContinue)
-            {
-                _pendingAsyncData.Add(args.AsyncData);
-                EventPatches.ContinueSendingVerifyPacket(args.PendingPlayer);
-            }
-            else
-                EventPatches.RemovePlayer(args.PendingPlayer, args.Rejection, args.RejectReason ?? "An unknown error occured.");
-        }
-        catch (Exception ex)
-        {
-            L.LogError(ex);
-            await UniTask.SwitchToMainThread(token);
-            EventPatches.ContinueSendingVerifyPacket(args.PendingPlayer);
-        }
-        finally
-        {
-            UCWarfare.I.PlayerJoinLock.Release();
         }
     }
     internal static bool OnDraggingOrSwappingItem(PlayerInventory playerInv, byte pageFrom, ref byte pageTo, byte xFrom, ref byte xTo, byte yFrom, ref byte yTo, ref byte rotTo, bool swap)

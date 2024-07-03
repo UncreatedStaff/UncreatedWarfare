@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -19,31 +20,6 @@ public static class LeaderboardEx
 {
     public const string EmptyFieldNamePlaceholder = "---";
     public const string EmptyFieldPlaceholder = "--";
-    public static bool LeaderboardUp(this Gamemode? gamemode) => gamemode is IEndScreen { IsScreenUp: true };
-    public static bool LeaderboardUp(this Gamemode? gamemode, out ILeaderboard lb)
-    {
-        if (gamemode is IImplementsLeaderboard { State: not State.Active and not State.Staging, IsScreenUp: true, Leaderboard: { } lb2 }
-            && (lb2 is not MonoBehaviour o || o.isActiveAndEnabled))
-        {
-            lb = lb2;
-            return true;
-        }
-
-        lb = null!;
-        return false;
-    }
-    public static bool LeaderboardUp<TStats, TStatTracker>(this Gamemode? gamemode, out ILeaderboard<TStats, TStatTracker> lb) where TStats : BasePlayerStats where TStatTracker : BaseStatTracker<TStats>
-    {
-        if (gamemode is IImplementsLeaderboard<TStats, TStatTracker> { State: not State.Active and not State.Staging, IsScreenUp: true, Leaderboard: { } lb2 }
-            && (lb2 is not MonoBehaviour o || o.isActiveAndEnabled))
-        {
-            lb = lb2;
-            return true;
-        }
-
-        lb = null!;
-        return false;
-    }
     public static void RemoveLeaderboardModifiers(UCPlayer player)
     {
         player.Player.movement.sendPluginSpeedMultiplier(1f);
@@ -60,7 +36,10 @@ public static class LeaderboardEx
             player.Player.movement.sendPluginJumpMultiplier(0f);
             player.Player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
 
-            if (Data.Is(out IRevives r)) r.ReviveManager.RevivePlayer(player.Player);
+            if (Data.Is(out IRevives? r))
+            {
+                r.ReviveManager.RevivePlayer(player.Player);
+            }
 
             if (!player.Player.life.isDead)
             {
@@ -68,14 +47,19 @@ public static class LeaderboardEx
                 player.Player.teleportToLocationUnsafe(zone != null ? zone.Center3D : TeamManager.LobbySpawn, TeamManager.GetMainYaw(team));
             }
             else
-                player.Player.life.ServerRespawn(false);
-
-            if (Data.Is(out IKitRequests req))
             {
-                UCWarfare.RunTask(req.KitManager.Requests.ResupplyKit(player), ctx: "Resupplying " + player + "'s kit for leaderboard.");
+                player.Player.life.ServerRespawn(false);
             }
+
+            if (Data.Is(out IKitRequests? req))
+            {
+                Task.Run(() => req.KitManager.Requests.ResupplyKit(player));
+            }
+
             if (Data.Is<IFlagRotation>())
+            {
                 CTFUI.ClearFlagList(player.Connection);
+            }
         }
         catch (Exception ex)
         {

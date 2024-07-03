@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using Uncreated.Warfare.Quests;
 
@@ -33,12 +34,13 @@ public abstract class QuestTracker
         Quest = quest;
         // todo rewards
     }
-
+    protected virtual void WriteProgress(Utf8JsonWriter writer) { }
+    protected virtual void ReadProgress(ref Utf8JsonReader reader) { }
     protected void InvokeUpdate()
     {
         if (Thread.CurrentThread.IsGameThread())
         {
-            HandleUpdated();
+            HandleUpdated(false);
 
             if (IsComplete)
                 HandleComplete();
@@ -48,7 +50,7 @@ public abstract class QuestTracker
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
-                HandleUpdated();
+                HandleUpdated(false);
 
                 if (IsComplete)
                     HandleComplete();
@@ -56,7 +58,7 @@ public abstract class QuestTracker
         }
     }
 
-    protected virtual void HandleUpdated()
+    protected virtual void HandleUpdated(bool skipFlagUpdate)
     {
         // todo
     }

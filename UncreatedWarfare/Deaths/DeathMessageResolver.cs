@@ -1,5 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -7,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -16,16 +19,17 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.NewQuests.Parameters;
-using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Deaths;
-internal class Localization
+public class DeathMessageResolver
 {
     private readonly EventDispatcher2 _dispatcher;
-    public Localization(EventDispatcher2 dispatcher)
+    private readonly ILogger<DeathMessageResolver> _logger;
+    public DeathMessageResolver(EventDispatcher2 dispatcher, ILogger<DeathMessageResolver> logger)
     {
         _dispatcher = dispatcher;
+        _logger = logger;
     }
 
     /*
@@ -37,11 +41,11 @@ internal class Localization
      * {5} ?= Player 3
      * {6} ?= Item 2
      */
-    private readonly Dictionary<string, DeathCause[]> DeathTranslations = new Dictionary<string, DeathCause[]>(48);
+    private readonly Dictionary<string, CauseGroup[]> _translationList = new Dictionary<string, CauseGroup[]>(8);
 
-    private readonly DeathCause[] DefaultValues =
+    private readonly CauseGroup[] _defaultTranslations =
     {
-        new DeathCause(EDeathCause.ACID)
+        new CauseGroup(EDeathCause.ACID)
         {
             Translations =
             [
@@ -49,7 +53,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being burned by an acid zombie.")
             ]
         },
-        new DeathCause(EDeathCause.ANIMAL)
+        new CauseGroup(EDeathCause.ANIMAL)
         {
             Translations =
             [
@@ -57,8 +61,8 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being attacked by an animal.")
             ]
         },
-        new DeathCause(EDeathCause.ARENA, new DeathTranslation(DeathFlags.None, "{0} stepped outside the arena boundary.")),
-        new DeathCause(EDeathCause.BLEEDING)
+        new CauseGroup(EDeathCause.ARENA, new DeathTranslation(DeathFlags.None, "{0} stepped outside the arena boundary.")),
+        new CauseGroup(EDeathCause.BLEEDING)
         {
             Translations =
             [
@@ -70,7 +74,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item, "{0} bled out by their own hand from a {3}."),
             ]
         },
-        new DeathCause(EDeathCause.BONES)
+        new CauseGroup(EDeathCause.BONES)
         {
             Translations =
             [
@@ -78,7 +82,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after breaking their legs.")
             ]
         },
-        new DeathCause(EDeathCause.BOULDER)
+        new CauseGroup(EDeathCause.BOULDER)
         {
             Translations =
             [
@@ -86,8 +90,8 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being crushed by a mega zombie.")
             ]
         },
-        new DeathCause(EDeathCause.BREATH, new DeathTranslation(DeathFlags.None, "{0} asphyxiated.")),
-        new DeathCause(EDeathCause.BURNER)
+        new CauseGroup(EDeathCause.BREATH, new DeathTranslation(DeathFlags.None, "{0} asphyxiated.")),
+        new CauseGroup(EDeathCause.BURNER)
         {
             Translations =
             [
@@ -95,7 +99,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being burned by a mega zombie.")
             ]
         },
-        new DeathCause(EDeathCause.BURNING)
+        new CauseGroup(EDeathCause.BURNING)
         {
             Translations =
             [
@@ -103,7 +107,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being burned.")
             ]
         },
-        new DeathCause(EDeathCause.CHARGE)
+        new CauseGroup(EDeathCause.CHARGE)
         {
             Translations =
             [
@@ -115,9 +119,9 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item, "{0} blew themselves up with a {3}."),
             ]
         },
-        new DeathCause(EDeathCause.FOOD, new DeathTranslation(DeathFlags.None, "{0} starved to death.")),
-        new DeathCause(EDeathCause.FREEZING, new DeathTranslation(DeathFlags.None, "{0} froze to death.")),
-        new DeathCause(EDeathCause.GRENADE)
+        new CauseGroup(EDeathCause.FOOD, new DeathTranslation(DeathFlags.None, "{0} starved to death.")),
+        new CauseGroup(EDeathCause.FREEZING, new DeathTranslation(DeathFlags.None, "{0} froze to death.")),
+        new CauseGroup(EDeathCause.GRENADE)
         {
             Translations =
             [
@@ -135,7 +139,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after blowing themselves up with a {3}.")
             ]
         },
-        new DeathCause(EDeathCause.GUN)
+        new CauseGroup(EDeathCause.GUN)
         {
             Translations =
             [
@@ -162,7 +166,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being shot in the {2} by {1} while in a {6} driven by {5} with a {3} from {4}m away."),
             ]
         },
-        new DeathCause(EDeathCause.INFECTION)
+        new CauseGroup(EDeathCause.INFECTION)
         {
             Translations =
             [
@@ -176,7 +180,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{0} bled out after {1} used a {3} on them.")
             ]
         },
-        new DeathCause(EDeathCause.KILL)
+        new CauseGroup(EDeathCause.KILL)
         {
             Translations =
             [
@@ -185,7 +189,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Suicide, "{0} killed themselves as an admin."), // tested
             ]
         },
-        new DeathCause(EDeathCause.LANDMINE)
+        new CauseGroup(EDeathCause.LANDMINE)
         {
             Translations =
             [
@@ -239,7 +243,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item | DeathFlags.Item2 | DeathFlags.Player3, "{0} bled out after being blown up by their {3} that was triggered by {5} uing a {6}."),
             ]
         },
-        new DeathCause(EDeathCause.MELEE)
+        new CauseGroup(EDeathCause.MELEE)
         {
             Translations =
             [
@@ -253,7 +257,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being struck by {1} with a {3} in the {2}.")
             ]
         },
-        new DeathCause(EDeathCause.MISSILE)
+        new CauseGroup(EDeathCause.MISSILE)
         {
             Translations =
             [
@@ -271,7 +275,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after blowing themselves up with a {3}."),
             ]
         },
-        new DeathCause(EDeathCause.PUNCH)
+        new CauseGroup(EDeathCause.PUNCH)
         {
             Translations =
             [
@@ -281,7 +285,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Killer | DeathFlags.Bleeding, "{0} bled out after being punched by {1}.")
             ]
         },
-        new DeathCause(EDeathCause.ROADKILL)
+        new CauseGroup(EDeathCause.ROADKILL)
         {
             Translations =
             [
@@ -298,7 +302,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after running themselves over using a {3} going {4} mph."),
             ]
         },
-        new DeathCause(EDeathCause.SENTRY)
+        new CauseGroup(EDeathCause.SENTRY)
         {
             Translations =
             [
@@ -324,7 +328,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item | DeathFlags.Item2, "{0} bled out after being shot by their own {3}'s {6}."),
             ]
         },
-        new DeathCause(EDeathCause.SHRED)
+        new CauseGroup(EDeathCause.SHRED)
         {
             Translations =
             [
@@ -342,7 +346,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after being shredded by their own {3}."),
             ]
         },
-        new DeathCause(EDeathCause.SPARK)
+        new CauseGroup(EDeathCause.SPARK)
         {
             Translations =
             [
@@ -350,7 +354,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being shocked by a mega zombie.")
             ]
         },
-        new DeathCause(EDeathCause.SPIT)
+        new CauseGroup(EDeathCause.SPIT)
         {
             Translations =
             [
@@ -358,7 +362,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being spit on by a zombie.")
             ]
         },
-        new DeathCause(EDeathCause.SPLASH)
+        new CauseGroup(EDeathCause.SPLASH)
         {
             Translations =
             [
@@ -396,8 +400,8 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after hitting themselves with {3} fragmentation while in a {6} driven by {5}."),
             ]
         },
-        new DeathCause(EDeathCause.SUICIDE, new DeathTranslation(DeathFlags.None, "{0} commited suicide.")),
-        new DeathCause(EDeathCause.VEHICLE)
+        new CauseGroup(EDeathCause.SUICIDE, new DeathTranslation(DeathFlags.None, "{0} commited suicide.")),
+        new CauseGroup(EDeathCause.VEHICLE)
         {
             Translations =
             [
@@ -425,8 +429,8 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Player3, "{0} blew themselves up with {5}'s vehicle."),
             ]
         },
-        new DeathCause(EDeathCause.WATER, new DeathTranslation(DeathFlags.None, "{0} dehydrated.")),
-        new DeathCause(EDeathCause.ZOMBIE)
+        new CauseGroup(EDeathCause.WATER, new DeathTranslation(DeathFlags.None, "{0} dehydrated.")),
+        new CauseGroup(EDeathCause.ZOMBIE)
         {
             Translations =
             [
@@ -434,7 +438,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being mauled by a zombie.")
             ]
         },
-        new DeathCause
+        new CauseGroup
         {
             CustomKey = "maincamp",
             Translations =
@@ -449,7 +453,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.NoDistance | DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{0} bled out trying to main-camp {1} with a {3}."),
             ]
         },
-        new DeathCause
+        new CauseGroup
         {
             CustomKey = "maindeath",
             Translations =
@@ -457,7 +461,7 @@ internal class Localization
                 new DeathTranslation(DeathFlags.None, "{0} died trying to enter their enemy's base.")
             ]
         },
-        new DeathCause
+        new CauseGroup
         {
             CustomKey = "explosive-consumable",
             Translations =
@@ -467,9 +471,9 @@ internal class Localization
                 new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{0} suicide bombed {1} with a {3}.") // tested
             ]
         },
-        new DeathCause // mortar override
+        new CauseGroup // mortar override
         {
-            ItemCause = new AssetParameterTemplate<ItemAsset>(new Guid("d6424d034309417dbc5f17814af905a8")).CreateValue(null!),
+            ItemCause = new AssetParameterTemplate<ItemAsset>(new Guid("d6424d034309417dbc5f17814af905a8")).CreateValueOnGameThread(),
             Translations =
             [
                 new DeathTranslation(DeathFlags.None, "{0} was blown up by a mortar shell."),
@@ -487,7 +491,7 @@ internal class Localization
             ]
         }
     };
-    public void BroadcastDeath(PlayerDied e, DeathMessageArgs args)
+    public void BroadcastDeath(PlayerDied e)
     {
         bool sentInConsole = false;
         // red if its a teamkill, otherwise white
@@ -515,8 +519,7 @@ internal class Localization
             Log(tk, str, e);
         }
 
-        e.LocalizationArgs = args;
-        e.Message = str!;
+        e.DefaultMessage = str!;
 
         // todo move to somewhere else
         if (e.Player.Player.TryGetPlayerData(out UCPlayerData data))
@@ -530,7 +533,7 @@ internal class Localization
             await _dispatcher.DispatchEventAsync(toDispatch);
             await UniTask.SwitchToMainThread();
 
-            if (e.WasEffectiveKill && e.Killer is { PendingCheaterDeathBan: false } && Util.IsSuspiciousDeath(e.Killer.Player, e.Cause, e.PrimaryAsset, e.SecondaryItem, e.Limb,
+            if (e.WasEffectiveKill && e.Killer is { PendingCheaterDeathBan: false } && Util.IsSuspiciousDeath(e.Killer.Player, e.Cause, e.PrimaryAsset, e.SecondaryAsset, e.Limb,
                     e.KillDistance, e.WasEffectiveKill, e.WasSuicide, e.WasTeamkill))
             {
                 e.Killer.PendingCheaterDeathBan = true;
@@ -638,14 +641,14 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             path = Path.Combine(path, "deaths.json");
         }
 
-        if (!DeathTranslations.TryGetValue(language.Code, out DeathCause[] causes) && (language.IsDefault || !DeathTranslations.TryGetValue(L.Default, out causes)))
-            causes = DefaultValues;
-        List<DeathCause> causesFull = new List<DeathCause>(causes);
-        if (causes != DefaultValues && writeMissing)
+        if (!_translationList.TryGetValue(language.Code, out CauseGroup[] causes) && (language.IsDefault || !_translationList.TryGetValue(L.Default, out causes)))
+            causes = _defaultTranslations;
+        List<CauseGroup> causesFull = new List<CauseGroup>(causes);
+        if (causes != _defaultTranslations && writeMissing)
         {
-            for (int i = 0; i < DefaultValues.Length; ++i)
+            for (int i = 0; i < _defaultTranslations.Length; ++i)
             {
-                DeathCause current = DefaultValues[i];
+                CauseGroup current = _defaultTranslations[i];
                 int existingIndex = causesFull.FindIndex(x => x.Equals(current));
                 if (existingIndex < 0)
                 {
@@ -653,7 +656,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 }
                 else
                 {
-                    DeathCause? existing = causesFull[existingIndex];
+                    CauseGroup? existing = causesFull[existingIndex];
                     List<DeathTranslation>? existingTranslations = null;
                     for (int j = 0; j < current.Translations.Length; ++j)
                     {
@@ -675,7 +678,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                     }
                     if (existingTranslations != null)
                     {
-                        causesFull[existingIndex] = existing = (DeathCause)existing.Clone();
+                        causesFull[existingIndex] = existing = (CauseGroup)existing.Clone();
                         DeathTranslation[] newArr = new DeathTranslation[existing.Translations.Length + existingTranslations.Count];
                         Array.Copy(existing.Translations, 0, newArr, 0, existing.Translations.Length);
                         existingTranslations.CopyTo(newArr, existing.Translations.Length);
@@ -699,7 +702,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     internal void Reload()
     {
         Warfare.Localization.ClearSection(TranslationSection.Deaths);
-        Warfare.Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(DefaultValues.SelectMany(x => x.Translations).Count()));
+        Warfare.Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(_defaultTranslations.SelectMany(x => x.Translations).Count()));
         string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
 
         F.CheckDir(Data.Paths.LangStorage + L.Default, out bool folderIsThere);
@@ -713,14 +716,14 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 stream.Write(comment, 0, comment.Length);
                 Utf8JsonWriter writer = new Utf8JsonWriter(stream, ConfigurationSettings.JsonWriterOptions);
                 writer.WriteStartArray();
-                for (int i = 0; i < DefaultValues.Length; ++i)
+                for (int i = 0; i < _defaultTranslations.Length; ++i)
                 {
-                    DefaultValues[i].WriteJson(writer);
+                    _defaultTranslations[i].WriteJson(writer);
                 }
                 writer.WriteEndArray();
                 writer.Dispose();
             }
-            List<DeathCause> causes = new List<DeathCause>(DefaultValues.Length);
+            List<CauseGroup> causes = new List<CauseGroup>(_defaultTranslations.Length);
             foreach (string folder in langDirs)
             {
                 DirectoryInfo directoryInfo = new DirectoryInfo(folder);
@@ -731,7 +734,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 {
                     if (info.Name.Equals("deaths.json", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        if (DeathTranslations.ContainsKey(lang)) continue;
+                        if (_translationList.ContainsKey(lang)) continue;
                         using FileStream stream = info.OpenRead();
                         if (stream.Length > int.MaxValue)
                             continue;
@@ -742,13 +745,13 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                         {
                             if (reader.TokenType == JsonTokenType.StartObject)
                             {
-                                DeathCause info2 = new DeathCause();
+                                CauseGroup info2 = new CauseGroup();
                                 info2.ReadJson(ref reader);
                                 causes.Add(info2);
                             }
                         }
 
-                        DeathTranslations.Add(lang, causes.ToArray());
+                        _translationList.Add(lang, causes.ToArray());
                         language?.IncrementSection(TranslationSection.Deaths, causes.Count);
                         causes.Clear();
                         break;
@@ -764,10 +767,10 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         if (string.IsNullOrEmpty(args.KillerName)) args.Flags &= ~DeathFlags.Killer;
         if (string.IsNullOrEmpty(args.Player3Name)) args.Flags &= ~DeathFlags.Player3;
         bool isDefault = false;
-        if (DeathTranslations.Count == 0 || (!DeathTranslations.TryGetValue(language.Code, out DeathCause[] causes) && (L.Default.Equals(language) || !DeathTranslations.TryGetValue(L.Default, out causes))))
+        if (_translationList.Count == 0 || (!_translationList.TryGetValue(language.Code, out CauseGroup[] causes) && (L.Default.Equals(language) || !_translationList.TryGetValue(L.Default, out causes))))
         {
             isDefault = true;
-            causes = DefaultValues;
+            causes = _defaultTranslations;
         }
 
         if (causes is null)
@@ -775,20 +778,20 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         rtn:
         int i = FindDeathCause(language, causes, ref args);
 
-        DeathCause cause = causes[i];
+        CauseGroup cause = causes[i];
         string? val = Translate(language, culture, cause, args);
         if (val is null)
         {
             if (isDefault)
                 return Warfare.Localization.TranslateEnum(args.DeathCause, language) + " Dead: " + args.DeadPlayerName;
-            causes = DefaultValues;
+            causes = _defaultTranslations;
             isDefault = true;
             goto rtn;
         }
         return val;
     }
 
-    private int FindDeathCause(LanguageInfo language, DeathCause[] causes, ref DeathMessageArgs args)
+    private int FindDeathCause(LanguageInfo language, CauseGroup[] causes, ref DeathMessageArgs args)
     {
         while (true)
         {
@@ -799,7 +802,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 for (int i = 0; i < causes.Length; ++i)
                 {
-                    DeathCause cause = causes[i];
+                    CauseGroup cause = causes[i];
                     if (cause.CustomKey is not null && cause.CustomKey.Equals(specKey, StringComparison.Ordinal)) return i;
                 }
             }
@@ -810,7 +813,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 {
                     for (int i = 0; i < causes.Length; ++i)
                     {
-                        DeathCause cause = causes[i];
+                        CauseGroup cause = causes[i];
                         if (cause.VehicleCause != null && cause.VehicleCause.IsMatch(guid)) return i;
                     }
                 }
@@ -818,7 +821,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 {
                     for (int i = 0; i < causes.Length; ++i)
                     {
-                        DeathCause cause = causes[i];
+                        CauseGroup cause = causes[i];
                         if (cause.ItemCause != null && cause.ItemCause.IsMatch(guid)) return i;
                     }
                 }
@@ -827,17 +830,17 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             EDeathCause cause2 = args.DeathCause;
             for (int i = 0; i < causes.Length; ++i)
             {
-                DeathCause cause = causes[i];
+                CauseGroup cause = causes[i];
                 if (cause.Cause.HasValue && cause.Cause == cause2) return i;
             }
-            if (!language.IsDefault && DeathTranslations.TryGetValue(L.Default, out causes))
+            if (!language.IsDefault && _translationList.TryGetValue(L.Default, out causes))
             {
                 language = Warfare.Localization.GetDefaultLanguage();
                 continue;
             }
-            if (causes != DefaultValues)
+            if (causes != _defaultTranslations)
             {
-                causes = DefaultValues;
+                causes = _defaultTranslations;
                 continue;
             }
 
@@ -845,17 +848,21 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         }
     }
 
-    private string? Translate(LanguageInfo language, CultureInfo culture, DeathCause cause, DeathMessageArgs args)
+    /// <summary>
+    /// Choose a template based on the <see cref="EDeathCause"/> and format it.
+    /// </summary>
+    public UniTask<string?> TranslateDeath(PlayerDied e, LanguageInfo language, IFormatProvider formatProvider, CauseGroup cause, bool useSteamNames)
     {
-        DeathFlags flags = args.Flags;
+        DeathFlags flags = e.MessageFlags;
     redo:
         for (int i = 0; i < cause.Translations.Length; ++i)
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == flags)
-                return args.Translate(d.Value, language, culture);
+                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
         }
-        L.LogWarning("Exact match not found for " + flags + ".");
+
+        _logger.LogWarning("Exact match not found for {0}.", flags);
         if ((flags & DeathFlags.NoDistance) == DeathFlags.NoDistance)
         {
             flags &= ~DeathFlags.NoDistance;
@@ -877,7 +884,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Killer)
-                    return args.Translate(d.Value, language, culture);
+                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
             }
         }
         else if ((flags & DeathFlags.Suicide) == DeathFlags.Suicide)
@@ -886,7 +893,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Suicide)
-                    return args.Translate(d.Value, language, culture);
+                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
             }
         }
         else if ((flags & DeathFlags.Player3) == DeathFlags.Player3)
@@ -895,62 +902,94 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Player3)
-                    return args.Translate(d.Value, language, culture);
+                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
             }
         }
         for (int i = 0; i < cause.Translations.Length; ++i)
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == DeathFlags.None)
-                return args.Translate(d.Value, language, culture);
+                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
         }
 
-        return null;
+        return UniTask.FromResult<string?>(null);
     }
-}
-public struct DeathMessageArgs
-{
-    public EDeathCause DeathCause;
-    public string? SpecialKey;
-    public string DeadPlayerName;
-    public string? KillerName;
-    public ulong DeadPlayerTeam;
-    public ulong KillerTeam;
-    public ELimb Limb;
-    public string? ItemName;
-    public Guid ItemGuid;
-    public Guid Item2Guid;
-    public bool ItemIsVehicle;
-    public float KillDistance;
-    public string? Player3Name;
-    public ulong Player3Team;
-    public string? Item2Name;
-    public DeathFlags Flags;
-    public bool IsTeamkill;
-    internal readonly string Translate(string template, LanguageInfo language, CultureInfo culture)
+
+    /// <summary>
+    /// Format a specific template using the given death args.
+    /// </summary>
+    private async UniTask<string> TranslateDeath(string template, PlayerDied e, LanguageInfo? language, IFormatProvider formatProvider, bool useSteamNames)
     {
-        object[] format = new object[7];
-        format[0] = DeadPlayerName.Colorize(TeamManager.GetTeamHexColor(DeadPlayerTeam));
-        format[1] = KillerName is null ? string.Empty : KillerName.Colorize(TeamManager.GetTeamHexColor(KillerTeam));
-        format[2] = Warfare.Localization.TranslateEnum(Limb, language);
-        format[3] = ItemName is not null ? ItemName.EndsWith(" Built", StringComparison.Ordinal) ? ItemName[..^6] : ItemName : string.Empty;
-        format[4] = KillDistance.ToString("F0", culture);
-        format[5] = Player3Name is null ? string.Empty : Player3Name.Colorize(TeamManager.GetTeamHexColor(Player3Team));
-        format[6] = Item2Name ?? string.Empty;
+        language ??= Localization.GetDefaultLanguage();
+
+        string? killerName = null;
+        if (e.Instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        {
+            if (e.Killer == null)
+            {
+                PlayerNames names = await F.GetPlayerOriginalNamesAsync(e.Instigator.m_SteamID);
+                killerName = useSteamNames ? names.PlayerName : names.CharacterName;
+            }
+            else
+            {
+                killerName = useSteamNames ? e.Killer.Name.PlayerName : e.Killer.Name.CharacterName;
+            }
+        }
+
+        string? thirdPartyName = null;
+        if (e.ThirdPartyId.HasValue && e.ThirdPartyId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        {
+            if (e.ThirdParty == null)
+            {
+                PlayerNames names = await F.GetPlayerOriginalNamesAsync(e.ThirdPartyId.Value.m_SteamID);
+                thirdPartyName = useSteamNames ? names.PlayerName : names.CharacterName;
+            }
+            else
+            {
+                thirdPartyName = useSteamNames ? e.ThirdParty.Name.PlayerName : e.ThirdParty.Name.CharacterName;
+            }
+        }
+
+        string? itemName = e.PrimaryAsset?.GetAsset()?.FriendlyName;
+        if (itemName != null && itemName.EndsWith(" Built", StringComparison.Ordinal))
+        {
+            itemName = itemName[..^6];
+        }
+
+        string[] format =
+        [
+            useSteamNames ? e.Player.Name.PlayerName : e.Player.Name.CharacterName, // {0}
+            killerName ?? string.Empty,                                             // {1}
+            Localization.TranslateEnum(e.Limb, language),                           // {2}
+            itemName ?? string.Empty,                                               // {3}
+            e.KillDistance.ToString("F0", formatProvider),                          // {4}
+            thirdPartyName ?? string.Empty,                                         // {5}
+            e.SecondaryAsset?.GetAsset()?.FriendlyName ?? string.Empty,             // {6}
+        ];
+
         try
         {
+            // ReSharper disable once CoVariantArrayConversion
             return string.Format(template, format);
         }
         catch (FormatException)
         {
-            L.LogWarning("Formatting error for template: \"" + template + "\" (" + Warfare.Localization.TranslateEnum(DeathCause, Warfare.Localization.GetDefaultLanguage()) + ":"
-                         + Warfare.Localization.TranslateEnum(Flags, Warfare.Localization.GetDefaultLanguage()) + ":" + language.Code.ToUpper() + ").");
-            return template.Replace("{0}", (string)format[0]);
+            _logger.LogWarning("Formatting error for template: \"{0}\" ({1}:{2}:{3}).",
+                template,
+                Localization.TranslateEnum(e.MessageCause),
+                Localization.TranslateEnum(e.MessageFlags),
+                language.Code.ToUpper()
+            );
+
+            return template.Replace("{0}", format[0]);
         }
     }
 }
 
-public class DeathCause : IEquatable<DeathCause>, ICloneable
+/// <summary>
+/// Represents a group of translations linked to a single <see cref="EDeathCause"/>, or a specific item, vehicle, or custom message key.
+/// </summary>
+internal class CauseGroup : IEquatable<CauseGroup>, ICloneable
 {
     public EDeathCause? Cause;
     public QuestParameterValue<Guid>? ItemCause;
@@ -958,9 +997,9 @@ public class DeathCause : IEquatable<DeathCause>, ICloneable
     public string? CustomKey;
     public DeathTranslation[] Translations;
 
-    public DeathCause() { }
+    public CauseGroup() { }
 
-    private DeathCause(EDeathCause? cause, QuestParameterValue<Guid>? itemCause, QuestParameterValue<Guid>? vehicleCause, string? customKey, DeathTranslation[] translations)
+    private CauseGroup(EDeathCause? cause, QuestParameterValue<Guid>? itemCause, QuestParameterValue<Guid>? vehicleCause, string? customKey, DeathTranslation[] translations)
     {
         Cause = cause;
         ItemCause = itemCause;
@@ -968,85 +1007,100 @@ public class DeathCause : IEquatable<DeathCause>, ICloneable
         CustomKey = customKey;
         Translations = translations;
     }
-    public DeathCause(EDeathCause cause)
+
+    public CauseGroup(EDeathCause cause)
     {
         Cause = cause;
     }
-    public DeathCause(EDeathCause cause, DeathTranslation translation) : this(cause, [ translation ]) { }
-    public DeathCause(EDeathCause cause, DeathTranslation[] translations) : this(cause)
+
+    public CauseGroup(EDeathCause cause, DeathTranslation translation) : this(cause, [ translation ]) { }
+
+    public CauseGroup(EDeathCause cause, DeathTranslation[] translations) : this(cause)
     {
         Translations = translations;
     }
+
     public void ReadJson(ref Utf8JsonReader reader)
     {
         if (reader.TokenType != JsonTokenType.StartObject) reader.Read();
         while (reader.Read())
         {
-            if (reader.TokenType == JsonTokenType.EndObject) break;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string? prop = reader.GetString();
-                if (reader.Read() && prop is not null)
-                {
-                    if (prop.Equals("death-cause", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (reader.TokenType == JsonTokenType.String && (prop = reader.GetString()) is not null)
-                        {
-                            if (Enum.TryParse(prop, true, out EDeathCause c))
-                            {
-                                CustomKey = null;
-                                Cause = c;
-                                ItemCause = null;
-                                VehicleCause = null;
-                            }
-                        }
-                    }
-                    else if (prop.Equals("item-cause", StringComparison.OrdinalIgnoreCase))
-                    {
-                        CustomKey = null;
-                        Cause = null;
-                        ItemCause = AssetParameterTemplate<ItemAsset>.ReadValueJson(ref reader);
-                        VehicleCause = null;
-                    }
-                    else if (prop.Equals("vehicle-cause", StringComparison.OrdinalIgnoreCase))
-                    {
-                        CustomKey = null;
-                        Cause = null;
-                        ItemCause = null;
-                        VehicleCause = AssetParameterTemplate<VehicleAsset>.ReadValueJson(ref reader);
-                    }
-                    else if (prop.Equals("custom-key", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if ((prop = reader.GetString()) is not null)
-                        {
-                            CustomKey = prop;
-                            Cause = null;
-                            ItemCause = null;
-                            VehicleCause = null;
-                        }
-                    }
-                    else if (prop.Equals("translations", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (reader.TokenType == JsonTokenType.StartObject)
-                        {
-                            List<DeathTranslation> translations = new List<DeathTranslation>(5);
-                            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
-                            {
-                                if (reader.TokenType == JsonTokenType.PropertyName)
-                                {
-                                    prop = reader.GetString();
-                                    if (reader.Read() && prop is not null && Enum.TryParse(prop, true, out DeathFlags flags)
-                                        && reader.TokenType == JsonTokenType.String && (prop = reader.GetString()) is not null)
-                                    {
-                                        translations.Add(new DeathTranslation(flags, prop));
-                                    }
-                                }
-                            }
+            if (reader.TokenType == JsonTokenType.EndObject)
+                break;
 
-                            Translations = translations.ToArray();
-                        }
+            if (reader.TokenType != JsonTokenType.PropertyName)
+                continue;
+
+            string? prop = reader.GetString();
+            if (!reader.Read() || prop == null)
+                continue;
+            
+            if (prop.Equals("death-cause", StringComparison.OrdinalIgnoreCase))
+            {
+                if (reader.TokenType != JsonTokenType.String
+                    || (prop = reader.GetString()) == null
+                    || !Enum.TryParse(prop, true, out EDeathCause c))
+                {
+                    continue;
+                }
+
+                CustomKey = null;
+                Cause = c;
+                ItemCause = null;
+                VehicleCause = null;
+            }
+            else if (prop.Equals("item-cause", StringComparison.OrdinalIgnoreCase))
+            {
+                CustomKey = null;
+                Cause = null;
+                ItemCause = AssetParameterTemplate<ItemAsset>.ReadValueJson(ref reader);
+                VehicleCause = null;
+            }
+            else if (prop.Equals("vehicle-cause", StringComparison.OrdinalIgnoreCase))
+            {
+                CustomKey = null;
+                Cause = null;
+                ItemCause = null;
+                VehicleCause = AssetParameterTemplate<VehicleAsset>.ReadValueJson(ref reader);
+            }
+            else if (prop.Equals("custom-key", StringComparison.OrdinalIgnoreCase))
+            {
+                if ((prop = reader.GetString()) == null)
+                {
+                    continue;
+                }
+
+                CustomKey = prop;
+                Cause = null;
+                ItemCause = null;
+                VehicleCause = null;
+            }
+            else if (prop.Equals("translations", StringComparison.OrdinalIgnoreCase))
+            {
+                if (reader.TokenType != JsonTokenType.StartObject)
+                {
+                    continue;
+                }
+
+                List<DeathTranslation> translations = new List<DeathTranslation>(5);
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                {
+                    if (reader.TokenType != JsonTokenType.PropertyName)
+                        continue;
+
+                    prop = reader.GetString();
+
+                    if (reader.Read()
+                        && prop != null
+                        && Enum.TryParse(prop, true, out DeathFlags flags)
+                        && reader.TokenType == JsonTokenType.String
+                        && (prop = reader.GetString()) != null)
+                    {
+                        translations.Add(new DeathTranslation(flags, prop));
                     }
                 }
+
+                Translations = translations.ToArray();
             }
         }
     }
@@ -1089,22 +1143,22 @@ public class DeathCause : IEquatable<DeathCause>, ICloneable
         writer.WriteEndObject();
     }
 
-    public override bool Equals(object? obj) => obj is DeathCause c && Equals(c);
+    public override bool Equals(object? obj) => obj is CauseGroup c && Equals(c);
 
     // ReSharper disable NonReadonlyMemberInGetHashCode
     public override int GetHashCode() => HashCode.Combine(Cause, ItemCause, VehicleCause, CustomKey, Translations);
     // ReSharper restore NonReadonlyMemberInGetHashCode
 
-    public static bool operator ==(DeathCause? left, DeathCause? right) => Equals(left, right);
-    public static bool operator !=(DeathCause? left, DeathCause? right) => !(left == right);
+    public static bool operator ==(CauseGroup? left, CauseGroup? right) => Equals(left, right);
+    public static bool operator !=(CauseGroup? left, CauseGroup? right) => !(left == right);
     public object Clone()
     {
         DeathTranslation[] newTranslations = new DeathTranslation[Translations.Length];
         Array.Copy(Translations, 0, newTranslations, 0, newTranslations.Length);
-        return new DeathCause(Cause, ItemCause, VehicleCause, CustomKey, newTranslations);
+        return new CauseGroup(Cause, ItemCause, VehicleCause, CustomKey, newTranslations);
     }
 
-    public bool Equals(DeathCause other)
+    public bool Equals(CauseGroup other)
     {
         if (ReferenceEquals(this, other)) return true;
         if (other is null) return false;
@@ -1127,7 +1181,8 @@ public class DeathCause : IEquatable<DeathCause>, ICloneable
         return string.Equals(other.CustomKey, CustomKey, StringComparison.Ordinal);
     }
 }
-public readonly struct DeathTranslation(DeathFlags flags, string value)
+
+internal readonly struct DeathTranslation(DeathFlags flags, string value)
 {
     public readonly DeathFlags Flags = flags;
     public readonly string Value = value;

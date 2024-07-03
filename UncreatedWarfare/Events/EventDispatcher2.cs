@@ -7,21 +7,26 @@ using SDG.Framework.Utilities;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Events;
+
+/// <summary>
+/// Handles dispatching <see cref="IEventListener{TEventArgs}"/> and <see cref="IAsyncEventListener{TEventArgs}"/> objects.
+/// </summary>
 public partial class EventDispatcher2 : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly CancellationToken _unloadToken;
+    private readonly ILogger<EventDispatcher2> _logger;
     private readonly Dictionary<EventListenerCacheKey, EventListenerInfo> _listeners = new Dictionary<EventListenerCacheKey, EventListenerInfo>();
 
     public EventDispatcher2(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
+        _logger = serviceProvider.GetRequiredService<ILogger<EventDispatcher2>>();
         _unloadToken = serviceProvider.GetRequiredService<WarfareModule>().UnloadToken;
     }
 
@@ -29,6 +34,8 @@ public partial class EventDispatcher2 : IHostedService
     {
         /* Provider */
         Provider.onServerConnected += ProviderOnServerConnected;
+        Provider.onServerDisconnected += ProviderOnServerDisconnected;
+        Provider.onBattlEyeKick += ProviderOnBattlEyeKick;
 
         /* Barricades */
         BarricadeManager.onDeployBarricadeRequested += BarricadeManagerOnDeployBarricadeRequested;
@@ -52,6 +59,8 @@ public partial class EventDispatcher2 : IHostedService
     {
         /* Provider */
         Provider.onServerConnected -= ProviderOnServerConnected;
+        Provider.onServerDisconnected -= ProviderOnServerDisconnected;
+        Provider.onBattlEyeKick -= ProviderOnBattlEyeKick;
 
         /* Barricades */
         BarricadeManager.onDeployBarricadeRequested -= BarricadeManagerOnDeployBarricadeRequested;
@@ -97,49 +106,54 @@ public partial class EventDispatcher2 : IHostedService
         List<EventListenerResult> eventListeners = ListPool<EventListenerResult>.claim();
 
         // get all event listeners from the service provider, then get all IEventListenerProviders and get all listeners from them.
-        IEnumerable<EventListenerResult> eventListenerEnum = _serviceProvider
-            .GetServices<IEventListener<TEventArgs>>()
-            .Select(listener => new EventListenerResult { IsAsyncListener = false, Listener = listener })
-            .Concat(_serviceProvider
-                .GetServices<IAsyncEventListener<TEventArgs>>()
-                .Select(listener => new EventListenerResult { IsAsyncListener = true, Listener = listener }))
-            .Concat(_serviceProvider
-                .GetServices<IEventListenerProvider>()
-                .SelectMany(provider => provider
-                    .EnumerateNormalListeners<TEventArgs>()
-                    .Select(listener => new EventListenerResult { IsAsyncListener = false, Listener = listener })
-                    .Concat(provider.EnumerateAsyncListeners<TEventArgs>()
-                        .Select(listener => new EventListenerResult { IsAsyncListener = true, Listener = listener })
-                    )
-                )
-            );
 
-        eventListeners.AddRange(eventListenerEnum);
-
-        if (eventListeners.Count == 0)
-            return true;
-
-        Type asyncType = typeof(IAsyncEventListener<TEventArgs>),
-             normalType = typeof(IEventListener<TEventArgs>);
-
-        for (int i = 0; i < eventListeners.Count; i++)
+        // IServiceProvider
+        foreach (IEventListener<TEventArgs> eventListener in _serviceProvider.GetServices<IEventListener<TEventArgs>>())
         {
-            EventListenerResult result = eventListeners[i];
-            GetInfo<TEventArgs>(result.IsAsyncListener ? asyncType : normalType, result.Listener.GetType(), out EventListenerInfo info);
-            result.Priority = info.Priority;
-            result.EnsureMainThread = info.EnsureMainThread;
-            eventListeners[i] = result;
+            eventListeners.Add(new EventListenerResult { Listener = eventListener });
         }
 
-        eventListeners.Sort((a, b) => b.Priority.CompareTo(a.Priority));
-
-        for (int i = 0; i < eventListeners.Count; i++)
+        foreach (IAsyncEventListener<TEventArgs> eventListener in _serviceProvider.GetServices<IAsyncEventListener<TEventArgs>>())
         {
-            EventListenerResult result = eventListeners[i];
+            eventListeners.Add(new EventListenerResult { Flags = 1, Listener = eventListener });
+        }
 
+        // IEventListenerProviders
+        foreach (IEventListenerProvider provider in _serviceProvider.GetServices<IEventListenerProvider>())
+        {
+            foreach (IEventListener<TEventArgs> eventListener in provider.EnumerateNormalListeners<TEventArgs>())
+            {
+                eventListeners.Add(new EventListenerResult { Listener = eventListener });
+            }
+
+            foreach (IAsyncEventListener<TEventArgs> eventListener in provider.EnumerateAsyncListeners<TEventArgs>())
+            {
+                eventListeners.Add(new EventListenerResult { Flags = 1, Listener = eventListener });
+            }
+        }
+
+        int ct = eventListeners.Count;
+
+        if (ct == 0)
+        {
+            return true;
+        }
+
+        EventListenerResult[] underlying = eventListeners.GetUnderlyingArray();
+
+        FillResults<TEventArgs>(underlying, ct);
+
+        Array.Sort(underlying, 0, ct, PriorityComparer.Instance);
+
+#if DEBUG
+        _logger.LogDebug("Dispatching event for {0} listeners: {1}.", ct, Accessor.Formatter.Format(typeof(TEventArgs)));
+#endif
+
+        for (int i = 0; i < ct; i++)
+        {
             try
             {
-                if (result.EnsureMainThread && Environment.CurrentManagedThreadId != WarfareModule.GameThreadId)
+                if ((underlying[i].Flags & 4) != 0 && Environment.CurrentManagedThreadId != WarfareModule.GameThreadId)
                 {
                     await UniTask.SwitchToMainThread(token);
                 }
@@ -147,34 +161,43 @@ public partial class EventDispatcher2 : IHostedService
                 if (eventArgs is ICancellable { IsCancelled: true })
                     break;
 
-                if (result.IsAsyncListener)
+                if ((underlying[i].Flags & 1) != 0)
                 {
-                    await ((IAsyncEventListener<TEventArgs>)result.Listener).HandleEventAsync(eventArgs, token);
+                    await ((IAsyncEventListener<TEventArgs>)underlying[i].Listener).HandleEventAsync(eventArgs, _serviceProvider, token);
                 }
                 else
                 {
-                    ((IEventListener<TEventArgs>)result.Listener).HandleEvent(eventArgs);
+                    ((IEventListener<TEventArgs>)underlying[i].Listener).HandleEvent(eventArgs, _serviceProvider);
                 }
             }
+            catch (ControlException) { }
             catch (Exception ex)
             {
-                Type listenerType = result.Listener.GetType();
-                ILogger logger = (ILogger)_serviceProvider.GetService(typeof(ILogger<>).MakeGenericType(listenerType));
-
                 if (Environment.CurrentManagedThreadId != WarfareModule.GameThreadId)
                 {
                     await UniTask.SwitchToMainThread(CancellationToken.None);
                 }
 
-                GetInfo<TEventArgs>(result.IsAsyncListener ? asyncType : normalType, listenerType, out EventListenerInfo info);
+                Type listenerType = underlying[i].Listener.GetType();
+
+                GetInfo<TEventArgs>((underlying[i].Flags & 1) != 0 ? typeof(IAsyncEventListener<TEventArgs>) : typeof(IEventListener<TEventArgs>), listenerType, out EventListenerInfo info);
+
+                ILogger logger = (ILogger)_serviceProvider.GetService(typeof(ILogger<>).MakeGenericType(listenerType));
                 if (ex is OperationCanceledException && token.IsCancellationRequested)
                 {
-                    logger.LogInformation(ex, "Execution of event handler {0} cancelled.", Accessor.Formatter.Format(info.Method));
+                    logger.LogInformation(ex, "Execution of event handler {0} cancelled by CancellationToken.", Accessor.Formatter.Format(info.Method));
                 }
                 else
                 {
                     logger.LogError(ex, "Error executing event handler: {0}.", Accessor.Formatter.Format(info.Method));
                 }
+
+                if (eventArgs is not ICancellable c)
+                    continue;
+
+                c.Cancel();
+                logger.LogInformation("Cancelling event handler {0} due to exception described above.", Accessor.Formatter.Format(info.Method));
+                break;
             }
         }
 
@@ -194,6 +217,37 @@ public partial class EventDispatcher2 : IHostedService
         }
 
         return eventArgs is not ICancellable { IsActionCancelled: true };
+    }
+
+    private class PriorityComparer : IComparer<EventListenerResult>
+    {
+        public static readonly PriorityComparer Instance = new PriorityComparer();
+        private PriorityComparer() { }
+        public int Compare(EventListenerResult a, EventListenerResult b)
+        {
+                                                    // avoid extra branching for performance
+            return (a.Flags & 2) != (b.Flags & 2) ? (a.Flags & 2) - 1 : b.Priority.CompareTo(a.Priority);
+        }
+    }
+
+    private void FillResults<TEventArgs>(EventListenerResult[] eventListeners, int ct)
+    {
+        // separate method because async functions can't have ref locals.
+        Type asyncType = typeof(IAsyncEventListener<TEventArgs>),
+             normalType = typeof(IEventListener<TEventArgs>);
+
+        for (int i = 0; i < ct; ++i)
+        {
+            ref EventListenerResult result = ref eventListeners[i];
+            bool isAsync = (result.Flags & 1) != 0;
+            GetInfo<TEventArgs>(isAsync ? asyncType : normalType, result.Listener.GetType(), out EventListenerInfo info);
+
+            result.Priority = info.Priority;
+            // ReSharper disable RedundantCast
+            result.Flags |= info.MustRunInstantly & !isAsync ? (byte)2 : (byte)0;
+            result.Flags |= info.EnsureMainThread ? (byte)4 : (byte)0;
+            // ReSharper restore RedundantCast
+        }
     }
 
     private void GetInfo<TEventArgs>(Type interfaceType, Type listenerType, out EventListenerInfo info)
@@ -216,6 +270,13 @@ public partial class EventDispatcher2 : IHostedService
         info = default;
         info.Priority = attribute?.Priority ?? 0;
         info.EnsureMainThread = attribute is not { HasRequiredMainThread: true } ? !isAsync : attribute.RequiresMainThread;
+        info.MustRunInstantly = attribute?.MustRunInstantly ?? false;
+
+        if (isAsync && info.MustRunInstantly)
+        {
+            throw new NotSupportedException("Async event listeners can not use the 'MustRunInstantly' property.");
+        }
+
         info.Method = implementedMethod ?? interfaceMethod;
         _listeners.Add(key, info);
     }
@@ -246,15 +307,19 @@ public partial class EventDispatcher2 : IHostedService
     {
         public int Priority;
         public bool EnsureMainThread;
+        public bool MustRunInstantly;
         public MethodInfo Method;
     }
 
     private struct EventListenerResult
     {
         public object Listener;
-        public bool IsAsyncListener;
+        // to save struct size, trying to keep performance good for these
+        // bits: 0: IsAsyncListener
+        //       1: MustRunInstantly
+        //       2: EnsureMainThread
+        public byte Flags;
         public int Priority;
-        public bool EnsureMainThread;
     }
 
     private struct EventListenerCacheKey : IEquatable<EventListenerCacheKey>

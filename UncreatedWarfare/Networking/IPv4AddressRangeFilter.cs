@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Networking;
 
 namespace Uncreated.Warfare.Networking;
 // ReSharper disable once InconsistentNaming

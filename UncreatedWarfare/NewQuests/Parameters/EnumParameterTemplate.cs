@@ -17,6 +17,10 @@ namespace Uncreated.Warfare.NewQuests.Parameters;
 [TypeConverter(typeof(EnumParameterTemplateTypeConverter))]
 public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEquatable<EnumParameterTemplate<TEnum>> where TEnum : unmanaged, Enum
 {
+    /// <summary>
+    /// A parameter value that matches any enum of type <typeparamref name="TEnum"/>.
+    /// </summary>
+    public static QuestParameterValue<TEnum> WildcardInclusive { get; } = new EnumParameterValue(new EnumParameterTemplate<TEnum>(ParameterSelectionType.Inclusive));
 
     /// <summary>
     /// Create a template of it's string representation.

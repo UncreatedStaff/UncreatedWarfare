@@ -1,4 +1,5 @@
-﻿using Stripe;
+﻿using Cysharp.Threading.Tasks;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -6,7 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.SQL;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
@@ -24,7 +24,7 @@ public class StripeEliteKit
         }
     };
 
-    public PrimaryKey PrimaryKey { get; private set; }
+    public uint PrimaryKey { get; private set; }
     public string KitId { get; private set; }
     public Product Product { get; private set; }
     internal static async Task BulkAddStripeEliteKits(IStripeService stripeService, IPurchaseRecordsInterface purchaseRecord, CancellationToken token = default)

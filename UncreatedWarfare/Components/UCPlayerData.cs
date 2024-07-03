@@ -1,13 +1,8 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using Uncreated.SQL;
-using Uncreated.Warfare.Deaths;
-using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using UnityEngine;
-using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Components;
 
@@ -44,29 +39,14 @@ public class UCPlayerData : MonoBehaviour
     internal BarricadeDrop? TriggeringLandmine;
     internal ItemMagazineAsset LastProjectedAmmoType;
     internal Coroutine? CurrentTeleportRequest;
-    internal PlayerDied? LastBleedingEvent;
     internal IDeployable? PendingDeploy;
     internal float[] PingBuffer = new float[PingBufferSize];
     internal int PingBufferIndex = -1;
     internal float LastAvgPingDifference;
-    internal List<ThrowableComponent> ActiveThrownItems = new List<ThrowableComponent>(4);
-    internal SqlItem<VehicleSpawn>? Currentlylinking;
-    internal VehicleComponent? ExplodingVehicle;
-    internal ThrowableComponent? TriggeringThrowable;
     internal KeyValuePair<ulong, DateTime> SecondLastAttacker;
-    internal DeathMessageArgs LastBleedingArgs;
-    internal Guid LastExplodedVehicle;
-    internal Guid LastVehicleHitBy;
-    internal Guid LastInfectableConsumed;
-    internal Guid LastExplosiveConsumed;
-    internal Guid LastChargeDetonated;
-    internal Guid LastShreddedBy;
-    internal Guid LastRocketShot;
-    internal Guid LastRocketShotVehicleAsset;
     internal InteractableVehicle? LastRocketShotVehicle;
     internal Guid LastGunShot; // used for amc
     internal ulong LastAttacker;
-    private float _currentTimeSeconds;
     public Player Player { get; private set; }
     public Gamemodes.Interfaces.IStats Stats { get; internal set; }
     public float JoinTime { get; private set; }
@@ -74,7 +54,6 @@ public class UCPlayerData : MonoBehaviour
     public void StartTracking(Player player)
     {
         Player = player;
-        _currentTimeSeconds = 0.0f;
         JoinTime = Time.realtimeSinceStartup;
     }
     public void AddPing(float value)
@@ -93,11 +72,6 @@ public class UCPlayerData : MonoBehaviour
     {
         LastAttacker = 0;
         SecondLastAttacker = new KeyValuePair<ulong, DateTime>(0, DateTime.Now);
-    }
-    public void Update()
-    {
-        float dt = Time.deltaTime;
-        _currentTimeSeconds += dt;
     }
     public void CancelDeployment()
     {

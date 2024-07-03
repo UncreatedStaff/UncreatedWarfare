@@ -9,6 +9,12 @@ public sealed class EventListenerAttribute : Attribute
     private bool _requiresMainThread;
 
     /// <summary>
+    /// Highest priority possible, ensures the event listener runs without switching contexts from the original event.
+    /// </summary>
+    /// <remarks>Not supported on <see cref="IAsyncEventListener{TEventArgs}"/>. An error will be thrown.</remarks>
+    public bool MustRunInstantly { get; set; }
+
+    /// <summary>
     /// Positive values run before negative values. 0 is neutral.
     /// </summary>
     /// <remarks>Defaults to 0.</remarks>

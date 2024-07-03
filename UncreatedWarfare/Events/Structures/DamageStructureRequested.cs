@@ -1,11 +1,10 @@
 ﻿using SDG.Unturned;
-using Uncreated.SQL;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Structures;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Structures;
-public class DamageStructureRequested : BreakableEvent, IBuildableDestroyedEvent
+public class DamageStructureRequested : CancellableEvent, IBuildableDestroyedEvent
 {
     private readonly UCPlayer? _instigator;
     private readonly ulong _instigatorId;
@@ -32,7 +31,7 @@ public class DamageStructureRequested : BreakableEvent, IBuildableDestroyedEvent
     public UnturnedAssetReference PrimaryAsset { get; }
     public UnturnedAssetReference SecondaryAsset { get; }
     public SqlItem<SavedStructure>? Save => _save;
-    public IBuildable Buildable => _buildable ??= new UCStructure(Structure);
+    public IBuildable Buildable => _buildable ??= new BuildableStructure(Structure);
     object IBuildableDestroyedEvent.Region => Region;
     public ushort PendingDamage { get; set; }
     internal DamageStructureRequested(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin, ushort pendingTotalDamage, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)

@@ -1,9 +1,8 @@
-﻿using SDG.Unturned;
-using System;
-using System.Text.Json;
-using System.Threading;
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using SDG.Unturned;
+using System;
+using System.Threading;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
@@ -135,69 +134,66 @@ public sealed class QuestDataAttribute(QuestType type) : Attribute
 {
     public QuestType Type { get; } = type;
 }
-[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
-public sealed class QuestRewardAttribute(QuestRewardType type, Type returnType) : Attribute
-{
-    public QuestRewardType Type { get; } = type;
-    public Type ReturnType { get; } = returnType;
-}
 
 public static class QuestJsonEx
 {
-    public static bool IsWildcardInclusive<TChoice, TVal>(this TChoice choice) where TChoice : IDynamicValue<TVal>.IChoice =>
-        choice.ValueType == DynamicValueType.Wildcard && choice.Behavior == ChoiceBehavior.Inclusive;
-    public static bool IsWildcardInclusive<TAsset>(this DynamicAssetValue<TAsset>.Choice choice) where TAsset : Asset =>
-        choice.ValueType == DynamicValueType.Wildcard && choice.Behavior == ChoiceBehavior.Inclusive;
+    public static bool IsWildcardInclusive<TValueType>(this QuestParameterValue<TValueType> choice)
+    {
+        return choice is { ValueType: ParameterValueType.Wildcard, SelectionType: ParameterSelectionType.Inclusive };
+    }
+
     public static WeaponClass GetWeaponClass(this Guid item)
     {
-        if (Assets.find(item) is ItemGunAsset weapon)
+        if (Assets.find(item) is not ItemGunAsset weapon)
+            return WeaponClass.Unknown;
+
+        if (weapon.action == EAction.Pump)
         {
-            if (weapon.action == EAction.Pump)
-            {
-                return WeaponClass.Shotgun;
-            }
-            if (weapon.action == EAction.Rail)
-            {
-                return WeaponClass.SniperRifle;
-            }
-            if (weapon.action == EAction.Minigun)
-            {
-                return WeaponClass.MachineGun;
-            }
-            if (weapon.action == EAction.Rocket)
-            {
-                return WeaponClass.Rocket;
-            }
-            if (weapon.itemDescription.IndexOf("smg", StringComparison.OrdinalIgnoreCase) != -1 ||
-                weapon.itemDescription.IndexOf("sub", StringComparison.OrdinalIgnoreCase) != -1)
-            {
-                return WeaponClass.SMG;
-            }
-            if (weapon.itemDescription.IndexOf("pistol", StringComparison.OrdinalIgnoreCase) != -1)
-            {
-                return WeaponClass.Pistol;
-            }
-            if (weapon.itemDescription.IndexOf("marksman", StringComparison.OrdinalIgnoreCase) != -1)
-            {
-                return WeaponClass.MarksmanRifle;
-            }
-            if (weapon.itemDescription.IndexOf("rifle", StringComparison.OrdinalIgnoreCase) != -1)
-            {
-                return WeaponClass.BattleRifle;
-            }
-            if (weapon.itemDescription.IndexOf("machine", StringComparison.OrdinalIgnoreCase) != -1 || weapon.itemDescription.IndexOf("lmg", StringComparison.OrdinalIgnoreCase) != -1)
-            {
-                return WeaponClass.MachineGun;
-            }
+            return WeaponClass.Shotgun;
+        }
+        if (weapon.action == EAction.Rail)
+        {
+            return WeaponClass.SniperRifle;
+        }
+        if (weapon.action == EAction.Minigun)
+        {
+            return WeaponClass.MachineGun;
+        }
+        if (weapon.action == EAction.Rocket)
+        {
+            return WeaponClass.Rocket;
+        }
+        if (weapon.itemDescription.IndexOf("smg", StringComparison.OrdinalIgnoreCase) != -1 ||
+            weapon.itemDescription.IndexOf("sub", StringComparison.OrdinalIgnoreCase) != -1)
+        {
+            return WeaponClass.SMG;
+        }
+        if (weapon.itemDescription.IndexOf("pistol", StringComparison.OrdinalIgnoreCase) != -1)
+        {
+            return WeaponClass.Pistol;
+        }
+        if (weapon.itemDescription.IndexOf("marksman", StringComparison.OrdinalIgnoreCase) != -1)
+        {
+            return WeaponClass.MarksmanRifle;
+        }
+        if (weapon.itemDescription.IndexOf("rifle", StringComparison.OrdinalIgnoreCase) != -1)
+        {
+            return WeaponClass.BattleRifle;
+        }
+        if (weapon.itemDescription.IndexOf("machine", StringComparison.OrdinalIgnoreCase) != -1 || weapon.itemDescription.IndexOf("lmg", StringComparison.OrdinalIgnoreCase) != -1)
+        {
+            return WeaponClass.MachineGun;
         }
 
         return WeaponClass.Unknown;
     }
 }
+
 public interface INotifyTracker
 {
     public UCPlayer? Player { get; }
 }
+
 public interface IQuestPreset
 {
     public Guid Key { get; }
@@ -270,7 +266,7 @@ public interface IQuestState
 {
     public QuestParameterValue<int> FlagValue { get; }
     public bool IsEligible(UCPlayer player);
-    public UniTask CreateFromConfigurationAsync(IConfiguration configuration, CancellationToken token = default);
+    public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token = default);
 }
 /// <inheritdoc/>
 /// <typeparam name="TQuestData">Class deriving from <see cref="BaseQuestData"/> used as a template for random variations to be created.</typeparam>

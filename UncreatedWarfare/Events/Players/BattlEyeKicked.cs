@@ -1,10 +1,20 @@
-﻿namespace Uncreated.Warfare.Events.Players;
+﻿using System;
+using SDG.Unturned;
+
+namespace Uncreated.Warfare.Events.Players;
+
+/// <summary>
+/// Event listener args which handles <see cref="Provider.onBattlEyeKick"/>.
+/// </summary>
 public class BattlEyeKicked : PlayerEvent
 {
-    private readonly string _reason;
-    public string KickReason => _reason;
-    public BattlEyeKicked(UCPlayer player, string reason) : base(player)
-    {
-        _reason = reason;
-    }
+    /// <summary>
+    /// The raw reason from BattlEye describing why the player was kicked.
+    /// </summary>
+    public required string KickReason { get; init; }
+
+    /// <summary>
+    /// ID of the global ban on the player, if that was the reason for the kick.
+    /// </summary>
+    public string? GlobalBanId { get; init; }
 }
