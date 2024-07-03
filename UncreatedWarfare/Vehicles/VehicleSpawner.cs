@@ -1589,11 +1589,11 @@ public class VehicleSpawn : IListItem
             Quaternion rotation;
             if (structure.Buildable.Data is StructureData sdata)
             {
-                rotation = sdata.rotation;
+                rotation = sdata.rotation * UCBarricadeManager.InverseBarricadeRotation;
             }
             else if (structure.Buildable.Data is BarricadeData bdata)
             {
-                rotation = bdata.rotation;
+                rotation = bdata.rotation * UCBarricadeManager.InverseBarricadeRotation;
             }
             else
             {

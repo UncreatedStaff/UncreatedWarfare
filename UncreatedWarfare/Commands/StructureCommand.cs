@@ -382,7 +382,7 @@ public class StructureCommand : AsyncCommand
                     return;
                 }
 
-                BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);
+                BarricadeManager.destroyBarricade(bdrop, x, y, plant);
                 player.SendChat(T.StructureDestroyed, bdrop.asset);
             }
             finally
