@@ -24,6 +24,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
@@ -697,7 +698,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             int buildRemoved = 0;
             int ammoRemoved = 0;
             Vector3 pos = nearestLogi.transform.position;
-            foreach (ItemJar item in nearestLogi.trunkItems.EnumerateInOrder())
+            foreach (ItemJar item in ItemUtility.EnumerateAlongGrid(nearestLogi.trunkItems, reverse: true))
             {
                 bool shouldRemove = false;
                 if (item.item.id == _buildItemId && buildRemoved < 16)

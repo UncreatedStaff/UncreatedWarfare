@@ -30,6 +30,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
@@ -207,11 +208,13 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public void LoadRepairStations()
     {
-        foreach (BarricadeDrop barricade in UCBarricadeManager.NonPlantedBarricades)
+        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
         {
-            BuildableData? data = FindBuildable(barricade.asset);
-            if (data is { Type: BuildableType.RepairStation } && !barricade.model.TryGetComponent(out RepairStationComponent _))
-                barricade.model.gameObject.AddComponent<RepairStationComponent>();
+            BuildableData? data = FindBuildable(barricade.Drop.asset);
+            if (data is { Type: BuildableType.RepairStation } && !barricade.Drop.model.TryGetComponent(out RepairStationComponent _))
+            {
+                barricade.Drop.model.gameObject.AddComponent<RepairStationComponent>();
+            }
         }
     }
     public static byte[] GetRadioState(ulong team) => team switch

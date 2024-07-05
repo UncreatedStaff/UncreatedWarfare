@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Harmony;
@@ -87,6 +89,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
             return false;
         }
 
+        ulong triggerTeam = 0;
         UCPlayer? playerTriggerer = null;
         Zombie? zombieTriggerer = null;
         Animal? animalTriggerer = null;
@@ -99,6 +102,8 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
             {
                 return false;
             }
+
+            triggerTeam = playerTriggerer.GetTeam();
         }
         else if (other.transform.CompareTag("Vehicle"))
         {
@@ -123,6 +128,8 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
                     return false;
                 }
             }
+
+            triggerTeam = playerTriggerer.GetTeam();
         }
         else if (other.transform.CompareTag("Agent"))
         {
@@ -137,6 +144,13 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
         {
             playerTriggerer = UCPlayer.FromSteamPlayer(PlayerTool.getSteamPlayer(throwable.Owner));
             throwableAsset = Assets.find<ItemThrowableAsset>(throwable.Throwable);
+
+            if (playerTriggerer == null)
+            {
+                return false;
+            }
+            
+            triggerTeam = playerTriggerer.GetTeam();
         }
 
         BarricadeData serversideData = barricade.GetServersideData();
@@ -153,6 +167,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
             TriggeringThrowableAssset = throwableAsset,
             TriggeringZombie = zombieTriggerer,
             TriggeringAnimal = animalTriggerer,
+            TriggeringTeam = triggerTeam,
             PlayerDamage = ___playerDamage,
             AnimalDamage = ___animalDamage,
             ZombieDamage = ___zombieDamage,
@@ -211,18 +226,22 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
     {
         if (args.IsExplosive)
         {
-            UCPlayerData? ownerData = null;
-            UCPlayerData? triggererData = null;
+            PlayerDeathTrackingComponent? ownerData = null,
+                                          triggererData = null;
 
-            if (args.BarricadeOwner is not null && args.BarricadeOwner.Player.TryGetPlayerData(out ownerData))
+            if (args.BarricadeOwner is { IsOnline: true })
             {
-                ownerData.ExplodingLandmine = args.Barricade;
+                ownerData = PlayerDeathTrackingComponent.GetOrAdd(args.BarricadeOwner.Player);
+
+                ownerData.OwnedTrap = args.Barricade;
             }
 
-            if (args.TriggeringPlayer != null && args.TriggeringPlayer.Player.TryGetPlayerData(out triggererData))
+            if (args.TriggeringPlayer is { IsOnline: true })
             {
-                triggererData.TriggeringLandmine = args.Barricade;
-                triggererData.TriggeringThrowable = args.TriggeringThrowable;
+                triggererData = PlayerDeathTrackingComponent.GetOrAdd(args.TriggeringPlayer.Player);
+
+                triggererData.TriggeredTrapExplosive = args.Barricade;
+                triggererData.ThrowableTrapTrigger = args.TriggeringThrowable;
             }
 
             Vector3 position = args.ServersideData.point;
@@ -251,18 +270,18 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
 
             if (ownerData != null)
             {
-                ownerData.ExplodingLandmine = null;
+                ownerData.OwnedTrap = null;
             }
             if (triggererData != null)
             {
-                triggererData.TriggeringLandmine = null;
-                triggererData.TriggeringThrowable = null;
+                triggererData.TriggeredTrapExplosive = null;
+                triggererData.ThrowableTrapTrigger = null;
             }
         }
         else
         {
 
-            UCPlayerData? data = null;
+            PlayerDeathTrackingComponent? data = null;
 
             if (args.TriggeringZombie != null)
             {
@@ -278,13 +297,13 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
                     instigator = args.Trap
                 }, out _, out _);
             }
-            else if (args.TriggeringPlayer != null)
+            else if (args.TriggeringPlayer is { IsOnline: true })
             {
                 if (args.TriggeringPlayer.IsInVehicle)
                     return;
 
-                if (args.TriggeringPlayer.Player.TryGetPlayerData(out data))
-                    data.LastShreddedBy = args.Barricade.asset.GUID;
+                data = PlayerDeathTrackingComponent.GetOrAdd(args.TriggeringPlayer.Player);
+                data.LastShreddedBy = AssetLink.Create(args.Barricade.asset);
 
                 DamageTool.damage(args.TriggeringPlayer.Player, EDeathCause.SHRED, ELimb.SPINE, new CSteamID(args.ServersideData.owner), Vector3.up, args.PlayerDamage, 1f, out _, trackKill: true);
                 if (args.ShouldBreakLegs && !args.TriggeringPlayer.Player.life.isDead)
@@ -326,7 +345,8 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(finalArgs, CancellationToken.None);
     }
 
-    // ReSharper disable once ClassNeverInstantiated.Local
+    // ReSharper disable once ClassNeverInstantiated.Local (added as component)
+
     /// <summary>
     /// Handles syncronizing trap events so that a trap can't go off while another event is pending.
     /// </summary>
@@ -335,7 +355,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
         /// <summary>
         /// If the <see cref="TriggerTrapRequested"/> event is pending on this trap.
         /// </summary>
-        public List<GameObject> Triggers = new List<GameObject>(1);
+        public readonly List<GameObject> Triggers = new List<GameObject>(1);
         void IManualOnDestroy.ManualOnDestroy()
         {
             Destroy(this);

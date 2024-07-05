@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -16,6 +17,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -83,7 +85,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         Kit? kit = player.CachedActiveKitInfo;
         if (kit != null)
         {
-            int itemCount = UCInventoryManager.CountItems(player.Player, a.GUID);
+            int itemCount = ItemUtility.CountItems(player.Player, AssetLink.Create(a));
 
             int allowedItems = kit.CountItems(a.GUID, true);
 
@@ -196,14 +198,14 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 int allowedCount = wh ? item.Amount : kit!.CountItems(barricade.asset.GUID);
                 if (allowedCount > 0)
                 {
-                    int placedCount = UCBarricadeManager.CountBarricadesWhere(b => b.GetServersideData().owner == player.Steam64 && b.asset.GUID == barricade.asset.GUID, allowedCount);
+                    int placedCount = BarricadeUtility.CountBarricadesWhere(b => b.GetServersideData().owner == player.Steam64 && b.asset.GUID == barricade.asset.GUID, allowedCount);
                     if (placedCount >= allowedCount && allowedCount != 255)
                     {
-                        StructureSaver? saver = StructureSaver.GetSingletonQuick();
+                        BuildableSaver? saver = StructureSaver.GetSingletonQuick();
                         int diff = placedCount - allowedCount + 1;
-                        foreach (BarricadeDrop drop in UCBarricadeManager.NonPlantedBarricades
-                                     .Where(b => b.GetServersideData().owner == player.Steam64 && b.asset.GUID == barricade.asset.GUID)
-                                     .OrderBy(b => b.model.TryGetComponent(out BarricadeComponent comp) ? comp.CreateTime : 0)
+                        foreach (BarricadeDrop drop in BarricadeUtility.EnumerateNonPlantedBarricades()
+                                     .Where(b => b.Drop.GetServersideData().owner == player.Steam64 && b.Drop.asset.GUID == barricade.asset.GUID)
+                                     .OrderBy(b => b.Drop.model.TryGetComponent(out BarricadeComponent comp) ? comp.CreateTime : 0)
                                      .ToList())
                         {
                             if (diff <= 0)
@@ -273,7 +275,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 if (allowedCount > 0)
                 {
                     // todo delete old structures not sure what happened to that system
-                    int placedCount = UCBarricadeManager.CountStructuresWhere(s => s.GetServersideData().owner == player.Steam64 && s.asset.GUID == structure.asset.GUID, allowedCount);
+                    int placedCount = StructureUtility.CountStructuresWhere(s => s.GetServersideData().owner == player.Steam64 && s.asset.GUID == structure.asset.GUID, allowedCount);
 
                     if (placedCount >= allowedCount && allowedCount != 255)
                     {

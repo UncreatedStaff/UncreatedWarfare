@@ -14,6 +14,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -76,15 +77,16 @@ public class AmmoCommand : IExecutableCommand
 
                 if (!VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
                 {
-                    BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(repairGuid,
-                        10,
-                        vehicle.transform.position,
-                        Context.Player.GetTeam(),
-                        false)
-                    .FirstOrDefault();
-
-                    if (repairStation == null)
+                    if (!BarricadeUtility.IsBarricadeInRange(
+                            vehicle.transform.position,
+                            10f,
+                            Context.Player.Player.quests.groupID.m_SteamID,
+                            Gamemode.Config.BarricadeRepairStation,
+                            horizontalDistanceOnly: false
+                        ))
+                    {
                         throw Context.Reply(T.AmmoNotNearRepairStation);
+                    }
                 }
 
                 FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(vehicle.transform.position, vehicle.lockedGroup.m_SteamID.GetTeam());

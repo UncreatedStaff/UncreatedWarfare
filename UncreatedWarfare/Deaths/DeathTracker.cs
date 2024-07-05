@@ -14,6 +14,7 @@ using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Deaths;
@@ -556,19 +557,25 @@ public class DeathTracker : IHostedService
                 if (instigator.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
                     break;
 
-                List<BarricadeDrop> drops = UCBarricadeManager.GetBarricadesWhere(x =>
-                        x.GetServersideData().owner == instigator.m_SteamID &&
-                        x.interactable is InteractableSentry sentry &&
-                        SentryTargetPlayerField != null &&
-                        SentryTargetPlayerField(sentry) is { } target &&
-                        target != null && target.channel.owner.playerID.steamID.m_SteamID ==
-                        dead.Steam64
-                    );
+                // find target sentry
+                List<BarricadeInfo> drops = BarricadeUtility.EnumerateBarricades()
+                    .Where(x =>
+                        x.Drop.GetServersideData().owner == e.Instigator.m_SteamID &&
+                        x.Drop.interactable is InteractableSentry sentry &&
+                        SentryTargetPlayerField?.Invoke(sentry) is { } target &&
+                        target != null && target.channel.owner.playerID.steamID.m_SteamID == e.Steam64.m_SteamID
+                    ).ToList();
 
                 if (drops.Count == 0)
+                {
                     break;
+                }
 
-                BarricadeDrop drop = drops[0];
+                Vector3 pos = e.Point;
+
+                // closest sentry
+                BarricadeDrop drop = drops.Aggregate((closest, next) => (closest.Drop.GetServersideData().point - pos).sqrMagnitude > (next.Drop.GetServersideData().point - pos).sqrMagnitude ? next : closest).Drop;
+
                 InteractableSentry sentry = (InteractableSentry)drop.interactable;
                 e.MessageFlags |= DeathFlags.Item;
                 e.PrimaryAsset = AssetLink.Create(drop.asset);
@@ -578,6 +585,7 @@ public class DeathTracker : IHostedService
                     e.SecondaryAsset = AssetLink.Create(gun);
                     e.MessageFlags |= DeathFlags.Item2;
                 }
+                
                 break;
 
             case >= MainCampDeathCauseOffset:
@@ -745,13 +753,14 @@ public class DeathTracker : IHostedService
                 }
 
                 // find target sentry
-                List<BarricadeDrop> drops = UCBarricadeManager.GetBarricadesWhere(x =>
-                    x.GetServersideData().owner == killerId &&
-                    x.interactable is InteractableSentry sentry &&
-                    SentryTargetPlayerField?.Invoke(sentry) is { } target &&
-                    target != null && target.channel.owner.playerID.steamID.m_SteamID ==
-                    dead.channel.owner.playerID.steamID.m_SteamID
-                );
+                List<BarricadeInfo> drops = BarricadeUtility.EnumerateBarricades()
+                    .Where(x =>
+                        x.Drop.GetServersideData().owner == killerId &&
+                        x.Drop.interactable is InteractableSentry sentry &&
+                        SentryTargetPlayerField?.Invoke(sentry) is { } target &&
+                        target != null && target.channel.owner.playerID.steamID.m_SteamID ==
+                        dead.channel.owner.playerID.steamID.m_SteamID
+                    ).ToList();
 
                 if (drops.Count == 0)
                 {
@@ -762,7 +771,7 @@ public class DeathTracker : IHostedService
                     Vector3 pos = dead.transform.position;
 
                     // closest sentry
-                    drop = drops.Aggregate((closest, next) => (closest.GetServersideData().point - pos).sqrMagnitude > (next.GetServersideData().point - pos).sqrMagnitude ? next : closest);
+                    drop = drops.Aggregate((closest, next) => (closest.Drop.GetServersideData().point - pos).sqrMagnitude > (next.Drop.GetServersideData().point - pos).sqrMagnitude ? next : closest).Drop;
 
                     InteractableSentry sentry = (InteractableSentry)drop.interactable;
                     item1 = AssetLink.Create(drop.asset);

@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Steamworks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -96,6 +97,10 @@ public class ActionLog : MonoBehaviour
     public static void Add(ActionLogType type, string? data = null, ulong player = 0)
     {
         _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
+    }
+    public static void Add(ActionLogType type, string? data, CSteamID player)
+    {
+        _instance!._items.Enqueue(new ActionLogItem(player.m_SteamID, type, data, DateTimeOffset.UtcNow));
     }
     /// <exception cref="NotSupportedException"/>
     public static void AddPriority(ActionLogType type, string? data = null, ulong player = 0)

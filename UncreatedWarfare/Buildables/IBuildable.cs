@@ -1,9 +1,12 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
+using System;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Buildables;
 
-public interface IBuildable
+[CannotApplyEqualityOperator]
+public interface IBuildable : IEquatable<IBuildable>
 {
     uint InstanceId { get; }
     bool IsStructure { get; }
@@ -14,8 +17,12 @@ public interface IBuildable
     object Drop { get; }
     object Data { get; }
     NetId NetId { get; }
+    Vector3 Position { get; }
+    Quaternion Rotation { get; }
 }
-public class BuildableBarricade : IBuildable
+
+[CannotApplyEqualityOperator]
+public class BuildableBarricade : IBuildable, IEquatable<BuildableBarricade>, IEquatable<BarricadeDrop>
 {
     public uint InstanceId => Drop.instanceID;
     public bool IsStructure => false;
@@ -24,8 +31,10 @@ public class BuildableBarricade : IBuildable
     public ulong Owner => Data.owner;
     public ulong Group => Data.group;
     public NetId NetId => Drop.GetNetId();
-    public BarricadeDrop Drop { get; internal set; }
-    public BarricadeData Data { get; internal set; }
+    public Vector3 Position => Data.point;
+    public Quaternion Rotation => Data.rotation;
+    public BarricadeDrop Drop { get; }
+    public BarricadeData Data { get; }
     public BuildableBarricade(BarricadeDrop drop)
     {
         Drop = drop;
@@ -34,8 +43,16 @@ public class BuildableBarricade : IBuildable
 
     object IBuildable.Drop => Drop;
     object IBuildable.Data => Data;
+
+    public bool Equals(BarricadeDrop? other) => other is not null && other.instanceID == Drop.instanceID;
+    public bool Equals(BuildableBarricade? other) => other is not null && other.Drop.instanceID == Drop.instanceID;
+    public bool Equals(IBuildable? other) => other is not null && !other.IsStructure && other.InstanceId == Drop.instanceID;
+    public override bool Equals(object? obj) => obj is IBuildable b && Equals(b);
+    public override int GetHashCode() => unchecked ( (int)Drop.instanceID );
 }
-public class BuildableStructure : IBuildable
+
+[CannotApplyEqualityOperator]
+public class BuildableStructure : IBuildable, IEquatable<BuildableStructure>, IEquatable<StructureDrop>
 {
     public uint InstanceId => Drop.instanceID;
     public bool IsStructure => true;
@@ -44,6 +61,8 @@ public class BuildableStructure : IBuildable
     public ulong Owner => Data.owner;
     public ulong Group => Data.group;
     public NetId NetId => Drop.GetNetId();
+    public Vector3 Position => Data.point;
+    public Quaternion Rotation => Data.rotation;
     public StructureDrop Drop { get; }
     public StructureData Data { get; }
     public BuildableStructure(StructureDrop drop)
@@ -54,4 +73,10 @@ public class BuildableStructure : IBuildable
 
     object IBuildable.Drop => Drop;
     object IBuildable.Data => Data;
+
+    public bool Equals(StructureDrop? other) => other is not null && other.instanceID == Drop.instanceID;
+    public bool Equals(BuildableStructure? other) => other is not null && other.Drop.instanceID == Drop.instanceID;
+    public bool Equals(IBuildable? other) => other is not null && other.IsStructure && other.InstanceId == Drop.instanceID;
+    public override bool Equals(object? obj) => obj is IBuildable b && Equals(b);
+    public override int GetHashCode() => unchecked ( (int)Drop.instanceID );
 }

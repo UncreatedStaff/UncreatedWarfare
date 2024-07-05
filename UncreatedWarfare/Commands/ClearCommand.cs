@@ -5,6 +5,7 @@ using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -96,7 +97,7 @@ public class ClearCommand : IExecutableCommand
             {
                 if (pl is not null)
                 {
-                    Kits.UCInventoryManager.ClearInventoryAndSlots(pl);
+                    ItemUtility.ClearInventoryAndSlots(pl);
 
                     Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.AdminLocale));
                     Context.Reply(T.ClearInventoryOther, pl);
@@ -107,7 +108,7 @@ public class ClearCommand : IExecutableCommand
                 throw Context.Reply(T.ClearNoPlayerConsole);
             else
             {
-                Kits.UCInventoryManager.ClearInventoryAndSlots(Context.Player);
+                ItemUtility.ClearInventoryAndSlots(Context.Player);
                 Context.LogAction(ActionLogType.ClearInventory, "CLEARED PERSONAL INVENTORY");
                 Context.Reply(T.ClearInventorySelf);
             }

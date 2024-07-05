@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Cysharp.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using SDG.Unturned;
 using System;
 using System.Collections;
@@ -6,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -826,7 +826,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         {
             L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
             await UniTask.SwitchToMainThread(token);
-            UCInventoryManager.ClearInventoryAndSlots(player);
+            ItemUtility.ClearInventoryAndSlots(player);
             return;
         }
         L.LogDebug($"Giving kit: {kit.InternalName} ({kit.PrimaryKey}).");
@@ -1070,7 +1070,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
                         continue;
 
                     item.TryGetItemSize(out byte sizeX2, out byte sizeY2);
-                    if (!UCInventoryManager.IsOverlapping(comparer.X.Value, comparer.Y.Value, sizeX, sizeY, item.X.Value, item.Y.Value, sizeX2, sizeY2, comparer.Rotation ?? 0, item.Rotation ?? 0))
+                    if (!ItemUtility.IsOverlapping(comparer.X.Value, comparer.Y.Value, sizeX, sizeY, item.X.Value, item.Y.Value, sizeX2, sizeY2, comparer.Rotation ?? 0, item.Rotation ?? 0))
                         continue;
 
                     if (alreadyChecked != null && alreadyChecked.Contains(j))
@@ -1105,7 +1105,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
             await SetupPlayer(player, token).ConfigureAwait(false);
             return;
         }
-        //UCInventoryManager.ClearInventory(player);
+        //ItemUtility.ClearInventory(player);
         player.EnsureDefaultSkillsets();
         _ = RefreshFavorites(player, false, token);
         _ = Boosting.IsNitroBoosting(player.Steam64, token);

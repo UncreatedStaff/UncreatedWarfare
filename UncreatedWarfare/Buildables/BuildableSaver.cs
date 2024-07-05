@@ -14,6 +14,7 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Buildables;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Buildables;
@@ -61,6 +62,7 @@ public class BuildableSaver : ISessionHostedService
 
             await UniTask.SwitchToMainThread(token);
 
+            // todo need to load this on level load
             List<BuildableSave> newSaves = _saves;
 
             for (int i = newSaves.Count - 1; i >= 0; i--)
@@ -116,6 +118,7 @@ public class BuildableSaver : ISessionHostedService
 
             _dbContext.RemoveRange(saves);
 
+            Vector3 rot = data.rotation.eulerAngles;
             newSave = new BuildableSave
             {
                 Buildable = new BuildableBarricade(barricade),
@@ -126,7 +129,13 @@ public class BuildableSaver : ISessionHostedService
                 Owner = data.owner,
                 Item = new UnturnedAssetReference(barricade.asset.GUID),
                 Position = data.point,
-                Rotation = new Vector3(MeasurementTool.byteToAngle(data.angle_x), MeasurementTool.byteToAngle(data.angle_y), MeasurementTool.byteToAngle(data.angle_z)),
+                Rotation = new Vector3(
+
+                    // round rotation to networked angle
+                    MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.x)),
+                    MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.y)),
+                    MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.z))
+                ),
                 MapId = MapScheduler.Current
             };
 
@@ -256,6 +265,7 @@ public class BuildableSaver : ISessionHostedService
 
             _dbContext.RemoveRange(saves);
 
+            Vector3 rot = data.rotation.eulerAngles;
             newSave = new BuildableSave
             {
                 Buildable = new BuildableStructure(structure),
@@ -266,7 +276,13 @@ public class BuildableSaver : ISessionHostedService
                 Owner = data.owner,
                 Item = new UnturnedAssetReference(structure.asset.GUID),
                 Position = data.point,
-                Rotation = new Vector3(MeasurementTool.byteToAngle(data.angle_x), MeasurementTool.byteToAngle(data.angle_y), MeasurementTool.byteToAngle(data.angle_z)),
+                Rotation = new Vector3(
+
+                    // round rotation to networked angle
+                    MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.x)),
+                    MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.y)),
+                    MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.z))
+                ),
                 MapId = MapScheduler.Current,
                 Items = new List<BuildableStorageItem>(0)
             };
@@ -447,8 +463,8 @@ public class BuildableSaver : ISessionHostedService
     private bool RestoreSave(List<BuildableSave>? saves, int index, BuildableSave save)
     {
         object? drop = save.IsStructure
-            ? UCBarricadeManager.FindStructure(save.InstanceId, save.Position)
-            : UCBarricadeManager.FindBarricade(save.InstanceId, save.Position);
+            ? StructureUtility.FindStructure(save.InstanceId, save.Position)
+            : BarricadeUtility.FindBarricade(save.InstanceId, save.Position);
 
         ItemAsset? asset = save.IsStructure
             ? save.Item.GetAsset<ItemStructureAsset>()
@@ -575,11 +591,18 @@ public class BuildableSaver : ISessionHostedService
             }
         }
 
+        Vector3 angle;
         if (save.IsStructure)
         {
             StructureDrop sDrop = (StructureDrop)drop;
             StructureData sData = sDrop.GetServersideData();
-            if (sData.angle_x != rotX || sData.angle_y != rotY || sData.angle_z != rotZ || !sData.point.AlmostEquals(save.Position))
+
+            angle = sData.rotation.eulerAngles;
+
+            if (MeasurementTool.angleToByte(angle.x) != rotX
+                || MeasurementTool.angleToByte(angle.y) != rotY
+                || MeasurementTool.angleToByte(angle.z) != rotZ
+                || !sData.point.AlmostEquals(save.Position))
             {
                 _logger.LogInformation("Moving misplaced structure {0} ({1} - {2}) at pos: {3} rot: {4}.", save.Id, save.Item, asset.FriendlyName, save.Position, save.Rotation);
                 StructureManager.ServerSetStructureTransform(sDrop.model, save.Position, Quaternion.Euler(save.Rotation));
@@ -603,7 +626,12 @@ public class BuildableSaver : ISessionHostedService
         BarricadeDrop bDrop = (BarricadeDrop)drop;
         BarricadeData bData = bDrop.GetServersideData();
 
-        if (bData.angle_x != rotX || bData.angle_y != rotY || bData.angle_z != rotZ || !bData.point.AlmostEquals(save.Position))
+        angle = bData.rotation.eulerAngles;
+
+        if (MeasurementTool.angleToByte(angle.x) != rotX
+            || MeasurementTool.angleToByte(angle.y) != rotY
+            || MeasurementTool.angleToByte(angle.z) != rotZ
+            || !bData.point.AlmostEquals(save.Position))
         {
             _logger.LogInformation("Moving misplaced structure {0} ({1} - {2}) at pos: {3} rot: {4}.", save.Id, save.Item, asset.FriendlyName, save.Position, save.Rotation);
             BarricadeManager.ServerSetBarricadeTransform(bDrop.model, save.Position, Quaternion.Euler(save.Rotation));

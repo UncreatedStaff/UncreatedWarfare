@@ -7,12 +7,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -70,14 +70,14 @@ public class KitDistribution(KitManager manager)
     {
         ThreadUtil.assertIsGameThread();
         if (clearInventory)
-            UCInventoryManager.ClearInventory(player, !Data.UseFastKits);
+            ItemUtility.ClearInventory(player, !Data.UseFastKits);
 
         player.ItemTransformations.Clear();
         player.ItemDropTransformations.Clear();
         player.Player.equipment.dequip();
         if (kit == null)
         {
-            UCInventoryManager.UpdateSlots(player);
+            ItemUtility.UpdateSlots(player);
             return;
         }
 
@@ -231,7 +231,7 @@ public class KitDistribution(KitManager manager)
                         giveY = 0;
                         giveRot = 0;
                     }
-                    else if (UCInventoryManager.IsOutOfBounds(page, giveX, giveY, asset.size_x, asset.size_y, giveRot))
+                    else if (ItemUtility.IsOutOfBounds(page, giveX, giveY, asset.size_x, asset.size_y, giveRot))
                     {
                         // if an item is out of range of it's container with a layout override, remove it and try again
                         if (layoutAffected)
@@ -253,7 +253,7 @@ public class KitDistribution(KitManager manager)
                     for (int j = 0; j < ic2; ++j)
                     {
                         ItemJar? jar2 = page.getItem((byte)j);
-                        if (jar2 != null && UCInventoryManager.IsOverlapping(giveX, giveY, asset.size_x, asset.size_y, jar2.x, jar2.y, jar2.size_x, jar2.size_y, giveRot, jar2.rot))
+                        if (jar2 != null && ItemUtility.IsOverlapping(giveX, giveY, asset.size_x, asset.size_y, jar2.x, jar2.y, jar2.size_x, jar2.size_y, giveRot, jar2.rot))
                         {
                             // if an overlap is detected with a layout override, remove it and try again
                             if (layoutAffected)
@@ -321,7 +321,7 @@ public class KitDistribution(KitManager manager)
             }
             if (ohi)
                 Data.SetOwnerHasInventory(player.Player.inventory, true);
-            UCInventoryManager.SendPages(player);
+            ItemUtility.SendPages(player);
         }
         else
         {
@@ -412,7 +412,7 @@ public class KitDistribution(KitManager manager)
             }
         }
 
-        UCInventoryManager.UpdateSlots(player);
+        ItemUtility.UpdateSlots(player);
 
         // send action menu tip
         if (kit.Class != Class.Unarmed && sendActionTip)

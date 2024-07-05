@@ -14,6 +14,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -534,7 +535,7 @@ partial class KitManager
                 foreach ((Page Page, Item Item, byte X, byte Y, byte Rotation, byte SizeX, byte SizeY) item in inventory)
                 {
                     if (item.Page != jar.Page) continue;
-                    if (UCInventoryManager.IsOverlapping(jar.X, jar.Y, sizeX1, sizeY1, item.X, item.Y, item.SizeX, item.SizeY, jar.Rotation, item.Rotation))
+                    if (ItemUtility.IsOverlapping(jar.X, jar.Y, sizeX1, sizeY1, item.X, item.Y, item.SizeX, item.SizeY, jar.Rotation, item.Rotation))
                     {
                         L.LogDebug("Found colliding item: " + item.Page + ", (" + item.X + ", " + item.Y + ").");
                         colliding = item;

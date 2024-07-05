@@ -8,16 +8,15 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Players.Unlocks;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using DelayType = Uncreated.Warfare.Vehicles.DelayType;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
@@ -28,7 +27,7 @@ namespace Uncreated.Warfare.Commands;
 [HelpMetadata(nameof(GetHelpMetadata))]
 public class RequestCommand : ICompoundingCooldownCommand
 {
-    private static readonly Guid KitSign = new Guid("275dd81d60ae443e91f0655b8b7aa920");
+    private static readonly IAssetLink<ItemBarricadeAsset> KitSign = AssetLink.Create<ItemBarricadeAsset>("275dd81d60ae443e91f0655b8b7aa920");
 
     private static readonly PermissionLeaf PermissionUpgrade    = new PermissionLeaf("commands.request.upgrade", unturned: false, warfare: true);
     private static readonly PermissionLeaf PermissionRequest    = new PermissionLeaf("commands.request.look", unturned: false, warfare: true);
@@ -363,9 +362,8 @@ public class RequestCommand : ICompoundingCooldownCommand
         else
         {
             // checks for spamming /req where the vehicle will be once it spawns
-            if (Gamemode.Config.StructureVehicleBay.TryGetGuid(out Guid guid) &&
-                UCBarricadeManager.IsStructureNearby(guid, 20f, Context.Player.Position, out _) &&
-                UCBarricadeManager.CountNearbyBarricades(KitSign, 8f, Context.Player.Position) < 5)
+            if (StructureUtility.IsStructureInRange(Context.Player.Position, 20f, Gamemode.Config.StructureVehicleBay, horizontalDistanceOnly: true) &&
+                BarricadeUtility.CountBarricadesInRange(Context.Player.Position, 8f, KitSign, max: 5) < 5)
             {
                 Context.IsolatedCommandCooldownTime = 5f;
             }

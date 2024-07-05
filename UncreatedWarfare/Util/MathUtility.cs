@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Util;
 public static class MathUtility
@@ -87,5 +89,23 @@ public static class MathUtility
 
             return value - step;
         }
+    }
+
+    /// <summary>
+    /// Find square distance and optionally ignore the Y axis.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float SquaredDistance(in Vector3 pos1, in Vector3 pos2, bool horizontalDistanceOnly)
+    {
+        float dx = pos1.x - pos2.x,
+              dz = pos1.z - pos2.z;
+
+        if (horizontalDistanceOnly)
+        {
+            return dx * dx + dz * dz;
+        }
+
+        float dy = pos1.y - pos2.y;
+        return dx * dx + dy * dy + dz * dz;
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Layouts;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 public class KitLayouts(KitManager manager)
@@ -48,7 +49,7 @@ public class KitLayouts(KitManager manager)
         for (int i2 = 0; i2 < ct; ++i2)
         {
             ItemJar jar = page.getItem((byte)i2);
-            if (!UCInventoryManager.IsOverlapping(original.X, original.Y, asset1.size_x, asset1.size_y, jar.x, jar.y, jar.size_x, jar.size_y, original.Rotation, jar.rot))
+            if (!ItemUtility.IsOverlapping(original.X, original.Y, asset1.size_x, asset1.size_y, jar.x, jar.y, jar.size_x, jar.size_y, original.Rotation, jar.rot))
                 continue;
 
             L.LogDebug($"Found reverse collision at {transformation.OldPage}, ({jar.x}, {jar.y}) @ rot {jar.rot}.");

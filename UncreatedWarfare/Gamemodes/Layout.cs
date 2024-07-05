@@ -3,11 +3,9 @@ using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -15,9 +13,7 @@ using System.Threading;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Phases;
 using Uncreated.Warfare.Gamemodes.Teams;
-using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Util;
-using YamlDotNet.RepresentationModel;
 
 namespace Uncreated.Warfare.Gamemodes;
 
@@ -207,70 +203,13 @@ public class Layout : IDisposable
         List<PhaseVariationInfo> variationFiles = new List<PhaseVariationInfo>();
         foreach (string variationFile in Directory.GetFiles(variationsPath, "*.yml", SearchOption.TopDirectoryOnly))
         {
-            using StreamReader streamReader = new StreamReader(variationFile);
-            YamlStream stream = new YamlStream();
-            stream.Load(streamReader);
-
-            if (stream.Documents.FirstOrDefault()?.RootNode is not YamlMappingNode yaml)
-            {
-                Logger.LogWarning("Failed to read yaml from variation {0} wile reading variations for phase {1}.", variationFile, Accessor.Formatter.Format(phaseType));
+            if (!YamlUtility.CheckMatchesMapFilterAndReadWeight(variationFile, out double weight))
                 continue;
-            }
 
             PhaseVariationInfo variation = default;
-            variation.Weight = 1;
-            bool wasFilteredOut = false;
-            foreach (KeyValuePair<YamlNode, YamlNode> nodePair in yaml.Children)
-            {
-                if (nodePair.Key is not YamlScalarNode scalar)
-                    continue;
-
-                if (string.Equals(scalar.Value, "Map", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (nodePair.Value is not YamlScalarNode { Value: { } map })
-                    {
-                        Logger.LogWarning("Invalid map filter in {0} wile reading variations for phase {1}. Expected scalar value.", variationFile, Accessor.Formatter.Format(phaseType));
-                        continue;
-                    }
-
-                    if (!map.Equals("all", StringComparison.OrdinalIgnoreCase)
-                        && !map.Equals(Provider.map, StringComparison.OrdinalIgnoreCase)
-                        && (!int.TryParse(map, NumberStyles.Number, CultureInfo.InvariantCulture, out int mapId) || mapId != MapScheduler.Current))
-                    {
-                        wasFilteredOut = true;
-                        break;
-                    }
-                }
-                else if (string.Equals(scalar.Value, "Maps", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (nodePair.Value is not YamlSequenceNode sequence)
-                    {
-                        Logger.LogWarning("Invalid maps filter in {0} wile reading variations for phase {1}. Expected sequence of scalar values.", variationFile, Accessor.Formatter.Format(phaseType));
-                        continue;
-                    }
-
-                    if (!sequence.Any(val => val is YamlScalarNode { Value: { } map } &&
-                                            (map.Equals("all", StringComparison.OrdinalIgnoreCase)
-                                             || map.Equals(Provider.map, StringComparison.OrdinalIgnoreCase)
-                                             || int.TryParse(map, NumberStyles.Number, CultureInfo.InvariantCulture, out int mapId) && mapId == MapScheduler.Current)
-                                            ))
-                    {
-                        wasFilteredOut = true;
-                        break;
-                    }
-                }
-                else if (string.Equals(scalar.Value, "Weight", StringComparison.InvariantCultureIgnoreCase)
-                         && nodePair.Value is YamlScalarNode { Value: { } weightStr }
-                         && double.TryParse(weightStr, NumberStyles.Number, CultureInfo.InvariantCulture, out double weight))
-                {
-                    variation.Weight = weight;
-                }
-            }
-
-            if (wasFilteredOut)
-                continue;
-
+            variation.Weight = weight;
             variation.FileName = variationFile;
+
             variationFiles.Add(variation);
         }
 

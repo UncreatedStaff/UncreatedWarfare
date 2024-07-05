@@ -329,16 +329,22 @@ public class DebugCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        InteractableSign? sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(Context.Player.Player.look);
-        if (sign == null) Context.ReplyString("You're not looking at a sign");
-        else
+        Transform aim = Context.Player.Player.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), 4f, RayMasks.BARRICADE, Context.Player.Player);
+
+        InteractableSign? sign = BarricadeManager.FindBarricadeByRootTransform(info.transform)?.interactable as InteractableSign;
+        if (sign == null)
         {
-            if (!Context.IsConsole)
-                Context.ReplyString("Sign text: \"" + sign.text + "\".");
-            else
-                Context.Defer();
-            L.Log("Sign Text: \n" + sign.text + "\nEND", ConsoleColor.Green);
+            Context.ReplyString("You're not looking at a sign");
+            return;
         }
+
+        if (!Context.IsConsole)
+            Context.ReplyString("Sign text: \"" + sign.text + "\".");
+        else
+            Context.Defer();
+
+        L.Log("Sign Text: \n" + sign.text + "\nEND", ConsoleColor.Green);
     }
 
     private void time()
@@ -1185,8 +1191,8 @@ public class DebugCommand : IExecutableCommand
 
         IKitItem[] items = KitDefaults<WarfareDbContext>.GetDefaultLoadoutItems(@class);
         L.LogDebug($"Found {items.Length} item{(items.Length == 1 ? string.Empty : "s")}.");
-        
-        UCInventoryManager.GiveItems(Context.Player, items, true);
+
+        ItemUtility.GiveItems(Context.Player, items, true);
 
         Context.ReplyString($"Given {items.Length} default item{(items.Length == 1 ? string.Empty : "s")} for a {Localization.TranslateEnum(@class, Context.Language)} loadout.");
     }

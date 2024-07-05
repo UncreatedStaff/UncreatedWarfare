@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using Cysharp.Threading.Tasks;
+using JetBrains.Annotations;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
@@ -7,9 +8,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using Cysharp.Threading.Tasks;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -458,7 +459,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         @object = obj.Object;
                     else
                     {
-                        @object = UCBarricadeManager.FindObject(obj.ObjectInstanceId, new Vector3(obj.X, obj.Y, obj.Z));
+                        @object = LevelObjectUtility.FindObject(obj.ObjectInstanceId, new Vector3(obj.X, obj.Y, obj.Z)).Object;
                         obj.Object = @object;
                     }
                     if (@object != null)
@@ -1138,7 +1139,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 if (Physics.Raycast(new Ray(ctx.Player.Player.look.aim.position, ctx.Player.Player.look.aim.forward), out RaycastHit hit, 4f,
                         RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL) && hit.transform != null)
                 {
-                    LevelObject? @object = UCBarricadeManager.FindObject(hit.transform);
+                    LevelObject? @object = LevelObjectUtility.FindObject(hit.transform).Object;
                     if (@object == null)
                         throw ctx.Reply(T.ZoneEditAddGridObjInvalid);
                     AddTransaction(new AddDelGridObjTransaction(@object, false, false));
@@ -1156,7 +1157,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 else if (Physics.Raycast(new Ray(ctx.Player.Player.look.aim.position, ctx.Player.Player.look.aim.forward),
                              out RaycastHit hit, 4f, RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL) && hit.transform != null)
                 {
-                    LevelObject? @object = UCBarricadeManager.FindObject(hit.transform);
+                    LevelObject? @object = LevelObjectUtility.FindObject(hit.transform).Object;
                     if (@object == null)
                         throw ctx.Reply(T.ZoneEditAddGridObjInvalid);
                     AddTransaction(new AddDelGridObjTransaction(@object, false, false));

@@ -16,6 +16,9 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 
+/// <summary>
+/// Generic read-only requirement to unlock something.
+/// </summary>
 public abstract class UnlockRequirement : ICloneable
 {
     public uint PrimaryKey { get; set; }
@@ -60,6 +63,7 @@ public abstract class UnlockRequirement : ICloneable
     /// <inheritdoc />
     public abstract object Clone();
 
+    // todo this is not a good way to handle this
     public virtual Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
         L.LogWarning("Unhandled kit requirement type: " + GetType().Name);

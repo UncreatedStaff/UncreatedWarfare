@@ -43,6 +43,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -279,14 +280,24 @@ public static class EventFunctions
 
     internal static void OnLandmineExploding(TriggerTrapRequested e)
     {
-        if (UCWarfare.Config.BlockLandmineFriendlyFire && e.TriggeringPlayer.GetTeam() == e.TrapBarricade.GetServersideData().group.GetTeam() || e.TriggeringPlayer.VanishMode)
+        if (!e.IsExplosive)
+            return;
+
+        if (e.TriggeringPlayer is { VanishMode: true })
         {
-            e.Break();
+            e.Cancel();
+            return;
         }
-        else
+
+        if (UCWarfare.Config.BlockLandmineFriendlyFire && e.TriggeringTeam == e.ServersideData.group.GetTeam())
         {
-            if (!CheckLandminePosition(e.TrapBarricade.model.transform.position))
-                e.Break();
+            // allow players to trigger their own landmines with throwables
+            if (e.TriggeringPlayer == null || e.TriggeringPlayer.Steam64 != e.ServersideData.owner || e.TriggeringThrowable == null)
+                e.Cancel();
+        }
+        else if (!CheckLandminePosition(e.ServersideData.point))
+        {
+            e.Cancel();
         }
     }
     private static bool CheckLandminePosition(Vector3 position)
@@ -1514,7 +1525,7 @@ public static class EventFunctions
                 }
             });
         }
-        BarricadeDrop? drop = UCBarricadeManager.FindBarricade(instanceID, point);
+        BarricadeDrop? drop = BarricadeUtility.FindBarricade(instanceID, point).Drop;
         if (drop != null && drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL)
         {
             TraitSigns.OnBarricadeMoved(drop);

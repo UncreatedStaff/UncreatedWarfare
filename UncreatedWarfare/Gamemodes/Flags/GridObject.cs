@@ -2,6 +2,8 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -39,18 +41,18 @@ public class GridObject : IJsonReadWrite, IListItem
         Z = z;
         Object = @object;
         if (@object == null && LevelObjects.objects != null)
-            Object = UCBarricadeManager.FindObject(objectInstanceId, new Vector3(x, y, z));
+            Object = LevelObjectUtility.FindObject(objectInstanceId, new Vector3(x, y, z)).Object;
     }
 
     public GridObject() : this (0, uint.MaxValue, Guid.Empty, 0f, 0f, 0f) { }
     public override string ToString() => $"Flag: {PrimaryKey}, Object: {ObjectInstanceId}.";
     public void WriteJson(Utf8JsonWriter writer)
     {
-        writer.WriteProperty("flag_id", PrimaryKey);
-        writer.WriteProperty("instance_id", ObjectInstanceId);
-        writer.WriteProperty("object_guid", Guid);
+        writer.WriteNumber("flag_id", PrimaryKey);
+        writer.WriteNumber("instance_id", ObjectInstanceId);
+        writer.WriteString("object_guid", Guid);
         writer.WritePropertyName("position");
-        JsonSerializer.Serialize(writer, new Vector3(X, Y, Z), writer.Options.Indented ? JsonEx.serializerSettings : JsonEx.condensedSerializerSettings);
+        JsonSerializer.Serialize(writer, new Vector3(X, Y, Z), writer.Options.Indented ? ConfigurationSettings.JsonSerializerSettings : ConfigurationSettings.JsonCondensedSerializerSettings);
     }
 
     public void ReadJson(ref Utf8JsonReader reader)
@@ -70,7 +72,7 @@ public class GridObject : IJsonReadWrite, IListItem
                     Guid = reader.GetGuid();
                 else if (string.Equals(prop, "position", StringComparison.OrdinalIgnoreCase))
                 {
-                    Vector3 pos = JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.condensedSerializerSettings);
+                    Vector3 pos = JsonSerializer.Deserialize<Vector3>(ref reader, ConfigurationSettings.JsonCondensedSerializerSettings);
                     X = pos.x;
                     Y = pos.y;
                     Z = pos.z;

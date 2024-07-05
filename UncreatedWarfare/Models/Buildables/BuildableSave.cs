@@ -59,20 +59,20 @@ public class BuildableSave : ITranslationArgument
         set => _position.z = value;
     }
 
-    public float RotationX
+    public byte RotationX
     {
-        get => _rotation.x;
-        set => _rotation.x = value;
+        get => MeasurementTool.angleToByte(_rotation.x);
+        set => _rotation.x = MeasurementTool.byteToAngle(value);
     }
-    public float RotationY
+    public byte RotationY
     {
-        get => _rotation.y;
-        set => _rotation.y = value;
+        get => MeasurementTool.angleToByte(_rotation.y);
+        set => _rotation.y = MeasurementTool.byteToAngle(value);
     }
-    public float RotationZ
+    public byte RotationZ
     {
-        get => _rotation.z;
-        set => _rotation.z = value;
+        get => MeasurementTool.angleToByte(_rotation.z);
+        set => _rotation.z = MeasurementTool.byteToAngle(value);
     }
 
     public ulong Owner { get; set; }

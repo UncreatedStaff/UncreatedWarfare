@@ -44,6 +44,7 @@ public static class ConfigurationHelper
     /// </summary>
     /// <remarks><paramref name="filePath"/> must be in the Warfare folder.</remarks>
     [MustUseReturnValue]
+    [System.Diagnostics.Contracts.Pure]
     public static IDisposable ListenForFileUpdate(string filePath, System.Action onUpdated)
     {
         return ChangeToken.OnChange(

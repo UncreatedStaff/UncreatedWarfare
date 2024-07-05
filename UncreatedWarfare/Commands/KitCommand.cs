@@ -7,7 +7,6 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
@@ -23,6 +22,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
@@ -721,7 +721,7 @@ public sealed class KitCommand : IExecutableCommand
                     await using IKitsDbContext dbContext = new WarfareDbContext();
 
                     IKitItem[] oldItems = kit.Items;
-                    kit.SetItemArray(UCInventoryManager.ItemsFromInventory(Context.Player, findAssetRedirects: true), dbContext);
+                    kit.SetItemArray(ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true), dbContext);
                     kit.WeaponText = manager.GetWeaponText(kit);
                     kit.UpdateLastEdited(Context.CallerId.m_SteamID);
                     Context.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.InternalName + ".");
@@ -767,7 +767,7 @@ public sealed class KitCommand : IExecutableCommand
 
                 await UniTask.SwitchToMainThread(token);
 
-                kit.SetItemArray(UCInventoryManager.ItemsFromInventory(Context.Player, findAssetRedirects: true), dbContext2);
+                kit.SetItemArray(ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true), dbContext2);
 
                 kit.Creator = kit.LastEditor = Context.CallerId.m_SteamID;
                 kit.WeaponText = manager.GetWeaponText(kit);
@@ -1333,7 +1333,7 @@ public sealed class KitCommand : IExecutableCommand
                     await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
                     await UniTask.SwitchToMainThread(token);
-                    loadout.SetItemArray(UCInventoryManager.ItemsFromInventory(Context.Player, findAssetRedirects: true), dbContext);
+                    loadout.SetItemArray(ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true), dbContext);
 
                     await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                 }

@@ -10,6 +10,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 #if TIME_FLAG_CHECK
 using System.Diagnostics;
@@ -426,13 +427,13 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected static void CheckPowerForAllBarricades()
     {
-        if (Data.RefreshIsConnectedToPower != null)
+        if (Data.RefreshIsConnectedToPower == null)
+            return;
+
+        foreach (BarricadeInfo drop in BarricadeUtility.EnumerateBarricades())
         {
-            foreach (BarricadeDrop drop in UCBarricadeManager.AllBarricades)
-            {
-                if (drop.interactable is InteractablePower power)
-                    Data.RefreshIsConnectedToPower(power);
-            }
+            if (drop.Drop.interactable is InteractablePower power)
+                Data.RefreshIsConnectedToPower(power);
         }
     }
     protected static void SetPowerForAllInGrid(IEnumerable<GridObject>? arr, bool state)

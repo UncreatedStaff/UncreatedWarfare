@@ -40,6 +40,11 @@ public class TriggerTrapRequested : CancellableEvent
     public required Collider TriggerCollider { get; init; }
 
     /// <summary>
+    /// The team that triggered the landmine.
+    /// </summary>
+    public required ulong TriggeringTeam { get; init; }
+
+    /// <summary>
     /// Player that instsigated the trap triggering.
     /// </summary>
     public required UCPlayer? TriggeringPlayer { get; init; }

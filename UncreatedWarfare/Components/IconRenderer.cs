@@ -10,6 +10,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
@@ -31,7 +32,7 @@ public static class IconManager
         for (int i = Icons.Count - 1; i >= 0; i--)
         {
             IconRenderer iconRenderer = Icons[i];
-            if (iconRenderer.Player != e.Steam64)
+            if (iconRenderer.Player != e.Steam64.m_SteamID)
                 continue;
 
             Icons.RemoveAt(i);
@@ -57,21 +58,22 @@ public static class IconManager
     }
     public static void CheckExistingBuildables()
     {
-        foreach (BarricadeDrop barricade in UCBarricadeManager.NonPlantedBarricades)
+        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
         {
-            ulong team = barricade.GetServersideData().group.GetTeam();
+            ulong team = barricade.Drop.GetServersideData().group.GetTeam();
             if (team is not 1ul and not 2ul)
                 continue;
 
-            CheckBuildable(barricade.asset, barricade.model, team);
+            CheckBuildable(barricade.Drop.asset, barricade.Drop.model, team);
         }
-        foreach (StructureDrop structure in UCBarricadeManager.AllStructures)
+
+        foreach (StructureInfo structure in StructureUtility.EnumerateStructures())
         {
-            ulong team = structure.GetServersideData().group.GetTeam();
+            ulong team = structure.Drop.GetServersideData().group.GetTeam();
             if (team is not 1ul and not 2ul)
                 continue;
 
-            CheckBuildable(structure.asset, structure.model, team);
+            CheckBuildable(structure.Drop.asset, structure.Drop.model, team);
         }
 
         void CheckBuildable(Asset asset, Transform transform, ulong team)
@@ -79,6 +81,7 @@ public static class IconManager
             BuildableData? buildableData = FOBManager.FindBuildable(asset);
             if (buildableData == null || !buildableData.FullBuildable.MatchGuid(asset.GUID))
                 return;
+
             L.LogDebug($"[ICONS] [{asset.FriendlyName}] Found existing buildable, try-applying marker type: {buildableData.Type}.");
             switch (buildableData.Type)
             {

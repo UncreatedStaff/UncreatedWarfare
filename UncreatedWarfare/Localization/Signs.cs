@@ -16,6 +16,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
@@ -155,13 +156,13 @@ public class Signs : BaseSingleton, ILevelStartListener
         ThreadUtil.assertIsGameThread();
         foreach (uint id in ActiveSigns.Keys.ToList())
         {
-            BarricadeDrop? drop = UCBarricadeManager.FindBarricade(id);
-            if (drop == null && ActiveSigns.TryGetValue(id, out CustomSignComponent comp))
-            {
-                if (comp != null)
-                    UnityEngine.Object.Destroy(comp);
-                ActiveSigns.Remove(id);
-            }
+            BarricadeDrop? drop = BarricadeUtility.FindBarricade(id).Drop;
+            if (drop != null || !ActiveSigns.TryGetValue(id, out CustomSignComponent comp))
+                continue;
+
+            if (comp != null)
+                UnityEngine.Object.Destroy(comp);
+            ActiveSigns.Remove(id);
         }
         for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
         {

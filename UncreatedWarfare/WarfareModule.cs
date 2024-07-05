@@ -26,6 +26,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Module = SDG.Framework.Modules.Module;
 
@@ -187,6 +188,7 @@ public sealed class WarfareModule : IModuleNexus
         });
 
         serviceCollection.AddScoped<BuildableSaver>();
+        serviceCollection.AddSingleton<VehicleInfoStore>();
 
         serviceCollection.AddTransient<ILoopTickerFactory, UnityLoopTickerFactory>();
 
@@ -227,7 +229,12 @@ public sealed class WarfareModule : IModuleNexus
     private async UniTask HostAsync()
     {
         CancellationToken token = UnloadToken;
-        List<IHostedService> hostedServices = ServiceProvider.GetServices<IHostedService>().ToList();
+
+        List<IHostedService> hostedServices = ServiceProvider
+            .GetServices<IHostedService>()
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
+
         int errIndex = -1;
         for (int i = 0; i < hostedServices.Count; i++)
         {
@@ -304,7 +311,10 @@ public sealed class WarfareModule : IModuleNexus
         if (_unloadedHostedServices)
             return;
 
-        List<IHostedService> hostedServices = ServiceProvider.GetServices<IHostedService>().ToList();
+        List<IHostedService> hostedServices = ServiceProvider
+            .GetServices<IHostedService>()
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
 
         UniTask[] tasks = new UniTask[hostedServices.Count];
         for (int i = 0; i < hostedServices.Count; ++i)
@@ -341,7 +351,10 @@ public sealed class WarfareModule : IModuleNexus
         _unloadedHostedServices = true;
         using CancellationTokenSource timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(3d));
 
-        List<IHostedService> hostedServices = ServiceProvider.GetServices<IHostedService>().ToList();
+        List<IHostedService> hostedServices = ServiceProvider
+            .GetServices<IHostedService>()
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
 
         UniTask[] tasks = new UniTask[hostedServices.Count];
         for (int i = 0; i < hostedServices.Count; ++i)

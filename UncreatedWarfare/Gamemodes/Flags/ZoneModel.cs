@@ -1,9 +1,10 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -155,19 +156,15 @@ public struct ZoneModel : IListItem
             }
 
             Vector3 pos = new Vector3(obj.X, obj.Y, obj.Z);
-            obj.Object ??= UCBarricadeManager.FindObject(obj.ObjectInstanceId, pos, obj.Guid);
+            obj.Object ??= LevelObjectUtility.FindObject(obj.ObjectInstanceId, AssetLink.Create<ObjectAsset>(obj.Guid), pos).Object;
             if (obj.Object == null)
             {
-                obj.Object = UCBarricadeManager.GetObjectFromPosition(obj.Guid, pos);
-                if (obj.Object == null)
-                {
-                    Util.RemoveFromArray(ref GridObjects, i--);
-                    L.LogWarning("[ZONE MODEL] Invalid grid object: " + obj + ".");
-                    continue;
-                }
+                Util.RemoveFromArray(ref GridObjects, i--);
+                L.LogWarning("[ZONE MODEL] Invalid grid object: " + obj + ".");
+                continue;
             }
 
-            pos = obj.Object.GetPosition();
+            pos = LevelObjectUtility.GetPosition(obj.Object);
 
             obj.ObjectInstanceId = obj.Object.instanceID;
             obj.X = pos.x;

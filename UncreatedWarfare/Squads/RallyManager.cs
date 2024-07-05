@@ -2,10 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Squads;
@@ -95,10 +96,9 @@ public static class RallyManager
         {
             SquadManager.RallyUI.ClearFromAllPlayers();
 
-            foreach (BarricadeDrop drop in GetRallyPointBarricades().ToList())
+            foreach (BarricadeInfo barricade in GetRallyPointBarricades().ToList())
             {
-                if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                BarricadeManager.destroyBarricade(barricade.Drop, barricade.Coord.x, barricade.Coord.y, barricade.Plant);
             }
         }
         catch (Exception ex)
@@ -107,15 +107,19 @@ public static class RallyManager
             L.LogError(ex);
         }
     }
-    public static IEnumerable<BarricadeDrop> GetRallyPointBarricades()
+
+    private static IEnumerable<BarricadeInfo> GetRallyPointBarricades()
     {
-        if (BarricadeManager.regions is null)
-            return Array.Empty<BarricadeDrop>();
-        return UCBarricadeManager.NonPlantedBarricades.Where(b => IsRally(b.asset));
+        if (BarricadeManager.regions == null)
+            return Array.Empty<BarricadeInfo>();
+
+        return BarricadeUtility.EnumerateBarricades().Where(b => IsRally(b.Drop.asset));
     }
-    public static bool IsRally(ItemBarricadeAsset asset) => Gamemode.Config.RallyPoints != null &&
-                                                            Gamemode.Config.RallyPoints.HasValue &&
-                                                            Gamemode.Config.RallyPoints.Value.Any(r => r.MatchGuid(asset.GUID));
+
+    public static bool IsRally(ItemBarricadeAsset asset)
+    {
+        return Gamemode.Config.RallyPoints.ContainsAsset(asset);
+    }
 }
 
 public class RallyPoint : MonoBehaviour, IManualOnDestroy
