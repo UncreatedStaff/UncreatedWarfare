@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
@@ -99,7 +100,7 @@ public class Insurgency :
     ILeaderboard? IImplementsLeaderboard.Leaderboard => _endScreen;
     InsurgencyTracker IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     IStatTracker IGameStats.GameStats => _gameStats;
-    public CacheLocations Locations { get; } = new CacheLocations();
+    public CacheLocationStore Locations { get; } = new CacheLocationStore();
     public Insurgency() : base("Insurgency", 0.25F) { }
     protected override Task PreInit(CancellationToken token)
     {
@@ -316,11 +317,9 @@ public class Insurgency :
 
         const float sqrRadius = 300 * 300;
         CacheLocation[] viableSpawns = Locations.Locations
-            .Where(c1 => c1 != null && !c1.IsDisabled && !_seenCaches.Contains(c1) &&
-                _seenCaches
-                    .All(c => (c1.Position - c.Position).sqrMagnitude > sqrRadius
-                    )
-                )
+            .Where(c1 => c1 is { IsDisabled: false }
+                         && !_seenCaches.Contains(c1)
+                         && _seenCaches.All(c => (c1.Position - c.Position).sqrMagnitude > sqrRadius))
             .ToArray();
 
         if (viableSpawns.Length == 0)
@@ -328,25 +327,55 @@ public class Insurgency :
             L.LogWarning("[INSURGENCY] No viable cache spawns.");
             return;
         }
+
         CacheLocation location = viableSpawns[RandomUtility.GetIndex((ICollection)viableSpawns)];
 
-        if (!Config.BarricadeInsurgencyCache.TryGetAsset(out ItemBarricadeAsset? asset))
+        IAssetLink<ItemPlaceableAsset>? placeable = location.CacheBuildable ?? Config.BarricadeInsurgencyCache;
+
+
+        if (!placeable.TryGetAsset(out ItemPlaceableAsset? asset))
         {
             L.LogWarning("[INSURGENCY] Invalid barricade GUID for Insurgency Cache.");
             return;
         }
-        Barricade barricade = new Barricade(asset);
-        Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, location.Position, location.GetBarricadeAngle(), 0, TeamManager.GetGroupID(DefendingTeam));
-        BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
-        if (foundationDrop == null)
+
+        Cache cache;
+        if (asset is ItemBarricadeAsset barricadeAsset)
         {
-            L.LogWarning("[INSURGENCY] Unable to spawn cache barricade.");
+            Barricade barricade = new Barricade(barricadeAsset, barricadeAsset.health, barricadeAsset.getState(EItemOrigin.ADMIN));
+            Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, location.Position, location.GetPlacementAngle(), 0, TeamManager.GetGroupID(DefendingTeam));
+            BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
+            if (foundationDrop == null)
+            {
+                L.LogWarning("[INSURGENCY] Unable to spawn cache barricade.");
+                return;
+            }
+
+            cache = FOBManager.RegisterNewCache(new BuildableBarricade(foundationDrop), DefendingTeam, location);
+        }
+        else if (asset is ItemStructureAsset structureAsset)
+        {
+            Structure structure = new Structure(structureAsset, structureAsset.health);
+            if (!StructureManager.dropReplicatedStructure(structure, location.Position, location.GetPlacementAngle(), 0, TeamManager.GetGroupID(DefendingTeam)))
+            {
+                L.LogWarning("[INSURGENCY] Unable to spawn cache barricade.");
+                return;
+            }
+
+            Regions.tryGetCoordinate(location.Position, out byte x, out byte y);
+            StructureManager.tryGetRegion(x, y, out StructureRegion region);
+
+            StructureDrop foundationDrop = region.drops.GetTail();
+
+            cache = FOBManager.RegisterNewCache(new BuildableStructure(foundationDrop), DefendingTeam, location);
+        }
+        else
+        {
+            L.LogWarning($"[INSURGENCY] Invalid cache placeable {placeable}.");
             return;
         }
 
-        Cache cache = FOBManager.RegisterNewCache(foundationDrop, DefendingTeam, location);
         CacheData currentCache = Caches[CachesDestroyed];
-
 
         if (!currentCache.IsActive)
         {

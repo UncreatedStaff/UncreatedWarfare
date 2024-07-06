@@ -940,7 +940,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         return fob;
     }
-    public static Cache RegisterNewCache(BarricadeDrop drop, ulong team, CacheLocation location)
+    public static Cache RegisterNewCache(IBuildable drop, ulong team, CacheLocation location)
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
@@ -961,7 +961,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         _singleton.AddFOB(cache);
 
         if (Data.Is(out IAttackDefense? atk) && GamemodeOld.Config.EffectMarkerCacheDefend.TryGetGuid(out Guid effectGuid))
-            IconManager.AttachIcon(effectGuid, drop.model, atk.DefendingTeam, 3.25f);
+            IconManager.AttachIcon(effectGuid, drop.Model, atk.DefendingTeam, 3.25f);
 
         return cache;
 

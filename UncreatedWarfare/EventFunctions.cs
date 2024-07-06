@@ -432,14 +432,15 @@ public static class EventFunctions
 
         if (toPage == PlayerInventory.STORAGE && player.inventory.isStorageTrunk)
         {
-            InteractableVehicle? vehicle = UCVehicleManager.FindVehicleFromTrunkStorage(player.inventory.items[PlayerInventory.STORAGE]);
-            if (vehicle != null)
+            if (VehicleUtility.TryGetVehicleFromTrunkStorage(player.inventory.items[PlayerInventory.STORAGE], out InteractableVehicle? vehicle))
             {
-                if (vehicle.TryGetComponent(out VehicleComponent component) && component.NoPickZone != null)
+                if (!vehicle.TryGetComponent(out VehicleComponent component) || component.NoPickZone == null)
                 {
-                    ucplayer.SendChat(T.ProhibitedPickupZone, itemData.item.GetAsset(), FlagGamemode.GetZoneOrFlag(component.NoPickZone));
-                    shouldAllow = false;
+                    return;
                 }
+
+                ucplayer.SendChat(T.ProhibitedPickupZone, itemData.item.GetAsset(), FlagGamemode.GetZoneOrFlag(component.NoPickZone));
+                shouldAllow = false;
                 return;
             }
         }
@@ -481,8 +482,7 @@ public static class EventFunctions
         if (e.Page == PlayerInventory.STORAGE && e.Player.Player.inventory.isStorageTrunk && !e.Player.Keys.IsKeyDown(Data.Keys.DropSupplyOverride))
         {
             Items? trunk = e.Player.Player.inventory.items[PlayerInventory.STORAGE];
-            InteractableVehicle? vehicle = UCVehicleManager.FindVehicleFromTrunkStorage(trunk);
-            if (vehicle != null)
+            if (VehicleUtility.TryGetVehicleFromTrunkStorage(trunk, out InteractableVehicle? vehicle))
             {
                 VehicleBay? bay = VehicleBay.GetSingletonQuick();
                 if (bay?.GetDataSync(vehicle.asset.GUID) is { } data && VehicleData.IsLogistics(data.Type))
@@ -498,7 +498,7 @@ public static class EventFunctions
                             trunk.removeItem(e.Index);
                             Item it2 = new Item(build ? ammoAsset : buildAsset, EItemOrigin.WORLD);
                             trunk.addItem(e.X, e.Y, e.ItemJar.rot, it2);
-                            e.Break();
+                            e.Cancel();
                             return;
                         }
                     }
@@ -507,7 +507,7 @@ public static class EventFunctions
                 if (!e.Player.OnDuty() && vehicle.TryGetComponent(out VehicleComponent component) && component.NoDropZone != null)
                 {
                     e.Player.SendChat(T.ProhibitedDropZone, itemAsset, FlagGamemode.GetZoneOrFlag(component.NoDropZone));
-                    e.Break();
+                    e.Cancel();
                 }
                 return;
             }

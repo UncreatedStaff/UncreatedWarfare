@@ -9,8 +9,8 @@ using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -284,8 +284,8 @@ public class VehicleCommand : IExecutableCommand
                     throw Context.Reply(T.VehicleSeatNotOccupied, seatIndex + 1);
                 
                 bool wantsFullKick = Context.MatchFlag("r", "k") && (vehicleTarget.asset.engine is not EEngine.PLANE and not EEngine.HELICOPTER ||
-                                                            Mathf.Abs(vehicleTarget.speed) <= 0.15f || TeamManager.IsInMain(team, vehicleTarget.transform.position));
-                if (wantsFullKick || !UCVehicleManager.TryMovePlayerToEmptySeat(target.Player))
+                                                            Mathf.Abs(vehicleTarget.ReplicatedSpeed) <= 0.15f || TeamManager.IsInMain(team, vehicleTarget.transform.position));
+                if (wantsFullKick || !VehicleUtility.TryMovePlayerToEmptySeat(target.Player))
                 {
                     L.LogDebug("Removing target instead of moving.");
                     VehicleManager.forceRemovePlayer(vehicleTarget, target.CSteamID);

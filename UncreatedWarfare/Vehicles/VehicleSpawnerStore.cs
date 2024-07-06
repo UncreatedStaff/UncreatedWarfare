@@ -88,7 +88,6 @@ public class VehicleSpawnerStore : ISessionHostedService
 
         SaveIntl(GetFilePath());
         return true;
-
     }
 
     /// <summary>

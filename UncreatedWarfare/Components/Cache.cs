@@ -3,20 +3,20 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
@@ -42,18 +42,18 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     public bool IsDestroyed { get; private set; }
     public string Name { get; }
     float IDeployable.Yaw => _component == null ? 0 : _component.transform.rotation.eulerAngles.y;
-    public BarricadeDrop Drop { get; private set; }
+    public IBuildable Drop { get; private set; }
     public CacheLocation Location { get; }
     public float Radius => 40;
-    public bool ContainsBuildable(IBuildable buildable) => buildable.Type == StructType.Barricade && Drop != null && Drop.instanceID == buildable.InstanceId;
+    public bool ContainsBuildable(IBuildable buildable) => Drop != null && Drop.Equals(buildable);
     public bool ContainsVehicle(InteractableVehicle vehicle) => false;
     public IFOBItem? FindFOBItem(IBuildable buildable) => null;
     public IFOBItem? FindFOBItem(InteractableVehicle vehicle) => null;
     public FobRecordTracker<WarfareDbContext>? Record { get; }
-    public Cache(BarricadeDrop drop, ulong team, CacheLocation location, string name, int number)
+    public Cache(IBuildable drop, ulong team, CacheLocation location, string name, int number)
     {
         IsDiscovered = false;
-        _component = drop.model.gameObject.AddComponent<CacheComponent>().Initialize(drop, this);
+        _component = drop.Model.gameObject.AddComponent<CacheComponent>().Initialize(drop, this);
         Drop = drop;
         Name = name;
         Number = number;
@@ -65,7 +65,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         _cl = F.GetClosestLocationName(pos, true, true);
         Location = location;
 
-        if (Data.Is(out IFlagRotation fg))
+        if (Data.Is(out IFlagRotation? fg))
         {
             Flag flag = fg.LoadedFlags.Find(f => f.Name.Equals(_cl, StringComparison.OrdinalIgnoreCase));
             if (flag != null)
@@ -75,8 +75,8 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         FobRecord fobRecord = new FobRecord
         {
             Steam64 = null,
-            FobAngle = Drop.model.eulerAngles,
-            FobPosition = Drop.model.position,
+            FobAngle = Drop.Rotation.eulerAngles,
+            FobPosition = Drop.Position,
             FobName = Name,
             FobType = FobType.Cache,
             FobNumber = Number,
@@ -223,12 +223,12 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         if (_disposed) return;
         if (_component != null)
             _component.Destroy();
-        if (Data.Is(out Insurgency ins))
+        if (Data.Is(out Insurgency? ins))
             ins.OnCacheDestroyed(this, ((IFOB)this).Instigator);
         _disposed = true; // MUST be set to true before deleting the barricade, or this method will be called multiple times recursively
-        if (Drop != null && BarricadeManager.tryGetRegion(Drop.model, out byte x, out byte y, out ushort plant, out _))
+        if (Drop != null)
         {
-            BarricadeManager.destroyBarricade(Drop, x, y, plant);
+            Drop.Destroy();
             Drop = null!;
         }
         Record?.Dispose();
@@ -251,7 +251,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         }
         public void SpawnAttackIcon()
         {
-            if (Data.Is(out IAttackDefense ins) && Gamemode.Config.EffectMarkerCacheAttack.TryGetGuid(out Guid effect))
+            if (Data.Is(out IAttackDefense? ins) && Gamemode.Config.EffectMarkerCacheAttack.TryGetGuid(out Guid effect))
             {
                 IconManager.AttachIcon(effect, _structure.model, ins.AttackingTeam, 30F);
             }

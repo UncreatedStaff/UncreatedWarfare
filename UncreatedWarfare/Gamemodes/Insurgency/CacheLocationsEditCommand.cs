@@ -19,12 +19,12 @@ internal static class CacheLocationsEditCommand
 
         ctx.AssertRanByPlayer();
 
-        CacheLocations locations;
+        CacheLocationStore locations;
         if (Data.Is(out Insurgency ins))
             locations = ins.Locations;
         else
         {
-            locations = new CacheLocations();
+            locations = new CacheLocationStore();
             locations.Reload();
         }
 
@@ -193,10 +193,10 @@ internal static class CacheLocationsEditCommand
                 location.Position = ctx.Player.Position;
                 location.Rotation = ctx.Player.Player.transform.rotation.eulerAngles;
                 if (Drops.TryGetValue(location, out BarricadeDrop? drop) && !drop.GetServersideData().barricade.isDead)
-                    BarricadeManager.ServerSetBarricadeTransform(drop.model, location.Position, location.GetBarricadeAngle());
+                    BarricadeManager.ServerSetBarricadeTransform(drop.model, location.Position, location.GetPlacementAngle());
                 else if (Gamemode.Config.BarricadeInsurgencyCache.TryGetAsset(out ItemBarricadeAsset? asset))
                 {
-                    Transform? t = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset), location.Position, location.GetBarricadeAngle(), ctx.CallerId.m_SteamID, ctx.Player.Player.quests.groupID.m_SteamID);
+                    Transform? t = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset), location.Position, location.GetPlacementAngle(), ctx.CallerId.m_SteamID, ctx.Player.Player.quests.groupID.m_SteamID);
                     if (t != null)
                     {
                         drop = BarricadeManager.FindBarricadeByRootTransform(t);
@@ -219,7 +219,7 @@ internal static class CacheLocationsEditCommand
         else throw ctx.SendCorrectUsage(Syntax);
     }
 
-    private static void CheckEditOperation(CommandContext ctx, CacheLocations locations)
+    private static void CheckEditOperation(CommandContext ctx, CacheLocationStore locations)
     {
         if (ctx.Player.CacheLocationIndex == -1)
             throw ctx.ReplyString("<#ffe7ff>You must be in edit mode to select caches. <#a77aa5>/dev caches start</color> to iterate through them.");
@@ -232,7 +232,7 @@ internal static class CacheLocationsEditCommand
         }
     }
 
-    private static void UpdateCacheIndex(UCPlayer player, int index, CacheLocations locations)
+    private static void UpdateCacheIndex(UCPlayer player, int index, CacheLocationStore locations)
     {
         int oldIndex = player.CacheLocationIndex;
         player.CacheLocationIndex = index;
@@ -250,7 +250,7 @@ internal static class CacheLocationsEditCommand
             CacheLocation newLocation = locations.Locations[index];
             if (Gamemode.Config.BarricadeInsurgencyCache.TryGetAsset(out ItemBarricadeAsset? asset) && (!Drops.TryGetValue(newLocation, out BarricadeDrop drop) || drop.GetServersideData().barricade.isDead))
             {
-                Transform? barricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset), newLocation.Position, newLocation.GetBarricadeAngle(), player.Steam64, player.Player.quests.groupID.m_SteamID);
+                Transform? barricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset), newLocation.Position, newLocation.GetPlacementAngle(), player.Steam64, player.Player.quests.groupID.m_SteamID);
                 if (barricade == null)
                     return;
                 drop = BarricadeManager.FindBarricadeByRootTransform(barricade);

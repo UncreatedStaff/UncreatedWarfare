@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands.Dispatch;
@@ -121,7 +122,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             if (ignoreFoundation is not null && item.Equals(ignoreFoundation))
                 continue;
             BuildableData? b = item.Buildable;
-            if (b != null && b.Foundation == buildable.Foundation && (item is not ShovelableComponent sh || sh.ActiveVehicle == null || !sh.ActiveVehicle.isDead))
+            if (b != null && b.Foundation.MatchAsset(buildable.Foundation) && (item is not ShovelableComponent sh || sh.ActiveVehicle == null || !sh.ActiveVehicle.isDead))
             {
                 --limit;
                 if (limit <= 0)
@@ -586,7 +587,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                         record.DestroyedAt = DateTimeOffset.UtcNow;
                         record.DestroyedByRoundEnd = destroyedByRoundEnd;
                         record.Teamkilled = teamkilled;
-                        record.Instigator = DestroyInfo?.InstigatorId;
+                        record.Instigator = DestroyInfo?.InstigatorId.m_SteamID;
                         record.InstigatorSession = session;
                         record.InstigatorPosition = DestroyInfo?.Instigator?.Position;
                         record.BuildLoaded = _buildLoaded;
@@ -681,63 +682,77 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public void OffloadNearbyLogisticsVehicle()
     {
         ThreadUtil.assertIsGameThread();
+
+        VehicleInfoStore infoStore = /* todo */ null!;
+
+        float sqrRad = FOBManager.Config.FOBBuildPickupRadiusNoBunker;
+        sqrRad *= sqrRad;
+
+        Vector3 fobPosition = transform.position;
+
+        // find closest logistics vehicle on the FOB's team.
+        InteractableVehicle? closestLogi = VehicleManager.vehicles
+            .Where(vehicle => vehicle.lockedGroup.m_SteamID == Team
+                && infoStore.Vehicles.FirstOrDefault(info => info.Vehicle.MatchAsset(vehicle.asset)) is { } info
+                && info.Type.IsLogistics()
+                && (vehicle.transform.position - fobPosition).sqrMagnitude <= sqrRad)
+            .Aggregate((closest, next) => (closest.transform.position - fobPosition).sqrMagnitude > (next.transform.position - fobPosition).sqrMagnitude ? next : closest);
         
-        InteractableVehicle? nearestLogi = UCVehicleManager.GetNearestLogi(transform.position, FOBManager.Config.FOBBuildPickupRadiusNoBunker, Team);
-        if (nearestLogi != null)
+        if (closestLogi == null)
+            return;
+
+        ulong delivererId = Owner;
+        if (closestLogi.transform.TryGetComponent(out VehicleComponent component))
         {
-            ulong delivererId = Owner;
-            if (nearestLogi.transform.TryGetComponent(out VehicleComponent component))
-            {
-                component.Quota += 5;
-                delivererId = component.LastDriver;
-            }
+            component.Quota += 5;
+            delivererId = component.LastDriver;
+        }
 
-            if (nearestLogi.isDriven)
-                return;
+        if (closestLogi.isDriven)
+            return;
             
-            int buildRemoved = 0;
-            int ammoRemoved = 0;
-            Vector3 pos = nearestLogi.transform.position;
-            foreach (ItemJar item in ItemUtility.EnumerateAlongGrid(nearestLogi.trunkItems, reverse: true))
+        int buildRemoved = 0;
+        int ammoRemoved = 0;
+        Vector3 pos = closestLogi.transform.position;
+        foreach (ItemJar item in ItemUtility.EnumerateAlongGrid(closestLogi.trunkItems, reverse: true))
+        {
+            bool shouldRemove = false;
+            if (item.item.id == _buildItemId && buildRemoved < 16)
             {
-                bool shouldRemove = false;
-                if (item.item.id == _buildItemId && buildRemoved < 16)
-                {
-                    shouldRemove = true;
-                    buildRemoved++;
-                }
-                if (item.item.id == _ammoItemId && ammoRemoved < 12)
-                {
-                    shouldRemove = true;
-                    ammoRemoved++;
-                }
-                if (shouldRemove)
-                {
-                    ItemPositionSyncTracker tracker = new ItemPositionSyncTracker(pos);
-
-                    ItemManager.onServerSpawningItemDrop += tracker.OnItemSpawned;
-                    ItemManager.dropItem(item.item, pos, false, true, false);
-
-                    ItemManager.onServerSpawningItemDrop -= tracker.OnItemSpawned;
-                    pos = tracker.Position;
-
-                    nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
-                    EventFunctions.SimulateRegisterLastDroppedItem(pos, delivererId);
-                }
+                shouldRemove = true;
+                buildRemoved++;
             }
-
-            UCPlayer? deliverer = UCPlayer.FromID(delivererId) ?? (delivererId != Owner ? UCPlayer.FromID(Owner) : null);
-            if (deliverer != null)
+            if (item.item.id == _ammoItemId && ammoRemoved < 12)
             {
-                int groupsUnloaded = (buildRemoved + ammoRemoved) / 6;
-                if (groupsUnloaded > 0 && Points.PointsConfig.XPData.TryGetValue(nameof(XPReward.UnloadSupplies), out PointsConfig.XPRewardData data) &&
-                    data.Amount != 0)
-                {
-                    int xp = data.Amount;
-                    if (deliverer.KitClass == Class.Pilot)
-                        xp *= 2;
-                    Points.AwardXP(deliverer, XPReward.UnloadSupplies, groupsUnloaded * xp);
-                }
+                shouldRemove = true;
+                ammoRemoved++;
+            }
+            if (shouldRemove)
+            {
+                ItemPositionSyncTracker tracker = new ItemPositionSyncTracker(pos);
+
+                ItemManager.onServerSpawningItemDrop += tracker.OnItemSpawned;
+                ItemManager.dropItem(item.item, pos, false, true, false);
+
+                ItemManager.onServerSpawningItemDrop -= tracker.OnItemSpawned;
+                pos = tracker.Position;
+
+                closestLogi.trunkItems.removeItem(closestLogi.trunkItems.getIndex(item.x, item.y));
+                EventFunctions.SimulateRegisterLastDroppedItem(pos, delivererId);
+            }
+        }
+
+        UCPlayer? deliverer = UCPlayer.FromID(delivererId) ?? (delivererId != Owner ? UCPlayer.FromID(Owner) : null);
+        if (deliverer != null)
+        {
+            int groupsUnloaded = (buildRemoved + ammoRemoved) / 6;
+            if (groupsUnloaded > 0 && Points.PointsConfig.XPData.TryGetValue(nameof(XPReward.UnloadSupplies), out PointsConfig.XPRewardData data) &&
+                data.Amount != 0)
+            {
+                int xp = data.Amount;
+                if (deliverer.KitClass == Class.Pilot)
+                    xp *= 2;
+                Points.AwardXP(deliverer, XPReward.UnloadSupplies, groupsUnloaded * xp);
             }
         }
     }
@@ -847,7 +862,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                         pt = d.point;
                     if (d.item.id == _buildItemId)
                     {
-                        d.Destroy();
+                        ItemUtility.DestroyDroppedItem(d);
                         --buildCount;
                     }
                     ++index;
@@ -868,7 +883,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                         pt = d.point;
                     if (d.item.id == _ammoItemId)
                     {
-                        d.Destroy();
+                        ItemUtility.DestroyDroppedItem(d);
                         --ammoCount;
                     }
                     ++index;
@@ -947,12 +962,18 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public IFOBItem? FindFOBItem(IBuildable buildable)
     {
         if (Radio != null && Radio.Barricade.instanceID == buildable.InstanceId && !buildable.IsStructure)
+        {
             return Radio;
-        if (Bunker != null && (Bunker.ActiveStructure.BuildableEquals(buildable) || Bunker.Base.BuildableEquals(buildable)))
+        }
+
+        if (Bunker != null && (Bunker.ActiveStructure != null && Bunker.ActiveStructure.Equals(buildable) || Bunker.Base != null && Bunker.Base.Equals(buildable)))
+        {
             return Bunker;
+        }
+
         for (int i = 0; i < _items.Count; ++i)
         {
-            if (_items[i] is ShovelableComponent sh && (sh.ActiveStructure.BuildableEquals(buildable) || sh.Base.BuildableEquals(buildable)))
+            if (_items[i] is ShovelableComponent sh && (sh.ActiveStructure != null && sh.ActiveStructure.Equals(buildable) || sh.Base != null && sh.Base.Equals(buildable)))
                 return sh;
         }
 
@@ -1132,7 +1153,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 {
                     const ushort loss = 10;
                     BarricadeManager.damage(Radio.Barricade.model, loss, 1, false, default, EDamageOrigin.Useable_Melee);
-                    if (Radio != null && Radio.Barricade != null && Radio.Barricade.GetServersideData().barricade.isDead && Data.Is(out ITickets tickets))
+                    if (Radio != null && Radio.Barricade != null && Radio.Barricade.GetServersideData().barricade.isDead && Data.Is(out ITickets? tickets))
                     {
                         if (Team == 1ul)
                             tickets.TicketManager.Team1Tickets -= FOBManager.Config.TicketsFOBRadioLost;

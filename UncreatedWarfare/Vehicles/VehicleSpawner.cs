@@ -11,7 +11,9 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Uncreated.Players;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
@@ -29,6 +31,7 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
@@ -801,41 +804,41 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             if (!FOBManager.Config.Buildables.Exists(v => v.Type == BuildableType.Emplacement && v.Emplacement is not null && v.Emplacement.EmplacementVehicle is not null && v.Emplacement.EmplacementVehicle.Guid == e.Vehicle.asset.GUID))
             {
                 e.Player.SendChat(T.VehicleTooHigh);
-                e.Break();
+                e.Cancel();
             }
         }
     }
     private void OnVehicleEnterRequested(EnterVehicleRequested e)
     {
         ThreadUtil.assertIsGameThread();
-        if (!UCVehicleManager.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
+        if (!VehicleUtility.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
         {
-            e.Break();
+            e.Cancel();
             return;
         }
         if (Data.Gamemode.State != State.Active && Data.Gamemode.State != State.Staging)
         {
             e.Player.SendChat(T.VehicleStaging, e.Vehicle.asset);
-            e.Break();
+            e.Cancel();
             return;
         }
         if (!e.Vehicle.asset.canBeLocked) return;
-        if (!e.Player.OnDuty() && Data.Gamemode.State == State.Staging && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense atk) || e.Player.GetTeam() == atk.AttackingTeam))
+        if (!e.Player.OnDuty() && Data.Gamemode.State == State.Staging && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense? atk) || e.Player.GetTeam() == atk.AttackingTeam))
         {
             e.Player.SendChat(T.VehicleStaging, e.Vehicle.asset);
-            e.Break();
+            e.Cancel();
             return;
         }
-        if (Data.Is(out IRevives r) && r.ReviveManager.IsInjured(e.Player.Steam64))
+        if (Data.Is(out IRevives? r) && r.ReviveManager.IsInjured(e.Player.Steam64))
         {
-            e.Break();
+            e.Cancel();
             return;
         }
 
         if (!e.Player.HasKit)
         {
             e.Player.SendChat(T.VehicleNoKit);
-            e.Break();
+            e.Cancel();
         }
         if (e.Vehicle.transform.TryGetComponent(out VehicleComponent vc) && 
             (vc.Data?.Item?.IsDelayed(out Delay delay) ?? false) && 
@@ -843,29 +846,29 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             && e.Player.Player.IsInMain())
         {
             e.Player.SendChat(T.RequestVehicleTeammatesDelay, Mathf.FloorToInt(delay.Value));
-            e.Break();
+            e.Cancel();
         }
     }
     private void OnVehicleSwapSeatRequested(VehicleSwapSeatRequested e)
     {
         ThreadUtil.assertIsGameThread();
-        if (!UCVehicleManager.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
+        if (!VehicleUtility.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
         {
-            e.Break();
+            e.Cancel();
             return;
         }
         if (!e.Vehicle.TryGetComponent(out VehicleComponent c))
             return;
         if (c.IsEmplacement && e.FinalSeat == 0)
         {
-            e.Break();
+            e.Cancel();
         }
         else
         {
             if (!e.Player.HasKit)
             {
                 e.Player.SendChat(T.VehicleNoKit);
-                e.Break();
+                e.Cancel();
                 return;
             }
 
@@ -874,7 +877,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             if (data != null &&
                 data.RequiredClass != Class.None) // vehicle requires crewman or pilot
             {
-                if (!UCVehicleManager.AllowEnterDriverSeat
+                if (!VehicleUtility.AllowEnterDriverSeat
                     && c.IsAircraft &&
                     e.InitialSeat == 0 &&
                     e.FinalSeat != 0 &&
@@ -882,7 +885,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                     !e.Player.OnDuty())
                 {
                     e.Player.SendChat(T.VehicleAbandoningPilot);
-                    e.Break();
+                    e.Cancel();
                 }
                 else if (data.CrewSeats.ArrayContains(e.FinalSeat)) // seat is for crewman only
                 {
@@ -891,7 +894,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                         if (e.FinalSeat == 0) // if a crewman is trying to enter the driver's seat
                         {
                             FOBManager? manager = Data.Singletons.GetSingleton<FOBManager>();
-                            bool canEnterDriverSeat = UCVehicleManager.AllowEnterDriverSeat ||
+                            bool canEnterDriverSeat = VehicleUtility.AllowEnterDriverSeat ||
                                                       owner == null ||
                                 e.Player == owner ||
                                 e.Player.OnDuty() ||
@@ -922,7 +925,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                                 }
                                 else
                                     e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
-                                e.Break();
+                                e.Cancel();
                             }
                         }
                         else // if the player is trying to switch to a gunner's seat
@@ -932,12 +935,12 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                                 if (e.Vehicle.passengers.Length == 0 || e.Vehicle.passengers[0].player is null) // if they have no driver
                                 {
                                     e.Player.SendChat(T.VehicleDriverNeeded);
-                                    e.Break();
+                                    e.Cancel();
                                 }
                                 else if (e.Player.Steam64 == e.Vehicle.passengers[0].player.playerID.steamID.m_SteamID) // if they are the driver
                                 {
                                     e.Player.SendChat(T.VehicleAbandoningDriver);
-                                    e.Break();
+                                    e.Cancel();
                                 }
                             }
                         }
@@ -945,7 +948,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                     else
                     {
                         e.Player.SendChat(T.VehicleMissingKit, data.RequiredClass);
-                        e.Break();
+                        e.Cancel();
                     }
                 }                
             }
@@ -962,7 +965,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                         else
                             e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
 
-                        e.Break();
+                        e.Cancel();
                     }
                 }
             }
