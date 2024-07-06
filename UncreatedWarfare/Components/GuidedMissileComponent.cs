@@ -2,7 +2,6 @@
 using SDG.Unturned;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;

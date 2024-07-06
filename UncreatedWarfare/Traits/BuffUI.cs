@@ -1,7 +1,6 @@
 ﻿using SDG.NetTransport;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits;

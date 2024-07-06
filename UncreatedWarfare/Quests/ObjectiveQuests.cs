@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Text.Json;
-using Uncreated.Json;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Quests.Types;

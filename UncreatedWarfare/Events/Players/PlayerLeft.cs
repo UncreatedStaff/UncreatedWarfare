@@ -1,5 +1,5 @@
 ﻿using System.Threading;
-using Uncreated.Warfare.Gamemodes.Teams;
+using Uncreated.Warfare.Layouts.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Players;

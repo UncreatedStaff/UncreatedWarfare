@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes.Teams;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using UnityEngine;
 using ILogger = Microsoft.Extensions.Logging.ILogger;

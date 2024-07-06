@@ -1,7 +1,7 @@
 ﻿using DanielWillett.ReflectionTools;
 using System;
-using Uncreated.Warfare.Gamemodes.Phases;
-using Uncreated.Warfare.Gamemodes.Teams;
+using Uncreated.Warfare.Layouts.Phases;
+using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Exceptions;
 

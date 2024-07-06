@@ -27,17 +27,13 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Deaths;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -565,7 +561,7 @@ public static class Data
     internal static void RegisterInitialConfig()
     {
         Gamemode.ConfigObj = new GamemodeConfig();
-        Gamemode.WinToastUI = new Gamemodes.UI.WinToastUI();
+        Gamemode.WinToastUI = new WinToastUI();
         IsInitialSyncRegistering = false;
     }
     private static void OnSingletonReloaded(IReloadableSingleton singleton, bool success)

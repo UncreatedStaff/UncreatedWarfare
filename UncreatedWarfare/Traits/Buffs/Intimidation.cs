@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Players.Unlocks;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Traits.Buffs;
 /// <summary>

@@ -4,9 +4,7 @@ using System;
 using JetBrains.Annotations;
 using SDG.Unturned;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
-using static Uncreated.Warfare.Components.HeatSeekingController;
 using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
@@ -56,7 +54,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         _guidanceRampTime = guidanceRampTime;
         _allowedPathAlterations = 1;
         _startTime = Time.time;
-        if (_controller.Status == ELockOnMode.LOCKED_ON)
+        if (_controller.Status == HeatSeekingController.ELockOnMode.LOCKED_ON)
             _lost = false;
         else
             _lost = true;

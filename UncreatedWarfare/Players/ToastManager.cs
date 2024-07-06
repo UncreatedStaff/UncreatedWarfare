@@ -3,9 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.UI;
+using Uncreated.Warfare.Layouts.UI;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Players;

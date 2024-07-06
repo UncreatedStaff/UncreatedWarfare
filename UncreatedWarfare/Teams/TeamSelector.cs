@@ -12,7 +12,6 @@ using Uncreated.Framework.UI.Presets;
 using Uncreated.Players;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;

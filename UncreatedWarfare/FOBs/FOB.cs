@@ -12,8 +12,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;

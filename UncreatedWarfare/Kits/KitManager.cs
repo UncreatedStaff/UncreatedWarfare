@@ -13,8 +13,6 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;

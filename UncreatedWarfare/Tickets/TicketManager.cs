@@ -2,10 +2,8 @@
 using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;
 

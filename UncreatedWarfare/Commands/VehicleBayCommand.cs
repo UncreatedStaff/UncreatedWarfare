@@ -8,9 +8,6 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 using DelayType = Uncreated.Warfare.Vehicles.DelayType;
 

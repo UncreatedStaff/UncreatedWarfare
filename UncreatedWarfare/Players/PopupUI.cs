@@ -5,7 +5,6 @@ using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
-using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Players;
 

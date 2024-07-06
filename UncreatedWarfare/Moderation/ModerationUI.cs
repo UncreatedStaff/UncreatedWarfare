@@ -15,7 +15,6 @@ using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;

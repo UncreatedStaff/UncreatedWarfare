@@ -23,13 +23,8 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Flags.UI;
-using Uncreated.Warfare.Gamemodes.Insurgency;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
@@ -46,7 +41,6 @@ using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 #pragma warning disable IDE0060 // Remove unused parameter
 namespace Uncreated.Warfare;

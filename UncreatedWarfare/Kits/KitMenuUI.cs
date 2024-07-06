@@ -8,8 +8,6 @@ using System.Threading;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;

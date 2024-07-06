@@ -7,8 +7,7 @@ using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Insurgency;
-using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Layouts.Insurgency;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
