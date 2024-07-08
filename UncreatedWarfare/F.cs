@@ -1128,6 +1128,36 @@ public static class F
     {
         return collection == null || collection.Count == 0;
     }
+    public static int StringIndexOf<T>(IReadOnlyList<T> collection, Func<T, string?> selector, ReadOnlySpan<char> input, bool equalsOnly = false)
+    {
+        if (input == null)
+            return -1;
+
+        for (int i = 0; i < collection.Count; ++i)
+        {
+            if (input.Equals(selector(collection[i]), StringComparison.InvariantCultureIgnoreCase))
+                return i;
+        }
+        if (!equalsOnly)
+        {
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? n = selector(collection[i]);
+                if (n != null && n.AsSpan().IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
+                    return i;
+            }
+
+            string[] inSplits = new string(input).Split(SpaceSplit);
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? name = selector(collection[i]);
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                    return i;
+            }
+        }
+
+        return -1;
+    }
     public static int StringIndexOf<T>(IReadOnlyList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
     {
         if (input == null)

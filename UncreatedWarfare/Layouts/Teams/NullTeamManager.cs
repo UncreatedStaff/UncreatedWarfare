@@ -15,7 +15,7 @@ public class NullTeamManager : ITeamManager<Team>
 
     /// <inheritdoc />
     public Team? FindTeam(string teamSearch) => null;
-
+    
     /// <inheritdoc />
     public UniTask InitializeAsync(CancellationToken token = default) => UniTask.CompletedTask;
 }

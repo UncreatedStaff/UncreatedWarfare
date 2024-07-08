@@ -1,9 +1,13 @@
 ﻿using Cysharp.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -26,6 +30,9 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
     /// <inheritdoc />
     public IReadOnlyList<Team> AllTeams { get; }
+
+    /// <inheritdoc />
+    public CSteamID AdminGroupId { get; } = new CSteamID(3);
 
     /// <summary>
     /// Info about all teams, binded from configuration.
@@ -99,6 +106,44 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             _defender = 1;
 
         _logger.LogInformation("Teams: {0} (Role: {1}) vs {2} (Role: {3})", _teams[0].Faction.Name, team1Role, _teams[1].Faction.Name, team2Role);
+
+        await UniTask.SwitchToMainThread(token);
+        CreateInGameGroups();
+    }
+
+    /// <inheritdoc />
+    public Team? FindTeam(string teamSearch)
+    {
+        if (teamSearch.Equals("attack", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return _attacker == -1 ? null : _teams[_attacker];
+        }
+
+        if (teamSearch.Equals("defense", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return _defender == -1 ? null : _teams[_defender];
+        }
+
+        if (int.TryParse(teamSearch, NumberStyles.Number, CultureInfo.InvariantCulture, out int teamId))
+        {
+            return teamId is not 1 and not 2 ? null : _teams[teamId];
+        }
+
+        int index = F.StringIndexOf(AllTeams, x => x.Faction.Name, teamSearch);
+        if (index != -1)
+        {
+            return AllTeams[index];
+        }
+
+        index = F.StringIndexOf(AllTeams, x => x.Faction.Abbreviation, teamSearch);
+        if (index != -1)
+        {
+            return AllTeams[index];
+        }
+
+        index = F.StringIndexOf(AllTeams, x => x.Faction.ShortName, teamSearch);
+
+        return index != -1 ? AllTeams[index] : null;
     }
 
     private void DecideTeams(out TwoSidedTeamRole team1Role, out TwoSidedTeamRole team2Role)
@@ -151,5 +196,25 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         Teams[0].Role = role1;
         Teams[1].Role = role2;
         HasAttackDefense = true;
+    }
+
+    private void CreateInGameGroups()
+    {
+        object? groupsFieldValue = typeof(GroupManager)
+            .GetField("knownGroups", BindingFlags.Static | BindingFlags.NonPublic)?
+            .GetValue(null);
+
+        if (groupsFieldValue is not Dictionary<CSteamID, GroupInfo> knownGroups)
+            return;
+
+        // also kicks all players from all groups.
+        foreach (CSteamID existingGroup in knownGroups.Keys.ToList())
+        {
+            GroupManager.deleteGroup(existingGroup);
+        }
+
+        GroupManager.addGroup(new CSteamID(1), AllTeams[0].Faction.Name);
+        GroupManager.addGroup(new CSteamID(2), AllTeams[1].Faction.Name);
+        GroupManager.addGroup(new CSteamID(3), "Admins");
     }
 }

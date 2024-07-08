@@ -133,8 +133,8 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     {
         ThreadUtil.assertIsGameThread();
 
-        Vector3 worldPos = AttachmentRoot == null ? Vector3.zero : AttachmentRoot.InverseTransformPoint(position);
-        return _polygon.TestPoint(position - worldPos);
+        Vector3 worldPos = AttachmentRoot == null ? position : AttachmentRoot.InverseTransformPoint(position);
+        return _polygon.TestPoint(worldPos);
     }
 
     /// <inheritdoc />
@@ -142,8 +142,8 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     {
         ThreadUtil.assertIsGameThread();
 
-        Vector3 worldPos = AttachmentRoot == null ? Vector3.zero : AttachmentRoot.InverseTransformPoint(position);
-        return _polygon.TestPoint(new Vector2(position.x - worldPos.x, position.y - worldPos.z));
+        Vector3 worldPos = AttachmentRoot == null ? position : AttachmentRoot.InverseTransformPoint(position);
+        return _polygon.TestPoint(new Vector2(worldPos.x, worldPos.z));
     }
 
     /// <inheritdoc />

@@ -1,6 +1,8 @@
-﻿using Cysharp.Threading.Tasks;
+﻿using System;
+using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 using System.Threading;
+using Steamworks;
 
 namespace Uncreated.Warfare.Layouts.Teams;
 
@@ -24,4 +26,9 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// Used to initialize team info from the layout and map configuration.
     /// </summary>
     UniTask InitializeAsync(CancellationToken token = default);
+
+    /// <summary>
+    /// The group admins can join when placing buildables or doing other duties where they shouldn't be in a group.
+    /// </summary>
+    CSteamID AdminGroupId { get; }
 }
