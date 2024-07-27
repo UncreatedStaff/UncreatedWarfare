@@ -61,8 +61,6 @@ public readonly ref struct PolygonTriangulationProcessor
 
             RecalcArea(ref vert);
             vert.IsEar = IsEar(in vert);
-
-            Debug.Log($"{vert.PrevIndex}-{i}-{vert.NextIndex}: Is ear: {vert.IsEar}. Area: {vert.Area:F6}.");
         }
 
         int[] triArray = tris.Array!;
@@ -115,13 +113,6 @@ public readonly ref struct PolygonTriangulationProcessor
         }
 
         WriteCounterClockwiseTriangle(triArray, triOffset, in _vertices[startIndex]);
-
-        for (int i = 0; i < _pointCount; ++i)
-        {
-            ref VertexInfo vert = ref _vertices[i];
-            Debug.Log($"{vert.PrevIndex}-{i}-{vert.NextIndex}: Is ear: {vert.IsEar}. Area: {vert.Area:F6}.");
-        }
-
         return triCountProgress + 1;
     }
 

@@ -8,7 +8,7 @@ using Uncreated.Warfare.Events.Players;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Deaths;
-internal class PlayerDeathTrackingComponent : Component
+internal class PlayerDeathTrackingComponent : MonoBehaviour
 {
     /// <summary>
     /// The player this component is a part of.

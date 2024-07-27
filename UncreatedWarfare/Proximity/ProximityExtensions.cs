@@ -294,9 +294,6 @@ public static class ProximityExtensions
             origin /= ptCt;
         }
 
-        Debug.Log($"Start generate: rev: {isReversed}.");
-        Debug.Log("Origin: " + origin);
-
         int capTriCount = ptCt - 2;
         if (triCount < 0)
             triCount = capTriCount;
@@ -348,8 +345,6 @@ public static class ProximityExtensions
             tris[triStartIndex + 3] = vertStartIndex + 1;
             tris[triStartIndex + 4] = vertStartIndex + 2;
             tris[triStartIndex + 5] = vertStartIndex + 3;
-
-            Debug.Log(faceNormal);
         }
 
         Array.Reverse(points);

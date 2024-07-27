@@ -178,8 +178,12 @@ public class PolygonProximity : IPolygonProximity
             if (y < Math.Min(point1.y, point2.y) || y >= Math.Max(point1.y, point2.y))
                 continue;
 
-            if (Math.Abs(point1.x - point2.x) < 0.001f && point2.x < x)
+            if (Math.Abs(point1.x - point2.x) < 0.001f)
+            {
+                if (point2.x >= x)
+                    ++intersects;
                 continue;
+            }
 
             float xPos = (y - line.Intercept) / line.Slope;
             if (xPos >= x)

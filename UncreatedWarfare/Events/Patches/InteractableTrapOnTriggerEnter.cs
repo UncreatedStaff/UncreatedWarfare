@@ -350,7 +350,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
     /// <summary>
     /// Handles syncronizing trap events so that a trap can't go off while another event is pending.
     /// </summary>
-    private class TrapTrackingComponent : Component, IManualOnDestroy
+    private class TrapTrackingComponent : MonoBehaviour, IManualOnDestroy
     {
         /// <summary>
         /// If the <see cref="TriggerTrapRequested"/> event is pending on this trap.
