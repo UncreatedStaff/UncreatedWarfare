@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using System.Threading;
+using Microsoft.Extensions.Configuration;
 
 namespace Uncreated.Warfare.Layouts.Phases;
 
@@ -12,6 +13,11 @@ public interface ILayoutPhase
     /// If this phase is currently activated.
     /// </summary>
     bool IsActive { get; }
+
+    /// <summary>
+    /// The configuration section used to create this phase.
+    /// </summary>
+    IConfigurationSection Configuration { get; }
 
     /// <summary>
     /// Invoked before the layout starts. Meant to be used for loading extra configuration information.

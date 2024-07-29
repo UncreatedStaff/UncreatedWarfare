@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
+using Microsoft.Extensions.Configuration;
 using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Layouts.Phases;
@@ -21,8 +22,12 @@ public class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSettings : Phase
     /// </summary>
     public TTeamSettings[]? Teams { get; set; }
 
-    public BasePhase(IServiceProvider serviceProvider)
+    /// <inheritdoc />
+    public IConfigurationSection Configuration { get; }
+
+    public BasePhase(IServiceProvider serviceProvider, IConfigurationSection config)
     {
+        Configuration = config;
         _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
     }
 

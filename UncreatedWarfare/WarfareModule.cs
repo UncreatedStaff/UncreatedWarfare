@@ -192,7 +192,14 @@ public sealed class WarfareModule : IModuleNexus
 
         serviceCollection.AddTransient<ILoopTickerFactory, UnityLoopTickerFactory>();
 
+        // Layout
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout());
+
+        // Active ILayoutPhase
+        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().ActivePhase
+                                                          ?? throw new InvalidOperationException("There is not a phase currently loaded."));
+
+        // Active ITeamManager
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().TeamManager);
 
         // add all layout types

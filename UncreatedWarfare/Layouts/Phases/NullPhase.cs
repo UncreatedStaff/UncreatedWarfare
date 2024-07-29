@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using System.Threading;
+using Microsoft.Extensions.Configuration;
 
 namespace Uncreated.Warfare.Layouts.Phases;
 
@@ -10,6 +11,14 @@ public class NullPhase : ILayoutPhase
 {
     /// <inheritdoc />
     public bool IsActive => false;
+
+    /// <inheritdoc />
+    public IConfigurationSection Configuration { get; }
+
+    public NullPhase(IConfigurationSection config)
+    {
+        Configuration = config;
+    }
 
     /// <inheritdoc />
     public UniTask InitializePhaseAsync(CancellationToken token = default) => UniTask.CompletedTask;

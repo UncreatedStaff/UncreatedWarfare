@@ -1,16 +1,32 @@
 ﻿using SDG.Framework.Utilities;
 using SDG.Unturned;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Proximity;
-public abstract class ColliderProximityBase : MonoBehaviour, IProximity, IDisposable
+
+public delegate void ColliderEntered(Collider collider);
+public delegate void ColliderExited(Collider collider);
+
+public class ColliderProximity : MonoBehaviour, IProximity, IDisposable
 {
+    private List<Collider> _colliders = new List<Collider>(8);
     private Collider? _collider;
     private bool _initialized;
     private IProximity _proximity;
     public IProximity Proximity => _proximity;
 
+    public event ColliderEntered? OnColliderEntered;
+    public event ColliderExited? OnColliderExited;
+
+    public IReadOnlyList<Collider> Colliders { get; private set; }
+
+    public ColliderProximity()
+    {
+        Colliders = new ReadOnlyCollection<Collider>(_colliders);
+    }
     public void Initialize(IProximity proximity, Action<Collider>? colliderSettings = null)
     {
         ThreadUtil.assertIsGameThread();
@@ -71,19 +87,15 @@ public abstract class ColliderProximityBase : MonoBehaviour, IProximity, IDispos
         }
     }
 
-    public object Clone()
-    {
-        throw new NotImplementedException();
-    }
 
     public bool TestPoint(Vector3 position)
     {
-        throw new NotImplementedException();
+        return _proximity.TestPoint(position);
     }
 
     public bool TestPoint(Vector2 position)
     {
-        throw new NotImplementedException();
+        return _proximity.TestPoint(position);
     }
 
     public void Dispose()
@@ -109,4 +121,5 @@ public abstract class ColliderProximityBase : MonoBehaviour, IProximity, IDispos
     float IShapeVolume.internalVolume => _proximity.internalVolume;
     float IShapeVolume.surfaceArea => _proximity.surfaceArea;
     bool IShapeVolume.containsPoint(Vector3 point) => _proximity.containsPoint(point);
+    object ICloneable.Clone() => throw new NotSupportedException();
 }
