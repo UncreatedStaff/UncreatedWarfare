@@ -5,8 +5,9 @@ using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Players;
 
-namespace Uncreated.Warfare.Players;
+namespace Uncreated.Warfare.Players.UI;
 
 public delegate void PopupButtonPressed(UCPlayer player, int button, ref bool consume, ref bool closeWindow);
 public delegate void ToastPopupButtonPressed(UCPlayer player, int button, in ToastMessage message, ref bool consume, ref bool closeWindow);

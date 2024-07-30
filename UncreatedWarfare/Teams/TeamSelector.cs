@@ -9,13 +9,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
-using Uncreated.Players;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 

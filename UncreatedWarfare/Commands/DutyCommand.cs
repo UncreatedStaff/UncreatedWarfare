@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Commands;
 

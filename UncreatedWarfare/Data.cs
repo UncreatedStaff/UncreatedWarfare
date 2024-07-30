@@ -22,7 +22,6 @@ using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using Uncreated.Homebase.Unturned.Warfare;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
@@ -33,12 +32,12 @@ using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using UnityEngine.Assertions;
+using Uncreated.Warfare.Players.Management.Legacy;
 #if NETSTANDARD || NETFRAMEWORK
 using Uncreated.Warfare.Networking.Purchasing;
 #endif

@@ -3,12 +3,11 @@ using SDG.Unturned;
 using System;
 using System.Globalization;
 using System.Linq;
-using Uncreated.Warfare;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Models.Localization;
 using UnityEngine;
 
-namespace Uncreated.Players;
+namespace Uncreated.Warfare.Players.Management.Legacy;
 
 public struct PlayerNames : IPlayer
 {
@@ -85,39 +84,39 @@ public struct PlayerNames : IPlayer
         if (pws)
         {
             if (cws)
-                return steamId ? (s64 + " (" + nn + ")") : nn;
+                return steamId ? s64 + " (" + nn + ")" : nn;
             if (nws || nn.Equals(cn, StringComparison.Ordinal))
-                return steamId ? (s64 + " (" + cn + ")") : cn;
-            return steamId ? (s64 + " (" + cn + " | " + nn + ")") : (cn + " | " + nn);
+                return steamId ? s64 + " (" + cn + ")" : cn;
+            return steamId ? s64 + " (" + cn + " | " + nn + ")" : cn + " | " + nn;
         }
         if (cws)
         {
             if (pws)
-                return steamId ? (s64 + " (" + nn + ")") : nn;
+                return steamId ? s64 + " (" + nn + ")" : nn;
             if (nws || nn.Equals(pn, StringComparison.Ordinal))
-                return steamId ? (s64 + " (" + pn + ")") : pn;
-            return steamId ? (s64 + " (" + pn + " | " + nn + ")") : (pn + " | " + nn);
+                return steamId ? s64 + " (" + pn + ")" : pn;
+            return steamId ? s64 + " (" + pn + " | " + nn + ")" : pn + " | " + nn;
         }
         if (nws)
         {
             if (pws)
-                return steamId ? (s64 + " (" + cn + ")") : cn;
+                return steamId ? s64 + " (" + cn + ")" : cn;
             if (cws || cn.Equals(pn, StringComparison.Ordinal))
-                return steamId ? (s64 + " (" + pn + ")") : pn;
-            return steamId ? (s64 + " (" + pn + " | " + cn + ")") : pn + " | " + cn;
+                return steamId ? s64 + " (" + pn + ")" : pn;
+            return steamId ? s64 + " (" + pn + " | " + cn + ")" : pn + " | " + cn;
         }
 
         bool nep = nn.Equals(pn, StringComparison.Ordinal);
         bool nec = nn.Equals(cn, StringComparison.Ordinal);
         bool pec = nec && nep || pn.Equals(cn, StringComparison.Ordinal);
         if (nep && nec)
-            return steamId ? (s64 + " (" + nn + ")") : nn;
+            return steamId ? s64 + " (" + nn + ")" : nn;
         if (pec || nec)
-            return steamId ? (s64 + " (" + pn + " | " + nn + ")") : (pn + " | " + nn); 
+            return steamId ? s64 + " (" + pn + " | " + nn + ")" : pn + " | " + nn;
         if (nep)
-            return steamId ? (s64 + " (" + pn + " | " + cn + ")") : (pn + " | " + cn);
+            return steamId ? s64 + " (" + pn + " | " + cn + ")" : pn + " | " + cn;
 
-        return steamId ? (s64 + " (" + pn + " | " + cn + " | " + nn + ")") : (pn + " | " + cn + " | " + nn);
+        return steamId ? s64 + " (" + pn + " | " + cn + " | " + nn + ")" : pn + " | " + cn + " | " + nn;
     }
     public static bool operator ==(PlayerNames left, PlayerNames right) => left.Steam64 == right.Steam64;
     public static bool operator !=(PlayerNames left, PlayerNames right) => left.Steam64 != right.Steam64;

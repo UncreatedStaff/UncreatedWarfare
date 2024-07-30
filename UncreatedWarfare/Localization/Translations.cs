@@ -16,7 +16,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using Uncreated.Framework;
-using Uncreated.Players;
 using Uncreated.Properties;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
@@ -27,6 +26,7 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Action = System.Action;
+using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare;
 

@@ -30,13 +30,14 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Players.Management.Legacy;
 #if NETSTANDARD || NETFRAMEWORK
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking.Purchasing;

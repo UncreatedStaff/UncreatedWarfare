@@ -14,6 +14,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Kits;
 

@@ -9,8 +9,9 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;
+using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 

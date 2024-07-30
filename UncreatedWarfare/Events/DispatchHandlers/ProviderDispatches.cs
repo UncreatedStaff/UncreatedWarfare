@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -7,6 +8,8 @@ using System.Threading;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.Management.Legacy;
 using UnityEngine;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
@@ -46,17 +49,17 @@ partial class EventDispatcher2
         PendingAsyncData.RemoveAt(index);
         PendingAsyncData.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Steam64.m_SteamID));
 
-        // todo this will change
-        UCPlayer player = PlayerManager.InvokePlayerConnected(steamPlayer.player, data, out bool isNewPlayer);
+        PlayerService playerService = _serviceProvider.GetRequiredService<PlayerService>();
+        WarfarePlayer newPlayer = playerService.CreateWarfarePlayer(steamPlayer.player);
 
         PlayerJoined args = new PlayerJoined
         {
-            Player = player,
-            SaveData = player.Save,
-            IsNewPlayer = isNewPlayer
+            Player = newPlayer,
+            SaveData = newPlayer.Save,
+            IsNewPlayer = !newPlayer.Save.SaveFileExists
         };
 
-        _ = DispatchEventAsync(args, player.DisconnectToken);
+        _ = DispatchEventAsync(args, newPlayer.DisconnectToken);
     }
 
     /// <summary>

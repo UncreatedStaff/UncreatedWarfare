@@ -16,10 +16,10 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using UnityEngine;
+using Uncreated.Warfare.Players.UI;
 
 namespace Uncreated.Warfare.Squads.Commander;
 public class UAV : MonoBehaviour, IBuff

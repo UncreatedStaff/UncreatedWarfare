@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Uncreated.Warfare.Singletons;
 
-namespace Uncreated.Warfare.Players;
+namespace Uncreated.Warfare.Players.UI;
 
 public class Tips : BaseSingleton
 {

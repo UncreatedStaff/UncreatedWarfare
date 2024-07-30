@@ -23,6 +23,7 @@ using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
@@ -191,6 +192,9 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton<VehicleInfoStore>();
 
         serviceCollection.AddTransient<ILoopTickerFactory, UnityLoopTickerFactory>();
+
+        // Players
+        serviceCollection.AddSingleton<PlayerService>();
 
         // Layout
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout());

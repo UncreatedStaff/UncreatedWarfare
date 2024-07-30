@@ -19,7 +19,7 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// <summary>
     /// Find a team from a string value, such as from config.
     /// </summary>
-    /// <param name="teamSearch">Can be (in order of priority) A faction name, a team ID, 'attack', or 'defense'.</param>
+    /// <param name="teamSearch">Can be (in order of priority) A faction name, a team ID, 'blufor', or 'opfor'.</param>
     TTeam? FindTeam(string teamSearch);
 
     /// <summary>

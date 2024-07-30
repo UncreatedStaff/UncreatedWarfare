@@ -6,7 +6,7 @@ using System.Linq;
 using Uncreated.Warfare.Layouts.UI;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Players;
+namespace Uncreated.Warfare.Players.UI;
 public sealed class ToastManager
 {
     private static int _channelCount;
@@ -31,32 +31,32 @@ public sealed class ToastManager
         ToastMessages = new ToastMessageInfo[len];
         ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, Gamemode.WinToastUI, WinToastUI.SendToastCallback)
         {
-            ResendNames = [ "Canvas/Content/Header", "Canvas/Content/Header/Team1Tickets", "Canvas/Content/Header/Team2Tickets", "Canvas/Content/Header/Team1Image", "Canvas/Content/Header/Team2Image" ],
+            ResendNames = ["Canvas/Content/Header", "Canvas/Content/Header/Team1Tickets", "Canvas/Content/Header/Team2Tickets", "Canvas/Content/Header/Team1Image", "Canvas/Content/Header/Team2Image"],
             ClearableSlots = 3
         };
         ToastMessages[(int)ToastMessageStyle.Large] = new ToastMessageInfo(ToastMessageStyle.Large, 0, Gamemode.Config.UIToastLarge, canResend: true)
         {
-            ResendNames = [ "Canvas/Content/Top", "Canvas/Content/Middle", "Canvas/Content/Bottom" ],
+            ResendNames = ["Canvas/Content/Top", "Canvas/Content/Middle", "Canvas/Content/Bottom"],
             ClearableSlots = 3
         };
         ToastMessages[(int)ToastMessageStyle.Medium] = new ToastMessageInfo(ToastMessageStyle.Medium, 0, Gamemode.Config.UIToastMedium, canResend: true)
         {
-            ResendNames = [ "Canvas/Content/Middle" ],
+            ResendNames = ["Canvas/Content/Middle"],
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.Mini] = new ToastMessageInfo(ToastMessageStyle.Mini, 1, Gamemode.Config.UIToastXP, canResend: true)
         {
-            ResendNames = [ "Canvas/Content/Text" ],
+            ResendNames = ["Canvas/Content/Text"],
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.ProgressBar] = new ToastMessageInfo(ToastMessageStyle.ProgressBar, 2, Gamemode.Config.UIToastProgress, inturrupt: true, canResend: true)
         {
-            ResendNames = [ "Canvas/Content/Progress", "Canvas/Content/Bar" ],
+            ResendNames = ["Canvas/Content/Progress", "Canvas/Content/Bar"],
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.Tip] = new ToastMessageInfo(ToastMessageStyle.Tip, 0, Gamemode.Config.UIToastTip, canResend: true)
         {
-            ResendNames = [ "Canvas/Content/Text" ],
+            ResendNames = ["Canvas/Content/Text"],
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.Popup] = new ToastMessageInfo(ToastMessageStyle.Popup, 3, PopupUI.Instance, PopupUI.SendToastCallback, requiresClearing: true)
@@ -67,7 +67,7 @@ public sealed class ToastManager
         };
         ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, 4, Gamemode.Config.UIFlashingWarning, requiresClearing: true, canResend: true)
         {
-            ResendNames = [ "Canvas/Text" ],
+            ResendNames = ["Canvas/Text"],
             ClearableSlots = 1
         };
         int maxChannel = -1;

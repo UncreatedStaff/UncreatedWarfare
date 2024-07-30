@@ -4,6 +4,7 @@ using Steamworks;
 using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Management.Legacy;
 using UnityEngine;
 
 namespace Uncreated.Warfare;

@@ -1,12 +1,21 @@
-﻿using SDG.Unturned;
+﻿using Microsoft.Extensions.Logging;
+using SDG.NetTransport;
+using SDG.Unturned;
 using Steamworks;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players.Saves;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Players;
 public class WarfarePlayer
 {
-    public Player Player { get; }
-    public SteamPlayer SteamPlayer { get; }
+    private ILogger<WarfarePlayer> _logger;
     public CSteamID Steam64 { get; }
+    public Player UnturnedPlayer { get; }
+    public SteamPlayer SteamPlayer { get; }
+    public ITransportConnection Connection => SteamPlayer.transportConnection;
+    public Vector3 Position => UnturnedPlayer.transform.position;
+    public Team Team { get; private set; }
 
     /// <summary>
     /// Name visible to group members.
@@ -22,10 +31,19 @@ public class WarfarePlayer
     /// Name on their Steam profile.
     /// </summary>
     public string SteamName => SteamPlayer.playerID.playerName;
-    internal WarfarePlayer(Player player)
+    public BinaryPlayerSave Save { get; }
+    internal WarfarePlayer(Player player, ILogger<WarfarePlayer> logger)
     {
-        Player = player;
+        _logger = logger;
+        UnturnedPlayer = player;
         SteamPlayer = player.channel.owner;
         Steam64 = player.channel.owner.playerID.steamID;
+        Save = new BinaryPlayerSave(Steam64.m_SteamID, logger);
+        Save.Load();
+    }
+
+    public void UpdateTeam(Team team)
+    {
+        Team = team;
     }
 }

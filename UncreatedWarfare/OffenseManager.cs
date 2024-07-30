@@ -18,7 +18,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Records;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
 
 namespace Uncreated.Warfare;
 

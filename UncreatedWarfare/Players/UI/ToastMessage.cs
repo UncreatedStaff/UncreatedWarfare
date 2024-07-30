@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 
-namespace Uncreated.Warfare.Players;
+namespace Uncreated.Warfare.Players.UI;
 public struct ToastMessage
 {
     public ToastMessageStyle Style { get; }

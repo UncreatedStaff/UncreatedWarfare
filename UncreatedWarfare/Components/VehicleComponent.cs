@@ -12,7 +12,7 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;

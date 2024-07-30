@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
-using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare;
 

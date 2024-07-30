@@ -13,6 +13,7 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Buildables;
+using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using UnityEngine;

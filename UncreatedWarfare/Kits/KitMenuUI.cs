@@ -11,6 +11,7 @@ using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;

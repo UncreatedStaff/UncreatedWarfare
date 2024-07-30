@@ -12,7 +12,6 @@ using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
@@ -33,6 +32,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
+using Uncreated.Warfare.Players.Management.Legacy;
 #if DEBUG
 using Uncreated.Warfare.Squads.Commander;
 #endif

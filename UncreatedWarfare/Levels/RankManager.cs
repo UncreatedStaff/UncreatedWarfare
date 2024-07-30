@@ -9,7 +9,7 @@ using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Ranks;

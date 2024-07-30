@@ -1,9 +1,9 @@
 ﻿using Cysharp.Threading.Tasks;
 using System;
 using System.Threading;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Commands;
 

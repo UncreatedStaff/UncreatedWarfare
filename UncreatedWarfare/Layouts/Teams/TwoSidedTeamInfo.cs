@@ -28,14 +28,14 @@ public enum TwoSidedTeamRole
     /// Randomly pick this role at game start.
     /// </summary>
     Random,
-    
+
     /// <summary>
-    /// This team will always be the attacker.
+    /// This team represents the 'good guys' who are probably NATO affiliated and likely to be spreading their Western influence forcibly.
     /// </summary>
-    Attacker,
-    
+    Blufor,
+
     /// <summary>
-    /// This team will always be the defender.
+    /// This team represents the 'bad guys' who are probably Eastern and likely to be defending something that's against Western interests.
     /// </summary>
-    Defender
+    Opfor
 }

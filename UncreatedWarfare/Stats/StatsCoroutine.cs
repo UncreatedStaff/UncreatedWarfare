@@ -2,8 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Players;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players.Management.Legacy;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Stats;

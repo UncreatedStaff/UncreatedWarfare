@@ -3,7 +3,7 @@ using System;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 
-namespace Uncreated.Warfare.Players;
+namespace Uncreated.Warfare.Players.UI;
 public enum ToastMessageStyle
 {
     GameOver,

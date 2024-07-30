@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management.Legacy;
 using static Uncreated.Warfare.Harmony.Patches;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 

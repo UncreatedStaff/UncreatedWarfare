@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Players;
+namespace Uncreated.Warfare.Players.Management.Legacy;
 
 [RpcClass]
 public class PlayerList : BaseSingletonComponent

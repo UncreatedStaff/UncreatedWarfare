@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
+using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.FOBs.UI;
 public class FOBListUI : UnturnedUI

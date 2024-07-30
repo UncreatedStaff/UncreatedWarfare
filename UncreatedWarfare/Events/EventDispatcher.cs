@@ -18,6 +18,7 @@ using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 

@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Moderation.Reports;
+using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Commands;
 

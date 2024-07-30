@@ -13,7 +13,8 @@ using Uncreated.Framework;
 using Uncreated.Framework.Quests;
 using Uncreated.Json;
 using Uncreated.Networking;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Quests;
 

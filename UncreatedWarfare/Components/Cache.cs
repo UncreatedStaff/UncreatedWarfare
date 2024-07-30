@@ -13,6 +13,7 @@ using Uncreated.Warfare.Layouts.Insurgency;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
+using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;

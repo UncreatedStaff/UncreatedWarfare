@@ -25,8 +25,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 {
     private readonly ILogger<TwoSidedTeamManager> _logger;
     private readonly Team[] _teams = new Team[2];
-    private int _attacker;
-    private int _defender;
+    private int _blufor;
+    private int _opfor;
 
     /// <inheritdoc />
     public IReadOnlyList<Team> AllTeams { get; }
@@ -40,21 +40,21 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     public TwoSidedTeamInfo[] Teams { get; set; }
 
     /// <summary>
-    /// If there are attacking and defending teams specified.
+    /// If both Blufor and Opfor teams are specified.
     /// </summary>
-    public bool HasAttackDefense { get; private set; }
+    public bool HasBothTeams { get; private set; }
 
     /// <summary>
-    /// The attacking team.
+    /// The 'good guys' who are spreading their influence forcibly.
     /// </summary>
-    /// <exception cref="InvalidOperationException">There is no attacking team.</exception>
-    public Team Attacker => _attacker == -1 ? throw new InvalidOperationException("This layout does not have an attacker.") : _teams[_attacker];
+    /// <exception cref="InvalidOperationException">There is no Blufor team.</exception>
+    public Team Blufor => _blufor == -1 ? throw new InvalidOperationException("This layout does not have an Blufor team.") : _teams[_blufor];
 
     /// <summary>
-    /// The defending team.
+    /// The 'bad guys' who are defending something against the interests of the other team.
     /// </summary>
-    /// <exception cref="InvalidOperationException">There is no defending team.</exception>
-    public Team Defender => _defender == -1 ? throw new InvalidOperationException("This layout does not have an attacker.") : _teams[_defender];
+    /// <exception cref="InvalidOperationException">There is no Opfor team.</exception>
+    public Team Opfor => _opfor == -1 ? throw new InvalidOperationException("This layout does not have an Opfor team.") : _teams[_opfor];
 
     public TwoSidedTeamManager(ILogger<TwoSidedTeamManager> logger)
     {
@@ -66,7 +66,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     public async UniTask InitializeAsync(CancellationToken token = default)
     {
         if (Teams is not { Length: 2 })
-            throw new LayoutConfigurationException(this, "Expected exactly 2 team info's in the 'Teams' section.");
+            throw new LayoutConfigurationException(this, "Expected exactly 2 team infos in the 'Teams' section.");
 
         FactionInfo? factionInfo1, factionInfo2;
         await using (IGameDataDbContext dbContext = new WarfareDbContext())
@@ -95,15 +95,15 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
         DecideTeams(out TwoSidedTeamRole team1Role, out TwoSidedTeamRole team2Role);
 
-        if (team1Role == TwoSidedTeamRole.Attacker)
-            _attacker = 0;
-        else if (team1Role == TwoSidedTeamRole.Defender)
-            _defender = 0;
+        if (team1Role == TwoSidedTeamRole.Blufor)
+            _blufor = 0;
+        else if (team1Role == TwoSidedTeamRole.Opfor)
+            _opfor = 0;
 
-        if (team2Role == TwoSidedTeamRole.Attacker)
-            _attacker = 1;
-        else if (team2Role == TwoSidedTeamRole.Defender)
-            _defender = 1;
+        if (team2Role == TwoSidedTeamRole.Blufor)
+            _blufor = 1;
+        else if (team2Role == TwoSidedTeamRole.Opfor)
+            _opfor = 1;
 
         _logger.LogInformation("Teams: {0} (Role: {1}) vs {2} (Role: {3})", _teams[0].Faction.Name, team1Role, _teams[1].Faction.Name, team2Role);
 
@@ -114,14 +114,14 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <inheritdoc />
     public Team? FindTeam(string teamSearch)
     {
-        if (teamSearch.Equals("attack", StringComparison.InvariantCultureIgnoreCase))
+        if (teamSearch.Equals("blufor", StringComparison.InvariantCultureIgnoreCase))
         {
-            return _attacker == -1 ? null : _teams[_attacker];
+            return _blufor == -1 ? null : _teams[_blufor];
         }
 
-        if (teamSearch.Equals("defense", StringComparison.InvariantCultureIgnoreCase))
+        if (teamSearch.Equals("opfor", StringComparison.InvariantCultureIgnoreCase))
         {
-            return _defender == -1 ? null : _teams[_defender];
+            return _opfor == -1 ? null : _teams[_opfor];
         }
 
         if (int.TryParse(teamSearch, NumberStyles.Number, CultureInfo.InvariantCulture, out int teamId))
@@ -162,7 +162,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             team2Role = TwoSidedTeamRole.None;
             Teams[0].Role = team1Role;
             Teams[1].Role = team2Role;
-            HasAttackDefense = false;
+            HasBothTeams = false;
             return;
         }
 
@@ -170,23 +170,23 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         {
             bool team1Attacks = RandomUtility.GetBoolean();
 
-            team1Role = team1Attacks ? TwoSidedTeamRole.Attacker : TwoSidedTeamRole.Defender;
-            team2Role = team1Attacks ? TwoSidedTeamRole.Defender : TwoSidedTeamRole.Attacker;
+            team1Role = team1Attacks ? TwoSidedTeamRole.Blufor : TwoSidedTeamRole.Opfor;
+            team2Role = team1Attacks ? TwoSidedTeamRole.Opfor : TwoSidedTeamRole.Blufor;
             Teams[0].Role = team1Role;
             Teams[1].Role = team2Role;
-            HasAttackDefense = true;
+            HasBothTeams = true;
             return;
         }
 
-        if (role1 == TwoSidedTeamRole.Random && role2 is TwoSidedTeamRole.Attacker or TwoSidedTeamRole.Defender)
+        if (role1 == TwoSidedTeamRole.Random && role2 is TwoSidedTeamRole.Blufor or TwoSidedTeamRole.Opfor)
         {
-            role1 = role2 == TwoSidedTeamRole.Attacker ? TwoSidedTeamRole.Defender : TwoSidedTeamRole.Attacker;
+            role1 = role2 == TwoSidedTeamRole.Blufor ? TwoSidedTeamRole.Opfor : TwoSidedTeamRole.Blufor;
         }
-        else if (role2 == TwoSidedTeamRole.Random && role1 is TwoSidedTeamRole.Attacker or TwoSidedTeamRole.Defender)
+        else if (role2 == TwoSidedTeamRole.Random && role1 is TwoSidedTeamRole.Blufor or TwoSidedTeamRole.Opfor)
         {
-            role2 = role1 == TwoSidedTeamRole.Attacker ? TwoSidedTeamRole.Defender : TwoSidedTeamRole.Attacker;
+            role2 = role1 == TwoSidedTeamRole.Blufor ? TwoSidedTeamRole.Opfor : TwoSidedTeamRole.Blufor;
         }
-        else if (role1 is not TwoSidedTeamRole.Attacker and not TwoSidedTeamRole.Defender || role2 is not TwoSidedTeamRole.Attacker and not TwoSidedTeamRole.Defender || role1 == role2)
+        else if (role1 is not TwoSidedTeamRole.Blufor and not TwoSidedTeamRole.Opfor || role2 is not TwoSidedTeamRole.Blufor and not TwoSidedTeamRole.Opfor || role1 == role2)
         {
             throw new LayoutConfigurationException(this, "Invalid role configuration for team 1 or 2.");
         }
@@ -195,7 +195,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         team2Role = role2;
         Teams[0].Role = role1;
         Teams[1].Role = role2;
-        HasAttackDefense = true;
+        HasBothTeams = true;
     }
 
     private void CreateInGameGroups()

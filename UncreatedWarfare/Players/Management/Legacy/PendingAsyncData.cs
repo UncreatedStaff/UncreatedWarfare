@@ -4,7 +4,7 @@ using Steamworks;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 
-namespace Uncreated.Warfare.Players;
+namespace Uncreated.Warfare.Players.Management.Legacy;
 
 #nullable disable
 
@@ -37,7 +37,7 @@ public sealed class PendingAsyncData
     /// L10N and I14N settings for the joining player.
     /// </summary>
     public LanguagePreferences LanguagePreferences { get; set; }
-  
+
     public PendingAsyncData(SteamPending player)
     {
         Player = player;

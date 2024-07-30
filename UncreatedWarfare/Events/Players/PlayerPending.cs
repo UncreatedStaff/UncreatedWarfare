@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System.Reflection;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management.Legacy;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Players;

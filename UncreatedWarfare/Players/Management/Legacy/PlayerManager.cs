@@ -12,16 +12,15 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Players;
 using UnityEngine;
 using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Players.Management.Legacy;
 
 // todo make non static.
 public class PlayerManager
 {
-    
+
     // auto added on join and detroyed on leave
     public static readonly Type[] PlayerComponentTypes =
     {
@@ -223,7 +222,7 @@ public class PlayerManager
             );
 
             Data.OriginalPlayerNames.Remove(ucplayer.Steam64);
-            
+
             OnlinePlayers.Add(ucplayer);
             lock (_dict)
             {

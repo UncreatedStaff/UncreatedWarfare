@@ -1,4 +1,5 @@
 ﻿using SDG.Unturned;
+using Uncreated.Warfare.Players.Saves;
 
 namespace Uncreated.Warfare.Events.Players;
 
@@ -15,5 +16,5 @@ public class PlayerJoined : PlayerEvent
     /// <summary>
     /// Save data of the player, or a fresh save data object if they're new.
     /// </summary>
-    public required PlayerSave SaveData { get; init; }
+    public required BinaryPlayerSave SaveData { get; init; }
 }

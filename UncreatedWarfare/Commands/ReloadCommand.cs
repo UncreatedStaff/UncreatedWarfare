@@ -10,6 +10,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 

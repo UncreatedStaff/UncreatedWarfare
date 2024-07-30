@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.NewQuests.Parameters;
+using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Util;
 

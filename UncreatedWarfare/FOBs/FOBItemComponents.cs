@@ -13,7 +13,7 @@ using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Stats.Records;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
