@@ -1,18 +1,13 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Globalization;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
 
@@ -318,7 +313,7 @@ public class VehicleCommand : IExecutableCommand
             throw Context.ReplyString("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + Context.GetRange(0) + "</color>.</color>");
 
         Vector3 ppos = Context.Player.Position;
-        Vector3 v = Context.Player.Player.look.aim.forward.normalized with { y = 0 };
+        Vector3 v = Context.Player.UnturnedPlayer.look.aim.forward.normalized with { y = 0 };
         Vector3 targetPos = ppos + v * 6.5f;
         RaycastHit hit;
         targetPos.y += 500f;
@@ -353,7 +348,7 @@ public class VehicleCommand : IExecutableCommand
             0,
             0f,
             targetPos,
-            Quaternion.Euler(Context.Player.Player.look.aim.rotation.eulerAngles with { x = 0, z = 0 }),
+            Quaternion.Euler(Context.Player.UnturnedPlayer.look.aim.rotation.eulerAngles with { x = 0, z = 0 }),
             false,
             false,
             false,
@@ -362,13 +357,13 @@ public class VehicleCommand : IExecutableCommand
             asset.health,
             10000,
             Context.CallerId,
-            Context.Player.Player.quests.groupID,
+            Context.Player.UnturnedPlayer.quests.groupID,
             true,
             turrets,
             255);
         
         if (enter)
-            VehicleManager.ServerForcePassengerIntoVehicle(Context.Player.Player, vehicle);
+            VehicleManager.ServerForcePassengerIntoVehicle(Context.Player.UnturnedPlayer, vehicle);
 
         Context.ReplyString($"Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).", "bfb9ac");
     }

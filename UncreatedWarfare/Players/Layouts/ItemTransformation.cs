@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using Uncreated.Warfare.Kits.Items;
+﻿using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Players.Layouts;
 public readonly struct ItemTransformation

@@ -1,8 +1,4 @@
-﻿using SDG.Unturned;
-using Steamworks;
-using UnityEngine;
-
-namespace Uncreated.Warfare.Events.Structures;
+﻿namespace Uncreated.Warfare.Events.Structures;
 
 /// <summary>
 /// Event listener args which handles <see cref="StructureManager.onStructureSpawned"/>.

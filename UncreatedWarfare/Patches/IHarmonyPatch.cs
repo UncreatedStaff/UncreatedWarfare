@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace Uncreated.Warfare.Patches;
+﻿namespace Uncreated.Warfare.Patches;
 
 /// <summary>
 /// All objects implementing this are created on startup and patched, then created on shutdown and unpatched.

@@ -1,34 +1,32 @@
 ﻿using DanielWillett.SpeedBytes;
-using SDG.Unturned;
 using System;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Models.Localization;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Players.Management.Legacy;
 
 public struct PlayerNames : IPlayer
 {
-    public static readonly PlayerNames Nil = new PlayerNames { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = 0 };
-    public static readonly PlayerNames Console = new PlayerNames { CharacterName = "Console", NickName = "Console", PlayerName = "Console", Steam64 = 0 };
-    public ulong Steam64;
+    public static readonly PlayerNames Nil = new PlayerNames { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = default };
+    public static readonly PlayerNames Console = new PlayerNames { CharacterName = "Console", NickName = "Console", PlayerName = "Console", Steam64 = default };
+    public CSteamID Steam64;
     public string PlayerName;
     public string CharacterName;
     public string NickName;
     public bool WasFound;
-    ulong IPlayer.Steam64 => Steam64;
+    CSteamID IPlayer.Steam64 => Steam64;
 
     public PlayerNames(SteamPlayerID player)
     {
         PlayerName = player.playerName;
         CharacterName = player.characterName;
         NickName = player.nickName;
-        Steam64 = player.steamID.m_SteamID;
+        Steam64 = player.steamID;
         WasFound = true;
     }
-    public PlayerNames(ulong player)
+    public PlayerNames(CSteamID player)
     {
         string ts = player.ToString();
         PlayerName = ts;
@@ -42,7 +40,7 @@ public struct PlayerNames : IPlayer
         PlayerName = player.playerID.playerName;
         CharacterName = player.playerID.characterName;
         NickName = player.playerID.nickName;
-        Steam64 = player.playerID.steamID.m_SteamID;
+        Steam64 = player.playerID.steamID;
         WasFound = true;
     }
     public PlayerNames(Player player)
@@ -50,32 +48,34 @@ public struct PlayerNames : IPlayer
         PlayerName = player.channel.owner.playerID.playerName;
         CharacterName = player.channel.owner.playerID.characterName;
         NickName = player.channel.owner.playerID.nickName;
-        Steam64 = player.channel.owner.playerID.steamID.m_SteamID;
+        Steam64 = player.channel.owner.playerID.steamID;
         WasFound = true;
     }
-    public static void Write(ByteWriter writer, PlayerNames obj)
+
+    public static void Write(ByteWriter writer, in PlayerNames obj)
     {
-        writer.Write(obj.Steam64);
+        writer.Write(obj.Steam64.m_SteamID);
         writer.Write(obj.PlayerName);
         writer.Write(obj.CharacterName);
         writer.Write(obj.NickName);
     }
+
     public static PlayerNames Read(ByteReader reader) =>
         new PlayerNames
         {
-            Steam64 = reader.ReadUInt64(),
+            Steam64 = new CSteamID(reader.ReadUInt64()),
             PlayerName = reader.ReadString(),
             CharacterName = reader.ReadString(),
             NickName = reader.ReadString()
         };
 
-    public override string ToString() => ToString(true);
-    public string ToString(bool steamId)
+    public readonly override string ToString() => ToString(true);
+    public readonly string ToString(bool steamId)
     {
         string? pn = PlayerName;
         string? cn = CharacterName;
         string? nn = NickName;
-        string s64 = Steam64.ToString("D17");
+        string s64 = Steam64.m_SteamID.ToString("D17");
         bool pws = string.IsNullOrWhiteSpace(pn);
         bool cws = string.IsNullOrWhiteSpace(cn);
         bool nws = string.IsNullOrWhiteSpace(nn);
@@ -118,9 +118,9 @@ public struct PlayerNames : IPlayer
 
         return steamId ? s64 + " (" + pn + " | " + cn + " | " + nn + ")" : pn + " | " + cn + " | " + nn;
     }
-    public static bool operator ==(PlayerNames left, PlayerNames right) => left.Steam64 == right.Steam64;
-    public static bool operator !=(PlayerNames left, PlayerNames right) => left.Steam64 != right.Steam64;
-    public override bool Equals(object obj) => obj is PlayerNames pn && Steam64 == pn.Steam64;
+    public static bool operator ==(PlayerNames left, PlayerNames right) => left.Steam64.m_SteamID == right.Steam64.m_SteamID;
+    public static bool operator !=(PlayerNames left, PlayerNames right) => left.Steam64.m_SteamID != right.Steam64.m_SteamID;
+    public override bool Equals(object? obj) => obj is PlayerNames pn && Steam64.m_SteamID == pn.Steam64.m_SteamID;
     public override int GetHashCode() => Steam64.GetHashCode();
     string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags) => new OfflinePlayer(in this).Translate(language, format, target, culture, ref flags);

@@ -1,7 +1,4 @@
-﻿using SDG.Unturned;
-using Steamworks;
-
-namespace Uncreated.Warfare.Events.Vehicles;
+﻿namespace Uncreated.Warfare.Events.Vehicles;
 
 /// <summary>
 /// Event listener args which handles <see cref="VehicleManager.OnToggledVehicleLock"/>.

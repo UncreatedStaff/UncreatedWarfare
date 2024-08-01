@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 
-namespace Uncreated.Warfare.Util;
+namespace Uncreated.Warfare.Util.List;
 
 /// <summary>
 /// Two-way dictionary.

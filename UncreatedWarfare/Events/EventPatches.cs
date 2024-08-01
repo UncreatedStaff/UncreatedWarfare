@@ -1,16 +1,11 @@
 ﻿using HarmonyLib;
-using SDG.Unturned;
-using Steamworks;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits.Items;
-using UnityEngine;
 using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Events;

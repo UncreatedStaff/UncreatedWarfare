@@ -1,7 +1,4 @@
-﻿using System;
-using SDG.Unturned;
-
-namespace Uncreated.Warfare.Events.Players;
+﻿namespace Uncreated.Warfare.Events.Players;
 
 /// <summary>
 /// Event listener args which handles <see cref="Provider.onBattlEyeKick"/>.

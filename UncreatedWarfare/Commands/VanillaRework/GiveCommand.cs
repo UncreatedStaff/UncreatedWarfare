@@ -1,7 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,16 +57,16 @@ public class GiveCommand : IExecutableCommand
 
         int similarNamesCount = 0;
 
-        if (Context.MatchParameter(0, "ammo") && Context.Player.Player.equipment.useable is UseableGun)
+        if (Context.MatchParameter(0, "ammo") && Context.Player.UnturnedPlayer.equipment.useable is UseableGun)
         {
             // held item
             ItemGunAsset? gunAsset = null;
             byte[]? state = null;
-            if (!Context.Player.Player.equipment.isTurret)
+            if (!Context.Player.UnturnedPlayer.equipment.isTurret)
             {
-                ItemJar item = Context.Player.Player.inventory.items[Context.Player.Player.equipment.equippedPage].getItem(
-                    Context.Player.Player.inventory.items[Context.Player.Player.equipment.equippedPage]
-                        .getIndex(Context.Player.Player.equipment.equipped_x, Context.Player.Player.equipment.equipped_y));
+                ItemJar item = Context.Player.UnturnedPlayer.inventory.items[Context.Player.UnturnedPlayer.equipment.equippedPage].getItem(
+                    Context.Player.UnturnedPlayer.inventory.items[Context.Player.UnturnedPlayer.equipment.equippedPage]
+                        .getIndex(Context.Player.UnturnedPlayer.equipment.equipped_x, Context.Player.UnturnedPlayer.equipment.equipped_y));
                 if (item != null && item.item.GetAsset() is ItemGunAsset gun2)
                 {
                     gunAsset = gun2;
@@ -77,12 +76,12 @@ public class GiveCommand : IExecutableCommand
             // turret
             else
             {
-                InteractableVehicle? vehicle = Context.Player.Player.movement.getVehicle();
-                byte seat = Context.Player.Player.movement.getSeat();
+                InteractableVehicle? vehicle = Context.Player.UnturnedPlayer.movement.getVehicle();
+                byte seat = Context.Player.UnturnedPlayer.movement.getSeat();
                 if (vehicle != null && vehicle.passengers[seat].turret != null)
                 {
                     state = vehicle.passengers[seat].state;
-                    gunAsset = Context.Player.Player.equipment.asset as ItemGunAsset;
+                    gunAsset = Context.Player.UnturnedPlayer.equipment.asset as ItemGunAsset;
                 }
             }
             if (state != null && gunAsset != null)
@@ -241,7 +240,7 @@ public class GiveCommand : IExecutableCommand
         Item itemFromID = new Item(asset!.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));
         for (int i = 0; i < amount; i++)
         {
-            if (!Context.Player.Player.inventory.tryAddItem(itemFromID, true))
+            if (!Context.Player.UnturnedPlayer.inventory.tryAddItem(itemFromID, true))
                 ItemManager.dropItem(itemFromID, Context.Player.Position, true, true, true);
         }
 

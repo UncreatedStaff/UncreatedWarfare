@@ -1,6 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
 using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,11 +13,9 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Singletons;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Teams;
 

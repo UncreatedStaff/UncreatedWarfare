@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-using Steamworks;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -16,9 +14,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
-using UnityEngine;
 
 namespace Uncreated.Warfare;
 public class Whitelister : ListSingleton<WhitelistItem>

@@ -1,7 +1,5 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -11,13 +9,11 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Squads.UI;
-using UnityEngine;
 using static Uncreated.Warfare.Squads.UI.SquadListUI;
 using static Uncreated.Warfare.Squads.UI.SquadMenuUI;
 

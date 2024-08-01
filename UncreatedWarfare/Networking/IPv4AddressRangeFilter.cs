@@ -40,8 +40,8 @@ public sealed class IPv4AddressRangeFilter : IIPAddressFilter
             }
         }
     }
-    public ValueTask<bool> IsFiltered(IPAddress ip, ulong player, CancellationToken token) => new ValueTask<bool>(IsFiltered(ip));
-    public ValueTask RemoveFilteredIPs<T>(IList<T> ips, Func<T, uint> selector, ulong player, CancellationToken token)
+    public ValueTask<bool> IsFiltered(IPAddress ip, CSteamID player, CancellationToken token) => new ValueTask<bool>(IsFiltered(ip));
+    public ValueTask RemoveFilteredIPs<T>(IList<T> ips, Func<T, uint> selector, CSteamID player, CancellationToken token)
     {
         RemoveFilteredIPs(ips, selector);
         return new ValueTask();

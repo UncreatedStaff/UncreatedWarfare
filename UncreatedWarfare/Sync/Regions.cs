@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Sync;
 public static class ServerRegion

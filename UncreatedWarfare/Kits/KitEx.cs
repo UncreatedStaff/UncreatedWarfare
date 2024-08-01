@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -8,15 +7,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Networking;
-using Uncreated.Networking.Async;
-using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
@@ -24,7 +18,6 @@ using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
 

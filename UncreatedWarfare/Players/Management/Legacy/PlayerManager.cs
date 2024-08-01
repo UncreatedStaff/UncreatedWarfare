@@ -1,19 +1,16 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Uncreated.Framework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Moderation;
-using UnityEngine;
-using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
+using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Steam.Models;
 
 namespace Uncreated.Warfare.Players.Management.Legacy;
 
@@ -153,7 +150,7 @@ public class PlayerManager
             return;
 
 
-        PlayerSummary[] summaries = await SteamAPI.GetPlayerSummaries(players.AsArrayFast(), token);
+        PlayerSummary[] summaries = await SteamAPIService.GetPlayerSummaries(players.AsArrayFast(), token);
         for (int j = 0; j < summaries.Length; ++j)
         {
             PlayerSummary summary = summaries[j];
@@ -303,10 +300,4 @@ public class PlayerManager
 
     [RpcSend]
     internal RpcTask<bool> IsUserInDiscordServer(ulong discordId) => RpcTask<bool>.NotImplemented;
-}
-
-internal interface IPlayerComponent
-{
-    public UCPlayer Player { get; set; }
-    public void Init();
 }

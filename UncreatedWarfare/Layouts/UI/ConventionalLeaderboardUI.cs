@@ -2,7 +2,6 @@
 using System.Globalization;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Layouts.UI;
 

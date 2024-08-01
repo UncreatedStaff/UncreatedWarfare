@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
 using System;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
@@ -72,10 +71,10 @@ public class AttachCommand : IExecutableCommand
 
         Context.AssertArgs(1, Syntax);
 
-        if (Context.Player.Player.equipment.asset is not ItemGunAsset gunAsset)
+        if (Context.Player.UnturnedPlayer.equipment.asset is not ItemGunAsset gunAsset)
             throw Context.Reply(T.AttachNoGunHeld);
 
-        byte[] state = Context.Player.Player.equipment.state;
+        byte[] state = Context.Player.UnturnedPlayer.equipment.state;
         
         _firemodeEffect ??= Assets.find(FiremodeEffectGuid) as EffectAsset;
 
@@ -118,7 +117,7 @@ public class AttachCommand : IExecutableCommand
                 stateSpan[10] = 0; // ammo count
             }
 
-            Context.Player.Player.equipment.sendUpdateState();
+            Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
                 F.TriggerEffectReliable(_firemodeEffect, EffectManager.SMALL, Context.Player.Position);
             Context.LogAction(ActionLogType.Detach, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Type: " + type + (Assets.find(EAssetType.ITEM, oldItem) is ItemAsset iAsset ? (" | Prev: " + ActionLog.AsAsset(iAsset)) : string.Empty));
@@ -129,7 +128,7 @@ public class AttachCommand : IExecutableCommand
         {
             byte prevAmt = state[10];
             state[10] = amt;
-            Context.Player.Player.equipment.sendUpdateState();
+            Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
                 F.TriggerEffectReliable(_firemodeEffect, EffectManager.SMALL, Context.Player.Position);
             Context.LogAction(ActionLogType.SetAmmo, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Amt: " + amt + (prevAmt != amt ? " | Prev: " + prevAmt : string.Empty));
@@ -140,7 +139,7 @@ public class AttachCommand : IExecutableCommand
         {
             EFiremode prevMode = (EFiremode)state[11];
             state[11] = (byte)mode;
-            Context.Player.Player.equipment.sendUpdateState();
+            Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
                 F.TriggerEffectReliable(_firemodeEffect, EffectManager.SMALL, Context.Player.Position);
             Context.LogAction(ActionLogType.SetFiremode, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Mode: " + mode + (prevMode != mode ? " | Prev: " + prevMode : string.Empty));
@@ -172,7 +171,7 @@ public class AttachCommand : IExecutableCommand
             stateSpan[10] = asset.amount;
         }
 
-        Context.Player.Player.equipment.sendUpdateState();
+        Context.Player.UnturnedPlayer.equipment.sendUpdateState();
         if (_firemodeEffect != null)
             F.TriggerEffectReliable(_firemodeEffect, EffectManager.SMALL, Context.Player.Position);
         Context.LogAction(ActionLogType.Attach, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Type: " + type + " | Item: " + ActionLog.AsAsset(asset) + (Assets.find(EAssetType.ITEM, oldItem) is ItemAsset iAsset2 ? " | Prev: " + ActionLog.AsAsset(iAsset2) : string.Empty));

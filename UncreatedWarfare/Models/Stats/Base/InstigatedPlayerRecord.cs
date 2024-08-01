@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Users;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Models.Stats.Base;
 public abstract class InstigatedPlayerRecord : BasePlayerRecord

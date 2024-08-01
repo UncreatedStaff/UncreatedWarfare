@@ -1,68 +1,224 @@
-﻿using Microsoft.Extensions.Logging;
-using SDG.Framework.Utilities;
-using SDG.Unturned;
-using Steamworks;
+﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Util.List;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Players.Management;
+
+/// <summary>
+/// Handles keeping track of online <see cref="WarfarePlayer"/>'s.
+/// </summary>
 public class PlayerService
 {
+    /// <summary>
+    /// All types will be added to a player on join and removed on leave.
+    /// They dont necessarily have to be <see cref="MonoBehaviour"/>'s but must implement <see cref="IPlayerComponent"/>.
+    /// </summary>
+    /// <remarks>
+    /// Components can implement <see cref="IDisposable"/> if desired to run code before the player leaves.
+    /// <see cref="MonoBehaviour"/>'s will be automatically destroyed.
+    /// </remarks>
+    public static readonly Type[] PlayerComponents = [ typeof(AudioRecordPlayerComponent) ];
+
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;
-    private readonly Dictionary<ulong, WarfarePlayer> _onlinePlayersDictionary;
+    private readonly PlayerDictionary<WarfarePlayer> _onlinePlayersDictionary;
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers { get; }
-    public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayersOnTeam(Team team) => _onlinePlayers.Where(p => p.Team == team).ToTrackingList().AsReadOnly();
+    public TrackingWhereEnumerable<WarfarePlayer> OnlinePlayersOnTeam(Team team) => _onlinePlayers.Where(p => p.Team == team);
 
     private readonly ILoggerFactory _loggerFactory; 
+    private readonly IServiceProvider _serviceProvider; 
     private readonly ILogger<PlayerService> _logger;
     
-
-    public PlayerService(ILoggerFactory loggerFactory)
+    public PlayerService(ILoggerFactory loggerFactory, IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider;
         _onlinePlayers = new TrackingList<WarfarePlayer>();
-        _onlinePlayersDictionary = new Dictionary<ulong, WarfarePlayer>();
+        _onlinePlayersDictionary = new PlayerDictionary<WarfarePlayer>(Provider.maxPlayers);
         OnlinePlayers = _onlinePlayers.AsReadOnly();
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<PlayerService>();
     }
 
-    public WarfarePlayer CreateWarfarePlayer(Player player)
+    internal WarfarePlayer CreateWarfarePlayer(Player player)
     {
-        WarfarePlayer joined = new WarfarePlayer(player, _loggerFactory.CreateLogger<WarfarePlayer>());
-        _onlinePlayers.Add(joined);
-        _onlinePlayersDictionary.Add(joined.Steam64.m_SteamID, joined);
-        _logger.LogInformation($"Player {player} joined the server");
-        return joined;
+        lock (_onlinePlayersDictionary)
+        {
+            if (_onlinePlayersDictionary.ContainsPlayer(player))
+            {
+                throw new ArgumentException("This player has already been added to PlayerService.", nameof(player));
+            }
+
+            ILogger logger = _loggerFactory.CreateLogger(
+                player.channel.owner.playerID.steamID.m_SteamID.ToString("D17", CultureInfo.InvariantCulture)
+            );
+
+            List<IPlayerComponent> components = AddComponents(player);
+
+            WarfarePlayer joined = new WarfarePlayer(player, logger, components.AsReadOnly());
+            _onlinePlayers.Add(joined);
+            _onlinePlayersDictionary.Add(joined, joined);
+            
+            for (int i = 0; i < components.Count; ++i)
+            {
+                IPlayerComponent component = components[i];
+
+                component.Player = joined;
+                component.Init(_serviceProvider);
+            }
+
+            return joined;
+        }
     }
 
-    public WarfarePlayer OnPlayerLeft(Player player)
+    internal WarfarePlayer OnPlayerLeft(Player player)
     {
-        WarfarePlayer left = GetOnlinePlayer(player.channel.owner.playerID.steamID.m_SteamID);
-        _onlinePlayers.Remove(left);
-        _onlinePlayersDictionary.Remove(left.Steam64.m_SteamID);
-        _logger.LogInformation($"Player {player} left the server");
-        return left;
+        lock (_onlinePlayersDictionary)
+        {
+            WarfarePlayer left = GetOnlinePlayer(player.channel.owner.playerID.steamID.m_SteamID);
+
+            RemoveComponents(left);
+
+            _onlinePlayers.Remove(left);
+            _onlinePlayersDictionary.Remove(left.Steam64);
+
+            left.ApplyOfflineState();
+            return left;
+        }
     }
+
+    private List<IPlayerComponent> AddComponents(Player player)
+    {
+        List<IPlayerComponent> components = new List<IPlayerComponent>();
+        foreach (Type type in PlayerComponents)
+        {
+            if (!typeof(IPlayerComponent).IsAssignableFrom(type))
+            {
+                throw new InvalidOperationException($"Type {Accessor.ExceptionFormatter.Format(type)} does not " +
+                                                    $"implement {Accessor.ExceptionFormatter.Format<IPlayerComponent>()}.");
+            }
+
+            IPlayerComponent component;
+            if (type.IsSubclassOf(typeof(Component)))
+            {
+                component = (IPlayerComponent)player.gameObject.AddComponent(type);
+            }
+            else
+            {
+                component = (IPlayerComponent)ActivatorUtilities.CreateInstance(_serviceProvider, type, player, player.channel.owner, player.channel.owner.playerID);
+            }
+
+            components.Add(component);
+        }
+
+        return components;
+    }
+
+    private void RemoveComponents(WarfarePlayer player)
+    {
+        foreach (IPlayerComponent component in player.Components)
+        {
+            if (component is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+
+            if (component is Component unityComponent && unityComponent != null)
+            {
+                Object.Destroy(unityComponent);
+            }
+        }
+    }
+
+    public WarfarePlayer GetOnlinePlayer(Player player) => GetOnlinePlayer(player.channel.owner.playerID.steamID.m_SteamID);
+
+    public WarfarePlayer GetOnlinePlayer(SteamPlayer steamPlayer) => GetOnlinePlayer(steamPlayer.playerID.steamID.m_SteamID);
+
+    public WarfarePlayer GetOnlinePlayer(CSteamID steamId) => GetOnlinePlayer(steamId.m_SteamID);
+
     public WarfarePlayer GetOnlinePlayer(ulong steam64)
     {
-        if (!_onlinePlayersDictionary.TryGetValue(steam64, out WarfarePlayer? player))
-            throw new PlayerNotOnlineException(steam64);
+#if DEBUG
+        // putting this in here just because this function will be used so much
+        // that it's better to not add any extra code if possible
+        ThreadUtil.assertIsGameThread();
+#endif
+
+        // ReSharper disable once InconsistentlySynchronizedField
+        if (!_onlinePlayersDictionary.TryGetValue(Unsafe.As<ulong, CSteamID>(ref steam64), out WarfarePlayer? player))
+            throw new PlayerOfflineException(steam64);
 
         return player;
     }
-    public WarfarePlayer GetOnlinePlayer(Player player) => GetOnlinePlayer(player.channel.owner.playerID.steamID.m_SteamID);
-    public WarfarePlayer GetOnlinePlayer(SteamPlayer steamPlayer) => GetOnlinePlayer(steamPlayer.playerID.steamID.m_SteamID);
-    public WarfarePlayer GetOnlinePlayer(CSteamID steamId) => GetOnlinePlayer(steamId.m_SteamID);
+
+    public WarfarePlayer? GetOnlinePlayerOrNull(Player? player) => player is null ? null : GetOnlinePlayerOrNull(player.channel.owner.playerID.steamID.m_SteamID);
+
+    public WarfarePlayer? GetOnlinePlayerOrNull(SteamPlayer? steamPlayer) => steamPlayer == null ? null : GetOnlinePlayerOrNull(steamPlayer.playerID.steamID.m_SteamID);
+
+    public WarfarePlayer? GetOnlinePlayerOrNull(CSteamID steamId) => GetOnlinePlayerOrNull(steamId.m_SteamID);
+
+    public WarfarePlayer? GetOnlinePlayerOrNull(ulong steam64)
+    {
+#if DEBUG
+        // putting this in here just because this function will be used so much
+        // that it's better to not add any extra code if possible
+        ThreadUtil.assertIsGameThread();
+#endif
+
+        // ReSharper disable once InconsistentlySynchronizedField
+        _onlinePlayersDictionary.TryGetValue(Unsafe.As<ulong, CSteamID>(ref steam64), out WarfarePlayer? player);
+        return player;
+    }
+
+    public WarfarePlayer GetOnlinePlayerThreadSafe(Player player) => GetOnlinePlayerThreadSafe(player.channel.owner.playerID.steamID.m_SteamID);
+
+    public WarfarePlayer GetOnlinePlayerThreadSafe(SteamPlayer steamPlayer) => GetOnlinePlayerThreadSafe(steamPlayer.playerID.steamID.m_SteamID);
+
+    public WarfarePlayer GetOnlinePlayerThreadSafe(CSteamID steamId) => GetOnlinePlayerThreadSafe(steamId.m_SteamID);
+
+    public WarfarePlayer GetOnlinePlayerThreadSafe(ulong steam64)
+    {
+        lock (_onlinePlayersDictionary)
+        {
+            if (!_onlinePlayersDictionary.TryGetValue(Unsafe.As<ulong, CSteamID>(ref steam64), out WarfarePlayer? player))
+                throw new PlayerOfflineException(steam64);
+
+            return player;
+        }
+    }
+
+    [return: NotNullIfNotNull(nameof(player))]
+    public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(Player? player) => GetOnlinePlayerOrNullThreadSafe(player?.channel.owner);
+
+    [return: NotNullIfNotNull(nameof(steamPlayer))]
+    public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(SteamPlayer? steamPlayer) => steamPlayer == null ? null : GetOnlinePlayerThreadSafe(steamPlayer);
+
+    public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(CSteamID steamId) => GetOnlinePlayerOrNullThreadSafe(steamId.m_SteamID);
+
+    public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(ulong steam64)
+    {
+        lock (_onlinePlayersDictionary)
+        {
+            _onlinePlayersDictionary.TryGetValue(Unsafe.As<ulong, CSteamID>(ref steam64), out WarfarePlayer? player);
+            return player;
+        }
+    }
 }
-public class PlayerNotOnlineException : Exception
+
+/// <summary>
+/// Thrown when a player can't be found in <see cref="PlayerService"/>.
+/// </summary>
+public class PlayerOfflineException : Exception
 {
-    public PlayerNotOnlineException(ulong steamId)
-        : base($"Could not get WarfarePlayer '{steamId}' because they were not found in the list of online players.")
-    { }
+    public PlayerOfflineException(ulong steam64) : base(
+        $"Could not get WarfarePlayer '{steam64.ToString("D17", CultureInfo.InvariantCulture)}' " +
+        $"because they were not found in the list of online players.")
+    {
+
+    }
 }

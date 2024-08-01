@@ -1,16 +1,19 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.SpeedBytes;
 using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json.Serialization;
-using Uncreated.Encoding;
 using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Singletons;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Locations;
 
+/// <summary>
+/// Handles translating coordinates to/from grid coordinates.
+/// </summary>
 [JsonConverter(typeof(GridLocationConverter))]
+[TypeConverter(typeof(GridLocationTypeConverter))]
 public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocation>, IComparable<GridLocation>
 {
     private readonly uint _data;
@@ -639,5 +642,23 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
 
             Level.onPrePreLevelLoaded -= Reset;
         }
+    }
+}
+
+public class GridLocationTypeConverter : TypeConverter
+{
+    public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+    {
+        return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+    }
+
+    public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
+    {
+        return value == null ? "null" : ((GridLocation)value).ToString();
+    }
+
+    public override object? ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object? value)
+    {
+        return value is not string str ? base.ConvertFrom(context, culture, value) : GridLocation.Parse(str);
     }
 }

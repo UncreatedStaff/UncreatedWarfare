@@ -1,7 +1,6 @@
 ﻿#if NETSTANDARD || NETFRAMEWORK
 #define TELEMETRY
 using Cysharp.Threading.Tasks;
-using SDG.Unturned;
 using Stripe;
 using System;
 using System.Collections.Generic;

@@ -1,10 +1,8 @@
 ﻿using Cysharp.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
@@ -12,7 +10,6 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
@@ -23,7 +20,6 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -430,7 +426,7 @@ public sealed class KitCommand : IExecutableCommand
                 await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    PlayerEquipment equipment = Context.Player.Player.equipment;
+                    PlayerEquipment equipment = Context.Player.UnturnedPlayer.equipment;
                     Kit? kit = await Context.Player.GetActiveKit(token).ConfigureAwait(false);
                     if (kit is null)
                         throw Context.Reply(T.AmmoNoKit);
@@ -1380,7 +1376,7 @@ public sealed class KitCommand : IExecutableCommand
                 }, level);
             }
 
-            Skill skill = Context.Player.Player.skills.skills[(int)specialty][skillset];
+            Skill skill = Context.Player.UnturnedPlayer.skills.skills[(int)specialty][skillset];
             int max = skill.GetClampedMaxUnlockableLevel();
             if (!add || max >= level)
             {

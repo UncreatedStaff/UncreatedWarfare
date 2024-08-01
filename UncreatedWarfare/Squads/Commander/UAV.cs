@@ -1,11 +1,7 @@
 ﻿#if DEBUG
 using System;
-using Uncreated.Warfare.Gamemodes.Flags;
 #endif
 using Cysharp.Threading.Tasks;
-using JetBrains.Annotations;
-using SDG.Unturned;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
@@ -16,9 +12,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
-using UnityEngine;
 using Uncreated.Warfare.Players.UI;
 
 namespace Uncreated.Warfare.Squads.Commander;

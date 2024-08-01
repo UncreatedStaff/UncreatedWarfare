@@ -2,9 +2,6 @@
 
 using DanielWillett.ReflectionTools;
 using HarmonyLib;
-using JetBrains.Annotations;
-using Microsoft.Extensions.Logging;
-using SDG.Unturned;
 using StackCleaner;
 using System;
 using System.Collections.Generic;
@@ -15,11 +12,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Uncreated.Framework.UI;
-using UnityEngine;
-using UnityEngine.Assertions;
-using Debug = UnityEngine.Debug;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
-using Object = UnityEngine.Object;
 
 namespace Uncreated.Warfare;
 
@@ -219,7 +211,7 @@ public static class L
             }
             try
             {
-                FieldInfo? logger = typeof(Debug).GetField("s_Logger", BindingFlags.Static | BindingFlags.NonPublic);
+                FieldInfo? logger = typeof(UnityEngine.Debug).GetField("s_Logger", BindingFlags.Static | BindingFlags.NonPublic);
                 if (logger != null)
                     logger.SetValue(null, new UCUnityLogger());
                 //Log(Debug.unityLogger.GetType().Name);
@@ -269,14 +261,6 @@ public static class L
         }
     }
 
-    [OperationTest(DisplayName = "Colored Console Check")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestColoredConsole()
-    {
-        Assert.IsNotNull(_outputToConsoleMethod);
-        Assert.IsNotNull(_defaultIOHandler);
-    }
     private static void PrintLinePatch(string message)
     {
         if (!_inL)

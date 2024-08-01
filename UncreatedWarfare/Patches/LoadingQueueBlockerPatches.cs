@@ -1,6 +1,4 @@
 ﻿using HarmonyLib;
-using JetBrains.Annotations;
-using SDG.Unturned;
 using System;
 using System.Reflection;
 

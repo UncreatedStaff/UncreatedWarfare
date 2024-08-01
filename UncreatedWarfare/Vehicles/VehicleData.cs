@@ -1,8 +1,6 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
@@ -13,7 +11,6 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles;
 

@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes.Flags;
 
 namespace Uncreated.Warfare.Singletons;
 

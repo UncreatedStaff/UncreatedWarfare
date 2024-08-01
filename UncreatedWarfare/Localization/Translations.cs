@@ -1,8 +1,5 @@
-﻿using JetBrains.Annotations;
-using SDG.Unturned;
-using Steamworks;
+﻿using DanielWillett.ReflectionTools;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -14,19 +11,13 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using DanielWillett.ReflectionTools;
-using Uncreated.Framework;
-using Uncreated.Properties;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
-using Action = System.Action;
-using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare;
 

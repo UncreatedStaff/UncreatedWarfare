@@ -6,7 +6,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Stats.Base;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Models.Stats.Records;
 

@@ -1,9 +1,10 @@
 ﻿using Cysharp.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Util;
@@ -11,17 +12,32 @@ using Uncreated.Warfare.Zones;
 using Uncreated.Warfare.Zones.Pathing;
 
 namespace Uncreated.Warfare.Layouts.Phases.Flags;
-public class FlagActionPhaseLayout : ILayoutPhase
+public class FlagActionPhaseLayout : IFlagRotationPhase
 {
     private readonly ILogger<FlagActionPhaseLayout> _logger;
     private readonly IServiceProvider _serviceProvider;
     private IList<Zone>? _pathingResult;
-    public bool IsActive { get; private set; }
+    private ZoneStore _zoneStore;
 
+    /// <summary>
+    /// Array of all zones in order *including the main bases* at the beginning and end of the list.
+    /// </summary>
+    private ActiveZoneCluster[]? _zones;
+
+    public bool IsActive { get; private set; }
     public FlagPhaseSettings Flags { get; set; } = new FlagPhaseSettings();
 
     /// <inheritdoc />
     public IConfigurationSection Configuration { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyList<ActiveZoneCluster> ActiveZones { get; private set; } = Array.Empty<ActiveZoneCluster>();
+
+    /// <inheritdoc />
+    public ActiveZoneCluster StartingTeam { get; private set; }
+
+    /// <inheritdoc />
+    public ActiveZoneCluster EndingTeam { get; private set; }
 
     public FlagActionPhaseLayout(ILogger<FlagActionPhaseLayout> logger, IServiceProvider serviceProvider, IConfigurationSection config)
     {
@@ -48,29 +64,65 @@ public class FlagActionPhaseLayout : ILayoutPhase
             zoneProviders.Add((IZoneProvider)ActivatorUtilities.CreateInstance(_serviceProvider, zoneProviderType, this));
         }
 
-        ZoneStore zoneStore = new ZoneStore(zoneProviders);
+        _zoneStore = new ZoneStore(zoneProviders);
 
+        // load pathing provider
         IConfigurationSection config = Configuration.GetSection("PathingData");
-        IZonePathingProvider pathingProvider = (IZonePathingProvider)ActivatorUtilities.CreateInstance(_serviceProvider, pathingProviderType, this, zoneStore, config);
+        IZonePathingProvider pathingProvider = (IZonePathingProvider)ActivatorUtilities.CreateInstance(_serviceProvider, pathingProviderType, this, _zoneStore, config);
 
         config.Bind(pathingProvider);
 
+        // create zone path
         _pathingResult = await pathingProvider.CreateZonePathAsync(token);
     }
 
-    public virtual UniTask BeginPhaseAsync(CancellationToken token = default)
+    public virtual async UniTask BeginPhaseAsync(CancellationToken token = default)
     {
         IsActive = true;
 
-        // todo
-        // IList<Zone> zonePath = _pathingResult ?? throw new LayoutConfigurationException(this, "Unable to create zone path."); // shouldn't happen
+        if (_pathingResult == null || _zoneStore == null)
+        {
+            throw new LayoutConfigurationException(this, "Unable to create zone path.");
+        }
 
-        return UniTask.CompletedTask;
+        await UniTask.SwitchToMainThread(token);
+
+        // create zones as objects with colliders
+
+        List<ActiveZoneCluster> zoneList = new List<ActiveZoneCluster>(_pathingResult.Count);
+        foreach (Zone zone in _pathingResult)
+        {
+            ZoneProximity[] zones = _zoneStore.Zones
+                .Where(z => z.Name.Equals(zone.Name, StringComparison.Ordinal))
+                .Select(z => new ZoneProximity(_zoneStore.CreateColliderForZone(z), z))
+                .ToArray();
+
+            zoneList.Add(new ActiveZoneCluster(zones, _serviceProvider));
+        }
+
+        _zones = zoneList.ToArrayFast();
+        if (_zones.Length < 3)
+        {
+            throw new LayoutConfigurationException(this, "Unable to create zone path longer than one zone (not including main bases).");
+        }
+
+        ActiveZones = new ReadOnlyCollection<ActiveZoneCluster>(new ArraySegment<ActiveZoneCluster>(_zones, 1, _zones.Length - 2));
+        StartingTeam = _zones[0];
+        EndingTeam = _zones[^1];
     }
 
-    public virtual UniTask EndPhaseAsync(CancellationToken token = default)
+    public virtual async UniTask EndPhaseAsync(CancellationToken token = default)
     {
+        await UniTask.SwitchToMainThread(token);
+
+        // destroy collider objects
+        foreach (ActiveZoneCluster cluster in ActiveZones)
+        {
+            cluster.Dispose();
+        }
+
+        _zones = null;
+        ActiveZones = Array.Empty<ActiveZoneCluster>();
         IsActive = false;
-        return UniTask.CompletedTask;
     }
 }

@@ -1,10 +1,7 @@
-﻿using JetBrains.Annotations;
-using SDG.Unturned;
-using System;
+﻿using System;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Locations;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Layouts.Insurgency;
 

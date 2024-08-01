@@ -131,6 +131,32 @@
   </ItemGroup>
   <!-- ReSharper restore VulnerablePackage -->
 
+  <!-- Global Usings -->
+  <ItemGroup>
+    <Using Remove="System.Net.Http" />
+    <Using Remove="System.Text" />
+    <Using Include="JetBrains.Annotations" />
+    <Using Include="SDG.Unturned" />
+    <Using Include="Steamworks" />
+    <Using Include="System.Collections" />
+    <Using Include="UnityEngine" />
+    <Using Include="Steamworks" />
+    <Using Include="UnityEngine.Object">
+      <Alias>Object</Alias>
+    </Using>
+    <Using Include="System.Diagnostics.Contracts" />
+    <Using Include="System.Diagnostics.Contracts.PureAttribute">
+      <Alias>PureAttribute</Alias>
+    </Using>
+    <Using Include="System.Action">
+      <Alias>Action</Alias>
+    </Using>
+    <Using Include="Microsoft.Extensions.Logging" />
+    <Using Include="Microsoft.Extensions.Logging.ILogger">
+      <Alias>ILogger</Alias>
+    </Using>
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="DanielWillett.ModularRPCs">
       <HintPath>..\..\ModularRPCs\ModularRPCs\bin\Release\netstandard2.1\DanielWillett.ModularRPCs.dll</HintPath>

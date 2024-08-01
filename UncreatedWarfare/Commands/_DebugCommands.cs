@@ -1,9 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore;
-using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -27,10 +25,8 @@ using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 using Uncreated.Warfare.Players.Management.Legacy;
 #if DEBUG
@@ -312,7 +308,7 @@ public class DebugCommand : IExecutableCommand
         if (pos == Vector3.zero) return;
         Flag? flag = Data.Is(out IFlagRotation fg) ? fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos)) : null;
         string txt = $"Position: <#ff9999>({pos.x.ToString("0.##", Context.Culture)}, {pos.y.ToString("0.##", Context.Culture)}, {pos.z.ToString("0.##", Context.Culture)}) @ {new GridLocation(Context.Player.Position)}</color>. " +
-                     $"Yaw: <#ff9999>{Context.Player.Player.transform.eulerAngles.y.ToString("0.##", Context.Culture)}°</color>.";
+                     $"Yaw: <#ff9999>{Context.Player.UnturnedPlayer.transform.eulerAngles.y.ToString("0.##", Context.Culture)}°</color>.";
         if (flag is null)
             Context.ReplyString(txt);
         else
@@ -323,8 +319,8 @@ public class DebugCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        Transform aim = Context.Player.Player.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), 4f, RayMasks.BARRICADE, Context.Player.Player);
+        Transform aim = Context.Player.UnturnedPlayer.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), 4f, RayMasks.BARRICADE, Context.Player.UnturnedPlayer);
 
         InteractableSign? sign = BarricadeManager.FindBarricadeByRootTransform(info.transform)?.interactable as InteractableSign;
         if (sign == null)
@@ -577,7 +573,7 @@ public class DebugCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        Player player = Context.Player.Player;
+        Player player = Context.Player.UnturnedPlayer;
         if (!Context.TryGetTargetInfo(out RaycastInfo? raycast, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL | RayMasks.VEHICLE))
         {
             throw Context.ReplyString("You must be looking at a barricade, structure, vehicle, or object.");
@@ -710,7 +706,7 @@ public class DebugCommand : IExecutableCommand
         {
             if (Context.TryGet(1, out QuestAsset? asset, out _, true, -1, false))
             {
-                Context.Player.Player.quests.ServerRemoveQuest(asset);
+                Context.Player.UnturnedPlayer.quests.ServerRemoveQuest(asset);
                 Context.ReplyString("<#9fa1a6>Removed quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
             else Context.ReplyString("<#ff8c69>Quest not found.");
@@ -726,8 +722,8 @@ public class DebugCommand : IExecutableCommand
         {
             if (Context.TryGet(2, out short value) && Context.TryGet(1, out ushort flag))
             {
-                bool hasFlag = Context.Player.Player.quests.getFlag(flag, out short old);
-                Context.Player.Player.quests.sendSetFlag(flag, value);
+                bool hasFlag = Context.Player.UnturnedPlayer.quests.getFlag(flag, out short old);
+                Context.Player.UnturnedPlayer.quests.sendSetFlag(flag, value);
                 Context.ReplyString($"Set quest flag {flag} to {value} <#ddd>(from {(hasFlag ? old.ToString() : "<b>not set</b>")})</color>.");
                 return;
             }
@@ -736,7 +732,7 @@ public class DebugCommand : IExecutableCommand
         {
             if (Context.TryGet(1, out ushort flag))
             {
-                bool hasFlag = Context.Player.Player.quests.getFlag(flag, out short val);
+                bool hasFlag = Context.Player.UnturnedPlayer.quests.getFlag(flag, out short val);
                 Context.ReplyString($"Quest flag {flag} is {(hasFlag ? val.ToString() : "<b>not set</b>")})</color>.");
                 return;
             }
@@ -745,10 +741,10 @@ public class DebugCommand : IExecutableCommand
         {
             if (Context.TryGet(1, out ushort flag))
             {
-                bool hasFlag = Context.Player.Player.quests.getFlag(flag, out short old);
+                bool hasFlag = Context.Player.UnturnedPlayer.quests.getFlag(flag, out short old);
                 if (hasFlag)
                 {
-                    Context.Player.Player.quests.sendRemoveFlag(flag);
+                    Context.Player.UnturnedPlayer.quests.sendRemoveFlag(flag);
                     Context.ReplyString($"Quest flag {flag} was removed <#ddd>(from {old})</color>.");
                 }
                 else Context.ReplyString($"Quest flag {flag} is not set.");
@@ -830,8 +826,8 @@ public class DebugCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        bool isMarker = Context.Player.Player.quests.isMarkerPlaced;
-        Vector3 pos = isMarker ? Context.Player.Player.quests.markerPosition : Context.Player.Player.transform.position;
+        bool isMarker = Context.Player.UnturnedPlayer.quests.isMarkerPlaced;
+        Vector3 pos = isMarker ? Context.Player.UnturnedPlayer.quests.markerPosition : Context.Player.UnturnedPlayer.transform.position;
         pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + UAV.GroundHeightOffset) };
         UAV.GiveUAV(Context.Player.GetTeam(), Context.Player, Context.Player, isMarker, pos);
         Context.Defer();
@@ -1287,7 +1283,7 @@ public class DebugCommand : IExecutableCommand
         if (!float.TryParse(arg, NumberStyles.Number, Context.Culture, out float damage))
             throw Context.SendCorrectUsage("/test damage <amount>[%] [-r]");
 
-        RaycastInfo cast = DamageTool.raycast(new Ray(Context.Player.Player.look.aim.position, Context.Player.Player.look.aim.forward), 4f, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE, Context.Player.Player);
+        RaycastInfo cast = DamageTool.raycast(new Ray(Context.Player.UnturnedPlayer.look.aim.position, Context.Player.UnturnedPlayer.look.aim.forward), 4f, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE, Context.Player.UnturnedPlayer);
         if (cast.transform == null)
             throw Context.SendCorrectUsage("/test damage <amount>[%] while looking at a barricade, structure, or vehicle.");
 
@@ -1300,7 +1296,7 @@ public class DebugCommand : IExecutableCommand
         else if (StructureManager.FindStructureByRootTransform(cast.transform) is { } structure)
         {
             damage = percent ? (remaining ? structure.GetServersideData().structure.health : structure.asset.health) * (damage / 100f) : damage;
-            StructureManager.damage(structure.model, Context.Player.Player.look.aim.forward, damage, 1f, false, Context.CallerId, EDamageOrigin.Unknown);
+            StructureManager.damage(structure.model, Context.Player.UnturnedPlayer.look.aim.forward, damage, 1f, false, Context.CallerId, EDamageOrigin.Unknown);
             Context.ReplyString($"Damaged structure {structure.asset.FriendlyName} by {damage.ToString(Context.Culture)} points.");
         }
         else if (cast.vehicle != null)

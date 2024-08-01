@@ -1,7 +1,5 @@
 ﻿using DanielWillett.ReflectionTools;
 using HarmonyLib;
-using JetBrains.Annotations;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,8 +10,6 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
 using Module = SDG.Framework.Modules.Module;
 
 // ReSharper disable InconsistentNaming

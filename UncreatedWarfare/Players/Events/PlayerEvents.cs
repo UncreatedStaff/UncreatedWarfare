@@ -1,24 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
-using System.Threading;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Layouts;
-using Uncreated.Warfare.NewQuests.Parameters;
-using Uncreated.Warfare.NewQuests.Templates;
-using Uncreated.Warfare.NewQuests;
-using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Layouts.Teams;
 using System.Linq;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Players.Events;
 public class PlayerEvents : IEventListener<GroupChanged>, IEventListener<PlayerJoined>

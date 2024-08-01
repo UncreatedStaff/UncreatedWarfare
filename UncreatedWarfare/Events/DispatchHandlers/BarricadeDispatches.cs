@@ -1,15 +1,10 @@
 ﻿using Cysharp.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
-using UnityEngine;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2

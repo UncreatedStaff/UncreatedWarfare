@@ -1,22 +1,15 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -80,7 +73,7 @@ public class AmmoCommand : IExecutableCommand
                     if (!BarricadeUtility.IsBarricadeInRange(
                             vehicle.transform.position,
                             10f,
-                            Context.Player.Player.quests.groupID.m_SteamID,
+                            Context.Player.UnturnedPlayer.quests.groupID.m_SteamID,
                             Gamemode.Config.BarricadeRepairStation,
                             horizontalDistanceOnly: false
                         ))

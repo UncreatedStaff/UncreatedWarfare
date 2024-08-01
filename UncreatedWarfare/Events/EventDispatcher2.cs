@@ -2,9 +2,7 @@
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using SDG.Framework.Utilities;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Reflection;

@@ -1,13 +1,10 @@
 ﻿//#define DEBUG_LOGGING
 using HarmonyLib;
-using JetBrains.Annotations;
 using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Events;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
 internal class DebugComponent : MonoBehaviour

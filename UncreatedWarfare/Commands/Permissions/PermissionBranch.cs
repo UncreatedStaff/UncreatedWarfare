@@ -3,7 +3,6 @@ using System;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using SDG.Unturned;
 using Uncreated.Warfare.Models.Localization;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;

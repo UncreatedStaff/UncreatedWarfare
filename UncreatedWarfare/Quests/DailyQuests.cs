@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -8,11 +7,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
-using Uncreated.Framework;
-using Uncreated.Framework.Quests;
-using Uncreated.Json;
-using Uncreated.Networking;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Management.Legacy;
 

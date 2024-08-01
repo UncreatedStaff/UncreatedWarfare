@@ -2,7 +2,6 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;

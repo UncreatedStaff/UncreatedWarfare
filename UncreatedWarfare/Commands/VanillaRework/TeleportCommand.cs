@@ -1,12 +1,10 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
-using SDG.Unturned;
 using System;
 using System.Globalization;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Locations;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -146,12 +144,12 @@ public class TeleportCommand : IExecutableCommand
 
                 if (Context.MatchParameter(0, "wp", "waypoint", "marker"))
                 {
-                    if (!Context.Player.Player.quests.isMarkerPlaced)
+                    if (!Context.Player.UnturnedPlayer.quests.isMarkerPlaced)
                         throw Context.Reply(T.TeleportWaypointNotFound);
-                    Vector3 waypoint = Context.Player.Player.quests.markerPosition;
+                    Vector3 waypoint = Context.Player.UnturnedPlayer.quests.markerPosition;
                     GridLocation loc = new GridLocation(in waypoint);
                     if (F.TryGetHeight(waypoint.x, waypoint.z, out float height, 2f) &&
-                        Context.Player.Player.teleportToLocation(new Vector3(waypoint.x, height, waypoint.z), Context.Player.Yaw))
+                        Context.Player.UnturnedPlayer.teleportToLocation(new Vector3(waypoint.x, height, waypoint.z), Context.Player.Yaw))
                         throw Context.Reply(T.TeleportSelfWaypointSuccess, loc);
                     throw Context.Reply(T.TeleportSelfWaypointObstructed, loc);
                 }
@@ -168,7 +166,7 @@ public class TeleportCommand : IExecutableCommand
                         pos.y += 5f;
                     }
 
-                    if (Context.Player.Player.teleportToLocation(pos, onlinePlayer.Yaw))
+                    if (Context.Player.UnturnedPlayer.teleportToLocation(pos, onlinePlayer.Yaw))
                         throw Context.Reply(T.TeleportSelfSuccessPlayer, onlinePlayer);
                     throw Context.Reply(T.TeleportSelfPlayerObstructed, onlinePlayer);
                 }
@@ -176,7 +174,7 @@ public class TeleportCommand : IExecutableCommand
                 {
                     Vector3 center = location.Center;
                     if (F.TryGetHeight(center.x, center.z, out float height, 2f) &&
-                        Context.Player.Player.teleportToLocation(new Vector3(center.x, height, center.z), Context.Player.Yaw))
+                        Context.Player.UnturnedPlayer.teleportToLocation(new Vector3(center.x, height, center.z), Context.Player.Yaw))
                         throw Context.Reply(T.TeleportSelfWaypointSuccess, location);
                     throw Context.Reply(T.TeleportSelfWaypointObstructed, location);
                 }
@@ -186,7 +184,7 @@ public class TeleportCommand : IExecutableCommand
                 if (n is null)
                     throw Context.Reply(T.TeleportLocationNotFound, input);
                 pos = n.transform.position;
-                if (Context.Player.Player.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), Context.Player.Yaw))
+                if (Context.Player.UnturnedPlayer.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), Context.Player.Yaw))
                     throw Context.Reply(T.TeleportSelfLocationSuccess, n.locationName);
                 throw Context.Reply(T.TeleportSelfLocationObstructed, n.locationName);
 
@@ -198,9 +196,9 @@ public class TeleportCommand : IExecutableCommand
 
                     if (Context.MatchParameter(1, "wp", "wayport", "marker"))
                     {
-                        if (!Context.Player.Player.quests.isMarkerPlaced)
+                        if (!Context.Player.UnturnedPlayer.quests.isMarkerPlaced)
                             throw Context.Reply(T.TeleportWaypointNotFound);
-                        Vector3 waypoint = Context.Player.Player.quests.markerPosition;
+                        Vector3 waypoint = Context.Player.UnturnedPlayer.quests.markerPosition;
                         GridLocation loc = new GridLocation(in waypoint);
                         if (F.TryGetHeight(waypoint.x, waypoint.z, out float height, 2f) &&
                             target.Player.teleportToLocation(new Vector3(waypoint.x, height, waypoint.z), target.Yaw))
@@ -292,7 +290,7 @@ public class TeleportCommand : IExecutableCommand
                 if (float.IsNaN(y))
                     y = F.GetHeightAt2DPoint(x, z, pos.y, 2f);
                 pos = new Vector3(x, y, z);
-                throw Context.Reply(Context.Player.Player.teleportToLocation(pos, Context.Player.Yaw)
+                throw Context.Reply(Context.Player.UnturnedPlayer.teleportToLocation(pos, Context.Player.Yaw)
                         ? T.TeleportSelfLocationSuccess
                         : T.TeleportSelfLocationObstructed,
                     $"({x.ToString("0.##", Data.LocalLocale)}, {y.ToString("0.##", Data.LocalLocale)}, {z.ToString("0.##", Data.LocalLocale)})");

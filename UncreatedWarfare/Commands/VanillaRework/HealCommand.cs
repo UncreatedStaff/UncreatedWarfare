@@ -1,7 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -54,7 +53,7 @@ public class HealCommand : IExecutableCommand
         {
             Context.AssertRanByPlayer();
 
-            Context.Player.Player.life.sendRevive();
+            Context.Player.UnturnedPlayer.life.sendRevive();
 
             if (Data.Is(out IRevives rev))
                 rev.ReviveManager.RevivePlayer(Context.Player);

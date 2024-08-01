@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Text.Json;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Levels;

@@ -1,9 +1,7 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Proximity;
 

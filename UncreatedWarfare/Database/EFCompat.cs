@@ -1,14 +1,15 @@
 ﻿using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.EntityFrameworkCore.ValueGeneration;
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Microsoft.EntityFrameworkCore.ValueGeneration;
 using Uncreated.Warfare.Database.Automation;
 
 namespace Uncreated.Warfare.Database;
+
 /// <summary>
 /// Abstracts some properties used in <see cref="WarfareDatabaseReflection"/> to support later versions of EF.
 /// </summary>

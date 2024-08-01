@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using SDG.Unturned;
 
 namespace Uncreated.Warfare.Events.Players;
 public class PlayerInjured : PlayerEvent

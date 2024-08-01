@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -534,11 +533,11 @@ public class VehicleBayCommand : IExecutableCommand
                             if (page == PlayerInventory.AREA)
                                 continue;
 
-                            byte pageCount = Context.Player.Player.inventory.getItemCount(page);
+                            byte pageCount = Context.Player.UnturnedPlayer.inventory.getItemCount(page);
 
                             for (byte index = 0; index < pageCount; index++)
                             {
-                                if (Assets.find(EAssetType.ITEM, Context.Player.Player.inventory.getItem(page, index).item.id) is ItemAsset a)
+                                if (Assets.find(EAssetType.ITEM, Context.Player.UnturnedPlayer.inventory.getItem(page, index).item.id) is ItemAsset a)
                                     items.Add(a.GUID);
                             }
                         }
@@ -793,7 +792,7 @@ public class VehicleBayCommand : IExecutableCommand
             
             if (Context.TryGetBarricadeTarget(out BarricadeDrop? drop) && drop.interactable is InteractableSign)
             {
-                if (Context.Player.Player.TryGetPlayerData(out Components.UCPlayerData c))
+                if (Context.Player.UnturnedPlayer.TryGetPlayerData(out Components.UCPlayerData c))
                 {
                     if (c.Currentlylinking is { Item: not null } proxy)
                     {
@@ -826,7 +825,7 @@ public class VehicleBayCommand : IExecutableCommand
                 SqlItem<VehicleSpawn>? spawn = GetBayTarget(Context, spawner);
                 if (spawn?.Item is not null)
                 {
-                    if (Context.Player.Player.TryGetPlayerData(out Components.UCPlayerData c))
+                    if (Context.Player.UnturnedPlayer.TryGetPlayerData(out Components.UCPlayerData c))
                     {
                         c.Currentlylinking = spawn;
                         Context.Reply(T.VehicleBayLinkStarted);

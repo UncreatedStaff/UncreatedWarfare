@@ -1,12 +1,9 @@
 ﻿using MySql.Data.MySqlClient;
-using SDG.Unturned;
 using System;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Encoding;
-using Uncreated.SQL;
 using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Players;

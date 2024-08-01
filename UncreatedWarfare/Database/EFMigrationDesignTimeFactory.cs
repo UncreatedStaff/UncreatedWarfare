@@ -3,7 +3,6 @@ using System;
 using System.IO;
 using System.Text.Json;
 using DanielWillett.ReflectionTools;
-using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Database;
 public class EFMigrationDesignTimeFactory : IDesignTimeDbContextFactory<WarfareDbContext>

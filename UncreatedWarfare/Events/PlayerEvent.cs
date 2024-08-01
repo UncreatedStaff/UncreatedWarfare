@@ -1,6 +1,4 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
-using Steamworks;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events;

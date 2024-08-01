@@ -1,8 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using SDG.Framework.Utilities;
 using SDG.NetTransport;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -16,10 +14,8 @@ using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Util;
-using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Moderation;

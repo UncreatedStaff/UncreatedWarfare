@@ -1,16 +1,10 @@
-﻿using JetBrains.Annotations;
+﻿using DanielWillett.ReflectionTools;
 using SDG.Framework.Landscapes;
-using SDG.Unturned;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
-using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Components;
-using UnityEngine;
-using UnityEngine.Assertions;
+using Uncreated.Warfare.Util;
 using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Projectiles;
@@ -55,44 +49,42 @@ internal class ProjectileSolver : MonoBehaviour
 #if DEBUG
         List<BoxCollider> bcs = new List<BoxCollider>(8);
 #endif
-        for (int x = 0; x < Regions.WORLD_SIZE; ++x)
+        foreach (ObjectInfo objInfo in LevelObjectUtility.EnumerateObjects())
         {
-            for (int y = 0; y < Regions.WORLD_SIZE; ++y)
+            GameObject? model = objInfo.Object.asset.GetOrLoadModel();
+            if (model == null)
+                continue;
+
+            GameObject newObject = Instantiate(model, objInfo.Object.transform.position, objInfo.Object.transform.rotation);
+            if (objInfo.Object.asset.useScale)
             {
-                foreach (LevelObject obj2 in LevelObjects.objects[x, y].Where(o => o.asset != null && o.asset.type != EObjectType.SMALL && o.asset.type != EObjectType.DECAL))
-                {
-                    GameObject? orig = obj2.asset.GetOrLoadModel();
-                    if (orig != null)
-                    {
-                        GameObject obj = Instantiate(orig, obj2.transform.position, obj2.transform.rotation);
-                        if (obj2.asset.useScale)
-                            obj.transform.localScale = obj2.transform.localScale;
-                        Rigidbody rigidbody = transform.GetComponent<Rigidbody>();
-                        if (rigidbody != null)
-                            Destroy(rigidbody);
+                newObject.transform.localScale = objInfo.Object.transform.localScale;
+            }
 
-                        SceneManager.MoveGameObjectToScene(obj, _simScene);
+            Rigidbody rigidbody = transform.GetComponent<Rigidbody>();
+            if (rigidbody != null)
+                Destroy(rigidbody);
+
+            SceneManager.MoveGameObjectToScene(newObject, _simScene);
 #if DEBUG
-                        obj.GetComponentsInChildren(bcs);
-                        for (int i = 0; i < bcs.Count; ++i)
-                        {
-                            BoxCollider c = bcs[i];
-                            if (c.transform.localScale.x < 0 || c.transform.localScale.y < 0 || c.transform.localScale.z < 0 ||
-                                c.size.x < 0 || c.size.y < 0 || c.size.z < 0)
-                            {
-                                L.LogWarning(obj2.asset.objectName + " (" + obj2.asset.id + ", " +
-                                             obj2.asset.GUID.ToString("N") +
-                                             "): Negative scale or size detected, recommended to fix.");
-                            }
-                        }
-
-                        bcs.Clear();
-#endif
-                    }
+            newObject.GetComponentsInChildren(bcs);
+            for (int i = 0; i < bcs.Count; ++i)
+            {
+                BoxCollider c = bcs[i];
+                if (c.transform.localScale.x < 0 || c.transform.localScale.y < 0 || c.transform.localScale.z < 0 ||
+                    c.size.x < 0 || c.size.y < 0 || c.size.z < 0)
+                {
+                    L.LogWarning(objInfo.Object.asset.objectName + " (" + objInfo.Object.asset.id + ", " +
+                                 objInfo.Object.asset.GUID.ToString("N") +
+                                 "): Negative scale or size detected, recommended to fix.");
                 }
             }
+
+            bcs.Clear();
+#endif
         }
     }
+
     [UsedImplicitly]
     [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     private void Update()
@@ -104,16 +96,7 @@ internal class ProjectileSolver : MonoBehaviour
         }
     }
 
-    //private static readonly InstanceGetter<UseableGun, Attachments>? getAttachments = Accessor.GenerateInstanceGetter<UseableGun, Attachments>("thirdAttachments");
     private static readonly InstanceGetter<Rocket, bool> GetIsExploded = Accessor.GenerateInstanceGetter<Rocket, bool>("isExploded", throwOnError: true)!;
-
-    [OperationTest(DisplayName = "ProjectileSolver Check")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestServerSpawnLegacyImpact()
-    {
-        Assert.IsNotNull(GetIsExploded);
-    }
 
     private IEnumerator Simulate()
     {

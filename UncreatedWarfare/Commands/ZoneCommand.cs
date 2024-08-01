@@ -1,16 +1,10 @@
-﻿using System.Collections;
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using SDG.NetTransport;
-using SDG.Unturned;
-using System.Collections.Generic;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -56,7 +50,7 @@ public class ZeCommand : IExecutableCommand
 
         Context.AssertArgs(1, "edit_zone_syntax");
 
-        if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
+        if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
             comp.EditCommand(Context);
         else
             Context.SendUnknownError();
@@ -214,7 +208,7 @@ public class ZoneCommand : IExecutableCommand
             await Context.AssertPermissions(PermissionEdit, token);
             await UniTask.SwitchToMainThread(token);
 
-            if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
             {
                 Context.ArgumentOffset = 1;
                 try
@@ -235,7 +229,7 @@ public class ZoneCommand : IExecutableCommand
             await Context.AssertPermissions(PermissionCreate, token);
             await UniTask.SwitchToMainThread(token);
 
-            if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
             {
                 Context.ArgumentOffset = 1;
                 try
@@ -256,7 +250,7 @@ public class ZoneCommand : IExecutableCommand
             await Context.AssertPermissions(PermissionDelete, token);
             await UniTask.SwitchToMainThread(token);
 
-            if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
             {
                 Context.ArgumentOffset = 1;
                 try
@@ -275,7 +269,7 @@ public class ZoneCommand : IExecutableCommand
             await Context.AssertPermissions(PermissionUtil, token);
             await UniTask.SwitchToMainThread(token);
 
-            if (Context.Player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
             {
                 Context.ArgumentOffset = 1;
                 try
@@ -304,7 +298,7 @@ public class ZoneCommand : IExecutableCommand
         if (zone == null) throw Context.Reply(T.ZoneNoResults);
 
         Vector2[] points = zone.GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center);
-        ITransportConnection channel = Context.Player.Player.channel.owner.transportConnection;
+        ITransportConnection channel = Context.Player.UnturnedPlayer.channel.owner.transportConnection;
         bool hasui = ZonePlayerComponent.Airdrop != null;
 
         foreach (Vector2 point in points)
@@ -333,7 +327,7 @@ public class ZoneCommand : IExecutableCommand
                 F.TriggerEffectReliable(ZonePlayerComponent.Airdrop!, channel, pos);
         }
 
-        Context.Player.Player.StartCoroutine(ClearPoints(Context.Player));
+        Context.Player.UnturnedPlayer.StartCoroutine(ClearPoints(Context.Player));
         Context.Reply(T.ZoneVisualizeSuccess, points.Length + corners.Length + 1, zone);
     }
     private IEnumerator ClearPoints(UCPlayer player)
@@ -361,7 +355,7 @@ public class ZoneCommand : IExecutableCommand
         }
 
         Vector2 pos;
-        float yaw = Context.Player.Player.transform.rotation.eulerAngles.y;
+        float yaw = Context.Player.UnturnedPlayer.transform.rotation.eulerAngles.y;
         GridLocation location = default;
         IDeployable? deployable = null;
         LocationDevkitNode? loc = null;
@@ -403,7 +397,7 @@ public class ZoneCommand : IExecutableCommand
         }
         else if (Physics.Raycast(new Ray(new Vector3(pos.x, Level.HEIGHT, pos.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
         {
-            Context.Player.Player.teleportToLocationUnsafe(hit.point, yaw);
+            Context.Player.UnturnedPlayer.teleportToLocationUnsafe(hit.point, yaw);
             if (zone != null)
                 Context.Reply(T.ZoneGoSuccess, zone);
             else if (loc != null)

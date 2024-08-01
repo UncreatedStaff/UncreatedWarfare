@@ -1,8 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using HarmonyLib;
-using JetBrains.Annotations;
+using Microsoft.Extensions.Configuration;
 using SDG.NetPak;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -23,31 +22,34 @@ namespace Uncreated.Warfare.Moderation;
 [HarmonyPatch]
 public class AudioRecordManager
 {
-    public static AudioRecordManager Instance { get; } = new AudioRecordManager();
-
-    static AudioRecordManager() { }
-
     private DateTime _lastAuthenticate = DateTime.MinValue;
     private string? _tokenStr;
 
     private readonly Uri? _authenticateUri;
     private readonly Uri? _decodeUri;
-    private readonly Random _boundaryGenerator = new Random();
+    private readonly System.Random _boundaryGenerator = new System.Random();
 
-    public AudioRecordManager()
+    public AudioRecordManager(IConfiguration systemConfiguration)
     {
-        SystemConfigData.AudioRecordConfiguration? config = UCWarfare.Config.AudioRecordConfig;
+        IConfigurationSection section = systemConfiguration.GetSection("audio_recording");
+        string? baseUriStr = section["base_uri"];
+        string? username = section["username"];
+        string? password = section["password"];
 
-        if (config?.AudioRecordBaseUri == null || config.AudioRecordUsername == null || config.AudioRecordPassword == null)
+        if (baseUriStr == null || username == null || password == null)
         {
             return;
         }
 
-        string username = Uri.EscapeDataString(config.AudioRecordUsername);
-        string password = Uri.EscapeDataString(config.AudioRecordPassword);
-        _authenticateUri = new Uri(config.AudioRecordBaseUri, $"authentication?username={username}&key={password}");
-        _decodeUri = new Uri(config.AudioRecordBaseUri, "decoder/form");
+        username = Uri.EscapeDataString(username);
+        password = Uri.EscapeDataString(password);
+
+        Uri baseUri = new Uri(baseUriStr);
+
+        _authenticateUri = new Uri(baseUri, $"authentication?username={username}&key={password}");
+        _decodeUri = new Uri(baseUri, "decoder/form");
     }
+
     public async UniTask<AudioConvertResult> TryWriteWavAsync(byte[] multipartData, Stream writeTo, bool leaveOpen = true, CancellationToken token = default)
     {
         if (!UCWarfare.IsMainThread)
@@ -158,6 +160,7 @@ public class AudioRecordManager
 
         throw new JsonException("Missing property \"token\" from json.");
     }
+
     public async UniTask<AudioConvertResult> TryAuthenticateAsync(CancellationToken token = default)
     {
         const int tries = 3;
@@ -221,6 +224,7 @@ public class AudioRecordManager
 
         return AudioConvertResult.ConnectionError;
     }
+
     public byte[] CreateMultipartPacket(AudioRecordPlayerComponent component)
     {
         if (component.PacketCount == 0)
@@ -233,6 +237,7 @@ public class AudioRecordManager
 
         return CreateMultipartPacket(component.Packets, sections);
     }
+
     public byte[] CreateMultipartPacket(IReadOnlyList<PacketInfo> segments, ReadOnlySpan<AudioBatchSectionInfo> sections)
     {
         if (segments.Count == 0 || sections.Length == 0)

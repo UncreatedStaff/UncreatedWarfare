@@ -1,9 +1,4 @@
-﻿using System;
-using HarmonyLib;
-using JetBrains.Annotations;
-using SDG.Unturned;
-using Steamworks;
-using Uncreated.Warfare.Gamemodes.Interfaces;
+﻿using HarmonyLib;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable UnusedMember.Local

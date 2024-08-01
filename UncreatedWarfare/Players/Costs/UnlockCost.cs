@@ -4,7 +4,6 @@ using System.Threading;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Uncreated.Warfare.Players.Costs;
 

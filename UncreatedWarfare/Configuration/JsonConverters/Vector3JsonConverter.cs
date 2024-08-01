@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Configuration.JsonConverters;
 public sealed class Vector3JsonConverter : JsonConverter<Vector3>

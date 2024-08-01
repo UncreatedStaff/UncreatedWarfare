@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Util;
 public static class MathUtility

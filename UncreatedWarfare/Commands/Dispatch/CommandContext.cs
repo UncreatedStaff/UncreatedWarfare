@@ -1,19 +1,18 @@
-﻿using SDG.Unturned;
-using Steamworks;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands.Dispatch;
 
@@ -24,6 +23,7 @@ public class CommandContext : ControlException
 {
     public const string Default = "-";
     private readonly UserPermissionStore _permissionsStore;
+    private readonly PlayerService _playerService;
 
     /// <summary>
     /// Useful for sub-commands, offsets any parsing methods.
@@ -35,7 +35,7 @@ public class CommandContext : ControlException
     /// <summary>
     /// Player that called the command. Will be <see langword="null"/> if the command was called from console or some other source.
     /// </summary>
-    public UCPlayer Player { get; }
+    public WarfarePlayer Player { get; }
 #nullable restore
 
     /// <summary>
@@ -143,13 +143,15 @@ public class CommandContext : ControlException
     /// Type information about the command.
     /// </summary>
     public CommandType CommandInfo { get; }
-    public CommandContext(ICommandUser user, string[] args, string originalMessage, CommandType commandInfo, UserPermissionStore permissionsStore)
+    public CommandContext(ICommandUser user, string[] args, string originalMessage, CommandType commandInfo, IServiceProvider serviceProvider)
     {
         Command = null!;
         Caller = user;
         CommandInfo = commandInfo;
-        Player = user as UCPlayer;
-        _permissionsStore = permissionsStore;
+        Player = user as WarfarePlayer;
+
+        _permissionsStore = serviceProvider.GetRequiredService<UserPermissionStore>();
+        _playerService = serviceProvider.GetRequiredService<PlayerService>();
 
         IsConsole = user is null; // todo make console user
 
@@ -996,7 +998,7 @@ public class CommandContext : ControlException
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed (even when the user is offline).</returns>
-    public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
+    public bool TryGet(int parameter, out ulong steam64, out WarfarePlayer? onlinePlayer, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
     {
         parameter += ArgumentOffset;
         if (!IsConsole && MatchParameter(parameter, "me"))
@@ -1018,13 +1020,13 @@ public class CommandContext : ControlException
             if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
             {
                 steam64 = steamId.m_SteamID;
-                onlinePlayer = UCPlayer.FromID(steam64);
+                onlinePlayer = _playerService.GetOnlinePlayer(steam64);
                 return true;
             }
-            onlinePlayer = UCPlayer.FromName(s, searchType);
+            onlinePlayer = _playerService.GetOnlinePlayerOrNull(s, searchType);
             if (onlinePlayer is { IsOnline: true })
             {
-                steam64 = onlinePlayer.Steam64;
+                steam64 = onlinePlayer.Steam64.m_SteamID;
                 return true;
             }
         }
@@ -1042,7 +1044,7 @@ public class CommandContext : ControlException
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed and that player is in <paramref name="selection"/>.</returns>
-    public bool TryGet(int parameter, out ulong steam64, [MaybeNullWhen(false)] out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
+    public bool TryGet(int parameter, out ulong steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
     {
         parameter += ArgumentOffset;
         if (!IsConsole && MatchParameter(parameter, "me"))
@@ -1068,19 +1070,19 @@ public class CommandContext : ControlException
         if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             steam64 = steamId.m_SteamID;
-            foreach (UCPlayer player in selection)
+            foreach (WarfarePlayer player in selection)
             {
-                if (player.Steam64 == steam64)
+                if (player.Steam64.m_SteamID == steam64)
                 {
                     onlinePlayer = player;
                     return true;
                 }
             }
         }
-        onlinePlayer = UCPlayer.FromName(s, selection, searchType)!;
+        onlinePlayer = _playerService.GetOnlinePlayerOrNull(s, selection, searchType)!;
         if (onlinePlayer is { IsOnline: true })
         {
-            steam64 = onlinePlayer.Steam64;
+            steam64 = onlinePlayer.Steam64.m_SteamID;
             return true;
         }
 
@@ -1129,8 +1131,8 @@ public class CommandContext : ControlException
             return false;
         }
 
-        Transform aim = Player.Player.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? RayMasks.PLAYER_INTERACT : mask, Player.Player);
+        Transform aim = Player.UnturnedPlayer.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? RayMasks.PLAYER_INTERACT : mask, Player.UnturnedPlayer);
         transform = info.transform;
         return transform != null;
     }
@@ -1148,8 +1150,8 @@ public class CommandContext : ControlException
             return false;
         }
 
-        Transform aim = Player.Player.look.aim;
-        info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? RayMasks.PLAYER_INTERACT : mask, Player.Player);
+        Transform aim = Player.UnturnedPlayer.look.aim;
+        info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? RayMasks.PLAYER_INTERACT : mask, Player.UnturnedPlayer);
         return info.transform != null;
     }
 
@@ -1166,8 +1168,8 @@ public class CommandContext : ControlException
             return false;
         }
 
-        Transform aim = Player.Player.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? RayMasks.PLAYER_INTERACT : mask, Player.Player);
+        Transform aim = Player.UnturnedPlayer.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? RayMasks.PLAYER_INTERACT : mask, Player.UnturnedPlayer);
         if (info.transform == null)
         {
             interactable = null!;
@@ -1213,8 +1215,8 @@ public class CommandContext : ControlException
             return false;
         }
 
-        Transform aim = Player.Player.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.BARRICADE, Player.Player);
+        Transform aim = Player.UnturnedPlayer.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.BARRICADE, Player.UnturnedPlayer);
         if (info.transform == null)
         {
             drop = null;
@@ -1237,8 +1239,8 @@ public class CommandContext : ControlException
             return false;
         }
 
-        Transform aim = Player.Player.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.STRUCTURE, Player.Player);
+        Transform aim = Player.UnturnedPlayer.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.STRUCTURE, Player.UnturnedPlayer);
         if (info.transform == null)
         {
             drop = null;
@@ -1263,13 +1265,13 @@ public class CommandContext : ControlException
 
         if (tryCallersVehicleFirst)
         {
-            vehicle = Player.Player.movement.getVehicle();
+            vehicle = Player.UnturnedPlayer.movement.getVehicle();
             if (vehicle != null && (allowDead || !vehicle.isDead))
                 return true;
         }
 
-        Transform aim = Player.Player.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.VEHICLE, Player.Player);
+        Transform aim = Player.UnturnedPlayer.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.VEHICLE, Player.UnturnedPlayer);
         if (info.transform == null)
         {
             vehicle = null;
@@ -1287,8 +1289,8 @@ public class CommandContext : ControlException
             return false;
         }
 
-        Transform aim = Player.Player.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.PLAYER, Player.Player);
+        Transform aim = Player.UnturnedPlayer.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.PLAYER, Player.UnturnedPlayer);
         player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
         return player != null && player.IsOnline;
     }

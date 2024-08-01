@@ -1,7 +1,4 @@
-﻿using SDG.Unturned;
-using UnityEngine;
-
-namespace Uncreated.Warfare.Events.Components;
+﻿namespace Uncreated.Warfare.Events.Components;
 internal class DestroyerComponent : MonoBehaviour
 {
     private ulong _destroyer;

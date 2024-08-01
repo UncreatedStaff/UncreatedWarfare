@@ -1,7 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration.JsonConverters;
 
-namespace Uncreated.Framework;
+namespace Uncreated.Warfare.Steam.Models;
+
 #nullable disable
 public class PlayerSummariesResponse
 {

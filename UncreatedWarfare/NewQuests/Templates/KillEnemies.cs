@@ -1,7 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SDG.Unturned;
 using System;
 using System.Text.Json;
 using System.Threading;

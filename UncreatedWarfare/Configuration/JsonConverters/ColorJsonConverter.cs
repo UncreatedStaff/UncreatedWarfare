@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Util;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Configuration.JsonConverters;
 public sealed class ColorJsonConverter : JsonConverter<Color>

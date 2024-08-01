@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 
 namespace Uncreated.Warfare.Events.Items;
 public class CraftRequested : CancellablePlayerEvent

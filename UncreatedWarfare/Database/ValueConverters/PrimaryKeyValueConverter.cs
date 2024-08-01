@@ -1,8 +1,6 @@
-﻿using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Uncreated.SQL;
 using Uncreated.Warfare.Database.Automation;
 
 namespace Uncreated.Warfare.Database.ValueConverters;

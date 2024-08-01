@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using Uncreated.Warfare.Configuration;
+﻿using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Vehicles;
 public class VehicleBayConfig : Config<VehicleBayData>

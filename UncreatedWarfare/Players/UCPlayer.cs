@@ -1,7 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
 using SDG.NetTransport;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,7 +11,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Dispatch;
@@ -36,11 +33,11 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Util;
-using UnityEngine;
-using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
 namespace Uncreated.Warfare;
 
@@ -1193,7 +1190,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         int IEqualityComparer<UCPlayer>.GetHashCode(UCPlayer obj) => obj.Steam64.GetHashCode();
     }
 
-    public override bool Equals(object? obj) => obj == this || obj is IPlayer player && player.Steam64 == this.Steam64;
+    public override bool Equals(object? obj) => obj == this || obj is IPlayer player && player.Steam64.m_SteamID == this.Steam64;
     public override int GetHashCode() => unchecked((int)AccountId);
     public static void TryApplyViewLens(ref UCPlayer original)
     {
@@ -1215,7 +1212,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         if (allowCache && CachedSteamProfile != null)
             return CachedSteamProfile;
 
-        PlayerSummary? playerSummary = await SteamAPI.GetPlayerSummary(Steam64, token);
+        PlayerSummary? playerSummary = await SteamAPIService.GetPlayerSummary(Steam64, token);
         await UniTask.SwitchToMainThread(token);
         if (playerSummary != null)
             CachedSteamProfile = playerSummary;
@@ -1259,15 +1256,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
 
 public interface IPlayer : ITranslationArgument
 {
-    public ulong Steam64 { get; }
+    public CSteamID Steam64 { get; }
 }
-public readonly struct OfflinePlayerName(ulong steam64, string name) : IPlayer
+public readonly struct OfflinePlayerName(CSteamID steam64, string name) : IPlayer
 {
-    public ulong Steam64 { get; } = steam64;
+    public CSteamID Steam64 { get; } = steam64;
     public string Name { get; } = name;
     public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
     {
-        UCPlayer? pl = UCPlayer.FromID(Steam64);
+        UCPlayer? pl = UCPlayer.FromCSteamID(Steam64);
         if (format is null) goto end;
 
         if (format.Equals(UCPlayer.FormatCharacterName, StringComparison.Ordinal) ||
@@ -1276,41 +1273,41 @@ public readonly struct OfflinePlayerName(ulong steam64, string name) : IPlayer
             return Name;
         if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
             goto end;
-        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (UCWarfare.IsMainThread && PlayerSave.TryReadSaveFile(Steam64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
+        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (UCWarfare.IsMainThread && PlayerSave.TryReadSaveFile(Steam64.m_SteamID, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
         if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal) ||
             format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal) ||
             format.Equals(UCPlayer.FormatColoredPlayerName, StringComparison.Ordinal))
             return Localization.Colorize(hex, Name, flags);
         if (format.Equals(UCPlayer.FormatColoredSteam64, StringComparison.Ordinal))
-            return Localization.Colorize(hex, Steam64.ToString(culture ?? Data.LocalLocale), flags);
+            return Localization.Colorize(hex, Steam64.m_SteamID.ToString(culture ?? Data.LocalLocale), flags);
         end:
-        return Steam64.ToString(culture ?? Data.LocalLocale);
+        return Steam64.m_SteamID.ToString(culture ?? Data.LocalLocale);
     }
 }
 
 public struct OfflinePlayer : IPlayer
 {
-    private readonly ulong _s64;
+    private readonly CSteamID _s64;
     private PlayerNames? _names;
-    public readonly ulong Steam64 => _s64;
-    public OfflinePlayer(ulong steam64)
+    public readonly CSteamID Steam64 => _s64;
+    public OfflinePlayer(CSteamID steam64)
     {
         _s64 = steam64;
         _names = null;
     }
     public OfflinePlayer(in PlayerNames names)
     {
-        _s64 = names.Steam64;
+        _s64 = new CSteamID(names.Steam64);
         _names = names;
     }
     public async ValueTask CacheUsernames(CancellationToken token = default)
     {
         if (!TryCacheLocal())
-            _names = await F.GetPlayerOriginalNamesAsync(_s64, token).ConfigureAwait(false);
+            _names = await F.GetPlayerOriginalNamesAsync(_s64.m_SteamID, token).ConfigureAwait(false);
     }
     public bool TryCacheLocal()
     {
-        UCPlayer? pl = UCPlayer.FromID(Steam64);
+        UCPlayer? pl = UCPlayer.FromCSteamID(Steam64);
         if (pl != null)
             _names = pl.Name;
         return _names.HasValue;
@@ -1318,7 +1315,7 @@ public struct OfflinePlayer : IPlayer
     public readonly string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
-        UCPlayer? pl = UCPlayer.FromID(Steam64);
+        UCPlayer? pl = UCPlayer.FromCSteamID(Steam64);
         if (format is null || !_names.HasValue) goto end;
         PlayerNames names = _names.Value;
 
@@ -1330,7 +1327,7 @@ public struct OfflinePlayer : IPlayer
             return names.PlayerName;
         if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
             goto end;
-        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (UCWarfare.IsMainThread && PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
+        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (UCWarfare.IsMainThread && PlayerSave.TryReadSaveFile(_s64.m_SteamID, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
         if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal))
             return Localization.Colorize(hex, names.CharacterName, flags);
         if (format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal))
@@ -1338,9 +1335,9 @@ public struct OfflinePlayer : IPlayer
         if (format.Equals(UCPlayer.FormatColoredPlayerName, StringComparison.Ordinal))
             return Localization.Colorize(hex, names.PlayerName, flags);
         if (format.Equals(UCPlayer.FormatColoredSteam64, StringComparison.Ordinal))
-            return Localization.Colorize(hex, _s64.ToString(culture ?? Data.LocalLocale), flags);
+            return Localization.Colorize(hex, _s64.m_SteamID.ToString(culture ?? Data.LocalLocale), flags);
         end:
-        return _s64.ToString(culture ?? Data.LocalLocale);
+        return _s64.m_SteamID.ToString(culture ?? Data.LocalLocale);
     }
 }
 public class UCPlayerLocale

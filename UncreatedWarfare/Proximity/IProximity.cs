@@ -1,15 +1,16 @@
 ﻿using SDG.Framework.Utilities;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Proximity;
 
 /// <summary>
 /// Defines an object that can test points to see if they're contained in the proximity.
 /// </summary>
-/// <remarks>Also implements <see cref="IShapeVolume"/>.</remarks>
+/// <remarks>
+/// Also implements <see cref="IShapeVolume"/>.
+/// Any components implementing this interface should destroy themselves in <see cref="IDisposable.Dispose"/>.
+/// </remarks>
 public interface IProximity : IShapeVolume, ICloneable
 {
     /// <summary>
@@ -23,6 +24,42 @@ public interface IProximity : IShapeVolume, ICloneable
     bool TestPoint(Vector2 position);
 
     bool IShapeVolume.containsPoint(Vector3 point) => TestPoint(point);
+}
+
+/// <summary>
+/// Able to listen for a certain type of object to enter or leave the proximity.
+/// </summary>
+public interface IEventBasedProximity<out T> : IProximity
+{
+    /// <summary>
+    /// Invoked when an object goes in proximity.
+    /// </summary>
+    event Action<T> OnObjectEntered;
+
+    /// <summary>
+    /// Invoked when an object leaves proximity.
+    /// </summary>
+    event Action<T> OnObjectExited;
+}
+
+/// <summary>
+/// Able to listen for a certain type of object to enter or leave the proximity, and keeps a list of objects currently in proximity.
+/// </summary>
+public interface ITrackingProximity<T> : IEventBasedProximity<T>
+{
+    /// <summary>
+    /// List of all objects currently in proximity.
+    /// </summary>
+    /// <remarks>
+    /// This should be updated before <see cref="IEventBasedProximity{T}.OnObjectEntered"/>
+    /// and <see cref="IEventBasedProximity{T}.OnObjectExited"/> are updated.
+    /// </remarks>
+    IReadOnlyList<T> ActiveObjects { get; }
+
+    /// <summary>
+    /// If this object is in proximity.
+    /// </summary>
+    bool Contains(T obj);
 }
 
 /// <summary>

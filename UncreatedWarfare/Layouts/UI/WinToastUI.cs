@@ -1,6 +1,5 @@
 ﻿using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 
 namespace Uncreated.Warfare.Layouts.UI;

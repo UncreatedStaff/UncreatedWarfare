@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
@@ -7,7 +6,6 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Seasons;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Models.Buildables;
 

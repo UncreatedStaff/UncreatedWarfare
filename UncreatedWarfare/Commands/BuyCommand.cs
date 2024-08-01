@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
 using System;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
@@ -63,7 +62,7 @@ public class BuyCommand : IExecutableCommand
         if (UCWarfare.Config.WebsiteUri == null || Data.PurchasingDataStore.LoadoutProduct == null)
             throw Context.Reply(T.RequestNotBuyable);
 
-        Context.Player.Player.sendBrowserRequest("Purchase loadouts on our website.", new Uri(UCWarfare.Config.WebsiteUri, "kits/loadout").OriginalString);
+        Context.Player.UnturnedPlayer.sendBrowserRequest("Purchase loadouts on our website.", new Uri(UCWarfare.Config.WebsiteUri, "kits/loadout").OriginalString);
         throw Context.Defer();
     }
 }

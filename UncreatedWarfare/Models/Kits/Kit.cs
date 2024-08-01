@@ -1,7 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -9,8 +8,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
-using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;

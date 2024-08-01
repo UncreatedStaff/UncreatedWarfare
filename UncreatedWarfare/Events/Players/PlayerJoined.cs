@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using Uncreated.Warfare.Players.Saves;
+﻿using Uncreated.Warfare.Players.Saves;
 
 namespace Uncreated.Warfare.Events.Players;
 

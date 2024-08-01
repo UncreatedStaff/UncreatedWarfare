@@ -1,12 +1,10 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Layouts;

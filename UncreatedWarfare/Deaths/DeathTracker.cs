@@ -1,9 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +9,12 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
-using UnityEngine;
+using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Deaths;
 public class DeathTracker : IHostedService
@@ -24,20 +22,22 @@ public class DeathTracker : IHostedService
     private readonly ILogger<DeathTracker> _logger;
     private readonly DeathMessageResolver _deathMessageResolver;
     private readonly WarfareModule _warfare;
+    private readonly PlayerService _playerService;
 
     public const EDeathCause MainCampDeathCauseOffset = (EDeathCause)100;
     public const EDeathCause InEnemyMainDeathCause = (EDeathCause)37;
 
-    private readonly Dictionary<ulong, PlayerDied> _injuredPlayers = new Dictionary<ulong, PlayerDied>(Provider.maxPlayers);
+    private readonly PlayerDictionary<PlayerDied> _injuredPlayers = new PlayerDictionary<PlayerDied>(Provider.maxPlayers);
 
     private static readonly InstanceSetter<PlayerLife, bool>? PVPDeathField = Accessor.GenerateInstancePropertySetter<PlayerLife, bool>("wasPvPDeath");
     private static readonly InstanceGetter<InteractableSentry, Player>? SentryTargetPlayerField = Accessor.GenerateInstanceGetter<InteractableSentry, Player>("targetPlayer");
 
-    public DeathTracker(ILogger<DeathTracker> logger, DeathMessageResolver deathMessageResolver, WarfareModule warfare)
+    public DeathTracker(ILogger<DeathTracker> logger, DeathMessageResolver deathMessageResolver, WarfareModule warfare, PlayerService playerService)
     {
         _logger = logger;
-        _deathMessageResolver = deathMessageResolver;
         _warfare = warfare;
+        _playerService = playerService;
+        _deathMessageResolver = deathMessageResolver;
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)
@@ -75,34 +75,34 @@ public class DeathTracker : IHostedService
 
     private void OnPlayerDied(PlayerLife sender, EDeathCause cause, ELimb limb, CSteamID instigator)
     {
-        UCPlayer? dead = UCPlayer.FromPlayer(sender.player);
-        if (dead is null)
-        {
-            return;
-        }
+        WarfarePlayer dead = _playerService.GetOnlinePlayer(sender.player);
 
         PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(sender.player);
 
-        if (cause != EDeathCause.BLEEDING || comp?.BleedOutInfo == null)
+        UniTask.Create(async () =>
         {
-            ReviveManager? reviveManager = _warfare.ScopedProvider.GetService<ReviveManager>();
-
-            if (reviveManager != null && reviveManager.IsInjured(dead.Steam64) && _injuredPlayers.TryGetValue(dead.Steam64, out PlayerDied deathInfo))
+            if (cause != EDeathCause.BLEEDING || comp?.BleedOutInfo == null)
             {
-                _deathMessageResolver.BroadcastDeath(deathInfo);
+                ReviveManager? reviveManager = _warfare.ScopedProvider.GetService<ReviveManager>();
+
+                if (reviveManager != null && reviveManager.IsInjured(dead.Steam64.m_SteamID) && _injuredPlayers.TryGetValue(dead.Steam64, out PlayerDied deathInfo))
+                {
+                    await _deathMessageResolver.BroadcastDeath(deathInfo);
+                }
+                else
+                {
+                    PlayerDied e = new PlayerDied { Player = dead };
+                    FillArgs(dead, cause, limb, instigator, e);
+                    await _deathMessageResolver.BroadcastDeath(e);
+                }
             }
             else
             {
-                PlayerDied e = new PlayerDied { Player = dead };
-                FillArgs(dead, cause, limb, instigator, e);
-                _deathMessageResolver.BroadcastDeath(e);
+                comp.BleedOutInfo.MessageFlags |= DeathFlags.Bleeding;
+                await _deathMessageResolver.BroadcastDeath(comp.BleedOutInfo);
             }
-        }
-        else
-        {
-            comp.BleedOutInfo.MessageFlags |= DeathFlags.Bleeding;
-            _deathMessageResolver.BroadcastDeath(comp.BleedOutInfo);
-        }
+        });
+
 
         if (comp == null)
         {
@@ -118,13 +118,9 @@ public class DeathTracker : IHostedService
     // todo handle this better
     internal PlayerDied OnInjured(in DamagePlayerParameters parameters)
     {
-        UCPlayer? pl = UCPlayer.FromPlayer(parameters.player);
-        if (pl is null)
-        {
-            return null!;
-        }
+        WarfarePlayer pl = _playerService.GetOnlinePlayer(parameters.player);
 
-        if (parameters.cause == EDeathCause.BLEEDING && PlayerDeathTrackingComponent.GetOrAdd(pl.Player) is { BleedOutInfo: { } bleedOutInfo })
+        if (parameters.cause == EDeathCause.BLEEDING && PlayerDeathTrackingComponent.GetOrAdd(pl.UnturnedPlayer) is { BleedOutInfo: { } bleedOutInfo })
         {
             bleedOutInfo.MessageFlags |= DeathFlags.Bleeding;
             _injuredPlayers.Add(pl.Steam64, bleedOutInfo);
@@ -137,7 +133,7 @@ public class DeathTracker : IHostedService
         return e;
     }
 
-    internal void FillArgs(UCPlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, PlayerDied e)
+    internal void FillArgs(WarfarePlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, PlayerDied e)
     {
         ulong deadTeam = dead.GetTeam();
         e.DeadTeam = deadTeam;
@@ -176,15 +172,15 @@ public class DeathTracker : IHostedService
             case >= MainCampDeathCauseOffset:
                 e.MessageKey = "maincamp";
                 e.MessageCause = (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset);
-                PVPDeathField?.Invoke(dead.Player.life, true);
+                PVPDeathField?.Invoke(dead.UnturnedPlayer.life, true);
                 break;
         }
-        UCPlayer? killer = UCPlayer.FromCSteamID(instigator);
-        PlayerDeathTrackingComponent? deadData = dead.Player == null ? null : PlayerDeathTrackingComponent.GetOrAdd(dead.Player);
+        WarfarePlayer? killer = _playerService.GetOnlinePlayerOrNull(instigator);
+        PlayerDeathTrackingComponent? deadData = dead.UnturnedPlayer == null ? null : PlayerDeathTrackingComponent.GetOrAdd(dead.UnturnedPlayer);
         PlayerDeathTrackingComponent? killerData = null;
         if (killer is { IsOnline: true })
         {
-            killerData = PlayerDeathTrackingComponent.GetOrAdd(killer.Player);
+            killerData = PlayerDeathTrackingComponent.GetOrAdd(killer.UnturnedPlayer);
         }
         
         e.Killer = killer;
@@ -203,7 +199,7 @@ public class DeathTracker : IHostedService
 
         if (cause == EDeathCause.LANDMINE)
         {
-            UCPlayer? triggerer = null;
+            WarfarePlayer? triggerer = null;
             BarricadeDrop? drop = null;
             ThrowableComponent? throwable = null;
             bool isTriggerer = false;
@@ -229,17 +225,16 @@ public class DeathTracker : IHostedService
                 e.PrimaryAsset = AssetLink.Create(drop.asset);
                 if (!isTriggerer)
                 {
-                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                    foreach (WarfarePlayer player in _playerService.OnlinePlayers)
                     {
-                        UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                        if (pl.Steam64 == dead.Steam64)
+                        if (player.Equals(dead))
                             continue;
 
-                        PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(pl.Player);
-                        if (pl.Steam64 == dead.Steam64 || comp.TriggeredTrapExplosive != drop)
+                        PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(player.UnturnedPlayer);
+                        if (comp.TriggeredTrapExplosive != drop)
                             continue;
 
-                        triggerer = pl;
+                        triggerer = player;
                         throwable = comp.ThrowableTrapTrigger;
                         break;
                     }
@@ -248,14 +243,13 @@ public class DeathTracker : IHostedService
             else if (triggerer == null)
             {
                 // if it didnt find the triggerer, look for nearby players that just triggered a landmine. Needed in case the owner leaves.
-                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                foreach (WarfarePlayer player in _playerService.OnlinePlayers)
                 {
-                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                    if (pl.Steam64 == dead.Steam64
-                        || !pl.Player.TryGetComponent(out PlayerDeathTrackingComponent triggererData)
+                    if (player.Equals(dead)
+                        || !player.UnturnedPlayer.TryGetComponent(out PlayerDeathTrackingComponent triggererData)
                         || triggererData.TriggeredTrapExplosive == null
                         || !((triggererData.TriggeredTrapExplosive.model.position - dead.Position).sqrMagnitude < 400f /* 20m */)
-                        )
+                       )
                     {
                         continue;
                     }
@@ -263,7 +257,7 @@ public class DeathTracker : IHostedService
                     drop = triggererData.TriggeredTrapExplosive;
                     e.MessageFlags |= DeathFlags.Item;
                     e.PrimaryAsset = AssetLink.Create(drop.asset);
-                    triggerer = pl;
+                    triggerer = player;
                     throwable = triggererData.ThrowableTrapTrigger;
                     break;
                 }
@@ -283,7 +277,7 @@ public class DeathTracker : IHostedService
                 {
                     e.MessageFlags |= DeathFlags.Player3;
                     e.ThirdParty = triggerer;
-                    e.ThirdPartyId = triggerer.CSteamID;
+                    e.ThirdPartyId = triggerer.Steam64;
                     e.ThirdPartyPoint = triggerer.Position;
                     e.ThirdPartySession = triggerer.CurrentSession;
                     e.ThirdPartyTeam = triggerer.GetTeam();
@@ -338,23 +332,23 @@ public class DeathTracker : IHostedService
             case EDeathCause.GUN:
             case EDeathCause.MELEE:
             case EDeathCause.SPLASH:
-                if (killer == null || killer.Player.equipment.asset == null)
+                if (killer == null || killer.UnturnedPlayer.equipment.asset == null)
                     break;
 
-                e.PrimaryAsset = AssetLink.Create(killer.Player.equipment.asset);
+                e.PrimaryAsset = AssetLink.Create(killer.UnturnedPlayer.equipment.asset);
                 e.MessageFlags |= DeathFlags.Item;
 
                 if (cause == EDeathCause.MELEE)
                     break;
 
-                veh = killer.Player.movement.getVehicle();
+                veh = killer.UnturnedPlayer.movement.getVehicle();
                 if (veh == null || veh.isDead)
                     break;
 
                 // check if the player is on a turret, use the vehicle as item2, and give the driver third-party.
                 for (int i = 0; i < veh.turrets.Length; ++i)
                 {
-                    if (veh.turrets[i].turret == null || veh.turrets[i].turret.itemID != killer.Player.equipment.asset.id)
+                    if (veh.turrets[i].turret == null || veh.turrets[i].turret.itemID != killer.UnturnedPlayer.equipment.asset.id)
                     {
                         continue;
                     }
@@ -365,11 +359,11 @@ public class DeathTracker : IHostedService
 
                     if (veh.passengers.Length > 0 && veh.passengers[0].player is { } sp && sp.player != null)
                     {
-                        e.DriverAssist = UCPlayer.FromSteamPlayer(sp);
-                        if (e.DriverAssist != null && sp.playerID.steamID.m_SteamID != killer.Steam64)
+                        e.DriverAssist = _playerService.GetOnlinePlayer(sp);
+                        if (e.DriverAssist != null && sp.playerID.steamID.m_SteamID != killer.Steam64.m_SteamID)
                         {
                             e.ThirdParty = e.DriverAssist;
-                            e.ThirdPartyId = e.DriverAssist.CSteamID;
+                            e.ThirdPartyId = e.DriverAssist.Steam64;
                             e.ThirdPartyPoint = e.DriverAssist.Position;
                             e.ThirdPartySession = e.DriverAssist.CurrentSession;
                             e.MessageFlags |= DeathFlags.Player3;
@@ -425,11 +419,11 @@ public class DeathTracker : IHostedService
                 if (killer is not null)
                 {
                     // removes distance if the driver is blamed
-                    veh = killer.Player.movement.getVehicle();
+                    veh = killer.UnturnedPlayer.movement.getVehicle();
                     if (veh != null
                         && veh.passengers.Length > 0
                         && veh.passengers[0].player?.player != null
-                        && killer.Steam64 == veh.passengers[0].player.playerID.steamID.m_SteamID)
+                        && killer.Steam64.m_SteamID == veh.passengers[0].player.playerID.steamID.m_SteamID)
                     {
                         e.MessageFlags = (e.MessageFlags | DeathFlags.NoDistance) & ~DeathFlags.Player3;
                     }
@@ -486,29 +480,29 @@ public class DeathTracker : IHostedService
                     if (!driverAssist.HasValue || driverAssist.Value.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
                         break;
 
-                    e.DriverAssist = UCPlayer.FromCSteamID(driverAssist.Value);
-                    if (e.DriverAssist != null && driverAssist.Value.m_SteamID != killer.Steam64)
+                    e.DriverAssist = _playerService.GetOnlinePlayerOrNull(driverAssist.Value.m_SteamID);
+                    if (e.DriverAssist != null && driverAssist.Value.m_SteamID != killer.Steam64.m_SteamID)
                     {
                         e.ThirdParty = e.DriverAssist;
-                        e.ThirdPartyId = e.DriverAssist.CSteamID;
+                        e.ThirdPartyId = e.DriverAssist.Steam64;
                         e.ThirdPartyPoint = e.DriverAssist.Position;
                         e.ThirdPartySession = e.DriverAssist.CurrentSession;
                         e.MessageFlags |= DeathFlags.Player3;
                     }
                 }
-                else if (killer.Player.equipment.asset != null)
+                else if (killer.UnturnedPlayer.equipment.asset != null)
                 {
-                    e.PrimaryAsset = AssetLink.Create(killer.Player.equipment.asset);
+                    e.PrimaryAsset = AssetLink.Create(killer.UnturnedPlayer.equipment.asset);
                     e.MessageFlags |= DeathFlags.Item;
 
-                    veh = killer.Player.movement.getVehicle();
+                    veh = killer.UnturnedPlayer.movement.getVehicle();
                     if (veh == null)
                         break;
 
                     for (int i = 0; i < veh.turrets.Length; ++i)
                     {
                         TurretInfo? turretInfo = veh.turrets[i].turret;
-                        if (turretInfo == null || turretInfo.itemID != killer.Player.equipment.asset.id)
+                        if (turretInfo == null || turretInfo.itemID != killer.UnturnedPlayer.equipment.asset.id)
                             continue;
 
                         e.TurretVehicleOwner = AssetLink.Create(veh.asset);
@@ -517,11 +511,11 @@ public class DeathTracker : IHostedService
 
                         if (veh.passengers.Length > 0 && veh.passengers[0].player is { } sp && sp.player != null)
                         {
-                            e.DriverAssist = UCPlayer.FromSteamPlayer(sp);
-                            if (e.DriverAssist != null && sp.playerID.steamID.m_SteamID != killer.Steam64)
+                            e.DriverAssist = _playerService.GetOnlinePlayerOrNull(sp);
+                            if (e.DriverAssist != null && sp.playerID.steamID.m_SteamID != killer.Steam64.m_SteamID)
                             {
                                 e.ThirdParty = e.DriverAssist;
-                                e.ThirdPartyId = e.DriverAssist.CSteamID;
+                                e.ThirdPartyId = e.DriverAssist.Steam64;
                                 e.ThirdPartyPoint = e.DriverAssist.Position;
                                 e.ThirdPartySession = e.DriverAssist.CurrentSession;
                                 e.MessageFlags |= DeathFlags.Player3;
@@ -592,7 +586,7 @@ public class DeathTracker : IHostedService
             case >= MainCampDeathCauseOffset:
                 EDeathCause mainCampCause = e.MessageCause;
 
-                GetItems(mainCampCause, instigator.m_SteamID, killer?.Player, killerData, deadData, dead, out IAssetLink<Asset>? primary, out IAssetLink<Asset>? secondary);
+                GetItems(mainCampCause, instigator.m_SteamID, killer?.UnturnedPlayer, killerData, deadData, dead.UnturnedPlayer, out IAssetLink<Asset>? primary, out IAssetLink<Asset>? secondary);
 
                 if (primary != null)
                 {
@@ -610,7 +604,7 @@ public class DeathTracker : IHostedService
         }
     }
 
-    private static void GetItems(EDeathCause cause, ulong killerId, Player? killer, PlayerDeathTrackingComponent? killerData, PlayerDeathTrackingComponent? deadData, Player dead, out IAssetLink<Asset>? item1, out IAssetLink<Asset>? item2)
+    private void GetItems(EDeathCause cause, ulong killerId, Player? killer, PlayerDeathTrackingComponent? killerData, PlayerDeathTrackingComponent? deadData, Player dead, out IAssetLink<Asset>? item1, out IAssetLink<Asset>? item2)
     {
         item2 = null;
     repeat:
@@ -716,11 +710,10 @@ public class DeathTracker : IHostedService
                 else
                 {
                     // if it didnt find the triggerer, look for nearby players that just triggered a landmine. Needed in case the owner leaves.
-                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                    foreach (WarfarePlayer player in _playerService.OnlinePlayers)
                     {
-                        UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                        if (pl.Steam64 == dead.channel.owner.playerID.steamID.m_SteamID
-                            || !pl.Player.TryGetComponent(out PlayerDeathTrackingComponent triggererData)
+                        if (player.Steam64.m_SteamID == dead.channel.owner.playerID.steamID.m_SteamID
+                            || !player.UnturnedPlayer.TryGetComponent(out PlayerDeathTrackingComponent triggererData)
                             || triggererData.TriggeredTrapExplosive == null
                             || !((triggererData.TriggeredTrapExplosive.model.position - dead.transform.position).sqrMagnitude < 400f /* 20m */)
                            )
@@ -801,9 +794,7 @@ public class DeathTracker : IHostedService
         if (parameters.cause == EDeathCause.BLEEDING)
             return;
 
-        UCPlayer? dead = UCPlayer.FromPlayer(parameters.player);
-        if (dead == null)
-            return;
+        WarfarePlayer dead = _playerService.GetOnlinePlayer(parameters.player);
 
         PlayerDied e = new PlayerDied { Player = dead };
         FillArgs(dead, parameters.cause, parameters.limb, parameters.killer, e);
@@ -815,7 +806,7 @@ public class DeathTracker : IHostedService
     {
         _injuredPlayers.Clear();
     }
-    internal void RemovePlayerInfo(ulong steam64)
+    internal void RemovePlayerInfo(CSteamID steam64)
     {
         _injuredPlayers.Remove(steam64);
     }

@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 

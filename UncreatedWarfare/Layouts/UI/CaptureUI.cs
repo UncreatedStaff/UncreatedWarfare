@@ -1,8 +1,6 @@
 ﻿using SDG.NetTransport;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Layouts.UI;
 

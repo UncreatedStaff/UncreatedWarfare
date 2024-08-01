@@ -34,7 +34,7 @@ public class VanishCommand : IExecutableCommand
 
         Context.AssertOnDuty();
 
-        bool isUnvanished = Context.Player.Player.movement.canAddSimulationResultsToUpdates;
+        bool isUnvanished = Context.Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates;
         Context.Player.VanishMode = isUnvanished;
         if (isUnvanished)
         {

@@ -3,6 +3,10 @@ using System.IO;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Networking;
+
+/// <summary>
+/// Utility to download data directly to a stream using <see cref="UnityWebRequest"/>.
+/// </summary>
 public class UnityStreamDownloadHandler(Stream stream, bool leaveOpen = false, int bufferSize = 2048) : DownloadHandlerScript(new byte[bufferSize])
 {
     protected override bool ReceiveData(byte[] data, int dataLength)
@@ -19,21 +23,21 @@ public class UnityStreamDownloadHandler(Stream stream, bool leaveOpen = false, i
             return false;
         }
     }
+
     protected override void CompleteContent()
     {
         DisposeIntl();
         base.CompleteContent();
     }
+
     public override void Dispose()
     {
         DisposeIntl();
         base.Dispose();
     }
+
     private void DisposeIntl()
     {
-        if (leaveOpen)
-            return;
-
         try
         {
             stream.Flush();
@@ -42,6 +46,10 @@ public class UnityStreamDownloadHandler(Stream stream, bool leaveOpen = false, i
         {
             // ignored
         }
+
+        if (leaveOpen)
+            return;
+
         stream.Dispose();
         leaveOpen = true;
     }

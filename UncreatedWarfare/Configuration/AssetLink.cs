@@ -1,6 +1,4 @@
 ﻿using DanielWillett.ReflectionTools;
-using JetBrains.Annotations;
-using SDG.Unturned;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +8,6 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Framework.UI;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -28,12 +25,12 @@ public interface IAssetLink<out TAsset> : IAssetContainer, IEquatable<IAssetLink
     /// <summary>
     /// Guid of the asset, if known.
     /// </summary>
-    new Guid Guid { get; set; }
+    Guid Guid { get; set; }
 
     /// <summary>
     /// Short ID of the asset, if known.
     /// </summary>
-    new ushort Id { get; set; }
+    ushort Id { get; set; }
 
     /// <summary>
     /// Get the actual asset from the stored info.

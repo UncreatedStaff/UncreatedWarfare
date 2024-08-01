@@ -6,7 +6,6 @@ using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Stats.Base;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Models.Stats.Records;
 

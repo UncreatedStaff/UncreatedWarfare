@@ -1,33 +1,38 @@
-﻿using SDG.Framework.Utilities;
-using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using UnityEngine;
+using System.Threading;
 
 namespace Uncreated.Warfare.Proximity;
 
-public delegate void ColliderEntered(Collider collider);
-public delegate void ColliderExited(Collider collider);
-
-public class ColliderProximity : MonoBehaviour, IProximity, IDisposable
+public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, IDisposable
 {
     private List<Collider> _colliders = new List<Collider>(8);
     private Collider? _collider;
     private bool _initialized;
     private IProximity _proximity;
+    private bool _leaveGameObjectAlive;
+    private bool _disposed;
+    private Func<Collider, bool>? _validationCheck;
     public IProximity Proximity => _proximity;
 
-    public event ColliderEntered? OnColliderEntered;
-    public event ColliderExited? OnColliderExited;
+    public event Action<Collider>? OnObjectEntered;
+    public event Action<Collider>? OnObjectExited;
 
-    public IReadOnlyList<Collider> Colliders { get; private set; }
+    public IReadOnlyList<Collider> ActiveObjects { get; }
 
     public ColliderProximity()
     {
-        Colliders = new ReadOnlyCollection<Collider>(_colliders);
+        ActiveObjects = new ReadOnlyCollection<Collider>(_colliders);
     }
-    public void Initialize(IProximity proximity, Action<Collider>? colliderSettings = null)
+
+    public void Initialize(IProximity proximity,
+        bool leaveGameObjectAlive,
+        Action<Collider>? colliderSettings = null,
+        Func<Collider, bool>? validationCheck = null
+    )
     {
         ThreadUtil.assertIsGameThread();
 
@@ -35,8 +40,10 @@ public class ColliderProximity : MonoBehaviour, IProximity, IDisposable
             throw new InvalidOperationException("Already initialized.");
 
         _initialized = true;
+        _leaveGameObjectAlive = leaveGameObjectAlive;
 
         _proximity = proximity;
+        _validationCheck = validationCheck;
         SetupCollider();
 
         colliderSettings?.Invoke(_collider!);
@@ -54,6 +61,7 @@ public class ColliderProximity : MonoBehaviour, IProximity, IDisposable
                 BoxCollider boxCollider = gameObject.AddComponent<BoxCollider>();
                 boxCollider.center = Vector3.zero;
                 boxCollider.size = aabbInfo.size;
+                boxCollider.isTrigger = true;
 
                 _collider = boxCollider;
                 break;
@@ -66,6 +74,7 @@ public class ColliderProximity : MonoBehaviour, IProximity, IDisposable
                 SphereCollider sphereCollider = gameObject.AddComponent<SphereCollider>();
                 sphereCollider.radius = sphereInfo.radius;
                 sphereCollider.center = Vector3.zero;
+                sphereCollider.isTrigger = true;
 
                 _collider = sphereCollider;
                 break;
@@ -77,7 +86,8 @@ public class ColliderProximity : MonoBehaviour, IProximity, IDisposable
 
                 MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
                 meshCollider.sharedMesh = mesh;
-                meshCollider.convex = false;
+                meshCollider.isTrigger = true;
+                meshCollider.convex = true;
 
                 _collider = meshCollider;
                 break;
@@ -87,6 +97,61 @@ public class ColliderProximity : MonoBehaviour, IProximity, IDisposable
         }
     }
 
+    [UsedImplicitly]
+    private void OnTriggerStay(Collider collider)
+    {
+        Vector3 position = collider.transform.position;
+        bool foundCollider = false;
+        for (int i = 0; i < _colliders.Count; ++i)
+        {
+            if (collider != _colliders[i])
+                continue;
+
+            if (!TestPoint(position) || _validationCheck != null && !_validationCheck(collider))
+            {
+                _colliders.RemoveAt(i);
+                OnObjectExited?.Invoke(collider);
+                return;
+            }
+
+            foundCollider = true;
+            break;
+        }
+
+        if (foundCollider || !TestPoint(position) || _validationCheck != null && !_validationCheck(collider))
+            return;
+
+        _colliders.Add(collider);
+        OnObjectEntered?.Invoke(collider);
+    }
+
+    [UsedImplicitly]
+    private void OnTriggerExit(Collider collider)
+    {
+        for (int i = 0; i < _colliders.Count; ++i)
+        {
+            if (collider != _colliders[i])
+                continue;
+
+            _colliders.RemoveAt(i);
+            OnObjectExited?.Invoke(collider);
+            break;
+        }
+    }
+
+    public bool Contains(Collider obj)
+    {
+        if (obj == null)
+            return false;
+
+        for (int i = 0; i < _colliders.Count; ++i)
+        {
+            if (ReferenceEquals(obj, _colliders[i]))
+                return true;
+        }
+
+        return false;
+    }
 
     public bool TestPoint(Vector3 position)
     {
@@ -100,12 +165,43 @@ public class ColliderProximity : MonoBehaviour, IProximity, IDisposable
 
     public void Dispose()
     {
-        if (isActiveAndEnabled)
-            Destroy(this);
+        if (Thread.CurrentThread.IsGameThread())
+        {
+            DisposeIntl();
+        }
+        else
+        {
+            if (_disposed)
+                return;
+
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                DisposeIntl();
+            });
+        }
+    }
+
+    private void DisposeIntl()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        
+        if (_leaveGameObjectAlive)
+        {
+            if (this != null)
+                Destroy(this);
+        }
+        else if (gameObject != null)
+        {
+            Destroy(gameObject);
+        }
 
         if (_collider == null)
             return;
-        
+
         if (_collider is MeshCollider meshCollider)
         {
             Mesh mesh = meshCollider.sharedMesh;

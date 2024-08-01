@@ -1,6 +1,4 @@
 ﻿using Microsoft.Extensions.Configuration;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -29,9 +27,7 @@ using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
-using Object = UnityEngine.Object;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.FOBs;

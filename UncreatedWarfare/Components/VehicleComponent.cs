@@ -1,22 +1,14 @@
-﻿using JetBrains.Annotations;
-using SDG.Unturned;
-using Steamworks;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using Random = UnityEngine.Random;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 

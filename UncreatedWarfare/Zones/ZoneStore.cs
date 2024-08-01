@@ -1,12 +1,10 @@
 ﻿using Cysharp.Threading.Tasks;
 using SDG.Framework.Landscapes;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using Uncreated.Warfare.Proximity;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Zones;
 
@@ -56,7 +54,7 @@ public class ZoneStore
     /// <returns>The proximity, which has collision events.</returns>
     /// <exception cref="ArgumentException">This zone doesn't have a valid shape or is missing the associated data object.</exception>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public ColliderProximity CreateColliderForZone(Zone zone)
+    public ITrackingProximity<Collider> CreateColliderForZone(Zone zone)
     {
         ThreadUtil.assertIsGameThread();
 
@@ -71,12 +69,16 @@ public class ZoneStore
 
         GameObject obj = new GameObject(zone.Name)
         {
-            // Logic doesn't collide with player
-            layer = LayerMasks.LOGIC
+            layer = LayerMasks.CLIP
         };
 
         ColliderProximity prox = obj.AddComponent<ColliderProximity>();
-        prox.Initialize(CreateProximityForZone(zone));
+        prox.Initialize(
+            CreateProximityForZone(zone),
+            leaveGameObjectAlive: false,
+            validationCheck: collider => collider.transform.CompareTag("Player")
+        );
+
         return prox;
     }
 

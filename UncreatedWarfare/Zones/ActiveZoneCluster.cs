@@ -1,18 +1,31 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Threading;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
-using UnityEngine;
+using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Zones;
 
 /// <summary>
 /// Represents a zone or cluster of zones linked with their <see cref="IProximity"/> instances.
 /// </summary>
-public class ActiveZoneCluster
+public class ActiveZoneCluster : IDisposable
 {
     private readonly ZoneProximity[] _zones;
+    private readonly PlayerService _playerService;
     private readonly int _primaryIndex;
+    private bool _disposed;
+    private readonly TrackingList<WarfarePlayer> _players = new TrackingList<WarfarePlayer>(8);
+
+    /// <summary>
+    /// List of all players currently inside the zone.
+    /// </summary>
+    public ReadOnlyTrackingList<WarfarePlayer> Players { get; }
 
     /// <summary>
     /// List of all zones in this cluster.
@@ -33,10 +46,30 @@ public class ActiveZoneCluster
     /// The zone marked as primary of this group.
     /// </summary>
     public ref readonly ZoneProximity Primary => ref _zones[_primaryIndex];
-    internal ActiveZoneCluster(ZoneProximity[] zones)
+
+    /// <summary>
+    /// Total number of zones in this cluster.
+    /// </summary>
+    public int Count => _zones.Length;
+
+    internal ActiveZoneCluster(ZoneProximity[] zones, IServiceProvider serviceProvider)
     {
         if (zones.Length == 0)
             throw new ArgumentException("A zone group must consist of at least one zone.", nameof(zones));
+
+        Players = new ReadOnlyTrackingList<WarfarePlayer>(_players);
+
+        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+
+        // move primary to the front of the array
+        for (int i = 1; i < zones.Length; ++i)
+        {
+            if (!zones[i].Zone.IsPrimary)
+                continue;
+
+            (zones[0], zones[i]) = (zones[i], zones[0]);
+            break;
+        }
 
         _zones = zones;
         Zones = new ReadOnlyCollection<ZoneProximity>(_zones);
@@ -64,8 +97,61 @@ public class ActiveZoneCluster
 
         Name = primary.Name;
         ShortName = primary.ShortName;
+
+        for (int i = 0; i < zones.Length; ++i)
+        {
+            ITrackingProximity<Collider> proximity = zones[i].Proximity;
+
+            proximity.OnObjectEntered += OnObjectEnteredAnyZone;
+            proximity.OnObjectExited += OnObjectExitedAnyZone;
+        }
     }
 
+    private void OnObjectExitedAnyZone(Collider obj)
+    {
+        Player? nativePlayer = DamageTool.getPlayer(obj.transform);
+        if (nativePlayer == null)
+            return;
+
+        WarfarePlayer player = _playerService.GetOnlinePlayer(nativePlayer);
+
+        // check to make sure they're not already in another part of the cluster
+        if (_zones.Length > 0)
+        {
+            bool isInAnotherZone = false;
+            for (int i = 0; i < _zones.Length; ++i)
+            {
+                if (!_zones[i].Proximity.Contains(obj))
+                    continue;
+
+                isInAnotherZone = true;
+                break;
+            }
+
+            if (isInAnotherZone)
+            {
+                _players.AddIfNotExists(player);
+                return;
+            }
+        }
+
+        _players.Remove(player);
+    }
+
+    private void OnObjectEnteredAnyZone(Collider obj)
+    {
+        Player? nativePlayer = DamageTool.getPlayer(obj.transform);
+        if (nativePlayer == null)
+            return;
+
+        WarfarePlayer player = _playerService.GetOnlinePlayer(nativePlayer);
+
+        _players.AddIfNotExists(player);
+    }
+
+    /// <summary>
+    /// Check if a position is within the proximity.
+    /// </summary>
     public bool TestPoint(Vector3 position)
     {
         for (int i = 0; i < _zones.Length; ++i)
@@ -96,10 +182,57 @@ public class ActiveZoneCluster
 
         return false;
     }
+
+    // clean-up colliders and GameObjects
+    public void Dispose()
+    {
+        if (Thread.CurrentThread.IsGameThread())
+        {
+            DisposeIntl();
+        }
+        else
+        {
+            if (_disposed)
+                return;
+
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                DisposeIntl();
+            });
+        }
+    }
+
+    private void DisposeIntl()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        for (int i = 0; i < _zones.Length; ++i)
+        {
+            IEventBasedProximity<Collider> proximity = _zones[i].Proximity;
+            proximity.OnObjectEntered -= OnObjectEnteredAnyZone;
+            proximity.OnObjectExited -= OnObjectExitedAnyZone;
+            switch (proximity)
+            {
+                case IDisposable disposable:
+                    disposable.Dispose();
+                    break;
+
+                case Object component when component != null:
+                    Object.Destroy(component);
+                    break;
+            }
+        }
+    }
 }
 
-public readonly struct ZoneProximity(IProximity proximity, Zone zone)
+/// <summary>
+/// Links zone info with it's <see cref="IProximity"/> instance.
+/// </summary>
+public readonly struct ZoneProximity(ITrackingProximity<Collider> proximity, Zone zone)
 {
-    public IProximity Proximity { get; } = proximity;
+    public ITrackingProximity<Collider> Proximity { get; } = proximity;
     public Zone Zone { get; } = zone;
 }

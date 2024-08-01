@@ -1,7 +1,4 @@
-﻿using JetBrains.Annotations;
-using SDG.Framework.Utilities;
-using SDG.Unturned;
-using Steamworks;
+﻿using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -15,8 +12,6 @@ using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.FOBs;

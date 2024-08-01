@@ -1,7 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -161,7 +160,7 @@ public class CommandDispatcher : IDisposable
         {
             await UniTask.SwitchToMainThread();
 
-            CommandContext ctx = new CommandContext(user, args, originalMessage, command, _permissions);
+            CommandContext ctx = new CommandContext(user, args, originalMessage, command, _module.ScopedProvider);
 
             IExecutableCommand cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(_module.ScopedProvider, command.Type, [ ctx ]);
             ctx.Command = cmdInstance;

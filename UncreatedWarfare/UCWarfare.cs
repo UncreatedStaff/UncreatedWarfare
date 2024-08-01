@@ -2,15 +2,10 @@
 using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
-using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using SDG.Framework.Modules;
-using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -26,16 +21,12 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
-using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Management.Legacy;
 #if NETSTANDARD || NETFRAMEWORK
@@ -907,42 +898,4 @@ public class UCWarfareNexus : IModuleNexus
         if (!UCWarfare.IsLoaded) return;
         Unload(false).Wait(10000);
     }
-}
-
-[Conditional("DEBUG")]
-[AttributeUsage(AttributeTargets.Method, Inherited = true, AllowMultiple = true)]
-internal sealed class OperationTestAttribute : Attribute
-{
-    public string? DisplayName { get; set; }
-    public float? ArgumentSingle { get; }
-    public double? ArgumentDouble { get; }
-    public decimal? ArgumentDecimal { get; }
-    public long? ArgumentInt64 { get; }
-    public ulong? ArgumentUInt64 { get; }
-    public int? ArgumentInt32 { get; }
-    public uint? ArgumentUInt32 { get; }
-    public short? ArgumentInt16 { get; }
-    public ushort? ArgumentUInt16 { get; }
-    public sbyte? ArgumentInt8 { get; }
-    public byte? ArgumentUInt8 { get; }
-    public bool? ArgumentBoolean { get; }
-    public string? ArgumentString { get; }
-    public Type? ArgumentType { get; }
-    public Type[]? IgnoreExceptions { get; set; }
-    /// <summary>Just run it, check exceptions only.</summary>
-    public OperationTestAttribute() { }
-    public OperationTestAttribute(long arg) { ArgumentInt64 = arg; }
-    public OperationTestAttribute(ulong arg) { ArgumentUInt64 = arg; }
-    public OperationTestAttribute(int arg) { ArgumentInt32 = arg; }
-    public OperationTestAttribute(uint arg) { ArgumentUInt32 = arg; }
-    public OperationTestAttribute(short arg) { ArgumentInt16 = arg; }
-    public OperationTestAttribute(ushort arg) { ArgumentUInt16 = arg; }
-    public OperationTestAttribute(sbyte arg) { ArgumentInt8 = arg; }
-    public OperationTestAttribute(byte arg) { ArgumentUInt8 = arg; }
-    public OperationTestAttribute(bool arg) { ArgumentBoolean = arg; }
-    public OperationTestAttribute(float arg) { ArgumentSingle = arg; }
-    public OperationTestAttribute(double arg) { ArgumentDouble = arg; }
-    public OperationTestAttribute(decimal arg) { ArgumentDecimal = arg; }
-    public OperationTestAttribute(string arg) { ArgumentString = arg; }
-    public OperationTestAttribute(Type arg) { ArgumentType = arg; }
 }

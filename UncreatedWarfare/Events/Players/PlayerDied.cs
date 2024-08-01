@@ -1,10 +1,8 @@
-﻿using SDG.Unturned;
-using Steamworks;
-using Uncreated.Warfare.Configuration;
+﻿using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.GameData;
-using UnityEngine;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Players;
 public class PlayerDied : PlayerEvent
@@ -12,7 +10,7 @@ public class PlayerDied : PlayerEvent
     public EDeathCause Cause { get; internal set; }
     public EDeathCause MessageCause { get; internal set; }
     public ELimb Limb { get; internal set; }
-    public UCPlayer? Killer { get; internal set; }
+    public WarfarePlayer? Killer { get; internal set; }
     public CSteamID Instigator { get; internal set; }
     public bool WasTeamkill { get; internal set; }
     public bool ThirdPartyAtFault { get; internal set; }
@@ -33,8 +31,8 @@ public class PlayerDied : PlayerEvent
     public Class? KillerClass { get; internal set; }
     public Branch? KillerBranch { get; internal set; }
     public DeathFlags MessageFlags { get; internal set; }
-    public UCPlayer? DriverAssist { get; internal set; }
-    public UCPlayer? ThirdParty { get; internal set; }
+    public WarfarePlayer? DriverAssist { get; internal set; }
+    public WarfarePlayer? ThirdParty { get; internal set; }
     public CSteamID? ThirdPartyId { get; internal set; }
     public InteractableVehicle? ActiveVehicle { get; internal set; }
     public Vector3 Point { get; internal set; }

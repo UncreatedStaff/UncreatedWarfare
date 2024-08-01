@@ -1,6 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
 using System.Threading;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Players.Costs;
 

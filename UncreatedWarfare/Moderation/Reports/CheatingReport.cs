@@ -1,6 +1,5 @@
 ﻿using DanielWillett.SpeedBytes;
 using DanielWillett.SpeedBytes.Unity;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -10,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Database.Manual;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 

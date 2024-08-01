@@ -3,7 +3,6 @@ using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Tickets;
 

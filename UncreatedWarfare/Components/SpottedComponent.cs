@@ -1,13 +1,10 @@
 ﻿#define ENABLE_SPOTTED_BUFF
-using JetBrains.Annotations;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Management.Legacy;
 

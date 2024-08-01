@@ -1,6 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,11 +8,9 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Structures;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -284,7 +280,7 @@ public class StructureCommand : IExecutableCommand
             if (!Context.TryGet(2, out ulong s64) || s64 != 0 && (!grp && new CSteamID(s64).GetEAccountType() != EAccountType.k_EAccountTypeIndividual))
             {
                 if (Context.MatchParameter(2, "me"))
-                    s64 = grp ? Context.Player.Player.quests.groupID.m_SteamID : Context.CallerId.m_SteamID;
+                    s64 = grp ? Context.Player.UnturnedPlayer.quests.groupID.m_SteamID : Context.CallerId.m_SteamID;
                 else
                     throw Context.SendCorrectUsage(
                         "/structure <set|s> <group|owner> <value> - Value must be 'me', '0' or a valid Steam64 ID");

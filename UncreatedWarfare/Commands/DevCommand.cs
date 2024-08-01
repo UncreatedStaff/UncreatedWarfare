@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -9,7 +8,6 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Layouts.Insurgency;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -284,7 +282,7 @@ public class DevCommand : IExecutableCommand
             }
 
             InteractableVehicle? vehicle = await VehicleSpawner.SpawnLockedVehicle(asset.GUID,
-                Context.Player.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0),
+                Context.Player.UnturnedPlayer.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0),
                 token: token).ConfigureAwait(false);
 
             await UniTask.SwitchToMainThread(token);

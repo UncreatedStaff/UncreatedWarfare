@@ -1,11 +1,8 @@
 ﻿using System.Collections.Generic;
-using SDG.Unturned;
-using Steamworks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Deaths;
 internal class PlayerDeathTrackingComponent : MonoBehaviour

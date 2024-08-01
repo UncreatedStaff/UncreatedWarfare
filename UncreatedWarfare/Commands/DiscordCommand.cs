@@ -27,7 +27,7 @@ public class DiscordCommand : IExecutableCommand
     {
         if (Context.Caller is not null)
         {
-            Context.Player.Player.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+            Context.Player.UnturnedPlayer.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
             Context.Defer();
         }
         else

@@ -1,7 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -19,7 +16,6 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players.Management.Legacy;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Deaths;
 public class DeathMessageResolver
@@ -491,38 +487,28 @@ public class DeathMessageResolver
             ]
         }
     };
-    public void BroadcastDeath(PlayerDied e)
+    public async UniTask BroadcastDeath(PlayerDied e, CancellationToken token = default)
     {
-        bool sentInConsole = false;
         // red if its a teamkill, otherwise white
-        bool tk = (args.Flags & DeathFlags.Suicide) != DeathFlags.Suicide && args.IsTeamkill;
+        bool tk = (e.MessageFlags & DeathFlags.Suicide) != DeathFlags.Suicide && e.WasTeamkill;
         Color color = UCWarfare.GetColor(tk ? "death_background_teamkill" : "death_background");
         string? str = null;
         foreach (LanguageSet set in LanguageSet.All())
         {
-            string msg = TranslateMessage(set.Language, set.CultureInfo, args);
-            if (!sentInConsole && set.Language.IsDefault && set.CultureInfo.Name.Equals(Data.AdminLocale.Name, StringComparison.Ordinal))
-            {
-                Log(tk, msg, e);
-                sentInConsole = true;
-                str = msg;
-            }
+            string msg = await TranslateMessage(set.Language, set.CultureInfo, e, false, token);
             while (set.MoveNext())
             {
                 Chat.SendSingleMessage(msg, color, EChatMode.SAY, null, true, set.Next.Player.channel.owner);
             }
         }
 
-        if (!sentInConsole)
-        {
-            str = TranslateMessage(Warfare.Localization.GetDefaultLanguage(), Data.AdminLocale, args);
-            Log(tk, str, e);
-        }
+        str = await TranslateMessage(Localization.GetDefaultLanguage(), Data.AdminLocale, e, true, token);
+        Log(tk, str, e);
 
         e.DefaultMessage = str!;
 
         // todo move to somewhere else
-        if (e.Player.Player.TryGetPlayerData(out UCPlayerData data))
+        if (e.Player.UnturnedPlayer.TryGetPlayerData(out UCPlayerData data))
             data.CancelDeployment();
 
         PlayerDied toDispatch = e;
@@ -530,11 +516,10 @@ public class DeathMessageResolver
         // invoke PlayerDied event
         UniTask.Create(async () =>
         {
-            await _dispatcher.DispatchEventAsync(toDispatch);
+            await _dispatcher.DispatchEventAsync(toDispatch, CancellationToken.None);
             await UniTask.SwitchToMainThread();
 
-            if (e.WasEffectiveKill && e.Killer is { PendingCheaterDeathBan: false } && Util.IsSuspiciousDeath(e.Killer.Player, e.Cause, e.PrimaryAsset, e.SecondaryAsset, e.Limb,
-                    e.KillDistance, e.WasEffectiveKill, e.WasSuicide, e.WasTeamkill))
+            if (e is { WasEffectiveKill: true, Killer.PendingCheaterDeathBan: false } and { Cause: EDeathCause.GUN, Limb: ELimb.LEFT_FOOT or ELimb.RIGHT_FOOT or ELimb.LEFT_HAND or ELimb.RIGHT_HAND or ELimb.LEFT_BACK or ELimb.RIGHT_BACK or ELimb.LEFT_FRONT or ELimb.RIGHT_FRONT, KillDistance: > 3f })
             {
                 e.Killer.PendingCheaterDeathBan = true;
                 UCWarfare.I.StartCoroutine(BanInRandomTime(e.Killer.Steam64, e.Killer.SteamPlayer.joined));
@@ -542,16 +527,16 @@ public class DeathMessageResolver
         });
     }
 
-    private static IEnumerator<WaitForSecondsRealtime> BanInRandomTime(ulong steam64, float joined)
+    private static IEnumerator<WaitForSecondsRealtime> BanInRandomTime(CSteamID steam64, float joined)
     {
-        DateTimeOffset timestamp = DateTimeOffset.UtcNow;
-        L.Log("Auto ban by anticheat: " + steam64.ToString(Data.AdminLocale) + ".", ConsoleColor.Cyan);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        // make it harder to search for the source code causing it
+        L.Log("Aut" + "o " + "ban " + "by a" + "nti" + "che" + "at: " + steam64.m_SteamID.ToString(Data.AdminLocale) + ".", ConsoleColor.Cyan);
         yield return new WaitForSecondsRealtime(UnityEngine.Random.Range(50f, 80f));
 
-        DateTimeOffset now = DateTimeOffset.UtcNow;
         Ban ban = new Ban
         {
-            Player = steam64,
+            Player = steam64.m_SteamID,
             Actors =
             [
                 new RelatedActor(RelatedActor.RolePrimaryAdmin, true, Actors.AntiCheat)
@@ -560,27 +545,30 @@ public class DeathMessageResolver
             RelevantLogsEnd = now,
             StartedTimestamp = now,
             ResolvedTimestamp = now,
-            Message = $"Autoban by anti-cheat. Appeal at discord.gg/{UCWarfare.Config.DiscordInviteCode}.",
+            Message = "Autob" + "an by an" + "ti-ch" + "eat. Appe" + "al at di" + $"scord.gg/{UCWarfare.Config.DiscordInviteCode}.",
             Duration = Timeout.InfiniteTimeSpan,
             PresetLevel = 1,
             PresetType = PresetType.Cheating
         };
 
-        UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, ban, CancellationToken.None, ctx: "Ban suspected cheater.");
+        UniTask.Create(async () =>
+        {
+            await Data.ModerationSql.AddOrUpdate(ban, CancellationToken.None);
+        });
     }
     private static void Log(bool tk, string msg, PlayerDied e)
     {
-        string log = Util.RemoveRichText(msg);
-        L.Log(log, tk ? ConsoleColor.Cyan : ConsoleColor.DarkCyan);
+        // todo string log = Util.RemoveRichText(msg);
+        L.Log(msg, tk ? ConsoleColor.Cyan : ConsoleColor.DarkCyan);
         if (OffenseManager.IsValidSteam64Id(e.Instigator))
         {
-            ActionLog.Add(ActionLogType.Death, log + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
-            ActionLog.Add(ActionLogType.Kill, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
+            ActionLog.Add(ActionLogType.Death, msg + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
+            ActionLog.Add(ActionLogType.Kill, msg + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
             if (tk)
-                ActionLog.Add(ActionLogType.Teamkill, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
+                ActionLog.Add(ActionLogType.Teamkill, msg + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
         }
         else
-            ActionLog.Add(ActionLogType.Death, log, e.Player.Steam64);
+            ActionLog.Add(ActionLogType.Death, msg, e.Player.Steam64);
     }
 
     private const string JsonComment = @"/*
@@ -701,8 +689,8 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     }
     internal void Reload()
     {
-        Warfare.Localization.ClearSection(TranslationSection.Deaths);
-        Warfare.Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(_defaultTranslations.SelectMany(x => x.Translations).Count()));
+        Localization.ClearSection(TranslationSection.Deaths);
+        Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(_defaultTranslations.SelectMany(x => x.Translations).Count()));
         string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
 
         F.CheckDir(Data.Paths.LangStorage + L.Default, out bool folderIsThere);
@@ -760,12 +748,9 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             }
         }
     }
-    public string TranslateMessage(LanguageInfo language, CultureInfo culture, DeathMessageArgs args)
+
+    public async UniTask<string> TranslateMessage(LanguageInfo language, CultureInfo culture, PlayerDied args, bool useSteamNames, CancellationToken token = default)
     {
-        if (string.IsNullOrEmpty(args.ItemName)) args.Flags &= ~DeathFlags.Item;
-        if (string.IsNullOrEmpty(args.Item2Name)) args.Flags &= ~DeathFlags.Item2;
-        if (string.IsNullOrEmpty(args.KillerName)) args.Flags &= ~DeathFlags.Killer;
-        if (string.IsNullOrEmpty(args.Player3Name)) args.Flags &= ~DeathFlags.Player3;
         bool isDefault = false;
         if (_translationList.Count == 0 || (!_translationList.TryGetValue(language.Code, out CauseGroup[] causes) && (L.Default.Equals(language) || !_translationList.TryGetValue(L.Default, out causes))))
         {
@@ -774,16 +759,19 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         }
 
         if (causes is null)
-            return Warfare.Localization.TranslateEnum(args.DeathCause, language) + " Dead: " + args.DeadPlayerName;
+            return Localization.TranslateEnum(args.Cause, language) + " Dead: " + args.Player.Names.CharacterName;
         rtn:
-        int i = FindDeathCause(language, causes, ref args);
+        int i = FindDeathCause(language, causes, args);
 
         CauseGroup cause = causes[i];
-        string? val = Translate(language, culture, cause, args);
+        string? val = await TranslateDeath(args, language, culture, cause, useSteamNames, token);
+
+        await UniTask.SwitchToMainThread(token);
+
         if (val is null)
         {
             if (isDefault)
-                return Warfare.Localization.TranslateEnum(args.DeathCause, language) + " Dead: " + args.DeadPlayerName;
+                return Localization.TranslateEnum(args.Cause, language) + " Dead: " + args.Player.Names.CharacterName;
             causes = _defaultTranslations;
             isDefault = true;
             goto rtn;
@@ -791,13 +779,13 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         return val;
     }
 
-    private int FindDeathCause(LanguageInfo language, CauseGroup[] causes, ref DeathMessageArgs args)
+    private int FindDeathCause(LanguageInfo language, CauseGroup[] causes, PlayerDied args)
     {
         while (true)
         {
-            Guid guid;
-            bool item = (guid = args.ItemGuid) != default;
-            string? specKey = args.SpecialKey;
+            args.PrimaryAsset.TryGetGuid(out Guid guid);
+            bool item = guid != default;
+            string? specKey = args.MessageKey;
             if (specKey is not null)
             {
                 for (int i = 0; i < causes.Length; ++i)
@@ -809,7 +797,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
 
             if (item)
             {
-                if (args.ItemIsVehicle)
+                if (args.PrimaryAsset is IAssetLink<VehicleAsset>)
                 {
                     for (int i = 0; i < causes.Length; ++i)
                     {
@@ -827,7 +815,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 }
             }
 
-            EDeathCause cause2 = args.DeathCause;
+            EDeathCause cause2 = args.Cause;
             for (int i = 0; i < causes.Length; ++i)
             {
                 CauseGroup cause = causes[i];
@@ -835,7 +823,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             }
             if (!language.IsDefault && _translationList.TryGetValue(L.Default, out causes))
             {
-                language = Warfare.Localization.GetDefaultLanguage();
+                language = Localization.GetDefaultLanguage();
                 continue;
             }
             if (causes != _defaultTranslations)
@@ -851,7 +839,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     /// <summary>
     /// Choose a template based on the <see cref="EDeathCause"/> and format it.
     /// </summary>
-    public UniTask<string?> TranslateDeath(PlayerDied e, LanguageInfo language, IFormatProvider formatProvider, CauseGroup cause, bool useSteamNames)
+    public UniTask<string?> TranslateDeath(PlayerDied e, LanguageInfo language, IFormatProvider formatProvider, CauseGroup cause, bool useSteamNames, CancellationToken token = default)
     {
         DeathFlags flags = e.MessageFlags;
     redo:
@@ -859,7 +847,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == flags)
-                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
+                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
         }
 
         _logger.LogWarning("Exact match not found for {0}.", flags);
@@ -884,7 +872,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Killer)
-                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
+                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
             }
         }
         else if ((flags & DeathFlags.Suicide) == DeathFlags.Suicide)
@@ -893,7 +881,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Suicide)
-                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
+                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
             }
         }
         else if ((flags & DeathFlags.Player3) == DeathFlags.Player3)
@@ -902,14 +890,14 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Player3)
-                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
+                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
             }
         }
         for (int i = 0; i < cause.Translations.Length; ++i)
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == DeathFlags.None)
-                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames)!;
+                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
         }
 
         return UniTask.FromResult<string?>(null);
@@ -918,7 +906,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     /// <summary>
     /// Format a specific template using the given death args.
     /// </summary>
-    private async UniTask<string> TranslateDeath(string template, PlayerDied e, LanguageInfo? language, IFormatProvider formatProvider, bool useSteamNames)
+    private async UniTask<string> TranslateDeath(string template, PlayerDied e, LanguageInfo? language, IFormatProvider formatProvider, bool useSteamNames, CancellationToken token = default)
     {
         language ??= Localization.GetDefaultLanguage();
 
@@ -927,12 +915,12 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         {
             if (e.Killer == null)
             {
-                PlayerNames names = await F.GetPlayerOriginalNamesAsync(e.Instigator.m_SteamID);
+                PlayerNames names = await F.GetPlayerOriginalNamesAsync(e.Instigator.m_SteamID, token);
                 killerName = useSteamNames ? names.PlayerName : names.CharacterName;
             }
             else
             {
-                killerName = useSteamNames ? e.Killer.Name.PlayerName : e.Killer.Name.CharacterName;
+                killerName = useSteamNames ? e.Killer.Names.PlayerName : e.Killer.Names.CharacterName;
             }
         }
 
@@ -941,12 +929,12 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         {
             if (e.ThirdParty == null)
             {
-                PlayerNames names = await F.GetPlayerOriginalNamesAsync(e.ThirdPartyId.Value.m_SteamID);
+                PlayerNames names = await F.GetPlayerOriginalNamesAsync(e.ThirdPartyId.Value.m_SteamID, token);
                 thirdPartyName = useSteamNames ? names.PlayerName : names.CharacterName;
             }
             else
             {
-                thirdPartyName = useSteamNames ? e.ThirdParty.Name.PlayerName : e.ThirdParty.Name.CharacterName;
+                thirdPartyName = useSteamNames ? e.ThirdParty.Names.PlayerName : e.ThirdParty.Names.CharacterName;
             }
         }
 
@@ -958,13 +946,13 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
 
         string[] format =
         [
-            useSteamNames ? e.Player.Name.PlayerName : e.Player.Name.CharacterName, // {0}
-            killerName ?? string.Empty,                                             // {1}
-            Localization.TranslateEnum(e.Limb, language),                           // {2}
-            itemName ?? string.Empty,                                               // {3}
-            e.KillDistance.ToString("F0", formatProvider),                          // {4}
-            thirdPartyName ?? string.Empty,                                         // {5}
-            e.SecondaryAsset?.GetAsset()?.FriendlyName ?? string.Empty,             // {6}
+            useSteamNames ? e.Player.Names.PlayerName : e.Player.Names.CharacterName, // {0}
+            killerName ?? string.Empty,                                               // {1}
+            Localization.TranslateEnum(e.Limb, language),                             // {2}
+            itemName ?? string.Empty,                                                 // {3}
+            e.KillDistance.ToString("F0", formatProvider),                            // {4}
+            thirdPartyName ?? string.Empty,                                           // {5}
+            e.SecondaryAsset?.GetAsset()?.FriendlyName ?? string.Empty,               // {6}
         ];
 
         try
@@ -989,7 +977,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
 /// <summary>
 /// Represents a group of translations linked to a single <see cref="EDeathCause"/>, or a specific item, vehicle, or custom message key.
 /// </summary>
-internal class CauseGroup : IEquatable<CauseGroup>, ICloneable
+public class CauseGroup : IEquatable<CauseGroup>, ICloneable
 {
     public EDeathCause? Cause;
     public QuestParameterValue<Guid>? ItemCause;
@@ -1182,7 +1170,7 @@ internal class CauseGroup : IEquatable<CauseGroup>, ICloneable
     }
 }
 
-internal readonly struct DeathTranslation(DeathFlags flags, string value)
+public readonly struct DeathTranslation(DeathFlags flags, string value)
 {
     public readonly DeathFlags Flags = flags;
     public readonly string Value = value;

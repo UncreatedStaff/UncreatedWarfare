@@ -1,12 +1,10 @@
-﻿using System;
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Microsoft.Extensions.Logging;
 using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Phases;
 
 namespace Uncreated.Warfare.Zones.Pathing;
@@ -38,7 +36,7 @@ public class ManualZonePathingProvider : IZonePathingProvider
         {
             string zoneName = zoneNames[i];
 
-            Zone? zone = _zones.Zones.FirstOrDefault(zone => zone.Name.Equals(zoneName, StringComparison.Ordinal));
+            Zone? zone = _zones.Zones.FirstOrDefault(zone => zone.IsPrimary && zone.Name.Equals(zoneName, StringComparison.Ordinal));
             if (zone == null)
             {
                 _logger.LogError("There is no zone by the name \"{0}\" (#{1}).", zoneName.Length, i);

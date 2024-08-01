@@ -1,6 +1,5 @@
-﻿using Steamworks;
+﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Layouts.Teams;
@@ -8,8 +7,20 @@ namespace Uncreated.Warfare.Layouts.Teams;
 /// <summary>
 /// Represents a team or 'side' in a round.
 /// </summary>
-public class Team
+public class Team : IEquatable<Team>
 {
+    public static readonly Team NoTeam = new Team
+    {
+        Id = 0,
+        Faction = new FactionInfo(),
+        GroupId = default
+    };
+
+    /// <summary>
+    /// If this team has a valid <see cref="Id"/> and <see cref="GroupId"/>.
+    /// </summary>
+    public bool IsValid => Id > 0 && GroupId.m_SteamID > 0;
+
     /// <summary>
     /// Unique ID for the team.
     /// </summary>
@@ -25,25 +36,12 @@ public class Team
     /// </summary>
     public CSteamID GroupId { get; init; }
 
-    public List<Team> Opponents { get; private set; } = new List<Team>();
-
-    public static bool operator ==(Team team1, Team team2) => team1.GroupId == team2.GroupId;
-    public static bool operator !=(Team team1, Team team2) => team1.GroupId != team2.GroupId;
-    public static bool operator ==(ulong team1, Team team2) => team1 == team2.GroupId.m_SteamID;
-    public static bool operator !=(ulong team1, Team team2) => team1 != team2.GroupId.m_SteamID;
-    public static bool operator ==(Team team1, ulong team2) => team1.GroupId.m_SteamID == team2;
-    public static bool operator !=(Team team1, ulong team2) => team1.GroupId.m_SteamID != team2;
-    public static readonly Team NoTeam = new Team
-    {
-        Id = 0,
-        Faction = new FactionInfo(),
-        GroupId = new CSteamID()    
-    };
+    public List<Team> Opponents { get; } = new List<Team>();
 
     public override bool Equals(object? obj)
     {
         if (obj is Team otherTeam)
-            return GroupId == otherTeam.GroupId;
+            return Equals(otherTeam);
 
         if (obj is ulong otherGroup)
             return GroupId.m_SteamID == otherGroup;
@@ -51,10 +49,16 @@ public class Team
         return false;
     }
 
+    public bool Equals(Team? other)
+    {
+        return other is not null && GroupId.m_SteamID != other.GroupId.m_SteamID;
+    }
+
     public override int GetHashCode()
     {
         return GroupId.GetHashCode();
     }
+
     public static void DeclareEnemies(params Team[] teams)
     {
         foreach (Team team in teams)
@@ -71,4 +75,13 @@ public class Team
             }
         }
     }
+
+    public static bool operator ==(Team? team1, Team? team2) => team1 is null
+        ? team2 is null
+        : team2 is not null && team1.GroupId.m_SteamID == team2.GroupId.m_SteamID;
+    public static bool operator !=(Team? team1, Team? team2) => !(team1 == team2);
+    public static bool operator ==(ulong team1, Team? team2) => team1 == 0 ? team2 is null : team2 is not null && team1 == team2.GroupId.m_SteamID;
+    public static bool operator !=(ulong team1, Team? team2) => !(team1 == team2);
+    public static bool operator ==(Team? team1, ulong team2) => team2 == 0 ? team1 is null : team1 is not null && team2 == team1.GroupId.m_SteamID;
+    public static bool operator !=(Team? team1, ulong team2) => !(team1 == team2);
 }

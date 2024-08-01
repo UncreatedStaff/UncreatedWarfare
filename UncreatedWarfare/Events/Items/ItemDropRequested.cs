@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-
-namespace Uncreated.Warfare.Events.Items;
+﻿namespace Uncreated.Warfare.Events.Items;
 public class ItemDropRequested : CancellablePlayerEvent
 {
     private readonly Item _item;

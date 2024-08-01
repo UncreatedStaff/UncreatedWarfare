@@ -2,13 +2,9 @@
 //#define SHOW_BYTES
 
 using DanielWillett.ReflectionTools;
-using JetBrains.Annotations;
 using SDG.NetTransport;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -21,7 +17,6 @@ using Cysharp.Threading.Tasks;
 using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
-using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
@@ -34,9 +29,6 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
-using UnityEngine.Assertions;
 using Uncreated.Warfare.Players.Management.Legacy;
 #if NETSTANDARD || NETFRAMEWORK
 using Uncreated.Warfare.Networking.Purchasing;
@@ -168,56 +160,6 @@ public static class Data
     public static IRpcSerializer RpcSerializer { get; internal set; }
     public static IRpcRouter RpcRouter { get; internal set; }
     public static IModularRpcRemoteConnection RpcConnection { get; internal set; }
-
-    [OperationTest(DisplayName = "Fast Kits Check")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestFastKits()
-    {
-        Assert.IsTrue(UseFastKits);
-    }
-    [OperationTest(DisplayName = "ServerSpawnLegacyImpact Check")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestServerSpawnLegacyImpact()
-    {
-        Assert.IsNotNull(ServerSpawnLegacyImpact);
-    }
-    [OperationTest(DisplayName = "TransportConnectionListPool.Get Check")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestPullFromTransportConnectionListPool()
-    {
-        Assert.IsNotNull(PullFromTransportConnectionListPool);
-    }
-    [OperationTest(DisplayName = "InteractablePower.RefreshIsConnectedToPower Check")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestRefreshIsConnectedToPower()
-    {
-        Assert.IsNotNull(RefreshIsConnectedToPower);
-    }
-    [OperationTest(DisplayName = "RPC Check")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestRPCs()
-    {
-        Assert.IsNotNull(SendUpdateBarricadeState);
-        Assert.IsNotNull(SendDestroyItem);
-        Assert.IsNotNull(SendChangeText);
-        Assert.IsNotNull(SendMultipleBarricades);
-        Assert.IsNotNull(SendChatIndividual);
-    }
-    [OperationTest(DisplayName = "Generated Getters and Setters Check")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestGettersAndSetters()
-    {
-        Assert.IsNotNull(SetPrivateStance);
-        Assert.IsNotNull(SetOwnerHasInventory);
-        Assert.IsNotNull(GetItemManagerInstanceCount);
-        Assert.IsNotNull(ReplicateStance);
-    }
     public static bool IsInitialSyncRegistering { get; private set; } = true;
     public static WarfareSQL AdminSql => RemoteSQL ?? DatabaseManager;
 

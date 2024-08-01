@@ -1,11 +1,9 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Players.UI;
 

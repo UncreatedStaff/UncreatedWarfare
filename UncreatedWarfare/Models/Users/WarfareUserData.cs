@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Permissions;
 
 namespace Uncreated.Warfare.Models.Users;
 

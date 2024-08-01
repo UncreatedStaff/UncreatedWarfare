@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,7 +16,6 @@ using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 

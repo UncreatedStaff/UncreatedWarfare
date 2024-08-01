@@ -1,11 +1,9 @@
 ﻿using DanielWillett.SpeedBytes;
 using DanielWillett.SpeedBytes.Unity;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands.Permissions;
 

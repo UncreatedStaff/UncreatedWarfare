@@ -1,6 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-using SDG.Unturned;
 using System;
 using System.Threading;
 using Uncreated.Warfare.Components;

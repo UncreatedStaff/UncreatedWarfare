@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Stats.Records;
 

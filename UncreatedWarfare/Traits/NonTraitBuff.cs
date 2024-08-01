@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-
-namespace Uncreated.Warfare.Traits;
+﻿namespace Uncreated.Warfare.Traits;
 public abstract class NonTraitBuff : IBuff
 {
     private readonly string _icon;

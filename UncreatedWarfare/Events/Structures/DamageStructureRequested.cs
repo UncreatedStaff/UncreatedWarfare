@@ -1,7 +1,5 @@
-﻿using SDG.Unturned;
-using Uncreated.Warfare.Buildables;
+﻿using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Models.Assets;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Structures;
 public class DamageStructureRequested : CancellableEvent, IBuildableDestroyedEvent

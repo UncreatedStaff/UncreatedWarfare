@@ -1,6 +1,6 @@
-﻿using DanielWillett.ReflectionTools;
-using JetBrains.Annotations;
-using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
+using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,12 +11,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Steamworks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.Networking;
-using Uncreated.Networking.Async;
-using UnityEngine;
 
 namespace Uncreated.Warfare;
 public class ActionLog : MonoBehaviour
@@ -40,7 +34,7 @@ public class ActionLog : MonoBehaviour
     private static char[]? _nl;
     public static readonly DateTimeOffset MinDatetime = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero); // jan 1st, 2021
     private static ByteReader MetaReader => _metaReader ??= new ByteReader();
-    private static ByteWriter MetaWriter => _metaWriter ??= new ByteWriter(false, ActionLogMeta.Capacity);
+    private static ByteWriter MetaWriter => _metaWriter ??= new ByteWriter(ActionLogMeta.Capacity);
     public static ActionLog? Instance => _instance;
 #pragma warning disable CS0618
     private static char[][] Types
@@ -230,7 +224,7 @@ public class ActionLog : MonoBehaviour
                 DataReferencedPlayers = new List<ulong>(48),
                 UtcOffset = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now)
             };
-            if (Util.IsValidSteam64Id(item.Player) && !_current.LoggedPlayers.Contains(item.Player))
+            if (new CSteamID(item.Player).GetEAccountType() == EAccountType.k_EAccountTypeIndividual && !_current.LoggedPlayers.Contains(item.Player))
                 _current.LoggedPlayers.Add(item.Player);
 
             if (!string.IsNullOrEmpty(item.Data))
@@ -511,7 +505,7 @@ public class ActionLog : MonoBehaviour
                 {
                     MetaReader.LoadNew(stream);
                     meta = ReadMeta(MetaReader);
-                    MetaReader.Stream = null;
+                    MetaReader.LoadNew(Array.Empty<byte>());
                 }
 
                 MetaReader.ThrowOnError = f;
@@ -534,7 +528,7 @@ public class ActionLog : MonoBehaviour
                 {
                     readOneLine = true;
                     ActionLogItem item = n.Value;
-                    if (Util.IsValidSteam64Id(item.Player) && !logged.Contains(item.Player))
+                    if (new CSteamID(item.Player).GetEAccountType() == EAccountType.k_EAccountTypeIndividual && !logged.Contains(item.Player))
                     {
                         logged.Add(item.Player);
                     }
@@ -569,7 +563,7 @@ public class ActionLog : MonoBehaviour
                     break;
                 int end = index;
                 while (end - index < s64Lm1 && char.IsDigit(data[end + 1])) ++end;
-                if (end - index == s64Lm1 && ulong.TryParse(data.Substring(index, SteamIDLength), NumberStyles.Number, CultureInfo.InvariantCulture, out ulong steam64) && Util.IsValidSteam64Id(steam64) && !output.Contains(steam64))
+                if (end - index == s64Lm1 && ulong.TryParse(data.Substring(index, SteamIDLength), NumberStyles.Number, CultureInfo.InvariantCulture, out ulong steam64) && new CSteamID(steam64).GetEAccountType() == EAccountType.k_EAccountTypeIndividual && !output.Contains(steam64))
                     output.Add(steam64);
 
                 index = end;

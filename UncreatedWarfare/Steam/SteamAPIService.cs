@@ -1,24 +1,33 @@
 ﻿using Cysharp.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-using Uncreated.Framework;
-using Uncreated.Json;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Steam.Models;
 using UnityEngine.Networking;
 
-namespace Uncreated.Warfare.Networking;
-public sealed class SteamAPI
+namespace Uncreated.Warfare.Steam;
+public class SteamAPIService
 {
     private const string BaseUrl = "https://api.steampowered.com/";
+    private readonly IConfiguration _systemConfig;
+    private readonly ILogger<SteamAPIService> _logger;
 
-    public static async UniTask<PlayerSummary?> GetPlayerSummary(ulong player, CancellationToken token = default)
+    public SteamAPIService(IConfiguration systemConfig, ILogger<SteamAPIService> logger)
+    {
+        _systemConfig = systemConfig;
+        _logger = logger;
+    }
+
+    public async UniTask<PlayerSummary?> GetPlayerSummary(ulong player, CancellationToken token = default)
     {
         try
         {
-            PlayerSummary[] summary = await GetPlayerSummaries(new ulong[] { player }, token);
+            PlayerSummary[] summary = await GetPlayerSummaries([ player ], token);
             for (int i = 0; i < summary.Length; ++i)
             {
                 if (summary[i].Steam64 == player)
@@ -31,16 +40,13 @@ public sealed class SteamAPI
         }
         return null;
     }
-    public static string MakeUrl(string @interface, int version, string method, string? query)
+
+    public UniTask<PlayerSummary[]> GetPlayerSummaries(IList<ulong> players, CancellationToken token = default)
     {
-        string url = BaseUrl + @interface + "/" + method + "/v" + version.ToString(CultureInfo.InvariantCulture) + "?key=" + UCWarfare.Config.SteamAPIKey;
-        if (query != null)
-            url += "&" + query;
-        return url;
+        return GetPlayerSummaries(players, 0, players.Count, token);
     }
 
-    public static UniTask<PlayerSummary[]> GetPlayerSummaries(IList<ulong> players, CancellationToken token = default) => GetPlayerSummaries(players, 0, players.Count, token);
-    public static async UniTask<PlayerSummary[]> GetPlayerSummaries(IList<ulong> players, int index, int length, CancellationToken token = default)
+    public async UniTask<PlayerSummary[]> GetPlayerSummaries(IList<ulong> players, int index, int length, CancellationToken token = default)
     {
         if (string.IsNullOrEmpty(UCWarfare.Config.SteamAPIKey))
             throw new InvalidOperationException("Steam API key not present.");
@@ -88,11 +94,13 @@ public sealed class SteamAPI
 
         for (int tries = 0; tries < tryCt; ++tries)
         {
+            await UniTask.SwitchToMainThread(token);
+
             string responseText;
 
             try
             {
-                using UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + str));
+                using UnityWebRequest webRequest = UnityWebRequest.Get(CreateUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + str));
                 webRequest.timeout = tries + 1;
                 L.LogDebug($"Sending PlayerSummary request: {webRequest.url} with timeout {webRequest.timeout}... ({tries + 1}/{tryCt})");
                 await webRequest.SendWebRequest().WithCancellation(token);
@@ -122,7 +130,7 @@ public sealed class SteamAPI
 
             try
             {
-                PlayerSummariesResponse? responseData = JsonSerializer.Deserialize<PlayerSummariesResponse>(responseText, JsonEx.serializerSettings);
+                PlayerSummariesResponse? responseData = JsonSerializer.Deserialize<PlayerSummariesResponse>(responseText, ConfigurationSettings.JsonSerializerSettings);
 
                 return responseData?.Data.Results ?? Array.Empty<PlayerSummary>();
             }
@@ -133,5 +141,73 @@ public sealed class SteamAPI
         }
 
         return Array.Empty<PlayerSummary>(); // this will never be reached
+    }
+
+    public string? CreateUrl(string @interface, int version, string method, string? query)
+    {
+        string? apiKey = _systemConfig["steam_api_key"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            _logger.LogError("Steam API key is not configured in configuration at \"{0}\".", "steam_api_key");
+            throw new InvalidOperationException("Missing Steam API key.");
+        }
+
+        int vLen = F.CountDigits(version);
+        int stringLen = BaseUrl.Length + @interface.Length + 1 + method.Length + 2 + vLen + 5 + UCWarfare.Config.SteamAPIKey.Length;
+        if (query != null)
+            stringLen += 1 + query.Length;
+
+        CreateUrlState state = default;
+        state.APIKey = UCWarfare.Config.SteamAPIKey;
+        state.Version = version;
+        state.Method = method;
+        state.Interface = @interface;
+        state.VersionLength = vLen;
+        state.Query = query;
+
+        return string.Create(stringLen, state, (span, state) =>
+        {
+            int index = 0;
+            BaseUrl.AsSpan().CopyTo(span);
+            index += BaseUrl.Length;
+
+            state.Interface.AsSpan().CopyTo(span[index..]);
+            index += state.Interface.Length;
+
+            span[index++] = '/';
+
+            state.Method.AsSpan().CopyTo(span[index..]);
+            index += state.Method.Length;
+
+            span[index++] = '/';
+            span[index++] = 'v';
+
+            state.Version.TryFormat(span[index..], out _, "N0", CultureInfo.InvariantCulture);
+            index += state.VersionLength;
+
+            span[index++] = '?';
+            span[index++] = 'k';
+            span[index++] = 'e';
+            span[index++] = 'y';
+            span[index++] = '=';
+
+            state.APIKey.AsSpan().CopyTo(span[index..]);
+            index += state.APIKey.Length;
+
+            if (state.Query == null)
+                return;
+
+            span[index++] = '&';
+            state.Query.AsSpan().CopyTo(span[index..]);
+        });
+    }
+    private struct CreateUrlState
+    {
+        public string Interface;
+        public string Method;
+        public string? Query;
+        public string APIKey;
+        public int Version;
+        public int VersionLength;
     }
 }

@@ -4,9 +4,7 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using SDG.Framework.Modules;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,12 +21,13 @@ using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using Module = SDG.Framework.Modules.Module;
 
 namespace Uncreated.Warfare;
@@ -172,6 +171,10 @@ public sealed class WarfareModule : IModuleNexus
 
         serviceCollection.AddSingleton(this);
         serviceCollection.AddSingleton(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)));
+
+        serviceCollection.AddTransient<SteamAPIService>();
+
+        serviceCollection.AddSingleton<AudioRecordManager>();
 
         serviceCollection.AddSingleton<LayoutFactory>();
         serviceCollection.AddSingleton<ActionManager>();

@@ -1,7 +1,4 @@
-﻿using SDG.Unturned;
-using UnityEngine;
-
-namespace Uncreated.Warfare.Events.Vehicles;
+﻿namespace Uncreated.Warfare.Events.Vehicles;
 public class ProjectileSpawned : EventState
 {
     private readonly UCPlayer? _player;

@@ -1,10 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using JetBrains.Annotations;
-using Microsoft.Extensions.Logging;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -14,10 +10,7 @@ using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
-using UnityEngine;
 using static Uncreated.Warfare.Harmony.Patches;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
-using Object = UnityEngine.Object;
 
 namespace Uncreated.Warfare.Events.Patches;
 

@@ -1,7 +1,5 @@
-﻿using SDG.Unturned;
-using Uncreated.Warfare.Kits.Items;
+﻿using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 public struct HotkeyBinding

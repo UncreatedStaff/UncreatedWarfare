@@ -1,8 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
-using Steamworks;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -40,7 +37,6 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 #pragma warning disable IDE0060 // Remove unused parameter
 namespace Uncreated.Warfare;

@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;

@@ -1,7 +1,4 @@
-﻿using SDG.Unturned;
-using UnityEngine;
-
-namespace Uncreated.Warfare.Events.Vehicles;
+﻿namespace Uncreated.Warfare.Events.Vehicles;
 public class ThrowableSpawned : PlayerEvent
 {
     private readonly GameObject _throwable;

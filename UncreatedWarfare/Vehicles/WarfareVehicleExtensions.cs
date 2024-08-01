@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-
-namespace Uncreated.Warfare.Vehicles;
+﻿namespace Uncreated.Warfare.Vehicles;
 public static class WarfareVehicleExtensions
 {
     public static bool CanTransport(this WarfareVehicleInfo vehicleInfo, InteractableVehicle vehicle)

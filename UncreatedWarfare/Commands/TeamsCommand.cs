@@ -68,7 +68,7 @@ public class TeamsCommand : IExecutableCommand
         }
 
         ulong team = Context.Player.GetTeam();
-        if (team is 1 or 2 && !Context.Player.Player.IsInMain())
+        if (team is 1 or 2 && !Context.Player.UnturnedPlayer.IsInMain())
         {
             throw Context.Reply(T.NotInMain);
         }

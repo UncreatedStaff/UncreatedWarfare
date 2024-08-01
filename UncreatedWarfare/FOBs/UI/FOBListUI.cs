@@ -1,7 +1,6 @@
 ﻿using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Warfare.Players.Management.Legacy;

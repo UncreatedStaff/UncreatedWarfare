@@ -3,16 +3,12 @@ using DanielWillett.ModularRpcs;
 using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ReflectionTools;
-using JetBrains.Annotations;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Singletons;
 internal delegate void SingletonDelegate(IUncreatedSingleton singleton, bool success);

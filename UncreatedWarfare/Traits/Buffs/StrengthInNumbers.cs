@@ -1,9 +1,7 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Globalization;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Traits.Buffs;
 

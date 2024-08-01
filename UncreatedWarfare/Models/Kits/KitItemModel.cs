@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using SDG.Unturned;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Teams;

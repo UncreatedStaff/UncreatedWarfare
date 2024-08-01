@@ -1,6 +1,4 @@
-﻿using JetBrains.Annotations;
-using Microsoft.Extensions.Configuration;
-using SDG.Unturned;
+﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;

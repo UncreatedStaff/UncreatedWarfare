@@ -1,11 +1,8 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands;
@@ -83,7 +80,7 @@ public class GroupCommand : IExecutableCommand
                 groupId = TeamManager.GetGroupID(groupId);
             }
 
-            if (Context.Player.Player.quests.groupID.m_SteamID == groupId)
+            if (Context.Player.UnturnedPlayer.quests.groupID.m_SteamID == groupId)
             {
                 throw Context.Reply(T.AlreadyInGroup);
             }
@@ -95,7 +92,7 @@ public class GroupCommand : IExecutableCommand
                 throw Context.Reply(T.GroupNotFound, groupId.ToString(Data.LocalLocale));
             }
 
-            if (!Context.Player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
+            if (!Context.Player.UnturnedPlayer.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
             {
                 throw Context.Reply(T.GroupNotFound, groupId.ToString(Data.LocalLocale));
             }
@@ -110,7 +107,7 @@ public class GroupCommand : IExecutableCommand
 
             if (team == 0)
             {
-                team = Context.Player.Player.quests.groupID.m_SteamID;
+                team = Context.Player.UnturnedPlayer.quests.groupID.m_SteamID;
             }
 
             if (team is > 0 and < 4)
@@ -127,7 +124,7 @@ public class GroupCommand : IExecutableCommand
         }
         else if (Context.ArgumentCount == 0)
         {
-            GroupInfo info = GroupManager.getGroupInfo(Context.Player.Player.quests.groupID);
+            GroupInfo info = GroupManager.getGroupInfo(Context.Player.UnturnedPlayer.quests.groupID);
             if (info == null)
                 throw Context.Reply(T.NotInGroup);
             Context.Reply(T.CurrentGroup, Context.CallerId.m_SteamID, info.name, TeamManager.GetTeamColor(info.groupID.m_SteamID.GetTeam()));

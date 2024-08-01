@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
@@ -15,9 +13,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
 public class KitRequests(KitManager manager)

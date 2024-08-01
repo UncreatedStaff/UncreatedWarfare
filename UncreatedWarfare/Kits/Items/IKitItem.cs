@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
 

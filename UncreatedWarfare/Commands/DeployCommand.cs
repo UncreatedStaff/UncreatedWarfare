@@ -4,7 +4,6 @@ using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -44,7 +43,7 @@ public class DeployCommand : IExecutableCommand
 
         Context.AssertArgs(1, Syntax + " - " + Help);
 
-        if (Context.MatchParameter(0, "cancel", "stop") && Context.Player.Player.TryGetPlayerData(out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
+        if (Context.MatchParameter(0, "cancel", "stop") && Context.Player.UnturnedPlayer.TryGetPlayerData(out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
         {
             comp.CancelDeployment();
             throw Context.Reply(T.DeployCancelled);
@@ -55,14 +54,14 @@ public class DeployCommand : IExecutableCommand
 
         string input = Context.GetRange(0)!;
 
-        UCPlayerData? c = Context.Player.Player.GetPlayerData(out _);
+        UCPlayerData? c = Context.Player.UnturnedPlayer.GetPlayerData(out _);
         if (c is null) throw Context.SendUnknownError();
 
         ulong team = Context.Player.GetTeam();
         if (team is not 1 and not 2)
             throw Context.Reply(T.NotOnCaptureTeam);
 
-        bool inMain = Context.Player.Player.IsInMain();
+        bool inMain = Context.Player.UnturnedPlayer.IsInMain();
         bool inLobby = !inMain && TeamManager.LobbyZone.IsInside(Context.Player.Position);
         bool shouldCancelOnMove = !inMain;
         bool shouldCancelOnDamage = !inMain;

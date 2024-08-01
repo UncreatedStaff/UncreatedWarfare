@@ -1,7 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Proximity;
 public static class ProximityExtensions

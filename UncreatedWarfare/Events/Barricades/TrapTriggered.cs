@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-using Uncreated.Warfare.Events.Components;
-using UnityEngine;
+﻿using Uncreated.Warfare.Events.Components;
 
 namespace Uncreated.Warfare.Events.Barricades;
 

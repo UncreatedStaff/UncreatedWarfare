@@ -1,10 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
-using JetBrains.Annotations;
-using Microsoft.Extensions.Logging;
-using SDG.Unturned;
-using Steamworks;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
@@ -15,9 +11,7 @@ using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
-using UnityEngine;
 using static Uncreated.Warfare.Harmony.Patches;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Uncreated.Warfare.Events.Patches;
 

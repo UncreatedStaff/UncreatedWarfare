@@ -1,6 +1,4 @@
 ﻿using SDG.Framework.Utilities;
-using SDG.Unturned;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Proximity;
 

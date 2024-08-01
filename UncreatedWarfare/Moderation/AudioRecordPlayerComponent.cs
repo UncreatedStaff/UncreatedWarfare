@@ -1,6 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using DanielWillett.SpeedBytes;
-using SDG.Unturned;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,22 +8,26 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players;
 using Unity.Collections;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Moderation;
+
+/// <summary>
+/// Highly-effecient voice data recorder that stores a bunch of different packets in one block of bytes.
+/// </summary>
 public class AudioRecordPlayerComponent : IPlayerComponent
 {
     private static readonly ByteWriter MetaWriter = new ByteWriter(capacity: 0);
     private const ushort DataVersion = 1;
+    private AudioRecordManager _audioListenService = null!;
 
     private byte[]? _voiceBuffer;
     private List<PacketInfo>? _packets;
     private IReadOnlyList<PacketInfo>? _packetsReadOnly;
     private int _startIndex;
     private int _byteCount;
-    public UCPlayer Player { get; set; }
+    public WarfarePlayer Player { get; set; }
     public int PacketCount => _packets?.Count ?? 0;
     public ArraySegment<byte> RingSectionOne
     {
@@ -136,12 +140,12 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     {
         await UniTask.SwitchToMainThread(token);
 
-        byte[] data = AudioRecordManager.Instance.CreateMultipartPacket(this);
+        byte[] data = _audioListenService.CreateMultipartPacket(this);
         if (data.Length == 0)
             return AudioRecordManager.AudioConvertResult.NoData;
         File.WriteAllBytes(@"C:\Users\danny\OneDrive\Desktop\multi-part.txt", data);
 
-        return await AudioRecordManager.Instance.TryWriteWavAsync(data, writeTo, leaveOpen, token);
+        return await _audioListenService.TryWriteWavAsync(data, writeTo, leaveOpen, token);
     }
     public void WriteMetaFile(Stream writeTo, bool includeData = false, bool leaveOpen = true)
     {
@@ -202,7 +206,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     }
     public void WriteMetaFilePlayerSection(ByteWriter writer, bool includeData = false)
     {
-        writer.Write(Player.Steam64);
+        writer.Write(Player.Steam64.m_SteamID);
         writer.Write(PacketCount);
         for (int i = 0; i < PacketCount; ++i)
         {
@@ -235,7 +239,11 @@ public class AudioRecordPlayerComponent : IPlayerComponent
 
         }
     }
-    void IPlayerComponent.Init() { }
+
+    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    {
+        _audioListenService = serviceProvider.GetRequiredService<AudioRecordManager>();
+    }
 
     [Conditional("DEBUG")]
     public void Dump()
@@ -256,22 +264,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
             int endInd = i == _packets.Count - 1 ? (_startIndex + _byteCount) % _voiceBuffer.Length : _packets[i + 1].StartIndex;
             int packetSize = endInd < stInd ? _voiceBuffer!.Length - stInd + endInd : endInd - stInd;
             L.LogDebug($"Packet {i} starts at {_packets[i].StartIndex} and ends at {endInd}, size: {packetSize}. Wraps around? {stInd > endInd}");
-            //byte[] packet = new byte[packetSize];
-            //if (stInd > endInd)
-            //{
-            //    Buffer.BlockCopy(_voiceBuffer, stInd, packet, 0, _voiceBuffer.Length - stInd);
-            //    Buffer.BlockCopy(_voiceBuffer, 0, packet, _voiceBuffer.Length - stInd, endInd);
-            //}
-            //else
-            //{
-            //    Buffer.BlockCopy(_voiceBuffer, stInd, packet, 0, packetSize);
-            //}
-
-            //L.LogDebug(Convert.ToBase64String(packet));
         }
-
-        // L.LogDebug("Whole buffer: " + Convert.ToBase64String(_voiceBuffer));
-
     }
 }
 

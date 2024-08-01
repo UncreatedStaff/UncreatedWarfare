@@ -1,5 +1,4 @@
 ﻿using System;
-using Uncreated.Warfare.Gamemodes.Flags;
 
 namespace Uncreated.Warfare;
 

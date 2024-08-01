@@ -1,25 +1,18 @@
-﻿using JetBrains.Annotations;
-using SDG.NetTransport;
-using SDG.Unturned;
+﻿using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
-using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare;

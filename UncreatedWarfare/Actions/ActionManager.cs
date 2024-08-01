@@ -1,8 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Components;
@@ -13,9 +11,7 @@ using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Actions;
 

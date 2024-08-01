@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-
-namespace Uncreated.Warfare.Proximity;
+﻿namespace Uncreated.Warfare.Proximity;
 
 /// <inheritdoc />
 public class AABBProximity : IAABBProximity

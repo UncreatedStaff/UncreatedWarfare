@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Uncreated.Warfare.Util.List;
-public class TrackingList<T> : IEnumerable<T>, IList<T>
+public class TrackingList<T> : IList<T>
 {
     private readonly HashSet<T> _set;
     private readonly List<T> _list;
@@ -19,6 +18,12 @@ public class TrackingList<T> : IEnumerable<T>, IList<T>
     {
         _list = new List<T>();
         _set = new HashSet<T>();
+    }
+    
+    public TrackingList(int capacity)
+    {
+        _list = new List<T>(capacity);
+        _set = new HashSet<T>(capacity);
     }
 
     public IEnumerator<T> GetEnumerator() => _list.GetEnumerator();
@@ -88,7 +93,7 @@ public class TrackingList<T> : IEnumerable<T>, IList<T>
         _set.RemoveWhere(predicate);
     }
 
-    public bool TryGet(int index, out T? item)
+    public bool TryGet(int index, [MaybeNullWhen(false)] out T item)
     {
         item = default;
         if (index < Count)
@@ -101,7 +106,7 @@ public class TrackingList<T> : IEnumerable<T>, IList<T>
     public ReadOnlyTrackingList<T> AsReadOnly() => new ReadOnlyTrackingList<T>(this);
 }
 
-public class ReadOnlyTrackingList<T> : IEnumerable<T>, IReadOnlyList<T>
+public class ReadOnlyTrackingList<T> : IReadOnlyList<T>
 {
     private readonly TrackingList<T> _list;
 
@@ -125,17 +130,4 @@ public class ReadOnlyTrackingList<T> : IEnumerable<T>, IReadOnlyList<T>
     public void CopyTo(T[] array, int arrayIndex) => _list.CopyTo(array, arrayIndex);
 
     public bool TryGet(int index, out T? item) => _list.TryGet(index, out item);
-}
-
-public static class ListExtensions
-{
-    public static TrackingList<T> ToackingList<T>(this IEnumerable<T> enumerable)
-    {
-        TrackingList<T> list = new TrackingList<T>();
-        foreach (T item in enumerable)
-        {
-            list.Add(item);
-        }
-        return list;
-    }
 }

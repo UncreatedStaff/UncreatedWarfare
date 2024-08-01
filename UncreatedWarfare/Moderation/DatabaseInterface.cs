@@ -1,10 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using MySql.Data.MySqlClient;
-using SDG.Unturned;
-using Steamworks;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -23,8 +19,8 @@ using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Moderation;
 public class DatabaseInterface
@@ -74,9 +70,10 @@ public class DatabaseInterface
     public event Action<ModerationEntry>? OnNewModerationEntryAdded;
     public event Action<ModerationEntry>? OnModerationEntryUpdated;
     public ModerationCache Cache { get; } = new ModerationCache(64);
-
-    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger)
+    internal SteamAPIService SteamAPI { get; }
+    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, SteamAPIService steamApi)
     {
+        SteamAPI = steamApi;
         Sql = mySqlProvider;
         _logger = logger;
     }

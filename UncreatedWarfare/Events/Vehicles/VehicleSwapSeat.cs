@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-
-namespace Uncreated.Warfare.Events.Vehicles;
+﻿namespace Uncreated.Warfare.Events.Vehicles;
 public class VehicleSwapSeat : PlayerEvent
 {
     private readonly InteractableVehicle _vehicle;

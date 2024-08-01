@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-
-namespace Uncreated.Warfare.Events.Players;
+﻿namespace Uncreated.Warfare.Events.Players;
 public sealed class PlayerAided : CancellablePlayerEvent
 {
     public UCPlayer Medic { get; }

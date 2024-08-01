@@ -1,8 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using MySql.Data.MySqlClient;
 using SDG.NetTransport;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -13,19 +12,13 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using Uncreated.Warfare.Steam.Models;
 using Types = SDG.Unturned.Types;
 
 namespace Uncreated.Warfare;
@@ -1658,8 +1651,14 @@ public static class F
     }
     public static T[] ToArrayFast<T>(this IEnumerable<T> enumerable, bool copy = false)
     {
-        if (!copy && enumerable is T[] list)
-            return list;
+        if (!copy && enumerable is T[] array)
+            return array;
+
+        if (enumerable is List<T> list && list.Count == list.Capacity && Accessor.TryGetUnderlyingArray(list, out T[] underlying))
+        {
+            return underlying;
+        }
+
         return enumerable.ToArray();
     }
     /// <summary>
@@ -1775,7 +1774,7 @@ public static class F
             return await player.GetPlayerSummary(allowCache, token);
         }
 
-        PlayerSummary? playerSummary = await Networking.SteamAPI.GetPlayerSummary(steam64, token);
+        PlayerSummary? playerSummary = await Steam.SteamAPIService.GetPlayerSummary(steam64, token);
         await UniTask.SwitchToMainThread(token);
 #if DEBUG
         ThreadUtil.assertIsGameThread();
@@ -1810,7 +1809,7 @@ public static class F
 
         if (pls.Count <= 0)
             return;
-        PlayerSummary[] summaries = await Networking.SteamAPI.GetPlayerSummaries(pls, token);
+        PlayerSummary[] summaries = await Steam.SteamAPIService.GetPlayerSummaries(pls, token);
         for (int i = 0; i < summaries.Length; ++i)
         {
             PlayerSummary summary = summaries[i];

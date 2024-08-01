@@ -1,8 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-using SDG.Unturned;
 using System;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using Uncreated.Warfare.Events;

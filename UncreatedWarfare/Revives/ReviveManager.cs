@@ -1,7 +1,4 @@
-﻿using JetBrains.Annotations;
-using SDG.Framework.Utilities;
-using SDG.Unturned;
-using Steamworks;
+﻿using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +16,6 @@ using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
-using UnityEngine;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Revives;

@@ -1,7 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -10,8 +7,6 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
-using UnityEngine;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2

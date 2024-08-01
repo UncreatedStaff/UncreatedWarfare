@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Players;
@@ -16,6 +15,7 @@ public abstract class BaseSkillset : ICloneable
     public uint Id { get; set; }
 
     [Column("Skill")]
+    [StringLength(20)]
     public string Skill
     {
         get => Skillset.Speciality switch

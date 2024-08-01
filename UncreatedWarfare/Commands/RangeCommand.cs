@@ -1,8 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -40,7 +38,7 @@ public class RangeCommand : IExecutableCommand
         int distance;
         if (!Data.Is<ISquads>())
         {
-            distance = Mathf.RoundToInt((Context.Player.Position - Context.Player.Player.quests.markerPosition).magnitude / Precision) * Precision;
+            distance = Mathf.RoundToInt((Context.Player.Position - Context.Player.UnturnedPlayer.quests.markerPosition).magnitude / Precision) * Precision;
             throw Context.Reply(T.RangeOutput, distance);
         }
 
