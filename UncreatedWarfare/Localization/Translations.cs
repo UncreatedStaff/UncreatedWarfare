@@ -9,8 +9,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;

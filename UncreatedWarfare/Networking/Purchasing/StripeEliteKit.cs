@@ -1,12 +1,9 @@
-﻿using Cysharp.Threading.Tasks;
-using Stripe;
+﻿using Stripe;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;

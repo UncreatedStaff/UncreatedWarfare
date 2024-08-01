@@ -1,7 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using System.Threading;
-
-namespace Uncreated.Warfare.Services;
+﻿namespace Uncreated.Warfare.Services;
 
 /// <summary>
 /// Runs at module startup and shutdown.

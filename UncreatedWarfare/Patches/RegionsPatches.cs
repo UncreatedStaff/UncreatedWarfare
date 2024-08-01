@@ -2,7 +2,6 @@
 using SDG.NetPak;
 using SDG.NetTransport;
 using System;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Traits;
 
 // ReSharper disable InconsistentNaming

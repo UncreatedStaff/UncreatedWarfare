@@ -3,7 +3,6 @@ using DanielWillett.ReflectionTools.Formatting;
 using System;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using Uncreated.Warfare.Commands.Permissions;
 
 namespace Uncreated.Warfare.Commands.Dispatch;

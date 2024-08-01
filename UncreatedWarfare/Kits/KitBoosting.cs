@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Singletons;
 

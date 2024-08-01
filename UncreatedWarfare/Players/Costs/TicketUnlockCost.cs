@@ -1,7 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using System.Threading;
-
-namespace Uncreated.Warfare.Players.Costs;
+﻿namespace Uncreated.Warfare.Players.Costs;
 
 public class TicketUnlockCost : UnlockCost
 {

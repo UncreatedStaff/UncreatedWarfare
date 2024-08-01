@@ -1,13 +1,10 @@
-﻿using Cysharp.Threading.Tasks;
-using MySql.Data.MySqlClient;
+﻿using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Database.Manual;

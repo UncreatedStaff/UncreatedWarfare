@@ -6,8 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Moderation.Punishments;
 

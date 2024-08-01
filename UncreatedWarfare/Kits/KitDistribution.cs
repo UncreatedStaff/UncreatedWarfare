@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;

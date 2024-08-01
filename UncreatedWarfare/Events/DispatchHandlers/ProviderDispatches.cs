@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;

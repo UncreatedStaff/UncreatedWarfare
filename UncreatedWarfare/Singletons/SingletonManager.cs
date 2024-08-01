@@ -1,5 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using DanielWillett.ModularRpcs;
+﻿using DanielWillett.ModularRpcs;
 using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ReflectionTools;
@@ -7,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Singletons;
 internal delegate void SingletonDelegate(IUncreatedSingleton singleton, bool success);

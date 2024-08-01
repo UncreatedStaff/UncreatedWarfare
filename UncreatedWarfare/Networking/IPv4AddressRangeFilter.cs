@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Networking;
 // ReSharper disable once InconsistentNaming

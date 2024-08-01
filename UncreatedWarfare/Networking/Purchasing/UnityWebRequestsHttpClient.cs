@@ -1,6 +1,5 @@
 ﻿#if NETSTANDARD || NETFRAMEWORK
 #define TELEMETRY
-using Cysharp.Threading.Tasks;
 using Stripe;
 using System;
 using System.Collections.Generic;
@@ -12,8 +11,6 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEngine.Networking;
 #if TELEMETRY

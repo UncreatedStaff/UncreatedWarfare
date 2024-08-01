@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using System.Threading;
 
 namespace Uncreated.Warfare.Moderation.Punishments.Presets;
 public static class PunishmentPresets

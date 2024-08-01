@@ -1,8 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts.Teams;

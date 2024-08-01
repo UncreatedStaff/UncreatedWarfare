@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Management.Legacy;
 

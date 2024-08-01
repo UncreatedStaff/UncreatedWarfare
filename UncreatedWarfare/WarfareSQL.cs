@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players.Management.Legacy;
 

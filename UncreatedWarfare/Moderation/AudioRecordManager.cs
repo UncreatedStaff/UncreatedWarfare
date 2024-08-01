@@ -1,5 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using HarmonyLib;
+﻿using HarmonyLib;
 using Microsoft.Extensions.Configuration;
 using SDG.NetPak;
 using System;
@@ -9,7 +8,6 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
-using System.Threading;
 using Uncreated.Warfare.Networking;
 using UnityEngine.Networking;
 

@@ -1,6 +1,4 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Events.Items;
+﻿using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 
 namespace Uncreated.Warfare.Singletons;

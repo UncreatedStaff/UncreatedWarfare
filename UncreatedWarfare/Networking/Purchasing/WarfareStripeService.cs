@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Threading;
 
 namespace Uncreated.Warfare.Networking.Purchasing;
 public interface IStripeService
