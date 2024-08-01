@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Events;
@@ -17,6 +18,7 @@ namespace Uncreated.Warfare.Events;
 public partial class EventDispatcher2 : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly PlayerService _playerService;
     private readonly CancellationToken _unloadToken;
     private readonly ILogger<EventDispatcher2> _logger;
     private readonly Dictionary<EventListenerCacheKey, EventListenerInfo> _listeners = new Dictionary<EventListenerCacheKey, EventListenerInfo>();
@@ -26,6 +28,8 @@ public partial class EventDispatcher2 : IHostedService
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<EventDispatcher2>>();
         _unloadToken = serviceProvider.GetRequiredService<WarfareModule>().UnloadToken;
+
+        _playerService = serviceProvider.GetRequiredService<PlayerService>();
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)

@@ -28,6 +28,11 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// If the player this object represents is currently online. Set to false *after* the leave event is fired.
     /// </summary>
     public bool IsOnline { get; private set; } = true;
+    
+    /// <summary>
+    /// If the player this object represents is currently in the process of disconnecting.
+    /// </summary>
+    public bool IsDisconnecting { get; private set; } = true;
 
     /// <summary>
     /// List of auto-added components.
@@ -41,6 +46,11 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     public ITransportConnection Connection => SteamPlayer.transportConnection;
     public Vector3 Position => Transform.position;
     public float Yaw => Transform.eulerAngles.y;
+
+    /// <summary>
+    /// A <see cref="CancellationToken"/> that cancels after the player leaves.
+    /// </summary>
+    public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
 
     internal WarfarePlayer(Player player, ILogger logger, IReadOnlyList<IPlayerComponent> components)
     {
@@ -69,6 +79,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         try
         {
             _disconnectTokenSource.Cancel();
+            IsDisconnecting = false;
             IsOnline = false;
         }
         finally
@@ -76,6 +87,10 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
             _disconnectTokenSource.Dispose();
             _logger.LogInformation("Player {0} left the server.", this);
         }
+    }
+    public void StartDisconnecting()
+    {
+        IsDisconnecting = true;
     }
 
     public override string ToString()

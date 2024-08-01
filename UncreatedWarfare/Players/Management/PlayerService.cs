@@ -45,6 +45,7 @@ public class PlayerService
         _logger = loggerFactory.CreateLogger<PlayerService>();
     }
 
+    // todo add variation of PendingAsyncData
     internal WarfarePlayer CreateWarfarePlayer(Player player)
     {
         lock (_onlinePlayersDictionary)
@@ -76,19 +77,17 @@ public class PlayerService
         }
     }
 
-    internal WarfarePlayer OnPlayerLeft(Player player)
+    internal WarfarePlayer OnPlayerLeft(WarfarePlayer player)
     {
         lock (_onlinePlayersDictionary)
         {
-            WarfarePlayer left = GetOnlinePlayer(player.channel.owner.playerID.steamID.m_SteamID);
+            RemoveComponents(player);
 
-            RemoveComponents(left);
+            _onlinePlayers.Remove(player);
+            _onlinePlayersDictionary.Remove(player.Steam64);
 
-            _onlinePlayers.Remove(left);
-            _onlinePlayersDictionary.Remove(left.Steam64);
-
-            left.ApplyOfflineState();
-            return left;
+            player.ApplyOfflineState();
+            return player;
         }
     }
 

@@ -1,11 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Events;
@@ -44,14 +42,13 @@ partial class EventDispatcher2
         PendingAsyncData.RemoveAt(index);
         PendingAsyncData.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Steam64.m_SteamID));
 
-        PlayerService playerService = _serviceProvider.GetRequiredService<PlayerService>();
-        WarfarePlayer newPlayer = playerService.CreateWarfarePlayer(steamPlayer.player);
+        WarfarePlayer newPlayer = _playerService.CreateWarfarePlayer(steamPlayer.player);
 
         PlayerJoined args = new PlayerJoined
         {
             Player = newPlayer,
             SaveData = newPlayer.Save,
-            IsNewPlayer = !newPlayer.Save.SaveFileExists
+            IsNewPlayer = !newPlayer.Save.WasReadFromFile
         };
 
         _ = DispatchEventAsync(args, newPlayer.DisconnectToken);
@@ -62,7 +59,7 @@ partial class EventDispatcher2
     /// </summary>
     private void ProviderOnServerDisconnected(CSteamID steam64)
     {
-        UCPlayer? player = UCPlayer.FromCSteamID(steam64);
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(steam64);
         if (player == null)
         {
             ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerDisconnected));
@@ -70,10 +67,10 @@ partial class EventDispatcher2
             return;
         }
 
-        player.IsLeaving = true;
+        player.StartDisconnecting();
 
-        Transform t = player.Player.transform;
-        Transform aim = player.Player.look.aim;
+        Transform t = player.Transform;
+        Transform aim = player.UnturnedPlayer.look.aim;
         CancellationTokenSource disconnectToken = new CancellationTokenSource();
 
         PlayerLeft args = new PlayerLeft
@@ -83,7 +80,7 @@ partial class EventDispatcher2
             Rotation = t.rotation,
             LookPosition = aim.position,
             LookForward = aim.forward,
-            Team = player.Faction == null ? null : new Team { GroupId = new CSteamID(player.GetTeam()), Faction = player.Faction, Id = (int)player.GetTeam() }, // todo
+            Team = player.UnturnedPlayer == null ? null : new Team { GroupId = new CSteamID(player.GetTeam()), Faction = player.Faction, Id = (int)player.GetTeam() }, // todo
             DisconnectToken = disconnectToken.Token
         };
 
@@ -93,7 +90,7 @@ partial class EventDispatcher2
 
         try
         {
-            PlayerManager.InvokePlayerDisconnected(player);
+            _playerService.OnPlayerLeft(player);
         }
         catch (Exception ex)
         {
@@ -110,7 +107,7 @@ partial class EventDispatcher2
     /// </summary>
     private void ProviderOnBattlEyeKick(SteamPlayer client, string reason)
     {
-        UCPlayer? player = UCPlayer.FromSteamPlayer(client);
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(client);
         if (player == null)
         {
             ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onBattlEyeKick));
