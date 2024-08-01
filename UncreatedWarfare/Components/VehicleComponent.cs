@@ -1,14 +1,18 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Zones;
 using Random = UnityEngine.Random;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
@@ -16,42 +20,66 @@ namespace Uncreated.Warfare.Components;
 
 public class VehicleComponent : MonoBehaviour
 {
+    private const int StartingFlaresAttackHeli = 30;
+    private const int StartingFlaresTransportHeli = 50;
+    private const int StartingFlaresJet = 30;
+    public const int FlareBurstCount = 10;
+    public const int FlareCooldown = 11;
+
     public static readonly VehicleHUD VehicleHUD = new VehicleHUD();
+
+    private PlayerService _playerService = null!;
 
     private Zone? _noDropZone;
     private Zone? _noPickZone;
     private Zone? _safezoneZone;
+    private Vector3 _lastPosInterval;
+    private float _totalDistance;
+    private float _lastCheck;
+    private float _lastZoneCheck;
+    private float _timeLastFlare;
+    private float _timeLastFlareDrop;
+    private int _flareBurst;
+    public ulong LastDriver;
+    public float LastDriverTime;
+    public float LastDriverDistance;
     public Guid LastItem;
     public bool LastItemIsVehicle;
     public InteractableVehicle Vehicle;
     public InteractableVehicle? LastDamagedFromVehicle;
-    public SqlItem<VehicleData>? Data;
     public EDamageOrigin LastDamageOrigin;
     public ulong LastInstigator;
     public CSteamID LastLocker;
     private bool _isResupplied;
     private Coroutine? _quotaLoop;
     private Coroutine? _autoSupplyLoop;
-    private Dictionary<ulong, DateTime> _timeEnteredTable;
-    private Dictionary<ulong, DateTime> _timeRewardedTable;
+    private PlayerDictionary<DateTime> _timeEnteredTable;
+    private PlayerDictionary<DateTime> _timeRewardedTable;
     public Dictionary<ulong, KeyValuePair<ushort, DateTime>> DamageTable;
     public ulong PreviousOwner;
+    public float TotalDistanceTravelled => _totalDistance;
     public float TimeRequested { get; set; }
     public Stack<ulong> OwnerHistory { get; } = new Stack<ulong>(2);
     public ulong Team => Vehicle.lockedGroup.m_SteamID.GetTeam();
-    public Dictionary<ulong, Vector3> TransportTable { get; private set; }
-    public Dictionary<ulong, double> UsageTable { get; private set; }
+    public PlayerDictionary<Vector3> TransportTable { get; private set; }
+    public PlayerDictionary<double> UsageTable { get; private set; }
     public float Quota { get; set; }
     public float RequiredQuota { get; set; }
     public Coroutine? ForceSupplyLoop { get; private set; }
+    public WarfareVehicleInfo? VehicleData { get; private set; }
 
+    /// <summary>
+    /// The spawn the vehicle was created at, if any.
+    /// </summary>
+    // todo fill this value
+    public VehicleSpawnInfo? Spawn { get; private set; }
     public Zone? SafezoneZone
     {
         get
         {
-            if (Warfare.Data.Gamemode is null)
+            if (Data.Gamemode is null)
                 return null;
-            if (Time.time - _lastZoneCheck < Warfare.Data.Gamemode.EventLoopSpeed)
+            if (Time.time - _lastZoneCheck < Data.Gamemode.EventLoopSpeed)
                 CheckZones();
             return _safezoneZone;
         }
@@ -60,9 +88,9 @@ public class VehicleComponent : MonoBehaviour
     {
         get
         {
-            if (Warfare.Data.Gamemode is null)
+            if (Data.Gamemode is null)
                 return null;
-            if (Time.time - _lastZoneCheck < Warfare.Data.Gamemode.EventLoopSpeed)
+            if (Time.time - _lastZoneCheck < Data.Gamemode.EventLoopSpeed)
                 CheckZones();
             return _noDropZone;
         }
@@ -71,30 +99,30 @@ public class VehicleComponent : MonoBehaviour
     {
         get
         {
-            if (Warfare.Data.Gamemode is null)
+            if (Data.Gamemode is null)
                 return null;
-            if (Time.time - _lastZoneCheck < Warfare.Data.Gamemode.EventLoopSpeed)
+            if (Time.time - _lastZoneCheck < Data.Gamemode.EventLoopSpeed)
                 CheckZones();
             return _noPickZone;
         }
     }
 
-    public bool IsGroundVehicle => Data?.Item != null && VehicleData.IsGroundVehicle(Data.Item.Type);
-    public bool IsArmor => Data?.Item != null && VehicleData.IsArmor(Data.Item.Type);
-    public bool IsLogistics => Data?.Item != null && VehicleData.IsLogistics(Data.Item.Type);
-    public bool IsAircraft => Data?.Item != null && VehicleData.IsAircraft(Data.Item.Type);
-    public bool IsAssaultAircraft => Data?.Item != null && VehicleData.IsAssaultAircraft(Data.Item.Type);
-    public bool IsEmplacement => Data?.Item != null && VehicleData.IsEmplacement(Data.Item.Type);
-    public bool IsInVehiclebay => Data?.Item != null;
-    public bool CanTransport => Data?.Item != null && VehicleData.CanTransport(Data.Item, Vehicle);
+    public bool IsGroundVehicle => VehicleData != null && VehicleData.Type.IsGroundVehicle();
+    public bool IsArmor => VehicleData != null && VehicleData.Type.IsArmor();
+    public bool IsLogistics => VehicleData != null && VehicleData.Type.IsLogistics();
+    public bool IsAircraft => VehicleData != null && VehicleData.Type.IsAircraft();
+    public bool IsAssaultAircraft => VehicleData != null && VehicleData.Type.IsAssaultAircraft();
+    public bool IsEmplacement => VehicleData != null && VehicleData.Type.IsEmplacement();
+    public bool IsInVehiclebay => VehicleData != null;
+    public bool CanTransport => VehicleData != null && VehicleData.CanTransport(Vehicle);
 
-    public void Initialize(InteractableVehicle vehicle)
+    public void Initialize(InteractableVehicle vehicle, IServiceProvider serviceProvider)
     {
         Vehicle = vehicle;
-        TransportTable = new Dictionary<ulong, Vector3>();
-        UsageTable = new Dictionary<ulong, double>();
-        _timeEnteredTable = new Dictionary<ulong, DateTime>();
-        _timeRewardedTable = new Dictionary<ulong, DateTime>();
+        TransportTable = new PlayerDictionary<Vector3>(8);
+        UsageTable = new PlayerDictionary<double>(8);
+        _timeEnteredTable = new PlayerDictionary<DateTime>();
+        _timeRewardedTable = new PlayerDictionary<DateTime>();
         DamageTable = new Dictionary<ulong, KeyValuePair<ushort, DateTime>>();
         _isResupplied = true;
         if (vehicle.lockedOwner.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
@@ -103,20 +131,24 @@ public class VehicleComponent : MonoBehaviour
         Quota = 0;
         RequiredQuota = -1;
 
-        VehicleBay? bay = VehicleBay.GetSingletonQuick();
-        if (bay != null)
+        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+
+        VehicleInfoStore? vehicleInfoStore = serviceProvider.GetService<VehicleInfoStore>();
+        if (vehicleInfoStore != null)
         {
-            Data = bay.GetDataProxySync(Vehicle.asset.GUID);
-            if (Data?.Item != null)
-                vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(Data.Item.Type, vehicle);
+            VehicleData = vehicleInfoStore.GetVehicleInfo(Vehicle.asset);
+            if (VehicleData != null)
+            {
+                vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(VehicleData.Type, vehicle);
+            }
         }
         _lastPosInterval = transform.position;
 
         foreach (var passenger in Vehicle.turrets)
         {
-            if (VehicleBay.Config.GroundAAWeapons.HasID(passenger.turret.itemID))
+            if (VehicleBay.Config.GroundAAWeapons.ContainsId(passenger.turret.itemID))
                 passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(700, 1500, Gamemode.Config.EffectLockOn1, 0.7f, 14.6f);
-            if (VehicleBay.Config.AirAAWeapons.HasID(passenger.turret.itemID))
+            if (VehicleBay.Config.AirAAWeapons.ContainsId(passenger.turret.itemID))
                 passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2, 1, 11);
         }
 
@@ -133,11 +165,12 @@ public class VehicleComponent : MonoBehaviour
             comp.OwnerHistory.Push(steam64);
         }
     }
-    public bool IsType(VehicleType type) => Data?.Item != null && Data.Item.Type == type;
+    public bool IsType(VehicleType type) => VehicleData != null && VehicleData.Type == type;
     private void CheckZones()
     {
+        // todo not sure if we're keeping this
         _lastZoneCheck = Time.time;
-        if (Warfare.Data.Singletons.TryGetSingleton(out ZoneList zoneList))
+        if (Data.Singletons.TryGetSingleton(out ZoneList zoneList))
         {
             zoneList.WriteWait();
             try
@@ -182,28 +215,16 @@ public class VehicleComponent : MonoBehaviour
             }
         }
     }
-    private bool TryEnsureDataUpdated()
+
+    private void ShowHUD(WarfarePlayer player, byte seat)
     {
-        if (Data?.Item == null)
-        {
-            if (Warfare.Data.Singletons.TryGetSingleton(out VehicleBay bay))
-            {
-                Data = bay.GetDataProxySync(Vehicle.asset.GUID);
-                return Data?.Item != null;
-            }
-            return false;
-        }
-        return true;
-    }
-    private void ShowHUD(UCPlayer player, byte seat)
-    {
-        if (Data?.Item == null)
+        if (VehicleData == null)
             return;
 
         if (!IsAircraft)
             return;
 
-        if (!Data.Item.CrewSeats.ArrayContains(seat))
+        if (!VehicleData.IsCrewSeat(seat))
             return;
 
         VehicleHUD.SendToPlayer(player.Connection);
@@ -224,67 +245,66 @@ public class VehicleComponent : MonoBehaviour
         if (driver != null)
             VehicleHUD.FlareCount.SetText(driver.transportConnection, "FLARES: " + _totalFlaresLeft);
     }
-    private void HideHUD(UCPlayer player)
+    private void HideHUD(WarfarePlayer player)
     {
         VehicleHUD.ClearFromPlayer(player.Connection);
     }
     internal void OnPlayerEnteredVehicle(EnterVehicle e)
     {
-        UCPlayer player = e.Player;
+        WarfarePlayer player = e.Player;
 
         byte toSeat = e.PassengerIndex;
         if (toSeat == 0)
         {
-            LastDriver = player.Steam64;
+            LastDriver = player.Steam64.m_SteamID;
             LastDriverTime = Time.realtimeSinceStartup;
             _totalDistance = 0;
         }
-        if (TryEnsureDataUpdated())
+
+        if (VehicleData.IsCrewSeat(toSeat))
         {
-            if (!Data!.Item!.IsCrewSeat(toSeat))
-            {
-                TransportTable[player.Steam64] = player.Position;
-            }
-
-            _timeEnteredTable[player.Steam64] = DateTime.UtcNow;
-
-            if (_quotaLoop is null)
-            {
-                RequiredQuota = Data.Item.TicketCost * 0.5f;
-                _quotaLoop = StartCoroutine(QuotaLoop());
-            }
+            TransportTable[player] = player.Position;
         }
+
+        _timeEnteredTable[player] = DateTime.UtcNow;
+
+        if (_quotaLoop is null)
+        {
+            RequiredQuota = VehicleData.TicketCost * 0.5f;
+            _quotaLoop = StartCoroutine(QuotaLoop());
+        }
+
         ShowHUD(player, toSeat);
     }
     public void OnPlayerExitedVehicle(ExitVehicle e)
     {
         if (IsInVehiclebay)
-            EvaluateUsage(e.Player.Player.channel.owner);
+            EvaluateUsage(e.Player.UnturnedPlayer.channel.owner);
 
         HideHUD(e.Player);
         
         if (e.Player.KitClass == Class.Squadleader &&
-            (Data?.Item != null && VehicleData.IsLogistics(Data.Item.Type)) &&
+            (VehicleData != null && VehicleData.Type.IsLogistics()) &&
             !F.IsInMain(e.Player.Position) &&
-            Warfare.Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(e.Player.Position, e.Player.GetTeam()) == null
+            Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(e.Player.Position, e.Player.GetTeam()) == null
             )
         {
             Tips.TryGiveTip(e.Player, 300, T.TipPlaceRadio);
         }
 
         if (e.Vehicle.passengers.Length > 0 && e.Vehicle.passengers[0] == null || e.Vehicle.passengers[0].player == null ||
-            e.Vehicle.passengers[0].player.player.channel.owner.playerID.steamID.m_SteamID == e.Player.Steam64)
+            e.Vehicle.passengers[0].player.player.channel.owner.playerID.steamID.m_SteamID == e.Player.Steam64.m_SteamID)
         {
-            if (LastDriver == e.Player.Steam64)
+            if (LastDriver == e.Player.Steam64.m_SteamID)
                 LastDriverDistance = _totalDistance;
             return;
         }
-        if (TransportTable.TryGetValue(e.Player.Steam64, out Vector3 original))
+        if (TransportTable.TryGetValue(e.Player, out Vector3 original))
         {
             float distance = (e.Player.Position - original).magnitude;
             if (distance >= 200 && e.Player.KitClass is not Class.Crewman and not Class.Pilot)
             {
-                if (!(_timeRewardedTable.TryGetValue(e.Player.Steam64, out DateTime time) && (DateTime.UtcNow - time).TotalSeconds < 60))
+                if (!(_timeRewardedTable.TryGetValue(e.Player, out DateTime time) && (DateTime.UtcNow - time).TotalSeconds < 60))
                 {
                     int amount = (int)(Math.Floor(distance / 100) * 2) + 5;
 
@@ -294,10 +314,11 @@ public class VehicleComponent : MonoBehaviour
 
                     Quota += 0.5F;
 
-                    _timeRewardedTable[e.Player.Steam64] = DateTime.UtcNow;
+                    _timeRewardedTable[e.Player] = DateTime.UtcNow;
                 }
             }
-            TransportTable.Remove(e.Player.Steam64);
+
+            TransportTable.Remove(e.Player);
         }
     }
     public void OnPlayerSwapSeatRequested(VehicleSwapSeat e)
@@ -305,7 +326,7 @@ public class VehicleComponent : MonoBehaviour
         if (e.NewSeat == 0)
         {
             // new driver
-            LastDriver = e.Player.Steam64;
+            LastDriver = e.Player.Steam64.m_SteamID;
             LastDriverTime = Time.realtimeSinceStartup;
             _totalDistance = 0;
         }
@@ -314,10 +335,10 @@ public class VehicleComponent : MonoBehaviour
         {
             EvaluateUsage(e.Player.SteamPlayer);
 
-            if (!Data!.Item!.CrewSeats.Contains(e.NewSeat))
-                TransportTable.TryAdd(e.Player.Steam64, e.Player.Position);
+            if (VehicleData.IsCrewSeat(e.NewSeat))
+                TransportTable.TryAdd(e.Player, e.Player.Position);
             else
-                TransportTable.Remove(e.Player.Steam64);
+                TransportTable.Remove(e.Player);
         }
 
         ShowHUD(e.Player, e.NewSeat);
@@ -325,28 +346,28 @@ public class VehicleComponent : MonoBehaviour
     public void EvaluateUsage(SteamPlayer player)
     {
         byte currentSeat = player.player.movement.getSeat();
-        bool isCrewSeat = Data?.Item != null && Data.Item.CrewSeats.ArrayContains(currentSeat);
+        bool isCrewSeat = VehicleData.IsCrewSeat(currentSeat);
 
-        if (currentSeat == 0 || isCrewSeat)
-        {
-            ulong s64 = player.playerID.steamID.m_SteamID;
+        if (currentSeat != 0 && !isCrewSeat)
+            return;
 
-            if (_timeEnteredTable.TryGetValue(s64, out DateTime start))
-            {
-                double time = (DateTime.UtcNow - start).TotalSeconds;
-                if (!UsageTable.ContainsKey(s64))
-                    UsageTable.Add(s64, time);
-                else
-                    UsageTable[s64] += time;
-            }
-        }
+        CSteamID s64 = player.playerID.steamID;
+
+        if (!_timeEnteredTable.TryGetValue(s64, out DateTime start))
+            return;
+
+        double time = (DateTime.UtcNow - start).TotalSeconds;
+        if (!UsageTable.ContainsPlayer(s64))
+            UsageTable.Add(s64, time);
+        else
+            UsageTable[s64] += time;
     }
     private int _totalFlaresLeft;
     public void ReloadCountermeasures()
     {
-        if (Data?.Item is { Type: var type })
+        if (VehicleData != null)
         {
-            _totalFlaresLeft = type switch
+            _totalFlaresLeft = VehicleData.Type switch
             {
                 VehicleType.AttackHeli => StartingFlaresAttackHeli,
                 VehicleType.TransportAir => StartingFlaresTransportHeli,
@@ -373,33 +394,19 @@ public class VehicleComponent : MonoBehaviour
     }
     private void ToggleMissileWarning(bool enabled)
     {
-        if (Data is null)
+        if (VehicleData is null)
             return;
-        ListSqlConfig<VehicleData>? manager = Data.Manager;
-        if (manager is null)
-            return;
-        manager.WriteWait();
-        try
-        {
-            VehicleData? data = Data.Item;
-            if (data is null)
-                return;
-            for (byte i = 0; i < Vehicle.passengers.Length; i++)
-            {
-                Passenger passenger = Vehicle.passengers[i];
-                if (passenger?.player != null && data.IsCrewSeat(i))
-                {
-                    VehicleHUD.MissileWarning.SetVisibility(passenger.player.transportConnection, enabled);
-                    if (i == 0)
-                        VehicleHUD.MissileWarningDriver.SetVisibility(passenger.player.transportConnection, enabled);
-                }
-            }
-        }
-        finally
-        {
-            manager.WriteRelease();
-        }
 
+        for (byte i = 0; i < Vehicle.passengers.Length; i++)
+        {
+            Passenger passenger = Vehicle.passengers[i];
+            if (passenger?.player == null || !VehicleData.IsCrewSeat(i))
+                continue;
+
+            VehicleHUD.MissileWarning.SetVisibility(passenger.player.transportConnection, enabled);
+            if (i == 0)
+                VehicleHUD.MissileWarningDriver.SetVisibility(passenger.player.transportConnection, enabled);
+        }
     }
     public void StartForceLoadSupplies(UCPlayer caller, SupplyType type, int amount)
     {
@@ -407,7 +414,7 @@ public class VehicleComponent : MonoBehaviour
     }
     public bool TryStartAutoLoadSupplies()
     {
-        if (_isResupplied || _autoSupplyLoop != null || Data?.Item is null || Data.Item.Metadata is null || Data.Item.Metadata.TrunkItems is null || Vehicle.trunkItems is null)
+        if (_isResupplied || _autoSupplyLoop != null || VehicleData?.Trunk == null || Vehicle.trunkItems == null)
             return false;
 
         _autoSupplyLoop = StartCoroutine(AutoSupplyLoop());
@@ -462,51 +469,76 @@ public class VehicleComponent : MonoBehaviour
         TeamManager.GetFaction(Team).Build.TryGetAsset(out ItemAsset? build);
         TeamManager.GetFaction(Team).Ammo.TryGetAsset(out ItemAsset? ammo);
 
-        UCPlayer? driver = UCPlayer.FromID(LastDriver);
+        WarfarePlayer? driver = _playerService.GetOnlinePlayerOrNull(LastDriver);
 
         int loaderCount = 0;
 
         bool shouldMessagePlayer = false;
-        if (Data?.Item == null)
+
+        if (VehicleData == null)
             yield break;
-        if (Data.Item.Metadata?.TrunkItems != null)
+
+        if (VehicleData.Trunk != null)
         {
-            List<ISpecificPageKitItem> trunk = Data.Item.Metadata.TrunkItems;
+            IReadOnlyList<WarfareVehicleInfo.TrunkItem> trunk = VehicleData.Trunk;
             for (int i = 0; i < trunk.Count; i++)
             {
                 ItemAsset? asset;
-                ISpecificPageKitItem trunkItem = trunk[i];
-                if (build is not null && trunkItem.Item.Guid == build.GUID) asset = build;
-                else if (ammo is not null && trunkItem.Item.Guid == ammo.GUID) asset = ammo;
-                else asset = trunkItem.Item.GetAsset<ItemAsset>();
-
-                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunkItem.X, trunkItem.Y, asset.size_x, asset.size_y, trunkItem.Rotation) &&
-                    TeamManager.IsInMain(Vehicle.lockedGroup.m_SteamID.GetTeam(), Vehicle.transform.position))
+                WarfareVehicleInfo.TrunkItem trunkItem = trunk[i];
+                if (build != null && trunkItem.Item.Guid == build.GUID)
                 {
-                    Item item = new Item(asset.id, trunkItem.Amount, 100, Util.CloneBytes(trunkItem.State));
-                    Vehicle.trunkItems.addItem(trunkItem.X, trunkItem.Y, trunkItem.Rotation, item);
-                    loaderCount++;
-
-                    if (loaderCount >= 3)
-                    {
-                        loaderCount = 0;
-                        F.TryTriggerSupplyEffect(asset == build ? SupplyType.Build : SupplyType.Ammo, Vehicle.transform.position);
-                        shouldMessagePlayer = true;
-
-                        yield return new WaitForSeconds(1);
-                        while (Vehicle.ReplicatedSpeed is < -1 or > 1)
-                            yield return new WaitForSeconds(1);
-                    }
+                    asset = build;
                 }
+                else if (ammo != null && trunkItem.Item.Guid == ammo.GUID)
+                {
+                    asset = ammo;
+                }
+                else
+                {
+                    asset = trunkItem.Item.GetAsset();
+                }
+
+                if (asset == null
+                    || !Vehicle.trunkItems.checkSpaceEmpty(trunkItem.X, trunkItem.Y, asset.size_x, asset.size_y, trunkItem.Rotation)
+                    || !TeamManager.IsInMain(Vehicle.lockedGroup.m_SteamID.GetTeam(), Vehicle.transform.position))
+                {
+                    continue;
+                }
+
+                byte[] state;
+                if (trunkItem.State is { Length: > 0 })
+                {
+                    state = new byte[trunkItem.State.Length];
+                    Buffer.BlockCopy(trunkItem.State, 0, state, 0, state.Length);
+                }
+                else
+                {
+                    state = Array.Empty<byte>();
+                }
+
+                Item item = new Item(asset.id, asset.amount, 100, state);
+                Vehicle.trunkItems.addItem(trunkItem.X, trunkItem.Y, trunkItem.Rotation, item);
+                loaderCount++;
+
+                if (loaderCount < 3)
+                    continue;
+
+                loaderCount = 0;
+                F.TryTriggerSupplyEffect(asset == build ? SupplyType.Build : SupplyType.Ammo, Vehicle.transform.position);
+                shouldMessagePlayer = true;
+
+                yield return new WaitForSeconds(1);
+                while (Vehicle.ReplicatedSpeed is < -1 or > 1)
+                    yield return new WaitForSeconds(1);
             }
         }
 
         _isResupplied = true;
         _autoSupplyLoop = null;
 
-        if (shouldMessagePlayer && driver is not null && driver.IsOnline && F.IsInMain(driver.Position) && Data?.Item != null)
+        if (shouldMessagePlayer && driver is { IsOnline: true } && F.IsInMain(driver.Position) && VehicleData != null)
         {
-            Tips.TryGiveTip(driver, 120, T.TipLogisticsVehicleResupplied, Data.Item.Type);
+            Tips.TryGiveTip(driver, 120, T.TipLogisticsVehicleResupplied, VehicleData.Type);
         }
     }
     private IEnumerator<WaitForSeconds> QuotaLoop()
@@ -519,7 +551,7 @@ public class VehicleComponent : MonoBehaviour
             if (F.IsInMain(Vehicle.transform.position))
             {
                 //var ammoCrate = BarricadeUtility.CountBarricadesInRange(30, Vehicle.transform.position, Gamemode.Config.Barricades.AmmoCrateGUID, true).FirstOrDefault();
-                if (Vehicle.ReplicatedSpeed >= -1 && Vehicle.ReplicatedSpeed <= 1)
+                if (Vehicle.ReplicatedSpeed is >= -1 and <= 1)
                 {
                     TryStartAutoLoadSupplies();
                 }
@@ -537,16 +569,7 @@ public class VehicleComponent : MonoBehaviour
             }
         }
     }
-    private Vector3 _lastPosInterval;
-    private float _totalDistance;
-    public float TotalDistanceTravelled => _totalDistance;
-    private float _lastCheck;
-    private float _lastZoneCheck;
-    public ulong LastDriver;
-    public float LastDriverTime;
-    public float LastDriverDistance;
 
-    [SuppressMessage(Warfare.Data.SuppressCategory, Warfare.Data.SuppressID)]
     [UsedImplicitly]
     private void Update()
     {
@@ -554,23 +577,24 @@ public class VehicleComponent : MonoBehaviour
         if (time - _lastCheck > 3f)
         {
             _lastCheck = time;
-            if (Vehicle.passengers[0]?.player == null) return;
+            if (Vehicle.passengers[0]?.player == null)
+            {
+                return;
+            }
+
             Vector3 pos = transform.position;
-            if (pos == _lastPosInterval) return;
+            if (pos == _lastPosInterval)
+            {
+                return;
+            }
+
             float old = _totalDistance;
             _totalDistance += (_lastPosInterval - pos).magnitude;
             QuestManager.OnDistanceUpdated(LastDriver, _totalDistance, _totalDistance - old, this);
             _lastPosInterval = pos;
         }
     }
-    private float _timeLastFlare;
-    private float _timeLastFlareDrop;
-    private int _flareBurst;
-    const int StartingFlaresAttackHeli = 30;
-    const int StartingFlaresTransportHeli = 50;
-    const int StartingFlaresJet = 30;
-    public const int FlareBurstCount = 10;
-    public const int FlareCooldown = 11;
+
     public void TryDropFlares()
     {
         if (Time.time - _timeLastFlareDrop < FlareCooldown || _totalFlaresLeft < 0)
@@ -579,41 +603,47 @@ public class VehicleComponent : MonoBehaviour
         _flareBurst = FlareBurstCount;
         _timeLastFlareDrop = Time.time;
 
-        byte[] crewseats = Data?.Item == null ? Array.Empty<byte>() : Data.Item.CrewSeats;
+        if (!VehicleBay.Config.CountermeasureEffectID.TryGetAsset(out EffectAsset? countermeasureEffect))
+            return;
+
         for (byte seat = 0; seat < Vehicle.passengers.Length; seat++)
         {
-            if (Vehicle.passengers[seat].player != null && crewseats.ArrayContains(seat) && VehicleBay.Config.CountermeasureEffectID.HasValue)
-                EffectManager.sendUIEffect(VehicleBay.Config.CountermeasureEffectID.Value, (short)VehicleBay.Config.CountermeasureEffectID.Value.Id, Vehicle.passengers[seat].player.transportConnection, true);
+            if (Vehicle.passengers[seat].player != null && VehicleData.IsCrewSeat(seat))
+                EffectManager.sendUIEffect(countermeasureEffect.id, -1, Vehicle.passengers[seat].player.transportConnection, true);
         }
     }
 
     [UsedImplicitly]
     private void FixedUpdate()
     {
-        if (_totalFlaresLeft > 0 && _flareBurst > 0 && Time.time - _timeLastFlare > 0.2f)
-        {
-            _timeLastFlare = Time.time;
+        if (_totalFlaresLeft <= 0 || _flareBurst <= 0 || !(Time.time - _timeLastFlare > 0.2f))
+            return;
 
-            InteractableVehicle? countermeasureVehicle = VehicleManager.spawnVehicleV2(VehicleBay.Config.CountermeasureGUID.Value.Id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
+        _timeLastFlare = Time.time;
 
-            float sideforce = Random.Range(20, 30);
+        if (!VehicleBay.Config.CountermeasureGUID.TryGetAsset(out VehicleAsset? countermeasureAsset))
+            return;
 
-            if (_flareBurst % 2 == 0) sideforce = -sideforce;
+        InteractableVehicle? countermeasureVehicle = VehicleManager.spawnVehicleV2(countermeasureAsset, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
 
-            Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
-            Vector3 velocity = Vehicle.transform.forward * Vehicle.ReplicatedSpeed * 0.9f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
-            rigidbody.velocity = velocity;
+        float sideforce = Random.Range(20f, 30f);
 
-            var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();
+        if (_flareBurst % 2 == 0) sideforce = -sideforce;
 
-            Countermeasure.ActiveCountermeasures.Add(countermeasure);
+        Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
+        Vector3 velocity = Vehicle.transform.forward * Vehicle.ReplicatedSpeed * 0.9f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
+        rigidbody.velocity = velocity;
 
-            _totalFlaresLeft--;
-            _flareBurst--;
-            UpdateHUDFlares();
-        }
+        var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();
+
+        Countermeasure.ActiveCountermeasures.Add(countermeasure);
+
+        _totalFlaresLeft--;
+        _flareBurst--;
+        UpdateHUDFlares();
     }
 }
+
 public enum SupplyType
 {
     Build,

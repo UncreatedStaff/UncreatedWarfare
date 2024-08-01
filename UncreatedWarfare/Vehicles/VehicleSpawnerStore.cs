@@ -29,7 +29,7 @@ public class VehicleSpawnerStore : ISessionHostedService
     /// List of all spawns.
     /// </summary>
     /// <remarks>Use <see cref="SaveAsync"/> or <see cref="AddOrUpdateSpawnAsync"/> when making changes.</remarks>
-    public IReadOnlyList<VehicleSpawnInfo> Spawns { get; set; }
+    public IReadOnlyList<VehicleSpawnInfo> Spawns { get; }
 
     public VehicleSpawnerStore(ILogger<VehicleSpawnerStore> logger)
     {
@@ -228,9 +228,7 @@ public class VehicleSpawnerStore : ISessionHostedService
         // version
         writer.Write((byte)0);
 
-        List<VehicleSpawnInfo> spawns = _spawns;
-
-        int spawnCount = spawns.Count;
+        int spawnCount = _spawns.Count;
         writer.Write(spawnCount);
         for (int i = 0; i < spawnCount; ++i)
         {

@@ -32,7 +32,7 @@ public class PopupUI : UnturnedUI
             Buttons[i].OnClicked += OnButtonClicked;
         }
     }
-    public static void SendToastCallback(UCPlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui)
+    public static void SendToastCallback(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui)
     {
         PopupUI popup = (PopupUI)ui;
         if (message.Argument != null)

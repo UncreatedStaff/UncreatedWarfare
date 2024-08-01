@@ -1,5 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
@@ -7,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Threading;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -35,6 +34,30 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
         _logger = logger;
         _fileProvider = new PhysicalFileProvider(Path.Join(_warfare.HomeDirectory, "Vehicles"));
         Vehicles = new ReadOnlyCollection<WarfareVehicleInfo>(_vehicles);
+    }
+
+    /// <summary>
+    /// Finds the vehicle info associated with the given <paramref name="guid"/>, if it exists.
+    /// </summary>
+    public WarfareVehicleInfo? GetVehicleInfo(Guid guid)
+    {
+        return guid == Guid.Empty ? null : _vehicles.Find(x => x.Vehicle.MatchGuid(guid));
+    }
+
+    /// <summary>
+    /// Finds the vehicle info associated with the given <paramref name="asset"/>, if it exists.
+    /// </summary>
+    public WarfareVehicleInfo? GetVehicleInfo(VehicleAsset? asset)
+    {
+        return asset == null ? null : _vehicles.Find(x => x.Vehicle.MatchAsset(asset));
+    }
+
+    /// <summary>
+    /// Finds the vehicle info associated with the given <paramref name="asset"/>, if it exists.
+    /// </summary>
+    public WarfareVehicleInfo? GetVehicleInfo(IAssetLink<VehicleAsset>? asset)
+    {
+        return asset == null ? null : _vehicles.Find(x => x.Vehicle.MatchAsset(asset));
     }
 
     /// <inheritdoc />

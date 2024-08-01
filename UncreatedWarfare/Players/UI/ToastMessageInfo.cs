@@ -15,7 +15,7 @@ public enum ToastMessageStyle
     FlashingWarning
 }
 
-public delegate void SendToastWithCustomUI(UCPlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui);
+public delegate void SendToastWithCustomUI(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui);
 public sealed class ToastMessageInfo
 {
     private bool _durationOverridden;
@@ -73,10 +73,10 @@ public sealed class ToastMessageInfo
         RequiresResend = requiresResend && canResend;
         Key = requiresClearing || inturrupt || canResend ? UnturnedUIKeyPool.Claim() : (short)-1;
     }
-    public void UpdateAsset(IAssetContainer assetContainer)
+    public void UpdateAsset(IAssetLink<EffectAsset> assetContainer)
     {
-        Asset = assetContainer.Asset as EffectAsset;
-        UI?.LoadFromConfig(assetContainer);
+        Asset = assetContainer.GetAsset();
+        UI?.LoadFromConfig(Asset);
         if (!Assets.isLoading)
         {
             OnLevelLoaded(Level.BUILD_INDEX_GAME);

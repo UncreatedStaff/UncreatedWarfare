@@ -141,6 +141,9 @@
     <Using Include="System.Collections" />
     <Using Include="UnityEngine" />
     <Using Include="Steamworks" />
+    <Using Include="System.Threading" />
+    <Using Include="System.Threading.Tasks" />
+    <Using Include="Cysharp.Threading.Tasks" />
     <Using Include="UnityEngine.Object">
       <Alias>Object</Alias>
     </Using>

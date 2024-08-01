@@ -8,6 +8,7 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Saves;
+using Uncreated.Warfare.Players.UI;
 
 namespace Uncreated.Warfare.Players;
 
@@ -52,6 +53,9 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
 
+
+    public ToastManager Toasts { get; }
+
     internal WarfarePlayer(Player player, ILogger logger, IReadOnlyList<IPlayerComponent> components)
     {
         _disconnectTokenSource = new CancellationTokenSource();
@@ -65,6 +69,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         Save.Load();
 
         Components = components;
+        Toasts = new ToastManager(this);
 
         _logger.LogInformation("Player {0} joined the server", this);
     }

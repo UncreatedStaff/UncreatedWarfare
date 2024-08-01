@@ -46,7 +46,11 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>
     public class AbandonInfo
     {
         public bool AllowAbandon { get; set; } = true;
-        public double AbandonValueLossSpeed { get; set; } = 0.125d;
+
+        /// <summary>
+        /// Amount of credits lost per second of vehicle life.
+        /// </summary>
+        public double ValueLossSpeed { get; set; } = 0.125d;
     }
 
     public class TrunkItem
@@ -75,7 +79,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>
         Rearm.AmmoConsumed = other.Rearm.AmmoConsumed;
         Rearm.Items = other.Rearm.Items;
         
-        Abandon.AbandonValueLossSpeed = other.Abandon.AbandonValueLossSpeed;
+        Abandon.ValueLossSpeed = other.Abandon.ValueLossSpeed;
         Abandon.AllowAbandon = other.Abandon.AllowAbandon;
 
         UnlockRequirements = other.UnlockRequirements;

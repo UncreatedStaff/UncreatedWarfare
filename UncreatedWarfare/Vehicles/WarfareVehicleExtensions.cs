@@ -1,4 +1,6 @@
-﻿namespace Uncreated.Warfare.Vehicles;
+﻿using System.Linq;
+
+namespace Uncreated.Warfare.Vehicles;
 public static class WarfareVehicleExtensions
 {
     public static bool CanTransport(this WarfareVehicleInfo vehicleInfo, InteractableVehicle vehicle)
@@ -11,6 +13,11 @@ public static class WarfareVehicleExtensions
         return !IsEmplacement(vehicleInfo.Type)
                && vehicleInfo.Crew.Seats != null
                && vehicleInfo.Crew.Seats.Count < passengerCt;
+    }
+
+    public static bool IsCrewSeat(this WarfareVehicleInfo? vehicleInfo, byte seatIndex)
+    {
+        return vehicleInfo?.Crew?.Seats != null && vehicleInfo.Crew.Seats.Contains(seatIndex);
     }
 
     public static bool IsGroundVehicle(this VehicleType type)   => !IsAircraft(type);

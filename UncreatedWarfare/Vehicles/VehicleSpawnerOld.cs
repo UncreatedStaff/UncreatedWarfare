@@ -31,7 +31,7 @@ namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(VehicleBay))]
 [SingletonDependency(typeof(StructureSaver))]
-public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListenerAsync, IGameStartListener, IStagingPhaseOverListener, ITimeSyncListener, IFlagCapturedListener, IFlagNeutralizedListener, ICacheDiscoveredListener, ICacheDestroyedListener
+public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartListenerAsync, IGameStartListener, IStagingPhaseOverListener, ITimeSyncListener, IFlagCapturedListener, IFlagNeutralizedListener, ICacheDiscoveredListener, ICacheDestroyedListener
 {
     private static readonly List<InteractableVehicle> NearbyTempOutput = new List<InteractableVehicle>(4);
     public const ushort MaxBatteryCharge = 10000;
@@ -47,8 +47,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         EventDispatcher.VehicleSwapSeatRequested += OnVehicleSwapSeatRequested;
         EventDispatcher.ExitVehicleRequested += OnVehicleExitRequested;
         EventDispatcher.ExitVehicle += OnVehicleExit;
-        EventDispatcher.VehicleSpawned += OnVehicleSpawned;
-        EventDispatcher.VehicleLockChangeRequested += OnChangeLockRequested;
         TeamManager.OnPlayerEnteredMainBase += OnPlayerEnterMain;
         TeamManager.OnPlayerLeftMainBase += OnPlayerLeftMain;
         EventDispatcher.BarricadeDestroyed += OnBarricadeDestroyed;
@@ -67,8 +65,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         EventDispatcher.BarricadeDestroyed -= OnBarricadeDestroyed;
         TeamManager.OnPlayerLeftMainBase -= OnPlayerLeftMain;
         TeamManager.OnPlayerEnteredMainBase -= OnPlayerEnterMain;
-        EventDispatcher.VehicleLockChangeRequested += OnChangeLockRequested;
-        EventDispatcher.VehicleSpawned -= OnVehicleSpawned;
         EventDispatcher.ExitVehicle -= OnVehicleExit;
         EventDispatcher.ExitVehicleRequested -= OnVehicleExitRequested;
         EventDispatcher.VehicleSwapSeatRequested -= OnVehicleSwapSeatRequested;
@@ -535,76 +531,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         }
     }
 
-    /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
-    public void AbandonAllVehicles(bool respawn)
-    {
-        ThreadUtil.assertIsGameThread();
-        List<(InteractableVehicle, SqlItem<VehicleData>?, SqlItem<VehicleSpawn>?)> candidates = new List<(InteractableVehicle, SqlItem<VehicleData>?, SqlItem<VehicleSpawn>?)>(32);
-        WriteWait();
-        try
-        {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                VehicleSpawn? v = Items[i]?.Item;
-                if (v != null && v.HasLinkedVehicle(out InteractableVehicle veh))
-                {
-                    ulong t = veh.lockedGroup.m_SteamID.GetTeam();
-                    if (t == 1ul && TeamManager.Team1Main.IsInside(veh.transform.position) ||
-                        t == 2ul && TeamManager.Team2Main.IsInside(veh.transform.position))
-                    {
-                        candidates.Add((veh, v.Vehicle, Items[i]));
-                    }
-                }
-            }
-        }
-        finally
-        {
-            WriteRelease();
-        }
-
-        foreach ((InteractableVehicle vehicle, SqlItem<VehicleData>? data, SqlItem<VehicleSpawn>? spawn) in candidates)
-        {
-            if (!vehicle.isDead && !vehicle.isExploded)
-                AbandonVehicle(vehicle, data, spawn, respawn);
-        }
-    }
-    /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
-    /// <returns><see langword="true"/> if all the info is found about the vehicle and its deleted, <see langword="false"/> if it's just deleted (or is already dead).</returns>
-    public bool AbandonVehicle(InteractableVehicle vehicle, SqlItem<VehicleData>? data, SqlItem<VehicleSpawn>? spawn, bool respawn = true)
-    {
-        ThreadUtil.assertIsGameThread();
-        if (vehicle == null || vehicle.isDead || vehicle.isExploded)
-            return false;
-        VehicleData? dt = (data ?? VehicleBay.GetSingletonQuick()?.GetDataProxySync(vehicle.asset.GUID))?.Item;
-        if (spawn is null)
-            TryGetSpawn(vehicle, out spawn);
-        VehicleSpawn? sp = spawn?.Item;
-        UCPlayer? pl = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
-        bool found = false;
-        if (sp != null)
-        {
-            VehicleBayComponent? component = sp.Structure?.Item?.Buildable?.Model.GetComponent<VehicleBayComponent>();
-            found = dt != null && pl != null && component != null;
-            if (found && dt!.CreditCost > 0 && component!.RequestTime != 0 &&
-                // check if the ownership has changed in the vehicle's history, don't award credits if so, to prevent transferring credits.
-                (!vehicle.TryGetComponent(out VehicleComponent vehicleComponent) || vehicleComponent.OwnerHistory.Count < 2))
-            {
-                int creditReward = dt.CreditCost - Mathf.Min(dt.CreditCost,
-                    Mathf.FloorToInt(dt.AbandonValueLossSpeed * (Time.realtimeSinceStartup - component.RequestTime)));
-                Points.AwardCredits(pl!, creditReward, T.AbandonCompensationToast.Translate(pl), false, false);
-            }
-        }
-        else if (pl != null)
-        {
-            ToastMessage.QueueMessage(pl, new ToastMessage(ToastMessageStyle.Mini, T.AbandonCompensationToastTransferred.Translate(pl).Colorize("adadad")));
-        }
-
-        DeleteVehicle(vehicle);
-
-        if (respawn && sp != null)
-            UCWarfare.RunTask(sp.SpawnVehicle, ctx: "Respawning " + ActionLog.AsAsset(vehicle.asset) + " after abandoning.");
-        return found;
-    }
     public static async Task<InteractableVehicle?> SpawnVehicle(SqlItem<VehicleSpawn> spawn, CancellationToken token = default)
     {
         await spawn.Enter(token).ConfigureAwait(false);
@@ -745,19 +671,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         }
         return count;
     }
-    private static void OnChangeLockRequested(ChangeVehicleLockRequested e)
-    {
-        if (e.Vehicle == null ||
-            e.IsLocking ||
-            !e.Vehicle.TryGetComponent(out VehicleComponent c) ||
-            c.Data?.Item is not { } ||
-            e.Vehicle.isDead ||
-            (TeamManager.IsInAnyMain(e.Vehicle.transform.position) && e.Vehicle.lockedOwner.m_SteamID == e.Steam64) ||
-            e.Player.OnDuty())
-            return;
-        e.Player.SendChat(T.UnlockVehicleNotAllowed);
-        e.Break();
-    }
     private static void EnsureVehicleLocked(UCPlayer player)
     {
         InteractableVehicle? vehicle = player.Player.movement.getVehicle();
@@ -774,11 +687,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         {
             VehicleManager.ServerSetVehicleLock(vehicle, player.CSteamID, new CSteamID(TeamManager.GetGroupID(player.GetTeam())), true);
         }
-    }
-    private static void OnVehicleSpawned(VehicleSpawned e)
-    {
-        ThreadUtil.assertIsGameThread();
-        e.Vehicle.gameObject.AddComponent<VehicleComponent>().Initialize(e.Vehicle);
     }
     private static void OnVehicleExit(ExitVehicle e)
     {

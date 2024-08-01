@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.UI;
 
 namespace Uncreated.Warfare.Players.UI;
@@ -10,11 +11,11 @@ public sealed class ToastManager
     private static int _channelCount;
     public static ToastMessageInfo[] ToastMessages { get; private set; } = null!;
     public ToastMessageChannel[] Channels { get; }
-    public UCPlayer Player { get; }
+    public WarfarePlayer Player { get; }
     public bool HasToasts { get; private set; }
     public bool Hold { get; set; }
 
-    public ToastManager(UCPlayer player)
+    public ToastManager(WarfarePlayer player)
     {
         Player = player;
         Channels = new ToastMessageChannel[_channelCount];
@@ -308,20 +309,20 @@ public sealed class ToastManager
     }
     internal static void ReloadToastIds()
     {
-        ToastMessages[(int)ToastMessageStyle.GameOver].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastWin));
-        ToastMessages[(int)ToastMessageStyle.Large].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastLarge));
-        ToastMessages[(int)ToastMessageStyle.Medium].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastMedium));
-        ToastMessages[(int)ToastMessageStyle.Mini].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastXP));
-        ToastMessages[(int)ToastMessageStyle.ProgressBar].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastProgress));
-        ToastMessages[(int)ToastMessageStyle.Tip].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIToastTip));
-        ToastMessages[(int)ToastMessageStyle.Popup].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIPopup));
-        ToastMessages[(int)ToastMessageStyle.FlashingWarning].UpdateAsset(new JsonAssetContainer<EffectAsset>(Gamemode.Config.UIFlashingWarning));
+        ToastMessages[(int)ToastMessageStyle.GameOver].UpdateAsset(AssetLink.Create<EffectAsset>(Gamemode.Config.UIToastWin));
+        ToastMessages[(int)ToastMessageStyle.Large].UpdateAsset(AssetLink.Create<EffectAsset>(Gamemode.Config.UIToastLarge));
+        ToastMessages[(int)ToastMessageStyle.Medium].UpdateAsset(AssetLink.Create<EffectAsset>(Gamemode.Config.UIToastMedium));
+        ToastMessages[(int)ToastMessageStyle.Mini].UpdateAsset(AssetLink.Create<EffectAsset>(Gamemode.Config.UIToastXP));
+        ToastMessages[(int)ToastMessageStyle.ProgressBar].UpdateAsset(AssetLink.Create<EffectAsset>(Gamemode.Config.UIToastProgress));
+        ToastMessages[(int)ToastMessageStyle.Tip].UpdateAsset(AssetLink.Create<EffectAsset>(Gamemode.Config.UIToastTip));
+        ToastMessages[(int)ToastMessageStyle.Popup].UpdateAsset(AssetLink.Create<EffectAsset>(Gamemode.Config.UIPopup));
+        ToastMessages[(int)ToastMessageStyle.FlashingWarning].UpdateAsset(AssetLink.Create<EffectAsset>(Gamemode.Config.UIFlashingWarning));
     }
     private void EnableFlags(ToastMessageInfo info)
     {
         if (info.DisableFlags != EPluginWidgetFlags.None || info.EnableFlags != EPluginWidgetFlags.None)
         {
-            Player.Player.setAllPluginWidgetFlags((Player.Player.pluginWidgetFlags | info.EnableFlags) & ~info.DisableFlags);
+            Player.UnturnedPlayer.setAllPluginWidgetFlags((Player.UnturnedPlayer.pluginWidgetFlags | info.EnableFlags) & ~info.DisableFlags);
             if ((info.EnableFlags & EPluginWidgetFlags.Modal) != 0)
                 Player.ModalNeeded = true;
         }
@@ -330,7 +331,7 @@ public sealed class ToastManager
     {
         if (info.DisableFlags != EPluginWidgetFlags.None || info.EnableFlags != EPluginWidgetFlags.None)
         {
-            Player.Player.setAllPluginWidgetFlags((Player.Player.pluginWidgetFlags | info.DisableFlags) & ~info.EnableFlags);
+            Player.UnturnedPlayer.setAllPluginWidgetFlags((Player.UnturnedPlayer.pluginWidgetFlags | info.DisableFlags) & ~info.EnableFlags);
             if ((info.EnableFlags & EPluginWidgetFlags.Modal) != 0)
                 Player.ModalNeeded = Player.TeamSelectorData is { IsSelecting: true };
         }

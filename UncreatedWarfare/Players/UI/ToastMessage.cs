@@ -59,7 +59,7 @@ public struct ToastMessage
             set.Next.Toasts.Queue(in message);
         }
     }
-    public static void QueueMessage(UCPlayer player, in ToastMessage message)
+    public static void QueueMessage(WarfarePlayer player, in ToastMessage message)
     {
         player.Toasts.Queue(in message);
     }

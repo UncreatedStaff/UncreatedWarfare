@@ -28,6 +28,7 @@ using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Events;
 using Module = SDG.Framework.Modules.Module;
 
 namespace Uncreated.Warfare;
@@ -164,6 +165,14 @@ public sealed class WarfareModule : IModuleNexus
     {
         Assembly thisAsm = Assembly.GetExecutingAssembly();
 
+        serviceCollection.AddTransient<IManualMySqlProvider, ManualMySqlProvider>(_ =>
+        {
+            string connectionString = UCWarfare.Config.SqlConnectionString ??
+                                      (UCWarfare.Config.RemoteSQL ?? UCWarfare.Config.SQL).GetConnectionString("Uncreated.Warfare", true, true);
+
+            return new ManualMySqlProvider(connectionString);
+        });
+
         serviceCollection.AddDbContext<WarfareDbContext>(contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Singleton);
 
         serviceCollection.AddReflectionTools();
@@ -171,6 +180,9 @@ public sealed class WarfareModule : IModuleNexus
 
         serviceCollection.AddSingleton(this);
         serviceCollection.AddSingleton(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)));
+
+        // event handlers
+        serviceCollection.AddTransient<VehicleSpawnedHandler>();
 
         serviceCollection.AddTransient<SteamAPIService>();
 
@@ -183,16 +195,11 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<CommandDispatcher>().Parser);
         serviceCollection.AddRpcSingleton<UserPermissionStore>();
         serviceCollection.AddSingleton(_gameObjectHost);
-        serviceCollection.AddTransient<IManualMySqlProvider, ManualMySqlProvider>(_ =>
-        {
-            string connectionString = UCWarfare.Config.SqlConnectionString ??
-                                      (UCWarfare.Config.RemoteSQL ?? UCWarfare.Config.SQL).GetConnectionString("Uncreated.Warfare", true, true);
-
-            return new ManualMySqlProvider(connectionString);
-        });
 
         serviceCollection.AddScoped<BuildableSaver>();
         serviceCollection.AddSingleton<VehicleInfoStore>();
+        serviceCollection.AddSingleton<AbandonService>();
+        serviceCollection.AddSingleton<VehicleService>();
 
         serviceCollection.AddTransient<ILoopTickerFactory, UnityLoopTickerFactory>();
 
