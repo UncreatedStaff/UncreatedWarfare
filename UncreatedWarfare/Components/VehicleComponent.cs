@@ -154,6 +154,42 @@ public class VehicleComponent : MonoBehaviour
 
         ReloadCountermeasures();
     }
+
+    internal void UnlinkFromSpawn(VehicleSpawnInfo spawnInfo)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        if (spawnInfo == null)
+            throw new ArgumentNullException(nameof(spawnInfo));
+
+        if (!Equals(Spawn, spawnInfo))
+        {
+            throw new InvalidOperationException("The given spawn is not linked to this vehicle.");
+        }
+
+        if (Spawn?.LinkedVehicle == Vehicle)
+        {
+            throw new InvalidOperationException("The old linked spawn is still linked to this vehicle.");
+        }
+
+        Spawn = null;
+    }
+
+    internal void LinkToSpawn(VehicleSpawnInfo spawnInfo)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        if (spawnInfo == null)
+            throw new ArgumentNullException(nameof(spawnInfo));
+
+        if (spawnInfo.LinkedVehicle != Vehicle)
+        {
+            throw new InvalidOperationException("The given spawn is not linked to this vehicle.");
+        }
+
+        Spawn = spawnInfo;
+    }
+
     public static void TryAddOwnerToHistory(InteractableVehicle vehicle, ulong steam64)
     {
         if (vehicle.TryGetComponent(out VehicleComponent comp))

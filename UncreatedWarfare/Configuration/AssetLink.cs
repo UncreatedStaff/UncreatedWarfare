@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Models.Localization;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -20,22 +21,27 @@ namespace Uncreated.Warfare.Configuration;
 /// <typeparam name="TAsset">The type of asset to reference.</typeparam>
 [CannotApplyEqualityOperator]
 [TypeConverter(typeof(AssetLinkTypeConverter))]
-public interface IAssetLink<out TAsset> : IAssetContainer, IEquatable<IAssetLink<Asset>>, IAssetReference, ICloneable where TAsset : Asset
+public interface IAssetLink<out TAsset> : IAssetContainer, IEquatable<IAssetLink<Asset>>, IAssetReference, ICloneable, ITranslationArgument where TAsset : Asset
 {
     /// <summary>
     /// Guid of the asset, if known.
     /// </summary>
-    Guid Guid { get; set; }
+    new Guid Guid { get; set; }
 
     /// <summary>
     /// Short ID of the asset, if known.
     /// </summary>
-    ushort Id { get; set; }
+    new ushort Id { get; set; }
 
     /// <summary>
     /// Get the actual asset from the stored info.
     /// </summary>
     TAsset? GetAsset();
+
+    /// <summary>
+    /// Converts this asset link into a <see cref="string"/> for use in logging.
+    /// </summary>
+    string ToDisplayString();
 }
 
 public static class AssetLink
@@ -157,7 +163,7 @@ public static class AssetLink
         if (!typeof(Asset).IsAssignableFrom(toAssetType))
             throw new ArgumentException("Must derive from type Asset.", nameof(toAssetType));
 
-        Type fromAssetType = assetLink.GetType().GetGenericArguments()[0];
+        Type fromAssetType = GetAssetType(assetLink);
         if (toAssetType.IsAssignableFrom(fromAssetType))
             return assetLink;
 
@@ -296,6 +302,24 @@ public static class AssetLink
 
         asset = null;
         return false;
+    }
+
+    /// <summary>
+    /// Resolve an asset from an asset link, or throw an error
+    /// </summary>
+    /// <exception cref="AssetNotFoundException"/>
+    public static TAsset GetAssetOrFail<TAsset>([System.Diagnostics.CodeAnalysis.NotNull] this IAssetLink<TAsset>? link) where TAsset : Asset
+    {
+        return link == null ? throw new AssetNotFoundException() : link.GetAsset() ?? throw new AssetNotFoundException(link);
+    }
+
+    /// <summary>
+    /// Resolve an asset from an asset link, or throw an error
+    /// </summary>
+    /// <exception cref="AssetNotFoundException"/>
+    public static TAsset GetAssetOrFail<TAsset>([System.Diagnostics.CodeAnalysis.NotNull] this IAssetLink<TAsset>? link, string propertyName) where TAsset : Asset
+    {
+        return link == null ? throw new AssetNotFoundException(propertyName) : link.GetAsset() ?? throw new AssetNotFoundException(link, propertyName);
     }
 
     /// <summary>
@@ -510,6 +534,28 @@ public static class AssetLink
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Determines the value of the generic argument of <see cref="IAssetLink{TAsset}"/> given an object of any asset link type.
+    /// </summary>
+    public static Type GetAssetType(IAssetLink<Asset> assetLink)
+    {
+        Type type = assetLink.GetType();
+        if (type.IsGenericType)
+        {
+            Type[] args = type.GetGenericArguments();
+            for (int i = 0; i < args.Length; ++i)
+            {
+                if (typeof(Asset).IsAssignableFrom(args[i]))
+                {
+                    return args[i];
+                }
+            }
+        }
+
+        Type? intxType = Array.Find(type.GetInterfaces(), x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IAssetLink<>));
+        return intxType?.GetGenericArguments()[0] ?? typeof(Asset);
     }
 
     /// <summary>
@@ -794,6 +840,45 @@ public static class AssetLink
             return _cachedAsset != null
                 ? Path.GetRelativePath(UnturnedPaths.RootDirectory.FullName, _cachedAsset.absoluteOriginFilePath)
                 : "0";
+        }
+
+        public string ToDisplayString()
+        {
+            TAsset? asset = GetAsset();
+            if (asset == null)
+            {
+                return Guid == Guid.Empty ? Id.ToString("D", CultureInfo.InvariantCulture) : Guid.ToString("N", CultureInfo.InvariantCulture);
+            }
+
+            if (Guid != Guid.Empty)
+            {
+                if (Id != 0)
+                    return "\"" + asset.name + "\" {" + Guid.ToString("N", CultureInfo.InvariantCulture) + "} (" +
+                           UCAssetManager.GetAssetCategory<TAsset>() + "/" +
+                           Id.ToString("D", CultureInfo.InvariantCulture) + ")";
+
+                return "\"" + asset.name + "\" {" + Guid.ToString("N", CultureInfo.InvariantCulture) + "}";
+            }
+
+            if (Id != 0)
+                return "\"" + asset.name + "\" (" +
+                       UCAssetManager.GetAssetCategory<TAsset>() + "/" +
+                       Id.ToString("D", CultureInfo.InvariantCulture) + ")";
+
+            return "\"" + asset.name + "\"";
+        }
+
+        public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+        {
+            if (GetAsset() is { } asset)
+            {
+                return Translation.ToString(asset, language, culture ?? CultureInfo.InvariantCulture, format, null, flags);
+            }
+
+            if (Guid != Guid.Empty)
+                return Guid.ToString("N", culture);
+
+            return Id.ToString("D0", culture);
         }
 
         public override bool Equals(object? obj)

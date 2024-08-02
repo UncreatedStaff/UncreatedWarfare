@@ -102,11 +102,11 @@ public class AbandonService
             ToastMessage.QueueMessage(owner, new ToastMessage(ToastMessageStyle.Mini, T.AbandonCompensationToastTransferred.Translate(owner).Colorize("adadad")));
         }
 
-        await _vehicleService.DeleteVehicle(vehicle, token);
+        await _vehicleService.DeleteVehicleAsync(vehicle, token);
 
         if (respawn && originalSpawn != null)
         {
-            _vehicleService.SpawnVehicle(originalSpawn);
+            _vehicleService.SpawnVehicleAsync(originalSpawn);
         }
 
         return found;

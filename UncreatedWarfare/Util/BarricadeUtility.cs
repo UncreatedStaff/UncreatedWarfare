@@ -11,6 +11,16 @@ namespace Uncreated.Warfare.Util;
 public static class BarricadeUtility
 {
     /// <summary>
+    /// All transformations using a buildable as reference should rotate the barricade by this first.
+    /// </summary>
+    public static readonly Quaternion InverseDefaultBarricadeRotation = Quaternion.Euler(90f, 0f, 0f);
+
+    /// <summary>
+    /// All buildables should be rotated by this amount when placed relative to any other objects.
+    /// </summary>
+    public static readonly Quaternion DefaultBarricadeRotation = Quaternion.Euler(-90f, 0f, 0f);
+
+    /// <summary>
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around the center of the level, then planted barricades (barricades on a vehicle).
     /// </summary>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>

@@ -180,7 +180,7 @@ public class SteamAPIService
             span[index++] = '/';
             span[index++] = 'v';
 
-            state.Version.TryFormat(span[index..], out _, "N0", CultureInfo.InvariantCulture);
+            state.Version.TryFormat(span[index..], out _, "D", CultureInfo.InvariantCulture);
             index += state.VersionLength;
 
             span[index++] = '?';

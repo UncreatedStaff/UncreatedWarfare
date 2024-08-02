@@ -3,6 +3,7 @@ using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -104,50 +105,6 @@ public class ZoneCommand : IExecutableCommand
                         new CommandParameter("Zone", typeof(Zone))
                     ],
                 },
-                new CommandParameter("Delete")
-                {
-                    Description = "Deletes a zone.",
-                    Permission = PermissionDelete,
-                    Parameters =
-                    [
-                        new CommandParameter("Zone", typeof(Zone))
-                    ]
-                },
-                new CommandParameter("Edit")
-                {
-                    Description = "Modify a zone.",
-                    Permission = PermissionEdit,
-                    Parameters =
-                    [
-                        new CommandParameter("Parameter", typeof(string))
-                        {
-                            Aliases = ZonePlayerComponent.EditCommands,
-                            ChainDisplayCount = 2,
-                            Parameters =
-                            [
-                                new CommandParameter("Value", typeof(object))
-                                {
-                                    IsRemainder = true
-                                }
-                            ]
-                        }
-                    ]
-                },
-                new CommandParameter("Create")
-                {
-                    Description = "Starts creating a zone.",
-                    Permission = PermissionCreate,
-                    Parameters =
-                    [
-                        new CommandParameter("Type", "Rectangle", "Polygon", "Circle")
-                        {
-                            Parameters =
-                            [
-                                new CommandParameter("Name", typeof(string))
-                            ]
-                        }
-                    ]
-                },
                 new CommandParameter("Util")
                 {
                     Description = "Random zone utilities.",
@@ -196,69 +153,6 @@ public class ZoneCommand : IExecutableCommand
             Context.ArgumentOffset = 1;
             Go();
             Context.ArgumentOffset = 0;
-        }
-        else if (Context.MatchParameter(0, "edit", "e"))
-        {
-            Context.AssertRanByPlayer();
-
-            Context.AssertOnDuty();
-
-            await Context.AssertPermissions(PermissionEdit, token);
-            await UniTask.SwitchToMainThread(token);
-
-            if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
-            {
-                Context.ArgumentOffset = 1;
-                try
-                {
-                    comp.EditCommand(Context);
-                }
-                finally { Context.ArgumentOffset = 0; }
-            }
-            else
-                throw Context.SendUnknownError();
-        }
-        else if (Context.MatchParameter(0, "create", "c"))
-        {
-            Context.AssertRanByPlayer();
-
-            Context.AssertOnDuty();
-
-            await Context.AssertPermissions(PermissionCreate, token);
-            await UniTask.SwitchToMainThread(token);
-
-            if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
-            {
-                Context.ArgumentOffset = 1;
-                try
-                {
-                    comp.CreateCommand(Context);
-                }
-                finally { Context.ArgumentOffset = 0; }
-            }
-            else
-                throw Context.SendUnknownError();
-        }
-        else if (Context.MatchParameter(0, "delete", "remove", "d"))
-        {
-            Context.AssertRanByPlayer();
-
-            Context.AssertOnDuty();
-
-            await Context.AssertPermissions(PermissionDelete, token);
-            await UniTask.SwitchToMainThread(token);
-
-            if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
-            {
-                Context.ArgumentOffset = 1;
-                try
-                {
-                    comp.DeleteCommand(Context);
-                }
-                finally { Context.ArgumentOffset = 0; }
-            }
-            else
-                throw Context.SendUnknownError();
         }
         else if (Context.MatchParameter(0, "util", "u", "tools"))
         {

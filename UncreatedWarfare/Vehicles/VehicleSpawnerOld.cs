@@ -177,44 +177,35 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
         }
 #endif
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsDriver(UCPlayer player) => IsInSeat(player, 0);
-    public static bool IsInSeat(UCPlayer player, byte seat)
-    {
-        if (!player.IsOnline) return false;
-        InteractableVehicle? vehicle = player.Player.movement.getVehicle();
-        if (vehicle == null || vehicle.isDead)
-            return false;
-        return vehicle.findPlayerSeat(player.CSteamID, out byte seat2) && seat2 == seat;
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsOnlyPassenger(UCPlayer player) => IsOnlyPassenger(player, byte.MaxValue, out _);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsOnlyPassenger(UCPlayer player, out byte playerSeat) => IsOnlyPassenger(player, byte.MaxValue, out playerSeat);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsOnlyPassenger(UCPlayer player, byte inSeat) => IsOnlyPassenger(player, inSeat, out _);
-    public static bool IsOnlyPassenger(UCPlayer player, byte inSeat, out byte playerSeat)
+
+    public static bool IsOnlyPassenger(UCPlayer player, out byte playerSeat, byte inSeat = byte.MaxValue)
     {
         playerSeat = byte.MaxValue;
-        if (!player.IsOnline) return false;
-        InteractableVehicle? vehicle = player.Player.movement.getVehicle();
-        if (vehicle == null || vehicle.isDead)
-            return false;
-        if (player.Player.movement.getVehicle().findPlayerSeat(player.CSteamID, out byte seat))
+        if (!player.IsOnline)
         {
-            if (inSeat != byte.MaxValue && seat != inSeat)
-                return false;
-            for (int i = 0; i < vehicle.passengers.Length; ++i)
-            {
-                if (i != seat && vehicle.passengers[i].player != null)
-                    return false;
-            }
-
-            playerSeat = seat;
-            return true;
+            return false;
         }
 
-        return false;
+        InteractableVehicle? vehicle = player.Player.movement.getVehicle();
+        if (vehicle == null || vehicle.isDead)
+        {
+            return false;
+        }
+
+        byte seat = player.Player.movement.getSeat();
+        if (inSeat != byte.MaxValue && seat != inSeat)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < vehicle.passengers.Length; ++i)
+        {
+            if (i != seat && vehicle.passengers[i].player != null)
+                return false;
+        }
+
+        playerSeat = seat;
+        return true;
     }
     async Task ILevelStartListenerAsync.OnLevelReady(CancellationToken token)
     {
@@ -341,121 +332,6 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
                 UnityEngine.Object.Destroy(comp);
         }
     }
-    /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
-    public bool TryGetSpawn(BarricadeDrop drop, out SqlItem<VehicleSpawn> spawn)
-    {
-        StructureSaver? saver = StructureSaver.GetSingletonQuick();
-        if (saver == null || !saver.TryGetSaveNoLock(drop, out SqlItem<SavedStructure> structure))
-        {
-            spawn = null!;
-            return false;
-        }
-        
-        uint key = structure.LastPrimaryKey.Key;
-        if (key == 0)
-        {
-            spawn = null!;
-            return false;
-        }
-        WriteWait();
-        try
-        {
-            if (drop.interactable is InteractableSign)
-            {
-                for (int i = 0; i < Items.Count; ++i)
-                {
-                    if (Items[i].Item is { } spawn2 && spawn2.SignKey.Key == key)
-                    {
-                        spawn = Items[i];
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < Items.Count; ++i)
-                {
-                    if (Items[i].Item is { } spawn2 && spawn2.StructureKey.Key == key)
-                    {
-                        spawn = Items[i];
-                        return true;
-                    }
-                }
-            }
-
-            spawn = null!;
-            return false;
-        }
-        finally
-        {
-            WriteRelease();
-        }
-    }
-    /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
-    public bool TryGetSpawn(StructureDrop drop, out SqlItem<VehicleSpawn> spawn)
-    {
-        StructureSaver? saver = StructureSaver.GetSingletonQuick();
-        if (saver == null || !saver.TryGetSaveNoLock(drop, out SqlItem<SavedStructure> structure))
-        {
-            spawn = null!;
-            return false;
-        }
-
-        uint key = structure.LastPrimaryKey.Key;
-        if (key == 0)
-        {
-            spawn = null!;
-            return false;
-        }
-        WriteWait();
-        try
-        {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                if (Items[i].Item is { } spawn2 && spawn2.StructureKey.Key == key)
-                {
-                    spawn = Items[i];
-                    return true;
-                }
-            }
-
-            spawn = null!;
-            return false;
-        }
-        finally
-        {
-            WriteRelease();
-        }
-    }
-    /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
-    public bool TryGetSpawn(InteractableVehicle vehicle, out SqlItem<VehicleSpawn> spawn)
-    {
-        if (vehicle == null)
-        {
-            spawn = null!;
-            return false;
-        }
-        WriteWait();
-        try
-        {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                VehicleSpawn? vehicleSpawn = Items[i].Item;
-                if (vehicleSpawn?.LinkedVehicle == vehicle)
-                {
-                    spawn = Items[i];
-                    return true;
-                }
-            }
-
-            spawn = null!;
-            return false;
-        }
-        finally
-        {
-            WriteRelease();
-        }
-    }
     /// <remarks>Thread Safe</remarks>
     /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
     public async Task RespawnAllVehicles(CancellationToken token = default)
@@ -538,62 +414,6 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
         finally
         {
             spawn.Release();
-        }
-    }
-    /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
-    public static void DeleteVehicle(InteractableVehicle vehicle)
-    {
-        ThreadUtil.assertIsGameThread();
-        PreDeleteVehicle(vehicle);
-        VehicleManager.askVehicleDestroy(vehicle);
-    }
-    /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
-    public static void DeleteAllVehiclesFromWorld()
-    {
-        ThreadUtil.assertIsGameThread();
-        for (int i = 0; i < VehicleManager.vehicles.Count; i++)
-        {
-            PreDeleteVehicle(VehicleManager.vehicles[i]);
-        }
-        VehicleManager.askVehicleDestroyAll();
-    }
-    /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
-    private static void PreDeleteVehicle(InteractableVehicle vehicle)
-    {
-        BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
-        if (reg != null)
-        {
-            for (int b = 0; b < reg.drops.Count; b++)
-            {
-                if (reg.drops[b].interactable is InteractableStorage storage)
-                {
-                    storage.despawnWhenDestroyed = true;
-                }
-            }
-        }
-        if (vehicle.trunkItems != null)
-        {
-            int ct = vehicle.trunkItems.getItemCount();
-            for (int i = ct - 1; i >= 0; --i)
-                vehicle.trunkItems.removeItem((byte)i);
-        }
-        for (int i = 0; i < vehicle.passengers.Length; ++i)
-        {
-            SteamPlayer? pl = vehicle.passengers[i].player;
-            if (pl != null)
-            {
-                VehicleManager.forceRemovePlayer(vehicle, pl.playerID.steamID);
-                Vector3 p = pl.player.transform.position;
-                if (F.TryGetHeight(p.x, p.z, out float height, 1f) && Mathf.Abs(p.y - height) > 5f)
-                {
-                    pl.player.teleportToLocationUnsafe(p with { y = height }, pl.player.look.aim.transform.rotation.eulerAngles.y);
-                }
-            }
-        }
-        if (GetSingletonQuick() is { } spawner && spawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
-        {
-            VehicleSpawn? vehicleSpawn = spawn.Item;
-            vehicleSpawn?.Unlink();
         }
     }
     public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
@@ -802,7 +622,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
                             {
                                 if (owner?.Squad is null)
                                 {
-                                    OfflinePlayer pl = new OfflinePlayer(e.Vehicle.lockedOwner.m_SteamID);
+                                    OfflinePlayer pl = new OfflinePlayer(e.Vehicle.lockedOwner);
                                     if (owner != null || pl.TryCacheLocal())
                                     {
                                         e.Player.SendChat(T.VehicleWaitForOwner, owner ?? pl as IPlayer);
@@ -864,128 +684,6 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
                     }
                 }
             }
-        }
-    }
-    /// <remarks>Thread Safe</remarks>
-    public static async Task<InteractableVehicle?> SpawnLockedVehicle(Guid vehicleId, Vector3 position, Quaternion rotation, ulong owner = 0ul, ulong groupOwner = 0ul, bool @lock = true, bool checkExisting = false, CancellationToken token = default)
-    {
-        await UCWarfare.ToLevelLoad();
-        await UniTask.SwitchToMainThread(token);
-        ThreadUtil.assertIsGameThread();
-        if (checkExisting)
-        {
-            VehicleManager.getVehiclesInRadius(position, 2.5f, NearbyTempOutput);
-            if (NearbyTempOutput.Count > 0)
-            {
-                try
-                {
-                    for (int i = 0; i < NearbyTempOutput.Count; ++i)
-                    {
-                        InteractableVehicle veh = NearbyTempOutput[i];
-                        if (veh.asset.GUID != vehicleId) continue;
-                        L.LogDebug("Found nearby " + veh.asset.FriendlyName + " when spawning one at " + position.ToString("0.#") + ", removing vehicle.");
-                        DeleteVehicle(NearbyTempOutput[i]);
-                    }
-                }
-                finally
-                {
-                    NearbyTempOutput.Clear();
-                }
-            }
-        }
-        if (Assets.find(vehicleId) is not VehicleAsset asset)
-        {
-            L.LogError("Unable to find vehicle asset of " + vehicleId.ToString("N") + ".");
-            return null;
-        }
-        InteractableVehicle vehicle;
-        try
-        {
-            byte[][] turrets = new byte[asset.turrets.Length][];
-            for (int i = 0; i < asset.turrets.Length; ++i)
-            {
-                if (Assets.find(EAssetType.ITEM, asset.turrets[i].itemID) is ItemGunAsset turret)
-                {
-                    turrets[i] = turret.getState(EItemOrigin.ADMIN);
-                    if (!UCWarfare.Config.DisableAprilFools &&
-                        HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS) &&
-                        Assets.find(new Guid("c3d3123823334847a9fd294e5d764889")) is ItemBarrelAsset barrel)
-                    {
-                        unsafe
-                        {
-                            fixed (byte* ptr = turrets[i])
-                            {
-                                UnsafeBitConverter.GetBytes(ptr, barrel.id, (int)AttachmentType.Barrel);
-                                ptr[(int)AttachmentType.Barrel / 2 + 13] = 100;
-                            }
-                        }
-                    }
-                }
-            }
-
-            vehicle = VehicleManager.SpawnVehicleV3(asset, 0, 0, 0f, position, rotation, false, false, false, false, asset.fuel,
-                asset.health, MaxBatteryCharge, new CSteamID(owner), new CSteamID(groupOwner), true, null, byte.MaxValue);
-            if (vehicle == null)
-            {
-                L.LogError("Unknown internal error encountered spawning " + ActionLog.AsAsset(asset) + ", SpawnVehicleV3 returned null.");
-                return null;
-            }
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Internal error encountered spawning " + ActionLog.AsAsset(asset) + ".");
-            L.LogError(ex);
-            return null;
-        }
-
-        SqlItem<VehicleData>? dataProxy = VehicleBay.GetSingletonQuick()?.GetDataProxySync(vehicleId);
-        if (@lock && dataProxy is not null)
-            await dataProxy.Enter(token).ConfigureAwait(false);
-        try
-        {
-            VehicleData? data = dataProxy?.Item;
-            if (data?.Metadata != null)
-            {
-                if (data.Metadata.TrunkItems is { Count: > 0 })
-                {
-                    foreach (ISpecificPageKitItem k in data.Metadata.TrunkItems)
-                    {
-                        if (!k.Item.TryGetAsset(out ItemAsset iasset))
-                            continue;
-                        
-                        Item item = new Item(iasset.id, k.Amount, 100, Util.CloneBytes(k.State));
-                        if (vehicle.trunkItems.checkSpaceEmpty(k.X, k.Y, iasset.size_x, iasset.size_y, k.Rotation))
-                            vehicle.trunkItems.addItem(k.X, k.Y, k.Rotation, item);
-                        else if (!vehicle.trunkItems.tryAddItem(item))
-                            ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
-                    }
-                }
-                if (data.Metadata.Barricades is { Count: > 0 })
-                {
-                    foreach (VBarricade vb in data.Metadata.Barricades)
-                    {
-                        if (Assets.find(vb.BarricadeID) is not ItemBarricadeAsset basset)
-                        {
-                            L.LogError("Unable to find barricade asset of " + vb.BarricadeID.ToString("N") + ".");
-                            continue;
-                        }
-                        byte[] state = Util.CloneBytes(vb.Metadata);
-                        F.EnsureCorrectGroupAndOwner(ref state, basset, 0ul, TeamManager.AdminID);
-                        Barricade barricade = new Barricade(basset, asset.health, state);
-                        Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
-                        Transform t = BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, owner, groupOwner);
-                        if (basset is ItemStorageAsset && BarricadeManager.FindBarricadeByRootTransform(t)?.interactable is InteractableStorage s)
-                            s.despawnWhenDestroyed = true;
-                    }
-                }
-            }
-
-            return vehicle;
-        }
-        finally
-        {
-            if (@lock && dataProxy is not null)
-                dataProxy.Release();
         }
     }
 
@@ -1378,76 +1076,6 @@ public class VehicleSpawn : IListItem
         VehicleKey = vehicle;
         StructureKey = structure;
         SignKey = sign;
-    }
-    internal async Task<InteractableVehicle?> SpawnVehicle(CancellationToken token = default)
-    {
-        await UniTask.SwitchToMainThread(token);
-        if (HasLinkedVehicle(out InteractableVehicle vehicle))
-        {
-            ReportError("Vehicle already linked: {#" + vehicle.instanceID + "}.");
-            return null;
-        }
-        try
-        {
-            SqlItem<VehicleData>? dataP = Vehicle;
-            SqlItem<SavedStructure>? structureP = Structure;
-            SqlItem<SavedStructure>? signP = Sign;
-            if (dataP is null)
-            {
-                ReportError("Can't find vehicle data.");
-                return null;
-            }
-            if (structureP is null)
-            {
-                ReportError("Can't find vehicle bay structure.");
-                return null;
-            }
-            VehicleData? data = dataP.Item;
-            if (data == null)
-            {
-                ReportError("Can't find vehicle data.");
-                return null;
-            }
-            SavedStructure? structure = structureP.Item;
-            if (structure?.Buildable == null)
-            {
-                ReportError("Can't find structure.");
-                return null;
-            }
-            SavedStructure? sign = signP?.Item;
-            if (sign != null)
-                ReportInfo("Found sign: " + sign.PrimaryKey + ".");
-            Vector3 euler;
-            if (structure.Buildable.Data is StructureData sdata)
-            {
-                euler = F.BytesToEulerForVehicle(sdata.angle_x, sdata.angle_y, sdata.angle_z);
-            }
-            else if (structure.Buildable.Data is BarricadeData bdata)
-            {
-                euler = F.BytesToEulerForVehicle(bdata.angle_x, bdata.angle_y, bdata.angle_z);
-            }
-            else
-            {
-                ReportError("Invalid structure buildable.");
-                return null;
-            }
-            Quaternion rotation = Quaternion.Euler(euler);
-            Vector3 offset = structure.Buildable.Model.position + new Vector3(0f, VehicleSpawner.VehicleHeightOffset, 0f);
-            InteractableVehicle? veh = await VehicleSpawner.SpawnLockedVehicle(data.VehicleID, offset, rotation, checkExisting: true, token: token, @lock: false).ConfigureAwait(false);
-            await UniTask.SwitchToMainThread(token);
-            if (veh == null)
-                return null;
-            LinkNewVehicle(veh);
-            UpdateSign();
-            ReportInfo("Spawned vehicle.");
-            return veh;
-        }
-        catch (Exception ex)
-        {
-            L.LogError($"Error spawning vehicle {this}.");
-            L.LogError(ex);
-        }
-        return null;
     }
 
     private void ReportError(string message) => L.LogError("[VEH SPAWNER] " + this + " - " + message);
