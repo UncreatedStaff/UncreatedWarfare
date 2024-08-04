@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Zones;
 
@@ -161,6 +162,66 @@ public class ZoneStore : IHostedService
             default:
                 throw new ArgumentException("This zone doesn't have a valid shape or is missing the associated data object.", nameof(zone));
         }
+    }
+
+    /// <summary>
+    /// Enumerate through all zones that <paramref name="point"/> is inside.
+    /// </summary>
+    public IEnumerable<Zone> EnumerateInsideZones(Vector3 point, ZoneType? type = null)
+    {
+        if (ProximityZones == null)
+            yield break;
+
+        foreach (ZoneProximity proximity in ProximityZones)
+        {
+            if (proximity.Proximity.TestPoint(point))
+                yield return proximity.Zone;
+        }
+    }
+
+    /// <summary>
+    /// Enumerate through all zones that <paramref name="point"/> is inside.
+    /// </summary>
+    public IEnumerable<Zone> EnumerateInsideZones(Vector2 point, ZoneType? type = null)
+    {
+        if (ProximityZones == null)
+            yield break;
+
+        foreach (ZoneProximity proximity in ProximityZones)
+        {
+            if (proximity.Proximity.TestPoint(point))
+                yield return proximity.Zone;
+        }
+    }
+
+    /// <summary>
+    /// Find the first zone matching the given zone type and faction.
+    /// </summary>
+    public Zone? SearchZone(ZoneType type, FactionInfo? faction)
+    {
+        return faction == null
+            ? Zones.FirstOrDefault(zone => zone.Type == type)
+            : Zones.FirstOrDefault(zone => zone.Type == type && string.Equals(zone.Faction, faction.Name));
+    }
+
+    /// <summary>
+    /// Find the first zone matching the given zone type and faction.
+    /// </summary>
+    public bool IsInsideZone(Vector3 point, ZoneType type, FactionInfo? faction)
+    {
+        return faction == null
+            ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
+            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.Name));
+    }
+
+    /// <summary>
+    /// Find the first zone matching the given zone type and faction.
+    /// </summary>
+    public bool IsInsideZone(Vector2 point, ZoneType type, FactionInfo? faction)
+    {
+        return faction == null
+            ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
+            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.Name));
     }
 
     /// <summary>

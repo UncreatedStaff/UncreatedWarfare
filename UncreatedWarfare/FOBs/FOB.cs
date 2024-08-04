@@ -9,9 +9,11 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Localization;
@@ -727,13 +729,13 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 ItemPositionSyncTracker tracker = new ItemPositionSyncTracker(pos);
 
                 ItemManager.onServerSpawningItemDrop += tracker.OnItemSpawned;
+                // todo register item owner
                 ItemManager.dropItem(item.item, pos, false, true, false);
 
                 ItemManager.onServerSpawningItemDrop -= tracker.OnItemSpawned;
                 pos = tracker.Position;
 
                 closestLogi.trunkItems.removeItem(closestLogi.trunkItems.getIndex(item.x, item.y));
-                EventFunctions.SimulateRegisterLastDroppedItem(pos, delivererId);
             }
         }
 

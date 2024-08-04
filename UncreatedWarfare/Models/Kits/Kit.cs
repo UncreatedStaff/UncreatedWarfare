@@ -13,6 +13,7 @@ using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits.Bundles;

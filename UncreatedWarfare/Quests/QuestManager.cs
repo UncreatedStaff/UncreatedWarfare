@@ -14,6 +14,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Quests;

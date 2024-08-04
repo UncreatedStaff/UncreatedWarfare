@@ -1,9 +1,11 @@
 ﻿using SDG.NetTransport;
 using System;
+using Uncreated.Warfare;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management.Legacy;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Interaction;
 
 public static class Chat
 {
@@ -29,9 +31,9 @@ public static class Chat
         Data.SendChatIndividual.Invoke(ENetReliability.Reliable, recipient.transportConnection, CSteamID.Nil, iconURL ?? string.Empty, mode, color, richText, text);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendString(this Player player, string message, Color color) => SendString(player.channel.owner, message, color);
+    public static void SendString(this Player player, string message, Color color) => player.channel.owner.SendString(message, color);
     /// <remarks>Thread Safe</remarks>
-    public static void SendString(this UCPlayer player, string message, Color color) => SendString(player.SteamPlayer, message, color);
+    public static void SendString(this UCPlayer player, string message, Color color) => player.SteamPlayer.SendString(message, color);
     /// <remarks>Thread Safe</remarks>
     public static void SendString(this SteamPlayer player, string message, Color color)
     {
@@ -42,9 +44,9 @@ public static class Chat
         else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, color, EChatMode.SAY, null, true, player));
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendString(this Player player, string message, string hex) => SendString(player.channel.owner, message, hex);
+    public static void SendString(this Player player, string message, string hex) => player.channel.owner.SendString(message, hex);
     /// <remarks>Thread Safe</remarks>
-    public static void SendString(this UCPlayer player, string message, string hex) => SendString(player.SteamPlayer, message, hex);
+    public static void SendString(this UCPlayer player, string message, string hex) => player.SteamPlayer.SendString(message, hex);
     /// <remarks>Thread Safe</remarks>
     public static void SendString(this SteamPlayer player, string message, string hex)
     {
@@ -55,9 +57,9 @@ public static class Chat
         else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player));
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendString(this Player player, string message) => SendString(player.channel.owner, message);
+    public static void SendString(this Player player, string message) => player.channel.owner.SendString(message);
     /// <remarks>Thread Safe</remarks>
-    public static void SendString(this UCPlayer player, string message) => SendString(player.SteamPlayer, message);
+    public static void SendString(this UCPlayer player, string message) => player.SteamPlayer.SendString(message);
     /// <remarks>Thread Safe</remarks>
     public static void SendString(this SteamPlayer player, string message)
     {
@@ -68,9 +70,9 @@ public static class Chat
         else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player));
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat(this Player player, Translation translation) => SendChat(UCPlayer.FromPlayer(player)!, translation);
+    public static void SendChat(this Player player, Translation translation) => UCPlayer.FromPlayer(player)!.SendChat(translation);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat(this SteamPlayer player, Translation translation) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation);
+    public static void SendChat(this SteamPlayer player, Translation translation) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat(this UCPlayer player, Translation translation)
     {
@@ -81,9 +83,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0>(this Player player, Translation<T0> translation, T0 arg) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg);
+    public static void SendChat<T0>(this Player player, Translation<T0> translation, T0 arg) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0>(this SteamPlayer player, Translation<T0> translation, T0 arg) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg);
+    public static void SendChat<T0>(this SteamPlayer player, Translation<T0> translation, T0 arg) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0>(this UCPlayer player, Translation<T0> translation, T0 arg0)
     {
@@ -94,9 +96,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1>(this Player player, Translation<T0, T1> translation, T0 arg0, T1 arg1) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1);
+    public static void SendChat<T0, T1>(this Player player, Translation<T0, T1> translation, T0 arg0, T1 arg1) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg0, arg1);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1>(this SteamPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1);
+    public static void SendChat<T0, T1>(this SteamPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg0, arg1);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0, T1>(this UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
@@ -107,9 +109,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2>(this Player player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2);
+    public static void SendChat<T0, T1, T2>(this Player player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg0, arg1, arg2);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2>(this SteamPlayer player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2);
+    public static void SendChat<T0, T1, T2>(this SteamPlayer player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg0, arg1, arg2);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0, T1, T2>(this UCPlayer player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
@@ -120,9 +122,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3>(this Player player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3);
+    public static void SendChat<T0, T1, T2, T3>(this Player player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3>(this SteamPlayer player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3);
+    public static void SendChat<T0, T1, T2, T3>(this SteamPlayer player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0, T1, T2, T3>(this UCPlayer player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
@@ -133,9 +135,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4>(this Player player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4);
+    public static void SendChat<T0, T1, T2, T3, T4>(this Player player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4);
+    public static void SendChat<T0, T1, T2, T3, T4>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0, T1, T2, T3, T4>(this UCPlayer player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
@@ -146,9 +148,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5>(this Player player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5);
+    public static void SendChat<T0, T1, T2, T3, T4, T5>(this Player player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5);
+    public static void SendChat<T0, T1, T2, T3, T4, T5>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0, T1, T2, T3, T4, T5>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
@@ -159,9 +161,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5, T6>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5, T6>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0, T1, T2, T3, T4, T5, T6>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
@@ -172,9 +174,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
@@ -185,9 +187,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
@@ -198,9 +200,9 @@ public static class Chat
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) => UCPlayer.FromPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     /// <remarks>Thread Safe</remarks>
-    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) => UCPlayer.FromSteamPlayer(player)!.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     /// <remarks>Thread Safe</remarks>
     public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {

@@ -26,6 +26,8 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Logging;
+
 #if DEBUG
 using Uncreated.Warfare.Squads.Commander;
 #endif

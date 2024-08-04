@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles

@@ -5,6 +5,7 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;

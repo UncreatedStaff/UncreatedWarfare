@@ -6,6 +6,7 @@ using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Logging;
 using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Events;

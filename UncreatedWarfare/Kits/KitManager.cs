@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
@@ -73,6 +74,10 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     public static IQueryable<Kit> Set(IKitsDbContext dbContext)
         => dbContext.Kits
             .Include(x => x.Translations);
+
+    public static IQueryable<Kit> ItemsSet(IKitsDbContext dbContext)
+        => dbContext.Kits
+            .Include(x => x.ItemModels);
 
     public static IQueryable<Kit> FullSet(IKitsDbContext dbContext)
         => dbContext.Kits

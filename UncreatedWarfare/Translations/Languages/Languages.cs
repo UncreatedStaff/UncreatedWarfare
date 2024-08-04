@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Translations.Languages;
 public static class Languages
 {
     public const string EnglishUS = "en-us";

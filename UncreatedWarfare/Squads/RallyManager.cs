@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;

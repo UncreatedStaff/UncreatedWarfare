@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare;
 

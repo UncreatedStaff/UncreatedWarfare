@@ -8,6 +8,7 @@ using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Quests;
 

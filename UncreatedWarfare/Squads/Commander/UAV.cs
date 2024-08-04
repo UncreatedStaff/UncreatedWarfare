@@ -11,6 +11,8 @@ using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Squads.Commander;
 public class UAV : MonoBehaviour, IBuff

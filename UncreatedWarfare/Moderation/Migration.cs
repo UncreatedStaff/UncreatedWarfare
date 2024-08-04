@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Records;

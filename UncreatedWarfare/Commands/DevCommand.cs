@@ -5,6 +5,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Layouts.Insurgency;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands;

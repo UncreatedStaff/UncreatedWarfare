@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
@@ -17,7 +18,7 @@ public class PlaceBarricadeRequested : CancellableEvent
     /// <summary>
     /// The player that initially tried to place the barricade.
     /// </summary>
-    public required UCPlayer? OriginalPlacer { get; init; }
+    public required WarfarePlayer? OriginalPlacer { get; init; }
 
     /// <summary>
     /// Barricade instantiation data.

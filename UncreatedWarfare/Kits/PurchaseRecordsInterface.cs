@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Networking.Purchasing;

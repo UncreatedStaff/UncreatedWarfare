@@ -3,17 +3,15 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Util;
 public static class FormattingUtility
 {
     private static char[][]? _tags;
     private static RemoveRichTextOptions[]? _tagFlags;
-    private static readonly char[] SplitChars = [ ',' ];
-    private static KeyValuePair<string, Color>[]? _presets;
     public static Regex TimeRegex { get; } = new Regex(@"([\d\.]+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     /// <summary>
@@ -398,7 +396,7 @@ public static class FormattingUtility
         
         if (type == typeof(Color))
         {
-            if (!TryParseColor(input, out Color color))
+            if (!HexStringHelper.TryParseColor(input, CultureInfo.InvariantCulture, out Color color))
                 return false;
             
             value = color;
@@ -407,7 +405,7 @@ public static class FormattingUtility
         
         if (type == typeof(Color32))
         {
-            if (!TryParseColor32(input, out Color32 color))
+            if (!HexStringHelper.TryParseColor32(input, CultureInfo.InvariantCulture, out Color32 color))
                 return false;
             
             value = color;
@@ -575,251 +573,6 @@ public static class FormattingUtility
 
         fail:
         steamId = CSteamID.Nil;
-        return false;
-    }
-
-    /// <summary>
-    /// Parse a <see cref="Color32"/> from hex with an optional '#' prefix.
-    /// </summary>
-    public static unsafe bool TryParseHexColor32(string hex, out Color32 color)
-    {
-        if (string.IsNullOrWhiteSpace(hex))
-        {
-            color = default;
-            return false;
-        }
-
-        bool res = true;
-        fixed (char* ptr2 = hex)
-        {
-            int offset = *ptr2 == '#' ? 1 : 0;
-            char* ptr = ptr2 + offset;
-            switch (hex.Length - offset)
-            {
-                case 1: // w
-                    byte r = CharToHex(ptr, false);
-                    color = new Color32(r, r, r, byte.MaxValue);
-                    return res;
-                case 2: // wa
-                    r = CharToHex(ptr, false);
-                    byte a = CharToHex(ptr + 1, false);
-                    color = new Color32(r, r, r, a);
-                    return res;
-                case 3: // rgb
-                    r = CharToHex(ptr, false);
-                    byte g = CharToHex(ptr + 1, false);
-                    byte b = CharToHex(ptr + 2, false);
-                    color = new Color32(r, g, b, byte.MaxValue);
-                    return res;
-                case 4: // rgba
-                    r = CharToHex(ptr, false);
-                    g = CharToHex(ptr + 1, false);
-                    b = CharToHex(ptr + 2, false);
-                    a = CharToHex(ptr + 3, false);
-                    color = new Color32(r, g, b, a);
-                    return res;
-                case 6: // rrggbb
-                    r = CharToHex(ptr, true);
-                    g = CharToHex(ptr + 2, true);
-                    b = CharToHex(ptr + 4, true);
-                    color = new Color32(r, g, b, byte.MaxValue);
-                    return res;
-                case 8: // rrggbbaa
-                    r = CharToHex(ptr, true);
-                    g = CharToHex(ptr + 2, true);
-                    b = CharToHex(ptr + 4, true);
-                    a = CharToHex(ptr + 6, true);
-                    color = new Color32(r, g, b, a);
-                    return res;
-            }
-        }
-
-        color = default;
-        return false;
-
-        byte CharToHex(char* c, bool dual)
-        {
-            if (dual)
-            {
-                int c2 = *c;
-                byte b1;
-                if (c2 is > 96 and < 103)
-                    b1 = (byte)((c2 - 87) * 0x10);
-                else if (c2 is > 64 and < 71)
-                    b1 = (byte)((c2 - 55) * 0x10);
-                else if (c2 is > 47 and < 58)
-                    b1 = (byte)((c2 - 48) * 0x10);
-                else
-                {
-                    res = false;
-                    return 0;
-                }
-
-                c2 = *(c + 1);
-                if (c2 is > 96 and < 103)
-                    return (byte)(b1 + (c2 - 87));
-                if (c2 is > 64 and < 71)
-                    return (byte)(b1 + (c2 - 55));
-                if (c2 is > 47 and < 58)
-                    return (byte)(b1 + (c2 - 48));
-                res = false;
-            }
-            else
-            {
-                int c2 = *c;
-                if (c2 is > 96 and < 103)
-                    return (byte)((c2 - 87) * 0x10 + (c2 - 87));
-                if (c2 is > 64 and < 71)
-                    return (byte)((c2 - 55) * 0x10 + (c2 - 55));
-                if (c2 is > 47 and < 58)
-                    return (byte)((c2 - 48) * 0x10 + (c2 - 48));
-                res = false;
-            }
-
-            return 0;
-        }
-    }
-    private static void CheckPresets()
-    {
-        if (_presets != null)
-            return;
-        PropertyInfo[] props = typeof(Color).GetProperties(BindingFlags.Static | BindingFlags.Public)
-            .Where(x => x.PropertyType == typeof(Color)).Where(x => x.GetMethod != null).ToArray();
-        _presets = new KeyValuePair<string, Color>[props.Length];
-        for (int i = 0; i < props.Length; ++i)
-            _presets[i] = new KeyValuePair<string, Color>(props[i].Name.ToLowerInvariant(), (Color)props[i].GetMethod.Invoke(null, Array.Empty<object>()));
-    }
-
-    /// <summary>
-    /// Parse a <see cref="Color"/> from hex with an optional '#' prefix, common color name, rgb(r,g,b,a) or hsv(h,s,v).
-    /// </summary>
-    [Pure]
-    public static bool TryParseColor(string str, out Color color)
-    {
-        Color32 color32;
-        if (str.Length > 0 && str[0] == '#')
-        {
-            if (TryParseHexColor32(str, out color32))
-            {
-                color = color32;
-                return true;
-            }
-
-            color = default;
-            return false;
-        }
-        string[] strs = str.Split(SplitChars, StringSplitOptions.RemoveEmptyEntries);
-        if (strs.Length is 3 or 4)
-        {
-            bool hsv = strs[0].StartsWith("hsv");
-            float a = 255f;
-            int ind = strs[0].IndexOf('(');
-            if (ind != -1 && strs[0].Length > ind + 1) strs[0] = strs[0].Substring(ind + 1);
-            if (!float.TryParse(strs[0], NumberStyles.Number, CultureInfo.InvariantCulture, out float r))
-                goto fail;
-            if (!float.TryParse(strs[1], NumberStyles.Number, CultureInfo.InvariantCulture, out float g))
-                goto fail;
-            if (!float.TryParse(strs[2].Replace(')', ' '), NumberStyles.Number, CultureInfo.InvariantCulture, out float b))
-                goto fail;
-            if (strs.Length > 3 && !float.TryParse(strs[3].Replace(')', ' '), NumberStyles.Number, CultureInfo.InvariantCulture, out a))
-                goto fail;
-
-            if (hsv)
-            {
-                color = Color.HSVToRGB(r / 360f, g / 100f, b / 100f, false) with { a = a / 255f };
-                return true;
-            }
-
-            r = Mathf.Clamp01(r / 255f);
-            g = Mathf.Clamp01(g / 255f);
-            b = Mathf.Clamp01(b / 255f);
-            a = Mathf.Clamp01(a / 255f);
-            color = new Color(r, g, b, a);
-            return true;
-        fail:
-            color = default;
-            return false;
-        }
-
-        if (TryParseHexColor32(str, out color32))
-        {
-            color = color32;
-            return true;
-        }
-
-        CheckPresets();
-        for (int i = 0; i < _presets!.Length; ++i)
-        {
-            if (string.Compare(_presets[i].Key, str, CultureInfo.InvariantCulture,
-                CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType | CompareOptions.IgnoreWidth | CompareOptions.IgnoreNonSpace) == 0)
-            {
-                color = _presets[i].Value;
-                return true;
-            }
-        }
-
-        color = default;
-        return false;
-    }
-
-    /// <summary>
-    /// Parse a <see cref="Color"/> from hex with an optional '#' prefix, common color name, rgb(r,g,b,a) or hsv(h,s,v).
-    /// </summary>
-    [Pure]
-    public static bool TryParseColor32(string str, out Color32 color)
-    {
-        if (str.Length > 0 && str[0] == '#')
-        {
-            if (TryParseHexColor32(str, out color))
-                return true;
-
-            color = default;
-            return false;
-        }
-        string[] strs = str.Split(SplitChars, StringSplitOptions.RemoveEmptyEntries);
-        if (strs.Length is 3 or 4)
-        {
-            bool hsv = strs[0].StartsWith("hsv");
-            byte a = byte.MaxValue;
-            int ind = strs[0].IndexOf('(');
-            if (ind != -1 && strs[0].Length > ind + 1) strs[0] = strs[0].Substring(ind + 1);
-            if (!int.TryParse(strs[0], NumberStyles.Number, CultureInfo.InvariantCulture, out int r))
-                goto fail;
-            if (!byte.TryParse(strs[1], NumberStyles.Number, CultureInfo.InvariantCulture, out byte g))
-                goto fail;
-            if (!byte.TryParse(strs[2].Replace(')', ' '), NumberStyles.Number, CultureInfo.InvariantCulture, out byte b))
-                goto fail;
-            if (strs.Length > 3 && !byte.TryParse(strs[3].Replace(')', ' '), NumberStyles.Number, CultureInfo.InvariantCulture, out a))
-                goto fail;
-
-            if (hsv)
-            {
-                color = Color.HSVToRGB(r / 360f, g / 100f, b / 100f, false) with { a = a / 255f };
-                return true;
-            }
-
-            color = new Color32((byte)(r > 255 ? 255 : (r < 0 ? 0 : r)), g, b, a);
-            return true;
-        fail:
-            color = default;
-            return false;
-        }
-
-        if (TryParseHexColor32(str, out color))
-            return true;
-
-        CheckPresets();
-        for (int i = 0; i < _presets!.Length; ++i)
-        {
-            if (string.Compare(_presets[i].Key, str, CultureInfo.InvariantCulture,
-                    CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType | CompareOptions.IgnoreWidth | CompareOptions.IgnoreNonSpace) == 0)
-            {
-                color = _presets[i].Value;
-                return true;
-            }
-        }
-
-        color = default;
         return false;
     }
 

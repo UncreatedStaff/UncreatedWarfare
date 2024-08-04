@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Util;
 

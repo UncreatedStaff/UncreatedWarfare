@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Unlocks;

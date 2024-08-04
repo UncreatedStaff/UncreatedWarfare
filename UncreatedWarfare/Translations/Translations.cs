@@ -9,17 +9,21 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
+using DanielWillett.JavaPropertiesParser;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare;
 
-public class Translation
+public class TranslationOld
 {
     private const string NullColorTMPro = "<#569cd6><b>null</b></color>";
     private const string NullColorUnity = "<color=#569cd6><b>null</b></color>";
@@ -2048,14 +2052,14 @@ public interface ITranslationArgument
 {
     string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags);
 }
-public sealed class Translation<T0> : Translation
+public sealed class TranslationOld<T0> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly short _arg0PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string arg0Fmt) : this(@default, default, arg0Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string arg0Fmt) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string arg0Fmt) : this(@default, default, arg0Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string arg0Fmt) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
@@ -2114,16 +2118,16 @@ public sealed class Translation<T0> : Translation
     public string Translate(UCPlayer? player, bool canUseIMGUI, T0 arg0)
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0);
 }
-public sealed class Translation<T0, T1> : Translation
+public sealed class TranslationOld<T0, T1> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
     private readonly short _arg0PluralExp = -1;
     private readonly short _arg1PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string? arg0Fmt = null, string? arg1Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         _arg1Fmt = arg1Fmt;
@@ -2193,7 +2197,7 @@ public sealed class Translation<T0, T1> : Translation
     public string Translate(UCPlayer? player, bool canUseIMGUI, T0 arg0, T1 arg1)
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1);
 }
-public sealed class Translation<T0, T1, T2> : Translation
+public sealed class TranslationOld<T0, T1, T2> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2201,10 +2205,10 @@ public sealed class Translation<T0, T1, T2> : Translation
     private readonly short _arg0PluralExp = -1;
     private readonly short _arg1PluralExp = -1;
     private readonly short _arg2PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         _arg1Fmt = arg1Fmt;
@@ -2280,7 +2284,7 @@ public sealed class Translation<T0, T1, T2> : Translation
     public string Translate(UCPlayer? player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2)
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2);
 }
-public sealed class Translation<T0, T1, T2, T3> : Translation
+public sealed class TranslationOld<T0, T1, T2, T3> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2290,10 +2294,10 @@ public sealed class Translation<T0, T1, T2, T3> : Translation
     private readonly short _arg1PluralExp = -1;
     private readonly short _arg2PluralExp = -1;
     private readonly short _arg3PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         _arg1Fmt = arg1Fmt;
@@ -2374,7 +2378,7 @@ public sealed class Translation<T0, T1, T2, T3> : Translation
     public string Translate(UCPlayer? player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3);
 }
-public sealed class Translation<T0, T1, T2, T3, T4> : Translation
+public sealed class TranslationOld<T0, T1, T2, T3, T4> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2386,10 +2390,10 @@ public sealed class Translation<T0, T1, T2, T3, T4> : Translation
     private readonly short _arg2PluralExp = -1;
     private readonly short _arg3PluralExp = -1;
     private readonly short _arg4PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         _arg1Fmt = arg1Fmt;
@@ -2475,7 +2479,7 @@ public sealed class Translation<T0, T1, T2, T3, T4> : Translation
     public string Translate(UCPlayer? player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4);
 }
-public sealed class Translation<T0, T1, T2, T3, T4, T5> : Translation
+public sealed class TranslationOld<T0, T1, T2, T3, T4, T5> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2489,10 +2493,10 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5> : Translation
     private readonly short _arg3PluralExp = -1;
     private readonly short _arg4PluralExp = -1;
     private readonly short _arg5PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         _arg1Fmt = arg1Fmt;
@@ -2583,7 +2587,7 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5> : Translation
     public string Translate(UCPlayer? player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5);
 }
-public sealed class Translation<T0, T1, T2, T3, T4, T5, T6> : Translation
+public sealed class TranslationOld<T0, T1, T2, T3, T4, T5, T6> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2599,10 +2603,10 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6> : Translation
     private readonly short _arg4PluralExp = -1;
     private readonly short _arg5PluralExp = -1;
     private readonly short _arg6PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         _arg1Fmt = arg1Fmt;
@@ -2698,7 +2702,7 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6> : Translation
     public string Translate(UCPlayer? player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5, arg6);
 }
-public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7> : Translation
+public sealed class TranslationOld<T0, T1, T2, T3, T4, T5, T6, T7> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2716,10 +2720,10 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7> : Translation
     private readonly short _arg5PluralExp = -1;
     private readonly short _arg6PluralExp = -1;
     private readonly short _arg7PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : this(@default, default, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt, arg7Fmt, arg8Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : this(@default, default, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt, arg7Fmt, arg8Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         _arg1Fmt = arg1Fmt;
@@ -2820,7 +2824,7 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7> : Translation
     public string Translate(UCPlayer? player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
-public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> : Translation
+public sealed class TranslationOld<T0, T1, T2, T3, T4, T5, T6, T7, T8> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2840,10 +2844,10 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> : Translatio
     private readonly short _arg6PluralExp = -1;
     private readonly short _arg7PluralExp = -1;
     private readonly short _arg8PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt, arg7Fmt, arg8Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt, arg7Fmt, arg8Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         _arg1Fmt = arg1Fmt;
@@ -2949,7 +2953,7 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> : Translatio
     public string Translate(UCPlayer? player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }
-public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translation
+public sealed class TranslationOld<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> : TranslationOld
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2971,10 +2975,10 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> : Transl
     private readonly short _arg7PluralExp = -1;
     private readonly short _arg8PluralExp = -1;
     private readonly short _arg9PluralExp = -1;
-    public Translation(string @default) : base(@default) { }
-    public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt, arg7Fmt, arg8Fmt, arg9Fmt) { }
-    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null) : base(@default, flags)
+    public TranslationOld(string @default) : base(@default) { }
+    public TranslationOld(string @default, TranslationFlags flags) : base(@default, flags) { }
+    public TranslationOld(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt, arg7Fmt, arg8Fmt, arg9Fmt) { }
+    public TranslationOld(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null) : base(@default, flags)
     {
         _arg0Fmt = arg0Fmt;
         _arg1Fmt = arg1Fmt;
@@ -3087,7 +3091,7 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> : Transl
         => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 }
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
-public sealed class TranslationDataAttribute : Attribute
+public sealed class TranslationOldDataAttribute : Attribute
 {
     public TranslationDataAttribute() { }
     public TranslationDataAttribute(string section)

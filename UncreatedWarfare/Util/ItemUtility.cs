@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;

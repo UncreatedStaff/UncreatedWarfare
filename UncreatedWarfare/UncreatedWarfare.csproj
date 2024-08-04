@@ -105,6 +105,7 @@
     <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="[3.0.0,)" />
     <PackageReference Include="DanielWillett.SpeedBytes" Version="[1.1.2,)" />
     <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="[1.1.1,)" />
+    <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="[1.0.0,)" />
     <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease9" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
 

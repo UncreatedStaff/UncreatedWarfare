@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Stats;
 

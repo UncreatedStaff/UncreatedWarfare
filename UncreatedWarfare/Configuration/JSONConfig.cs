@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Configuration;
 

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 
 namespace Uncreated.Warfare.Networking.Purchasing;

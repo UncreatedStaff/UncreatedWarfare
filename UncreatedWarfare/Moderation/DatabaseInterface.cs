@@ -8,6 +8,7 @@ using System.Text;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Commendation;
 using Uncreated.Warfare.Moderation.Punishments;

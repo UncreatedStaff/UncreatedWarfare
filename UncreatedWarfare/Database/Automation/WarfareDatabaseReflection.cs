@@ -10,6 +10,7 @@ using System.Net;
 using System.Reflection;
 using Uncreated.Warfare.Database.ValueConverters;
 using Uncreated.Warfare.Database.ValueGenerators;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Moderation;
 

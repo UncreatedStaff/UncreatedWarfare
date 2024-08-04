@@ -8,6 +8,7 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Networking;
 using UnityEngine.Networking;
 

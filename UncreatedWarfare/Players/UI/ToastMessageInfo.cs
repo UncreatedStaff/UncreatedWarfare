@@ -1,6 +1,7 @@
 ﻿using System;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Players.UI;
 public enum ToastMessageStyle

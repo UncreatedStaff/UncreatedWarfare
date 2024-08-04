@@ -1,6 +1,7 @@
 ﻿using System;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands;

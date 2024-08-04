@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Util;
 using UnityEngine.SceneManagement;
 

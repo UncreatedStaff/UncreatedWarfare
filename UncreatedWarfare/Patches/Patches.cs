@@ -8,6 +8,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Squads;

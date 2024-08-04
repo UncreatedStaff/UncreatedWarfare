@@ -1,0 +1,82 @@
+﻿using System;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations.Util;
+
+namespace Uncreated.Warfare.Translations;
+
+/// <summary>
+/// This class stores the actual values for each language.
+/// </summary>
+public class TranslationValue
+{
+    private int _colorStrippedValueStart;
+    private int _colorStrippedValueLength;
+
+    private int _imguiColorStrippedValueStart;
+    private int _imguiColorStrippedValueLength;
+
+#nullable disable
+    private Pluralization[] _pluralizations;
+
+    /// <summary>
+    /// Translation this value belongs to.
+    /// </summary>
+    public Translation Translation { get; }
+
+    /// <summary>
+    /// Language of translations this value contains.
+    /// </summary>
+    public LanguageInfo Language { get; }
+
+    /// <summary>
+    /// The value of the translation, with pluralizations replaced with their singular values.
+    /// </summary>
+    public string Value { get; private set; }
+
+    /// <summary>
+    /// Value converted to IMGUI compatability. IMGUI uses full color tags instead of the TMPro shortcut.
+    /// </summary>
+    public string IMGUIValue { get; private set; }
+#nullable restore
+
+    /// <summary>
+    /// Background color for the message used for sending chat messages, defaulting to white.
+    /// </summary>
+    public Color Color { get; private set; }
+
+    /// <summary>
+    /// Span of text excluding the background color.
+    /// </summary>
+    public ReadOnlySpan<char> ColorStrippedValue => Value.AsSpan(_colorStrippedValueStart, _colorStrippedValueLength);
+
+    /// <summary>
+    /// Span of text excluding the background color (IMGUI).
+    /// </summary>
+    public ReadOnlySpan<char> ColorStrippedIMGUIValue => IMGUIValue.AsSpan(_imguiColorStrippedValueStart, _imguiColorStrippedValueLength);
+
+    /// <summary>
+    /// Offset into the <see cref="Value"/> string the color-stripped value starts.
+    /// </summary>
+    public int ColorStrippedValueOffset => _colorStrippedValueStart;
+
+    /// <summary>
+    /// Offset into the <see cref="IMGUIValue"/> string the color-stripped IMGUI value starts.
+    /// </summary>
+    public int ColorStrippedIMGUIValueOffset => _imguiColorStrippedValueStart;
+    public TranslationValue(LanguageInfo language, string value, Translation translation)
+    {
+        Language = language;
+        Translation = translation;
+        SetValue(value);
+    }
+    public void SetValue(string value)
+    {
+        string? imguiString = null;
+        _pluralizations = TranslationPluralizations.GetPluralizations(ref value, ref imguiString);
+        Value = value;
+        IMGUIValue = imguiString ?? TranslationFormattingUtility.CreateIMGUIString(value);
+
+        Color = TranslationFormattingUtility.ExtractColor(Value, out _colorStrippedValueStart, out _colorStrippedValueLength);
+        TranslationFormattingUtility.ExtractColor(IMGUIValue, out _imguiColorStrippedValueStart, out _imguiColorStrippedValueLength);
+    }
+}

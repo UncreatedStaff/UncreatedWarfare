@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Uncreated.Warfare.Logging;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Networking;

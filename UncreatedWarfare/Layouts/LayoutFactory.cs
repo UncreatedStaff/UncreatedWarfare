@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 

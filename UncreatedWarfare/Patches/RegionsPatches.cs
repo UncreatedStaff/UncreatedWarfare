@@ -2,6 +2,7 @@
 using SDG.NetPak;
 using SDG.NetTransport;
 using System;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Traits;
 
 // ReSharper disable InconsistentNaming

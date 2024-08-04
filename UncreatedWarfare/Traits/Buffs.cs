@@ -1,4 +1,6 @@
-﻿using Uncreated.Warfare.Squads;
+﻿using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits;
 public abstract class Buff : Trait, IBuff

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Components;
 internal class DebugComponent : MonoBehaviour

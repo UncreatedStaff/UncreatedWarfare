@@ -1,6 +1,7 @@
 ﻿#if DEBUG
 #endif
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Logging;
 using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;

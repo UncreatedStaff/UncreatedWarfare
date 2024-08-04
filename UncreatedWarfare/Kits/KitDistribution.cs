@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Players.Management.Legacy;

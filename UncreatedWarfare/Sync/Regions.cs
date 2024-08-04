@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Sync;
 public static class ServerRegion

@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Util;
 

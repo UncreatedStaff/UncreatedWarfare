@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Commands.Dispatch;

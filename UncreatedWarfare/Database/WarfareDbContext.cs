@@ -5,6 +5,8 @@ using Pomelo.EntityFrameworkCore.MySql.Storage;
 using System;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Authentication;
 using Uncreated.Warfare.Models.Buildables;
 using Uncreated.Warfare.Models.Factions;
@@ -19,7 +21,7 @@ using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Database;
 #pragma warning disable CS8644
-public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext
+public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext, IWhitelistDbContext
 {
     internal static string? ConnStringOverride = null;
     
@@ -46,6 +48,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<AidRecord> AidRecords => Set<AidRecord>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<BuildableSave> Saves => Set<BuildableSave>();
+    public DbSet<ItemWhitelist> Whitelists => Set<ItemWhitelist>();
 
     /* configure database settings */
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -77,6 +80,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         IStatsDbContext.ConfigureModels(modelBuilder);
         ISeasonsDbContext.ConfigureModels(modelBuilder);
         IGameDataDbContext.ConfigureModels(modelBuilder);
+        IWhitelistDbContext.ConfigureModels(modelBuilder);
 
         modelBuilder.Entity<HomebaseAuthenticationKey>();
 
@@ -85,6 +89,5 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
 
         Console.WriteLine("Model created.");
     }
-
 }
 #pragma warning restore CS8644

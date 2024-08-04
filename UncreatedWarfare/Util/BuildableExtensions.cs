@@ -1,5 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Util;
 public static class BuildableExtensions

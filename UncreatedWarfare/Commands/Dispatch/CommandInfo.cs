@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Commands.Dispatch;
 public class CommandType

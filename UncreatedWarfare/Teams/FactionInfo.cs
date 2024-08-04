@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Localization;

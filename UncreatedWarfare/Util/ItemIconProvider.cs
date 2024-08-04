@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Teams;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Util;
 internal static class ItemIconProvider
 {
     private const int WhiteColor = unchecked((int)0xFFFFFFFF);
@@ -429,7 +430,7 @@ internal static class ItemIconProvider
         {
             L.Log("Loading defaults into newly created item icon config.", ConsoleColor.Magenta);
 #endif
-            await AddDefaults(token).ConfigureAwait(false);
+        await AddDefaults(token).ConfigureAwait(false);
 #if !DEBUG
             return;
         }

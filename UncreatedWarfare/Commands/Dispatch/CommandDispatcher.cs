@@ -7,6 +7,8 @@ using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Commands.Dispatch;
 public class CommandDispatcher : IDisposable

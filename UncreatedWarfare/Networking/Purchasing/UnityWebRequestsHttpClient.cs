@@ -13,6 +13,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Newtonsoft.Json;
 using UnityEngine.Networking;
+using Uncreated.Warfare.Logging;
+
 #if TELEMETRY
 using System.Net.Http;
 #endif

@@ -6,12 +6,13 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Kits;
 

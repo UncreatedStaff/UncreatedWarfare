@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare.Components;

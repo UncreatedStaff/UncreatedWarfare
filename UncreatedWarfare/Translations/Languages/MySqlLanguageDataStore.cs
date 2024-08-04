@@ -2,13 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Localization;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Translations.Languages;
 public interface ILanguageDataStore
 {
     Task Initialize(CancellationToken token = default);
@@ -227,21 +224,5 @@ public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageData
             foreach (LanguageInfo info2 in info)
                 outputList.Add(info2);
         }
-    }
-}
-
-public sealed class WarfareMySqlLanguageDataStore : MySqlLanguageDataStore<WarfareDbContext>
-{
-    public void Subscribe()
-    {
-        EventDispatcher.PlayerPendingAsync += OnPlayerPending;
-    }
-    public void Unsubscribe()
-    {
-        EventDispatcher.PlayerPendingAsync -= OnPlayerPending;
-    }
-    private async Task OnPlayerPending(PlayerPending e, CancellationToken token)
-    {
-        e.AsyncData.LanguagePreferences = await GetLanguagePreferences(e.Steam64, token).ConfigureAwait(false);
     }
 }

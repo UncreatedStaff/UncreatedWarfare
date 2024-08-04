@@ -5,6 +5,7 @@ using System.Reflection;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Singletons;

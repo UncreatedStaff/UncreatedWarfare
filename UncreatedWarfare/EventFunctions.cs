@@ -16,8 +16,10 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
@@ -34,6 +36,7 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Zones;
 
 #pragma warning disable IDE0060 // Remove unused parameter
 namespace Uncreated.Warfare;
@@ -73,30 +76,6 @@ public static class EventFunctions
             TeleportCommand.Jump(true, -1f, player);
             Vector3 castPt = player.Position;
             player.SendChat(T.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
-        }
-    }
-    internal static void OnDropItemTry(PlayerInventory inv, Item item, ref bool allow)
-    {
-        ItemsTempBuffer[item] = inv;
-    }
-    internal static void OnDropItemFinal(Item item, ref Vector3 location, ref bool shouldAllow)
-    {
-        if (ItemsTempBuffer.TryGetValue(item, out PlayerInventory inv))
-        {
-            uint nextindex = Data.GetItemManagerInstanceCount() + 1;
-            if (DroppedItems.TryGetValue(inv.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instanceids))
-            {
-                if (instanceids == null) DroppedItems[inv.player.channel.owner.playerID.steamID.m_SteamID] = [ nextindex ];
-                else instanceids.Add(nextindex);
-            }
-            else
-            {
-                DroppedItems.Add(inv.player.channel.owner.playerID.steamID.m_SteamID, [ nextindex ]);
-            }
-
-            DroppedItemsOwners[nextindex] = inv.player.channel.owner.playerID.steamID.m_SteamID;
-
-            ItemsTempBuffer.Remove(item);
         }
     }
     internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow)
@@ -266,130 +245,6 @@ public static class EventFunctions
             e.Cancel();
         }
     }
-    private static bool CheckLandminePosition(Vector3 position)
-    {
-        return !(TeamManager.IsInAnyMainOrAMCOrLobby(position) || FOBManager.Loaded && FOBManager.IsPointInFOB(position, out _));
-    }
-
-    internal static void OnStructureTryPlaced(Structure structure, ItemStructureAsset asset, ref Vector3 point, ref float angleX,
-        ref float angleY, ref float angleZ, ref ulong owner, ref ulong group, ref bool shouldAllow)
-    {
-        if (!shouldAllow) return;
-        UCPlayer? player = UCPlayer.FromID(owner);
-        if (player is null)
-        {
-            shouldAllow = false;
-            return;
-        }
-
-        bool perms = player.OnDuty();
-
-        if (!perms && !CheckZoneBuildablePermissions(player, point, asset))
-        {
-            shouldAllow = false;
-            // return;
-        }
-    }
-    internal static void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angleX,
-        ref float angleY, ref float angleZ, ref ulong owner, ref ulong group, ref bool shouldAllow)
-    {
-        try
-        {
-            if (!shouldAllow) return;
-            UCPlayer? player = UCPlayer.FromID(owner);
-            if (player is null)
-            {
-                shouldAllow = false;
-                return;
-            }
-
-            bool perms = player.OnDuty();
-            if (asset.build == EBuild.SPIKE || asset.build == EBuild.WIRE)
-            {
-                if (!perms && !CheckLandminePosition(point))
-                {
-                    shouldAllow = false;
-                    player.SendChat(T.ProhibitedPlacement, asset);
-                    return;
-                }
-            }
-
-            if (hit != null && hit.TryGetComponent<InteractableVehicle>(out _))
-            {
-                if (!UCWarfare.Config.ModerationSettings.AllowedBarricadesOnVehicles.Contains(asset.id))
-                {
-                    if (!perms)
-                    {
-                        shouldAllow = false;
-                        player.SendChat(T.NoPlacementOnVehicle, asset);
-                        return;
-                    }
-                }
-            }
-            
-            if (!perms && !CheckZoneBuildablePermissions(player, point, asset))
-            {
-                shouldAllow = false;
-                return;
-            }
-
-            RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angleX, ref angleY, ref angleZ, ref owner, ref group, ref shouldAllow);
-            if (!shouldAllow) return;
-
-            if (Gamemode.Config.BarricadeAmmoBag.TryGetGuid(out Guid guid) && guid == barricade.asset.GUID)
-            {
-                if (!perms && player.KitClass != Class.Rifleman)
-                {
-                    shouldAllow = false;
-                    player.SendChat(T.AmmoNotRifleman);
-                    return;
-                }
-            }
-            if (Data.Gamemode.UseWhitelist)
-                Data.Gamemode.Whitelister.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angleX, ref angleY, ref angleZ, ref owner, ref group, ref shouldAllow);
-            if (!(shouldAllow && Data.Gamemode is TeamGamemode)) return;
-            
-            if (!perms && TeamManager.IsInAnyMainOrAMCOrLobby(point))
-            {
-                shouldAllow = false;
-                player.SendChat(T.WhitelistProhibitedPlace, barricade.asset);
-            }
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Error in OnBarricadeTryPlaced");
-            L.LogError(ex);
-            shouldAllow = false;
-        }
-    }
-    private static bool CheckZoneBuildablePermissions(UCPlayer placer, Vector3 point, ItemAsset asset)
-    {
-        if (!Data.Singletons.TryGetSingleton(out ZoneList list))
-            return true;
-        ZoneFlags flags = GetNoBuildingZoneFlags(asset);
-        if (flags != ZoneFlags.None)
-        {
-            list.WriteWait();
-            try
-            {
-                for (int i = 0; i < list.Items.Count; ++i)
-                {
-                    Zone? zone = list.Items[i]?.Item;
-                    if (zone == null || (zone.Data.Flags & flags) == 0 || !zone.IsInside(point))
-                        continue;
-
-                    placer.SendChat(T.ProhibitedPlacementZone, asset, FlagGamemode.GetZoneOrFlag(zone));
-                    return false;
-                }
-            }
-            finally
-            {
-                list.WriteRelease();
-            }
-        }
-
-        return true;
-    }
     public static void OnPickedUpItemRequested(Player player, byte x, byte y, uint instanceId, byte toX, byte toY, byte toRotation, byte toPage, ItemData itemData, ref bool shouldAllow)
     {
         UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
@@ -417,28 +272,6 @@ public static class EventFunctions
             shouldAllow = false;
             // return;
         }
-    }
-    private static ZoneFlags GetNoBuildingZoneFlags(ItemAsset asset)
-    {
-        if (asset is ItemBarricadeAsset barricade)
-        {
-            if (RallyManager.IsRally(barricade))
-                return ZoneFlags.NoRallies | ZoneFlags.NoBuilding;
-
-            if (barricade.build is EBuild.SPIKE or EBuild.WIRE)
-                return ZoneFlags.NoTraps | ZoneFlags.NoBuilding;
-        }
-
-        if (Gamemode.Config.FOBRadios.Value.HasGuid(asset.GUID))
-            return ZoneFlags.NoRadios | ZoneFlags.NoBuilding;
-
-        if (Gamemode.Config.BarricadeFOBBunkerBase.MatchGuid(asset.GUID))
-            return ZoneFlags.NoBunkers | ZoneFlags.NoBuilding;
-
-        if (FOBManager.FindBuildable(asset) is not null)
-            return ZoneFlags.NoFOBBuilding | ZoneFlags.NoBuilding;
-
-        return ZoneFlags.NoBuilding;
     }
     internal static void OnItemDropRequested(ItemDropRequested e)
     {

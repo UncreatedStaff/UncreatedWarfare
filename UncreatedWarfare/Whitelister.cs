@@ -10,7 +10,9 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Util;
@@ -365,23 +367,5 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 return true;
         }
         return false;
-    }
-}
-
-public class WhitelistItem
-{
-    public Guid Item { get; set; }
-    [CommandSettable]
-    public int Amount { get; set; }
-
-    public WhitelistItem()
-    {
-        Item = default;
-        Amount = 255;
-    }
-    public WhitelistItem(Guid itemID, ushort amount)
-    {
-        Item = itemID;
-        Amount = amount;
     }
 }

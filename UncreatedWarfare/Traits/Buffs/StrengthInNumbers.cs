@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 

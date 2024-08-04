@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Commands;

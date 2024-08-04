@@ -75,10 +75,11 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         Save.Load();
 
         Locale = new WarfarePlayerLocale(this, /* todo data.LanguagePreferences */ null);
-
-        Components = components;
         Toasts = new ToastManager(this);
 
+        Components = components;
+
+        Team = Team.NoTeam;
         _logger.LogInformation("Player {0} joined the server", this);
     }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Commands;
 

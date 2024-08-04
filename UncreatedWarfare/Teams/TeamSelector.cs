@@ -8,6 +8,7 @@ using Uncreated.Framework.UI.Presets;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management.Legacy;

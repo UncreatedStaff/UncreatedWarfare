@@ -153,7 +153,7 @@ public sealed class ColorJsonConverter : JsonConverter<Color>
             string str = reader.GetString()!;
             if (str.Length > 0 && str[0] == '#')
             {
-                if (FormattingUtility.TryParseColor(str, out Color color))
+                if (HexStringHelper.TryParseColor(str, CultureInfo.InvariantCulture, out Color color))
                     return color;
 
                 throw new JsonException("String notation for Color must provide 3 or 4 float elements.");
@@ -173,7 +173,7 @@ public sealed class ColorJsonConverter : JsonConverter<Color>
                 if (strs.Length > 3 && !float.TryParse(strs[3].Replace(')', ' '), NumberStyles.Number, CultureInfo.InvariantCulture, out a))
                     throw new JsonException("Invalid alpha channel in Color string notation.");
             }
-            else if (FormattingUtility.TryParseColor(str, out Color color))
+            else if (HexStringHelper.TryParseColor(str, CultureInfo.InvariantCulture, out Color color))
                 return color;
             else
                 throw new JsonException("String notation for Color must provide 3 or 4 float elements or a \"#ffffff\" notation.");

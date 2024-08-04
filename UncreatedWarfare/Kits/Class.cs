@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using SDG.Framework.Utilities;
 using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Kits;
 

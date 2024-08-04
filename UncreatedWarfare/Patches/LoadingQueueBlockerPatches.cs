@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using System;
 using System.Reflection;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Harmony;
 

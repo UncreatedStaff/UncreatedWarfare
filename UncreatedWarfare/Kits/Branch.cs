@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Kits;
 

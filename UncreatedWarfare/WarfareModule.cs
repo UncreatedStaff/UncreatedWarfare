@@ -17,11 +17,16 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Collections;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
@@ -207,18 +212,17 @@ public sealed class WarfareModule : IModuleNexus
 
         // Players
         serviceCollection.AddSingleton<PlayerService>();
+        serviceCollection.AddSingleton<IEventListenerProvider, PlayerComponentListenerProvider>();
 
-        // Layout
+        // Layouts
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout());
+        serviceCollection.AddTransient<IEventListenerProvider>(serviceProvider => serviceProvider.GetRequiredService<Layout>());
 
         // Active ILayoutPhase
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().ActivePhase
                                                           ?? throw new InvalidOperationException("There is not a phase currently loaded."));
 
-        // Active ITeamManager
-        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().TeamManager);
-
-        // add all layout types
+        // All layout types so they can be individually requested (i'm not too sure about adding this)
         foreach (Type type in Accessor.GetTypesSafe(thisAsm).Where(x => x.IsSubclassOf(typeof(Layout))))
         {
             serviceCollection.Add(new ServiceDescriptor(type, _ =>
@@ -232,6 +236,18 @@ public sealed class WarfareModule : IModuleNexus
                 return session;
             }, ServiceLifetime.Transient));
         }
+
+        // Active ITeamManager
+        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().TeamManager);
+
+        // Localization
+        serviceCollection.AddSingleton<LanguageService>();
+        serviceCollection.AddSingleton<ILanguageDataStore, MySqlLanguageDataStore<WarfareDbContext>>();
+
+        // Translations
+        serviceCollection.AddSingleton<ITranslationValueFormatter, TranslationValueFormatter>();
+        serviceCollection.AddSingleton<ITranslationService, TranslationService>();
+        serviceCollection.AddTransient(typeof(TranslationInjection<>));
     }
 
     public async UniTask ShutdownAsync(CancellationToken token = default)

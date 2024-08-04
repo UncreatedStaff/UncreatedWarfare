@@ -7,10 +7,12 @@ using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.Logging;
+
 
 #if ENABLE_SPOTTED_BUFF
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Traits;
 #endif
 

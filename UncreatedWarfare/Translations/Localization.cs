@@ -10,8 +10,10 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
@@ -23,7 +25,7 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare;
 
-public static class Localization
+public static class LocalizationOld
 {
     private static int _totalDefaultTranslations;
     private static readonly Dictionary<TranslationSection, int> TotalSectionedDefaultTranslations = new Dictionary<TranslationSection, int>(6);

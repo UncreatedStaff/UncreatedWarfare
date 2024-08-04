@@ -9,7 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Logging;
 public class ActionLog : MonoBehaviour
 {
     public const string DateHeaderFormat = "yyyy-MM-dd_HH-mm-ss";
@@ -82,7 +82,7 @@ public class ActionLog : MonoBehaviour
         }
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                                                 // the brackets are separated on purpose
+    // the brackets are separated on purpose
     public static string AsAsset(Asset asset) => "{" + $"{asset.FriendlyName} / {asset.id} / {asset.GUID:N}" + "}";
     public static void Add(ActionLogType type, string? data, UCPlayer? player) => Add(type, data, player == null ? 0ul : player.Steam64);
     public static void Add(ActionLogType type, string? data = null, ulong player = 0)
@@ -177,7 +177,7 @@ public class ActionLog : MonoBehaviour
                     NetTask netTask = NetCalls.SendLog.RequestAck(UCWarfare.I.NetClient!, meta, bytes, timeoutMs);
 
                     RequestResponse response = await netTask;
-                    L.LogDebug("  ... Done, " + (response.Responded ? ("Response: " + response.Context) : "No response."));
+                    L.LogDebug("  ... Done, " + (response.Responded ? "Response: " + response.Context : "No response."));
                     if (response.Responded && response.ErrorCode is (int)StandardErrorCode.Success && context.Connection == null)
                     {
                         if (meta != _current)
@@ -261,7 +261,7 @@ public class ActionLog : MonoBehaviour
 
             type = (ActionLogType)i;
             return true;
-            g:;
+        g:;
         }
         return Enum.TryParse(text, true, out type);
     }
@@ -905,7 +905,7 @@ public enum ActionLogType : byte
     CreateModerationEntry,
     [Translatable("REMOVE_MOD_ENTRY")]
     RemoveModerationEntry,
-    
+
     [Translatable(IsPrioritizedTranslation = false)]
     [Obsolete("Don't use this.")]
     [Ignore]

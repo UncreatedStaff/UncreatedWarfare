@@ -5,6 +5,7 @@ using SDG.NetTransport;
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Levels;
 

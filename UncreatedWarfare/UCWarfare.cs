@@ -25,6 +25,11 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
+
+
 #if NETSTANDARD || NETFRAMEWORK
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking.Purchasing;

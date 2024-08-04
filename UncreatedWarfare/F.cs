@@ -9,12 +9,14 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Steam.Models;
 using Types = SDG.Unturned.Types;
 
@@ -120,6 +122,10 @@ public static class F
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool OnDuty(this UCPlayer player)
+        => player.PermissionCheck(EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, PermissionComparison.MaskOverlaps);
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool OnDuty(this WarfarePlayer player)
         => player.PermissionCheck(EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

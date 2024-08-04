@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Configuration;
 public static class ConfigurationHelper

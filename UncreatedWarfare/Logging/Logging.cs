@@ -12,8 +12,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Translations.Languages;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Logging;
 
 public static class L
 {
@@ -54,7 +55,7 @@ public static class L
             Locale = CultureInfo.InvariantCulture,
             PutSourceDataOnNewLine = true,
         };
-        
+
         if (Type.GetType("Cysharp.Threading.Tasks.UniTask, UniTask", throwOnError: false) is { } uniTaskType)
         {
             List<Type> hiddenTypes = new List<Type>(config.GetHiddenTypes())
@@ -88,7 +89,7 @@ public static class L
 
             config.HiddenTypes = hiddenTypes;
         }
-        
+
         Cleaner = new StackTraceCleaner(config);
 
         Accessor.Logger = new UCLoggerReflectionTools();
@@ -119,7 +120,7 @@ public static class L
                     AddLine(msg.Message, msg.Color);
                 }
             }
-            
+
             Log(string.Empty);
             using (IndentLog(1))
             {
@@ -221,7 +222,7 @@ public static class L
                 CommandWindow.LogError("Failed to set unity logger:");
                 CommandWindow.LogError(ex);
             }
-            
+
             Application.logMessageReceivedThreaded += OnUnityLogMessage;
             Application.SetStackTraceLogType(LogType.Error, StackTraceLogType.ScriptOnly);
             Application.SetStackTraceLogType(LogType.Exception, StackTraceLogType.ScriptOnly);
@@ -540,7 +541,7 @@ public static class L
             {
                 AddLine2(string.Empty, ConsoleColor.Red);
             }
-            AddLine2(ind + (inner ? "Inner Exception: " : ((string.IsNullOrEmpty(method) ? string.Empty : ("[" + method.ToUpper() + "] ")) + "Exception: ")) + ex.GetType().Name, ConsoleColor.Red);
+            AddLine2(ind + (inner ? "Inner Exception: " : (string.IsNullOrEmpty(method) ? string.Empty : "[" + method.ToUpper() + "] ") + "Exception: ") + ex.GetType().Name, ConsoleColor.Red);
             AddLine2(ind + (ex.Message ?? "No message"), ConsoleColor.DarkRed);
             if (ex is TypeLoadException t)
             {
@@ -604,7 +605,7 @@ public static class L
             LogError("Plugin threw an exception from onCommandWindowInputted:");
             LogError(ex);
         }
-        if (!shouldExecuteCommand || Commander.execute(Steamworks.CSteamID.Nil, command))
+        if (!shouldExecuteCommand || Commander.execute(CSteamID.Nil, command))
             return;
         LogError($"Unable to match \"{command}\" with any built-in commands");
     }

@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Events.Models.Players;

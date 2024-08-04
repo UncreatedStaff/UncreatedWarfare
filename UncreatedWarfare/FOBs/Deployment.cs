@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Traits.Buffs;

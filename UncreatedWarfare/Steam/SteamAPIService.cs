@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Steam.Models;
 using UnityEngine.Networking;
 

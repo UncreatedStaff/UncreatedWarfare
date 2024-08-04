@@ -1,6 +1,7 @@
 ﻿using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
 using System;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare.Players.Management.Legacy;

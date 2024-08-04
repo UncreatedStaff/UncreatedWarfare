@@ -2,6 +2,7 @@
 using System;
 using System.Globalization;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Locations;
 
 namespace Uncreated.Warfare.Commands;

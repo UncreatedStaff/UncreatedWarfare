@@ -7,8 +7,9 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Models.Structures;
+using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Harmony;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using static Uncreated.Warfare.Harmony.Patches;
 

@@ -2,6 +2,7 @@
 #endif
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands;

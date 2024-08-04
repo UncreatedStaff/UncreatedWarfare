@@ -8,6 +8,7 @@ using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;

@@ -2,6 +2,7 @@
 using DanielWillett.ModularRpcs.Protocol;
 using DanielWillett.ModularRpcs.WebSockets;
 using System;
+using Uncreated.Warfare.Logging;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Networking;

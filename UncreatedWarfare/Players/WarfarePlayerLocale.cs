@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Players;

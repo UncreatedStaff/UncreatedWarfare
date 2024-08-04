@@ -5,6 +5,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;

@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Models.Localization;
 
@@ -65,6 +66,18 @@ public class LanguageInfo : ITranslationArgument
             return _totalDefaultTranslations;
         }
         set => _totalDefaultTranslations = value;
+    }
+
+    public LanguageInfo() { }
+
+    public LanguageInfo(string tempCode)
+    {
+        Code = tempCode;
+        DisplayName = tempCode;
+        HasTranslationSupport = false;
+        Aliases = new List<LanguageAlias>(0);
+        Contributors = new List<LanguageContributor>(0);
+        SupportedCultures = new List<LanguageCulture>(0);
     }
 
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Structures;
 
@@ -14,7 +15,7 @@ public class PlaceStructureRequested : CancellableEvent
     /// <summary>
     /// The player that initially tried to place the structure.
     /// </summary>
-    public required UCPlayer? OriginalPlacer { get; init; }
+    public required WarfarePlayer? OriginalPlacer { get; init; }
 
     /// <summary>
     /// Structure instantiation data.

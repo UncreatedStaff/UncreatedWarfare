@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Unity.Collections;
 

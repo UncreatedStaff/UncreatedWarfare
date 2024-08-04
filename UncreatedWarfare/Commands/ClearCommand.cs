@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;

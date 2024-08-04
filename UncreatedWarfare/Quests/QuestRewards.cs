@@ -2,6 +2,7 @@
 using System;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Sync;
 
 namespace Uncreated.Warfare.Quests;

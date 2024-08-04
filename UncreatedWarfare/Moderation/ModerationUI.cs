@@ -9,6 +9,7 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Teams;
