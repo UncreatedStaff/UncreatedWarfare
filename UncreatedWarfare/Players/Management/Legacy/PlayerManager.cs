@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;

@@ -1,7 +1,7 @@
 ﻿using SDG.NetTransport;
 using System;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare.Tickets;

@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Maps;

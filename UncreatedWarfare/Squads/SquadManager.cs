@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;

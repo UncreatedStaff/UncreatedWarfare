@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events;

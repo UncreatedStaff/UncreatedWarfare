@@ -1,7 +1,7 @@
 ﻿using System;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events;

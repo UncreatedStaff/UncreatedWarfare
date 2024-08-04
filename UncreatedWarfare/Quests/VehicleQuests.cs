@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Text.Json;
-using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests.Types;

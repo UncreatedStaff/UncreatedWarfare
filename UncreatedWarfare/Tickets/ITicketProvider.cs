@@ -1,6 +1,7 @@
 ﻿using SDG.NetTransport;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Singletons;
 
@@ -76,7 +77,7 @@ public abstract class BaseTicketProvider : ITicketProvider, IPlayerDeathListener
         else if (e.DeadTeam == 2)
             --Manager.Team2Tickets;
     }
-    protected virtual void OnVehicleDestroyed(Events.Vehicles.VehicleDestroyed e)
+    protected virtual void OnVehicleDestroyed(VehicleDestroyed e)
     {
         if (e.VehicleData is not null)
         {

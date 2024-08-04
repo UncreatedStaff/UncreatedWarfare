@@ -2,7 +2,7 @@
 using DanielWillett.ReflectionTools.Formatting;
 using System;
 using System.Reflection;
-using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
 using static Uncreated.Warfare.Harmony.Patches;

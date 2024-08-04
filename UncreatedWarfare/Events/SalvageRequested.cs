@@ -1,8 +1,8 @@
 ﻿using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Models.Buildables;
-using Uncreated.Warfare.Events.Barricades;
-using Uncreated.Warfare.Events.Structures;
+using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Structures;
 
 namespace Uncreated.Warfare.Events;
 

@@ -3,7 +3,7 @@ using DanielWillett.ReflectionTools.Formatting;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management.Legacy;

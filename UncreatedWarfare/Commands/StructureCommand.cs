@@ -3,8 +3,8 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events.Barricades;
-using Uncreated.Warfare.Events.Structures;
+using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Teams;
 

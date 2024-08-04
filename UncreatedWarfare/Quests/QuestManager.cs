@@ -11,8 +11,8 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Squads;
 
