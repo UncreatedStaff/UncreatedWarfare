@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Vehicles;

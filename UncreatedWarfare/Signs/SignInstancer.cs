@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Barricades;
+using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;

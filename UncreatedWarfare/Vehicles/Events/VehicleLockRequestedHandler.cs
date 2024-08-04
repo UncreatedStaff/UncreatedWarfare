@@ -1,7 +1,7 @@
 ﻿using System;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Events.Models.Vehicles;
 
 namespace Uncreated.Warfare.Vehicles.Events;
 internal class VehicleLockRequestedHandler : IEventListener<ChangeVehicleLockRequested>

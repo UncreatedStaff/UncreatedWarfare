@@ -1,6 +1,6 @@
 ﻿using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Structures;
+using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events;

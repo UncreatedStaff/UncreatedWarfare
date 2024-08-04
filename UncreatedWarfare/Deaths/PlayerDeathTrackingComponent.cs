@@ -2,7 +2,7 @@
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 
 namespace Uncreated.Warfare.Deaths;
 internal class PlayerDeathTrackingComponent : MonoBehaviour

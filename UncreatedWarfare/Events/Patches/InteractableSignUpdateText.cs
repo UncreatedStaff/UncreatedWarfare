@@ -2,7 +2,7 @@
 using DanielWillett.ReflectionTools.Formatting;
 using System.Reflection;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events.Barricades;
+using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
 using static Uncreated.Warfare.Harmony.Patches;

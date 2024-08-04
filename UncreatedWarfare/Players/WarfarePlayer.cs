@@ -119,7 +119,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
 
     public bool Equals(IPlayer other)
     {
-        return Steam64.m_SteamID == other.Steam64.m_SteamID;
+        return Steam64.m_SteamID == other.Steam64;
     }
 
     public bool Equals(WarfarePlayer other)
@@ -129,7 +129,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
 
     public override bool Equals(object? obj)
     {
-        return obj is IPlayer player && Steam64.m_SteamID == player.Steam64.m_SteamID;
+        return obj is IPlayer player && Steam64.m_SteamID == player.Steam64;
     }
 
     public override int GetHashCode()
@@ -138,6 +138,9 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     }
 
     bool ICommandUser.IsSuperUser => false;
+
+    ulong IPlayer.Steam64 => throw new NotImplementedException();
+
     void ICommandUser.SendMessage(string message)
     {
         ChatManager.serverSendMessage(message, Palette.AMBIENT, null, SteamPlayer, EChatMode.SAY, useRichTextFormatting: true);
