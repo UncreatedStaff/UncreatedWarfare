@@ -63,6 +63,19 @@ public class AttachedSphereProximity : IAttachedSphereProximity
         }
     }
 
+    /// <inheritdoc />
+    float IProximity.Area
+    {
+        get
+        {
+            ThreadUtil.assertIsGameThread();
+
+            float rad = Sphere.radius;
+            Vector3 scale = AttachmentRoot != null ? AttachmentRoot.lossyScale : Vector3.one;
+            return Mathf.PI * rad * scale.x * rad * scale.z;
+        }
+    }
+
     /// <summary>
     /// Create a sphere from a <see cref="BoundingSphere"/>.
     /// </summary>

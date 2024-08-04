@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using HarmonyLib;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,10 +21,11 @@ namespace Uncreated.Warfare.Harmony;
 
 public static partial class Patches
 {
-    public static HarmonyLib.Harmony Patcher = new HarmonyLib.Harmony("net.uncreated.warfare");
+    public static HarmonyLib.Harmony Patcher = new HarmonyLib.Harmony("network.uncreated.warfare");
     /// <summary>Patch methods</summary>
-    public static void DoPatching(Module module)
+    public static void DoPatching(Module module, IServiceProvider serviceProvider)
     {
+        ILoggerFactory loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         // patch all IHarmonyPatch instances in all referenced assemblies.
         foreach (Type type in Accessor.GetTypesSafe(module.assemblies).Where(typeof(IHarmonyPatch).IsAssignableFrom))
         {
@@ -40,7 +42,7 @@ public static partial class Patches
             IHarmonyPatch patch = (IHarmonyPatch)ctor.Invoke(Array.Empty<object>());
             try
             {
-                patch.Patch();
+                patch.Patch(loggerFactory.CreateLogger(type));
             }
             catch (Exception ex)
             {
@@ -54,8 +56,9 @@ public static partial class Patches
             InternalPatches.ServerMessageHandler_ValidateAssets_Patch.Patch(Patcher);
     }
     /// <summary>Unpatch methods</summary>
-    public static void Unpatch()
+    public static void Unpatch(IServiceProvider serviceProvider)
     {
+        ILoggerFactory loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         foreach (Type type in Accessor.GetTypesSafe(AppDomain.CurrentDomain.GetAssemblies()).Where(typeof(IHarmonyPatch).IsAssignableFrom))
         {
             if (type.IsAbstract)
@@ -68,7 +71,7 @@ public static partial class Patches
             IHarmonyPatch patch = (IHarmonyPatch)ctor.Invoke(Array.Empty<object>());
             try
             {
-                patch.Unpatch();
+                patch.Unpatch(loggerFactory.CreateLogger(type));
             }
             catch (Exception ex)
             {
@@ -77,7 +80,7 @@ public static partial class Patches
             }
         }
 
-        Patcher.UnpatchAll("net.uncreated.warfare");
+        Patcher.UnpatchAll("network.uncreated.warfare");
     }
     public delegate void BarricadeDroppedEventArgs(BarricadeDrop drop, BarricadeRegion region, Barricade barricade, Vector3 point, Quaternion rotation, ulong owner, ulong group);
     public delegate void StructureDestroyedEventArgs(StructureData data, StructureDrop drop, uint instanceID);

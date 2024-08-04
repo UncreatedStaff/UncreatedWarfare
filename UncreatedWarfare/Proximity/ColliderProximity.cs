@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Proximity;
 
 public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, IDisposable
 {
-    private List<Collider> _colliders = new List<Collider>(8);
+    private readonly List<Collider> _colliders = new List<Collider>(8);
     private Collider? _collider;
     private bool _initialized;
     private IProximity _proximity;
@@ -212,6 +212,7 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, ID
     }
 
     Bounds IShapeVolume.worldBounds => _proximity.worldBounds;
+    float IProximity.Area => _proximity.Area;
     float IShapeVolume.internalVolume => _proximity.internalVolume;
     float IShapeVolume.surfaceArea => _proximity.surfaceArea;
     bool IShapeVolume.containsPoint(Vector3 point) => _proximity.containsPoint(point);

@@ -69,6 +69,18 @@ public class AttachedAACylinderProximity : IAttachedAACylinderProximity
     }
 
     /// <inheritdoc />
+    float IProximity.Area
+    {
+        get
+        {
+            ThreadUtil.assertIsGameThread();
+
+            Vector3 v = GetTrasformedVector();
+            return Mathf.PI * v.x * v.z;
+        }
+    }
+
+    /// <inheritdoc />
     public Transform? AttachmentRoot { get; }
 
     /// <summary>

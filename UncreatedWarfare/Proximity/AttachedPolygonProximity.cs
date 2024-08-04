@@ -13,6 +13,7 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     private readonly IPolygonProximity _polygon;
     private float _volume;
     private float _surfaceArea;
+    private float _area;
     private Vector3 _lastScale = Vector3.one;
 
     /// <inheritdoc />
@@ -56,7 +57,8 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
             if (scale.IsNearlyEqual(_lastScale))
                 return _volume;
 
-            PolygonProximity.CalculateAreaAndVolume(AttachmentRoot, MinHeight, MaxHeight, Points, out float surfaceArea, out float volume);
+            PolygonProximity.CalculateAreaAndVolume(AttachmentRoot, MinHeight, MaxHeight, Points, out float area, out float surfaceArea, out float volume);
+            _area = area;
             _surfaceArea = surfaceArea;
             _volume = volume;
             _lastScale = scale;
@@ -82,7 +84,35 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
             if (scale.IsNearlyEqual(_lastScale))
                 return _surfaceArea;
 
-            PolygonProximity.CalculateAreaAndVolume(AttachmentRoot, MinHeight, MaxHeight, Points, out float surfaceArea, out float volume);
+            PolygonProximity.CalculateAreaAndVolume(AttachmentRoot, MinHeight, MaxHeight, Points, out float area, out float surfaceArea, out float volume);
+            _area = area;
+            _surfaceArea = surfaceArea;
+            _volume = volume;
+            _lastScale = scale;
+
+            return surfaceArea;
+        }
+    }
+
+    /// <inheritdoc />
+    float IProximity.Area
+    {
+        get
+        {
+            ThreadUtil.assertIsGameThread();
+
+            if (AttachmentRoot == null)
+                return _polygon.Area;
+            
+            Vector3 scale = AttachmentRoot.lossyScale;
+            if (scale.IsNearlyEqual(Vector3.one))
+                return _polygon.Area;
+
+            if (scale.IsNearlyEqual(_lastScale))
+                return _area;
+
+            PolygonProximity.CalculateAreaAndVolume(AttachmentRoot, MinHeight, MaxHeight, Points, out float area, out float surfaceArea, out float volume);
+            _area = area;
             _surfaceArea = surfaceArea;
             _volume = volume;
             _lastScale = scale;

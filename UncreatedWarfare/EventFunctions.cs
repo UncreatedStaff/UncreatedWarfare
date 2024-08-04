@@ -75,27 +75,6 @@ public static class EventFunctions
             player.SendChat(T.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
         }
     }
-    internal static void OnItemRemoved(ItemData item)
-    {
-        ItemsTempBuffer.Remove(item.item);
-        if (!DroppedItemsOwners.Remove(item.instanceID, out ulong pl))
-            return;
-        
-        if (DroppedItems.TryGetValue(pl, out List<uint> items))
-            items.Remove(item.item.id);
-    }
-    internal static void OnClearAllItems()
-    {
-        ItemsTempBuffer.Clear();
-        DroppedItemsOwners.Clear();
-        foreach (KeyValuePair<ulong, List<uint>> kvp in DroppedItems.ToList())
-        {
-            if (UCPlayer.FromID(kvp.Key) is not { IsOnline: true })
-                DroppedItems.Remove(kvp.Key);
-            else
-                kvp.Value.Clear();
-        }
-    }
     internal static void OnDropItemTry(PlayerInventory inv, Item item, ref bool allow)
     {
         ItemsTempBuffer[item] = inv;

@@ -1,4 +1,6 @@
-﻿namespace Uncreated.Warfare.Events.Vehicles;
+﻿using Uncreated.Warfare.Players;
+
+namespace Uncreated.Warfare.Events.Vehicles;
 
 /// <summary>
 /// Event listener args which handles <see cref="VehicleManager.OnToggledVehicleLock"/>.
@@ -8,7 +10,7 @@ public class VehicleLockChanged
     /// <summary>
     /// Player that locked the vehicle, if any.
     /// </summary>
-    public UCPlayer? Player { get; init; }
+    public WarfarePlayer? Player { get; init; }
 
     /// <summary>
     /// The vehicle on which the lock state is being changed.

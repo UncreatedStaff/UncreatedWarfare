@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util.Region;
 
@@ -15,6 +16,9 @@ namespace Uncreated.Warfare.Util;
 /// </summary>
 public static class ItemUtility
 {
+    internal static event ItemDestroyed? OnItemDestroyed;
+    internal delegate void ItemDestroyed(in ItemInfo item, bool despawned, bool pickedUp, CSteamID pickUpPlayer);
+
     /// <summary>
     /// Enumerate items along the grid instead of the order they were added.
     /// </summary>
@@ -27,6 +31,103 @@ public static class ItemUtility
         ThreadUtil.assertIsGameThread();
 
         return new ItemPageIterator(items, reverse);
+    }
+
+    /// <summary>
+    /// Enumerate through all dropped items around the center of the level.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static DroppedItemIterator EnumerateDroppedItems()
+    {
+        ThreadUtil.assertIsGameThread();
+
+        return new DroppedItemIterator();
+    }
+
+    /// <summary>
+    /// Enumerate through all dropped items around the center of the level.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static DroppedItemIterator EnumerateDroppedItems(Vector3 center)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
+        {
+            x = y = (byte)(Regions.WORLD_SIZE / 2);
+        }
+
+        return new DroppedItemIterator(x, y);
+    }
+
+    /// <summary>
+    /// Enumerate through all dropped items around the center of the level.
+    /// </summary>
+    /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static DroppedItemIterator EnumerateDroppedItems(Vector3 center, byte maxRegionDistance)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
+        {
+            x = y = (byte)(Regions.WORLD_SIZE / 2);
+        }
+
+        return new DroppedItemIterator(x, y, maxRegionDistance);
+    }
+
+    /// <summary>
+    /// Enumerate through all dropped items around the given <paramref name="region"/>.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static DroppedItemIterator EnumerateDroppedItems(RegionCoord region)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        return new DroppedItemIterator(region.x, region.y);
+    }
+
+    /// <summary>
+    /// Enumerate through all dropped items around the region <paramref name="x"/>, <paramref name="y"/>.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static DroppedItemIterator EnumerateDroppedItems(byte x, byte y)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        return new DroppedItemIterator(x, y);
+    }
+
+    /// <summary>
+    /// Enumerate through all dropped items around the given <paramref name="region"/>.
+    /// </summary>
+    /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static DroppedItemIterator EnumerateDroppedItems(RegionCoord region, byte maxRegionDistance)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        return new DroppedItemIterator(region.x, region.y, maxRegionDistance);
+    }
+
+    /// <summary>
+    /// Enumerate through all dropped items around the region <paramref name="x"/>, <paramref name="y"/>.
+    /// </summary>
+    /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static DroppedItemIterator EnumerateDroppedItems(byte x, byte y, byte maxRegionDistance)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        return new DroppedItemIterator(x, y, maxRegionDistance);
     }
 
     /// <summary>
@@ -124,51 +225,245 @@ public static class ItemUtility
     }
 
     /// <summary>
+    /// Destroy all items on the map.
+    /// </summary>
+    /// <param name="despawned">If the item should be considered as having despawned, instead of destroyed.</param>
+    /// <returns>Number of items destroyed.</returns>
+    public static int DestroyAllDroppedItems(bool despawned)
+    {
+        int ct = 0;
+        foreach (ItemInfo item in EnumerateDroppedItems())
+        {
+            ++ct;
+            OnItemDestroyed?.Invoke(in item, despawned, false, CSteamID.Nil);
+        }
+
+        ItemManager.askClearAllItems();
+        return ct;
+    }
+
+    /// <summary>
+    /// Destroy the number of items in the given <paramref name="radius"/> matching an <paramref name="asset"/>.
+    /// </summary>
+    /// <param name="pickUpPlayer">The player that is picking up the items, if any.</param>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <returns>Number of items destroyed.</returns>
+    public static int DestroyDroppedItemsInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default)
+    {
+        if (asset == null)
+            throw new ArgumentNullException(nameof(asset));
+
+        ThreadUtil.assertIsGameThread();
+
+        float sqrRadius = radius * radius;
+        int totalItemsFound = 0;
+        RadiusRegionsEnumerator iterator = new RadiusRegionsEnumerator(position, radius);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > sqrRadius || !asset.MatchId(item.item.id))
+                    continue;
+
+                ++totalItemsFound;
+                RemoveDroppedItemUnsafe(coord.x, coord.y, i, false, pickUpPlayer, playTakeItemSound);
+                if (max >= 0 && totalItemsFound >= max)
+                {
+                    return totalItemsFound;
+                }
+            }
+        }
+
+        return totalItemsFound;
+    }
+
+    /// <summary>
+    /// Destroy the number of items in the given <paramref name="radius"/> matching a <paramref name="itemSelector"/>.
+    /// </summary>
+    /// <param name="pickUpPlayer">The player that is picking up the items, if any.</param>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <returns>Number of items destroyed.</returns>
+    public static int DestroyDroppedItemsInRange(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default)
+    {
+        if (itemSelector == null)
+            throw new ArgumentNullException(nameof(itemSelector));
+
+        ThreadUtil.assertIsGameThread();
+
+        float sqrRadius = radius * radius;
+        int totalItemsFound = 0;
+        RadiusRegionsEnumerator iterator = new RadiusRegionsEnumerator(position, radius);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > sqrRadius || !itemSelector(item))
+                    continue;
+
+                ++totalItemsFound;
+                RemoveDroppedItemUnsafe(coord.x, coord.y, i, false, pickUpPlayer, playTakeItemSound);
+                if (max >= 0 && totalItemsFound >= max)
+                {
+                    return totalItemsFound;
+                }
+            }
+        }
+
+        return totalItemsFound;
+    }
+
+    /// <summary>
+    /// Destroy the number of items in the given <paramref name="radius"/> matching a <paramref name="itemSelector"/>.
+    /// </summary>
+    /// <param name="pickUpPlayer">The player that is picking up the items, if any.</param>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <returns>Number of items destroyed.</returns>
+    public static int DestroyDroppedItemsInRange(Vector3 position, float radius, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        float sqrRadius = radius * radius;
+        int totalItemsFound = 0;
+        RadiusRegionsEnumerator iterator = new RadiusRegionsEnumerator(position, radius);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > sqrRadius)
+                    continue;
+
+                ++totalItemsFound;
+                RemoveDroppedItemUnsafe(coord.x, coord.y, i, false, pickUpPlayer, playTakeItemSound);
+                if (max >= 0 && totalItemsFound >= max)
+                {
+                    return totalItemsFound;
+                }
+            }
+        }
+
+        return totalItemsFound;
+    }
+
+    /// <summary>
     /// Property clean up and replicate destroying (taking) a dropped item.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public static bool DestroyDroppedItem(ItemData item, bool playDropItemSound = false)
+    public static bool DestroyDroppedItem(ItemData item, bool despawned, bool playTakeItemSound = false)
     {
         if (item == null)
             throw new ArgumentNullException(nameof(item));
 
         ThreadUtil.assertIsGameThread();
 
-        if (Regions.tryGetCoordinate(item.point, out byte x, out byte y))
-        {
-            ItemRegion region = ItemManager.regions[x, y];
-            int index = region.items.FindIndex(droppedItem => droppedItem.instanceID == item.instanceID);
-            if (index != -1)
-            {
-                RemoveItem(x, y, index, region, item, playDropItemSound);
-                return true;
-            }
-        }
+        ItemInfo itemInfo = FindItem(item.instanceID, item.point);
 
-        SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
-        while (iterator.MoveNext())
-        {
-            RegionCoord coord = iterator.Current;
-            x = coord.x; y = coord.y;
-            ItemRegion region = ItemManager.regions[x, y];
-            int index = region.items.FindIndex(droppedItem => droppedItem.instanceID == item.instanceID);
-            if (index == -1)
-                continue;
+        if (!itemInfo.HasValue)
+            return false;
 
-            RemoveItem(x, y, index, region, item, playDropItemSound);
-            return true;
-        }
-
-        return false;
+        RegionCoord region = itemInfo.Coord;
+        RemoveDroppedItemUnsafe(region.x, region.y, itemInfo.Index, despawned, CSteamID.Nil, playTakeItemSound);
+        return true;
     }
 
-    private static void RemoveItem(byte x, byte y, int index, ItemRegion region, ItemData item, bool playDropItemSound)
+    /// <summary>
+    /// Property clean up and replicate destroying (taking) a dropped item that was picked up by a player.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    public static bool DestroyDroppedItem(ItemData item, bool despawned, WarfarePlayer pickUpPlayer, bool playTakeItemSound = false)
     {
-        Data.SendDestroyItem.Invoke(ENetReliability.Reliable, Regions.GatherRemoteClientConnections(x, y, ItemManager.ITEM_REGIONS), x, y, item.instanceID, playDropItemSound);
+        if (item == null)
+            throw new ArgumentNullException(nameof(item));
+
+        ThreadUtil.assertIsGameThread();
+
+        ItemInfo itemInfo = FindItem(item.instanceID, item.point);
+
+        if (!itemInfo.HasValue)
+            return false;
+
+        RegionCoord region = itemInfo.Coord;
+        RemoveDroppedItemUnsafe(region.x, region.y, itemInfo.Index, despawned, despawned ? CSteamID.Nil : pickUpPlayer.Steam64, playTakeItemSound);
+        return true;
+    }
+
+    /// <summary>
+    /// Property clean up and replicate destroying (taking) a dropped item.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, bool playTakeItemSound = false)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        if (!Regions.checkSafe(x, y))
+            throw new ArgumentOutOfRangeException("(x, y)", "X and/or Y coordinate invalid.");
+
+        if (index >= ItemManager.regions[x, y].items.Count)
+            throw new ArgumentOutOfRangeException(nameof(index), "No item with the given index.");
+
+        RemoveDroppedItemUnsafe(x, y, index, despawned, CSteamID.Nil, playTakeItemSound);
+    }
+
+    /// <summary>
+    /// Property clean up and replicate destroying (taking) a dropped item that was picked up by a player.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, WarfarePlayer pickUpPlayer, bool playTakeItemSound)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        if (!Regions.checkSafe(x, y))
+            throw new ArgumentOutOfRangeException("(x, y)", "X and/or Y coordinate invalid.");
+
+        if (index >= ItemManager.regions[x, y].items.Count)
+            throw new ArgumentOutOfRangeException(nameof(index), "No item with the given index.");
+
+        RemoveDroppedItemUnsafe(x, y, index, despawned, despawned ? CSteamID.Nil : pickUpPlayer.Steam64, playTakeItemSound);
+    }
+
+    internal static void RemoveDroppedItemUnsafe(byte x, byte y, int index, bool despawned, CSteamID pickUpPlayer, bool playTakeItemSound)
+    {
+        ItemRegion region = ItemManager.regions[x, y];
+        ItemData item = region.items[index];
+
+        Data.SendDestroyItem.Invoke(ENetReliability.Reliable, Regions.GatherRemoteClientConnections(x, y, ItemManager.ITEM_REGIONS), x, y, item.instanceID, playTakeItemSound);
 
         region.items.RemoveAt(index);
-        EventFunctions.OnItemRemoved(item);
+
+        ItemInfo itemInfo = new ItemInfo(item, index, new RegionCoord(x, y));
+        OnItemDestroyed?.Invoke(itemInfo, despawned, !despawned && pickUpPlayer.GetEAccountType() == EAccountType.k_EAccountTypeIndividual, despawned ? CSteamID.Nil : pickUpPlayer);
+    }
+
+    internal static void InvokeOnItemDestroyed(in ItemInfo item, bool despawned, bool pickedUp, CSteamID pickUpPlayer)
+    {
+        OnItemDestroyed?.Invoke(item, despawned, pickedUp, pickUpPlayer);
     }
 
     /// <summary>
@@ -266,7 +561,7 @@ public static class ItemUtility
     /// <summary>
     /// Clear the playery's inventory and update their third-person model for other players.
     /// </summary>
-    public static void ClearInventoryAndSlots(UCPlayer player, bool clothes = true)
+    public static void ClearInventoryAndSlots(WarfarePlayer player, bool clothes = true)
     {
         ClearInventory(player, clothes);
         UpdateSlots(player);
@@ -275,32 +570,33 @@ public static class ItemUtility
     /// <summary>
     /// Update the player's third-person model for other players.
     /// </summary>
-    public static void UpdateSlots(UCPlayer player)
+    public static void UpdateSlots(WarfarePlayer player)
     {
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
         // removes the primaries/secondaries from the third person model
-        player.Player.equipment.sendSlot(0);
-        player.Player.equipment.sendSlot(1);
+        player.UnturnedPlayer.equipment.sendSlot(0);
+        player.UnturnedPlayer.equipment.sendSlot(1);
     }
     
     /// <summary>
     /// Effeciently remove all items and clothes from a player's inventory.
     /// </summary>
-    public static void ClearInventory(UCPlayer player, bool clothes = true)
+    public static void ClearInventory(WarfarePlayer player, bool clothes = true)
     {
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
         player.ItemTransformations.Clear();
         player.ItemDropTransformations.Clear();
+        Player nativePlayer = player.UnturnedPlayer;
         if (Data.UseFastKits)
         {
             // clears the inventory quickly
-            player.Player.equipment.dequip();
+            nativePlayer.equipment.dequip();
 
-            Items[] inv = player.Player.inventory.items;
+            Items[] inv = nativePlayer.inventory.items;
 
             // clear slots
             while (inv[0].getItemCount() > 0)
@@ -338,20 +634,20 @@ public static class ItemUtility
             if (clothes)
             {
                 byte[] blank = Array.Empty<byte>();
-                NetId id = player.Player.clothing.GetNetId();
-                if (player.Player.clothing.shirt != 0)
+                NetId id = nativePlayer.clothing.GetNetId();
+                if (nativePlayer.clothing.shirt != 0)
                     Data.SendWearShirt!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
-                if (player.Player.clothing.pants != 0)
+                if (nativePlayer.clothing.pants != 0)
                     Data.SendWearPants!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
-                if (player.Player.clothing.hat != 0)
+                if (nativePlayer.clothing.hat != 0)
                     Data.SendWearHat!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
-                if (player.Player.clothing.backpack != 0)
+                if (nativePlayer.clothing.backpack != 0)
                     Data.SendWearBackpack!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
-                if (player.Player.clothing.vest != 0)
+                if (nativePlayer.clothing.vest != 0)
                     Data.SendWearVest!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
-                if (player.Player.clothing.mask != 0)
+                if (nativePlayer.clothing.mask != 0)
                     Data.SendWearMask!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
-                if (player.Player.clothing.glasses != 0)
+                if (nativePlayer.clothing.glasses != 0)
                     Data.SendWearGlasses!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
             }
         }
@@ -359,42 +655,42 @@ public static class ItemUtility
         {
             for (byte page = 0; page < PlayerInventory.PAGES - 2; page++)
             {
-                byte count = player.Player.inventory.getItemCount(page);
+                byte count = nativePlayer.inventory.getItemCount(page);
 
                 for (byte index = 0; index < count; index++)
                 {
-                    player.Player.inventory.removeItem(page, 0);
+                    nativePlayer.inventory.removeItem(page, 0);
                 }
             }
 
             if (clothes)
             {
                 byte[] blank = Array.Empty<byte>();
-                player.Player.clothing.askWearBackpack(0, 0, blank, true);
-                player.Player.inventory.removeItem(2, 0);
+                nativePlayer.clothing.askWearBackpack(0, 0, blank, true);
+                nativePlayer.inventory.removeItem(2, 0);
 
-                player.Player.clothing.askWearGlasses(0, 0, blank, true);
-                player.Player.inventory.removeItem(2, 0);
+                nativePlayer.clothing.askWearGlasses(0, 0, blank, true);
+                nativePlayer.inventory.removeItem(2, 0);
 
-                player.Player.clothing.askWearHat(0, 0, blank, true);
-                player.Player.inventory.removeItem(2, 0);
+                nativePlayer.clothing.askWearHat(0, 0, blank, true);
+                nativePlayer.inventory.removeItem(2, 0);
 
-                player.Player.clothing.askWearPants(0, 0, blank, true);
-                player.Player.inventory.removeItem(2, 0);
+                nativePlayer.clothing.askWearPants(0, 0, blank, true);
+                nativePlayer.inventory.removeItem(2, 0);
 
-                player.Player.clothing.askWearMask(0, 0, blank, true);
-                player.Player.inventory.removeItem(2, 0);
+                nativePlayer.clothing.askWearMask(0, 0, blank, true);
+                nativePlayer.inventory.removeItem(2, 0);
 
-                player.Player.clothing.askWearShirt(0, 0, blank, true);
-                player.Player.inventory.removeItem(2, 0);
+                nativePlayer.clothing.askWearShirt(0, 0, blank, true);
+                nativePlayer.inventory.removeItem(2, 0);
 
-                player.Player.clothing.askWearVest(0, 0, blank, true);
-                player.Player.inventory.removeItem(2, 0);
+                nativePlayer.clothing.askWearVest(0, 0, blank, true);
+                nativePlayer.inventory.removeItem(2, 0);
 
-                byte handcount = player.Player.inventory.getItemCount(2);
+                byte handcount = nativePlayer.inventory.getItemCount(2);
                 for (byte i = 0; i < handcount; i++)
                 {
-                    player.Player.inventory.removeItem(2, 0);
+                    nativePlayer.inventory.removeItem(2, 0);
                 }
             }
         }
@@ -403,7 +699,7 @@ public static class ItemUtility
     /// <summary>
     /// Replace a player's inventory with the given kit item abstractions.
     /// </summary>
-    public static void GiveItems(UCPlayer player, IKitItem[] items, bool clear)
+    public static void GiveItems(WarfarePlayer player, IKitItem[] items, bool clear)
     {
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
@@ -413,10 +709,11 @@ public static class ItemUtility
             ClearInventory(player, true);
 
         FactionInfo? faction = TeamManager.GetFactionSafe(player.GetTeam());
+        Player nativePlayer = player.UnturnedPlayer;
 
         if (Data.UseFastKits)
         {
-            NetId id = player.Player.clothing.GetNetId();
+            NetId id = nativePlayer.clothing.GetNetId();
             byte flag = 0;
             bool hasPlayedEffect = false;
             for (int i = 0; i < items.Length; ++i)
@@ -471,12 +768,12 @@ public static class ItemUtility
                 })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
             }
 
-            Items[] p = player.Player.inventory.items;
+            Items[] p = nativePlayer.inventory.items;
 
-            bool oldOwnerHasInventoryValue = Data.GetOwnerHasInventory(player.Player.inventory);
+            bool oldOwnerHasInventoryValue = Data.GetOwnerHasInventory(nativePlayer.inventory);
             if (oldOwnerHasInventoryValue)
             {
-                Data.SetOwnerHasInventory(player.Player.inventory, false);
+                Data.SetOwnerHasInventory(nativePlayer.inventory, false);
             }
 
             List<(Item, IPageKitItem)>? toAddLater = null;
@@ -537,7 +834,7 @@ public static class ItemUtility
                 {
                     (Item item, _) = toAddLater[i];
                     L.LogWarning("Had to re-add item: " + item.GetAsset()?.itemName + ".");
-                    if (!player.Player.inventory.tryAddItemAuto(item, false, false, false, !hasPlayedEffect))
+                    if (!nativePlayer.inventory.tryAddItemAuto(item, false, false, false, !hasPlayedEffect))
                     {
                         ItemManager.dropItem(item, player.Position, !hasPlayedEffect, true, false);
                     }
@@ -549,7 +846,7 @@ public static class ItemUtility
 
             if (oldOwnerHasInventoryValue)
             {
-                Data.SetOwnerHasInventory(player.Player.inventory, true);
+                Data.SetOwnerHasInventory(nativePlayer.inventory, true);
             }
 
             SendPages(player);
@@ -570,43 +867,43 @@ public static class ItemUtility
                 if (clothing.Type == ClothingType.Shirt)
                 {
                     if (asset is ItemShirtAsset shirt)
-                        player.Player.clothing.askWearShirt(shirt, 100, state, true);
+                        nativePlayer.clothing.askWearShirt(shirt, 100, state, true);
                     else goto error;
                 }
                 else if (clothing.Type == ClothingType.Pants)
                 {
                     if (asset is ItemPantsAsset pants)
-                        player.Player.clothing.askWearPants(pants, 100, state, true);
+                        nativePlayer.clothing.askWearPants(pants, 100, state, true);
                     else goto error;
                 }
                 else if (clothing.Type == ClothingType.Vest)
                 {
                     if (asset is ItemVestAsset vest)
-                        player.Player.clothing.askWearVest(vest, 100, state, true);
+                        nativePlayer.clothing.askWearVest(vest, 100, state, true);
                     else goto error;
                 }
                 else if (clothing.Type == ClothingType.Hat)
                 {
                     if (asset is ItemHatAsset hat)
-                        player.Player.clothing.askWearHat(hat, 100, state, true);
+                        nativePlayer.clothing.askWearHat(hat, 100, state, true);
                     else goto error;
                 }
                 else if (clothing.Type == ClothingType.Mask)
                 {
                     if (asset is ItemMaskAsset mask)
-                        player.Player.clothing.askWearMask(mask, 100, state, true);
+                        nativePlayer.clothing.askWearMask(mask, 100, state, true);
                     else goto error;
                 }
                 else if (clothing.Type == ClothingType.Backpack)
                 {
                     if (asset is ItemBackpackAsset backpack)
-                        player.Player.clothing.askWearBackpack(backpack, 100, state, true);
+                        nativePlayer.clothing.askWearBackpack(backpack, 100, state, true);
                     else goto error;
                 }
                 else if (clothing.Type == ClothingType.Glasses)
                 {
                     if (asset is ItemGlassesAsset glasses)
-                        player.Player.clothing.askWearGlasses(glasses, 100, state, true);
+                        nativePlayer.clothing.askWearGlasses(glasses, 100, state, true);
                     else goto error;
                 }
                 else
@@ -617,7 +914,7 @@ public static class ItemUtility
                 error:
                 L.LogWarning("Invalid or mismatched clothing type: " + clothing + ".");
                 Item uitem = new Item(asset.id, amt, 100, state);
-                if (!player.Player.inventory.tryAddItem(uitem, true))
+                if (!nativePlayer.inventory.tryAddItem(uitem, true))
                 {
                     ItemManager.dropItem(uitem, player.Position, false, true, true);
                 }
@@ -635,12 +932,12 @@ public static class ItemUtility
                 }
                 Item uitem = new Item(asset.id, amt, 100, state);
 
-                if (item is IPageKitItem jar && player.Player.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
+                if (item is IPageKitItem jar && nativePlayer.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
                 {
                     continue;
                 }
 
-                if (!player.Player.inventory.tryAddItem(uitem, true))
+                if (!nativePlayer.inventory.tryAddItem(uitem, true))
                 {
                     ItemManager.dropItem(uitem, player.Position, false, true, true);
                 }
@@ -651,13 +948,13 @@ public static class ItemUtility
     /// <summary>
     /// Manually send the entire page via RPC to save on bandwidth.
     /// </summary>
-    public static void SendPages(UCPlayer player)
+    public static void SendPages(WarfarePlayer player)
     {
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
-        Items[] il = player.Player.inventory.items;
-        Data.SendInventory!.Invoke(player.Player.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
+        Items[] il = player.UnturnedPlayer.inventory.items;
+        Data.SendInventory!.Invoke(player.UnturnedPlayer.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
             writer =>
             {
                 for (int i = 0; i < PlayerInventory.PAGES - 2; ++i)
@@ -686,20 +983,21 @@ public static class ItemUtility
     /// <summary>
     /// Get the <see cref="ItemJar"/> that's actively held by the player.
     /// </summary>
-    public static ItemJar? GetHeldItem(this UCPlayer player, out byte page)
+    public static ItemJar? GetHeldItem(WarfarePlayer player, out Page page)
     {
         ThreadUtil.assertIsGameThread();
         if (player.IsOnline)
         {
-            PlayerEquipment eq = player.Player.equipment;
+            PlayerEquipment eq = player.UnturnedPlayer.equipment;
             if (eq.asset != null)
             {
-                page = eq.equippedPage;
-                return eq.player.inventory.getItem(page, eq.player.inventory.getIndex(page, eq.equipped_x, eq.equipped_y));
+                byte pg = eq.equippedPage;
+                page = (Page)pg;
+                return eq.player.inventory.getItem(pg, eq.player.inventory.getIndex(pg, eq.equipped_x, eq.equipped_y));
             }
         }
 
-        page = byte.MaxValue;
+        page = (Page)byte.MaxValue;
         return null;
     }
 
@@ -761,5 +1059,602 @@ public static class ItemUtility
             (sizeX, sizeY) = (sizeY, sizeX);
 
         return posX + sizeX > pageSizeX || posY + sizeY > pageSizeY;
+    }
+
+    /// <summary>
+    /// Find a item by it's instance ID.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo FindItem(uint instanceId)
+    {
+        return FindItem(instanceId, (byte)(Regions.WORLD_SIZE / 2), (byte)(Regions.WORLD_SIZE / 2));
+    }
+
+    /// <summary>
+    /// Find a item by it's instance ID, with help from a position to prevent having to search every region.
+    /// </summary>
+    /// <remarks>All regions will be searched if it's not found near the expected position.</remarks>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo FindItem(uint instanceId, Vector3 expectedPosition)
+    {
+        return Regions.tryGetCoordinate(expectedPosition, out byte x, out byte y)
+            ? FindItem(instanceId, x, y)
+            : FindItem(instanceId, (byte)(Regions.WORLD_SIZE / 2), (byte)(Regions.WORLD_SIZE / 2));
+    }
+
+    /// <summary>
+    /// Find a item by it's instance ID, with help from an expected region to prevent having to search every region.
+    /// </summary>
+    /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo FindItem(uint instanceId, byte expectedRegionX, byte expectedRegionY)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                if (region.items[i].instanceID == instanceId)
+                    return new ItemInfo(region.items[i], i, coord);
+            }
+        }
+
+        return new ItemInfo(null, -1, new RegionCoord(expectedRegionX, expectedRegionY));
+    }
+
+    /// <summary>
+    /// Find a item by it's instance ID, with help from an expected region to prevent having to search every region.
+    /// </summary>
+    /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo FindItem(uint instanceId, IAssetLink<ItemAsset> expectedAsset, Vector3 expectedPosition)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        ItemInfo foundByPosition = default;
+
+        SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedPosition);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+
+                if (item.instanceID == instanceId && expectedAsset.MatchId(item.item.id))
+                    return new ItemInfo(item, i, coord);
+
+                Vector3 pos = item.point;
+                if (!pos.IsNearlyEqual(expectedPosition, 0.1f) || !expectedAsset.MatchId(item.item.id))
+                    continue;
+
+                // if not found or the one found is farther from the expected point than this one
+                if (foundByPosition.Item == null || (foundByPosition.Item.point - expectedPosition).sqrMagnitude > (pos - expectedPosition).sqrMagnitude)
+                {
+                    foundByPosition = new ItemInfo(item, i, coord);
+                }
+            }
+        }
+
+        if (foundByPosition.Item != null)
+        {
+            return foundByPosition;
+        }
+
+        if (!Regions.tryGetCoordinate(expectedPosition, out byte x, out byte y))
+        {
+            x = y = (byte)(Regions.WORLD_SIZE / 2);
+        }
+
+        return new ItemInfo(null, -1, new RegionCoord(x, y));
+    }
+
+    /// <summary>
+    /// Check for a nearby item with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static bool IsItemInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool horizontalDistanceOnly = false)
+    {
+        return GetClosestItemInRange(position, radius, asset, horizontalDistanceOnly).Item != null;
+    }
+
+    /// <summary>
+    /// Check for a nearby item matching a predicate to <paramref name="position"/> within the given <paramref name="radius"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static bool IsItemInRange(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool horizontalDistanceOnly = false)
+    {
+        return GetClosestItemWhere(position, radius, itemSelector, horizontalDistanceOnly).Item != null;
+    }
+
+    /// <summary>
+    /// Check for a nearby item to <paramref name="position"/> within the given <paramref name="radius"/>.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static bool IsItemInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
+    {
+        return GetClosestItemInRange(position, radius, horizontalDistanceOnly).Item != null;
+    }
+
+    /// <summary>
+    /// Find the closest item with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo GetClosestItemInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool horizontalDistanceOnly = false)
+    {
+        if (asset == null)
+            throw new ArgumentNullException(nameof(asset));
+
+        ThreadUtil.assertIsGameThread();
+
+        float closestSqrDist = 0f;
+        float sqrRadius = radius * radius;
+        ItemInfo closest = default;
+        RadiusRegionsEnumerator iterator = new RadiusRegionsEnumerator(position, radius);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > closestSqrDist || sqrDist > sqrRadius || !asset.MatchId(item.item.id))
+                    continue;
+
+                closest = new ItemInfo(item, i, coord);
+                closestSqrDist = sqrDist;
+            }
+        }
+
+        return closest;
+    }
+
+    /// <summary>
+    /// Find the closest item with the given <paramref name="asset"/> to <paramref name="position"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo GetClosestItem(Vector3 position, IAssetLink<ItemAsset> asset, bool horizontalDistanceOnly = false)
+    {
+        if (asset == null)
+            throw new ArgumentNullException(nameof(asset));
+
+        ThreadUtil.assertIsGameThread();
+
+        float closestSqrDist = 0f;
+        ItemInfo closest = default;
+        if (!Regions.tryGetCoordinate(position, out byte x, out byte y))
+        {
+            x = y = (byte)(Regions.WORLD_SIZE / 2);
+        }
+
+        SurroundingRegionsIterator iterator = new SurroundingRegionsIterator(x, y);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > closestSqrDist || !asset.MatchId(item.item.id))
+                    continue;
+
+                closest = new ItemInfo(item, i, coord);
+                closestSqrDist = sqrDist;
+            }
+        }
+
+        return closest;
+    }
+
+    /// <summary>
+    /// Find the closest item to <paramref name="position"/> within the given <paramref name="radius"/>.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo GetClosestItemInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        float closestSqrDist = 0f;
+        float sqrRadius = radius * radius;
+        ItemInfo closest = default;
+        RadiusRegionsEnumerator iterator = new RadiusRegionsEnumerator(position, radius);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > closestSqrDist || sqrDist > sqrRadius)
+                    continue;
+
+                closest = new ItemInfo(item, i, coord);
+                closestSqrDist = sqrDist;
+            }
+        }
+
+        return closest;
+    }
+
+    /// <summary>
+    /// Find the closest item to <paramref name="position"/>.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo GetClosestItem(Vector3 position, bool horizontalDistanceOnly = false)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        float closestSqrDist = 0f;
+        ItemInfo closest = default;
+        if (!Regions.tryGetCoordinate(position, out byte x, out byte y))
+        {
+            x = y = (byte)(Regions.WORLD_SIZE / 2);
+        }
+
+        SurroundingRegionsIterator iterator = new SurroundingRegionsIterator(x, y);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > closestSqrDist)
+                    continue;
+
+                closest = new ItemInfo(item, i, coord);
+                closestSqrDist = sqrDist;
+            }
+        }
+
+        return closest;
+    }
+
+    /// <summary>
+    /// Find the closest item matching a predicate to <paramref name="position"/> within a given <paramref name="radius"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo GetClosestItemWhere(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool horizontalDistanceOnly = false)
+    {
+        if (itemSelector == null)
+            throw new ArgumentNullException(nameof(itemSelector));
+
+        ThreadUtil.assertIsGameThread();
+
+        float closestSqrDist = 0f;
+        float sqrRadius = radius * radius;
+        ItemInfo closest = default;
+        RadiusRegionsEnumerator iterator = new RadiusRegionsEnumerator(position, radius);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > closestSqrDist || sqrDist > sqrRadius || !itemSelector(item))
+                    continue;
+
+                closest = new ItemInfo(item, i, coord);
+                closestSqrDist = sqrDist;
+            }
+        }
+
+        return closest;
+    }
+
+    /// <summary>
+    /// Find the closest item matching a predicate to <paramref name="position"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo GetClosestItemWhere(Vector3 position, Predicate<ItemData> itemSelector, bool horizontalDistanceOnly = false)
+    {
+        if (itemSelector == null)
+            throw new ArgumentNullException(nameof(itemSelector));
+
+        ThreadUtil.assertIsGameThread();
+
+        float closestSqrDist = 0f;
+        ItemInfo closest = default;
+        if (!Regions.tryGetCoordinate(position, out byte x, out byte y))
+        {
+            x = y = (byte)(Regions.WORLD_SIZE / 2);
+        }
+
+        SurroundingRegionsIterator iterator = new SurroundingRegionsIterator(x, y);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > closestSqrDist || !itemSelector(item))
+                    continue;
+
+                closest = new ItemInfo(item, i, coord);
+                closestSqrDist = sqrDist;
+            }
+        }
+
+        return closest;
+    }
+
+    /// <summary>
+    /// Count the number of items in the given <paramref name="radius"/> matching a predicate.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static int CountItemsWhere(Vector3 position, float radius, Predicate<ItemData> itemSelector, int max = -1, bool horizontalDistanceOnly = false)
+    {
+        if (itemSelector == null)
+            throw new ArgumentNullException(nameof(itemSelector));
+
+        ThreadUtil.assertIsGameThread();
+
+        float sqrRadius = radius * radius;
+        int totalItemsFound = 0;
+        RadiusRegionsEnumerator iterator = new RadiusRegionsEnumerator(position, radius);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > sqrRadius || !itemSelector(item))
+                    continue;
+
+                ++totalItemsFound;
+                if (max >= 0 && totalItemsFound >= max)
+                {
+                    return totalItemsFound;
+                }
+            }
+        }
+
+        return totalItemsFound;
+    }
+
+    /// <summary>
+    /// Count the number of items in the given radius matching a predicate.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static int CountItemsWhere(Predicate<ItemData> itemSelector, int max = -1)
+    {
+        if (itemSelector == null)
+            throw new ArgumentNullException(nameof(itemSelector));
+
+        ThreadUtil.assertIsGameThread();
+
+        int totalItemsFound = 0;
+        SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                if (!itemSelector(item))
+                    continue;
+
+                ++totalItemsFound;
+                if (max >= 0 && totalItemsFound >= max)
+                {
+                    return totalItemsFound;
+                }
+            }
+        }
+
+        return totalItemsFound;
+    }
+
+    /// <summary>
+    /// Count the number of items in the given <paramref name="radius"/> matching an <paramref name="asset"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static int CountItemsInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, int max = -1, bool horizontalDistanceOnly = false)
+    {
+        if (asset == null)
+            throw new ArgumentNullException(nameof(asset));
+
+        ThreadUtil.assertIsGameThread();
+
+        float sqrRadius = radius * radius;
+        int totalItemsFound = 0;
+        RadiusRegionsEnumerator iterator = new RadiusRegionsEnumerator(position, radius);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > sqrRadius || !asset.MatchId(item.item.id))
+                    continue;
+
+                ++totalItemsFound;
+                if (max >= 0 && totalItemsFound >= max)
+                {
+                    return totalItemsFound;
+                }
+            }
+        }
+
+        return totalItemsFound;
+    }
+
+    /// <summary>
+    /// Count the number of items in the given radius matching an <paramref name="asset"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static int CountItems(IAssetLink<ItemAsset> asset, int max = -1)
+    {
+        if (asset == null)
+            throw new ArgumentNullException(nameof(asset));
+
+        ThreadUtil.assertIsGameThread();
+
+        int totalItemsFound = 0;
+        SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                if (!asset.MatchId(item.item.id))
+                    continue;
+
+                ++totalItemsFound;
+                if (max >= 0 && totalItemsFound >= max)
+                {
+                    return totalItemsFound;
+                }
+            }
+        }
+
+        return totalItemsFound;
+    }
+
+    /// <summary>
+    /// Count the number of items in the given radius.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    [Pure]
+    public static int CountItemsInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        float sqrRadius = radius * radius;
+        int totalItemsFound = 0;
+        RadiusRegionsEnumerator iterator = new RadiusRegionsEnumerator(position, radius);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                ItemData item = region.items[i];
+                Vector3 pos = item.point;
+
+                float sqrDist = MathUtility.SquaredDistance(in position, in pos, horizontalDistanceOnly);
+
+                if (sqrDist > sqrRadius)
+                    continue;
+
+                ++totalItemsFound;
+                if (max >= 0 && totalItemsFound >= max)
+                {
+                    return totalItemsFound;
+                }
+            }
+        }
+
+        return totalItemsFound;
+    }
+}
+
+/// <summary>
+/// Stores return information about an item including it's region information.
+/// </summary>
+/// <remarks>Only valid for one frame, shouldn't be stored for longer than that.</remarks>
+public readonly struct ItemInfo
+{
+#nullable disable
+    public ItemData Item { get; }
+#nullable restore
+    public bool HasValue => Item != null;
+
+    /// <summary>
+    /// Coordinates of the region the item is in, if it's not on a vehicle.
+    /// </summary>
+    public RegionCoord Coord { get; }
+
+    /// <summary>
+    /// Index of the item in it's region's item list.
+    /// </summary>
+    public int Index { get; }
+
+    public ItemInfo(ItemData? item, int index, RegionCoord coord)
+    {
+        Item = item;
+        Coord = coord;
+        Index = index;
+    }
+
+    [Pure]
+    public ItemRegion GetRegion()
+    {
+        if (Item == null)
+            throw new NullReferenceException("This info doesn't store a valid ItemData instance.");
+
+        RegionCoord regionCoord = Coord;
+        return ItemManager.regions[regionCoord.x, regionCoord.y];
     }
 }

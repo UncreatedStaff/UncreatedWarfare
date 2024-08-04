@@ -14,6 +14,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
@@ -331,11 +332,11 @@ public static class Localization
             playercount;
 
     }
-    public static string TranslateKitSign(Kit kit, UCPlayer player)
+    public static string TranslateKitSign(Kit kit, WarfarePlayer player)
     {
         KitManager? manager = KitManager.GetSingletonQuick();
         bool keepline = false;
-        UCPlayer.TryApplyViewLens(ref player);
+        // todo UCPlayer.TryApplyViewLens(ref player);
         ulong team = player.GetTeam();
         string name;
         if (!player.OnDuty())
@@ -375,7 +376,7 @@ public static class Localization
             UCPlayer? c = SquadManager.Singleton.Commanders.GetCommander(team);
             if (c != null)
             {
-                cost = c.Steam64 != player.Steam64 ? T.KitCommanderTaken.Translate(player) : T.KitCommanderTakenByViewer.Translate(player);
+                cost = c.Steam64 != player.Steam64.m_SteamID ? T.KitCommanderTaken.Translate(player) : T.KitCommanderTakenByViewer.Translate(player);
                 goto n;
             }
         }
@@ -1360,25 +1361,25 @@ public static class Localization
     }
 }
 
-public struct LanguageSet : IEnumerator<UCPlayer>
+public struct LanguageSet : IEnumerator<WarfarePlayer>
 {
     public readonly LanguageInfo Language;
     public readonly CultureInfo CultureInfo;
     public readonly bool IsDefault;
     public ulong Team = 0;
-    public List<UCPlayer> Players { get; }
+    public List<WarfarePlayer> Players { get; }
     public readonly bool IMGUI;
     private int _index;
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
-    public UCPlayer Next;
-    readonly UCPlayer IEnumerator<UCPlayer>.Current => Next;
+    public WarfarePlayer Next;
+    readonly WarfarePlayer IEnumerator<WarfarePlayer>.Current => Next;
     readonly object IEnumerator.Current => Next;
-    public LanguageSet(UCPlayer player)
+    public LanguageSet(WarfarePlayer player)
     {
         Language = player.Locale.LanguageInfo;
         CultureInfo = player.Locale.CultureInfo;
         IsDefault = player.Locale.IsDefaultLanguage && player.Locale.IsDefaultCulture;
-        Players = new List<UCPlayer>(1) { player };
+        Players = new List<WarfarePlayer>(1) { player };
         IMGUI = player.Save.IMGUI;
         _index = -1;
         Next = null!;
@@ -1389,35 +1390,62 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         Language = lang ?? throw new ArgumentNullException(nameof(lang));
         CultureInfo = cultureInfo ?? throw new ArgumentNullException(nameof(cultureInfo));
         IsDefault = lang.IsDefault && cultureInfo.Name.Equals(Data.LocalLocale.Name, StringComparison.Ordinal);
-        Players = new List<UCPlayer>(IsDefault ? Provider.clients.Count : 1);
+        Players = new List<WarfarePlayer>(IsDefault ? Provider.clients.Count : 1);
         _index = -1;
         Next = null!;
         IMGUI = false;
     }
-    public LanguageSet(LanguageInfo lang, CultureInfo cultureInfo, UCPlayer first)
+    public LanguageSet(LanguageInfo lang, CultureInfo cultureInfo, WarfarePlayer first)
     {
         Language = lang ?? throw new ArgumentNullException(nameof(lang));
         CultureInfo = cultureInfo ?? throw new ArgumentNullException(nameof(cultureInfo));
         IsDefault = lang.IsDefault && cultureInfo.Name.Equals(Data.LocalLocale.Name, StringComparison.Ordinal);
-        Players = new List<UCPlayer>(IsDefault ? Provider.clients.Count : 1) { first };
+        Players = new List<WarfarePlayer>(IsDefault ? Provider.clients.Count : 1) { first };
         _index = -1;
         Next = null!;
         IMGUI = first.Save.IMGUI;
+    }
+
+    public readonly PooledTransportConnectionList GatherTransportConnectionList()
+    {
+        PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Players.Count);
+        for (int i = 0; i < Players.Count; ++i)
+        {
+            WarfarePlayer player = Players[i];
+            if (player.IsOnline)
+                list.Add(player.Connection);
+        }
+
+        return list;
+    }
+
+    public readonly PooledTransportConnectionList GatherTransportConnectionList(byte x, byte y, byte area)
+    {
+        PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Players.Count);
+        for (int i = 0; i < Players.Count; ++i)
+        {
+            WarfarePlayer player = Players[i];
+            PlayerMovement movement = player.UnturnedPlayer.movement;
+            if (player.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
+                list.Add(player.Connection);
+        }
+
+        return list;
     }
 
     public readonly bool Equals(in LanguageSet other) => other.IMGUI == IMGUI &&
                                                 other.Language.Code.Equals(other.Language.Code, StringComparison.OrdinalIgnoreCase) &&
                                                 other.CultureInfo.Name.Equals(CultureInfo.Name, StringComparison.Ordinal);
 
-    public readonly bool MatchesPlayer(UCPlayer player) => player.Save.IMGUI == IMGUI &&
+    public readonly bool MatchesPlayer(WarfarePlayer player) => player.Save.IMGUI == IMGUI &&
                                                            player.Locale.LanguageInfo.Code.Equals(Language.Code, StringComparison.OrdinalIgnoreCase) &&
                                                            player.Locale.CultureInfo.Name.Equals(CultureInfo.Name);
 
-    public readonly bool MatchesPlayer(UCPlayer player, ulong team) => team == Team &&
+    public readonly bool MatchesPlayer(WarfarePlayer player, ulong team) => team == Team &&
                                                                        player.Save.IMGUI == IMGUI &&
                                                                        player.Locale.LanguageInfo.Code.Equals(Language.Code, StringComparison.OrdinalIgnoreCase) &&
                                                                        player.Locale.CultureInfo.Name.Equals(CultureInfo.Name);
-    public readonly void Add(UCPlayer pl) => Players.Add(pl);
+    public readonly void Add(WarfarePlayer pl) => Players.Add(pl);
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
     public bool MoveNext()
     {

@@ -240,7 +240,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Find a object by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
-    /// <remarks>All regions will be searched if it's not found in the expected region. Only instance ID is checked on planted objects.</remarks>
+    /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo FindObject(uint instanceId, IAssetLink<ObjectAsset> expectedAsset, Vector3 expectedPosition)

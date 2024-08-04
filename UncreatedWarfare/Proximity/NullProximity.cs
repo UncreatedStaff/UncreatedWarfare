@@ -32,6 +32,9 @@ public sealed class NullProximity : IAttachableProximity<IAttachedProximity>, IN
     /// <inheritdoc />
     float IShapeVolume.surfaceArea => 0f;
 
+    /// <inheritdoc />
+    float IProximity.Area => 0f;
+
     private class Attached(Transform attachmentRoot) : IAttachedProximity
     {
         /// <inheritdoc />
@@ -54,5 +57,8 @@ public sealed class NullProximity : IAttachableProximity<IAttachedProximity>, IN
 
         /// <inheritdoc />
         float IShapeVolume.surfaceArea => 0f;
+
+        /// <inheritdoc />
+        float IProximity.Area => 0f;
     }
 }

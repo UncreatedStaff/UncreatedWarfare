@@ -659,52 +659,6 @@ public static class EventDispatcher
             }
         }
     }
-    internal static void OnDroppedItem(PlayerInventory playerInv, byte page, byte x, byte y, byte rot, Item? item)
-    {
-        if (ItemDropped != null && UCPlayer.FromPlayer(playerInv.player) is { IsOnline: true } pl)
-        {
-            ItemData? data = null;
-            if (ItemManager.regions != null && item != null)
-            {
-                if (Regions.tryGetCoordinate(playerInv.player.transform.position, out byte x2, out byte y2))
-                {
-                    ItemRegion r = ItemManager.regions[x2, y2];
-                    for (int i = 0; i < r.items.Count; ++i)
-                    {
-                        if (r.items[i].item == item)
-                        {
-                            data = r.items[i];
-                            break;
-                        }
-                    }
-                }
-                if (data == null)
-                {
-                    for (x2 = 0; x2 < Regions.WORLD_SIZE; ++x2)
-                    {
-                        for (y2 = 0; y2 < Regions.WORLD_SIZE; ++y2)
-                        {
-                            ItemRegion r = ItemManager.regions[x2, y2];
-                            for (int i = 0; i < r.items.Count; ++i)
-                            {
-                                if (r.items[i].item == item)
-                                {
-                                    data = r.items[i];
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            ItemDropped args = new ItemDropped(pl, item, data, (Page)page, x, y, rot);
-            foreach (EventDelegate<ItemDropped> inv in ItemDropped.GetInvocationList().Cast<EventDelegate<ItemDropped>>())
-            {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(ItemDropped));
-            }
-        }
-    }
 
     public static void InvokeOnItemRemoved(UCPlayer player, byte page, byte index, ItemJar jar)
     {

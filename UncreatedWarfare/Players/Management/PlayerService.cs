@@ -24,7 +24,7 @@ public class PlayerService
     /// Components can implement <see cref="IDisposable"/> if desired to run code before the player leaves.
     /// <see cref="MonoBehaviour"/>'s will be automatically destroyed.
     /// </remarks>
-    public static readonly Type[] PlayerComponents = [ typeof(AudioRecordPlayerComponent) ];
+    public static readonly Type[] PlayerComponents = [ typeof(AudioRecordPlayerComponent), typeof(PlayerEventDispatcher) ];
 
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;
     private readonly PlayerDictionary<WarfarePlayer> _onlinePlayersDictionary;
@@ -136,6 +136,8 @@ public class PlayerService
 
     public WarfarePlayer GetOnlinePlayer(Player player) => GetOnlinePlayer(player.channel.owner.playerID.steamID.m_SteamID);
 
+    public WarfarePlayer GetOnlinePlayer(PlayerCaller player) => GetOnlinePlayer(player.channel.owner.playerID.steamID.m_SteamID);
+
     public WarfarePlayer GetOnlinePlayer(SteamPlayer steamPlayer) => GetOnlinePlayer(steamPlayer.playerID.steamID.m_SteamID);
 
     public WarfarePlayer GetOnlinePlayer(CSteamID steamId) => GetOnlinePlayer(steamId.m_SteamID);
@@ -156,6 +158,8 @@ public class PlayerService
     }
 
     public WarfarePlayer? GetOnlinePlayerOrNull(Player? player) => player is null ? null : GetOnlinePlayerOrNull(player.channel.owner.playerID.steamID.m_SteamID);
+    
+    public WarfarePlayer? GetOnlinePlayerOrNull(PlayerCaller? player) => player is null ? null : GetOnlinePlayerOrNull(player.channel.owner.playerID.steamID.m_SteamID);
 
     public WarfarePlayer? GetOnlinePlayerOrNull(SteamPlayer? steamPlayer) => steamPlayer == null ? null : GetOnlinePlayerOrNull(steamPlayer.playerID.steamID.m_SteamID);
 
@@ -175,6 +179,8 @@ public class PlayerService
     }
 
     public WarfarePlayer GetOnlinePlayerThreadSafe(Player player) => GetOnlinePlayerThreadSafe(player.channel.owner.playerID.steamID.m_SteamID);
+    
+    public WarfarePlayer GetOnlinePlayerThreadSafe(PlayerCaller player) => GetOnlinePlayerThreadSafe(player.channel.owner.playerID.steamID.m_SteamID);
 
     public WarfarePlayer GetOnlinePlayerThreadSafe(SteamPlayer steamPlayer) => GetOnlinePlayerThreadSafe(steamPlayer.playerID.steamID.m_SteamID);
 
@@ -191,10 +197,10 @@ public class PlayerService
         }
     }
 
-    [return: NotNullIfNotNull(nameof(player))]
     public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(Player? player) => GetOnlinePlayerOrNullThreadSafe(player?.channel.owner);
+    
+    public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(PlayerCaller? player) => GetOnlinePlayerOrNullThreadSafe(player?.channel.owner);
 
-    [return: NotNullIfNotNull(nameof(steamPlayer))]
     public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(SteamPlayer? steamPlayer) => steamPlayer == null ? null : GetOnlinePlayerThreadSafe(steamPlayer);
 
     public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(CSteamID steamId) => GetOnlinePlayerOrNullThreadSafe(steamId.m_SteamID);

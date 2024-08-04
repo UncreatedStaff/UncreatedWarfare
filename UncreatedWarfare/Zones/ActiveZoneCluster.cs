@@ -98,7 +98,8 @@ public class ActiveZoneCluster : IDisposable
 
         for (int i = 0; i < zones.Length; ++i)
         {
-            ITrackingProximity<Collider> proximity = zones[i].Proximity;
+            if (zones[i].Proximity is not ITrackingProximity<Collider> proximity)
+                continue;
 
             proximity.OnObjectEntered += OnObjectEnteredAnyZone;
             proximity.OnObjectExited += OnObjectExitedAnyZone;
@@ -119,7 +120,7 @@ public class ActiveZoneCluster : IDisposable
             bool isInAnotherZone = false;
             for (int i = 0; i < _zones.Length; ++i)
             {
-                if (!_zones[i].Proximity.Contains(obj))
+                if (_zones[i].Proximity is not ITrackingProximity<Collider> proximity || !proximity.Contains(obj))
                     continue;
 
                 isInAnotherZone = true;
@@ -209,10 +210,13 @@ public class ActiveZoneCluster : IDisposable
         _disposed = true;
         for (int i = 0; i < _zones.Length; ++i)
         {
-            IEventBasedProximity<Collider> proximity = _zones[i].Proximity;
-            proximity.OnObjectEntered -= OnObjectEnteredAnyZone;
-            proximity.OnObjectExited -= OnObjectExitedAnyZone;
-            switch (proximity)
+            if (_zones[i].Proximity is IEventBasedProximity<Collider> proximity)
+            {
+                proximity.OnObjectEntered -= OnObjectEnteredAnyZone;
+                proximity.OnObjectExited -= OnObjectExitedAnyZone;
+            }
+
+            switch (_zones[i].Proximity)
             {
                 case IDisposable disposable:
                     disposable.Dispose();
@@ -229,8 +233,8 @@ public class ActiveZoneCluster : IDisposable
 /// <summary>
 /// Links zone info with it's <see cref="IProximity"/> instance.
 /// </summary>
-public readonly struct ZoneProximity(ITrackingProximity<Collider> proximity, Zone zone)
+public readonly struct ZoneProximity(IProximity proximity, Zone zone)
 {
-    public ITrackingProximity<Collider> Proximity { get; } = proximity;
+    public IProximity Proximity { get; } = proximity;
     public Zone Zone { get; } = zone;
 }

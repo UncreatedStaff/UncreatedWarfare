@@ -23,6 +23,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     public Transform Transform { get; }
     public Team Team { get; private set; }
     public BinaryPlayerSave Save { get; }
+    public WarfarePlayerLocale Locale { get; }
 
     /// <summary>
     /// If the player this object represents is currently online. Set to false *after* the leave event is fired.
@@ -43,6 +44,12 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// Structure including all variations of the player's names.
     /// </summary>
     public ref readonly PlayerNames Names => ref _playerNameHelper;
+
+    /// <summary>
+    /// The Steam64 ID of the group the player's in.
+    /// </summary>
+    public CSteamID GroupId => UnturnedPlayer.quests.groupID;
+
     public ITransportConnection Connection => SteamPlayer.transportConnection;
     public Vector3 Position => Transform.position;
     public float Yaw => Transform.eulerAngles.y;
@@ -66,6 +73,8 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         Transform = player.transform;
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
+
+        Locale = new WarfarePlayerLocale(this, /* todo data.LanguagePreferences */ null);
 
         Components = components;
         Toasts = new ToastManager(this);

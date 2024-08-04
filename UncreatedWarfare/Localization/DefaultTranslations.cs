@@ -18,6 +18,7 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Zones;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
@@ -213,6 +214,34 @@ internal static class T
 
     [TranslationData(SectionFlags, "Shows above the cache list UI.")]
     public static readonly Translation CachesHeader = new Translation("Caches", TranslationFlags.UnityUI);
+    #endregion
+
+    #region Zones
+    private const string SectionZones = "Zones";
+
+    [TranslationData(SectionZones, FormattingDescriptions = [ "X (m)", "Y (m)", "Z (m)", "Yaw (°)"])]
+    public static readonly Translation<float, float, float, float> ZoneUtilLocation = new Translation<float, float, float, float>("<#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.", "0.##", "0.##", "0.##", "0.##");
+
+    [TranslationData(SectionZones)]
+    public static readonly Translation ZoneNoResultsLocation = new Translation("<#ff8c69>You aren't in any existing zone.");
+
+    [TranslationData(SectionZones)]
+    public static readonly Translation ZoneNoResultsName = new Translation("<#ff8c69>Couldn't find a zone by that name.");
+
+    [TranslationData(SectionZones)]
+    public static readonly Translation ZoneNoResults = new Translation("<#ff8c69>You must be in a zone or specify a valid zone name to use this command.");
+
+    [TranslationData(SectionZones)]
+    public static readonly Translation<int, Zone> ZoneVisualizeSuccess = new Translation<int, Zone>("<#e6e3d5>Spawned {0} particles around <color=#cedcde>{1}</color>.", arg1Fmt: Flag.NAME_FORMAT);
+
+    [TranslationData(SectionZones, IsPrioritizedTranslation = false)]
+    public static readonly Translation<Zone> ZoneGoSuccess = new Translation<Zone>("<#e6e3d5>Teleported to <#5a6e5c>{0}</color>.", Flag.NAME_FORMAT);
+
+    [TranslationData(SectionZones, IsPrioritizedTranslation = false)]
+    public static readonly Translation<string> ZoneGoSuccessRaw = new Translation<string>("<#e6e3d5>Teleported to <#cedcde>{0}</color>.");
+
+    [TranslationData(SectionZones, IsPrioritizedTranslation = false)]
+    public static readonly Translation<GridLocation> ZoneGoSuccessGridLocation = new Translation<GridLocation>("<#e6e3d5>Teleported to <#ff8c69>{0}</color>.", Flag.NAME_FORMAT);
     #endregion
 
     #region Players

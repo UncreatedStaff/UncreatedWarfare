@@ -9,14 +9,13 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare;
-public class Signs : BaseSingleton, ILevelStartListener
+public class Signs_ : BaseSingleton, ILevelStartListener
 {
     public const string Prefix = "sign_";
     public const string VBSPrefix = "vbs_";

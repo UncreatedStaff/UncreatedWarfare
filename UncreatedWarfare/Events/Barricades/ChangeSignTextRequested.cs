@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Buildables;
+﻿using System.Diagnostics.CodeAnalysis;
+using Uncreated.Warfare.Buildables;
 
 namespace Uncreated.Warfare.Events.Barricades;
 
@@ -8,6 +9,7 @@ namespace Uncreated.Warfare.Events.Barricades;
 public class ChangeSignTextRequested : CancellablePlayerEvent
 {
     private IBuildable? _cachedBuildable;
+    private string _text;
 
     /// <summary>
     /// The index of the vehicle region in <see cref="BarricadeManager.vehicleRegions"/>. <see cref="ushort.MaxValue"/> if the barricade is not planted.
@@ -59,5 +61,9 @@ public class ChangeSignTextRequested : CancellablePlayerEvent
     /// New text on the sign.
     /// </summary>
     /// <remarks>This can be changed.</remarks>
-    public required string Text { get; set; }
+    public required string Text
+    {
+        get => _text;
+        set => _text = value ?? string.Empty;
+    }
 }

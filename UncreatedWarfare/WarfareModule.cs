@@ -26,6 +26,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events;
+using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
 
 namespace Uncreated.Warfare;
@@ -169,6 +170,10 @@ public sealed class WarfareModule : IModuleNexus
 
             return new ManualMySqlProvider(connectionString);
         });
+
+        // global zones (not used for layouts)
+        serviceCollection.AddTransient<IZoneProvider, MapZoneProvider>();
+        serviceCollection.AddSingleton(serviceProvider => new ZoneStore(serviceProvider.GetServices<IZoneProvider>(), serviceProvider.GetRequiredService<ILogger<ZoneStore>>(), true));
 
         serviceCollection.AddDbContext<WarfareDbContext>(contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Singleton);
 

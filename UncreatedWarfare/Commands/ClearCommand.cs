@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
-using Uncreated.Warfare.Commands.Dispatch;
+﻿using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -9,12 +10,18 @@ namespace Uncreated.Warfare.Commands;
 [HelpMetadata(nameof(GetHelpMetadata))]
 public class ClearCommand : IExecutableCommand
 {
+    private readonly VehicleService _vehicleService;
     private const string Syntax = "/clear <inventory|items|vehicles|structures> [player for inventory]";
     private const string Help = "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
     private static readonly PermissionLeaf PermissionClearInventory  = new PermissionLeaf("commands.clear.inventory",  unturned: false, warfare: true);
     private static readonly PermissionLeaf PermissionClearItems      = new PermissionLeaf("commands.clear.items",      unturned: false, warfare: true);
     private static readonly PermissionLeaf PermissionClearVehicles   = new PermissionLeaf("commands.clear.vehicles",   unturned: false, warfare: true);
     private static readonly PermissionLeaf PermissionClearStructures = new PermissionLeaf("commands.clear.structures", unturned: false, warfare: true);
+
+    public ClearCommand(VehicleService vehicleService)
+    {
+        _vehicleService = vehicleService;
+    }
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
@@ -87,13 +94,13 @@ public class ClearCommand : IExecutableCommand
             await Context.AssertPermissions(PermissionClearInventory, token);
             await UniTask.SwitchToMainThread(token);
 
-            if (Context.TryGet(1, out _, out UCPlayer? pl) || Context.HasArgs(2))
+            if (Context.TryGet(1, out _, out WarfarePlayer? pl) || Context.HasArgs(2))
             {
                 if (pl is not null)
                 {
                     ItemUtility.ClearInventoryAndSlots(pl);
 
-                    Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.AdminLocale));
+                    Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.m_SteamID.ToString(Data.AdminLocale));
                     Context.Reply(T.ClearInventoryOther, pl);
                 }
                 else throw Context.Reply(T.PlayerNotFound);
@@ -114,29 +121,13 @@ public class ClearCommand : IExecutableCommand
 
             if (!Context.TryGet(1, out float range))
             {
-                ClearItems();
+                ItemUtility.DestroyAllDroppedItems(false);
                 Context.LogAction(ActionLogType.ClearItems);
                 throw Context.Reply(T.ClearItems);
             }
 
             Context.AssertRanByPlayer();
-            Vector3 pos = Context.Player.Position;
-            List<RegionCoordinate> c = new List<RegionCoordinate>(8);
-            Regions.getRegionsInRadius(pos, range, c);
-            float r2 = range * range;
-            for (int i = 0; i < c.Count; ++i)
-            {
-                RegionCoordinate c2 = c[i];
-                ItemRegion region = ItemManager.regions[c2.x, c2.y];
-                for (int j = region.items.Count - 1; j >= 0; --j)
-                {
-                    ItemData item = region.items[j];
-                    if ((item.point - pos).sqrMagnitude <= r2)
-                        EventFunctions.OnItemRemoved(item);
-                }
-            }
-
-            ItemManager.ServerClearItemsInSphere(pos, range);
+            ItemUtility.DestroyDroppedItemsInRange(Context.Player.Position, range, false);
             Context.LogAction(ActionLogType.ClearItems, "RANGE: " + range.ToString("F0") + "m");
             Context.Reply(T.ClearItemsInRange, range);
         }
@@ -145,7 +136,8 @@ public class ClearCommand : IExecutableCommand
             await Context.AssertPermissions(PermissionClearVehicles, token);
             await UniTask.SwitchToMainThread(token);
 
-            WipeVehiclesAndRespawn();
+            await _vehicleService.DeleteAllVehiclesAsync(token);
+            // todo respawn all vehicles
             Context.LogAction(ActionLogType.ClearVehicles);
             Context.Reply(T.ClearVehicles);
         }
@@ -160,23 +152,5 @@ public class ClearCommand : IExecutableCommand
             Context.Reply(T.ClearStructures);
         }
         else throw Context.SendCorrectUsage(Syntax);
-    }
-    public static void WipeVehicles()
-    {
-        VehicleSpawner.DeleteAllVehiclesFromWorld();
-    }
-    public static void WipeVehiclesAndRespawn()
-    {
-        WipeVehicles();
-        
-        if (Data.Is(out IVehicles vgm))
-        {
-            UCWarfare.RunTask(vgm.VehicleSpawner.RespawnAllVehicles, ctx: "Wipe and respawn all vehicles.");
-        }
-    }
-    public static void ClearItems()
-    {
-        ItemManager.askClearAllItems();
-        EventFunctions.OnClearAllItems();
     }
 }

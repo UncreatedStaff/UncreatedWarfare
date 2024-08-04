@@ -2,26 +2,65 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Uncreated.Warfare.Proximity;
+using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Zones;
 
 /// <summary>
 /// Stores a full list of active zones.
 /// </summary>
-public class ZoneStore
+public class ZoneStore : IHostedService
 {
     private readonly List<IZoneProvider> _zoneProviders;
     private int _init;
+    private readonly ILogger<ZoneStore> _logger;
+    private bool _lvlEventSub;
+    private UniTask _loadTask;
 
     /// <summary>
     /// All available zones (not just the ones in-game).
     /// </summary>
     public IReadOnlyList<Zone> Zones { get; private set; }
 
-    public ZoneStore(IEnumerable<IZoneProvider> zoneProviders)
+    /// <summary>
+    /// All available zones (not just the ones in-game).
+    /// </summary>
+    /// <remarks>This is only available on the global <see cref="ZoneStore"/>.</remarks>
+    public IReadOnlyList<ZoneProximity>? ProximityZones { get; private set; }
+
+    /// <summary>
+    /// If this instance of <see cref="ZoneStore"/> is the global instance, not the one created for flag layouts.
+    /// </summary>
+    public bool IsGlobal { get; }
+
+    public ZoneStore(IEnumerable<IZoneProvider> zoneProviders, ILogger<ZoneStore> logger, bool isGlobal)
     {
-        _zoneProviders = zoneProviders.ToListFast();
+        _zoneProviders = zoneProviders.ToList();
+        _logger = logger;
+        IsGlobal = isGlobal;
+    }
+
+    async UniTask IHostedService.StartAsync(CancellationToken token)
+    {
+        if (Level.isLoaded && _init == 0)
+        {
+            await Initialize(token);
+        }
+        else
+        {
+            Level.loadingSteps += OnLevelLoading;
+            Level.onPrePreLevelLoaded += OnLevelLoaded;
+            _lvlEventSub = true;
+        }
+    }
+
+    UniTask IHostedService.StopAsync(CancellationToken token)
+    {
+        if (_lvlEventSub)
+            Level.loadingSteps -= OnLevelLoading;
+        return UniTask.CompletedTask;
     }
 
     /// <summary>
@@ -42,8 +81,20 @@ public class ZoneStore
         }
 
         Zones = new ReadOnlyCollection<Zone>(zones);
-
+        _logger.LogInformation("Discovered {0} zone(s) with {1} provider(s).", zones.Count, _zoneProviders.Count);
         _zoneProviders.Clear();
+
+        if (!IsGlobal)
+            return;
+
+        List<ZoneProximity> proxZones = new List<ZoneProximity>(zones.Count);
+        foreach (Zone zone in zones)
+        {
+            proxZones.Add(new ZoneProximity(CreateProximityForZone(zone), zone));
+        }
+
+        ProximityZones = proxZones.AsReadOnly();
+        _logger.LogInformation("Initialized proximities for {0} zone(s).", proxZones.Count);
     }
 
     /// <summary>
@@ -110,5 +161,172 @@ public class ZoneStore
             default:
                 throw new ArgumentException("This zone doesn't have a valid shape or is missing the associated data object.", nameof(zone));
         }
+    }
+
+    /// <summary>
+    /// Find a zone matching the given name, or <see langword="null"/>.
+    /// </summary>
+    public Zone? SearchZone(string term)
+    {
+        int index = F.StringIndexOf(Zones, x => x.Name, term, false);
+        if (index < 0)
+        {
+            index = F.StringIndexOf(Zones, x => x.ShortName, term, false);
+        }
+
+        if (index >= 0)
+            return Zones[index];
+
+        if (term.Equals("lobby", StringComparison.OrdinalIgnoreCase) || term.Equals("spawn", StringComparison.OrdinalIgnoreCase))
+            return Zones.FirstOrDefault(x => x.Type == ZoneType.Lobby);
+        if (term.Equals("t1main", StringComparison.OrdinalIgnoreCase) || term.Equals("t1", StringComparison.OrdinalIgnoreCase))
+            return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, TeamManager.Team1Faction));
+        if (term.Equals("t2main", StringComparison.OrdinalIgnoreCase) || term.Equals("t2", StringComparison.OrdinalIgnoreCase))
+            return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, TeamManager.Team2Faction));
+        if (term.Equals("t1amc", StringComparison.OrdinalIgnoreCase))
+            return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, TeamManager.Team1Faction));
+        if (term.Equals("t2amc", StringComparison.OrdinalIgnoreCase))
+            return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, TeamManager.Team2Faction));
+
+        // todo lookup obj1, obj2, and obj
+        //Flag? fl = null;
+        //if (term.Equals("obj1", StringComparison.OrdinalIgnoreCase))
+        //{
+        //    if (Data.Is(out IFlagTeamObjectiveGamemode gm))
+        //    {
+        //        fl = gm.ObjectiveTeam1;
+        //    }
+        //}
+        //else if (term.Equals("obj2", StringComparison.OrdinalIgnoreCase))
+        //{
+        //    if (Data.Is(out IFlagTeamObjectiveGamemode gm))
+        //    {
+        //        fl = gm.ObjectiveTeam2;
+        //    }
+        //}
+        //else if (term.Equals("obj", StringComparison.OrdinalIgnoreCase))
+        //{
+        //    if (Data.Is(out IFlagTeamObjectiveGamemode rot))
+        //    {
+        //        if (Data.Is(out IAttackDefense atdef))
+        //        {
+        //            ulong t = atdef.DefendingTeam;
+        //            fl = t == 1 ? rot.ObjectiveTeam1 : rot.ObjectiveTeam2;
+        //        }
+        //    }
+        //    else if (Data.Is(out IFlagObjectiveGamemode obj))
+        //    {
+        //        fl = obj.Objective;
+        //    }
+        //}
+        //if (fl != null)
+        //    return fl.ZoneData;
+        return null;
+    }
+
+    /// <summary>
+    /// Get a zone where the given point is inside it. Smaller area zones will be returned before larger ones.
+    /// </summary>
+    /// <param name="pos">The position to search for.</param>
+    /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
+    public Zone? FindInsizeZone(Vector3 pos, bool noOverlap)
+    {
+        if (ProximityZones == null)
+            return null;
+
+        Zone? current = null;
+        float area = 0;
+        for (int i = 0; i < ProximityZones.Count; ++i)
+        {
+            ZoneProximity proximity = ProximityZones[i];
+            if (!proximity.Proximity.TestPoint(pos))
+                continue;
+            
+            float a = proximity.Proximity.Area;
+            if (current is null)
+            {
+                current = proximity.Zone;
+                area = a;
+            }
+            else if (noOverlap)
+                return null;
+            else if (a < area)
+            {
+                current = proximity.Zone;
+                area = a;
+            }
+        }
+
+        return current;
+    }
+
+    /// <summary>
+    /// Get a zone where the given point is inside it. Smaller area zones will be returned before larger ones.
+    /// </summary>
+    /// <param name="pos">The position to search for.</param>
+    /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
+    public Zone? FindInsizeZone(Vector2 pos, bool noOverlap)
+    {
+        if (ProximityZones == null)
+            return null;
+
+        Zone? current = null;
+        float area = 0;
+        for (int i = 0; i < ProximityZones.Count; ++i)
+        {
+            ZoneProximity proximity = ProximityZones[i];
+            if (!proximity.Proximity.TestPoint(pos))
+                continue;
+            
+            float a = proximity.Proximity.Area;
+            if (current is null)
+            {
+                current = proximity.Zone;
+                area = a;
+            }
+            else if (noOverlap)
+                return null;
+            else if (a < area)
+            {
+                current = proximity.Zone;
+                area = a;
+            }
+        }
+
+        return current;
+    }
+
+    // start loading zones mid-way through level load and force it to finish at the end.
+
+    /// <summary>
+    /// Invoked just before the level actually loads.
+    /// </summary>
+    private void OnLevelLoaded(int level)
+    {
+        if (_loadTask.Status == UniTaskStatus.Pending)
+        {
+            _logger.LogWarning("Still waiting on zone reading to complete.");
+            _loadTask.AsTask().Wait();
+            _logger.LogInformation("Zone reading completed.");
+        }
+        else
+        {
+            _loadTask = default;
+        }
+    }
+
+    /// <summary>
+    /// Invoked during level load.
+    /// </summary>
+    private void OnLevelLoading()
+    {
+        _loadTask = UniTask.Create(async () =>
+        {
+            if (_init == 0)
+                await Initialize();
+        });
+
+        if (_loadTask.Status != UniTaskStatus.Pending)
+            _loadTask = default;
     }
 }

@@ -62,7 +62,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
             zoneProviders.Add((IZoneProvider)ActivatorUtilities.CreateInstance(_serviceProvider, zoneProviderType, this));
         }
 
-        _zoneStore = new ZoneStore(zoneProviders);
+        _zoneStore = new ZoneStore(zoneProviders, _serviceProvider.GetRequiredService<ILogger<ZoneStore>>(), isGlobal: false);
 
         // load pathing provider
         IConfigurationSection config = Configuration.GetSection("PathingData");

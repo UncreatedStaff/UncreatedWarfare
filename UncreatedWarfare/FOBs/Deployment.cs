@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Traits.Buffs;
 
@@ -112,9 +113,9 @@ public static class Deployment
             data.PendingDeploy = null;
         }
     }
-    public static void ForceDeploy(UCPlayer player, IFOB? deployedFrom, IDeployable location, bool chat, bool startCooldown = true)
+    public static void ForceDeploy(WarfarePlayer player, IFOB? deployedFrom, IDeployable location, bool chat, bool startCooldown = true)
     {
-        player.Player.teleportToLocationUnsafe(location.SpawnPosition, location.Yaw);
+        player.UnturnedPlayer.teleportToLocationUnsafe(location.SpawnPosition, location.Yaw);
         location.OnDeploy(player, chat);
         if (startCooldown)
             CooldownManager.StartCooldown(player, CooldownType.Deploy, RapidDeployment.GetDeployTime(player));

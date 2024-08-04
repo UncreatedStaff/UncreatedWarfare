@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
@@ -71,37 +72,9 @@ partial class EventDispatcher2
             OriginalPlacer = UCPlayer.FromID(owner),
             GroupOwner = new CSteamID(group)
         };
-        
-        UniTask<bool> task = DispatchEventAsync(args, _unloadToken);
 
-        if (task.Status != UniTaskStatus.Pending)
+        EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
         {
-            if (args.IsActionCancelled)
-            {
-                shouldAllow = false;
-                return;
-            }
-
-            Vector3 rot = args.Rotation;
-
-            point = args.Position;
-            angleX = rot.x;
-            angleY = rot.y;
-            angleZ = rot.z;
-            owner = args.Owner.m_SteamID;
-            group = args.GroupOwner.m_SteamID;
-            return;
-        }
-
-        // prevent placement then replace it once the task finishes
-        shouldAllow = false;
-        UniTask.Create(async () =>
-        {
-            if (!await task)
-                return;
-            
-            await UniTask.SwitchToMainThread(_unloadToken);
-
             bool plantTargetAlive = args.TargetVehicle != null;
             if (!plantTargetAlive && args.TargetVehicle is not null || plantTargetAlive && args.HitTarget == null)
             {
@@ -111,7 +84,7 @@ partial class EventDispatcher2
 
             Vector3 rot = args.Rotation;
             Quaternion rotation = BarricadeManager.getRotation(args.Barricade.asset, rot.x, rot.y, rot.z);
-            
+
             if (plantTargetAlive)
             {
                 BarricadeManager.dropPlantedBarricade(args.HitTarget, args.Barricade, args.Position, rotation, args.Owner.m_SteamID, args.GroupOwner.m_SteamID);
@@ -121,6 +94,18 @@ partial class EventDispatcher2
                 BarricadeManager.dropNonPlantedBarricade(args.Barricade, args.Position, rotation, args.Owner.m_SteamID, args.GroupOwner.m_SteamID);
             }
         });
+
+        if (!shouldAllow)
+            return;
+        
+        Vector3 rot = args.Rotation;
+
+        point = args.Position;
+        angleX = rot.x;
+        angleY = rot.y;
+        angleZ = rot.z;
+        owner = args.Owner.m_SteamID;
+        group = args.GroupOwner.m_SteamID;
     }
 
     /// <summary>
@@ -173,13 +158,7 @@ partial class EventDispatcher2
 
         DestroyerComponent.AddOrUpdate(barricade.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, EDamageOrigin.Unknown);
 
-        UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
-        if (player == null)
-        {
-            ILogger logger = GetLogger(typeof(BarricadeDrop), nameof(BarricadeDrop.OnSalvageRequested_Global));
-            logger.LogError("Unable to identify player that salvaged a {0} barricade.", barricade.asset.itemName);
-            return;
-        }
+        WarfarePlayer player = _playerService.GetOnlinePlayer(instigatorClient);
 
         if (!BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region))
         {
@@ -233,17 +212,55 @@ partial class EventDispatcher2
                     return;
             }
 
-            task = DispatchEventAsync(args, _unloadToken);
-
-            if (task.Status != UniTaskStatus.Pending)
+            EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
             {
-                if (args.IsActionCancelled)
-                    shouldAllow = false;
+                if (args.ServersideData.barricade.isDead)
+                    return;
 
-                return;
-            }
+                // simulate BarricadeDrop.ReceiveSalvageRequest
+                ItemBarricadeAsset asset = args.Barricade.asset;
+                if (asset.isUnpickupable)
+                    return;
 
-            shouldAllow = false;
+                // re-apply ISalvageInfo components
+                barricade.model.GetComponents(_workingSalvageInfos);
+                try
+                {
+                    for (int i = 0; i < _workingSalvageInfos.Count; ++i)
+                    {
+                        ISalvageInfo salvageInfo = _workingSalvageInfos[i];
+                        salvageInfo.Salvager = instigatorClient.playerID.steamID;
+                        salvageInfo.IsSalvaged = true;
+                    }
+                }
+                finally
+                {
+                    _workingSalvageInfos.Clear();
+                }
+
+                // add salvaged item
+                if (args.ServersideData.barricade.health >= asset.health)
+                {
+                    args.Player.UnturnedPlayer.inventory.forceAddItem(new Item(asset, EItemOrigin.NATURE), true);
+                }
+                else if (asset.isSalvageable)
+                {
+                    ItemAsset? salvagable = asset.FindSalvageItemAsset();
+                    if (salvagable != null)
+                    {
+                        player.UnturnedPlayer.inventory.forceAddItem(new Item(salvagable, EItemOrigin.NATURE), true);
+                    }
+                }
+
+                if (!BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out _))
+                {
+                    x = args.RegionPosition.x;
+                    y = args.RegionPosition.y;
+                    plant = args.VehicleRegionIndex;
+                }
+
+                BarricadeManager.destroyBarricade(args.Barricade, x, y, plant);
+            });
         }
         finally
         {
@@ -261,63 +278,6 @@ partial class EventDispatcher2
                 _workingSalvageInfos.Clear();
             }
         }
-
-        UniTask.Create(async () =>
-        {
-            if (!await task)
-            {
-                return;
-            }
-
-            await UniTask.SwitchToMainThread(_unloadToken);
-
-            if (args.ServersideData.barricade.isDead)
-                return;
-
-            // simulate BarricadeDrop.ReceiveSalvageRequest
-            ItemBarricadeAsset asset = args.Barricade.asset;
-            if (asset.isUnpickupable)
-                return;
-
-            // re-apply ISalvageInfo components
-            barricade.model.GetComponents(_workingSalvageInfos);
-            try
-            {
-                for (int i = 0; i < _workingSalvageInfos.Count; ++i)
-                {
-                    ISalvageInfo salvageInfo = _workingSalvageInfos[i];
-                    salvageInfo.Salvager = instigatorClient.playerID.steamID;
-                    salvageInfo.IsSalvaged = true;
-                }
-            }
-            finally
-            {
-                _workingSalvageInfos.Clear();
-            }
-
-            // add salvaged item
-            if (args.ServersideData.barricade.health >= asset.health)
-            {
-                args.Player.Player.inventory.forceAddItem(new Item(asset, EItemOrigin.NATURE), true);
-            }
-            else if (asset.isSalvageable)
-            {
-                ItemAsset? salvagable = asset.FindSalvageItemAsset();
-                if (salvagable != null)
-                {
-                    player.Player.inventory.forceAddItem(new Item(salvagable, EItemOrigin.NATURE), true);
-                }
-            }
-
-            if (!BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out _))
-            {
-                x = args.RegionPosition.x;
-                y = args.RegionPosition.y;
-                plant = args.VehicleRegionIndex;
-            }
-
-            BarricadeManager.destroyBarricade(args.Barricade, x, y, plant);
-        });
     }
 
     /// <summary>
@@ -343,12 +303,7 @@ partial class EventDispatcher2
 
         BarricadeData data = drop.GetServersideData();
 
-        UCPlayer? instigatorPlayer = UCPlayer.FromCSteamID(instigator);
-        if (instigatorPlayer == null)
-        {
-            shouldallow = false;
-            return;
-        }
+        WarfarePlayer instigatorPlayer = _playerService.GetOnlinePlayer(instigator);
 
         ChangeSignTextRequested args = new ChangeSignTextRequested
         {
@@ -362,42 +317,29 @@ partial class EventDispatcher2
             Text = sign.text
         };
 
-        UniTask<bool> task = WarfareModule.EventDispatcher.DispatchEventAsync(args, CancellationToken.None);
-        if (task.Status != UniTaskStatus.Pending)
+        EventContinuations.Dispatch(args, this, _unloadToken, out shouldallow, continuation: args =>
         {
-            if (args.IsActionCancelled)
-            {
-                shouldallow = false;
+            if (args.Sign == null || args.Barricade.GetServersideData().barricade.isDead)
                 return;
-            }
 
-            if (instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && sign.transform.TryGetComponent(out BarricadeComponent bcomp))
+            if (args.Player is not null && args.Sign.transform.TryGetComponent(out BarricadeComponent bcomp))
             {
-                bcomp.LastEditor = instigator;
-                bcomp.EditTick = UCWarfare.I.Debugger.Updates;
-            }
-
-            text = args.Text;
-            return;
-        }
-
-        shouldallow = false;
-        UniTask.Create(async () =>
-        {
-            if (!await task)
-            {
-                return;
-            }
-
-            await UniTask.SwitchToMainThread(_unloadToken);
-
-            if (args.Player is not null && sign.transform.TryGetComponent(out BarricadeComponent bcomp))
-            {
-                bcomp.LastEditor = args.Player.CSteamID;
+                bcomp.LastEditor = args.Player.Steam64;
                 bcomp.EditTick = UCWarfare.I.Debugger.Updates;
             }
 
             BarricadeManager.ServerSetSignText(args.Sign, args.Text);
         });
+
+        if (!shouldallow)
+            return;
+
+        if (instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && sign.transform.TryGetComponent(out BarricadeComponent bcomp))
+        {
+            bcomp.LastEditor = instigator;
+            bcomp.EditTick = UCWarfare.I.Debugger.Updates;
+        }
+
+        text = args.Text;
     }
 }

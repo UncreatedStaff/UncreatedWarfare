@@ -41,9 +41,6 @@ internal static class EventPatches
             {
                 L.LogError("Unable to find Items.addItem to transpile player inventory events.");
             }
-
-            PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveDropItem), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-                transpiler: PatchUtil.GetMethodInfo(TranspileReceiveDropItem));
         }
         else
         {
@@ -356,60 +353,6 @@ internal static class EventPatches
         ILGenerator generator) => TranspileReceiveSwapOrDragItem(instructions, generator, true);
     private static IEnumerable<CodeInstruction> TranspileReceiveDragItem(IEnumerable<CodeInstruction> instructions,
         ILGenerator generator) => TranspileReceiveSwapOrDragItem(instructions, generator, false);
-    private static IEnumerable<CodeInstruction> TranspileReceiveDropItem(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase method)
-    {
-        int lcl2 = method.FindLocalOfType<ItemJar>();
-        if (lcl2 < 0)
-            L.LogWarning("Unable to find local for ItemJar while transpiling ReceiveDropItem.");
-
-        MethodInfo? itemGetter = typeof(ItemJar).GetProperty(nameof(ItemJar.item), BindingFlags.Public | BindingFlags.Instance)?.GetMethod;
-        if (itemGetter == null)
-            L.LogWarning("Unable to find 'get ItemJar.item' while transpiling ReceiveDropItem.");
-        
-        FieldInfo? rotField = typeof(ItemJar).GetField(nameof(ItemJar.rot), BindingFlags.Public | BindingFlags.Instance);
-        if (rotField == null)
-            L.LogWarning("Unable to find 'ItemJar.rot' while transpiling ReceiveDropItem.");
-        
-        bool foundOne = false;
-        foreach (CodeInstruction instruction in instructions)
-        {
-            yield return instruction;
-            if (!foundOne && instruction.Calls(MthdRemoveItem!))
-            {
-                foundOne = true;
-                yield return new CodeInstruction(OpCodes.Ldarg_0);                 // this
-                yield return new CodeInstruction(OpCodes.Ldarg_1);                 // page
-                yield return new CodeInstruction(OpCodes.Ldarg_2);                 // x
-                yield return new CodeInstruction(OpCodes.Ldarg_3);                 // y
-                if (lcl2 > -1)
-                {
-                    if (rotField != null)
-                    {
-                        yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)lcl2); // itemjar local
-                        yield return new CodeInstruction(OpCodes.Ldfld, rotField);    // .rot
-                    }
-                    else
-                        yield return new CodeInstruction(OpCodes.Ldc_I4_0);           // load 0 as backup
-
-                    if (itemGetter != null)
-                    {
-                        yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)lcl2); // itemjar local
-                        yield return new CodeInstruction(OpCodes.Callvirt, itemGetter); // .item
-                    }
-                    else
-                        yield return new CodeInstruction(OpCodes.Ldnull);           // load null as backup
-                }
-                else
-                {
-                    yield return new CodeInstruction(OpCodes.Ldc_I4_0);               // load 0 as backup
-                    yield return new CodeInstruction(OpCodes.Ldnull);               // load null as backup
-                }
-
-                yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(EventDispatcher.OnDroppedItem));
-                L.LogDebug("Patched ReceiveDropItem.");
-            }
-        }
-    }
     private static IEnumerable<CodeInstruction> TranspileReceiveTakeItemRequest(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase method)
     {
         FieldInfo? rpcField = typeof(ItemManager).GetField("SendDestroyItem", BindingFlags.NonPublic | BindingFlags.Static);

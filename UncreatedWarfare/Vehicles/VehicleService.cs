@@ -145,7 +145,7 @@ public class VehicleService
     /// <summary>
     /// Remove all vehicles and clean up spawn information and items.
     /// </summary>
-    public async UniTask<int> DeleteAllVehiclesAsync(InteractableVehicle vehicle, CancellationToken token = default)
+    public async UniTask<int> DeleteAllVehiclesAsync(CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 

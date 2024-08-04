@@ -25,8 +25,8 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Sessions;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Util;
 #if NETSTANDARD || NETFRAMEWORK
 using Uncreated.Warfare.Networking.Purchasing;
 #endif
@@ -146,7 +146,6 @@ public static class Data
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
     internal static InstanceGetter<UseableGun, bool>? GetUseableGunReloading;
     internal static InstanceGetter<PlayerLife, CSteamID>? GetRecentKiller;
-    internal static StaticGetter<uint> GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Action<PlayerInventory, SteamPlayer> SendInitialInventoryState;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
@@ -224,11 +223,6 @@ public static class Data
         OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
         PlaytimeComponents = new Dictionary<ulong, UCPlayerData>(Provider.maxPlayers);
 
-        Singletons.OnSingletonLoaded += OnSingletonLoaded;
-        Singletons.OnSingletonUnloaded += OnSingletonUnloaded;
-        Singletons.OnSingletonReloaded += OnSingletonReloaded;
-
-
         /* CREATE DIRECTORIES */
         L.Log("Validating directories...", ConsoleColor.Magenta);
         F.CheckDir(Paths.BaseDirectory, out _, true);
@@ -249,11 +243,7 @@ public static class Data
 
         await UniTask.SwitchToMainThread(token);
         Gamemode.ReadGamemodes();
-
-        if (UCWarfare.Config.EnableReporter)
-            Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
-
-
+        
         DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(true, token: token);
         GamemodeListeners = new IUncreatedSingleton[2];
         GamemodeListeners[0] = Points = await Singletons.LoadSingletonAsync<Points>(true, token: token);
@@ -264,29 +254,32 @@ public static class Data
         /* REFLECT PRIVATE VARIABLES */
         L.Log("Getting RPCs...", ConsoleColor.Magenta);
         IDisposable indent = L.IndentLog(1);
-        SendChangeText = Util.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
-        SendMultipleBarricades = Util.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
-        SendChatIndividual = Util.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
-        SendDestroyItem = Util.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
-        SendUpdateBarricadeState = Util.GetRPC<ClientInstanceMethod<byte[]>, BarricadeDrop>("SendUpdateState");
-        SendInventory = Util.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
-        SendWearShirt = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearShirt");
-        SendWearPants = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearPants");
-        SendWearHat = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearHat");
-        SendWearBackpack = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearBackpack");
-        SendWearVest = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearVest");
-        SendWearMask = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
-        SendWearGlasses = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
-        SendSwapVehicleSeats = Util.GetRPC<ClientStaticMethod<uint, byte, byte>, VehicleManager>("SendSwapVehicleSeats");
-        SendEnterVehicle = Util.GetRPC<ClientStaticMethod<uint, byte, CSteamID>, VehicleManager>("SendEnterVehicle");
-        // SendScreenshotDestination = Util.GetRPC<ClientInstanceMethod, Player>("SendScreenshotDestination");
+
+        SendChangeText = ReflectionUtility.FindRequiredRpc<InteractableSign, ClientInstanceMethod<string>>("SendChangeText");
+        SendMultipleBarricades = ReflectionUtility.FindRequiredRpc<BarricadeManager, ClientStaticMethod>("SendMultipleBarricades");
+        SendChatIndividual = ReflectionUtility.FindRequiredRpc<ChatManager, ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>>("SendChatEntry");
+        SendDestroyItem = ReflectionUtility.FindRequiredRpc<ItemManager, ClientStaticMethod<byte, byte, uint, bool>>("SendDestroyItem");
+
+        SendUpdateBarricadeState = ReflectionUtility.FindRpc<BarricadeDrop, ClientInstanceMethod<byte[]>>("SendUpdateState");
+        SendInventory = ReflectionUtility.FindRpc<PlayerInventory, ClientInstanceMethod>("SendInventory");
+        SendWearShirt = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearShirt");
+        SendWearPants = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearPants");
+        SendWearHat = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearHat");
+        SendWearBackpack = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearBackpack");
+        SendWearVest = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearVest");
+        SendWearMask = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearMask");
+        SendWearGlasses = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearGlasses");
+        SendSwapVehicleSeats = ReflectionUtility.FindRpc<VehicleManager, ClientStaticMethod<uint, byte, byte>>("SendSwapVehicleSeats");
+        SendEnterVehicle = ReflectionUtility.FindRpc<VehicleManager, ClientStaticMethod<uint, byte, CSteamID>>("SendEnterVehicle");
+        // SendScreenshotDestination = ReflectionUtility.FindRpc<ClientInstanceMethod, Player>("SendScreenshotDestination");
+
         UseFastKits = true;
         if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null || SendInventory is null)
         {
             L.LogWarning("Unable to gather all the RPCs needed for Fast Kits, kits will not work as quick.");
             UseFastKits = false;
         }
-        GetItemManagerInstanceCount = Accessor.GenerateStaticGetter<ItemManager, uint>("instanceCount", throwOnError: true)!;
+
         SetPrivateStance = Accessor.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance");
         SetStorageInventory = Accessor.GenerateInstanceSetter<InteractableStorage, Items>("_items");
         RefreshIsConnectedToPower = (Action<InteractablePower>?)Accessor.GenerateInstanceCaller<InteractablePower>("RefreshIsConnectedToPower");
@@ -502,63 +495,13 @@ public static class Data
         Gamemode.WinToastUI = new WinToastUI();
         IsInitialSyncRegistering = false;
     }
-    private static void OnSingletonReloaded(IReloadableSingleton singleton, bool success)
-    {
-        if (success)
-            L.Log("Singleton reloaded || " + singleton.GetType().Name, ConsoleColor.Blue);
-        else
-            L.LogWarning("Singleton failed to reload | " + singleton.GetType().Name, ConsoleColor.Red);
-    }
-
-    private static void OnSingletonUnloaded(IUncreatedSingleton singleton, bool success)
-    {
-        if (success)
-            L.Log("Singleton unloaded \\\\ " + singleton.GetType().Name, ConsoleColor.Blue);
-        else
-            L.LogWarning("Singleton failed to unload | " + singleton.GetType().Name, ConsoleColor.Red);
-    }
-
-    private static void OnSingletonLoaded(IUncreatedSingleton singleton, bool success)
-    {
-        if (success)
-            L.Log("Singleton loaded // " + singleton.GetType().Name, ConsoleColor.Blue);
-        else
-            L.LogWarning("Singleton failed to load | " + singleton.GetType().Name, ConsoleColor.Red);
-    }
-
     internal static readonly List<KeyValuePair<Type, string?>> TranslatableEnumTypes = new List<KeyValuePair<Type, string?>>()
     {
         new KeyValuePair<Type, string?>(typeof(EDamageOrigin), "Damage Origin"),
         new KeyValuePair<Type, string?>(typeof(EDeathCause), "Death Cause"),
         new KeyValuePair<Type, string?>(typeof(ELimb), "Limb")
     };
-    internal static void OnClientReceivedMessage(IConnection connection, in MessageOverhead overhead, byte[] message)
-    {
-        if (UCWarfare.Config.Debug)
-        {
-            L.Log("Received from TCP server: " + overhead + "."
-#if SHOW_BYTES
-                + "\n" + Logging.GetBytesHex(message)
-#endif
-                , ConsoleColor.DarkGray);
-        }
-    }
-    internal static void OnClientSentMessage(IConnection connection, in MessageOverhead overhead, byte[] message)
-    {
-        if (UCWarfare.Config.Debug)
-        {
-            L.Log("Sent over TCP server    : " + overhead + "."
-#if SHOW_BYTES
-                  + "\n" + Logging.GetBytesHex(message)
-#endif
-                , ConsoleColor.DarkGray);
-        }
-    }
-    internal static void OnClientDisconnected(IConnection connection)
-    {
-        L.Log("Disconnected from HomeBase.", ConsoleColor.DarkYellow);
-    }
-    
+
     private static CancellationTokenSource? _netClientSource;
     internal static void OnClientConnected(IConnection connection)
     {
@@ -635,25 +578,25 @@ public static class Data
         Key = 0,
         Code = L.Default,
         DisplayName = "English",
-        Aliases = new LanguageAlias[]
-        {
+        Aliases =
+        [
             new LanguageAlias { Alias = "English" },
             new LanguageAlias { Alias = "American" },
             new LanguageAlias { Alias = "British" },
             new LanguageAlias { Alias = "Inglés" },
             new LanguageAlias { Alias = "Ingles" },
             new LanguageAlias { Alias = "Inglesa" }
-        },
-        Contributors = new LanguageContributor[]
-        {
+        ],
+        Contributors =
+        [
             new LanguageContributor { Contributor = 76561198267927009 },
             new LanguageContributor { Contributor = 76561198857595123 }
-        },
+        ],
         HasTranslationSupport = true,
         DefaultCultureCode = "en-US",
         RequiresIMGUI = false,
-        SupportedCultures = new LanguageCulture[]
-        {
+        SupportedCultures =
+        [
            new LanguageCulture { CultureCode = "en-001" },
            new LanguageCulture { CultureCode = "en-029" },
            new LanguageCulture { CultureCode = "en-150" },
@@ -760,6 +703,6 @@ public static class Data
            new LanguageCulture { CultureCode = "en-ZA" },
            new LanguageCulture { CultureCode = "en-ZM" },
            new LanguageCulture { CultureCode = "en-ZW" }
-        }
+        ]
     };
 }

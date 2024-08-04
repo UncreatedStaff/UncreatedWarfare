@@ -32,6 +32,9 @@ public class PolygonProximity : IPolygonProximity
     /// <inheritdoc />
     public float surfaceArea { get; }
 
+    /// <inheritdoc />
+    public float Area { get; }
+
     /// <summary>
     /// Create a polygon with a set of points.
     /// </summary>
@@ -108,6 +111,7 @@ public class PolygonProximity : IPolygonProximity
 
         internalVolume = ttlArea * height;
         surfaceArea = ttlArea * 2 + sideSurfaceArea;
+        Area = ttlArea;
 
         _bounds.SetMinMax(min, max);
     }
@@ -191,7 +195,7 @@ public class PolygonProximity : IPolygonProximity
         return intersects % 2 == 1;
     }
 
-    internal static void CalculateAreaAndVolume(Transform transform, float? minHeight, float? maxHeight, IReadOnlyList<Vector2> points, out float surfaceArea, out float volume)
+    internal static void CalculateAreaAndVolume(Transform transform, float? minHeight, float? maxHeight, IReadOnlyList<Vector2> points, out float area, out float surfaceArea, out float volume)
     {
         ThreadUtil.assertIsGameThread();
 
@@ -236,6 +240,7 @@ public class PolygonProximity : IPolygonProximity
 
         volume = ttlArea * height;
         surfaceArea = ttlArea * 2 + sideSurfaceArea;
+        area = ttlArea;
     }
 
     /// <inheritdoc />

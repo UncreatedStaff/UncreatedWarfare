@@ -1,6 +1,7 @@
 ﻿using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Structures;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
@@ -31,38 +32,22 @@ partial class EventDispatcher2
             GroupOwner = new CSteamID(group)
         };
 
-        UniTask<bool> task = DispatchEventAsync(args, _unloadToken);
-
-        if (task.Status != UniTaskStatus.Pending)
+        EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
         {
-            if (args.IsActionCancelled)
-            {
-                shouldAllow = false;
-                return;
-            }
-
-            Vector3 rot = args.Rotation.eulerAngles;
-
-            point = args.Position;
-            angleX = rot.x;
-            angleY = rot.y;
-            angleZ = rot.z;
-            owner = args.Owner.m_SteamID;
-            group = args.GroupOwner.m_SteamID;
-            return;
-        }
-
-        // prevent placement then replace it once the task finishes
-        shouldAllow = false;
-        UniTask.Create(async () =>
-        {
-            if (!await task)
-                return;
-            
-            await UniTask.SwitchToMainThread(_unloadToken);
-
             StructureManager.dropReplicatedStructure(args.Structure, args.Position, args.Rotation, args.Owner.m_SteamID, args.GroupOwner.m_SteamID);
         });
+
+        if (!shouldAllow)
+            return;
+
+        Vector3 rot = args.Rotation.eulerAngles;
+
+        point = args.Position;
+        angleX = rot.x;
+        angleY = rot.y;
+        angleZ = rot.z;
+        owner = args.Owner.m_SteamID;
+        group = args.GroupOwner.m_SteamID;
     }
 
     /// <summary>
@@ -100,13 +85,7 @@ partial class EventDispatcher2
 
         DestroyerComponent.AddOrUpdate(structure.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, EDamageOrigin.Unknown);
 
-        UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
-        if (player == null)
-        {
-            ILogger logger = GetLogger(typeof(StructureDrop), nameof(StructureDrop.OnSalvageRequested_Global));
-            logger.LogError("Unable to identify player that salvaged a {0} structure.", structure.asset.itemName);
-            return;
-        }
+        WarfarePlayer player = _playerService.GetOnlinePlayer(instigatorClient);
 
         if (!StructureManager.tryGetRegion(structure.model, out byte x, out byte y, out StructureRegion region))
         {
@@ -159,17 +138,57 @@ partial class EventDispatcher2
                     return;
             }
 
-            task = DispatchEventAsync(args, _unloadToken);
-
-            if (task.Status != UniTaskStatus.Pending)
+            EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
             {
-                if (args.IsActionCancelled)
-                    shouldAllow = false;
+                if (args.ServersideData.structure.isDead)
+                    return;
 
-                return;
-            }
+                // simulate StructureDrop.ReceiveSalvageRequest
+                ItemStructureAsset? asset = args.Structure.asset;
+                if (asset is { isUnpickupable: true })
+                    return;
 
-            shouldAllow = false;
+                // re-apply ISalvageInfo components
+                structure.model.GetComponents(_workingSalvageInfos);
+                try
+                {
+                    for (int i = 0; i < _workingSalvageInfos.Count; ++i)
+                    {
+                        ISalvageInfo salvageInfo = _workingSalvageInfos[i];
+                        salvageInfo.Salvager = instigatorClient.playerID.steamID;
+                        salvageInfo.IsSalvaged = true;
+                    }
+                }
+                finally
+                {
+                    _workingSalvageInfos.Clear();
+                }
+
+                if (asset != null)
+                {
+                    // add salvaged item
+                    if (args.ServersideData.structure.health >= asset.health)
+                    {
+                        args.Player.UnturnedPlayer.inventory.forceAddItem(new Item(asset, EItemOrigin.NATURE), true);
+                    }
+                    else if (asset.isSalvageable)
+                    {
+                        ItemAsset? salvagable = asset.FindSalvageItemAsset();
+                        if (salvagable != null)
+                        {
+                            player.UnturnedPlayer.inventory.forceAddItem(new Item(salvagable, EItemOrigin.NATURE), true);
+                        }
+                    }
+                }
+
+                if (!StructureManager.tryGetRegion(structure.model, out byte x, out byte y, out _))
+                {
+                    x = args.RegionPosition.x;
+                    y = args.RegionPosition.y;
+                }
+
+                StructureManager.destroyStructure(args.Structure, x, y, player.IsOnline ? (structure.model.position - player.Position).normalized * 100f : new Vector3(0f, 100f, 0f), true);
+            });
         }
         finally
         {
@@ -187,64 +206,5 @@ partial class EventDispatcher2
                 _workingSalvageInfos.Clear();
             }
         }
-
-        UniTask.Create(async () =>
-        {
-            if (!await task)
-            {
-                return;
-            }
-
-            await UniTask.SwitchToMainThread(_unloadToken);
-
-            if (args.ServersideData.structure.isDead)
-                return;
-
-            // simulate StructureDrop.ReceiveSalvageRequest
-            ItemStructureAsset? asset = args.Structure.asset;
-            if (asset is { isUnpickupable: true })
-                return;
-
-            // re-apply ISalvageInfo components
-            structure.model.GetComponents(_workingSalvageInfos);
-            try
-            {
-                for (int i = 0; i < _workingSalvageInfos.Count; ++i)
-                {
-                    ISalvageInfo salvageInfo = _workingSalvageInfos[i];
-                    salvageInfo.Salvager = instigatorClient.playerID.steamID;
-                    salvageInfo.IsSalvaged = true;
-                }
-            }
-            finally
-            {
-                _workingSalvageInfos.Clear();
-            }
-
-            if (asset != null)
-            {
-                // add salvaged item
-                if (args.ServersideData.structure.health >= asset.health)
-                {
-                    args.Player.Player.inventory.forceAddItem(new Item(asset, EItemOrigin.NATURE), true);
-                }
-                else if (asset.isSalvageable)
-                {
-                    ItemAsset? salvagable = asset.FindSalvageItemAsset();
-                    if (salvagable != null)
-                    {
-                        player.Player.inventory.forceAddItem(new Item(salvagable, EItemOrigin.NATURE), true);
-                    }
-                }
-            }
-
-            if (!StructureManager.tryGetRegion(structure.model, out byte x, out byte y, out _))
-            {
-                x = args.RegionPosition.x;
-                y = args.RegionPosition.y;
-            }
-
-            StructureManager.destroyStructure(args.Structure, x, y, player.IsOnline ? (structure.model.position - player.Position).normalized * 100f : new Vector3(0f, 100f, 0f), true);
-        });
     }
 }

@@ -88,6 +88,14 @@ public class PlayerDictionary<TValue> :
         set => _dictionary[steam64.m_SteamID] = value;
     }
 
+    /// <summary>
+    /// Get the value associated with the given player.
+    /// </summary>
+    public TValue this[ulong steam64]
+    {
+        get => _dictionary[steam64];
+        set => _dictionary[steam64] = value;
+    }
 
     /// <summary>
     /// Check if this dictionary has a value for the given player.
@@ -127,6 +135,14 @@ public class PlayerDictionary<TValue> :
     public bool ContainsPlayer(CSteamID steam64)
     {
         return _dictionary.ContainsKey(steam64.m_SteamID);
+    }
+    
+    /// <summary>
+    /// Check if this dictionary has a value for the given player.
+    /// </summary>
+    public bool ContainsPlayer(ulong steam64)
+    {
+        return _dictionary.ContainsKey(steam64);
     }
 
     /// <summary>
@@ -168,6 +184,14 @@ public class PlayerDictionary<TValue> :
     public bool TryGetValue(CSteamID steam64, [MaybeNullWhen(false)] out TValue value)
     {
         return _dictionary.TryGetValue(steam64.m_SteamID, out value);
+    }
+
+    /// <summary>
+    /// Attempt to get the value for the given player if it exists.
+    /// </summary>
+    public bool TryGetValue(ulong steam64, [MaybeNullWhen(false)] out TValue value)
+    {
+        return _dictionary.TryGetValue(steam64, out value);
     }
 
 #pragma warning restore CS8767 // Nullability of reference types in type of parameter doesn't match implicitly implemented member (possibly because of nullability attributes).
@@ -213,6 +237,14 @@ public class PlayerDictionary<TValue> :
     }
 
     /// <summary>
+    /// Remove the value for the given player if it exists.
+    /// </summary>
+    public bool Remove(ulong steam64)
+    {
+        return _dictionary.Remove(steam64);
+    }
+
+    /// <summary>
     /// Add the value for the given player.
     /// </summary>
     /// <exception cref="ArgumentException">The key already exists in the dictionary.</exception>
@@ -255,6 +287,15 @@ public class PlayerDictionary<TValue> :
     public void Add(CSteamID steam64, TValue value)
     {
         _dictionary.Add(steam64.m_SteamID, value);
+    }
+
+    /// <summary>
+    /// Add the value for the given player.
+    /// </summary>
+    /// <exception cref="ArgumentException">The key already exists in the dictionary.</exception>
+    public void Add(ulong steam64, TValue value)
+    {
+        _dictionary.Add(steam64, value);
     }
 
     /// <inheritdoc cref="IDictionary{TKey,TValue}" />

@@ -2,6 +2,7 @@
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
@@ -16,7 +17,7 @@ partial class EventDispatcher2
         if (vehicle == null || !vehicle.isDriven || !shouldallow) 
             return;
 
-        UCPlayer? player = UCPlayer.FromSteamPlayer(vehicle.passengers[0].player);
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(vehicle.passengers[0].player);
         if (player is null)
             return;
 
@@ -26,33 +27,8 @@ partial class EventDispatcher2
             Vehicle = vehicle
         };
 
-        UniTask<bool> task = DispatchEventAsync(args, CancellationToken.None);
-
-        if (task.Status != UniTaskStatus.Pending)
+        EventContinuations.Dispatch(args, this, _unloadToken, out shouldallow, continuation: args =>
         {
-            if (args.IsActionCancelled)
-            {
-                shouldallow = false;
-            }
-
-            if (vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
-            {
-                vehicleComponent.LastLocker = player.CSteamID;
-            }
-
-            return;
-        }
-
-        shouldallow = false;
-        UniTask.Create(async () =>
-        {
-            if (!await task)
-            {
-                return;
-            }
-
-            await UniTask.SwitchToMainThread(_unloadToken);
-
             bool isLocking = args.IsLocking;
 
             if (args.Vehicle == null || args.Vehicle.isDead || args.Vehicle.isLocked == isLocking)
@@ -60,10 +36,10 @@ partial class EventDispatcher2
 
             if (vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
             {
-                vehicleComponent.LastLocker = args.Player.CSteamID;
+                vehicleComponent.LastLocker = args.Player.Steam64;
             }
 
-            VehicleManager.ServerSetVehicleLock(args.Vehicle, args.Player.CSteamID, args.Player.Player.quests.groupID, args.IsLocking);
+            VehicleManager.ServerSetVehicleLock(args.Vehicle, args.Player.Steam64, args.Player.GroupId, args.IsLocking);
 
             _firemodeEffect ??= AssetLink.Create<EffectAsset>(new Guid("bc41e0feaebe4e788a3612811b8722d3"));
 
@@ -84,6 +60,14 @@ partial class EventDispatcher2
 
             _ = DispatchEventAsync(finalArgs, CancellationToken.None);
         });
+
+        if (!shouldallow)
+            return;
+        
+        if (vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
+        {
+            vehicleComponent.LastLocker = player.Steam64;
+        }
     }
 
     /// <summary>
@@ -91,15 +75,15 @@ partial class EventDispatcher2
     /// </summary>
     private void VehicleManagerOnToggledVehicleLock(InteractableVehicle vehicle)
     {
-        UCPlayer? player = null;
+        WarfarePlayer? player = null;
         if (vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
         {
-            player = UCPlayer.FromCSteamID(vehicleComponent.LastLocker);
+            player = _playerService.GetOnlinePlayerOrNull(vehicleComponent.LastLocker);
         }
 
         if (vehicle.lockedOwner.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            player ??= UCPlayer.FromCSteamID(vehicle.lockedOwner);
+            player ??= _playerService.GetOnlinePlayerOrNull(vehicle.lockedOwner);
         }
 
         VehicleLockChanged args = new VehicleLockChanged

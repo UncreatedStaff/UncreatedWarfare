@@ -3,78 +3,31 @@ using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
-
-[Command("ze", PermissionOverride = "commands.zone.edit")]
-[HelpMetadata(nameof(GetHelpMetadata))]
-public class ZeCommand : IExecutableCommand
-{
-    /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Edit zones.",
-            Parameters =
-            [
-                new CommandParameter("Parameter", typeof(string))
-                {
-                    Aliases = ZonePlayerComponent.EditCommands,
-                    ChainDisplayCount = 2,
-                    Parameters =
-                    [
-                        new CommandParameter("Value", typeof(object))
-                        {
-                            IsRemainder = true
-                        }
-                    ]
-                }
-            ]
-        };
-    }
-
-    /// <inheritdoc />
-    public UniTask ExecuteAsync(CancellationToken token)
-    {
-        Context.AssertRanByPlayer();
-
-        Context.AssertOnDuty();
-
-        Context.AssertArgs(1, "edit_zone_syntax");
-
-        if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
-            comp.EditCommand(Context);
-        else
-            Context.SendUnknownError();
-
-        return default;
-    }
-}
 
 [Command("zone")]
 [HelpMetadata(nameof(GetHelpMetadata))]
 public class ZoneCommand : IExecutableCommand
 {
-    private const string Syntax = "/zone <visualize|go|delete|create|util>";
+    private readonly ZoneStore _zoneStore;
+    private const string Syntax = "/zone <visualize|go|util>";
     private const string Help = "Manage zones.";
 
     internal static readonly PermissionLeaf PermissionVisualize = new PermissionLeaf("commands.zone.visualize", unturned: false, warfare: true);
     internal static readonly PermissionLeaf PermissionGo        = new PermissionLeaf("commands.zone.go", unturned: false, warfare: true);
-    internal static readonly PermissionLeaf PermissionDelete    = new PermissionLeaf("commands.zone.delete", unturned: false, warfare: true);
-    internal static readonly PermissionLeaf PermissionEdit      = new PermissionLeaf("commands.zone.edit", unturned: false, warfare: true);
-    internal static readonly PermissionLeaf PermissionCreate    = new PermissionLeaf("commands.zone.create", unturned: false, warfare: true);
     internal static readonly PermissionLeaf PermissionUtil      = new PermissionLeaf("commands.zone.util", unturned: false, warfare: true);
     internal static readonly PermissionLeaf PermissionLocation  = new PermissionLeaf("commands.zone.util.location", unturned: false, warfare: true);
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public ZoneCommand(ZoneStore zoneStore)
+    {
+        _zoneStore = zoneStore;
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -161,17 +114,13 @@ public class ZoneCommand : IExecutableCommand
             await Context.AssertPermissions(PermissionUtil, token);
             await UniTask.SwitchToMainThread(token);
 
-            if (Context.Player.UnturnedPlayer.TryGetComponent(out ZonePlayerComponent comp))
+            if (Context.MatchParameter(0, "location", "position", "loc", "pos"))
             {
-                Context.ArgumentOffset = 1;
-                try
-                {
-                    await comp.UtilCommand(Context, token);
-                }
-                finally { Context.ArgumentOffset = 0; }
+                Vector3 p = Context.Player.Position;
+                throw Context.Reply(T.ZoneUtilLocation, p.x, p.y, p.z, Context.Player.Yaw);
             }
-            else
-                throw Context.SendUnknownError();
+            
+            throw Context.SendCorrectUsage("/zone util location");
         }
         else throw Context.SendCorrectUsage(Syntax);
     }
@@ -179,12 +128,12 @@ public class ZoneCommand : IExecutableCommand
     {
         Zone? zone;
         if (Context.TryGetRange(0, out string? zname))
-            zone = GetZone(zname);
+            zone = _zoneStore.SearchZone(zname);
         else
         {
             Vector3 plpos = Context.Player.Position;
             if (!Context.Player.IsOnline) return; // player got kicked
-            zone = GetZone(plpos);
+            zone = _zoneStore.FindInsizeZone(plpos, false);
         }
 
         if (zone == null) throw Context.Reply(T.ZoneNoResults);
@@ -222,11 +171,11 @@ public class ZoneCommand : IExecutableCommand
         Context.Player.UnturnedPlayer.StartCoroutine(ClearPoints(Context.Player));
         Context.Reply(T.ZoneVisualizeSuccess, points.Length + corners.Length + 1, zone);
     }
-    private IEnumerator ClearPoints(UCPlayer player)
+    private IEnumerator ClearPoints(WarfarePlayer player)
     {
         yield return new WaitForSecondsRealtime(60f);
         if (player == null) yield break;
-        ITransportConnection channel = player.Player.channel.owner.transportConnection;
+        ITransportConnection channel = player.Connection;
         if (ZonePlayerComponent.Airdrop != null)
             EffectManager.askEffectClearByID(ZonePlayerComponent.Airdrop.id, channel);
         EffectManager.askEffectClearByID(ZonePlayerComponent.Side.id, channel);
@@ -237,12 +186,12 @@ public class ZoneCommand : IExecutableCommand
     {
         Zone? zone;
         if (Context.TryGetRange(0, out string? zname))
-            zone = GetZone(zname);
+            zone = _zoneStore.SearchZone(zname);
         else
         {
             Vector3 plpos = Context.Player.Position;
             if (!Context.Player.IsOnline) return; // player got kicked
-            zone = GetZone(plpos);
+            zone = _zoneStore.FindInsizeZone(plpos, false);
             zname = zone?.Name;
         }
 
@@ -303,15 +252,5 @@ public class ZoneCommand : IExecutableCommand
             Context.SendUnknownError();
             L.LogWarning("Tried to teleport to " + (zone == null ? location.ToString() : zone.Name.ToUpper()) + " and there was no terrain to teleport to at " + pos + ".");
         }
-    }
-
-    internal static Zone? GetZone(string nameInput) => GetZone(Data.Singletons.GetSingleton<ZoneList>()!, nameInput);
-    internal static Zone? GetZone(ZoneList singleton, string nameInput) => singleton?.SearchZone(nameInput)?.Item;
-    internal static Zone? GetZone(Vector3 position) => GetZone(Data.Singletons.GetSingleton<ZoneList>()!, position);
-    internal static Zone? GetZone(ZoneList singleton, Vector3 position)
-    {
-        return singleton == null ? null : 
-           (singleton.FindInsizeZone(position, false) is { Item: { } z } ? z :
-            singleton.FindInsizeZone(new Vector2(position.x, position.z), false)?.Item);
     }
 }

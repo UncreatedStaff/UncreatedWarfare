@@ -14,6 +14,11 @@ namespace Uncreated.Warfare.Proximity;
 public interface IProximity : IShapeVolume, ICloneable
 {
     /// <summary>
+    /// The 2D area of the shape when looking down.
+    /// </summary>
+    float Area { get; }
+
+    /// <summary>
     /// Check if a position is within the proximity.
     /// </summary>
     bool TestPoint(Vector3 position);
@@ -134,6 +139,17 @@ public interface IAABBProximity : INearestPointProximity, IAttachableProximity<I
         }
     }
 
+    float IProximity.Area
+    {
+        get
+        {
+            Vector3 size = Dimensions.size;
+            if (float.IsInfinity(size.x)) size.x = Level.size;
+            if (float.IsInfinity(size.z)) size.z = Level.size;
+            return size.x * size.z;
+        }
+    }
+
     Vector3 INearestPointProximity.GetNearestPointOnBorder(Vector3 fromLocation) => ProximityExtensions.GetNearestPointOnBorder(this, fromLocation);
     IAttachedAABBProximity IAttachableProximity<IAttachedAABBProximity>.CreateAttachedProximity(Transform attachmentRoot) => new AttachedAABBProximity(attachmentRoot, this);
 }
@@ -160,12 +176,22 @@ public interface ISphereProximity : INearestPointProximity, IAttachableProximity
             return 4f / 3f * Mathf.PI * rad * rad * rad;
         }
     }
+
     float IShapeVolume.surfaceArea
     {
         get
         {
             float rad = Sphere.radius;
             return 4f * Mathf.PI * rad * rad;
+        }
+    }
+
+    float IProximity.Area
+    {
+        get
+        {
+            float rad = Sphere.radius;
+            return Mathf.PI * rad * rad;
         }
     }
 
@@ -214,6 +240,7 @@ public interface IAACylinderProximity : INearestPointProximity, IAttachableProxi
             return Mathf.PI * rad * rad * height;
         }
     }
+
     float IShapeVolume.surfaceArea
     {
         get
@@ -222,6 +249,22 @@ public interface IAACylinderProximity : INearestPointProximity, IAttachableProxi
             float height = Height;
             if (float.IsInfinity(height)) height = Level.HEIGHT * 2;
             return 2f * Mathf.PI * rad * height + 2f * Mathf.PI * rad * rad;
+        }
+    }
+
+    float IProximity.Area
+    {
+        get
+        {
+            float rad = Radius;
+            if (Axis == SnapAxis.Y)
+            {
+                return Mathf.PI * rad * rad;
+            }
+
+            float height = Height;
+            if (float.IsInfinity(height)) height = Level.HEIGHT * 2;
+            return height * rad;
         }
     }
 

@@ -69,6 +69,25 @@ public class AttachedAABBProximity : IAttachedAABBProximity
     }
 
     /// <inheritdoc />
+    float IProximity.Area
+    {
+        get
+        {
+            ThreadUtil.assertIsGameThread();
+
+            Vector3 extents = _aabb.Dimensions.extents;
+
+            if (AttachmentRoot != null)
+                extents = AttachmentRoot.TransformVector(extents);
+
+            if (float.IsInfinity(extents.x)) extents.x = Level.size / 2f;
+            if (float.IsInfinity(extents.z)) extents.z = Level.size / 2f;
+
+            return extents.x * extents.z;
+        }
+    }
+
+    /// <inheritdoc />
     public Transform? AttachmentRoot { get; }
 
     /// <summary>
