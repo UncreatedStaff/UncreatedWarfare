@@ -287,6 +287,34 @@ public static class BarricadeUtility
     }
 
     /// <summary>
+    /// Sets the sign text without replicating to clients.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="ArgumentException"><paramref name="barricade"/> is not a sign.</exception>
+    public static void SetServersideSignText(BarricadeDrop barricade, string text)
+    {
+        ThreadUtil.assertIsGameThread();
+        
+        if (barricade.interactable is not InteractableSign sign)
+            throw new ArgumentException("Barricade must be a sign.", nameof(barricade));
+
+        byte[] state = barricade.GetServersideData().barricade.state;
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(text);
+        if (bytes.Length > byte.MaxValue - 18)
+        {
+            L.LogWarning(text + " is too long to go on a sign! (SetSignTextServerOnly)");
+            return;
+        }
+        byte[] newState = new byte[17 + bytes.Length];
+        Buffer.BlockCopy(state, 0, newState, 0, 16);
+        newState[16] = (byte)bytes.Length;
+        if (bytes.Length != 0)
+            Buffer.BlockCopy(bytes, 0, newState, 17, bytes.Length);
+        BarricadeManager.updateState(barricade.model, newState, newState.Length);
+        sign.updateState(barricade.asset, newState);
+    }
+
+    /// <summary>
     /// Find a barricade by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region. Only instance ID is checked on planted barricades.</remarks>

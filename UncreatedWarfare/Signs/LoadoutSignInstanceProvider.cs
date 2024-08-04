@@ -6,29 +6,30 @@ using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Signs;
 
-[SignPrefix("kit_")]
-public class KitSignInstanceProvider : ISignInstanceProvider
+[SignPrefix("loadout_")]
+public class LoadoutSignInstanceProvider : ISignInstanceProvider
 {
     private readonly KitManager _kitManager;
-    private string _kitId = null!;
+    private int _loadoutId = -1!;
     bool ISignInstanceProvider.CanBatchTranslate => false;
-    public KitSignInstanceProvider(KitManager kitManager)
+    public LoadoutSignInstanceProvider(KitManager kitManager)
     {
         _kitManager = kitManager;
     }
 
     public void Initialize(BarricadeDrop barricade, string extraInfo)
     {
-        _kitId = extraInfo;
+        if (!int.TryParse(extraInfo, out _loadoutId))
+            _loadoutId = -1;
     }
 
     public string Translate(LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        if (!_kitManager.Cache.KitDataById.TryGetValue(_kitId, out Kit kit))
+        if (_loadoutId is < 0 or > byte.MaxValue)
         {
-            return _kitId;
+            return "Loadout";
         }
 
-        return Localization.TranslateKitSign(kit, player!);
+        return Localization.TranslateLoadoutSign((byte)_loadoutId, player!);
     }
 }

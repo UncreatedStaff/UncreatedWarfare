@@ -6,6 +6,7 @@ using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
@@ -15,8 +16,15 @@ namespace Uncreated.Warfare.Commands;
 [HelpMetadata(nameof(GetHelpMetadata))]
 public class AmmoCommand : IExecutableCommand
 {
+    private readonly DroppedItemTracker _itemTracker;
+
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public AmmoCommand(DroppedItemTracker itemTracker)
+    {
+        _itemTracker = itemTracker;
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -207,7 +215,7 @@ public class AmmoCommand : IExecutableCommand
                     Context.IsolatedCommandCooldownTime = 15f;
                 }
 
-                WipeDroppedItems(Context.CallerId.m_SteamID);
+                await _itemTracker.DestroyItemsDroppedByPlayer(Context.CallerId, false, token);
                 await req.KitManager.Requests.ResupplyKit(Context.Player, kit, token: token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
 
@@ -253,7 +261,7 @@ public class AmmoCommand : IExecutableCommand
 
                     Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BAG");
 
-                    WipeDroppedItems(Context.CallerId.m_SteamID);
+                    await _itemTracker.DestroyItemsDroppedByPlayer(Context.CallerId, false, token);
                     Context.Reply(T.AmmoResuppliedKit, ammoCost, ammobag.Ammo);
                 }
                 else
@@ -262,39 +270,5 @@ public class AmmoCommand : IExecutableCommand
             else throw Context.Reply(T.AmmoNoTarget);
         }
         else throw Context.Reply(T.AmmoNoTarget);
-    }
-    internal static void WipeDroppedItems(ulong player)
-    {
-        ThreadUtil.assertIsGameThread();
-        if (!EventFunctions.DroppedItems.TryGetValue(player, out List<uint> instances))
-            return;
-        TeamManager.Team1Faction.Build.TryGetId(out ushort build1);
-        TeamManager.Team2Faction.Build.TryGetId(out ushort build2);
-        TeamManager.Team1Faction.Ammo.TryGetId(out ushort ammo1);
-        TeamManager.Team2Faction.Ammo.TryGetId(out ushort ammo2);
-        for (byte x = 0; x < Regions.WORLD_SIZE; x++)
-        {
-            for (byte y = 0; y < Regions.WORLD_SIZE; y++)
-            {
-                if (Regions.checkSafe(x, y))
-                {
-                    ItemRegion region = ItemManager.regions[x, y];
-                    for (int i = 0; i < instances.Count; i++)
-                    {
-                        int index = region.items.FindIndex(r => r.instanceID == instances[i]);
-                        if (index != -1)
-                        {
-                            ItemData it = ItemManager.regions[x, y].items[index];
-                            if (it.item.id == build1 || it.item.id == build2 || it.item.id == ammo1 || it.item.id == ammo2) continue;
-
-                            Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.GatherRemoteClientConnections(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i], false);
-                            ItemManager.regions[x, y].items.RemoveAt(index);
-                            EventFunctions.OnItemRemoved(it);
-                        }
-                    }
-                }
-            }
-        }
-        instances.Clear();
     }
 }

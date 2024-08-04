@@ -12,7 +12,6 @@ using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Util;
 
@@ -368,6 +367,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         return false;
     }
 }
+
 public class WhitelistItem
 {
     public Guid Item { get; set; }

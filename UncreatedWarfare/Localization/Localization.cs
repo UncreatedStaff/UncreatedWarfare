@@ -235,9 +235,9 @@ public static class Localization
         return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(language, culture)}" +
                $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language, culture)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(language, culture)}")}";
     }
-    public static string TranslateLoadoutSign(byte loadoutId, UCPlayer player)
+    public static string TranslateLoadoutSign(byte loadoutId, WarfarePlayer player)
     {
-        UCPlayer.TryApplyViewLens(ref player);
+        // todo UCPlayer.TryApplyViewLens(ref player);
         ulong team = player.GetTeam();
         if (loadoutId <= 0)
         {

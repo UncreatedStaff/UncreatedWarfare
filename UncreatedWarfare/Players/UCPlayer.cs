@@ -28,13 +28,13 @@ using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Ranks;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare;
 
