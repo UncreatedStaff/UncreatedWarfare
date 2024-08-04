@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Uncreated.Warfare.Translations.Collections;
+namespace Uncreated.Warfare.Translations;
 public class TranslationService : ITranslationService
 {
     public const string TranslationsFolder = "Translations";

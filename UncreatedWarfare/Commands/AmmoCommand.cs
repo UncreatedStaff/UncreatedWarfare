@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
@@ -8,6 +7,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
@@ -18,13 +18,17 @@ namespace Uncreated.Warfare.Commands;
 public class AmmoCommand : IExecutableCommand
 {
     private readonly DroppedItemTracker _itemTracker;
+    private readonly PlayerService _playerService;
+    private readonly AmmoCommandTranslations _translations;
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public AmmoCommand(DroppedItemTracker itemTracker)
+    public AmmoCommand(DroppedItemTracker itemTracker, TranslationInjection<AmmoCommandTranslations> translations, PlayerService playerService)
     {
         _itemTracker = itemTracker;
+        _playerService = playerService;
+        _translations = translations.Value;
     }
 
     /// <summary>
@@ -50,13 +54,12 @@ public class AmmoCommand : IExecutableCommand
         if (Context.TryGetVehicleTarget(out InteractableVehicle? vehicle))
         {
             if (vehicle.lockedOwner.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
-                throw Context.Reply(T.AmmoVehicleCantRearm);
-
-            Context.AssertGamemode<IVehicles>();
+                throw Context.Reply(_translations.AmmoVehicleCantRearm);
 
             SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
             if (data?.Item == null)
-                throw Context.Reply(T.AmmoVehicleCantRearm);
+                throw Context.Reply(_translations.AmmoVehicleCantRearm);
+
             await data.Enter(token).ConfigureAwait(false);
             try
             {
@@ -64,15 +67,15 @@ public class AmmoCommand : IExecutableCommand
                 VehicleData vehicleData = data.Item;
                 if (vehicleData.Metadata is { TrunkItems: not null } && vehicleData.Items.Length == 0 && vehicleData.Type is VehicleType.LogisticsGround or VehicleType.TransportAir)
                 {
-                    throw Context.Reply(T.AmmoAutoSupply);
+                    throw Context.Reply(_translations.AmmoAutoSupply);
                 }
 
                 bool isInMain = F.IsInMain(vehicle.transform.position);
 
-                if (!Gamemode.Config.BarricadeRepairStation.TryGetGuid(out Guid repairGuid))
+                if (!Gamemode.Config.BarricadeRepairStation.TryGetGuid(out _))
                 {
                     Context.ReplyString("No asset for repair station. Contact admin.");
-                    throw Context.Reply(T.AmmoNotNearRepairStation);
+                    throw Context.Reply(_translations.AmmoNotNearRepairStation);
                 }
 
                 if (!VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
@@ -85,20 +88,20 @@ public class AmmoCommand : IExecutableCommand
                             horizontalDistanceOnly: false
                         ))
                     {
-                        throw Context.Reply(T.AmmoNotNearRepairStation);
+                        throw Context.Reply(_translations.AmmoNotNearRepairStation);
                     }
                 }
 
                 FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(vehicle.transform.position, vehicle.lockedGroup.m_SteamID.GetTeam());
 
                 if (fob == null && !isInMain)
-                    throw Context.Reply(T.AmmoNotNearFOB);
+                    throw Context.Reply(_translations.AmmoNotNearFOB);
 
                 if (!isInMain && fob!.AmmoSupply < vehicleData.RearmCost)
-                    throw Context.Reply(T.AmmoOutOfStock, fob.AmmoSupply, vehicleData.RearmCost);
+                    throw Context.Reply(_translations.AmmoOutOfStock, fob.AmmoSupply, vehicleData.RearmCost);
 
                 if (vehicle.lockedGroup.m_SteamID != 0 && vehicle.lockedGroup.m_SteamID != Context.Player.GetTeam())
-                    throw Context.Reply(T.AmmoVehicleCantRearm);
+                    throw Context.Reply(_translations.AmmoVehicleCantRearm);
 
                 vehicle.TryGetComponent(out VehicleComponent? vcomp);
                 if (VehicleData.IsFlyingEngine(vehicle.asset.engine) && (vehicle.isDriven ||
@@ -128,12 +131,12 @@ public class AmmoCommand : IExecutableCommand
                             }
                         }
                         else if (lastDriver.CurrentVehicle == vehicle)
-                            throw Context.Reply(T.AmmoInVehicle);
+                            throw Context.Reply(_translations.AmmoInVehicle);
                     }
                 }
 
                 if (vehicleData.Items.Length == 0)
-                    throw Context.Reply(T.AmmoVehicleFullAlready);
+                    throw Context.Reply(_translations.AmmoVehicleFullAlready);
                 if (Gamemode.Config.EffectAmmo.TryGetAsset(out EffectAsset? effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
 
@@ -150,15 +153,15 @@ public class AmmoCommand : IExecutableCommand
 
                     FOBManager.ShowResourceToast(new LanguageSet(Context.Player), ammo: -vehicleData.RearmCost, message: T.FOBResourceToastRearmVehicle.Translate(Context.Player));
 
-                    if (vehicle.TryGetComponent(out VehicleComponent comp) && UCPlayer.FromID(comp.LastDriver) is { } lastDriver && lastDriver.Steam64 != Context.CallerId.m_SteamID)
+                    if (vehicle.TryGetComponent(out VehicleComponent comp) && _playerService.GetOnlinePlayerOrNull(comp.LastDriver) is { } lastDriver && lastDriver.Steam64.m_SteamID != Context.CallerId.m_SteamID)
                         FOBManager.ShowResourceToast(new LanguageSet(lastDriver), ammo: -vehicleData.RearmCost, message: T.FOBResourceToastRearmVehicle.Translate(lastDriver));
 
-                    Context.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.AmmoSupply);
+                    Context.Reply(_translations.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.AmmoSupply);
                     Context.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE");
                 }
                 else
                 {
-                    Context.Reply(T.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
+                    Context.Reply(_translations.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
                     Context.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE IN MAIN");
                 }
             }
@@ -272,4 +275,43 @@ public class AmmoCommand : IExecutableCommand
         }
         else throw Context.Reply(T.AmmoNoTarget);
     }
+}
+
+public class AmmoCommandTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Ammo Stocking";
+
+    public readonly Translation AmmoNoTarget = new Translation("<#ffab87>Look at an <#cedcde>AMMO CRATE</color>, <#cedcde>AMMO BAG</color> or <#cedcde>VEHICLE</color> in order to resupply.");
+    
+    public readonly Translation<int, int> AmmoResuppliedKit = new Translation<int, int>("<#d1bda7>Resupplied kit. Consumed: <#c$ammo$>{0} AMMO</color> <#948f8a>({1} left)</color>.");
+    
+    public readonly Translation<int> AmmoResuppliedKitMain = new Translation<int>("<#d1bda7>Resupplied kit. Consumed: <#c$ammo$>{0} AMMO</color>.");
+    
+    public readonly Translation AmmoAutoSupply = new Translation("<#b3a6a2>This vehicle will <#cedcde>AUTO RESUPPLY</color> when in main. You can also use '<color=#c9bfad>/load <color=#c$build$>build</color>|<color=#c$ammo$>ammo</color> <amount></color>'.");
+    
+    public readonly Translation AmmoNotNearFOB = new Translation("<#b3a6a2>This ammo crate is not built on a friendly FOB.");
+    
+    public readonly Translation<int, int> AmmoOutOfStock = new Translation<int, int>("<#b3a6a2>Insufficient ammo. Required: <#c$ammo$>{0}/{1} AMMO</color>.");
+    
+    public readonly Translation AmmoNoKit = new Translation("<#b3a6a2>You don't have a kit yet. Go request one from the armory in your team's headquarters.");
+    
+    public readonly Translation AmmoWrongTeam = new Translation("<#b3a6a2>You cannot rearm with enemy ammunition.");
+    
+    public readonly Translation<Cooldown> AmmoCooldown = new Translation<Cooldown>("<#b7bab1>More <#cedcde>AMMO</color> arriving in: <color=#de95a8>{0}</color>", Cooldown.FormatTimeShort);
+    
+    public readonly Translation AmmoNotRifleman = new Translation("<#b7bab1>You must be a <#cedcde>RIFLEMAN</color> in order to place this <#cedcde>AMMO BAG</color>.");
+    
+    public readonly Translation AmmoNotNearRepairStation = new Translation("<#b3a6a2>Your vehicle must be next to a <#cedcde>REPAIR STATION</color> in order to rearm.");
+    
+    public readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#c$ammo$>{1} AMMO</color> <#948f8a>({2} left)</color>.", VehicleData.COLORED_NAME);
+    
+    public readonly Translation<VehicleData, int> AmmoResuppliedVehicleMain = new Translation<VehicleData, int>("<#d1bda7>Resupplied {0}. Consumed: <#c$ammo$>{1} AMMO</color>.", VehicleData.COLORED_NAME);
+    
+    public readonly Translation AmmoVehicleCantRearm = new Translation("<#d1bda7>You cannot ressuply this vehicle.");
+    
+    public readonly Translation AmmoInVehicle = new Translation("<#d1bda7>You cannot ressuply this vehicle while flying, try exiting the vehicle.");
+    
+    public readonly Translation<VehicleData> AmmoVehicleFullAlready = new Translation<VehicleData>("<#b3a6a2>Your {0} does not need to be resupplied.", VehicleData.COLORED_NAME);
+    
+    public readonly Translation<VehicleData> AmmoVehicleNotNearRepairStation = new Translation<VehicleData>("<#b3a6a2>Your {0} must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.", VehicleData.COLORED_NAME);
 }

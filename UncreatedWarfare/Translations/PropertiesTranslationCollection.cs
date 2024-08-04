@@ -1,7 +1,7 @@
 ﻿using System;
 using Uncreated.Warfare.Translations.Storage;
 
-namespace Uncreated.Warfare.Translations.Collections;
+namespace Uncreated.Warfare.Translations;
 
 public abstract class PropertiesTranslationCollection : TranslationCollection
 {

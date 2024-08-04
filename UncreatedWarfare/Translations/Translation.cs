@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Translations.Collections;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Translations;
 public class Translation : IDisposable
 {
-    public TranslationValue Original { get; }
+    private readonly string _defaultText;
+    public TranslationValue Original { get; private set; }
     public string Key { get; private set; }
     public TranslationData Data { get; private set; }
     public TranslationCollection Collection { get; private set; } = null!;
@@ -14,17 +15,11 @@ public class Translation : IDisposable
     public bool IsInitialized { get; private set; }
     public TranslationOptions Options { get; }
     public virtual int ArgumentCount => 0;
-    public Translation(string defaultValue, LanguageService languageService, TranslationOptions options = default)
+    public Translation(string defaultValue, TranslationOptions options = default)
     {
+        _defaultText = defaultValue;
         Key = string.Empty;
         Options = options;
-        Original = new TranslationValue(
-            new LanguageInfo
-            {
-                // todo get from provider
-                Code = TranslationService.DefaultLanguage
-            },
-            defaultValue, this);
     }
     public TranslationValue GetValueForLanguage(LanguageInfo? language)
     {
@@ -47,11 +42,13 @@ public class Translation : IDisposable
         string key,
         IDictionary<TranslationLanguageKey, TranslationValue> underlyingTable,
         TranslationCollection collection,
+        LanguageService languageService,
         TranslationData data)
     {
         Key = key;
         Data = data;
 
+        Original = new TranslationValue(languageService.GetDefaultLanguage(), _defaultText, this);
         Collection = collection;
         Table = new SharedTranslationDictionary(this, underlyingTable);
         IsInitialized = true;

@@ -7,6 +7,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -68,7 +69,7 @@ public class AbandonService
         if (!vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
             return false;
 
-        WarfarePlayer? owner = _playerService.FromID(vehicle.lockedOwner.m_SteamID);
+        WarfarePlayer? owner = _playerService.GetOnlinePlayer(vehicle.lockedOwner.m_SteamID);
         bool found = false;
         VehicleSpawnInfo? originalSpawn = vehicleComponent.Spawn;
         if (originalSpawn != null)
@@ -106,9 +107,44 @@ public class AbandonService
 
         if (respawn && originalSpawn != null)
         {
-            _vehicleService.SpawnVehicleAsync(originalSpawn);
+            await _vehicleService.SpawnVehicleAsync(originalSpawn, token);
         }
 
         return found;
     }
+}
+
+public class AbandonTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Abandon";
+
+    [TranslationData(Description = "Sent when a player isn't looking at a vehicle when doing /abandon.")]
+    public readonly Translation AbandonNoTarget = new Translation("<#ff8c69>You must be looking at a vehicle.");
+
+    [TranslationData(Description = "Sent when a player is looking at a vehicle they didn't request.")]
+    public readonly Translation<InteractableVehicle> AbandonNotOwned = new Translation<InteractableVehicle>("<#ff8c69>You did not request that {0}.");
+
+    [TranslationData(Description = "Sent when a player does /abandon while not in main.")]
+    public readonly Translation AbandonNotInMain = new Translation("<#ff8c69>You must be in main to abandon a vehicle.");
+
+    [TranslationData(Description = "Sent when a player tries to abandon a damaged vehicle.")]
+    public readonly Translation<InteractableVehicle> AbandonDamaged = new Translation<InteractableVehicle>("<#ff8c69>Your <#cedcde>{0}</color> is damaged, repair it before returning it to the yard.");
+
+    [TranslationData(Description = "Sent when a player tries to abandon a vehicle with low fuel.")]
+    public readonly Translation<InteractableVehicle> AbandonNeedsFuel = new Translation<InteractableVehicle>("<#ff8c69>Your <#cedcde>{0}</color> is not fully fueled.");
+
+    [TranslationData(Description = "Sent when a player tries to abandon a vehicle and all the bays for that vehicle are already full, theoretically should never happen.")]
+    public readonly Translation<InteractableVehicle> AbandonNoSpace = new Translation<InteractableVehicle>("<#ff8c69>There's no space for <#cedcde>{0}</color> in the yard.", FormatPlural);
+
+    [TranslationData(Description = "Sent when a player tries to abandon a vehicle that isn't allowed to be abandoned.")]
+    public readonly Translation<InteractableVehicle> AbandonNotAllowed = new Translation<InteractableVehicle>("<#ff8c69><#cedcde>{0}</color> can not be abandoned.", FormatPlural);
+
+    [TranslationData(Description = "Sent when a player abandons a vehicle.")]
+    public readonly Translation<InteractableVehicle> AbandonSuccess = new Translation<InteractableVehicle>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.");
+
+    [TranslationData(Description = "Credits toast for returning a vehicle soon after requesting it.")]
+    public readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationOptions.TMProUI);
+
+    [TranslationData(Description = "Credits toast for returning a vehicle soon after requesting it, but not getting anything because the vehicle was transferred.")]
+    public readonly Translation AbandonCompensationToastTransferred = new Translation("+0 <color=#c$credits$>C</color> [GIVEN]\nRETURNED VEHICLE", TranslationOptions.TMProUI);
 }

@@ -1,6 +1,4 @@
-﻿using Uncreated.Warfare.Translations.Collections;
-
-namespace Uncreated.Warfare.Translations;
+﻿namespace Uncreated.Warfare.Translations;
 public readonly struct TranslationInjection<T> where T : TranslationCollection, new()
 {
     public T Value { get; }

@@ -2,16 +2,6 @@
 
 namespace Uncreated.Warfare.Translations;
 
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
-public sealed class TranslationCollectionAttribute : Attribute
-{
-    public string FileName { get; }
-    public TranslationCollectionAttribute(string fileName)
-    {
-        FileName = fileName;
-    }
-}
-
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
 public sealed class TranslationDataAttribute : Attribute
 {

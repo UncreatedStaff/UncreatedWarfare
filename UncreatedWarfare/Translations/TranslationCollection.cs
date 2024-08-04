@@ -9,7 +9,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Translations.Storage;
 
-namespace Uncreated.Warfare.Translations.Collections;
+namespace Uncreated.Warfare.Translations;
 
 public abstract class TranslationCollection
 {
@@ -22,6 +22,7 @@ public abstract class TranslationCollection
 
     public abstract ITranslationStorage Storage { get; }
     public ITranslationService TranslationService { get; private set; }
+    public LanguageService LanguageService { get; private set; }
     public ITranslationValueFormatter ValueFormatter { get; private set; }
     public IReadOnlyDictionary<string, Translation> Translations { get; private set; }
 #nullable restore
@@ -44,6 +45,7 @@ public abstract class TranslationCollection
         _translations = new Dictionary<string, Translation>(32);
         _valueTable = new Dictionary<TranslationLanguageKey, TranslationValue>(64, TranslationLanguageKey.EqualityComparer);
 
+        LanguageService = serviceProvider.GetRequiredService<LanguageService>();
         TranslationService = translationService;
         Translations = new ReadOnlyDictionary<string, Translation>(_translations);
 

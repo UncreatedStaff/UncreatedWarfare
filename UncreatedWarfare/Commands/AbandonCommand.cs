@@ -1,6 +1,8 @@
 ﻿using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
-using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -8,11 +10,24 @@ namespace Uncreated.Warfare.Commands;
 [HelpMetadata(nameof(GetHelpMetadata))]
 public class AbandonCommand : IExecutableCommand
 {
+    private readonly ZoneStore _zoneStore;
+    private readonly VehicleInfoStore _vehicleInfo;
+    private readonly AbandonService _abandonService;
+    private readonly AbandonTranslations _translations;
+
     private const string Syntax = "/abandon | /av";
     private const string Help = "If you no longer want to use your vehicle, you can return it to the vehicle pool.";
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public AbandonCommand(TranslationInjection<AbandonTranslations> translations, ZoneStore zoneStore, VehicleInfoStore vehicleInfo, AbandonService abandonService)
+    {
+        _zoneStore = zoneStore;
+        _vehicleInfo = vehicleInfo;
+        _abandonService = abandonService;
+        _translations = translations.Value;
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -30,51 +45,37 @@ public class AbandonCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        Context.AssertGamemode(out IVehicles vgm);
-
         Context.AssertHelpCheck(0, Syntax + " - " + Help);
-        VehicleBay bay = vgm.VehicleBay;
-        VehicleSpawner spawner = vgm.VehicleSpawner;
 
-        if (!TeamManager.IsInMain(Context.Player))
-            throw Context.Reply(T.AbandonNotInMain);
+        if (!_zoneStore.IsInMainBase(Context.Player))
+            throw Context.Reply(_translations.AbandonNotInMain);
 
         if (!Context.TryGetVehicleTarget(out InteractableVehicle? vehicle))
-            throw Context.Reply(T.AbandonNoTarget);
+            throw Context.Reply(_translations.AbandonNoTarget);
         
-        SqlItem<VehicleData>? vehicleData = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
+        WarfareVehicleInfo? vehicleData = _vehicleInfo.GetVehicleInfo(vehicle.asset.GUID);
         
-        if (vehicleData?.Item == null)
-            throw Context.Reply(T.AbandonNoTarget);
+        if (vehicleData == null)
+            throw Context.Reply(_translations.AbandonNoTarget);
 
-        await vehicleData.Enter(token).ConfigureAwait(false);
-        try
-        {
-            await UniTask.SwitchToMainThread(token);
+        if (!vehicleData.Abandon.AllowAbandon)
+            throw Context.Reply(_translations.AbandonNotAllowed);
 
-            if (vehicleData.Item.DisallowAbandons)
-                throw Context.Reply(T.AbandonNotAllowed);
+        if (vehicle.lockedOwner.m_SteamID != Context.CallerId.m_SteamID)
+            throw Context.Reply(_translations.AbandonNotOwned, vehicle);
 
-            if (vehicle.lockedOwner.m_SteamID != Context.CallerId.m_SteamID)
-                throw Context.Reply(T.AbandonNotOwned, vehicle);
+        if ((float)vehicle.health / vehicle.asset.health < 0.9f)
+            throw Context.Reply(_translations.AbandonDamaged, vehicle);
 
-            if ((float)vehicle.health / vehicle.asset.health < 0.9f)
-                throw Context.Reply(T.AbandonDamaged, vehicle);
+        if ((float)vehicle.fuel / vehicle.asset.fuel < 0.9f)
+            throw Context.Reply(_translations.AbandonNeedsFuel, vehicle);
 
-            if ((float)vehicle.fuel / vehicle.asset.fuel < 0.9f)
-                throw Context.Reply(T.AbandonNeedsFuel, vehicle);
+        if (!vehicle.TryGetComponent(out VehicleComponent vehicleComponent) || vehicleComponent.Spawn == null)
+            throw Context.Reply(_translations.AbandonNoSpace, vehicle);
 
-            if (!spawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
-                throw Context.Reply(T.AbandonNoSpace, vehicle);
-
-            if (spawner.AbandonVehicle(vehicle, vehicleData, spawn, true))
-                Context.Reply(T.AbandonSuccess, vehicle);
-            else
-                throw Context.SendUnknownError();
-        }
-        finally
-        {
-            vehicleData.Release();
-        }
+        if (await _abandonService.AbandonVehicle(vehicle, true, token))
+            Context.Reply(_translations.AbandonSuccess, vehicle);
+        else
+            throw Context.SendUnknownError();
     }
 }

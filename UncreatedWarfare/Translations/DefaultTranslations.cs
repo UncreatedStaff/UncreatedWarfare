@@ -1214,44 +1214,6 @@ internal static class T
     public static readonly Translation DeployLobbyRemoved                   = new Translation("<#fae69c>The lobby has been removed, use <#e3c27f>/teams</color> to switch teams instead.");
     #endregion
 
-    #region Ammo
-    private const string SectionAmmo = "Ammo";
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoNoTarget                = new Translation("<#ffab87>Look at an <#cedcde>AMMO CRATE</color>, <#cedcde>AMMO BAG</color> or <#cedcde>VEHICLE</color> in order to resupply.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation<int, int> AmmoResuppliedKit = new Translation<int, int>("<#d1bda7>Resupplied kit. Consumed: <#c$ammo$>{0} AMMO</color> <#948f8a>({1} left)</color>.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation<int> AmmoResuppliedKitMain  = new Translation<int>("<#d1bda7>Resupplied kit. Consumed: <#c$ammo$>{0} AMMO</color>.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoAutoSupply              = new Translation("<#b3a6a2>This vehicle will <#cedcde>AUTO RESUPPLY</color> when in main. You can also use '<color=#c9bfad>/load <color=#c$build$>build</color>|<color=#c$ammo$>ammo</color> <amount></color>'.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoNotNearFOB              = new Translation("<#b3a6a2>This ammo crate is not built on a friendly FOB.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation<int, int> AmmoOutOfStock    = new Translation<int, int>("<#b3a6a2>Insufficient ammo. Required: <#c$ammo$>{0}/{1} AMMO</color>.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoNoKit                   = new Translation("<#b3a6a2>You don't have a kit yet. Go request one from the armory in your team's headquarters.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoWrongTeam = new Translation("<#b3a6a2>You cannot rearm with enemy ammunition.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation<Cooldown> AmmoCooldown      = new Translation<Cooldown>("<#b7bab1>More <#cedcde>AMMO</color> arriving in: <color=#de95a8>{0}</color>", Cooldown.FormatTimeShort);
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoNotRifleman             = new Translation("<#b7bab1>You must be a <#cedcde>RIFLEMAN</color> in order to place this <#cedcde>AMMO BAG</color>.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoNotNearRepairStation    = new Translation("<#b3a6a2>Your vehicle must be next to a <#cedcde>REPAIR STATION</color> in order to rearm.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#c$ammo$>{1} AMMO</color> <#948f8a>({2} left)</color>.", VehicleData.COLORED_NAME);
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation<VehicleData, int> AmmoResuppliedVehicleMain  = new Translation<VehicleData, int>("<#d1bda7>Resupplied {0}. Consumed: <#c$ammo$>{1} AMMO</color>.", VehicleData.COLORED_NAME);
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoVehicleCantRearm             = new Translation("<#d1bda7>You cannot ressuply this vehicle.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoInVehicle                    = new Translation("<#d1bda7>You cannot ressuply this vehicle while flying, try exiting the vehicle.");
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation<VehicleData> AmmoVehicleFullAlready          = new Translation<VehicleData>("<#b3a6a2>Your {0} does not need to be resupplied.", VehicleData.COLORED_NAME);
-    [TranslationData(SectionAmmo)]
-    public static readonly Translation<VehicleData> AmmoVehicleNotNearRepairStation = new Translation<VehicleData>("<#b3a6a2>Your {0} must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.", VehicleData.COLORED_NAME);
-    #endregion
-
     #region Popup
     private const string SectionPopup = "Popup";
     [TranslationData(SectionPopup)]
@@ -2497,30 +2459,6 @@ internal static class T
     public static readonly Translation ReportNotConnected = new Translation("<#ff8c69>The report system is not available right now, please try again later.");
     #endregion
 
-    #region Abandon
-    private const string SectionAbandon = "Abandon";
-    [TranslationData(SectionAbandon, "Sent when a player isn't looking at a vehicle when doing /abandon.")]
-    public static readonly Translation AbandonNoTarget = new Translation("<#ff8c69>You must be looking at a vehicle.");
-    [TranslationData(SectionAbandon, "Sent when a player is looking at a vehicle they didn't request.")]
-    public static readonly Translation<InteractableVehicle> AbandonNotOwned = new Translation<InteractableVehicle>("<#ff8c69>You did not request that {0}.");
-    [TranslationData(SectionAbandon, "Sent when a player does /abandon while not in main.")]
-    public static readonly Translation AbandonNotInMain = new Translation("<#ff8c69>You must be in main to abandon a vehicle.");
-    [TranslationData(SectionAbandon, "Sent when a player tries to abandon a damaged vehicle.")]
-    public static readonly Translation<InteractableVehicle> AbandonDamaged = new Translation<InteractableVehicle>("<#ff8c69>Your <#cedcde>{0}</color> is damaged, repair it before returning it to the yard.");
-    [TranslationData(SectionAbandon, "Sent when a player tries to abandon a vehicle with low fuel.")]
-    public static readonly Translation<InteractableVehicle> AbandonNeedsFuel = new Translation<InteractableVehicle>("<#ff8c69>Your <#cedcde>{0}</color> is not fully fueled.");
-    [TranslationData(SectionAbandon, "Sent when a player tries to abandon a vehicle and all the bays for that vehicle are already full, theoretically should never happen.")]
-    public static readonly Translation<InteractableVehicle> AbandonNoSpace = new Translation<InteractableVehicle>("<#ff8c69>There's no space for <#cedcde>{0}</color> in the yard.", FormatPlural);
-    [TranslationData(SectionAbandon, "Sent when a player tries to abandon a vehicle that isn't allowed to be abandoned.")]
-    public static readonly Translation<InteractableVehicle> AbandonNotAllowed = new Translation<InteractableVehicle>("<#ff8c69><#cedcde>{0}</color> can not be abandoned.", FormatPlural);
-    [TranslationData(SectionAbandon, "Sent when a player abandons a vehicle.")]
-    public static readonly Translation<InteractableVehicle> AbandonSuccess = new Translation<InteractableVehicle>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.");
-    [TranslationData(SectionAbandon, "Credits toast for returning a vehicle soon after requesting it.")]
-    public static readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationFlags.TMProUI);
-    [TranslationData(SectionAbandon, "Credits toast for returning a vehicle soon after requesting it, but not getting anything because the vehicle was transferred.")]
-    public static readonly Translation AbandonCompensationToastTransferred = new Translation("+0 <color=#c$credits$>C</color> [GIVEN]\nRETURNED VEHICLE", TranslationFlags.TMProUI);
-    #endregion
-    
     #region DailyQuests
     private const string SectionDailyQuests = "Daily Quests";
     [TranslationData(SectionDailyQuests, "Sent when new daily quests are put into action.")]
