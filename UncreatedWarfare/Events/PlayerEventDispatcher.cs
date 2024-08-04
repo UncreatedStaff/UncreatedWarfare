@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 

@@ -1,6 +1,6 @@
 ﻿using Uncreated.Warfare.Buildables;
 
-namespace Uncreated.Warfare.Events.Barricades;
+namespace Uncreated.Warfare.Events.Models.Barricades;
 
 /// <summary>
 /// Event listener args which handles a patch on <see cref="InteractableSign.updateText"/>.

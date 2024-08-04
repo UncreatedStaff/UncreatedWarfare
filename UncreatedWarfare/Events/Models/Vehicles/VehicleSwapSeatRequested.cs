@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Vehicles;
+﻿namespace Uncreated.Warfare.Events.Models.Vehicles;
 public class VehicleSwapSeatRequested : CancellablePlayerEvent
 {
     private readonly InteractableVehicle _vehicle;

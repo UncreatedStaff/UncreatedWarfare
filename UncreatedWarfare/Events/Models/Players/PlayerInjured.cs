@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace Uncreated.Warfare.Events.Players;
+namespace Uncreated.Warfare.Events.Models.Players;
 public class PlayerInjured : PlayerEvent
 {
     private readonly unsafe void* _parameters;

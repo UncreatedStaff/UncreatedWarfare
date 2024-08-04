@@ -1,6 +1,6 @@
 ﻿using Uncreated.Warfare.Kits.Items;
 
-namespace Uncreated.Warfare.Events.Items;
+namespace Uncreated.Warfare.Events.Models.Items;
 
 /// <summary>
 /// Invoked by <see cref="PlayerInventory.onDropItemRequested"/>.

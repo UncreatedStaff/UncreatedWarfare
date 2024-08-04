@@ -1,7 +1,7 @@
 ﻿using System;
 using Uncreated.Warfare.Quests;
 
-namespace Uncreated.Warfare.Events.Players;
+namespace Uncreated.Warfare.Events.Models.Players;
 
 public class QuestCompleted : CancellablePlayerEvent
 {

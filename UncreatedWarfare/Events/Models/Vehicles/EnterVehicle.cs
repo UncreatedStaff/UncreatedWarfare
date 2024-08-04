@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Vehicles;
+﻿namespace Uncreated.Warfare.Events.Models.Vehicles;
 public class EnterVehicle : PlayerEvent
 {
     private readonly InteractableVehicle _vehicle;

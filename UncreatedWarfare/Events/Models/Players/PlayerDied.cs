@@ -4,7 +4,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Players;
 
-namespace Uncreated.Warfare.Events.Players;
+namespace Uncreated.Warfare.Events.Models.Players;
 public class PlayerDied : PlayerEvent
 {
     public EDeathCause Cause { get; internal set; }

@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Players;
+﻿namespace Uncreated.Warfare.Events.Models.Players;
 public sealed class PlayerAided : CancellablePlayerEvent
 {
     public UCPlayer Medic { get; }

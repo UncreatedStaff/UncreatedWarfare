@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Players;
+﻿namespace Uncreated.Warfare.Events.Models.Players;
 
 /// <summary>
 /// Event listener args which handles <see cref="Provider.onBattlEyeKick"/>.

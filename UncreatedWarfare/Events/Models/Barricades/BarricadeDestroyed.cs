@@ -1,7 +1,7 @@
 ﻿using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 
-namespace Uncreated.Warfare.Events.Barricades;
+namespace Uncreated.Warfare.Events.Models.Barricades;
 
 /// <summary>
 /// Event listener args which handles a patch on <see cref="BarricadeManager.destroyBarricade(BarricadeDrop, byte, byte, ushort)"/>.

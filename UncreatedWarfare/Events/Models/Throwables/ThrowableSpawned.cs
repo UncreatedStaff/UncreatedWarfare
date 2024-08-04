@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Vehicles;
+﻿namespace Uncreated.Warfare.Events.Models.Throwables;
 public class ThrowableSpawned : PlayerEvent
 {
     private readonly GameObject _throwable;

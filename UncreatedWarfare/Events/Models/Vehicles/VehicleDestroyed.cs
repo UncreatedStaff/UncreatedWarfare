@@ -2,7 +2,7 @@
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Vehicles;
 
-namespace Uncreated.Warfare.Events.Vehicles;
+namespace Uncreated.Warfare.Events.Models.Vehicles;
 public class VehicleDestroyed : EventState
 {
     private readonly InteractableVehicle _vehicle;

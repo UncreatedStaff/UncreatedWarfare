@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Uncreated.Warfare.Events.Items;
+namespace Uncreated.Warfare.Events.Models.Items;
 public class CraftRequested : CancellablePlayerEvent
 {
     private ItemAsset _item;

@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Structures;
+﻿namespace Uncreated.Warfare.Events.Models.Structures;
 
 /// <summary>
 /// Event listener args which handles <see cref="StructureManager.onStructureSpawned"/>.

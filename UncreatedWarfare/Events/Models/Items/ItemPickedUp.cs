@@ -1,6 +1,6 @@
 ﻿using Uncreated.Warfare.Kits.Items;
 
-namespace Uncreated.Warfare.Events.Items;
+namespace Uncreated.Warfare.Events.Models.Items;
 public class ItemPickedUp : PlayerEvent
 {
     public Page Page { get; }

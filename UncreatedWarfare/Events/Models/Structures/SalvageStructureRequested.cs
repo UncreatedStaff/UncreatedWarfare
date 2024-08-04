@@ -1,6 +1,6 @@
 ﻿using Uncreated.Warfare.Buildables;
 
-namespace Uncreated.Warfare.Events.Structures;
+namespace Uncreated.Warfare.Events.Models.Structures;
 
 /// <summary>
 /// Event listener args which handles <see cref="StructureDrop.OnSalvageRequested_Global"/>.

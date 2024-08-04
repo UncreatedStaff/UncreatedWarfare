@@ -1,6 +1,6 @@
 ﻿using Uncreated.Warfare.Players;
 
-namespace Uncreated.Warfare.Events.Items;
+namespace Uncreated.Warfare.Events.Models.Items;
 public class ItemDestroyed
 {
     /// <summary>

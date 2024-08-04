@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using Uncreated.Warfare.Players.Management.Legacy;
 
-namespace Uncreated.Warfare.Events.Players;
+namespace Uncreated.Warfare.Events.Models.Players;
 
 /// <summary>
 /// Event listener args which handles a patch on when the player gets put in the queue.

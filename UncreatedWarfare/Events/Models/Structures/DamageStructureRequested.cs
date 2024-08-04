@@ -1,7 +1,7 @@
 ﻿using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Models.Assets;
 
-namespace Uncreated.Warfare.Events.Structures;
+namespace Uncreated.Warfare.Events.Models.Structures;
 public class DamageStructureRequested : CancellableEvent, IBuildableDestroyedEvent
 {
     private readonly UCPlayer? _instigator;

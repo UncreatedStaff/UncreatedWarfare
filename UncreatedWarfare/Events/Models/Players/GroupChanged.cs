@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Players;
+﻿namespace Uncreated.Warfare.Events.Models.Players;
 public class GroupChanged : PlayerEvent
 {
     public ulong OldGroup { get; }

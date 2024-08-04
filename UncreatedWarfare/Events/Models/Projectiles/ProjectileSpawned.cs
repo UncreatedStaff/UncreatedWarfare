@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Vehicles;
+﻿namespace Uncreated.Warfare.Events.Models.Projectiles;
 public class ProjectileSpawned : EventState
 {
     private readonly UCPlayer? _player;

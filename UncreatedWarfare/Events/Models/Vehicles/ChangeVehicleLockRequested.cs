@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Vehicles;
+﻿namespace Uncreated.Warfare.Events.Models.Vehicles;
 
 /// <summary>
 /// Event listener args which handles <see cref="VehicleManager.OnToggleVehicleLockRequested"/>.

@@ -1,7 +1,7 @@
 ﻿using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 
-namespace Uncreated.Warfare.Events.Structures;
+namespace Uncreated.Warfare.Events.Models.Structures;
 
 /// <summary>
 /// Event listener args which handles a patch on <see cref="StructureManager.destroyStructure(StructureDrop, byte, byte, Vector3, bool)"/>.
