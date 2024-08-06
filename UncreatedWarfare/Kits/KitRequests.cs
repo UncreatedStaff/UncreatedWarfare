@@ -1,22 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Kits.Translations;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
-public class KitRequests(KitManager manager)
+public class KitRequests
 {
-    public KitManager Manager { get; } = manager;
+    private readonly DroppedItemTracker _droppedItemTracker;
+    private readonly RequestTranslations _translations;
+    public KitManager Manager { get; }
+    public KitRequests(KitManager manager, TranslationInjection<RequestTranslations> translations, DroppedItemTracker droppedItemTracker)
+    {
+        _droppedItemTracker = droppedItemTracker;
+        _translations = translations.Value;
+        Manager = manager;
+    }
 
     /// <exception cref="CommandContext"/>
     public async Task RequestLoadout(int loadoutId, CommandContext ctx, CancellationToken token = default)
@@ -32,23 +43,23 @@ public class KitRequests(KitManager manager)
     {
         await UniTask.SwitchToMainThread(token);
         if (loadout == null)
-            throw ctx.Reply(T.RequestLoadoutNotOwned);
+            throw ctx.Reply(_translations.RequestLoadoutNotOwned);
         if (loadout.NeedsUpgrade)
-            throw ctx.Reply(T.RequestKitNeedsUpgrade);
+            throw ctx.Reply(_translations.RequestKitNeedsUpgrade);
         if (loadout.NeedsSetup)
-            throw ctx.Reply(T.RequestKitNeedsSetup);
+            throw ctx.Reply(_translations.RequestKitNeedsSetup);
         if (loadout.Disabled || loadout.Season != UCWarfare.Season && loadout.Season > 0)
-            throw ctx.Reply(T.RequestKitDisabled);
+            throw ctx.Reply(_translations.RequestKitDisabled);
         if (!loadout.IsCurrentMapAllowed())
-            throw ctx.Reply(T.RequestKitMapBlacklisted);
+            throw ctx.Reply(_translations.RequestKitMapBlacklisted);
 
         ulong team = ctx.Caller.GetTeam();
 
         if (!loadout.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
-            throw ctx.Reply(T.RequestKitFactionBlacklisted);
+            throw ctx.Reply(_translations.RequestKitFactionBlacklisted);
         if (loadout.IsClassLimited(out _, out int allowedPlayers, team))
         {
-            ctx.Reply(T.RequestKitLimited, allowedPlayers);
+            ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
             return;
         }
         ctx.LogAction(ActionLogType.RequestKit, $"Loadout {KitEx.GetLoadoutLetter(KitEx.ParseStandardLoadoutId(loadout.InternalName))}: {loadout.InternalName}, Team {team}, Class: {Localization.TranslateEnum(loadout.Class)}");
@@ -85,40 +96,40 @@ public class KitRequests(KitManager manager)
         // already requested
         uint? activeKit = ctx.Caller.ActiveKit;
         if (activeKit.HasValue && activeKit.Value == kit.PrimaryKey)
-            throw ctx.Reply(T.RequestKitAlreadyOwned);
+            throw ctx.Reply(_translations.RequestKitAlreadyOwned);
 
         // outdated kit
         if (kit.Disabled || kit.Season != UCWarfare.Season && kit.Season > 0)
-            throw ctx.Reply(T.RequestKitDisabled);
+            throw ctx.Reply(_translations.RequestKitDisabled);
 
         // map filter
         if (!kit.IsCurrentMapAllowed())
-            throw ctx.Reply(T.RequestKitMapBlacklisted);
+            throw ctx.Reply(_translations.RequestKitMapBlacklisted);
 
         // faction filter
         if (!kit.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
-            throw ctx.Reply(T.RequestKitFactionBlacklisted);
+            throw ctx.Reply(_translations.RequestKitFactionBlacklisted);
 
         // check credits bought
         if (kit is { IsPublicKit: true, CreditCost: > 0 } && !Manager.HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
         {
             if (ctx.Caller.CachedCredits >= kit.CreditCost)
-                throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
+                throw ctx.Reply(_translations.RequestKitNotBought, kit.CreditCost);
             
-            throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
+            throw ctx.Reply(_translations.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
         }
         
         // elite access
         if (kit is { IsPublicKit: false, RequiresNitro: false } && !Manager.HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
-            throw ctx.Reply(T.RequestKitMissingAccess);
+            throw ctx.Reply(_translations.RequestKitMissingAccess);
 
         // team limits
         if (kit.IsLimited(out _, out int allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
-            throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
+            throw ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
 
         // squad leader limit
         if (kit.Class == Class.Squadleader && ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
-            throw ctx.Reply(T.RequestKitNotSquadleader);
+            throw ctx.Reply(_translations.RequestKitNotSquadleader);
 
         // cooldowns
         if (
@@ -163,7 +174,7 @@ public class KitRequests(KitManager manager)
                         bool nitroBoosting = await Manager.Boosting.IsNitroBoosting(ctx.CallerID, token).ConfigureAwait(false) ?? ctx.Caller.Save.WasNitroBoosting;
                         await UniTask.SwitchToMainThread(token);
                         if (!nitroBoosting)
-                            throw ctx.Reply(T.RequestKitMissingNitro);
+                            throw ctx.Reply(_translations.RequestKitMissingNitro);
                     }
                     catch (TimeoutException)
                     {
@@ -171,16 +182,16 @@ public class KitRequests(KitManager manager)
                     }
                 }
                 else if (kit.IsPaid)
-                    throw ctx.Reply(T.RequestKitMissingAccess);
+                    throw ctx.Reply(_translations.RequestKitMissingAccess);
                 else if (ctx.Caller.CachedCredits >= kit.CreditCost)
-                    throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
+                    throw ctx.Reply(_translations.RequestKitNotBought, kit.CreditCost);
                 else
-                    throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
+                    throw ctx.Reply(_translations.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
             }
         }
         // recheck limits to make sure people can't request at the same time to avoid limits.
         if (kit.IsLimited(out _, out allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
-            throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
+            throw ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
 
         ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.InternalName}, Team {team}, Class: {Localization.TranslateEnum(kit.Class)}");
 
@@ -204,7 +215,7 @@ public class KitRequests(KitManager manager)
             }
         }
     }
-    internal async Task GiveKit(UCPlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default, bool psLock = true)
+    internal async Task GiveKit(WarfarePlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default, bool psLock = true)
     {
         if (!player.IsOnline)
             return;
@@ -246,9 +257,8 @@ public class KitRequests(KitManager manager)
     }
     private async Task<bool> GrantKitRequest(CommandContext ctx, Kit kit, CancellationToken token = default)
     {
-        await UniTask.SwitchToMainThread(token);
-        AmmoCommand.WipeDroppedItems(ctx.CallerID);
-        await GiveKit(ctx.Caller, kit, true, true, token).ConfigureAwait(false);
+        await _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(ctx.CallerId, false, token);
+        await GiveKit(ctx.Player, kit, true, true, token).ConfigureAwait(false);
         // string id = kit.InternalName;
         // StatsManager.ModifyKit(id, k => k.TimesRequested++);
         // StatsManager.ModifyStats(ctx.CallerID, s =>
@@ -263,15 +273,15 @@ public class KitRequests(KitManager manager)
         //         kitData.TimesRequested++;
         // }, false);
 
-        ctx.Reply(T.RequestSignGiven, kit.Class);
+        ctx.Reply(_translations.RequestSignGiven, kit.Class);
 
         if (kit is { IsPaid: true, RequestCooldown: > 0 })
-            CooldownManager.StartCooldown(ctx.Caller, CooldownType.PremiumKit, kit.RequestCooldown, kit.InternalName);
-        CooldownManager.StartCooldown(ctx.Caller, CooldownType.RequestKit, CooldownManager.Config.RequestKitCooldown);
+            CooldownManager.StartCooldown(ctx.Player, CooldownType.PremiumKit, kit.RequestCooldown, kit.InternalName);
+        CooldownManager.StartCooldown(ctx.Player, CooldownType.RequestKit, CooldownManager.Config.RequestKitCooldown);
 
         return true;
     }
-    private void GrantKit(UCPlayer player, Kit? kit, bool tip = true)
+    private void GrantKit(WarfarePlayer player, Kit? kit, bool tip = true)
     {
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
@@ -319,7 +329,7 @@ public class KitRequests(KitManager manager)
                 player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)page, x, y);
         }
     }
-    internal async Task RemoveKit(UCPlayer player, bool manual, CancellationToken token = default, bool psLock = true)
+    internal async Task RemoveKit(WarfarePlayer player, bool manual, CancellationToken token = default, bool psLock = true)
     {
         if (psLock)
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
@@ -359,12 +369,12 @@ public class KitRequests(KitManager manager)
                 throw ctx.Defer();
             }
 
-            throw ctx.Reply(T.RequestNotBuyable);
+            throw ctx.Reply(_translations.RequestNotBuyable);
         }
         if (kit.CreditCost == 0 || Manager.HasAccessQuick(kit, ctx.Player))
-            throw ctx.Reply(T.RequestKitAlreadyOwned);
+            throw ctx.Reply(_translations.RequestKitAlreadyOwned);
         if (ctx.Player.CachedCredits < kit.CreditCost)
-            throw ctx.Reply(T.RequestKitCantAfford, ctx.Player.CachedCredits, kit.CreditCost);
+            throw ctx.Reply(_translations.RequestKitCantAfford, ctx.Player.CachedCredits, kit.CreditCost);
 
         await ctx.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
@@ -373,7 +383,7 @@ public class KitRequests(KitManager manager)
             if (ctx.Player.CachedCredits < kit.CreditCost)
             {
                 await UniTask.SwitchToMainThread(token);
-                throw ctx.Reply(T.RequestKitCantAfford, ctx.Player.CachedCredits, kit.CreditCost);
+                throw ctx.Reply(_translations.RequestKitCantAfford, ctx.Player.CachedCredits, kit.CreditCost);
             }
 
             CreditsParameters parameters = new CreditsParameters(ctx.Player, team, -kit.CreditCost)
@@ -405,7 +415,7 @@ public class KitRequests(KitManager manager)
             F.TriggerEffectReliable(effect, EffectManager.SMALL, effectPos ?? (ctx.Player.Player.look.aim.position + ctx.Player.Player.look.aim.forward * 0.25f));
         }
 
-        ctx.Reply(T.RequestKitBought, kit.CreditCost);
+        ctx.Reply(_translations.RequestKitBought, kit.CreditCost);
     }
 
     public async Task ResupplyKit(UCPlayer player, bool ignoreAmmoBags = false, CancellationToken token = default)
@@ -434,7 +444,7 @@ public class KitRequests(KitManager manager)
                 if (kit != null && kit.ContainsItem(asset.GUID, player.GetTeam()))
                     continue;
 
-                WhitelistItem? item = null;
+                ItemWhitelist? item = null;
                 if (Whitelister.Loaded && !Whitelister.IsWhitelisted(asset.GUID, out item))
                     continue;
 

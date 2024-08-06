@@ -2,9 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Players.UI;
@@ -81,6 +84,16 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
 
         Team = Team.NoTeam;
         _logger.LogInformation("Player {0} joined the server", this);
+    }
+
+    /// <summary>
+    /// Get the given component type from <see cref="Components"/>.
+    /// </summary>
+    /// <remarks>Always returns a value or throws.</remarks>
+    /// <exception cref="PlayerComponentNotFoundException">Component not found.</exception>
+    public TComponentType Component<TComponentType>()
+    {
+        return Components.OfType<TComponentType>().FirstOrDefault() ?? throw new PlayerComponentNotFoundException(typeof(TComponentType), this);
     }
 
     public void UpdateTeam(Team team)

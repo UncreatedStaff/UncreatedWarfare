@@ -1,6 +1,8 @@
 ﻿using System;
 using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Translations;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -8,11 +10,17 @@ namespace Uncreated.Warfare.Commands;
 [HelpMetadata(nameof(GetHelpMetadata))]
 public class BuyCommand : IExecutableCommand
 {
+    private readonly RequestTranslations _translations;
     const string Help = "Must be looking at a kit request sign. Purchases a kit for credits.";
     const string Syntax = "/buy [help]";
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public BuyCommand(TranslationInjection<RequestTranslations> translations)
+    {
+        _translations = translations.Value;
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -45,7 +53,7 @@ public class BuyCommand : IExecutableCommand
 
         if (!Context.TryGetBarricadeTarget(out BarricadeDrop? drop) || drop.interactable is not InteractableSign)
         {
-            throw Context.Reply(T.RequestNoTarget);
+            throw Context.Reply(_translations.RequestNoTarget);
         }
 
         if (Signs.GetKitFromSign(drop, out int ld) is { } kit)
@@ -55,10 +63,10 @@ public class BuyCommand : IExecutableCommand
         }
 
         if (ld <= -1)
-            throw Context.Reply(T.RequestKitNotRegistered);
+            throw Context.Reply(_translations.RequestKitNotRegistered);
 
         if (UCWarfare.Config.WebsiteUri == null || Data.PurchasingDataStore.LoadoutProduct == null)
-            throw Context.Reply(T.RequestNotBuyable);
+            throw Context.Reply(_translations.RequestNotBuyable);
 
         Context.Player.UnturnedPlayer.sendBrowserRequest("Purchase loadouts on our website.", new Uri(UCWarfare.Config.WebsiteUri, "kits/loadout").OriginalString);
         throw Context.Defer();

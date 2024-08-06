@@ -201,17 +201,17 @@ public class AmmoCommand : IExecutableCommand
                             isInMain = true;
                         }
                         else
-                            throw Context.Reply(T.AmmoNotNearFOB);
+                            throw Context.Reply(_translations.AmmoNotNearFOB);
                     }
                 }
                 if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(Context.Player, CooldownType.Ammo, out Cooldown cooldown))
-                    throw Context.Reply(T.AmmoCooldown, cooldown);
+                    throw Context.Reply(_translations.AmmoCooldown, cooldown);
 
                 if (!isInMain && !isCache && fob.AmmoSupply < ammoCost)
-                    throw Context.Reply(T.AmmoOutOfStock, fob.AmmoSupply, ammoCost);
+                    throw Context.Reply(_translations.AmmoOutOfStock, fob.AmmoSupply, ammoCost);
 
                 if (barricade.GetServersideData().group != Context.Player.GetTeam())
-                    throw Context.Reply(T.AmmoWrongTeam);
+                    throw Context.Reply(_translations.AmmoWrongTeam);
 
                 if (!isInMain && !isCache)
                 {
@@ -219,7 +219,7 @@ public class AmmoCommand : IExecutableCommand
                     Context.IsolatedCommandCooldownTime = 15f;
                 }
 
-                await _itemTracker.DestroyItemsDroppedByPlayer(Context.CallerId, false, token);
+                await _itemTracker.DestroyItemsDroppedByPlayerAsync(Context.CallerId, false, token);
                 await req.KitManager.Requests.ResupplyKit(Context.Player, kit, token: token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
 
@@ -228,7 +228,7 @@ public class AmmoCommand : IExecutableCommand
 
                 if (isInMain)
                 {
-                    Context.Reply(T.AmmoResuppliedKitMain, ammoCost);
+                    Context.Reply(_translations.AmmoResuppliedKitMain, ammoCost);
                     Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT IN MAIN");
 
                     if (FOBManager.Config.AmmoCommandCooldown > 0)
@@ -236,7 +236,7 @@ public class AmmoCommand : IExecutableCommand
                 }
                 else if (isCache)
                 {
-                    Context.Reply(T.AmmoResuppliedKitMain, ammoCost);
+                    Context.Reply(_translations.AmmoResuppliedKitMain, ammoCost);
                     Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM CACHE");
                 }
                 else
@@ -244,7 +244,7 @@ public class AmmoCommand : IExecutableCommand
                     fob.ModifyAmmo(-ammoCost);
                     FOBManager.ShowResourceToast(new LanguageSet(Context.Player), ammo: -ammoCost, message: T.FOBResourceToastRearmPlayer.Translate(Context.Player));
                     Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BOX");
-                    Context.Reply(T.AmmoResuppliedKit, ammoCost, fob.AmmoSupply);
+                    Context.Reply(_translations.AmmoResuppliedKit, ammoCost, fob.AmmoSupply);
                 }
             }
             else if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(barricade.asset.GUID))
@@ -252,10 +252,10 @@ public class AmmoCommand : IExecutableCommand
                 if (barricade.model.TryGetComponent(out AmmoBagComponent ammobag))
                 {
                     if (barricade.GetServersideData().group != Context.Player.GetTeam())
-                        throw Context.Reply(T.AmmoWrongTeam);
+                        throw Context.Reply(_translations.AmmoWrongTeam);
 
                     if (ammobag.Ammo < ammoCost)
-                        throw Context.Reply(T.AmmoOutOfStock, ammobag.Ammo, ammoCost);
+                        throw Context.Reply(_translations.AmmoOutOfStock, ammobag.Ammo, ammoCost);
 
                     await ammobag.ResupplyPlayer(Context.Player, kit, ammoCost, token).ConfigureAwait(false);
                     await UniTask.SwitchToMainThread(token);
@@ -265,15 +265,15 @@ public class AmmoCommand : IExecutableCommand
 
                     Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BAG");
 
-                    await _itemTracker.DestroyItemsDroppedByPlayer(Context.CallerId, false, token);
-                    Context.Reply(T.AmmoResuppliedKit, ammoCost, ammobag.Ammo);
+                    await _itemTracker.DestroyItemsDroppedByPlayerAsync(Context.CallerId, false, token);
+                    Context.Reply(_translations.AmmoResuppliedKit, ammoCost, ammobag.Ammo);
                 }
                 else
                     L.LogError("ERROR: Missing AmmoBagComponent on an ammo bag");
             }
-            else throw Context.Reply(T.AmmoNoTarget);
+            else throw Context.Reply(_translations.AmmoNoTarget);
         }
-        else throw Context.Reply(T.AmmoNoTarget);
+        else throw Context.Reply(_translations.AmmoNoTarget);
     }
 }
 

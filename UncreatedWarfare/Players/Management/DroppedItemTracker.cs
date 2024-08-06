@@ -56,7 +56,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
     /// Destroy all items that were dropped by the given player.
     /// </summary>
     /// <returns>Number of items destroyed.</returns>
-    public async UniTask<int> DestroyItemsDroppedByPlayer(CSteamID player, bool despawned, CancellationToken token = default)
+    public async UniTask<int> DestroyItemsDroppedByPlayerAsync(CSteamID player, bool despawned, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 

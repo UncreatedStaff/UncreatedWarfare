@@ -18,6 +18,7 @@ using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation;
@@ -235,6 +236,9 @@ public sealed class WarfareModule : IModuleNexus
                 return session;
             }, ServiceLifetime.Transient));
         }
+
+        // FOBs
+        serviceCollection.AddScoped<DeploymentService>();
 
         // Active ITeamManager
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().TeamManager);

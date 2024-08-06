@@ -14,17 +14,19 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.UI;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Insurgency;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
@@ -877,7 +879,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         }
     }
 
-    public static bool IsPointInFOB(Vector3 point, out IFOB fob)
+    public bool IsPointInFOB(Vector3 point, out IFOB fob)
     {
         _singleton.AssertLoaded();
         for (int i = 0; i < _singleton._fobs.Count; ++i)
@@ -892,7 +894,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         fob = null!;
         return false;
     }
-    public static bool IsOnFOB(UCPlayer player, out IFOB fob)
+    public bool IsOnFOB(WarfarePlayer player, out IFOB fob)
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
@@ -909,7 +911,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         fob = null!;
         return false;
     }
-    public static bool IsOnFOB<TFOB>(UCPlayer player, out TFOB fob) where TFOB : class, IRadiusFOB
+    public static bool IsOnFOB<TFOB>(WarfarePlayer player, out TFOB fob) where TFOB : class, IRadiusFOB
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
@@ -1023,7 +1025,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         }
     }
     
-    public static bool TryFindFOB(string name, ulong team, out IDeployable fob)
+    public static bool TryFindFOB(string name, Team team, out IDeployable fob)
     {
         if (_singleton is { IsUnloading: false })
             _singleton.AssertLoaded();

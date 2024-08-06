@@ -18,11 +18,10 @@ using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Zones;
-using Uncreated.Warfare.Translations;
 using Cache = Uncreated.Warfare.Components.Cache;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare;
 internal static class T
@@ -170,52 +169,52 @@ internal static class T
     public static readonly Translation<Flag> FlagLocked = new Translation<Flag>("<#c$locked$>{0} has already been captured, try to protect the objective to win.", Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to all players when a flag gets neutralized.", "Objective in question")]
-    public static readonly Translation<Flag> FlagNeutralized = new Translation<Flag>("<#e6e3d5>{0} has been neutralized!", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> FlagNeutralized = new Translation<Flag>("<#e6e3d5>{0} has been neutralized!", TranslationOptions.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
 
     [TranslationData(SectionFlags, "Gets broadcasted when a team captures a flag.")]
-    public static readonly Translation<FactionInfo, Flag> TeamCaptured = new Translation<FactionInfo, Flag>("<#a0ad8e>{0} captured {1}.", TranslationFlags.PerTeamTranslation, FactionInfo.FormatColorDisplayName, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<FactionInfo, Flag> TeamCaptured = new Translation<FactionInfo, Flag>("<#a0ad8e>{0} captured {1}.", TranslationOptions.PerTeamTranslation, FactionInfo.FormatColorDisplayName, Flag.COLOR_NAME_DISCOVER_FORMAT);
 
     [TranslationData(SectionFlags, "Backup translation for team 0 name and short name.")]
-    public static readonly Translation Neutral = new Translation("Neutral", TranslationFlags.UnityUI);
+    public static readonly Translation Neutral = new Translation("Neutral", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows in place of the objective name for an undiscovered flag or objective.")]
-    public static readonly Translation UndiscoveredFlag = new Translation("<color=#c$undiscovered_flag$>unknown</color>", TranslationFlags.UnityUI);
+    public static readonly Translation UndiscoveredFlag = new Translation("<color=#c$undiscovered_flag$>unknown</color>", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows in place of the objective name for an undiscovered flag or objective.")]
-    public static readonly Translation UndiscoveredFlagNoColor = new Translation("unknown", TranslationFlags.NoColorOptimization);
+    public static readonly Translation UndiscoveredFlagNoColor = new Translation("unknown", TranslationOptions.NoColorOptimization);
     
     [TranslationData(SectionFlags, "Shows on the Capture UI when the player's team is capturing a flag they're on.")]
-    public static readonly Translation UICapturing = new Translation("CAPTURING",     TranslationFlags.UnityUI);
+    public static readonly Translation UICapturing = new Translation("CAPTURING",     TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows on the Capture UI when the player's team is losing a flag they're on because there isn't enough of them to contest it.")]
-    public static readonly Translation UILosing = new Translation("LOSING", TranslationFlags.UnityUI);
+    public static readonly Translation UILosing = new Translation("LOSING", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows on the Capture UI when the player's team is clearing a flag they're on.")]
-    public static readonly Translation UIClearing = new Translation("CLEARING", TranslationFlags.UnityUI);
+    public static readonly Translation UIClearing = new Translation("CLEARING", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows on the Capture UI when the player's team is contested with the other team on the flag they're on.")]
-    public static readonly Translation UIContested = new Translation("CONTESTED", TranslationFlags.UnityUI);
+    public static readonly Translation UIContested = new Translation("CONTESTED", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows on the Capture UI when the player's team owns flag they're on.")]
-    public static readonly Translation UISecured = new Translation("SECURED", TranslationFlags.UnityUI);
+    public static readonly Translation UISecured = new Translation("SECURED", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows on the Capture UI when the player's on a flag that isn't their team's objective.")]
-    public static readonly Translation UINoCap = new Translation("NOT OBJECTIVE", TranslationFlags.UnityUI);
+    public static readonly Translation UINoCap = new Translation("NOT OBJECTIVE", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows on the Capture UI when the player's team has too few people on a flag to contest and the other team owns the flag.")]
-    public static readonly Translation UINotOwned = new Translation("TAKEN", TranslationFlags.UnityUI);
+    public static readonly Translation UINotOwned = new Translation("TAKEN", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows on the Capture UI when the objective they're on is owned by the other team and is locked from recapture.")]
-    public static readonly Translation UILocked = new Translation("LOCKED", TranslationFlags.UnityUI);
+    public static readonly Translation UILocked = new Translation("LOCKED", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows on the Capture UI when the player's in a vehicle on their objective.")]
-    public static readonly Translation UIInVehicle = new Translation("IN VEHICLE", TranslationFlags.UnityUI);
+    public static readonly Translation UIInVehicle = new Translation("IN VEHICLE", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows above the flag list UI.")]
-    public static readonly Translation FlagsHeader = new Translation("Flags", TranslationFlags.UnityUI);
+    public static readonly Translation FlagsHeader = new Translation("Flags", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows above the cache list UI.")]
-    public static readonly Translation CachesHeader = new Translation("Caches", TranslationFlags.UnityUI);
+    public static readonly Translation CachesHeader = new Translation("Caches", TranslationOptions.UnityUI);
     #endregion
 
     #region Zones
@@ -262,28 +261,28 @@ internal static class T
     public static readonly Translation<IPlayer> PlayerDisconnected = new Translation<IPlayer>("<#e6e3d5>{0} left the server.");
 
     [TranslationData(SectionPlayers, "Kick message for a player that suffers from a rare bug which will cause GameObject.get_transform() to throw a NullReferenceException (not return null). They are kicked if this happens.", "Discord Join Code")]
-    public static readonly Translation<string> NullTransformKickMessage = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> NullTransformKickMessage = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).", TranslationOptions.NoColorOptimization);
 
     [TranslationData(SectionPlayers, "Gets sent to a player when their message gets blocked by the chat filter.", "Section of the message that matched the chat filter.")]
     public static readonly Translation<string> ChatFilterFeedback = new Translation<string>("<#ff8c69>Our chat filter flagged <#fdfdfd>{0}</color>, so the message wasn't sent.");
     
     [TranslationData(SectionPlayers, "Gets sent to a player when their message gets blocked by the chat filter.", "Amount of alphanumeric characters in succession.")]
-    public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationOptions.NoColorOptimization);
     
     [TranslationData(SectionPlayers, "Gets sent to a player if they're banned when they join.")]
-    public static readonly Translation<string, int> RejectBanned = new Translation<string, int>("You are banned for {1}: \"{0}\".", TranslationFlags.NoColorOptimization, arg1Fmt: FormatTimeLongAbbreviated);
+    public static readonly Translation<string, int> RejectBanned = new Translation<string, int>("You are banned for {1}: \"{0}\".", TranslationOptions.NoColorOptimization, arg1Fmt: FormatTimeLongAbbreviated);
 
     [TranslationData(SectionPlayers, "Gets sent to a player if they're permanently banned when they join.")]
-    public static readonly Translation<string> RejectPermanentBanned = new Translation<string>("You are permanently banned: \"{0}\".", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> RejectPermanentBanned = new Translation<string>("You are permanently banned: \"{0}\".", TranslationOptions.NoColorOptimization);
     
     [TranslationData(SectionPlayers, "Gets sent to a player when their nick name gets blocked by the chat filter.", "Violating text.")]
-    public static readonly Translation<string> NameProfanityNickNameKickMessage = new Translation<string>("Your nickname is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> NameProfanityNickNameKickMessage = new Translation<string>("Your nickname is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationOptions.NoColorOptimization);
     
     [TranslationData(SectionPlayers, "Gets sent to a player when their character name gets blocked by the chat filter.", "Violating text.")]
-    public static readonly Translation<string> NameProfanityCharacterNameKickMessage = new Translation<string>("Your character name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> NameProfanityCharacterNameKickMessage = new Translation<string>("Your character name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationOptions.NoColorOptimization);
     
     [TranslationData(SectionPlayers, "Gets sent to a player when their player name gets blocked by the chat filter.", "Violating text.")]
-    public static readonly Translation<string> NameProfanityPlayerNameKickMessage = new Translation<string>("Your Steam name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> NameProfanityPlayerNameKickMessage = new Translation<string>("Your Steam name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationOptions.NoColorOptimization);
     
     [TranslationData(SectionPlayers, "Gets sent to a player who is attempting to main camp the other team.")]
     public static readonly Translation AntiMainCampWarning = new Translation("<#fa9e9e>Stop <b><#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.");
@@ -316,7 +315,7 @@ internal static class T
     public static readonly Translation MarkerNotInSquad = new Translation("<#fa9e9e>Only your squad can see markers. Create a squad with <#cedcde>/squad create</color> to use this feature.");
     
     [TranslationData(SectionPlayers, "Sent on a SEVERE toast when the player enters enemy territory.", "Seconds until death")]
-    public static readonly Translation<string> EnteredEnemyTerritory = new Translation<string>("ENEMY HQ PROXIMITY\nLEAVE IMMEDIATELY\nDEAD IN <uppercase>{0}</uppercase>", TranslationFlags.UnityUI);
+    public static readonly Translation<string> EnteredEnemyTerritory = new Translation<string>("ENEMY HQ PROXIMITY\nLEAVE IMMEDIATELY\nDEAD IN <uppercase>{0}</uppercase>", TranslationOptions.UnityUI);
     
     [TranslationData(SectionPlayers, "Sent 2 times before a player is kicked for inactivity.", "Time code")]
     public static readonly Translation<string> InactivityWarning = new Translation<string>("<#fa9e9e>You will be AFK-Kicked in <#cedcde>{0}</color> if you don't move.</color>");
@@ -349,7 +348,7 @@ internal static class T
     public static readonly Translation UnlockVehicleNotAllowed = new Translation("<#b3a6a2>You can not unlock a requested vehicle.");
 
     [TranslationData(SectionPlayers, "Goes on the warning UI.")]
-    public static readonly Translation MortarWarning = new Translation("FRIENDLY MORTAR\nINCOMING", TranslationFlags.TMProUI);
+    public static readonly Translation MortarWarning = new Translation("FRIENDLY MORTAR\nINCOMING", TranslationOptions.TMProUI);
     #endregion
 
     #region Leaderboards
@@ -357,400 +356,400 @@ internal static class T
     private const string SectionLeaderboard = "Leaderboard";
     #region Shared
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation StartingSoon                   = new Translation("Starting soon...", TranslationFlags.UnityUI);
+    public static readonly Translation StartingSoon                   = new Translation("Starting soon...", TranslationOptions.UnityUI);
 
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<string> NextGameShutdown       = new Translation<string>("<#94cbff>Shutting Down Because: \"{0}\"</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<string> NextGameShutdown       = new Translation<string>("<#94cbff>Shutting Down Because: \"{0}\"</color>", TranslationOptions.UnityUI);
 
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationFlags.UnityUI, "mm\\:ss");
+    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationOptions.UnityUI, "mm\\:ss");
 
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationFlags.UnityUI, FactionInfo.FormatColorShortName, FactionInfo.FormatColorShortName);
+    public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationOptions.UnityUI, FactionInfo.FormatColorShortName, FactionInfo.FormatColorShortName);
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1} presence", TranslationFlags.UnityUI, UCPlayer.FormatColoredCharacterName, "P0");
+    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1} presence", TranslationOptions.UnityUI, UCPlayer.FormatColoredCharacterName, "P0");
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> WinnerTitle                 = new Translation<FactionInfo>("{0} Wins!", TranslationFlags.UnityUI, FactionInfo.FormatColorShortName);
+    public static readonly Translation<FactionInfo> WinnerTitle                 = new Translation<FactionInfo>("{0} Wins!", TranslationOptions.UnityUI, FactionInfo.FormatColorShortName);
 
     [TranslationData(SectionLeaderboard, FormattingDescriptions = new string[] { "Distance", "Gun Name", "Player" })]
-    public static readonly Translation<float, ItemAsset, IPlayer> LongestShot     = new Translation<float, ItemAsset, IPlayer>("{0}m - {1}\n{2}", TranslationFlags.UnityUI, "F1", arg2Fmt: UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<float, ItemAsset, IPlayer> LongestShot     = new Translation<float, ItemAsset, IPlayer>("{0}m - {1}\n{2}", TranslationOptions.UnityUI, "F1", arg2Fmt: UCPlayer.FormatColoredCharacterName);
     #endregion
 
     #region CTFBase
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats0  = new Translation("Kills: ",            TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats0  = new Translation("Kills: ",            TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats1  = new Translation("Deaths: ",           TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats1  = new Translation("Deaths: ",           TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats2  = new Translation("K/D Ratio: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats2  = new Translation("K/D Ratio: ",        TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats3  = new Translation("Kills on Point: ",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats3  = new Translation("Kills on Point: ",   TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats4  = new Translation("Time Deployed: ",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats4  = new Translation("Time Deployed: ",    TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats5  = new Translation("XP Gained: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats5  = new Translation("XP Gained: ",        TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats6  = new Translation("Time on Point: ",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats6  = new Translation("Time on Point: ",    TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats7  = new Translation("Captures: ",         TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats7  = new Translation("Captures: ",         TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats8  = new Translation("Time in Vehicle: ",  TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats8  = new Translation("Time in Vehicle: ",  TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats9  = new Translation("Teamkills: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats9  = new Translation("Teamkills: ",        TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats10 = new Translation("FOBs Destroyed: ",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats10 = new Translation("FOBs Destroyed: ",   TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFPlayerStats11 = new Translation("Credits Gained: ",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats11 = new Translation("Credits Gained: ",   TranslationOptions.UnityUI);
 
 
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFWarStats0 = new Translation("Duration: ", TranslationFlags.UnityUI);
+    public static readonly Translation CTFWarStats0 = new Translation("Duration: ", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> CTFWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> CTFWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> CTFWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> CTFWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFWarStats3 = new Translation("Flag Captures: ", TranslationFlags.UnityUI);
+    public static readonly Translation CTFWarStats3 = new Translation("Flag Captures: ", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> CTFWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> CTFWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> CTFWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> CTFWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> CTFWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> CTFWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> CTFWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> CTFWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> CTFWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> CTFWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> CTFWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> CTFWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.UnityUI);
+    public static readonly Translation CTFWarStats10 = new Translation("Teamkill Casualties: ", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFWarStats11 = new Translation("Longest Shot: ",        TranslationOptions.UnityUI);
 
 
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFHeader0 = new Translation("Kills",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader0 = new Translation("Kills",   TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFHeader1 = new Translation("Deaths",  TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader1 = new Translation("Deaths",  TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader2 = new Translation("XP",      TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFHeader3 = new Translation("Caps", TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader3 = new Translation("Caps", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFHeader4 = new Translation("Vehicles\nDestr.",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader4 = new Translation("Vehicles\nDestr.",    TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFHeader5 = new Translation("Aircraft\nDestr.",  TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader5 = new Translation("Aircraft\nDestr.",  TranslationOptions.UnityUI);
     #endregion
 
     #region Insurgency
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats0  = new Translation("Kills: ",                 TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats0  = new Translation("Kills: ",                 TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats1  = new Translation("Deaths: ",                TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats1  = new Translation("Deaths: ",                TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats2  = new Translation("Damage Done: ",           TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats2  = new Translation("Damage Done: ",           TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats3  = new Translation("Objective Kills: ",       TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats3  = new Translation("Objective Kills: ",       TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats4  = new Translation("Time Deployed: ",         TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats4  = new Translation("Time Deployed: ",         TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats5  = new Translation("XP Gained: ",             TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats5  = new Translation("XP Gained: ",             TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats6  = new Translation("Intelligence Gathered: ", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats6  = new Translation("Intelligence Gathered: ", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats7  = new Translation("Caches Discovered: ",     TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats7  = new Translation("Caches Discovered: ",     TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats8  = new Translation("Caches Destroyed: ",      TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats8  = new Translation("Caches Destroyed: ",      TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats9  = new Translation("Teamkills: ",             TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats9  = new Translation("Teamkills: ",             TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyPlayerStats11 = new Translation("Credits Gained: ",        TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats11 = new Translation("Credits Gained: ",        TranslationOptions.UnityUI);
 
 
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyWarStats0 = new Translation("Duration: ", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyWarStats0 = new Translation("Duration: ", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> InsurgencyWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> InsurgencyWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyWarStats3 = new Translation("Intelligence Gathered: ", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyWarStats3 = new Translation("Intelligence Gathered: ", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> InsurgencyWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> InsurgencyWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> InsurgencyWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> InsurgencyWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> InsurgencyWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> InsurgencyWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyWarStats10 = new Translation("Teamkill Casualties: ", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyWarStats11 = new Translation("Longest Shot: ",        TranslationOptions.UnityUI);
 
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyHeader0 = new Translation("Kills",   TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader0 = new Translation("Kills",   TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyHeader1 = new Translation("Deaths",  TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader1 = new Translation("Deaths",  TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader2 = new Translation("XP",      TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyHeader3 = new Translation("KDR", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader3 = new Translation("KDR", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyHeader4 = new Translation("Vehicles\nDestr.",     TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader4 = new Translation("Vehicles\nDestr.",     TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyHeader5 = new Translation("Aircraft\nDestr.",  TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader5 = new Translation("Aircraft\nDestr.",  TranslationOptions.UnityUI);
     #endregion
 
     #region Conquest
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats0  = new Translation("Kills: ",                 TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats0  = new Translation("Kills: ",                 TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats1  = new Translation("Deaths: ",                TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats1  = new Translation("Deaths: ",                TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats2  = new Translation("Damage Done: ",           TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats2  = new Translation("Damage Done: ",           TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats3  = new Translation("Objective Kills: ",       TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats3  = new Translation("Objective Kills: ",       TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats4  = new Translation("Time Deployed: ",         TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats4  = new Translation("Time Deployed: ",         TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats5  = new Translation("XP Gained: ",             TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats5  = new Translation("XP Gained: ",             TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats6  = new Translation("Revives: ",               TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats6  = new Translation("Revives: ",               TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats7  = new Translation("Flags Captured: ",        TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats7  = new Translation("Flags Captured: ",        TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats8  = new Translation("Time on Flag: ",          TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats8  = new Translation("Time on Flag: ",          TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats9  = new Translation("Teamkills: ",             TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats9  = new Translation("Teamkills: ",             TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestPlayerStats11 = new Translation("Credits Gained: ",        TranslationFlags.UnityUI);
+    public static readonly Translation ConquestPlayerStats11 = new Translation("Credits Gained: ",        TranslationOptions.UnityUI);
 
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestWarStats0 = new Translation("Duration: ",                                      TranslationFlags.UnityUI);
+    public static readonly Translation ConquestWarStats0 = new Translation("Duration: ",                                      TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> ConquestWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> ConquestWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> ConquestWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> ConquestWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestWarStats3 = new Translation("Flag Captures: ",                                 TranslationFlags.UnityUI);
+    public static readonly Translation ConquestWarStats3 = new Translation("Flag Captures: ",                                 TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> ConquestWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> ConquestWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> ConquestWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> ConquestWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> ConquestWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> ConquestWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> ConquestWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> ConquestWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> ConquestWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> ConquestWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> ConquestWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> ConquestWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.UnityUI);
+    public static readonly Translation ConquestWarStats10 = new Translation("Teamkill Casualties: ", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.UnityUI);
+    public static readonly Translation ConquestWarStats11 = new Translation("Longest Shot: ",        TranslationOptions.UnityUI);
 
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestHeader0 = new Translation("Kills",   TranslationFlags.UnityUI);
+    public static readonly Translation ConquestHeader0 = new Translation("Kills",   TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestHeader1 = new Translation("Deaths",  TranslationFlags.UnityUI);
+    public static readonly Translation ConquestHeader1 = new Translation("Deaths",  TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
+    public static readonly Translation ConquestHeader2 = new Translation("XP",      TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestHeader3 = new Translation("Captures", TranslationFlags.UnityUI);
+    public static readonly Translation ConquestHeader3 = new Translation("Captures", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestHeader4 = new Translation("Vehicles\nDestr.",     TranslationFlags.UnityUI);
+    public static readonly Translation ConquestHeader4 = new Translation("Vehicles\nDestr.",     TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestHeader5 = new Translation("Aircraft\nDestr.",  TranslationFlags.UnityUI);
+    public static readonly Translation ConquestHeader5 = new Translation("Aircraft\nDestr.",  TranslationOptions.UnityUI);
     #endregion
 
     #region Hardpoint
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats0  = new Translation("Kills: ",                 TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats0  = new Translation("Kills: ",                 TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats1  = new Translation("Deaths: ",                TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats1  = new Translation("Deaths: ",                TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats2  = new Translation("Damage Done: ",           TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats2  = new Translation("Damage Done: ",           TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats3  = new Translation("Objective Kills: ",       TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats3  = new Translation("Objective Kills: ",       TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats4  = new Translation("Time Deployed: ",         TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats4  = new Translation("Time Deployed: ",         TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats5  = new Translation("XP Gained: ",             TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats5  = new Translation("XP Gained: ",             TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats6  = new Translation("Revives: ",               TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats6  = new Translation("Revives: ",               TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats7  = new Translation("Points Gained: ",         TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats7  = new Translation("Points Gained: ",         TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats8  = new Translation("Time on Flag: ",          TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats8  = new Translation("Time on Flag: ",          TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats9  = new Translation("Teamkills: ",             TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats9  = new Translation("Teamkills: ",             TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointPlayerStats11 = new Translation("Credits Gained: ",        TranslationFlags.UnityUI);
+    public static readonly Translation HardpointPlayerStats11 = new Translation("Credits Gained: ",        TranslationOptions.UnityUI);
 
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointWarStats0 = new Translation("Duration: ",                                      TranslationFlags.UnityUI);
+    public static readonly Translation HardpointWarStats0 = new Translation("Duration: ",                                      TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> HardpointWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> HardpointWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> HardpointWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> HardpointWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointWarStats3 = new Translation("Contesting Time: ",                               TranslationFlags.UnityUI);
+    public static readonly Translation HardpointWarStats3 = new Translation("Contesting Time: ",                               TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> HardpointWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> HardpointWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> HardpointWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> HardpointWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> HardpointWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> HardpointWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> HardpointWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> HardpointWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> HardpointWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> HardpointWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<FactionInfo> HardpointWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    public static readonly Translation<FactionInfo> HardpointWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationOptions.UnityUI, FactionInfo.FormatShortName);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.UnityUI);
+    public static readonly Translation HardpointWarStats10 = new Translation("Teamkill Casualties: ", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.UnityUI);
+    public static readonly Translation HardpointWarStats11 = new Translation("Longest Shot: ",        TranslationOptions.UnityUI);
 
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointHeader0 = new Translation("Kills",    TranslationFlags.UnityUI);
-
-    [TranslationData(SectionLeaderboard)]                                             
-    public static readonly Translation HardpointHeader1 = new Translation("Deaths",   TranslationFlags.UnityUI);
+    public static readonly Translation HardpointHeader0 = new Translation("Kills",    TranslationOptions.UnityUI);
 
     [TranslationData(SectionLeaderboard)]                                             
-    public static readonly Translation HardpointHeader2 = new Translation("XP",       TranslationFlags.UnityUI);
+    public static readonly Translation HardpointHeader1 = new Translation("Deaths",   TranslationOptions.UnityUI);
 
     [TranslationData(SectionLeaderboard)]                                             
-    public static readonly Translation HardpointHeader3 = new Translation("Cap Seconds",  TranslationFlags.UnityUI);
+    public static readonly Translation HardpointHeader2 = new Translation("XP",       TranslationOptions.UnityUI);
+
+    [TranslationData(SectionLeaderboard)]                                             
+    public static readonly Translation HardpointHeader3 = new Translation("Cap Seconds",  TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointHeader4 = new Translation("Vehicles\nDestr.", TranslationFlags.UnityUI);
+    public static readonly Translation HardpointHeader4 = new Translation("Vehicles\nDestr.", TranslationOptions.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointHeader5 = new Translation("Aircraft\nDestr.",  TranslationFlags.UnityUI);
+    public static readonly Translation HardpointHeader5 = new Translation("Aircraft\nDestr.",  TranslationOptions.UnityUI);
     #endregion
 
     #endregion
@@ -818,13 +817,13 @@ internal static class T
     #region Toasts
     private const string SectionToasts = "Toasts";
     [TranslationData(SectionToasts, "Sent when the player joins for the 1st time.")]
-    public static readonly Translation<IPlayer> WelcomeMessage = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nCheck out our tutorial to get started (follow the signs).", TranslationFlags.UnityUI, UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> WelcomeMessage = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nCheck out our tutorial to get started (follow the signs).", TranslationOptions.UnityUI, UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionToasts, "Broadcasted when a game is loading.", "Next gamemode")]
-    public static readonly Translation<Gamemode> LoadingGamemode = new Translation<Gamemode>("Loading New Gamemode\n<#66ff99>{0}</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<Gamemode> LoadingGamemode = new Translation<Gamemode>("Loading New Gamemode\n<#66ff99>{0}</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionToasts, "Broadcasted when a player joins and their data is loading.")]
-    public static readonly Translation LoadingOnJoin = new Translation("Loading Player Data", TranslationFlags.TMProUI);
+    public static readonly Translation LoadingOnJoin = new Translation("Loading Player Data", TranslationOptions.TMProUI);
     [TranslationData(SectionToasts, "Title for the welcome message.")]
-    public static readonly Translation WelcomeMessageTitle = new Translation("Welcome to Uncreated Warfare", TranslationFlags.TMProUI);
+    public static readonly Translation WelcomeMessageTitle = new Translation("Welcome to Uncreated Warfare", TranslationOptions.TMProUI);
     #endregion
 
     #region KitCommand
@@ -1015,23 +1014,23 @@ internal static class T
     [TranslationData(SectionSquads)]
     public static readonly Translation<int> SquadsTooManyPlayerCount = new Translation<int>("<#a89791>There are too many squads right now. More squads are unlocked once your team reaches {0} ${p:0:member}.");
     [TranslationData(SectionSquads)]
-    public static readonly Translation SquadWarningNoMembers = new Translation("<#a89791>Your squad will be DISBANDED unless others join", TranslationFlags.TMProUI);
+    public static readonly Translation SquadWarningNoMembers = new Translation("<#a89791>Your squad will be DISBANDED unless others join", TranslationOptions.TMProUI);
     [TranslationData(SectionSquads)]
-    public static readonly Translation SquadWarningWrongKit = new Translation("<#a89791>You must request a SQUADLEADER kit", TranslationFlags.TMProUI);
+    public static readonly Translation SquadWarningWrongKit = new Translation("<#a89791>You must request a SQUADLEADER kit", TranslationOptions.TMProUI);
 
 
     [TranslationData(SectionSquads, IsPrioritizedTranslation = false)]
-    public static readonly Translation<Squad, int, int> SquadsUIHeaderPlayerCount    = new Translation<Squad, int, int>("<#bd6b5b>{0}</color> {1}/{2}", TranslationFlags.UnityUI, Squad.FormatName);
+    public static readonly Translation<Squad, int, int> SquadsUIHeaderPlayerCount    = new Translation<Squad, int, int>("<#bd6b5b>{0}</color> {1}/{2}", TranslationOptions.UnityUI, Squad.FormatName);
     [TranslationData(SectionSquads, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int, int> SquadsUIPlayerCountList             = new Translation<int, int>("{0}/{1}", TranslationFlags.UnityUI);
+    public static readonly Translation<int, int> SquadsUIPlayerCountList             = new Translation<int, int>("{0}/{1}", TranslationOptions.UnityUI);
     [TranslationData(SectionSquads, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int, int, char> SquadsUIPlayerCountListLocked = new Translation<int, int, char>("{2} {0}/{1}", TranslationFlags.UnityUI);
+    public static readonly Translation<int, int, char> SquadsUIPlayerCountListLocked = new Translation<int, int, char>("{2} {0}/{1}", TranslationOptions.UnityUI);
     [TranslationData(SectionSquads, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int, int> SquadsUIPlayerCountSmall            = new Translation<int, int>("{0}/{1}", TranslationFlags.UnityUI);
+    public static readonly Translation<int, int> SquadsUIPlayerCountSmall            = new Translation<int, int>("{0}/{1}", TranslationOptions.UnityUI);
     [TranslationData(SectionSquads, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int, int> SquadsUIPlayerCountSmallLocked      = new Translation<int, int>("<#969696>{0}/{1}</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int, int> SquadsUIPlayerCountSmallLocked      = new Translation<int, int>("<#969696>{0}/{1}</color>", TranslationOptions.UnityUI);
     [TranslationData(SectionSquads, IsPrioritizedTranslation = false)]
-    public static readonly Translation SquadUIExpanded                               = new Translation("...", TranslationFlags.UnityUI);
+    public static readonly Translation SquadUIExpanded                               = new Translation("...", TranslationOptions.UnityUI);
     #endregion
 
     #region Rallies
@@ -1071,159 +1070,59 @@ internal static class T
     [TranslationData(SectionRallies)]
     public static readonly Translation RallyEnemiesNearbyTp = new Translation("<#9e7a6c>There are enemies near your RALLY. Deployment is no longer possible.");
     [TranslationData(SectionRallies)]
-    public static readonly Translation<int> RallyToast = new Translation<int>("<#959c8c><#c$rally$>RALLY</color> IN <#ffe4b5>{0}</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> RallyToast = new Translation<int>("<#959c8c><#c$rally$>RALLY</color> IN <#ffe4b5>{0}</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionRallies, IsPrioritizedTranslation = false)]
-    public static readonly Translation<string> RallyUI = new Translation<string>("<#c$rally$>RALLY</color> {0}", TranslationFlags.UnityUI);
+    public static readonly Translation<string> RallyUI = new Translation<string>("<#c$rally$>RALLY</color> {0}", TranslationOptions.UnityUI);
     [TranslationData(SectionRallies, IsPrioritizedTranslation = false)]
-    public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationFlags.UnityUI, "mm\\:ss");
+    public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationOptions.UnityUI, "mm\\:ss");
     #endregion
 
     #region Time
     private const string SectionTime = "Time Strings";
     [TranslationData(SectionTime, "Permanent time, lasts forever.")]
-    public static readonly Translation TimePermanent    = new Translation("permanent", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimePermanent    = new Translation("permanent", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "1 second (singular).")]
-    public static readonly Translation TimeSecondSingle = new Translation("second", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeSecondSingle = new Translation("second", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "X seconds (plural).")]
-    public static readonly Translation TimeSecondPlural = new Translation("seconds", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeSecondPlural = new Translation("seconds", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "1 minute (singular).")]
-    public static readonly Translation TimeMinuteSingle = new Translation("minute", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMinuteSingle = new Translation("minute", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "X minutes (plural).")]
-    public static readonly Translation TimeMinutePlural = new Translation("minutes", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMinutePlural = new Translation("minutes", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "1 hour (singular).")]
-    public static readonly Translation TimeHourSingle   = new Translation("hour", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeHourSingle   = new Translation("hour", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "X hours (plural).")]
-    public static readonly Translation TimeHourPlural   = new Translation("hours", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeHourPlural   = new Translation("hours", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "1 day (singular).")]
-    public static readonly Translation TimeDaySingle    = new Translation("day", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeDaySingle    = new Translation("day", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "X days (plural).")]
-    public static readonly Translation TimeDayPlural    = new Translation("days", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeDayPlural    = new Translation("days", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "1 week (singular).")]
-    public static readonly Translation TimeWeekSingle   = new Translation("week", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeWeekSingle   = new Translation("week", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "X weeks (plural).")]
-    public static readonly Translation TimeWeekPlural   = new Translation("weeks", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeWeekPlural   = new Translation("weeks", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "1 month (singular).")]
-    public static readonly Translation TimeMonthSingle  = new Translation("month", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMonthSingle  = new Translation("month", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "X months (plural).")]
-    public static readonly Translation TimeMonthPlural  = new Translation("months", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMonthPlural  = new Translation("months", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "1 year (singular).")]
-    public static readonly Translation TimeYearSingle   = new Translation("year", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeYearSingle   = new Translation("year", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "X years (plural).")]
-    public static readonly Translation TimeYearPlural   = new Translation("years", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeYearPlural   = new Translation("years", TranslationOptions.UnityUINoReplace);
     [TranslationData(SectionTime, "Joining keyword (1 hour \"and\" 30 minutes).")]
-    public static readonly Translation TimeAnd          = new Translation("and", TranslationFlags.UnityUINoReplace);
-    #endregion
-
-    #region FOBs and Buildables
-    private const string SectionFOBs = "FOBs / Buildables";
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation BuildNotInRadius        = new Translation("<#ffab87>This can only be placed inside <#cedcde>FOB RADIUS</color>.");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation BuildTickNotInRadius    = new Translation("<#ffab87>There's no longer a friendly FOB nearby.");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<float> BuildSmallRadius = new Translation<float>("<#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a <#cedcde>FOB BUNKER</color>.", "N0");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation BuildLegacyExplanation  = new Translation("<#ffab87>Hit the foundation with your Entrenching Tool to build it.");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<float> BuildNoRadio     = new Translation<float>("<#ffab87>This can only be placed within {0}m of a friendly <#cedcde>FOB RADIO</color>.", "N0");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<int, BuildableData> BuildLimitReached = new Translation<int, BuildableData>("<#ffab87>This FOB already has {0} {1}.", "F0", FormatPlural + "{0}");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<int, BuildableData> RegionalBuildLimitReached = new Translation<int, BuildableData>("<#ffab87>You cannot place more than {0} {1} in this area.", "F0", FormatPlural + "{0}");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<BuildableData> BuildTickStructureExists = new Translation<BuildableData>("<#ffab87>Too many {0} have already been built on this FOB.", FormatPlural);
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation BuildEnemy              = new Translation("<#ffab87>You may not build on an enemy FOB.");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<int, int> BuildMissingSupplies = new Translation<int, int>("<#ffab87>You're missing nearby build! <#c$build$>Building Supplies: <#e0d8b8>{0}/{1}</color></color>.");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation BuildMaxFOBsHit         = new Translation("<#ffab87>The max number of FOBs on your team has been reached.");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation BuildFOBUnderwater      = new Translation("<#ffab87>You can't build a FOB underwater.");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<float> BuildFOBTooHigh  = new Translation<float>("<#ffab87>You can't build a FOB more than {0}m above the ground.", "F0");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation BuildFOBTooCloseToMain  = new Translation("<#ffab87>You can't build a FOB this close to main base.");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.FormatNameColored, "F0", "F0");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<float, float> BuildBunkerTooClose = new Translation<float, float>("<#ffa238>You are too close to an existing FOB Bunker ({0}m away). You must be at least {1}m away to place a new radio.", "F0", "F0");
-    [TranslationData(SectionFOBs, IsPrioritizedTranslation = false)]
-    public static readonly Translation BuildInvalidAsset = new Translation("<#ffa238>This buildable has invalid barricade assets (contact devs).");
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation BuildableNotAllowed = new Translation("<#ffa238>You are not allowed to place this buildable.");
-    [TranslationData(SectionFOBs, IsPrioritizedTranslation = false)]
-    public static readonly Translation<IDeployable, GridLocation, string> FOBUI    = new Translation<IDeployable, GridLocation, string>("{0}  <color=#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.FormatNameColored);
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.TMProUI);
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.TMProUI);
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<color=#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color></color>", TranslationFlags.TMProUI, FormatUppercase);
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation CacheDiscoveredDefense  = new Translation("<#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT", TranslationFlags.TMProUI);
-    [TranslationData(SectionFOBs)]
-    public static readonly Translation CacheSpawnedDefense     = new Translation("<#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE", TranslationFlags.TMProUI);
-    #endregion
-
-    #region Deploy
-    private const string SectionDeploy = "Deployment";
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable> DeploySuccess           = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", FOB.FormatNameColored);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable, int> DeployStandby      = new Translation<IDeployable, int>("<#fae69c>Now deploying to {0}. You will arrive in <#eee>{1} ${p:1:second}</color>", FOB.FormatNameColored);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable> DeployNotSpawnableTick  = new Translation<IDeployable>("<#ffa238>{0} is no longer active.", FOB.FormatNameColored);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable> DeployNotSpawnable      = new Translation<IDeployable>("<#ffa238>{0} is not active.", FOB.FormatNameColored);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable> DeployDestroyed         = new Translation<IDeployable>("<#ffa238>{0} was destroyed.", FOB.FormatNameColored);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable> DeployNoBunker          = new Translation<IDeployable>("<#ffaa42>{0} doesn't have a <#cedcde>FOB BUNKER</color>. Your team must build one to use the <#cedcde>FOB</color> as a spawnpoint.", FOB.FormatNameColored);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable> DeployRadioDamaged      = new Translation<IDeployable>("<#ffaa42>The <#cedcde>FOB RADIO</color> at {0} is damaged. Repair it with an <#cedcde>ENTRENCHING TOOL</color>.", FOB.FormatNameColored);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation DeployMoved                          = new Translation("<#ffa238>You moved and can no longer deploy.");
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation DeployDamaged                        = new Translation("<#ffa238>You were damaged and can no longer deploy.");
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable> DeployEnemiesNearbyTick = new Translation<IDeployable>("<#ffa238>You no longer deploy to {0} - there are enemies nearby.", FOB.FormatNameColored);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable> DeployEnemiesNearby     = new Translation<IDeployable>("<#ffaa42>You cannot deploy to {0} - there are enemies nearby.");
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation DeployCancelled                      = new Translation("<#fae69c>Active deployment cancelled.");
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<string> DeployableNotFound           = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", FormatUppercase);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<IDeployable> DeployableAlreadyOnFOB  = new Translation<IDeployable>("<#ffa238>You are already on <#e3c27f>{0}</color>.", FOB.FormatNameColored);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation DeployNotNearFOB                     = new Translation("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or in <#cedcde>MAIN BASE</color> in order to deploy.");
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation DeployNotNearFOBInsurgency           = new Translation("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or <#e8d1a7>CACHE</color>, or in <#cedcde>MAIN BASE</color> in order to deploy.");
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<Cooldown> DeployCooldown             = new Translation<Cooldown>("<#ffa238>You can deploy again in: <#e3c27f>{0}</color>", Cooldown.FormatTimeLong);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation DeployAlreadyActive                  = new Translation("<#b5a591>You're already deploying somewhere.");
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation<Cooldown> DeployInCombat             = new Translation<Cooldown>("<#ffaa42>You are in combat, soldier! You can deploy in another: <#e3987f>{0}</color>.", Cooldown.FormatTimeLong);
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation DeployInjured                        = new Translation("<#ffaa42>You can not deploy while injured, get a medic to revive you or give up.");
-    [TranslationData(SectionDeploy)]
-    public static readonly Translation DeployLobbyRemoved                   = new Translation("<#fae69c>The lobby has been removed, use <#e3c27f>/teams</color> to switch teams instead.");
+    public static readonly Translation TimeAnd          = new Translation("and", TranslationOptions.UnityUINoReplace);
     #endregion
 
     #region Popup
     private const string SectionPopup = "Popup";
     [TranslationData(SectionPopup)]
-    public static readonly Translation ButtonOK = new Translation("OK", TranslationFlags.TMProUI);
+    public static readonly Translation ButtonOK = new Translation("OK", TranslationOptions.TMProUI);
     [TranslationData(SectionPopup)]
-    public static readonly Translation ButtonCancel = new Translation("Cancel", TranslationFlags.TMProUI);
+    public static readonly Translation ButtonCancel = new Translation("Cancel", TranslationOptions.TMProUI);
     [TranslationData(SectionPopup)]
-    public static readonly Translation ButtonYes = new Translation("Yes", TranslationFlags.TMProUI);
+    public static readonly Translation ButtonYes = new Translation("Yes", TranslationOptions.TMProUI);
     [TranslationData(SectionPopup)]
-    public static readonly Translation ButtonNo = new Translation("No", TranslationFlags.TMProUI);
+    public static readonly Translation ButtonNo = new Translation("No", TranslationOptions.TMProUI);
     #endregion
 
     #region Load Command
@@ -1251,136 +1150,136 @@ internal static class T
     #region Signs
     private const string SectionSigns = "Signs";
         [TranslationData(Section = SectionSigns, SignId = "rules", Description = "Server rules")]
-    public static readonly Translation SignRules = new Translation("Rules\nNo suicide vehicles.\netc.", TranslationFlags.TMProSign);
+    public static readonly Translation SignRules = new Translation("Rules\nNo suicide vehicles.\netc.", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "kitdelay", Description = "Shown on new seasons when elite kits and loadouts are locked.")]
-    public static readonly Translation SignKitDelay = new Translation("<#e6e6e6>All <#3bede1>Elite Kits</color> and <#32a852>Loadouts</color> are locked for the two weeks of the season.\nThey will be available again after <#d8addb>April 2nd, 2023</color>.", TranslationFlags.TMProSign);
+    public static readonly Translation SignKitDelay = new Translation("<#e6e6e6>All <#3bede1>Elite Kits</color> and <#32a852>Loadouts</color> are locked for the two weeks of the season.\nThey will be available again after <#d8addb>April 2nd, 2023</color>.", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_squadleader")]
-    public static readonly Translation SignClassDescriptionSquadleader   = new Translation("\n\n<#cecece>Help your squad by supplying them with <#f0a31c>rally points</color> and placing <#f0a31c>FOB radios</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionSquadleader   = new Translation("\n\n<#cecece>Help your squad by supplying them with <#f0a31c>rally points</color> and placing <#f0a31c>FOB radios</color>.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_rifleman")]
-    public static readonly Translation SignClassDescriptionRifleman      = new Translation("\n\n<#cecece>Resupply your teammates in the field with an <#f0a31c>Ammo Bag</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionRifleman      = new Translation("\n\n<#cecece>Resupply your teammates in the field with an <#f0a31c>Ammo Bag</color>.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_medic")]
-    public static readonly Translation SignClassDescriptionMedic         = new Translation("\n\n<#cecece><#f0a31c>Revive</color> your teammates after they've been injured.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionMedic         = new Translation("\n\n<#cecece><#f0a31c>Revive</color> your teammates after they've been injured.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_breacher")]
-    public static readonly Translation SignClassDescriptionBreacher      = new Translation("\n\n<#cecece>Use <#f0a31c>high-powered explosives</color> to take out <#f01f1c>enemy FOBs</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionBreacher      = new Translation("\n\n<#cecece>Use <#f0a31c>high-powered explosives</color> to take out <#f01f1c>enemy FOBs</color>.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_autorifleman")]
-    public static readonly Translation SignClassDescriptionAutoRifleman  = new Translation("\n\n<#cecece>Equipped with a high-capacity and powerful <#f0a31c>LMG</color> to spray-and-pray your enemies.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionAutoRifleman  = new Translation("\n\n<#cecece>Equipped with a high-capacity and powerful <#f0a31c>LMG</color> to spray-and-pray your enemies.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_machinegunner")]
-    public static readonly Translation SignClassDescriptionMachineGunner = new Translation("\n\n<#cecece>Equipped with a powerful <#f0a31c>Machine Gun</color> to shred the enemy team in combat.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionMachineGunner = new Translation("\n\n<#cecece>Equipped with a powerful <#f0a31c>Machine Gun</color> to shred the enemy team in combat.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_lat")]
-    public static readonly Translation SignClassDescriptionLAT           = new Translation("\n\n<#cecece>A balance between an anti-tank and combat loadout, used to conveniently destroy <#f01f1c>armored enemy vehicles</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionLAT           = new Translation("\n\n<#cecece>A balance between an anti-tank and combat loadout, used to conveniently destroy <#f01f1c>armored enemy vehicles</color>.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_hat")]
-    public static readonly Translation SignClassDescriptionHAT           = new Translation("\n\n<#cecece>Equipped with multiple powerful <#f0a31c>anti-tank shells</color> to take out any vehicles.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionHAT           = new Translation("\n\n<#cecece>Equipped with multiple powerful <#f0a31c>anti-tank shells</color> to take out any vehicles.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_grenadier")]
-    public static readonly Translation SignClassDescriptionGrenadier     = new Translation("\n\n<#cecece>Equipped with a <#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionGrenadier     = new Translation("\n\n<#cecece>Equipped with a <#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_marksman")]
-    public static readonly Translation SignClassDescriptionMarksman      = new Translation("\n\n<#cecece>Equipped with a <#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionMarksman      = new Translation("\n\n<#cecece>Equipped with a <#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_sniper")]
-    public static readonly Translation SignClassDescriptionSniper        = new Translation("\n\n<#cecece>Equipped with a high-powered <#f0a31c>sniper rifle</color> to take out enemies from great distances.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionSniper        = new Translation("\n\n<#cecece>Equipped with a high-powered <#f0a31c>sniper rifle</color> to take out enemies from great distances.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_aprifleman")]
-    public static readonly Translation SignClassDescriptionAPRifleman    = new Translation("\n\n<#cecece>Equipped with <#f0a31c>explosive traps</color> to cover entry-points and entrap enemy vehicles.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionAPRifleman    = new Translation("\n\n<#cecece>Equipped with <#f0a31c>explosive traps</color> to cover entry-points and entrap enemy vehicles.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_engineer")]
-    public static readonly Translation SignClassDescriptionEngineer      = new Translation("\n\n<#cecece>Features 200% <#f0a31c>build speed</color> and are equipped with <#f0a31c>fortifications</color> and traps to help defend their team's FOBs.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionEngineer      = new Translation("\n\n<#cecece>Features 200% <#f0a31c>build speed</color> and are equipped with <#f0a31c>fortifications</color> and traps to help defend their team's FOBs.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_crewman")]
-    public static readonly Translation SignClassDescriptionCrewman       = new Translation("\n\n<#cecece>The only kits than can man <#f0a31c>armored vehicles</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionCrewman       = new Translation("\n\n<#cecece>The only kits than can man <#f0a31c>armored vehicles</color>.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_pilot")]
-    public static readonly Translation SignClassDescriptionPilot         = new Translation("\n\n<#cecece>The only kits that can fly <#f0a31c>aircraft</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionPilot         = new Translation("\n\n<#cecece>The only kits that can fly <#f0a31c>aircraft</color>.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_specops")]
-    public static readonly Translation SignClassDescriptionSpecOps       = new Translation("\n\n<#cecece>Equipped with <#f0a31c>night-vision</color> to help see at night.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionSpecOps       = new Translation("\n\n<#cecece>Equipped with <#f0a31c>night-vision</color> to help see at night.</color>\n<#f01f1c>\\/</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_misc")]
-    public static readonly Translation SignBundleMisc       = new Translation("<#fff>Misc.", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleMisc       = new Translation("<#fff>Misc.", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_caf")]
-    public static readonly Translation SignBundleCanada     = new Translation("<#fff>Canadian Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleCanada     = new Translation("<#fff>Canadian Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_fr")]
-    public static readonly Translation SignBundleFrance     = new Translation("<#fff>French Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleFrance     = new Translation("<#fff>French Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_ger")]
-    public static readonly Translation SignBundleGermany    = new Translation("<#fff>German Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleGermany    = new Translation("<#fff>German Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_usmc")]
-    public static readonly Translation SignBundleUSMC       = new Translation("<#fff>USMC Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleUSMC       = new Translation("<#fff>USMC Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_usa")]
-    public static readonly Translation SignBundleUSA        = new Translation("<#fff>USA Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleUSA        = new Translation("<#fff>USA Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_pl")]
-    public static readonly Translation SignBundlePoland     = new Translation("<#fff>Polish Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundlePoland     = new Translation("<#fff>Polish Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_idf")]
-    public static readonly Translation SignBundleIsrael     = new Translation("<#fff>IDF Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleIsrael     = new Translation("<#fff>IDF Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_militia")]
-    public static readonly Translation SignBundleMilitia    = new Translation("<#fff>Militia Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleMilitia    = new Translation("<#fff>Militia Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_ru")]
-    public static readonly Translation SignBundleRussia     = new Translation("<#fff>Russia Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleRussia     = new Translation("<#fff>Russia Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_soviet")]
-    public static readonly Translation SignBundleSoviet     = new Translation("<#fff>Soviet Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleSoviet     = new Translation("<#fff>Soviet Bundle", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "bundle_special")]
-    public static readonly Translation SignBundleSpecial    = new Translation("<#fff>Special Kits", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleSpecial    = new Translation("<#fff>Special Kits", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "loadout_info", Description = "Information on how to obtain a loadout.")]
-    public static readonly Translation SignLoadoutInfo      = new Translation("<#cecece>Loadouts and elite kits can be purchased\nin our <#7483c4>Discord</color> server.</color>\n\n<#7483c4>/discord</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignLoadoutInfo      = new Translation("<#cecece>Loadouts and elite kits can be purchased\nin our <#7483c4>Discord</color> server.</color>\n\n<#7483c4>/discord</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "air_solo_warning", Description = "Soloing warning positioned near attack heli and jet.")]
-    public static readonly Translation SignAirSoloingWarning = new Translation("<color=#f01f1c><b>Do not exit main without another <#cedcde>PILOT</color> for the Jet or Attack Heli\n\n\n<color=#ff6600>YOU WILL BE BANNED FOR 6 DAYS WITHOUT WARNING!<b></color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignAirSoloingWarning = new Translation("<color=#f01f1c><b>Do not exit main without another <#cedcde>PILOT</color> for the Jet or Attack Heli\n\n\n<color=#ff6600>YOU WILL BE BANNED FOR 6 DAYS WITHOUT WARNING!<b></color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "armor_solo_warning", Description = "Soloing warning positioned near armor requests.")]
-    public static readonly Translation SignArmorSoloingWarning = new Translation("<color=#f01f1c><b>Do not exit main without another <#cedcde>CREWMAN</color> while driving any vehicles that require a <#cedcde>CREWMAN</color> kit!\n\n\n<color=#ff6600>YOU WILL BE BANNED FOR 6 DAYS WITHOUT WARNING!<b></color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignArmorSoloingWarning = new Translation("<color=#f01f1c><b>Do not exit main without another <#cedcde>CREWMAN</color> while driving any vehicles that require a <#cedcde>CREWMAN</color> kit!\n\n\n<color=#ff6600>YOU WILL BE BANNED FOR 6 DAYS WITHOUT WARNING!<b></color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "waiting_warning", Description = "Warning about waiting for vehicles while the server is full.")]
-    public static readonly Translation SignWaitingWarning = new Translation("<color=#f01f1c>Waiting for vehicles to spawn when the server is full for more than 2 minutes will result in a KICK or BAN</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignWaitingWarning = new Translation("<color=#f01f1c>Waiting for vehicles to spawn when the server is full for more than 2 minutes will result in a KICK or BAN</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "waiting_notice_1", Description = "Change notice about waiting for vehicles while the server is full (part 1).")]
-    public static readonly Translation SignWaitingNoticePart1 = new Translation("<color=yellow>Warning:</color>\n<color=white>Due to players sitting at base waiting for air assets, we've decided that if the server capacity is full and air assets aren't available for</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignWaitingNoticePart1 = new Translation("<color=yellow>Warning:</color>\n<color=white>Due to players sitting at base waiting for air assets, we've decided that if the server capacity is full and air assets aren't available for</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "waiting_notice_2", Description = "Change notice about waiting for vehicles while the server is full (part 2).")]
-    public static readonly Translation SignWaitingNoticePart2 = new Translation("<color=white>a considerable amount of time, we reserve the right to warn you not to. If you continue to sit around we will kick you to allow another player in the queue to play.</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignWaitingNoticePart2 = new Translation("<color=white>a considerable amount of time, we reserve the right to warn you not to. If you continue to sit around we will kick you to allow another player in the queue to play.</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "solo_notice_1", Description = "Notice about soloing (part 1).")]
-    public static readonly Translation SignSoloNoticePart1 = new Translation("<color=#f01f1c>You are not allowed to take out the following vehicles without a passenger:</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignSoloNoticePart1 = new Translation("<color=#f01f1c>You are not allowed to take out the following vehicles without a passenger:</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "solo_notice_2_t1", Description = "Notice about soloing (part 2, team 1).")]
-    public static readonly Translation SignSoloNoticePart2T1 = new Translation("<#f01f1c>- Abrams\n- LAV\n- Stryker\n- Attack Heli\n- Fighter Jet\n</color>\n<#ec8100>You will get banned for <#ff6600>3 days</color> if you do!</color>\n<#f01f1c>If your passenger leaves, return to base (RTB).</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignSoloNoticePart2T1 = new Translation("<#f01f1c>- Abrams\n- LAV\n- Stryker\n- Attack Heli\n- Fighter Jet\n</color>\n<#ec8100>You will get banned for <#ff6600>3 days</color> if you do!</color>\n<#f01f1c>If your passenger leaves, return to base (RTB).</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "solo_notice_2_t2", Description = "Notice about soloing (part 2, team 2).")]
-    public static readonly Translation SignSoloNoticePart2T2 = new Translation("<#f01f1c>- T-90\n- BTR-82A\n- BDRM\n- BMP-2\n- Attack Heli\n- Fighter Jet\n</color>\n<#ec8100>You will get banned for <#ff6600>3 days</color> if you do!</color>\n<#f01f1c>If your passenger leaves, return to base (RTB).</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignSoloNoticePart2T2 = new Translation("<#f01f1c>- T-90\n- BTR-82A\n- BDRM\n- BMP-2\n- Attack Heli\n- Fighter Jet\n</color>\n<#ec8100>You will get banned for <#ff6600>3 days</color> if you do!</color>\n<#f01f1c>If your passenger leaves, return to base (RTB).</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_arrow", Description = "Points to the tutorial with a caption.")]
-    public static readonly Translation SignTutorialArrow = new Translation("<#2df332>Small tutorial this way!\n<#ff6600><b><---</b>", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialArrow = new Translation("<#2df332>Small tutorial this way!\n<#ff6600><b><---</b>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_get_kit_1", Description = "Tells the player about kits and how to request them (part 1).")]
-    public static readonly Translation SignTutorialGetKitPart1 = new Translation("<#ff6600><b>How do I get a kit?</b>", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialGetKitPart1 = new Translation("<#ff6600><b>How do I get a kit?</b>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_get_kit_2", Description = "Tells the player about kits and how to request them (part 2).")]
-    public static readonly Translation SignTutorialGetKitPart2 = new Translation("<#cEcEcE>Look at kit sign and type <#2df332>/req</color> in chat to recieve the kit.", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialGetKitPart2 = new Translation("<#cEcEcE>Look at kit sign and type <#2df332>/req</color> in chat to recieve the kit.", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_get_kit_3", Description = "Tells the player about kits and how to request them (part 3).")]
-    public static readonly Translation SignTutorialGetKitPart3 = new Translation("<#cEcEcE>Some kits are unlocked using <#c$credits$>credits</color>. Look at the sign and do <#2df332>/buy</color> to unlock the kit.", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialGetKitPart3 = new Translation("<#cEcEcE>Some kits are unlocked using <#c$credits$>credits</color>. Look at the sign and do <#2df332>/buy</color> to unlock the kit.", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_get_vehicle_1", Description = "Tells the player about vehicles and how to request them (part 1).")]
-    public static readonly Translation SignTutorialGetVehiclePart1 = new Translation("<#ff6600><b>How do I get a vehicle?</b>", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialGetVehiclePart1 = new Translation("<#ff6600><b>How do I get a vehicle?</b>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_get_vehicle_2", Description = "Tells the player about vehicles and how to request them (part 2).")]
-    public static readonly Translation SignTutorialGetVehiclePart2 = new Translation("<#cEcEcE>Look at the vehicle you'd like to request and type in chat <#2df332>/req</color> to unlock the vehicle.", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialGetVehiclePart2 = new Translation("<#cEcEcE>Look at the vehicle you'd like to request and type in chat <#2df332>/req</color> to unlock the vehicle.", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_get_vehicle_3", Description = "Tells the player about vehicles and how to request them (part 3).")]
-    public static readonly Translation SignTutorialGetVehiclePart3 = new Translation("<#cEcEcE>Some vehicles require a special kit. Request a <#cedcde>CREWMAN</color> or <#cedcde>PILOT</color> kit to gain acces to them!", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialGetVehiclePart3 = new Translation("<#cEcEcE>Some vehicles require a special kit. Request a <#cedcde>CREWMAN</color> or <#cedcde>PILOT</color> kit to gain acces to them!", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_faq_header", Description = "Header for the FAQ (frequently asked questions) section of the tutorial.")]
-    public static readonly Translation SignTutorialFAQHeader = new Translation("<#ff6600><b>FAQ</b>", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialFAQHeader = new Translation("<#ff6600><b>FAQ</b>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_faq_give_up_q", Description = "(question) This FAQ explains how to Give Up after being injured.")]
-    public static readonly Translation SignTutorialFAQGiveUpQ = new Translation("<#2df332>Q: Help! I can't reset when downed!", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialFAQGiveUpQ = new Translation("<#2df332>Q: Help! I can't reset when downed!", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "tutorial_faq_give_up_a", Description = "(answer) This FAQ explains how to Give Up after being injured.")]
-    public static readonly Translation SignTutorialFAQGiveUpA = new Translation("<#cEcEcE>A: Press the '/' button on your keyboard to give up when injured. If this doesn't work, Head to your <#2df332>keybind settings</color> and set <#f32d2d>Code Hotkey #3</color> to your preference!", TranslationFlags.TMProSign);
+    public static readonly Translation SignTutorialFAQGiveUpA = new Translation("<#cEcEcE>A: Press the '/' button on your keyboard to give up when injured. If this doesn't work, Head to your <#2df332>keybind settings</color> and set <#f32d2d>Code Hotkey #3</color> to your preference!", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "discord_link", Description = "Has the discord link.")]
-    public static readonly Translation SignDiscordLink = new Translation("<color=#CECECE>Need help? Join our <color=#7483c4>Discord</color> server!\n<#6796ce>discord.gg/" + UCWarfare.Config.DiscordInviteCode + "</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignDiscordLink = new Translation("<color=#CECECE>Need help? Join our <color=#7483c4>Discord</color> server!\n<#6796ce>discord.gg/" + UCWarfare.Config.DiscordInviteCode + "</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "saddam_hussein", Description = "Saddam Hussein.", IsPrioritizedTranslation = false)]
-    public static readonly Translation SignSaddamHussein = new Translation("<color=red>Saddam Hussein\n ▇▅▆▇▆▅▅█</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignSaddamHussein = new Translation("<color=red>Saddam Hussein\n ▇▅▆▇▆▅▅█</color>", TranslationOptions.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "elite_kit_pointer", Description = "Points to the building with elite kits.")]
-    public static readonly Translation SignEliteKitPointer = new Translation("<color=#f0a31c>Elite kits found in this building     --></color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignEliteKitPointer = new Translation("<color=#f0a31c>Elite kits found in this building     --></color>", TranslationOptions.TMProSign);
 
 
     [TranslationData(Section = SectionSigns, SignId = "faq1_1")]
     public static readonly Translation SignFAQ1Part1 = new Translation("""
                                                                        <#fa6122>Giving up or Flaring
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq1_2")]
     public static readonly Translation SignFAQ1Part2 = new Translation("""
                                                                        <#2df332>Q: Help! I can't give up when I'm downed or flare in a air vehicle </color>
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq1_3")]
     public static readonly Translation SignFAQ1Part3 = new Translation("""
                                                                         <#FFFFFF>A: Press <#2df332>/</color> on your keyboard to give up when downed or flare. If this doesn't work head to</color>
                                                                         <#f01f1c>Controls -> Mods/Plugins -> Code Hotkey#3
-                                                                        """, TranslationFlags.TMProSign);
+                                                                        """, TranslationOptions.TMProSign);
 
     [TranslationData(Section = SectionSigns, SignId = "faq2_1")]
     public static readonly Translation SignFAQ2Part1 = new Translation("""
                                                                        <#fa6122>Squad Commands
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq2_2")]
     public static readonly Translation SignFAQ2Part2 = new Translation("""
                                                                        <#fa6122>To Join a Squad
                                                                        <#FFFFFF>/Squad join <#2df332>(Name)</color>
                                                                        <#fa6122>To Create a Squad
                                                                        <#FFFFFF>/Squad Create
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq2_3")]
     public static readonly Translation SignFAQ2Part3 = new Translation("""
                                                                        <#fa6122>Other Squad Commands
@@ -1389,46 +1288,46 @@ internal static class T
                                                                        /squad promote <#2df332>(player)</color>
                                                                        /squad kick <#2df332>(player)
                                                                        </color>/squad lock / unlock
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
 
     [TranslationData(Section = SectionSigns, SignId = "faq3_1")]
     public static readonly Translation SignFAQ3Part1 = new Translation("""
                                                                        <#fa6122>How do I get a kit?
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq3_2")]
     public static readonly Translation SignFAQ3Part2 = new Translation("""
                                                                        <#FFFFFF>If you are new to the server look at a kit sign that says free, and type <#2df332>/request</color> to receive it
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq3_3")]
     public static readonly Translation SignFAQ3Part3 = new Translation("""
                                                                        <#FFFFFF>Some kits are not free and will need to be purchased with in-game credits, do <#2df332>/buy</color> on the kit sign to purchase it
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
 
     [TranslationData(Section = SectionSigns, SignId = "faq4_1")]
     public static readonly Translation SignFAQ4Part1 = new Translation("""
                                                                        <#fa6122>How do I deploy to the battlefield?
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq4_2")]
     public static readonly Translation SignFAQ4Part2 = new Translation("""
                                                                        <#FFFFFF>On the left side of your screen, you can see the FOBs that belong to your team. Each fob displays a different number <#6698FF>(FOB#)</color>, and location.
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq4_3")]
     public static readonly Translation SignFAQ4Part3 = new Translation("""
                                                                        <#FFFFFF>To deploy you have to type: /dep fob(number) <#2df332>e.g. /deploy fob1</color> Check its location before deploying.
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
 
     [TranslationData(Section = SectionSigns, SignId = "faq5_1")]
     public static readonly Translation SignFAQ5Part1 = new Translation("""
                                                                        <#fa6122>How do I get a vehicle?
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq5_2")]
     public static readonly Translation SignFAQ5Part2 = new Translation("""
                                                                        <#FFFFFF>Look at a vehicle you would like to request, and type <#2df332>/request</color> to unlock the vehicle
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     [TranslationData(Section = SectionSigns, SignId = "faq5_3")]
     public static readonly Translation SignFAQ5Part3 = new Translation("""
                                                                        <#FFFFFF>Some Vehicles require a special kit: Like Helicopters APCs, IFVs, and MBTs. You'll need to request and/or buy, <#2df332>the crewman or pilot kit to gain access to them
-                                                                       """, TranslationFlags.TMProSign);
+                                                                       """, TranslationOptions.TMProSign);
     #endregion
 
     #region Announcements
@@ -1506,11 +1405,11 @@ internal static class T
     [TranslationData(SectionWarn)]
     public static readonly Translation<IPlayer> WarnSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by an operator.", UCPlayer.FormatCharacterName);
     [TranslationData(SectionWarn)]
-    public static readonly Translation<IPlayer, string> WarnSuccessDM         = new Translation<IPlayer, string>("<color=#ffff00><color=#" + TeamManager.AdminColorHex + ">{0}</color> warned you for <color=#ffffff>{1}</color>.</color>", TranslationFlags.TMProUI, UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer, string> WarnSuccessDM         = new Translation<IPlayer, string>("<color=#ffff00><color=#" + TeamManager.AdminColorHex + ">{0}</color> warned you for <color=#ffffff>{1}</color>.</color>", TranslationOptions.TMProUI, UCPlayer.FormatPlayerName);
     [TranslationData(SectionWarn)]
-    public static readonly Translation<string> WarnSuccessDMOperator          = new Translation<string>("<color=#ffff00>An operator warned you for <color=#ffffff>{0}</color>.</color>", TranslationFlags.TMProUI, UCPlayer.FormatPlayerName);
+    public static readonly Translation<string> WarnSuccessDMOperator          = new Translation<string>("<color=#ffff00>An operator warned you for <color=#ffffff>{0}</color>.</color>", TranslationOptions.TMProUI, UCPlayer.FormatPlayerName);
     [TranslationData(SectionWarn)]
-    public static readonly Translation WarnSuccessTitle = new Translation("<color=#ffff00>Warning", TranslationFlags.TMProUI);
+    public static readonly Translation WarnSuccessTitle = new Translation("<color=#ffff00>Warning", TranslationOptions.TMProUI);
     #endregion
 
     #region Mute Command
@@ -1600,173 +1499,6 @@ internal static class T
     public static readonly Translation<float, IPlayer> SetJumpMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", "0.##", UCPlayer.FormatColoredCharacterName);
     #endregion
 
-    #region Request
-    private const string SectionRequest = "Request Command";
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestUpgradeNotInDiscordServer = new Translation("<#a4baa9>Join the <#7483c4>Discord</color> server (<#fff>/discord</color>) to open a ticket.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestUpgradeNotConnected = new Translation("<#a4baa9>The loadout upgrade system is not available right now, please try again later.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Kit> RequestUpgradeAlreadyOpen = new Translation<Kit>("<#a4baa9>You already have a ticket open for <#ffebbd>{0}</color>.", Kit.DisplayNameFormat);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestUpgradeTooManyTicketsOpen = new Translation("<#a4baa9>There are too many tickets open right now, please try again later.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<string> RequestUpgradeError = new Translation<string>("<#a4baa9>Error opening ticket: <#fff>{0}</color>.", FormatUppercase);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Kit> DoesNotNeedUpgrade = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be upgraded.", Kit.DisplayNameFormat);
-    [TranslationData(SectionRequest, IsPrioritizedTranslation = false)]
-    public static readonly Translation<Kit> DoesNotNeedUnlock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be unlocked.", Kit.DisplayNameFormat);
-    [TranslationData(SectionRequest, IsPrioritizedTranslation = false)]
-    public static readonly Translation<Kit> DoesNotNeedLock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be locked.", Kit.DisplayNameFormat);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Kit> RequestUpgradeOnKit = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> can't be upgraded.", Kit.DisplayNameFormat);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Kit> TicketOpened = new Translation<Kit>("<#a8918a>An upgrade request was opened in your name for <#ffebbd>{0}</color>. Please fill it out as soon as possible.", Kit.DisplayNameFormat);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Class> RequestSignGiven = new Translation<Class>("<#a8918a>You have been allocated a <#cedcde>{0}</color> kit.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestNoTarget = new Translation("<#a4baa9>You must be looking at a request sign or vehicle.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#c$credits$>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitNotRegistered = new Translation("<#a8918a>This kit has not been created yet.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitAlreadyOwned = new Translation("<#a8918a>You already have this kit.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitNeedsUpgrade = new Translation("<#a8918a>This kit needs to be upgraded. Use <#fff>/request upgrade</color> to start a ticket.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitNeedsSetup = new Translation("<#a8918a>This kit needs to be setup by an admin. Check your upgrade ticket.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitDisabled = new Translation("<#a8918a>This kit is disabled.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitMapBlacklisted = new Translation("<#a8918a>This kit is not allowed on this map.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitFactionBlacklisted = new Translation("<#a8918a>Your team is not allowed to use this kit.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitMissingAccess = new Translation("<#a8918a>You don't have access to this kit.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitMissingNitro = new Translation("<#a8918a>You must be <#e00ec9>NITRO BOOSTING</color> to use this kit.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestKitNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#c$credits$>C </color><#ffffff>{0}</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int, int> RequestKitCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to unlock this kit.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<FactionInfo> RequestKitWrongTeam = new Translation<FactionInfo>("<#a8918a>You must be part of {0} to request this kit.", FactionInfo.FormatShortName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestNotBuyable = new Translation("<#a8918a>This kit cannot be purchased with credits.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestKitLimited = new Translation<int>("<#a8918a>Your team already has a max of <#d9e882>{0}</color> players using this kit. Try again later.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<LevelData> RequestKitLowLevel = new Translation<LevelData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to use this kit.", LevelData.FormatName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<RankData> RequestKitLowRank = new Translation<RankData>("<#b3ab9f>You must be {0} to use this kit.", RankData.FormatColorName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<QuestAsset> RequestKitQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this kit.", BaseQuestData.FormatColorQuestAsset);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestKitNotSquadleader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to get this kit.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestLoadoutNotOwned = new Translation("<#a8918a>You do not own this loadout.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int, int> RequestVehicleCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to request this vehicle.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Cooldown> RequestVehicleCooldown = new Translation<Cooldown>("<#b3ab9f>This vehicle can't be requested for another: <#ffe2ab>{0}</color>.", Cooldown.FormatTimeShort);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestVehicleNotSquadLeader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to request this vehicle.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestVehicleNotInSquad = new Translation("<#b3ab9f>You must be <#cedcde>IN A SQUAD</color> in order to request this vehicle.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestVehicleNoKit = new Translation("<#a8918a>Get a kit before you request vehicles.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<FactionInfo> RequestVehicleOtherTeam = new Translation<FactionInfo>("<#a8918a>You must be on {0} to request this vehicle.", FactionInfo.FormatColorDisplayName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Class> RequestVehicleWrongClass = new Translation<Class>("<#b3ab9f>You need a <#cedcde><uppercase>{0}</uppercase></color> kit in order to request this vehicle.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<LevelData> RequestVehicleMissingLevels = new Translation<LevelData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.", LevelData.FormatName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<RankData> RequestVehicleRankIncomplete = new Translation<RankData>("<#b3ab9f>You must be {0} to request this vehicle.", RankData.FormatColorName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<QuestAsset> RequestVehicleQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this vehicle.", BaseQuestData.FormatColorQuestAsset);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<IPlayer> RequestVehicleAlreadyRequested = new Translation<IPlayer>("<#a8918a>This vehicle was already requested by {0}.", UCPlayer.FormatColoredCharacterName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<InteractableVehicle> RequestVehicleAlreadyOwned = new Translation<InteractableVehicle>("<#a8918a>You already have a nearby {0}.", VehicleData.COLORED_NAME);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<VehicleData> RequestVehicleSuccess = new Translation<VehicleData>("<#b3a591>This {0} is now yours to take into battle.", VehicleData.COLORED_NAME);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<VehicleData> RequestVehicleDead = new Translation<VehicleData>("<#b3a591>The {0} was destroyed and will be restocked soon.", VehicleData.COLORED_NAME);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestVehicleAssetBannedGlobalPermanent = new Translation("<#b3a591>You are permanently banned from using all vehicles.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<TimeSpan> RequestVehicleAssetBannedGlobal = new Translation<TimeSpan>("<#b3a591>You are banned from using all vehicles for another {0}.", FormatTimeLong);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<string> RequestVehicleAssetBannedPermanent = new Translation<string>("<#b3a591>You are permanently banned from using <#fff>{0}</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<TimeSpan, string> RequestVehicleAssetBanned = new Translation<TimeSpan, string>("<#b3a591>You are banned from using <#fff>{1}</color> for another {0}.", FormatTimeLong);
-
-    #region Vehicle Request Delays
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<string> RequestVehicleTimeDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed for another: <#c$vbs_delay$>{0}</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Cache> RequestVehicleCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this vehicle.", FOB.FormatName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Cache> RequestVehicleCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this vehicle until you lose <color=#c$vbs_delay$>{0}</color>.", FOB.FormatName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestVehicleCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#c$vbs_delay$>Discover and Destroy</color> the next cache to request this vehicle.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestVehicleCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this vehicle until you've <color=#c$vbs_delay$>uncovered and lost</color> your next cache.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestVehicleCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#c$vbs_delay$>{0} more caches</color> to request this vehicle.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestVehicleCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this vehicle until you've lost <#c$vbs_delay$>{0} more caches</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Flag> RequestVehicleFlagDelay1 = new Translation<Flag>("<#b3ab9f>Capture {0} to request this vehicle.", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Flag> RequestVehicleLoseFlagDelay1 = new Translation<Flag>("<#b3ab9f>You can't request this vehicle until you lose {0}.", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestVehicleFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#c$vbs_delay$>{0} more flags</color> to request this vehicle.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestVehicleLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this vehicle until you lose <#c$vbs_delay$>{0} more flags</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestVehicleStagingDelay = new Translation("<#a6918a>This vehicle can only be requested after the game starts.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<string> RequestVehicleUnknownDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed because: <#c$vbs_delay$>{0}</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestVehicleTeammatesDelay = new Translation<int>("<#b3ab9f>This vehicle is delayed until <#c$vbs_delay$>{0}v{0}</color> players online.");
-    #endregion
-
-    #region Trait Request Delays
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<string> RequestTraitTimeDelay = new Translation<string>("<#b3ab9f>This trait is delayed for another: <#c$vbs_delay$>{0}</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Cache> RequestTraitCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this trait.", FOB.FormatName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Cache> RequestTraitCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this trait until you lose <color=#c$vbs_delay$>{0}</color>.", FOB.FormatName);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestTraitCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#c$vbs_delay$>Discover and Destroy</color> the next cache to request this trait.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestTraitCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this trait until you've <color=#c$vbs_delay$>uncovered and lost</color> your next cache.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestTraitCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#c$vbs_delay$>{0} more caches</color> to request this trait.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestTraitCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this trait until you've lost <#c$vbs_delay$>{0} more caches</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Flag> RequestTraitFlagDelay1 = new Translation<Flag>("<#b3ab9f>Capture {0} to request this trait.", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<Flag> RequestTraitLoseFlagDelay1 = new Translation<Flag>("<#b3ab9f>You can't request this trait until you lose {0}.", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestTraitFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#c$vbs_delay$>{0} more flags</color> to request this trait.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestTraitLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this trait until you lose <#c$vbs_delay$>{0} more flags</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation RequestTraitStagingDelay = new Translation("<#a6918a>This trait can only be requested after the game starts.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<string> RequestTraitUnknownDelay = new Translation<string>("<#b3ab9f>This trait is delayed because: <#c$vbs_delay$>{0}</color>.");
-    [TranslationData(SectionRequest)]
-    public static readonly Translation<int> RequestTraitTeammatesDelay = new Translation<int>("<#b3ab9f>This trait is delayed until <#c$vbs_delay$>{0}v{0}</color> players online.");
-    #endregion
-
-    #endregion
-
     #region Strutures
     private const string SectionStructures = "Structures";
     [TranslationData(SectionStructures)]
@@ -1788,13 +1520,13 @@ internal static class T
     [TranslationData(SectionStructures)]
     public static readonly Translation StructureExamineNotLocked = new Translation("<#ff8c69>This vehicle is not locked.");
     [TranslationData(SectionStructures)]
-    public static readonly Translation<Asset, IPlayer, FactionInfo> StructureExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo>("Last owner of {0}: {1}, Team: {2}.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, arg1Fmt: UCPlayer.FormatPlayerName, arg2Fmt: FactionInfo.FormatDisplayName);
+    public static readonly Translation<Asset, IPlayer, FactionInfo> StructureExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo>("Last owner of {0}: {1}, Team: {2}.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg1Fmt: UCPlayer.FormatPlayerName, arg2Fmt: FactionInfo.FormatDisplayName);
     [TranslationData(SectionStructures)]
-    public static readonly Translation<Asset, IPlayer, IPlayer, FactionInfo> StructureExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo>("<#c6d4b8>Last owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, FormatRarityColor, arg1Fmt: UCPlayer.FormatColoredPlayerName, arg2Fmt: UCPlayer.FormatSteam64, arg3Fmt: FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<Asset, IPlayer, IPlayer, FactionInfo> StructureExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo>("<#c6d4b8>Last owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, FormatRarityColor, arg1Fmt: UCPlayer.FormatColoredPlayerName, arg2Fmt: UCPlayer.FormatSteam64, arg3Fmt: FactionInfo.FormatColorDisplayName);
     [TranslationData(SectionStructures)]
-    public static readonly Translation<Asset, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo, string, ulong>("Owner of {0}: {1}, Team: {2}. Previous Owner: {3} ({4}).", TranslationFlags.TMProUI | TranslationFlags.NoRichText, arg1Fmt: UCPlayer.FormatPlayerName, arg2Fmt: FactionInfo.FormatDisplayName);
+    public static readonly Translation<Asset, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo, string, ulong>("Owner of {0}: {1}, Team: {2}. Previous Owner: {3} ({4}).", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg1Fmt: UCPlayer.FormatPlayerName, arg2Fmt: FactionInfo.FormatDisplayName);
     [TranslationData(SectionStructures)]
-    public static readonly Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong>("<#c6d4b8>Owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}. Previous Owner: {4} <i>({5})</i>.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, FormatRarityColor, arg1Fmt: UCPlayer.FormatColoredPlayerName, arg2Fmt: UCPlayer.FormatSteam64, arg3Fmt: FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong>("<#c6d4b8>Owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}. Previous Owner: {4} <i>({5})</i>.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, FormatRarityColor, arg1Fmt: UCPlayer.FormatColoredPlayerName, arg2Fmt: UCPlayer.FormatSteam64, arg3Fmt: FactionInfo.FormatColorDisplayName);
     [TranslationData(SectionStructures, IsPrioritizedTranslation = false)]
     public static readonly Translation<string> StructureSaveInvalidProperty = new Translation<string>("<#ff8c69>{0} isn't a valid a structure property. Try putting 'owner' or 'group'.");
     [TranslationData(SectionStructures, IsPrioritizedTranslation = false)]
@@ -1992,32 +1724,12 @@ internal static class T
     public static readonly Translation<IPlayer, VehicleAsset, string> VehicleTeamkilled = new Translation<IPlayer, VehicleAsset, string>("<#c$death_background_teamkill$>{0} blew up a friendly <#{2}>{1}</color>.", UCPlayer.FormatColoredCharacterName);
     #endregion
 
-    #region Clear
-    private const string SectionClear = "Clear Command";
-    [TranslationData(SectionClear, IsPrioritizedTranslation = false)]
-    public static readonly Translation ClearNoPlayerConsole = new Translation("Specify a player name when clearing from console.", TranslationFlags.NoColorOptimization);
-    [TranslationData(SectionClear, IsPrioritizedTranslation = false)]
-    public static readonly Translation ClearInventorySelf = new Translation("<#e6e3d5>Cleared your inventory.");
-    [TranslationData(SectionClear, IsPrioritizedTranslation = false)]
-    public static readonly Translation<IPlayer> ClearInventoryOther = new Translation<IPlayer>("<#e6e3d5>Cleared {0}'s inventory.", UCPlayer.FormatColoredCharacterName);
-    [TranslationData(SectionClear, IsPrioritizedTranslation = false)]
-    public static readonly Translation ClearItems = new Translation("<#e6e3d5>Cleared all dropped items.");
-    [TranslationData(SectionClear, IsPrioritizedTranslation = false)]
-    public static readonly Translation<float> ClearItemsInRange = new Translation<float>("<#e6e3d5>Cleared all dropped items in {0}m.", "F0");
-    [TranslationData(SectionClear, IsPrioritizedTranslation = false)]
-    public static readonly Translation<IPlayer> ClearItemsOther = new Translation<IPlayer>("<#e6e3d5>Cleared {0}'s dropped items.", UCPlayer.FormatColoredCharacterName);
-    [TranslationData(SectionClear, IsPrioritizedTranslation = false)]
-    public static readonly Translation ClearStructures = new Translation("<#e6e3d5>Cleared all placed structures and barricades.");
-    [TranslationData(SectionClear, IsPrioritizedTranslation = false)]
-    public static readonly Translation ClearVehicles = new Translation("<#e6e3d5>Cleared all vehicles.");
-    #endregion
-
     #region Shutdown
     private const string SectionShutdown = "Shutdown Broadcasts";
     [TranslationData(SectionShutdown)]
     public static readonly Translation<string> ShutdownBroadcastAfterGame = new Translation<string>("<#00ffff>A shutdown has been scheduled after this game because: \"<#6699ff>{0}</color>\".");
     [TranslationData(SectionShutdown)]
-    public static readonly Translation<string> ShutdownBroadcastDaily = new Translation<string>("<#00ffff>A daily restart will occur after this game. Down-time estimate: <#6699ff>2 minutes</color>.", TranslationFlags.SuppressWarnings);
+    public static readonly Translation<string> ShutdownBroadcastDaily = new Translation<string>("<#00ffff>A daily restart will occur after this game. Down-time estimate: <#6699ff>2 minutes</color>.", TranslationOptions.SuppressWarnings);
     [TranslationData(SectionShutdown)]
     public static readonly Translation ShutdownBroadcastCancelled = new Translation("<#00ffff>The scheduled shutdown has been canceled.");
     [TranslationData(SectionShutdown)]
@@ -2098,29 +1810,29 @@ internal static class T
     #region Trait Signs
     private const string SectionTraitSigns = "Traits / Sign";
     [TranslationData(SectionTraitSigns, "Shows instead of the credits when Credit Cost is 0.")]
-    public static readonly Translation TraitSignFree = new Translation("<#c$kit_level_dollars_owned$>FREE</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation TraitSignFree = new Translation("<#c$kit_level_dollars_owned$>FREE</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionTraitSigns, "Shows instead of the unlock requirements when a trait is unlocked.")]
-    public static readonly Translation TraitSignUnlocked = new Translation("<#99ff99>Unlocked</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation TraitSignUnlocked = new Translation("<#99ff99>Unlocked</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionTraitSigns, "Shows when you're not in a squad and it's required.")]
-    public static readonly Translation TraitSignRequiresSquad = new Translation("<#c$vbs_delay$>Join a Squad</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation TraitSignRequiresSquad = new Translation("<#c$vbs_delay$>Join a Squad</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionTraitSigns, "Shows when you're not in a squad or not a squad leader and it's required.")]
-    public static readonly Translation TraitSignRequiresSquadLeader = new Translation("<#c$vbs_delay$>Squad Leaders Only</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation TraitSignRequiresSquadLeader = new Translation("<#c$vbs_delay$>Squad Leaders Only</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionTraitSigns, "Shows when you dont have a kit or have an unarmed kit.")]
-    public static readonly Translation TraitSignNoKit = new Translation("<#c$vbs_delay$>Request a Kit</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation TraitSignNoKit = new Translation("<#c$vbs_delay$>Request a Kit</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionTraitSigns, "Shows when the trait is locked in the current gamemode.")]
-    public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionTraitSigns, "Shows when the kit class you have isn't compatible with the trait.", "Class name")]
-    public static readonly Translation<Class> TraitSignClassBlacklisted = new Translation<Class>("<#c$vbs_delay$>Locked for {0}</color>", TranslationFlags.NoColorOptimization, FormatPlural);
+    public static readonly Translation<Class> TraitSignClassBlacklisted = new Translation<Class>("<#c$vbs_delay$>Locked for {0}</color>", TranslationOptions.NoColorOptimization, FormatPlural);
     [TranslationData(SectionTraitSigns, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 1 class.", "Class name")]
-    public static readonly Translation<Class> TraitSignClassWhitelisted1 = new Translation<Class>("<#c$vbs_delay$>{0} Required</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Class> TraitSignClassWhitelisted1 = new Translation<Class>("<#c$vbs_delay$>{0} Required</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionTraitSigns, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 2 classes.", "Class name")]
-    public static readonly Translation<Class, Class> TraitSignClassWhitelisted2 = new Translation<Class, Class>("<#c$vbs_delay$>{0} or {1} Required</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Class, Class> TraitSignClassWhitelisted2 = new Translation<Class, Class>("<#c$vbs_delay$>{0} or {1} Required</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionTraitSigns, "Shows when you currently have the trait and it expires in time.", "Minutes", "Seconds")]
-    public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
     [TranslationData(SectionTraitSigns, "Shows when you currently have the trait and it expires on death.")]
-    public static readonly Translation TraitSignAlreadyActiveDeath = new Translation("<#c$vbs_delay$>Already Active</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation TraitSignAlreadyActiveDeath = new Translation("<#c$vbs_delay$>Already Active</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionTraitSigns, "Shows when you are on either global or individual cooldown (whichever is longer).", "Minutes", "Seconds")]
-    public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#c$vbs_delay$>On Cooldown: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#c$vbs_delay$>On Cooldown: {0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
     #endregion
     #region Trait Interactions
     private const string SectionTraitInteractions = "Traits / Interactions";
@@ -2136,87 +1848,87 @@ internal static class T
     #region Request Signs
     private const string SectionRequestSigns = "Kit Signs";
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitFree = new Translation("<#c$kit_free$>FREE</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitFree = new Translation("<#c$kit_free$>FREE</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitNitroBoostOwned = new Translation("<#f66fe6>BOOSTING</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitNitroBoostOwned = new Translation("<#f66fe6>BOOSTING</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitNitroBoostNotOwned = new Translation("<#9b59b6>NITRO BOOST</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitNitroBoostNotOwned = new Translation("<#9b59b6>NITRO BOOST</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns, IsPrioritizedTranslation = false)]
-    public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns, IsPrioritizedTranslation = false)]
-    public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns, IsPrioritizedTranslation = false)]
-    public static readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#c$kit_level_dollars$>$ {0}</color>", TranslationFlags.NoColorOptimization, "N2");
+    public static readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#c$kit_level_dollars$>$ {0}</color>", TranslationOptions.NoColorOptimization, "N2");
     [TranslationData(SectionRequestSigns, FormattingDescriptions = new string[] { "Level", "Color depending on player's current level." })]
-    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#f0a31c>Rank:</color> <#{1}>{0}</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#f0a31c>Rank:</color> <#{1}>{0}</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns, FormattingDescriptions = new string[] { "Rank", "Color depending on player's current rank." })]
-    public static readonly Translation<RankData, Color> KitRequiredRank = new Translation<RankData, Color>("<#{1}>Rank: {0}</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<RankData, Color> KitRequiredRank = new Translation<RankData, Color>("<#{1}>Rank: {0}</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns, FormattingDescriptions = new string[] { "Quest", "Color depending on whether the player has completed the quest." })]
-    public static readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns, FormattingDescriptions = new string[] { "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" })]
-    public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitPremiumOwned = new Translation("<#c$kit_level_dollars_owned$>OWNED</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitPremiumOwned = new Translation("<#c$kit_level_dollars_owned$>OWNED</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitCommanderTakenByViewer = new Translation("<#c$kit_level_dollars_owned$>You are the <#cedcde>COMMANDER</color>.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitCommanderTakenByViewer = new Translation("<#c$kit_level_dollars_owned$>You are the <#cedcde>COMMANDER</color>.</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation<IPlayer> KitCommanderTaken = new Translation<IPlayer>("<#f0a31c>Taken by <#fff>{0}</color></color>", TranslationFlags.NoColorOptimization, UCPlayer.FormatNickName);
+    public static readonly Translation<IPlayer> KitCommanderTaken = new Translation<IPlayer>("<#f0a31c>Taken by <#fff>{0}</color></color>", TranslationOptions.NoColorOptimization, UCPlayer.FormatNickName);
     [TranslationData(SectionRequestSigns, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitUnlimited = new Translation("<#c$kit_unlimited_players$>unlimited</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitUnlimited = new Translation("<#c$kit_unlimited_players$>unlimited</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns, IsPrioritizedTranslation = false)]
-    public static readonly Translation<string> LoadoutName = new Translation<string>("<#c$kit_level_dollars$>LOADOUT {0}</color>", TranslationFlags.NoColorOptimization, FormatUppercase);
+    public static readonly Translation<string> LoadoutName = new Translation<string>("<#c$kit_level_dollars$>LOADOUT {0}</color>", TranslationOptions.NoColorOptimization, FormatUppercase);
     [TranslationData(SectionRequestSigns, IsPrioritizedTranslation = false)]
-    public static readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitLoadoutSetup = new Translation("<#3399ff>PENDING SETUP</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitLoadoutSetup = new Translation("<#3399ff>PENDING SETUP</color>", TranslationOptions.NoColorOptimization);
     #endregion
 
     #region Vehicle Bay Signs
     private const string SectionVBS = "Vehicle Signs";
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSTickets = new Translation<int>("<#c$vbs_ticket_number$>{0}</color> <#c$vbs_ticket_label$>Tickets</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> VBSTickets = new Translation<int>("<#c$vbs_ticket_number$>{0}</color> <#c$vbs_ticket_label$>Tickets</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSStateReady = new Translation("<#c$vbs_ready$>Ready!</color> <#aaa><b>/request</b></color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation VBSStateReady = new Translation("<#c$vbs_ready$>Ready!</color> <#aaa><b>/request</b></color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS, FormattingDescriptions = new string[] { "Minutes", "Seconds" }, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int, int> VBSStateDead = new Translation<int, int>("<#c$vbs_dead$>{0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation<int, int> VBSStateDead = new Translation<int, int>("<#c$vbs_dead$>{0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
     [TranslationData(SectionVBS, FormattingDescriptions = new string[] { "Nearest location." }, IsPrioritizedTranslation = false)]
-    public static readonly Translation<string> VBSStateActive = new Translation<string>("<#c$vbs_active$>{0}</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> VBSStateActive = new Translation<string>("<#c$vbs_active$>{0}</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS, FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
-    public static readonly Translation<int, int> VBSStateIdle = new Translation<int, int>("<#c$vbs_idle$>Idle: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation<int, int> VBSStateIdle = new Translation<int, int>("<#c$vbs_idle$>Idle: {0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSDelayStaging = new Translation("<#c$vbs_delay$>Locked Until Start</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation VBSDelayStaging = new Translation("<#c$vbs_delay$>Locked Until Start</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS, FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
-    public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#c$vbs_delay$>Locked: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#c$vbs_delay$>Locked: {0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayTeammates = new Translation<int>("<#c$vbs_delay$>Locked until {0}v{0}</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayTeammates = new Translation<int>("<#c$vbs_delay$>Locked until {0}v{0}</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#c$vbs_delay$>Capture {0}</color>", TranslationFlags.NoColorOptimization | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#c$vbs_delay$>Capture {0}</color>", TranslationOptions.NoColorOptimization | TranslationOptions.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#c$vbs_delay$>Lose {0}</color>", TranslationFlags.NoColorOptimization | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#c$vbs_delay$>Lose {0}</color>", TranslationOptions.NoColorOptimization | TranslationOptions.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more flags.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more flags.</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#c$vbs_delay$>Capture {0} more flags.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#c$vbs_delay$>Capture {0} more flags.</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#c$vbs_delay$>Destroy {0}</color>", TranslationFlags.NoColorOptimization, FOB.FormatLocationName);
+    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#c$vbs_delay$>Destroy {0}</color>", TranslationOptions.NoColorOptimization, FOB.FormatLocationName);
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#c$vbs_delay$>Destroy Next Cache</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#c$vbs_delay$>Destroy Next Cache</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#c$vbs_delay$>Destroy {0} more caches.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#c$vbs_delay$>Destroy {0} more caches.</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#c$vbs_delay$>Lose {0}</color>", TranslationFlags.NoColorOptimization, FOB.FormatLocationName);
+    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#c$vbs_delay$>Lose {0}</color>", TranslationOptions.NoColorOptimization, FOB.FormatLocationName);
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#c$vbs_delay$>Lose Next Cache</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#c$vbs_delay$>Lose Next Cache</color>", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more caches.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more caches.</color>", TranslationOptions.NoColorOptimization);
     #endregion
 
     #region Revives
@@ -2260,98 +1972,98 @@ internal static class T
     #region Phases
     private const string SectionPhases = "Phases";
     [TranslationData(SectionPhases)]
-    public static readonly Translation PhaseBriefing                      = new Translation("BRIEFING PHASE", TranslationFlags.TMProUI);
+    public static readonly Translation PhaseBriefing                      = new Translation("BRIEFING PHASE", TranslationOptions.TMProUI);
     [TranslationData(SectionPhases)]
-    public static readonly Translation PhasePreparation                   = new Translation("PREPARATION PHASE", TranslationFlags.TMProUI);
+    public static readonly Translation PhasePreparation                   = new Translation("PREPARATION PHASE", TranslationOptions.TMProUI);
     [TranslationData(SectionPhases)]
-    public static readonly Translation PhaseBreifingInvasionAttack        = new Translation("BRIEFING PHASE", TranslationFlags.TMProUI);
+    public static readonly Translation PhaseBreifingInvasionAttack        = new Translation("BRIEFING PHASE", TranslationOptions.TMProUI);
     [TranslationData(SectionPhases)]
-    public static readonly Translation<Flag> PhaseBreifingInvasionDefense = new Translation<Flag>("PREPARATION PHASE\nFORTIFY {0}", TranslationFlags.TMProUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<Flag> PhaseBreifingInvasionDefense = new Translation<Flag>("PREPARATION PHASE\nFORTIFY {0}", TranslationOptions.TMProUI, Flag.COLOR_SHORT_NAME_FORMAT);
     #endregion
 
     #region XP Toasts
     private const string SectionXPCreditsToast = "XP / Credit / Supply Toast Messages";
     [TranslationData(SectionXPCreditsToast, "XP or credits given from the console.")]
-    public static readonly Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast, "XP or credits given by an admin.")]
-    public static readonly Translation XPToastFromPlayer = new Translation("FROM ADMIN", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFromPlayer = new Translation("FROM ADMIN", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastHealedTeammate = new Translation("HEALED TEAMMATE", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastHealedTeammate = new Translation("HEALED TEAMMATE", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastEnemyInjured = new Translation("<color=#e3e3e3>DOWNED</color>", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastEnemyInjured = new Translation("<color=#e3e3e3>DOWNED</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyInjured = new Translation("<color=#e3e3e3>DOWNED FRIENDLY</color>", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFriendlyInjured = new Translation("<color=#e3e3e3>DOWNED FRIENDLY</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastEnemyKilled = new Translation("KILLED ENEMY", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastEnemyKilled = new Translation("KILLED ENEMY", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastKillAssist = new Translation("ASSIST", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastKillAssist = new Translation("ASSIST", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastKillVehicleAssist = new Translation("VEHICLE ASSIST", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastKillVehicleAssist = new Translation("VEHICLE ASSIST", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastKillDriverAssist = new Translation("DRIVER ASSIST", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastKillDriverAssist = new Translation("DRIVER ASSIST", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastSpotterAssist = new Translation("SPOTTER", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastSpotterAssist = new Translation("SPOTTER", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyKilled = new Translation("TEAMKILLED", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFriendlyKilled = new Translation("TEAMKILLED", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastSuicide = new Translation("SUICIDE", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastSuicide = new Translation("SUICIDE", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFOBDestroyed = new Translation("FOB DESTROYED", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFOBDestroyed = new Translation("FOB DESTROYED", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyFOBDestroyed = new Translation("FRIENDLY FOB DESTROYED", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFriendlyFOBDestroyed = new Translation("FRIENDLY FOB DESTROYED", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastBunkerDestroyed = new Translation("BUNKER DESTROYED", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastBunkerDestroyed = new Translation("BUNKER DESTROYED", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyBunkerDestroyed = new Translation("FRIENDLY BUNKER DESTROYED", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFriendlyBunkerDestroyed = new Translation("FRIENDLY BUNKER DESTROYED", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFOBUsed = new Translation("FOB IN USE", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFOBUsed = new Translation("FOB IN USE", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastSuppliesUnloaded = new Translation("RESUPPLIED FOB", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastSuppliesUnloaded = new Translation("RESUPPLIED FOB", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastResuppliedTeammate = new Translation("RESUPPLIED TEAMMATE", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastResuppliedTeammate = new Translation("RESUPPLIED TEAMMATE", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastRepairedVehicle = new Translation("REPAIRED VEHICLE", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastRepairedVehicle = new Translation("REPAIRED VEHICLE", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFOBRepairedVehicle = new Translation("FOB REPAIRED VEHICLE", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFOBRepairedVehicle = new Translation("FOB REPAIRED VEHICLE", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation<VehicleType> XPToastVehicleDestroyed = new Translation<VehicleType>("{0} DESTROYED", TranslationFlags.TMProUI, FormatUppercase);
+    public static readonly Translation<VehicleType> XPToastVehicleDestroyed = new Translation<VehicleType>("{0} DESTROYED", TranslationOptions.TMProUI, FormatUppercase);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation<VehicleType> XPToastAircraftDestroyed = new Translation<VehicleType>("{0} SHOT DOWN", TranslationFlags.TMProUI, FormatUppercase);
+    public static readonly Translation<VehicleType> XPToastAircraftDestroyed = new Translation<VehicleType>("{0} SHOT DOWN", TranslationOptions.TMProUI, FormatUppercase);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation<VehicleType> XPToastFriendlyVehicleDestroyed = new Translation<VehicleType>("FRIENDLY {0} DESTROYED", TranslationFlags.TMProUI, FormatUppercase);
+    public static readonly Translation<VehicleType> XPToastFriendlyVehicleDestroyed = new Translation<VehicleType>("FRIENDLY {0} DESTROYED", TranslationOptions.TMProUI, FormatUppercase);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation<VehicleType> XPToastFriendlyAircraftDestroyed = new Translation<VehicleType>("FRIENDLY {0} SHOT DOWN", TranslationFlags.TMProUI, FormatUppercase);
+    public static readonly Translation<VehicleType> XPToastFriendlyAircraftDestroyed = new Translation<VehicleType>("FRIENDLY {0} SHOT DOWN", TranslationOptions.TMProUI, FormatUppercase);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastAceArmorRefund = new Translation("ACE ARMOR SHARE", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastAceArmorRefund = new Translation("ACE ARMOR SHARE", TranslationOptions.TMProUI);
 
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFlagCaptured = new Translation("FLAG CAPTURED", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFlagCaptured = new Translation("FLAG CAPTURED", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFlagNeutralized = new Translation("FLAG NEUTRALIZED", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFlagNeutralized = new Translation("FLAG NEUTRALIZED", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFlagAttackTick = new Translation("ATTACK", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFlagAttackTick = new Translation("ATTACK", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFlagDefenseTick = new Translation("DEFENSE", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFlagDefenseTick = new Translation("DEFENSE", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastCacheDestroyed = new Translation("CACHE DESTROYED", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastCacheDestroyed = new Translation("CACHE DESTROYED", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyCacheDestroyed = new Translation("FRIENDLY CACHE DESTROYED", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastFriendlyCacheDestroyed = new Translation("FRIENDLY CACHE DESTROYED", TranslationOptions.TMProUI);
 
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastSquadBonus = new Translation("SQUAD BONUS", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastSquadBonus = new Translation("SQUAD BONUS", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastOnDuty = new Translation("ON DUTY", TranslationFlags.TMProUI);
+    public static readonly Translation XPToastOnDuty = new Translation("ON DUTY", TranslationOptions.TMProUI);
 
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> FOBToastGainBuild = new Translation<int>("<color=#c$build$>+{0} BUILD</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> FOBToastGainBuild = new Translation<int>("<color=#c$build$>+{0} BUILD</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> FOBToastLoseBuild = new Translation<int>("<color=#c$build$>-{0} BUILD</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> FOBToastLoseBuild = new Translation<int>("<color=#c$build$>-{0} BUILD</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> FOBToastGainAmmo = new Translation<int>("<color=#c$ammo$>+{0} AMMO</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> FOBToastGainAmmo = new Translation<int>("<color=#c$ammo$>+{0} AMMO</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> FOBToastLoseAmmo = new Translation<int>("<color=#c$ammo$>-{0} AMMO</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> FOBToastLoseAmmo = new Translation<int>("<color=#c$ammo$>-{0} AMMO</color>", TranslationOptions.TMProUI);
 
     [TranslationData(SectionXPCreditsToast)]
     public static readonly Translation FOBResourceToastLoadSupplies = new Translation("LOAD SUPPLIES");
@@ -2363,26 +2075,26 @@ internal static class T
     public static readonly Translation FOBResourceToastRepairVehicle = new Translation("REPAIR");
 
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastGainXP = new Translation<int>("+{0} XP", TranslationFlags.TMProUI);
+    public static readonly Translation<int> XPToastGainXP = new Translation<int>("+{0} XP", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastLoseXP = new Translation<int>("-{0} XP", TranslationFlags.TMProUI);
+    public static readonly Translation<int> XPToastLoseXP = new Translation<int>("-{0} XP", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastGainCredits = new Translation<int>("+{0} <color=#c$credits$>C</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> XPToastGainCredits = new Translation<int>("+{0} <color=#c$credits$>C</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastPurchaseCredits = new Translation<int>("-{0} <color=#c$credits$>C</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> XPToastPurchaseCredits = new Translation<int>("-{0} <color=#c$credits$>C</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastLoseCredits = new Translation<int>("-{0} <color=#d69898>C</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> XPToastLoseCredits = new Translation<int>("-{0} <color=#d69898>C</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation ToastPromoted = new Translation("YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO", TranslationFlags.TMProUI);
+    public static readonly Translation ToastPromoted = new Translation("YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO", TranslationOptions.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation ToastDemoted = new Translation("YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO", TranslationFlags.TMProUI);
+    public static readonly Translation ToastDemoted = new Translation("YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO", TranslationOptions.TMProUI);
     #endregion
 
     #region Injured UI
     [TranslationData(SectionRevives)]
-    public static readonly Translation InjuredUIHeader = new Translation("You are injured", TranslationFlags.TMProUI);
+    public static readonly Translation InjuredUIHeader = new Translation("You are injured", TranslationOptions.TMProUI);
     [TranslationData(SectionRevives)]
-    public static readonly Translation InjuredUIGiveUp = new Translation("Press <color=#cecece><b><plugin_2/></b></color> to give up.", TranslationFlags.TMProUI);
+    public static readonly Translation InjuredUIGiveUp = new Translation("Press <color=#cecece><b><plugin_2/></b></color> to give up.", TranslationOptions.TMProUI);
     [TranslationData(SectionRevives)]
     public static readonly Translation InjuredUIGiveUpChat = new Translation("<#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.");
     #endregion
@@ -2390,21 +2102,21 @@ internal static class T
     #region Insurgency
     private const string SectionInsurgency = "Gamemode Insurgency";
     [TranslationData(SectionInsurgency)]
-    public static readonly Translation InsurgencyListHeader = new Translation("Caches", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyListHeader = new Translation("Caches", TranslationOptions.UnityUI);
     [TranslationData(SectionInsurgency)]
-    public static readonly Translation InsurgencyUnknownCacheAttack = new Translation("<color=#696969>Undiscovered</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyUnknownCacheAttack = new Translation("<color=#696969>Undiscovered</color>", TranslationOptions.UnityUI);
     [TranslationData(SectionInsurgency)]
-    public static readonly Translation InsurgencyUnknownCacheDefense = new Translation("<color=#696969>Unknown</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyUnknownCacheDefense = new Translation("<color=#696969>Unknown</color>", TranslationOptions.UnityUI);
     [TranslationData(SectionInsurgency)]
-    public static readonly Translation InsurgencyDestroyedCacheAttack = new Translation("<color=#5a6e5c>Destroyed</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyDestroyedCacheAttack = new Translation("<color=#5a6e5c>Destroyed</color>", TranslationOptions.UnityUI);
     [TranslationData(SectionInsurgency)]
-    public static readonly Translation InsurgencyDestroyedCacheDefense = new Translation("<color=#6b5858>Lost</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyDestroyedCacheDefense = new Translation("<color=#6b5858>Lost</color>", TranslationOptions.UnityUI);
     [TranslationData(SectionInsurgency, IsPrioritizedTranslation = false)]
-    public static readonly Translation<Cache, Cache> InsurgencyCacheAttack = new Translation<Cache, Cache>("<color=#ff7661>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.FormatName, FOB.FormatLocationName);
+    public static readonly Translation<Cache, Cache> InsurgencyCacheAttack = new Translation<Cache, Cache>("<color=#ff7661>{0}</color> <color=#c2c2c2>{1}</color>", TranslationOptions.UnityUI, FOB.FormatName, FOB.FormatLocationName);
     [TranslationData(SectionInsurgency, IsPrioritizedTranslation = false)]
-    public static readonly Translation<Cache, Cache> InsurgencyCacheDefense = new Translation<Cache, Cache>("<color=#555bcf>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.FormatName, FOB.FormatLocationName);
+    public static readonly Translation<Cache, Cache> InsurgencyCacheDefense = new Translation<Cache, Cache>("<color=#555bcf>{0}</color> <color=#c2c2c2>{1}</color>", TranslationOptions.UnityUI, FOB.FormatName, FOB.FormatLocationName);
     [TranslationData(SectionInsurgency, IsPrioritizedTranslation = false)]
-    public static readonly Translation<Cache, Cache> InsurgencyCacheDefenseUndiscovered = new Translation<Cache, Cache>("<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.FormatName, FOB.FormatLocationName);
+    public static readonly Translation<Cache, Cache> InsurgencyCacheDefenseUndiscovered = new Translation<Cache, Cache>("<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>", TranslationOptions.UnityUI, FOB.FormatName, FOB.FormatLocationName);
     #endregion
 
     #region Hardpoint
@@ -2440,9 +2152,9 @@ internal static class T
     [TranslationData(SectionReport)]
     public static readonly Translation<IPlayer, IPlayer, string, string> ReportNotifyAdmin = new Translation<IPlayer, IPlayer, string, string>("<#c480d9>{0} reported {1} for <#fff>{2}</color> as a <#00ffff>{3}</color> report. Check <#c480d9>#player-reports</color> for more information.", UCPlayer.FormatCharacterName, UCPlayer.FormatCharacterName);
     [TranslationData(SectionReport)]
-    public static readonly Translation<string> ReportNotifyViolatorToast = new Translation<string>("<#c480d9>You've been reported for <#00ffff>{0}</color>.\nCheck <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> ReportNotifyViolatorToast = new Translation<string>("<#c480d9>You've been reported for <#00ffff>{0}</color>.\nCheck <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.", TranslationOptions.TMProUI);
     [TranslationData(SectionReport)]
-    public static readonly Translation ReportNotifyViolatorToastTitle = new Translation("You Were Reported", TranslationFlags.TMProUI);
+    public static readonly Translation ReportNotifyViolatorToastTitle = new Translation("You Were Reported", TranslationOptions.TMProUI);
     [TranslationData(SectionReport)]
     public static readonly Translation<string, string> ReportNotifyViolatorMessage = new Translation<string, string>("<#c480d9>You've been reported for <#00ffff>{0} - {1}</color>. Check <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.");
     [TranslationData(SectionReport)]
@@ -2470,23 +2182,23 @@ internal static class T
     #region Tips
     private const string SectionTips = "In-game Tips";
     [TranslationData(SectionTips)]
-    public static readonly Translation<IPlayer> TipUAVRequest = new Translation<IPlayer>("<#d9c69a>{0} Requested a UAV!", TranslationFlags.TMProUI, UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> TipUAVRequest = new Translation<IPlayer>("<#d9c69a>{0} Requested a UAV!", TranslationOptions.TMProUI, UCPlayer.FormatColoredNickName);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipPlaceRadio = new Translation("Place a <#ababab>FOB RADIO</color>.", TranslationFlags.TMProUI);
+    public static readonly Translation TipPlaceRadio = new Translation("Place a <#ababab>FOB RADIO</color>.", TranslationOptions.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationFlags.TMProUI);
+    public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationOptions.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipUnloadSupplies = new Translation("<#d9c69a>DROP SUPPLIES</color> onto the FOB.", TranslationFlags.TMProUI);
+    public static readonly Translation TipUnloadSupplies = new Translation("<#d9c69a>DROP SUPPLIES</color> onto the FOB.", TranslationOptions.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation<IPlayer> TipHelpBuild = new Translation<IPlayer>("<#d9c69a>{0} needs help building!", TranslationFlags.TMProUI, UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> TipHelpBuild = new Translation<IPlayer>("<#d9c69a>{0} needs help building!", TranslationOptions.TMProUI, UCPlayer.FormatColoredNickName);
     [TranslationData(SectionTips)]
-    public static readonly Translation<VehicleType> TipLogisticsVehicleResupplied = new Translation<VehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationFlags.TMProUI, FormatUppercase);
+    public static readonly Translation<VehicleType> TipLogisticsVehicleResupplied = new Translation<VehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationOptions.TMProUI, FormatUppercase);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipActionMenu = new Translation("Press <#a5c3d9><plugin_1/></color> for field actions", TranslationFlags.TMProUI);
+    public static readonly Translation TipActionMenu = new Translation("Press <#a5c3d9><plugin_1/></color> for field actions", TranslationOptions.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipActionMenuSl = new Translation("Press <#a5c3d9><plugin_1/></color> for <#85c996>squad actions</color>", TranslationFlags.TMProUI);
+    public static readonly Translation TipActionMenuSl = new Translation("Press <#a5c3d9><plugin_1/></color> for <#85c996>squad actions</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipCallMedic = new Translation("You are hurt. Press <#d9a5bb><plugin_1/></color> to call for a medic.", TranslationFlags.TMProUI);
+    public static readonly Translation TipCallMedic = new Translation("You are hurt. Press <#d9a5bb><plugin_1/></color> to call for a medic.", TranslationOptions.TMProUI);
     #endregion
 
     #region Teams
@@ -2504,19 +2216,19 @@ internal static class T
     [TranslationData(SectionTeams)]
     public static readonly Translation<Cooldown> TeamsCooldown = new Translation<Cooldown>("<#ff8c69>You can't use /teams for another {0}.", Cooldown.FormatTimeLong);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIHeader = new Translation("Choose a Team", TranslationFlags.TMProUI);
+    public static readonly Translation TeamsUIHeader = new Translation("Choose a Team", TranslationOptions.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIClickToJoin = new Translation("CLICK TO JOIN", TranslationFlags.TMProUI);
+    public static readonly Translation TeamsUIClickToJoin = new Translation("CLICK TO JOIN", TranslationOptions.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIJoined = new Translation("JOINED", TranslationFlags.TMProUI);
+    public static readonly Translation TeamsUIJoined = new Translation("JOINED", TranslationOptions.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIFull = new Translation("<#bf6363>FULL", TranslationFlags.TMProUI);
+    public static readonly Translation TeamsUIFull = new Translation("<#bf6363>FULL", TranslationOptions.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIConfirm = new Translation("CONFIRM", TranslationFlags.TMProUI);
+    public static readonly Translation TeamsUIConfirm = new Translation("CONFIRM", TranslationOptions.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIBack = new Translation("BACK", TranslationFlags.TMProUI);
+    public static readonly Translation TeamsUIBack = new Translation("BACK", TranslationOptions.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIJoining = new Translation("<#999999>JOINING...", TranslationFlags.TMProUI);
+    public static readonly Translation TeamsUIJoining = new Translation("<#999999>JOINING...", TranslationOptions.TMProUI);
     [TranslationData(SectionTeams)]
     public static readonly Translation TeamsShuffleQueued = new Translation("Teams will be SHUFFLED next game.");
     #endregion
@@ -2524,80 +2236,80 @@ internal static class T
     #region Spotting
     private const string SectionSpotting = "Spotting";
     [TranslationData(SectionSpotting)]
-    public static readonly Translation SpottedToast = new Translation("<#b9ffaa>SPOTTED", TranslationFlags.TMProUI);
+    public static readonly Translation SpottedToast = new Translation("<#b9ffaa>SPOTTED", TranslationOptions.TMProUI);
     [TranslationData(SectionSpotting, FormattingDescriptions = new string[] { "Team color of the speaker.", "Target" })]
-    public static readonly Translation<Color, string> SpottedMessage = new Translation<Color, string>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Enemy {1} spotted!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color, string> SpottedMessage = new Translation<Color, string>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Enemy {1} spotted!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionSpotting)]
-    public static readonly Translation SpottedTargetPlayer = new Translation("contact", TranslationFlags.NoColorOptimization);
+    public static readonly Translation SpottedTargetPlayer = new Translation("contact", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionSpotting)]
-    public static readonly Translation SpottedTargetFOB = new Translation("FOB", TranslationFlags.NoColorOptimization);
+    public static readonly Translation SpottedTargetFOB = new Translation("FOB", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionSpotting)]
-    public static readonly Translation SpottedTargetCache = new Translation("Cache", TranslationFlags.NoColorOptimization);
+    public static readonly Translation SpottedTargetCache = new Translation("Cache", TranslationOptions.NoColorOptimization);
     #endregion
 
     #region Actions
     private const string SectionActions = "Actions";
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> NeedMedicChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need a medic here!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> NeedMedicChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need a medic here!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> NeedMedicToast = new Translation<string>("<#a1998d>{0} needs healing.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> NeedMedicToast = new Translation<string>("<#a1998d>{0} needs healing.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> NeedAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need some ammo here!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> NeedAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need some ammo here!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> NeedAmmoToast = new Translation<string>("<#a1998d>{0} needs ammunition.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> NeedAmmoToast = new Translation<string>("<#a1998d>{0} needs ammunition.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> NeedRideChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Hey, I need a ride!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> NeedRideChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Hey, I need a ride!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> NeedRideToast = new Translation<string>("<#a1998d>{0} needs a ride.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> NeedRideToast = new Translation<string>("<#a1998d>{0} needs a ride.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> NeedSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need help over here!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> NeedSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need help over here!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> NeedSupportToast = new Translation<string>("<#a1998d>{0} needs help.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> NeedSupportToast = new Translation<string>("<#a1998d>{0} needs help.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> HeliPickupChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting helicopter transport!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> HeliPickupChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting helicopter transport!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> HeliPickupToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs transport.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> HeliPickupToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs transport.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> HeliDropoffChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting drop off at this position!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> HeliDropoffChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting drop off at this position!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> HeliDropoffToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> is requesting drop off.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> HeliDropoffToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> is requesting drop off.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> SuppliesBuildChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB building supplies!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> SuppliesBuildChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB building supplies!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> SuppliesBuildToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB supplies.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> SuppliesBuildToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB supplies.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> SuppliesAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB ammunition supplies!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> SuppliesAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB ammunition supplies!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> SuppliesAmmoToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB ammunition.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> SuppliesAmmoToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB ammunition.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> AirSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting close air support!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> AirSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting close air support!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> AirSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs air support.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> AirSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs air support.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> ArmorSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting armor support!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> ArmorSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting armor support!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> ArmorSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs armor support.", TranslationFlags.TMProUI);
+    public static readonly Translation<string> ArmorSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs armor support.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> ThankYouChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Thank you!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> ThankYouChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Thank you!", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> SorryChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Sorry.", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> SorryChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Sorry.", TranslationOptions.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation AttackToast = new Translation("<#a1998d>Attack the marked position.", TranslationFlags.TMProUI);
+    public static readonly Translation AttackToast = new Translation("<#a1998d>Attack the marked position.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation DefendToast = new Translation("<#a1998d>Defend the marked position.", TranslationFlags.TMProUI);
+    public static readonly Translation DefendToast = new Translation("<#a1998d>Defend the marked position.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation MoveToast = new Translation("<#a1998d>Move to the marked position.", TranslationFlags.TMProUI);
+    public static readonly Translation MoveToast = new Translation("<#a1998d>Move to the marked position.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation BuildToast = new Translation("<#a1998d>Build near the marked position.", TranslationFlags.TMProUI);
+    public static readonly Translation BuildToast = new Translation("<#a1998d>Build near the marked position.", TranslationOptions.TMProUI);
 
     [TranslationData(SectionActions)]
-    public static readonly Translation ActionErrorInMain = new Translation("<#9e7d7d>Unavailable in main", TranslationFlags.TMProUI);
+    public static readonly Translation ActionErrorInMain = new Translation("<#9e7d7d>Unavailable in main", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation ActionErrorNoMarker = new Translation("<#9e7d7d>Place a MARKER first", TranslationFlags.TMProUI);
+    public static readonly Translation ActionErrorNoMarker = new Translation("<#9e7d7d>Place a MARKER first", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation ActionErrorNotInHeli = new Translation("<#9e7d7d>You are not inside a HELICOPTER", TranslationFlags.TMProUI);
+    public static readonly Translation ActionErrorNotInHeli = new Translation("<#9e7d7d>You are not inside a HELICOPTER", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation ActionErrorInVehicle = new Translation("<#9e7d7d>Unavailable in vehicle", TranslationFlags.TMProUI);
+    public static readonly Translation ActionErrorInVehicle = new Translation("<#9e7d7d>Unavailable in vehicle", TranslationOptions.TMProUI);
     #endregion
 
     #region Teleport
@@ -2697,11 +2409,11 @@ internal static class T
     #region Win UI
     private const string SectionWinUI = "Win UI";
     [TranslationData(SectionWinUI)]
-    public static readonly Translation<int> WinUIValueTickets = new Translation<int>("{0} ${p:0:Ticket}", TranslationFlags.UnityUI);
+    public static readonly Translation<int> WinUIValueTickets = new Translation<int>("{0} ${p:0:Ticket}", TranslationOptions.UnityUI);
     [TranslationData(SectionWinUI)]
-    public static readonly Translation<int> WinUIValueCaches = new Translation<int>("{0} ${p:0:Cache} Left", TranslationFlags.UnityUI);
+    public static readonly Translation<int> WinUIValueCaches = new Translation<int>("{0} ${p:0:Cache} Left", TranslationOptions.UnityUI);
     [TranslationData(SectionWinUI)]
-    public static readonly Translation<FactionInfo> WinUIHeaderWinner = new Translation<FactionInfo>("{0}\r\nhas won the battle!", TranslationFlags.UnityUI, FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<FactionInfo> WinUIHeaderWinner = new Translation<FactionInfo>("{0}\r\nhas won the battle!", TranslationOptions.UnityUI, FactionInfo.FormatColorDisplayName);
     #endregion
 
     #region UAV
@@ -2755,236 +2467,208 @@ internal static class T
 
     #endregion
 
-    #region Attach
-    private const string SectionAttach = "Attach";
-
-    [TranslationData(SectionAttach, "Sent when a player tries to use /attach without holding a gun.", IsPrioritizedTranslation = false)]
-    public static readonly Translation AttachNoGunHeld = new Translation("<#ff8c69>You must be holding a gun to attach an attachment.");
-
-    [TranslationData(SectionAttach, "Sent when a player tries to use /attach remove without providing a valid attachment type.", "Caller's input", IsPrioritizedTranslation = false)]
-    public static readonly Translation<string> AttachClearInvalidType = new Translation<string>("<#ff8c69><#fff>{0}</color> is not a valid attachment type. Enter one of the following: <#fff><sight|tact|grip|barrel|ammo></color>.");
-
-    [TranslationData(SectionAttach, "Sent when a player tries to use /attach remove <type> without that attachment.", "Held gun asset", "Type of attachment", IsPrioritizedTranslation = false)]
-    public static readonly Translation<ItemGunAsset, AttachmentType> AttachClearAlreadyGone = new Translation<ItemGunAsset, AttachmentType>("<#ff8c69>There is not a <#cedcde>{1}</color> on your {0}.", FormatRarityColor, FormatUppercase);
-
-    [TranslationData(SectionAttach, "Sent when a player successfully uses /attach remove <type>.", "Held gun asset", "Type of attachment", IsPrioritizedTranslation = false)]
-    public static readonly Translation<ItemGunAsset, AttachmentType> AttachClearSuccess = new Translation<ItemGunAsset, AttachmentType>("<#bfb9ac>You removed the <#cedcde>{1}</color> from your {0}.", FormatRarityColor, FormatUppercase);
-
-    [TranslationData(SectionAttach, "Sent when a player successfully uses /attach <attachment>.", "Held gun asset", "Type of attachment", "Attachment item asset", IsPrioritizedTranslation = false)]
-    public static readonly Translation<ItemGunAsset, AttachmentType, ItemCaliberAsset> AttachSuccess = new Translation<ItemGunAsset, AttachmentType, ItemCaliberAsset>("<#bfb9ac>Added {2} as a <#cedcde>{1}</color> to your {0}.", FormatRarityColor, FormatUppercase, FormatRarityColor);
-
-    [TranslationData(SectionAttach, "Sent when a player tries to attach an item but either it's not an attachment or can't be found.", "Caller's input", IsPrioritizedTranslation = false)]
-    public static readonly Translation<string> AttachCaliberNotFound = new Translation<string>("<#ff8c69>Unable to find an attachment named <#fff>{0}</color>.", FormatPropercase);
-
-    [TranslationData(SectionAttach, "Sent when a player successfully sets the ammo count of a gun.", "Held gun asset", "Amount of ammo", IsPrioritizedTranslation = false)]
-    public static readonly Translation<ItemGunAsset, byte> AttachSetAmmoSuccess = new Translation<ItemGunAsset, byte>("<#bfb9ac>Set the ammo count in your {0} to <#fff>{1}</color>.", FormatRarityColor);
-
-    [TranslationData(SectionAttach, "Sent when a player successfully sets the ammo count of a gun.", "Held gun asset", "Amount of ammo", IsPrioritizedTranslation = false)]
-    public static readonly Translation<ItemGunAsset, EFiremode> AttachSetFiremodeSuccess = new Translation<ItemGunAsset, EFiremode>("<#bfb9ac>Set the fire mode of your {0} to <#cedcde>{1}</color>.", FormatRarityColor, FormatUppercase);
-    #endregion
-
     #region Kit Menu UI
     private const string SectionKitMenuUI = "Kit Menu";
     [TranslationData(SectionKitMenuUI, "Text that goes on the base kits tab.")]
-    public static readonly Translation KitMenuUITabBaseKits    = new Translation("Base Kits", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUITabBaseKits    = new Translation("Base Kits", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Text that goes on the elite kits tab.")]
-    public static readonly Translation KitMenuUITabEliteKits   = new Translation("Elite Kits", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUITabEliteKits   = new Translation("Elite Kits", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Text that goes on the loadouts tab.")]
-    public static readonly Translation KitMenuUITabLoadouts    = new Translation("Loadouts", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUITabLoadouts    = new Translation("Loadouts", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Text that goes on the special kits tab.")]
-    public static readonly Translation KitMenuUITabSpecialKits = new Translation("Special Kits", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUITabSpecialKits = new Translation("Special Kits", TranslationOptions.TMProUI);
 
     [TranslationData(SectionKitMenuUI, "Label that goes in front of the filter dropdown.")]
-    public static readonly Translation KitMenuUIFilterLabel = new Translation("Filter", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIFilterLabel = new Translation("Filter", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of the faction in kit info.")]
-    public static readonly Translation KitMenuUIFactionLabel = new Translation("Faction", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIFactionLabel = new Translation("Faction", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of the class in kit info.")]
-    public static readonly Translation KitMenuUIClassLabel = new Translation("Class", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIClassLabel = new Translation("Class", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of the included items list in kit info.")]
-    public static readonly Translation KitMenuUIIncludedItemsLabel = new Translation("Included Items", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIIncludedItemsLabel = new Translation("Included Items", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Value for kit type (KitType.Public).")]
-    public static readonly Translation KitMenuUIKitTypeLabelPublic = new Translation("Public Kit", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIKitTypeLabelPublic = new Translation("Public Kit", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Value for kit type (KitType.Elite).")]
-    public static readonly Translation KitMenuUIKitTypeLabelElite = new Translation("Elite Kit", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIKitTypeLabelElite = new Translation("Elite Kit", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Value for kit type (KitType.Special).")]
-    public static readonly Translation KitMenuUIKitTypeLabelSpecial = new Translation("Special/Event Kit", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIKitTypeLabelSpecial = new Translation("Special/Event Kit", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Value for kit type (KitType.Loadout).")]
-    public static readonly Translation KitMenuUIKitTypeLabelLoadout = new Translation("Custom Loadout", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIKitTypeLabelLoadout = new Translation("Custom Loadout", TranslationOptions.TMProUI);
 
     [TranslationData(SectionKitMenuUI, "Label that goes in front of playtime in kit stats.")]
-    public static readonly Translation KitMenuUIPlaytimeLabel = new Translation("Playtime", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIPlaytimeLabel = new Translation("Playtime", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of total kills in kit stats.")]
-    public static readonly Translation KitMenuUIKillsLabel = new Translation("Total Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIKillsLabel = new Translation("Total Kills", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of total deaths in kit stats.")]
-    public static readonly Translation KitMenuUIDeathsLabel = new Translation("Total Deaths", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIDeathsLabel = new Translation("Total Deaths", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills in kit stats.")]
-    public static readonly Translation KitMenuUIPrimaryKillsLabel = new Translation("Primary Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIPrimaryKillsLabel = new Translation("Primary Kills", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of primary average kill distance in kit stats.")]
-    public static readonly Translation KitMenuUIPrimaryAvgDstLabel = new Translation("Primary Avg. Dst.", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIPrimaryAvgDstLabel = new Translation("Primary Avg. Dst.", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of secondary kills in kit stats.")]
-    public static readonly Translation KitMenuUISecondaryKillsLabel = new Translation("Secondary Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUISecondaryKillsLabel = new Translation("Secondary Kills", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of DBNO states in kit stats.")]
-    public static readonly Translation KitMenuUIDBNOLabel = new Translation("Injures Without Kill", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIDBNOLabel = new Translation("Injures Without Kill", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of distance traveled in kit stats.")]
-    public static readonly Translation KitMenuUIDistanceTraveledLabel = new Translation("Distance Traveled", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIDistanceTraveledLabel = new Translation("Distance Traveled", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of tickets lost in kit stats.")]
-    public static readonly Translation KitMenuUITicketsLostLabel = new Translation("Tickets Lost", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUITicketsLostLabel = new Translation("Tickets Lost", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of tickets gained in kit stats.")]
-    public static readonly Translation KitMenuUITicketsGainedLabel = new Translation("Tickets Recovered", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUITicketsGainedLabel = new Translation("Tickets Recovered", TranslationOptions.TMProUI);
 
     [TranslationData(SectionKitMenuUI, "Label for kit stats title.")]
-    public static readonly Translation KitMenuUIStatsLabel = new Translation("Stats", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIStatsLabel = new Translation("Stats", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label for kit actions title.")]
-    public static readonly Translation KitMenuUIActionsLabel = new Translation("Actions", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIActionsLabel = new Translation("Actions", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label actions button action 1, request kit.")]
-    public static readonly Translation KitMenuUIActionRequestKitLabel = new Translation("Request Kit", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIActionRequestKitLabel = new Translation("Request Kit", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label actions button action 2, buy kit (can afford).", "Credit cost")]
-    public static readonly Translation<int> KitMenuUIActionBuyPublicKitCanAffordLabel = new Translation<int>("<#ccffff>Buy Kit <#c$credits$>C</color> <#fff>{0}</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> KitMenuUIActionBuyPublicKitCanAffordLabel = new Translation<int>("<#ccffff>Buy Kit <#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label actions button action 2, buy kit (can't afford).", "Credit cost")]
-    public static readonly Translation<int> KitMenuUIActionBuyPublicKitCantAffordLabel = new Translation<int>("<#ff6666>Requires <#c$credits$>C</color> <#fff>{0}</color>", TranslationFlags.TMProUI);
+    public static readonly Translation<int> KitMenuUIActionBuyPublicKitCantAffordLabel = new Translation<int>("<#ff6666>Requires <#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label actions button action 3, order kit.", "Price", "Currency Prefix")]
-    public static readonly Translation<decimal, string> KitMenuUIActionBuyPremiumKitLabel = new Translation<decimal, string>("<#ccffff>Open Ticket <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationFlags.TMProUI, "C");
+    public static readonly Translation<decimal, string> KitMenuUIActionBuyPremiumKitLabel = new Translation<decimal, string>("<#ccffff>Open Ticket <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");
     [TranslationData(SectionKitMenuUI, "Label actions button action not in main.")]
-    public static readonly Translation KitMenuUIActionNotInMainKitLabel = new Translation("<#ff6666>Not in Main", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIActionNotInMainKitLabel = new Translation("<#ff6666>Not in Main", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label actions button action premium not linked.", "Price", "Currency Prefix")]
-    public static readonly Translation<decimal, string> KitMenuUIActionBuyPremiumKitNotLinkedLabel = new Translation<decimal, string>("<#ccffff>Premium kit: <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationFlags.TMProUI, "C");
+    public static readonly Translation<decimal, string> KitMenuUIActionBuyPremiumKitNotLinkedLabel = new Translation<decimal, string>("<#ccffff>Premium kit: <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");
     [TranslationData(SectionKitMenuUI, "Label actions button action premium unlock requirement not met.", "Price", "Currency Prefix")]
-    public static readonly Translation<decimal, string> KitMenuUIActionBuyPublicUnlockReqNotMetLabel = new Translation<decimal, string>("<#ccffff>Premium kit: <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationFlags.TMProUI, "C");
+    public static readonly Translation<decimal, string> KitMenuUIActionBuyPublicUnlockReqNotMetLabel = new Translation<decimal, string>("<#ccffff>Premium kit: <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");
     [TranslationData(SectionKitMenuUI, "Label actions button staff give kit.")]
-    public static readonly Translation KitMenuUIActionGiveKitLabel = new Translation("<#0099ff>Give Kit", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIActionGiveKitLabel = new Translation("<#0099ff>Give Kit", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label actions button staff edit kit.")]
-    public static readonly Translation KitMenuUIActionEditKitLabel = new Translation("<#0099ff>Edit Kit</color> (Coming Soon)", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIActionEditKitLabel = new Translation("<#0099ff>Edit Kit</color> (Coming Soon)", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label actions button staff set loadout items kit.")]
-    public static readonly Translation KitMenuUIActionSetLoadoutItemsLabel = new Translation("<#0099ff>Set Loadout Items", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIActionSetLoadoutItemsLabel = new Translation("<#0099ff>Set Loadout Items", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Shown when a player doesn't have access to a kit.")]
-    public static readonly Translation KitMenuUIActionNoAccessLabel = new Translation("No Access", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIActionNoAccessLabel = new Translation("No Access", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Shown when a kit's faction is not assigned.")]
-    public static readonly Translation KitMenuUINoFaction = new Translation("Unaffiliated", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUINoFaction = new Translation("Unaffiliated", TranslationOptions.TMProUI);
 
     /* CLASS STATS */
     // squadleader
     [TranslationData(SectionKitMenuUI, "Label that goes in front of FOBs started for Squadleaders in kit stats.")]
-    public static readonly Translation KitMenuUISquadLeaderFOBsStartedLabel = new Translation("FOBs Started", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUISquadLeaderFOBsStartedLabel = new Translation("FOBs Started", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of UAVs requested for Squadleaders in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUISquadLeaderUAVsRequestedLabel = new Translation("UAVs Requested", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUISquadLeaderUAVsRequestedLabel = new Translation("UAVs Requested", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of targets spotted for Squadleaders in kit stats.")]
-    public static readonly Translation KitMenuUISquadLeaderTargetsSpottedLabel = new Translation("Targets Spotted", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUISquadLeaderTargetsSpottedLabel = new Translation("Targets Spotted", TranslationOptions.TMProUI);
 
     // rifleman
     [TranslationData(SectionKitMenuUI, "Label that goes in front of self restocked for Riflemen in kit stats.")]
-    public static readonly Translation KitMenuUIRiflemanSelfRestockedLabel = new Translation("Self Restocked", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIRiflemanSelfRestockedLabel = new Translation("Self Restocked", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of teammates restocked for Riflemen in kit stats.")]
-    public static readonly Translation KitMenuUIRiflemanTeammatesRestockedLabel = new Translation("Teammates Restocked", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIRiflemanTeammatesRestockedLabel = new Translation("Teammates Restocked", TranslationOptions.TMProUI);
     
     // medic
     [TranslationData(SectionKitMenuUI, "Label that goes in front of teammates healed for Medics in kit stats.")]
-    public static readonly Translation KitMenuUIMedicTeammatesHealedLabel = new Translation("Teammates Healed", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIMedicTeammatesHealedLabel = new Translation("Teammates Healed", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of teammates revived for Medics in kit stats.")]
-    public static readonly Translation KitMenuUIMedicTeammatesRevivedLabel = new Translation("Teammates Revived", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIMedicTeammatesRevivedLabel = new Translation("Teammates Revived", TranslationOptions.TMProUI);
 
     // breacher
     [TranslationData(SectionKitMenuUI, "Label that goes in front of structures destroyed for Breachers in kit stats.")]
-    public static readonly Translation KitMenuUIBreacherStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIBreacherStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of radios destroyed for Breachers in kit stats.")]
-    public static readonly Translation KitMenuUIBreacherRadiosDestroyedLabel = new Translation("Radios Destroyed", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIBreacherRadiosDestroyedLabel = new Translation("Radios Destroyed", TranslationOptions.TMProUI);
 
     // auto-rifleman
     [TranslationData(SectionKitMenuUI, "Label that goes in front of spray n pray streak (most kills without reloading) for Automatic Riflemen in kit stats.")]
-    public static readonly Translation KitMenuUIAutoRiflemanStructuresDestroyedLabel = new Translation("Spray n Pray Streak", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIAutoRiflemanStructuresDestroyedLabel = new Translation("Spray n Pray Streak", TranslationOptions.TMProUI);
 
     // grenadier
     [TranslationData(SectionKitMenuUI, "Label that goes in front of grenade kills for Grenadiers in kit stats.")]
-    public static readonly Translation KitMenuUIGrenadierGrenadeKillsLabel = new Translation("Grenade Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIGrenadierGrenadeKillsLabel = new Translation("Grenade Kills", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of vehicle kills for Grenadiers in kit stats.")]
-    public static readonly Translation KitMenuUIGrenadierVehicleKillsLabel = new Translation("Vehicle Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIGrenadierVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
 
     // machine gunner
     [TranslationData(SectionKitMenuUI, "Label that goes in front of spray n pray streak (most kills without reloading) for Machine Gunners in kit stats.")]
-    public static readonly Translation KitMenuUIMachineGunnerStructuresDestroyedLabel = new Translation("Spray n Pray Streak", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIMachineGunnerStructuresDestroyedLabel = new Translation("Spray n Pray Streak", TranslationOptions.TMProUI);
     
     // LAT
     [TranslationData(SectionKitMenuUI, "Label that goes in front of vehicle kills for LATs in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUILATVehicleKillsLabel = new Translation("Vehicle Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUILATVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of LAT player kills for LATs in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUILATPlayerKillsLabel = new Translation("LAT Player Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUILATPlayerKillsLabel = new Translation("LAT Player Kills", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of structure kills for LATs in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUILATStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUILATStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationOptions.TMProUI);
     
     // HAT
     [TranslationData(SectionKitMenuUI, "Label that goes in front of vehicle kills for HATs in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIHATVehicleKillsLabel = new Translation("Vehicle Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIHATVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of HAT player kills for HATs in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIHATPlayerKillsLabel = new Translation("HAT Player Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIHATPlayerKillsLabel = new Translation("HAT Player Kills", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of structure kills for HATs in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIHATStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIHATStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationOptions.TMProUI);
 
     // marksman
     [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills from 150m to 250m away for Marksmen in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIMarksmanKills100mLabel = new Translation("Kills 150m-250m", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIMarksmanKills100mLabel = new Translation("Kills 150m-250m", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills from 250m to 350m away for Marksmen in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIMarksmanKills200mLabel = new Translation("Kills 250m-350m", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIMarksmanKills200mLabel = new Translation("Kills 250m-350m", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills over 350m away for Marksmen in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIMarksmanKills300mLabel = new Translation("Kills 350m+", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIMarksmanKills300mLabel = new Translation("Kills 350m+", TranslationOptions.TMProUI);
 
     // sniper
     [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills from 200m to 300m away for Snipers in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUISniperKills200mLabel = new Translation("Kills 200m-300m", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUISniperKills200mLabel = new Translation("Kills 200m-300m", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills from 300m to 400m away for Snipers in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUISniperKills300mLabel = new Translation("Kills 300m-400m", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUISniperKills300mLabel = new Translation("Kills 300m-400m", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills over 400m away for Snipers in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUISniperKills400mLabel = new Translation("Kills 400m+", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUISniperKills400mLabel = new Translation("Kills 400m+", TranslationOptions.TMProUI);
 
     // ap-rifleman
     [TranslationData(SectionKitMenuUI, "Label that goes in front of vehicle kills for AP Riflemen in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIAPRiflemanVehicleKillsLabel = new Translation("Vehicle Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIAPRiflemanVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of player trap kills for AP Riflemen in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIAPRiflemanTrapKillsLabel = new Translation("Trap Kills", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIAPRiflemanTrapKillsLabel = new Translation("Trap Kills", TranslationOptions.TMProUI);
 
     // combat engineer
     [TranslationData(SectionKitMenuUI, "Label that goes in front of shovel points for Combat Engineers in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUICombatEngineerShovelsLabel = new Translation("Shovel Points", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUICombatEngineerShovelsLabel = new Translation("Shovel Points", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of fortifications built for Combat Engineers in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUICombatEngineerFortificationsBuiltLabel = new Translation("Fortifications Built", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUICombatEngineerFortificationsBuiltLabel = new Translation("Fortifications Built", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of emplacements built for Combat Engineers in kit stats.")]
     // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUICombatEngineerEmplacementsBuiltLabel = new Translation("Emplacements Built", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUICombatEngineerEmplacementsBuiltLabel = new Translation("Emplacements Built", TranslationOptions.TMProUI);
 
     // crewman
     [TranslationData(SectionKitMenuUI, "Label that goes in front of km driven for Crewmen in kit stats.")]
-    public static readonly Translation KitMenuUICrewmanKmDrivenLabel = new Translation("Distance Driven (km)", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUICrewmanKmDrivenLabel = new Translation("Distance Driven (km)", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of driver assists for Crewmen in kit stats.")]
-    public static readonly Translation KitMenuUICrewmanDriverAssistsLabel = new Translation("Driver Assists", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUICrewmanDriverAssistsLabel = new Translation("Driver Assists", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of total transport distance built for Crewmen in kit stats.")]
-    public static readonly Translation KitMenuUICrewmanTransportDistanceLabel = new Translation("Ttl. Transport Dst.", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUICrewmanTransportDistanceLabel = new Translation("Ttl. Transport Dst.", TranslationOptions.TMProUI);
 
     // pilot
     [TranslationData(SectionKitMenuUI, "Label that goes in front of km flown for Pilots in kit stats.")]
-    public static readonly Translation KitMenuUIPilotKmDrivenLabel = new Translation("Distance Flown (km)", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIPilotKmDrivenLabel = new Translation("Distance Flown (km)", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of pilot assists for Pilots in kit stats.")]
-    public static readonly Translation KitMenuUIPilotDriverAssistsLabel = new Translation("Pilot Assists", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIPilotDriverAssistsLabel = new Translation("Pilot Assists", TranslationOptions.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label that goes in front of total transport distance built for Pilots in kit stats.")]
-    public static readonly Translation KitMenuUIPilotTransportDistanceLabel = new Translation("Ttl. Transport Dst.", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUIPilotTransportDistanceLabel = new Translation("Ttl. Transport Dst.", TranslationOptions.TMProUI);
 
     // spec ops
     [TranslationData(SectionKitMenuUI, "Label that goes in front of night vision kills for Special Ops in kit stats.")]
-    public static readonly Translation KitMenuUISpecOpsNVGKillsLabel = new Translation("NVG Kills (Night)", TranslationFlags.TMProUI);
+    public static readonly Translation KitMenuUISpecOpsNVGKillsLabel = new Translation("NVG Kills (Night)", TranslationOptions.TMProUI);
     #endregion
 
     #region Options
@@ -3056,6 +2740,7 @@ internal static class T
     public static readonly Translation[] Translations;
     public static readonly Dictionary<string, Translation> Signs;
     internal static readonly List<string> AllLanguages = new List<string>(4);
+
     static T()
     {
         FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).Where(x => typeof(Translation).IsAssignableFrom(x.FieldType)).ToArray();

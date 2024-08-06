@@ -36,8 +36,6 @@ public class UCPlayerData : MonoBehaviour
     internal BarricadeDrop? ExplodingLandmine;
     internal BarricadeDrop? TriggeringLandmine;
     internal ItemMagazineAsset LastProjectedAmmoType;
-    internal Coroutine? CurrentTeleportRequest;
-    internal IDeployable? PendingDeploy;
     internal float[] PingBuffer = new float[PingBufferSize];
     internal int PingBufferIndex = -1;
     internal float LastAvgPingDifference;
@@ -70,14 +68,5 @@ public class UCPlayerData : MonoBehaviour
     {
         LastAttacker = 0;
         SecondLastAttacker = new KeyValuePair<ulong, DateTime>(0, DateTime.Now);
-    }
-    public void CancelDeployment()
-    {
-        if (CurrentTeleportRequest != null)
-        {
-            StopCoroutine(CurrentTeleportRequest);
-            CurrentTeleportRequest = null;
-            PendingDeploy = null;
-        }
     }
 }

@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Zones;
-public class Zone
+public class Zone : IDeployable
 {
     private List<uint> _gridObjects = [];
     private List<UpstreamZone> _upstreamZones = [];
@@ -107,6 +112,38 @@ public class Zone
     /// </summary>
     [JsonPropertyName("faction")]
     public string? Faction { get; set; }
+
+
+    [JsonIgnore]
+    Vector3 IDeployable.SpawnPosition => Spawn;
+
+    [JsonIgnore]
+    float IDeployable.Yaw => SpawnYaw;
+
+    TimeSpan IDeployable.GetDelay(WarfarePlayer player)
+    {
+        return TimeSpan.FromSeconds(FOBManager.Config.DeployMainDelay);
+    }
+
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    {
+        return Name;
+    }
+
+    bool IDeployable.CheckDeployableTo(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    {
+        return true;
+    }
+
+    bool IDeployable.CheckDeployableFrom(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
+    {
+        return true;
+    }
+
+    bool IDeployable.CheckDeployableToTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    {
+        return true;
+    }
 }
 
 public class ZoneCircleInfo

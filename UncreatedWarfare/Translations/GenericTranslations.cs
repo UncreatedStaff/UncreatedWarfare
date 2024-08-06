@@ -37,3 +37,57 @@ public class Translation<T0, T1, T2> : Translation
         FormatArg2 = arg2Fmt;
     }
 }
+public class Translation<T0, T1, T2, T3> : Translation
+{
+    public override int ArgumentCount => 4;
+    public string? FormatArg0 { get; set; }
+    public string? FormatArg1 { get; set; }
+    public string? FormatArg2 { get; set; }
+    public string? FormatArg3 { get; set; }
+    public Translation(string defaultValue, TranslationOptions options = default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null)
+        : base(defaultValue, options)
+    {
+        FormatArg0 = arg0Fmt;
+        FormatArg1 = arg1Fmt;
+        FormatArg2 = arg2Fmt;
+        FormatArg3 = arg3Fmt;
+    }
+}
+public class Translation<T0, T1, T2, T3, T5> : Translation
+{
+    public override int ArgumentCount => 5;
+    public string? FormatArg0 { get; set; }
+    public string? FormatArg1 { get; set; }
+    public string? FormatArg2 { get; set; }
+    public string? FormatArg3 { get; set; }
+    public string? FormatArg4 { get; set; }
+    public Translation(string defaultValue, TranslationOptions options = default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null)
+        : base(defaultValue, options)
+    {
+        FormatArg0 = arg0Fmt;
+        FormatArg1 = arg1Fmt;
+        FormatArg2 = arg2Fmt;
+        FormatArg3 = arg3Fmt;
+        FormatArg4 = arg4Fmt;
+    }
+}
+public class Translation<T0, T1, T2, T3, T5, T6> : Translation
+{
+    public override int ArgumentCount => 6;
+    public string? FormatArg0 { get; set; }
+    public string? FormatArg1 { get; set; }
+    public string? FormatArg2 { get; set; }
+    public string? FormatArg3 { get; set; }
+    public string? FormatArg4 { get; set; }
+    public string? FormatArg5 { get; set; }
+    public Translation(string defaultValue, TranslationOptions options = default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null)
+        : base(defaultValue, options)
+    {
+        FormatArg0 = arg0Fmt;
+        FormatArg1 = arg1Fmt;
+        FormatArg2 = arg2Fmt;
+        FormatArg3 = arg3Fmt;
+        FormatArg4 = arg4Fmt;
+        FormatArg5 = arg5Fmt;
+    }
+}

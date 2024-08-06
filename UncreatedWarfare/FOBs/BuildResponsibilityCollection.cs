@@ -44,7 +44,7 @@ public class TickResponsibilityCollection : IEnumerable<TickResponsibility>
     public float GetTicksNoLock() => _total;
 
     /// <returns>The percentage of the work <paramref name="player"/> has done (from 0 to 1).</returns>
-    public float this[IPlayer player] => this[player.Steam64];
+    public float this[IPlayer player] => this[player.Steam64.m_SteamID];
 
     /// <returns>The percentage of the work <paramref name="steam64"/> has done (from 0 to 1).</returns>
     public float this[ulong steam64]
@@ -65,7 +65,7 @@ public class TickResponsibilityCollection : IEnumerable<TickResponsibility>
     }
 
     /// <returns>The percentage of the work <paramref name="player"/> has done (from 0 to 1).</returns>
-    public float this[IPlayer player, ulong sessionId] => this[player.Steam64, sessionId];
+    public float this[IPlayer player, ulong sessionId] => this[player.Steam64.m_SteamID, sessionId];
 
     /// <returns>The percentage of the work <paramref name="steam64"/> has done (from 0 to 1).</returns>
     public float this[ulong steam64, ulong sessionId]
@@ -173,7 +173,7 @@ public class TickResponsibilityCollection : IEnumerable<TickResponsibility>
     /// <summary>
     /// Remove a player's contribution (effectively setting it to 0).
     /// </returns>
-    public bool Remove(IPlayer player) => Remove(player.Steam64);
+    public bool Remove(IPlayer player) => Remove(player.Steam64.m_SteamID);
     /// <summary>
     /// Remove a player's contribution (effectively setting it to 0).
     /// </returns>
@@ -198,7 +198,7 @@ public class TickResponsibilityCollection : IEnumerable<TickResponsibility>
     /// <summary>
     /// Remove a player's contribution (effectively setting it to 0).
     /// </returns>
-    public bool Remove(IPlayer player, ulong sessionId) => Remove(player.Steam64, sessionId);
+    public bool Remove(IPlayer player, ulong sessionId) => Remove(player.Steam64.m_SteamID, sessionId);
     /// <summary>
     /// Remove a player's contribution (effectively setting it to 0).
     /// </returns>

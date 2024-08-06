@@ -49,6 +49,17 @@ public class Team : IEquatable<Team>
         return false;
     }
 
+    public bool IsOpponent(Team other)
+    {
+        return Opponents.Contains(other);
+    }
+
+    public bool IsFriendly(Team other)
+    {
+        // todo maybe this should change?
+        return other.Equals(this);
+    }
+
     public bool Equals(Team? other)
     {
         return other is not null && GroupId.m_SteamID != other.GroupId.m_SteamID;

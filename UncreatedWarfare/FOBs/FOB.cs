@@ -9,6 +9,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
@@ -18,10 +19,10 @@ using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
@@ -1041,48 +1042,52 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
         return null;
     }
-    float IDeployable.GetDelay() => FOBManager.Config.DeployFOBDelay;
-    bool IDeployable.CheckDeployable(UCPlayer player, CommandContext? ctx)
+    TimeSpan IDeployable.GetDelay(WarfarePlayer player) => TimeSpan.FromSeconds(FOBManager.Config.DeployFOBDelay);
+    bool IDeployable.CheckDeployableTo(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
     {
+        if (!isActiveAndEnabled || Bleeding)
+        {
+            if (!settings.DisableInitialChatUpdates)
+                player.SendChat(translations.DeployRadioDamaged, this);
+            return false;
+        }
+
         if (Bunker == null || Bunker.ActiveStructure?.Model == null || Bunker.State != ShovelableComponent.BuildableState.Full)
         {
-            if (ctx is not null)
-                throw ctx.Reply(T.DeployNoBunker, this);
+            if (!settings.DisableInitialChatUpdates)
+                player.SendChat(translations.DeployNoBunker, this);
             return false;
         }
-        if (Bleeding)
-        {
-            if (ctx is not null)
-                throw ctx.Reply(T.DeployRadioDamaged, this);
-            return false;
-        }
+
         if (IsProxied)
         {
-            if (ctx is not null)
-                throw ctx.Reply(T.DeployEnemiesNearby, this);
+            if (!settings.DisableInitialChatUpdates)
+                player.SendChat(translations.DeployEnemiesNearby, this);
             return false;
         }
 
         return true;
     }
-    bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
+    bool IDeployable.CheckDeployableToTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
     {
+        if (!isActiveAndEnabled || Bleeding)
+        {
+            if (!settings.DisableTickingChatUpdates)
+                player.SendChat(translations.DeployRadioDamaged, this);
+            return false;
+        }
+
         if (Bunker == null || Bunker.ActiveStructure?.Model == null || Bunker.State != ShovelableComponent.BuildableState.Full)
         {
-            if (chat)
-                player.SendChat(T.DeployNoBunker, this);
+            if (!settings.DisableTickingChatUpdates)
+                player.SendChat(translations.DeployNoBunker, this);
             return false;
         }
-        if (Bleeding)
-        {
-            if (chat)
-                player.SendChat(T.DeployRadioDamaged, this);
-            return false;
-        }
+
         if (IsProxied)
         {
-            if (chat)
-                player.SendChat(T.DeployEnemiesNearbyTick, this);
+            if (!settings.DisableTickingChatUpdates)
+                player.SendChat(translations.DeployEnemiesNearbyTick, this);
             return false;
         }
 

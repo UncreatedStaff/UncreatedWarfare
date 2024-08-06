@@ -1,7 +1,11 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Revives;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -12,8 +16,21 @@ public class DeployCommand : IExecutableCommand
     private const string Syntax = "/deploy main -OR- /deploy <fob name>";
     private const string Help = "Deploy to a point of interest such as a main base, FOB, VCP, or cache.";
 
+    private readonly ReviveManager? _reviveManager;
+    private readonly ZoneStore _globalZoneStore;
+    private readonly DeploymentTranslations _translations;
+    private readonly DeploymentService _deploymentService;
+
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public DeployCommand(IServiceProvider serviceProvider)
+    {
+        _reviveManager = serviceProvider.GetService<ReviveManager>(); // optional
+        _globalZoneStore = serviceProvider.GetRequiredService<ZoneStore>();
+        _deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
+        _translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>().Value;
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -41,48 +58,30 @@ public class DeployCommand : IExecutableCommand
 
         Context.AssertArgs(1, Syntax + " - " + Help);
 
-        if (Context.MatchParameter(0, "cancel", "stop") && Context.Player.UnturnedPlayer.TryGetPlayerData(out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
+        if (Context.MatchParameter(0, "cancel", "stop"))
         {
-            comp.CancelDeployment();
-            throw Context.Reply(T.DeployCancelled);
+            DeploymentComponent comp = Context.Player.Component<DeploymentComponent>();
+
+            if (comp.CurrentDeployment == null)
+                throw Context.Reply(_translations.DeployCancelNotDeploying);
+
+            comp.CancelDeployment(false);
+            throw Context.Reply(_translations.DeployCancelled);
         }
 
-        if (Data.Is(out IRevives r) && r.ReviveManager.IsInjured(Context.CallerId.m_SteamID))
-            throw Context.Reply(T.DeployInjured);
+        if (_reviveManager != null && _reviveManager.IsInjured(Context.CallerId.m_SteamID))
+            throw Context.Reply(_translations.DeployInjured);
 
         string input = Context.GetRange(0)!;
 
-        UCPlayerData? c = Context.Player.UnturnedPlayer.GetPlayerData(out _);
-        if (c is null) throw Context.SendUnknownError();
-
-        ulong team = Context.Player.GetTeam();
-        if (team is not 1 and not 2)
-            throw Context.Reply(T.NotOnCaptureTeam);
-
-        bool inMain = Context.Player.UnturnedPlayer.IsInMain();
-        bool inLobby = !inMain && TeamManager.LobbyZone.IsInside(Context.Player.Position);
-        bool shouldCancelOnMove = !inMain;
-        bool shouldCancelOnDamage = !inMain;
-
-        if (CooldownManager.HasCooldown(Context.Player, CooldownType.Deploy, out Cooldown cooldown))
-            throw Context.Reply(T.DeployCooldown, cooldown);
-
-        IFOB? deployFromFob = null;
-
-        if (!(inMain || inLobby))
-        {
-            if (CooldownManager.HasCooldown(Context.Player, CooldownType.Combat, out Cooldown combatlog))
-                throw Context.Reply(T.DeployInCombat, combatlog);
-
-            if (!(Context.Player.IsOnFOB(out deployFromFob) && deployFromFob is not FOB { Bleeding: true } && deployFromFob.CheckDeployable(Context.Player, null)))
-                throw Context.Reply(Data.Is<Insurgency>() ? T.DeployNotNearFOBInsurgency : T.DeployNotNearFOB);
-        }
-
         IDeployable? destination = null;
-        if (!FOBManager.Loaded || !FOBManager.TryFindFOB(input, team, out destination))
+
+        DeploySettings deploySettings = default;
+
+        if (!FOBManager.Loaded || !FOBManager.TryFindFOB(input, Context.Player.Team, out destination))
         {
             if (input.Equals("lobby", StringComparison.InvariantCultureIgnoreCase))
-                throw Context.Reply(T.DeployLobbyRemoved);
+                throw Context.Reply(_translations.DeployLobbyRemoved);
 
             if (input.Equals("main", StringComparison.InvariantCultureIgnoreCase) ||
                 input.Equals("base", StringComparison.InvariantCultureIgnoreCase) ||
@@ -92,17 +91,20 @@ public class DeployCommand : IExecutableCommand
                 input.Equals("homebase", StringComparison.InvariantCultureIgnoreCase) ||
                 input.Equals("home base", StringComparison.InvariantCultureIgnoreCase))
             {
-                destination = TeamManager.GetMain(team);
+                destination = _globalZoneStore.SearchZone(ZoneType.MainBase, Context.Player.Team.Faction);
             }
         }
 
         if (destination == null)
-            throw Context.Reply(T.DeployableNotFound, input);
+            throw Context.Reply(_translations.DeployableNotFound, input);
 
-        if (destination.Equals(deployFromFob))
-            throw Context.Reply(T.DeployableAlreadyOnFOB);
+        if (_globalZoneStore.IsInMainBase(Context.Player))
+        {
+            deploySettings.AllowMovement = true;
+            deploySettings.AllowNearbyEnemies = true;
+        }
 
-        Deployment.DeployTo(Context.Player, deployFromFob, destination, Context, shouldCancelOnMove, shouldCancelOnDamage, startCooldown: true);
+        _deploymentService.TryStartDeployment(Context.Player, destination, deploySettings);
         Context.Defer();
         return default;
     }
