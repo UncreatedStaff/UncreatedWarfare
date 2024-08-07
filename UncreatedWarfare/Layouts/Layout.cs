@@ -446,14 +446,14 @@ public class Layout : IDisposable, IEventListenerProvider
     }
 
     // allows the current phase to handle events
-    IEnumerable<IEventListener<TEventArgs>> IEventListenerProvider.EnumerateNormalListeners<TEventArgs>()
+    IEnumerable<IEventListener<TEventArgs>> IEventListenerProvider.EnumerateNormalListeners<TEventArgs>(TEventArgs args)
     {
         return ActivePhase is IEventListener<TEventArgs> phase
             ? Enumerable.Repeat(phase, 1)
             : Enumerable.Empty<IEventListener<TEventArgs>>();
     }
 
-    IEnumerable<IAsyncEventListener<TEventArgs>> IEventListenerProvider.EnumerateAsyncListeners<TEventArgs>()
+    IEnumerable<IAsyncEventListener<TEventArgs>> IEventListenerProvider.EnumerateAsyncListeners<TEventArgs>(TEventArgs args)
     {
         return ActivePhase is IAsyncEventListener<TEventArgs> phase
             ? Enumerable.Repeat(phase, 1)

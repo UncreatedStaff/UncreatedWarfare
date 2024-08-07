@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
@@ -22,10 +23,10 @@ public class KitRequests
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly RequestTranslations _translations;
     public KitManager Manager { get; }
-    public KitRequests(KitManager manager, TranslationInjection<RequestTranslations> translations, DroppedItemTracker droppedItemTracker)
+    public KitRequests(KitManager manager, IServiceProvider serviceProvider)
     {
-        _droppedItemTracker = droppedItemTracker;
-        _translations = translations.Value;
+        _droppedItemTracker = serviceProvider.GetRequiredService<DroppedItemTracker>();
+        _translations = serviceProvider.GetRequiredService<TranslationInjection<RequestTranslations>>().Value;
         Manager = manager;
     }
 

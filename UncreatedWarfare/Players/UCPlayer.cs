@@ -101,14 +101,10 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public Coroutine? StorageCoroutine;
     public RankStatus[]? RankData;
     public List<uint>? AccessibleKits;
-    public List<HotkeyBinding>? HotkeyBindings;
     internal List<LayoutTransformation>? LayoutTransformations;
     public IBuff?[] ActiveBuffs = new IBuff?[BuffUI.MaxBuffs];
     public List<Trait> ActiveTraits = new List<Trait>(8);
     internal Action<byte, ItemJar> SendItemRemove;
-    // used to trace items back to their original position in the kit
-    internal List<ItemTransformation> ItemTransformations = new List<ItemTransformation>(16);
-    internal List<ItemDropTransformation> ItemDropTransformations = new List<ItemDropTransformation>(16);
     internal List<Guid>? CompletedQuests;
     internal bool ModalNeeded;
     // [xp sent][credits sent][xp vis][credits vis][credits][branch][level][xp]
@@ -519,15 +515,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             KitMenuData = null!;
         }
     }
-    public async Task<Kit?> GetActiveKit(CancellationToken token = default, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
-    {
-        uint? activeKit = ActiveKit;
 
-        if (!activeKit.HasValue || KitManager.GetSingletonQuick() is not { } kitManager)
-            return null;
-
-        return await kitManager.GetKit(activeKit.Value, token, set);
-    }
     public static UCPlayer? FromID(ulong steamID) => steamID == 0 ? null : PlayerManager.FromID(steamID);
     public static UCPlayer? FromCSteamID(CSteamID steamID) => steamID.m_SteamID == 0 ? null : PlayerManager.FromID(steamID.m_SteamID);
     public static UCPlayer? FromPlayer(Player player) => player == null ? null : PlayerManager.FromID(player.channel.owner.playerID.steamID.m_SteamID);

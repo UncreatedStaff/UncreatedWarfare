@@ -7,7 +7,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
-using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
@@ -24,9 +23,9 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
-using XPReward = Uncreated.Warfare.Levels.XPReward;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Logging;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 #if DEBUG
 using Uncreated.Warfare.Squads.Commander;

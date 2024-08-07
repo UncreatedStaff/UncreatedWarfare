@@ -27,6 +27,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     public Team Team { get; private set; }
     public BinaryPlayerSave Save { get; }
     public WarfarePlayerLocale Locale { get; }
+    public SemaphoreSlim PurchaseSync { get; }
 
     /// <summary>
     /// If the player this object represents is currently online. Set to false *after* the leave event is fired.
@@ -84,6 +85,8 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
 
         Team = Team.NoTeam;
         _logger.LogInformation("Player {0} joined the server", this);
+
+        PurchaseSync = new SemaphoreSlim(1, 1);
     }
 
     /// <summary>

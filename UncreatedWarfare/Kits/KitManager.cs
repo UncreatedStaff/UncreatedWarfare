@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,20 +14,33 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Timing;
 
 // ReSharper disable ConstantConditionalAccessQualifier
 
 namespace Uncreated.Warfare.Kits;
 
-public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandler, IPlayerConnectListener, IPlayerPostInitListenerAsync, IGameTickListener, IPlayerDisconnectListener, ITCPConnectedListener
+public partial class KitManager :
+    ISessionHostedService,
+    IEventListener<QuestCompleted>,
+    IEventListener<PlayerJoined>,
+    IEventListener<PlayerLeft>,
+    IEventListener<GroupChanged>,
+    IDisposable
 {
+    private readonly ILoopTicker _favoritesTicker;
+    private readonly ILogger<KitManager> _logger;
+    private readonly PlayerService _playerService;
+
     private static KitMenuUI? _menuUi;
     public static readonly Guid[] BlacklistedWeaponsTextItems =
     {
@@ -34,7 +48,6 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         new Guid("010de9d7d1fd49d897dc41249a22d436")  // Laser Rangefinder
     };
     public static KitMenuUI MenuUI => _menuUi ??= new KitMenuUI();
-    public override bool AwaitLoad => true;
     public KitDataCache Cache { get; }
     public KitDistribution Distribution { get; }
     public KitRequests Requests { get; }
@@ -44,33 +57,51 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     public KitLoadouts<WarfareDbContext> Loadouts { get; }
     public KitDefaults<WarfareDbContext> Defaults { get; }
 
-    public static event KitChanged? OnKitChanged;
+    public event KitChanged? OnKitChanged;
+
     /// <summary>
     /// Doesn't include changes due to group change.
     /// </summary>
-    public static event KitChanged? OnManualKitChanged;
-    public static event KitAccessCallback? OnKitAccessChanged;
-    public static event System.Action? OnFavoritesRefreshed;
+    public event KitChanged? OnManualKitChanged;
+    public event KitAccessCallback? OnKitAccessChanged;
+    public event Action? OnFavoritesRefreshed;
 
-    public static KitManager? GetSingletonQuick()
+    public KitManager(IServiceProvider serviceProvider)
     {
-        if (Data.Gamemode is IKitRequests k)
-            return k.KitManager;
+        _logger = serviceProvider.GetRequiredService<ILogger<KitManager>>();
+        _playerService = serviceProvider.GetRequiredService<PlayerService>();
 
-        return Data.Singletons.GetSingleton<KitManager>();
-    }
-
-    public KitManager() : base("kits")
-    {
         Cache = new KitDataCache(this);
         Distribution = new KitDistribution(this);
-        Requests = new KitRequests(this);
-        Signs = new KitSigns(this);
+        Requests = new KitRequests(this, serviceProvider);
+        Signs = new KitSigns(this, serviceProvider);
         Layouts = new KitLayouts(this);
         Boosting = new KitBoosting(this);
         Loadouts = new KitLoadouts<WarfareDbContext>(this);
         Defaults = new KitDefaults<WarfareDbContext>(this);
+
+        _favoritesTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromMinutes(1d), TimeSpan.FromMinutes(1d), false, SaveFavoritesTick);
     }
+
+    internal static void ConfigureServices(IServiceCollection serviceCollection)
+    {
+        serviceCollection.AddScoped<KitManager>();
+        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Cache);
+        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Distribution);
+        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Requests);
+        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Signs);
+        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Layouts);
+        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Boosting);
+        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Loadouts);
+        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Defaults);
+    }
+
+    void IDisposable.Dispose()
+    {
+        _favoritesTicker.Dispose();
+    }
+
+    // pre-made include sets for EF queries
     public static IQueryable<Kit> Set(IKitsDbContext dbContext)
         => dbContext.Kits
             .Include(x => x.Translations);
@@ -103,16 +134,14 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
 
         return set;
     }
-    protected override async Task LoadAsync(CancellationToken token)
+
+    async UniTask ISessionHostedService.StartAsync(CancellationToken token)
     {
         await CreateMissingDefaultKits(token).ConfigureAwait(false);
 
         await ValidateKits(token).ConfigureAwait(false);
 
         PlayerLife.OnPreDeath += OnPreDeath;
-        EventDispatcher.GroupChanged += OnGroupChanged;
-        EventDispatcher.PlayerJoined += OnPlayerJoined;
-        EventDispatcher.PlayerLeft += OnPlayerLeaving;
         EventDispatcher.ItemMoved += OnItemMoved;
         EventDispatcher.ItemDropped += OnItemDropped;
         EventDispatcher.ItemPickedUp += OnItemPickedUp;
@@ -122,38 +151,52 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
 
         await Cache.ReloadCache(token).ConfigureAwait(false);
     }
-    protected override Task UnloadAsync(CancellationToken token)
+
+    UniTask ISessionHostedService.StopAsync(CancellationToken token)
     {
         PlayerLife.OnPreDeath -= OnPreDeath;
-        EventDispatcher.GroupChanged -= OnGroupChanged;
-        EventDispatcher.PlayerJoined -= OnPlayerJoined;
-        EventDispatcher.PlayerLeft -= OnPlayerLeaving;
         EventDispatcher.ItemMoved -= OnItemMoved;
         EventDispatcher.ItemDropped -= OnItemDropped;
         EventDispatcher.ItemPickedUp -= OnItemPickedUp;
         EventDispatcher.SwapClothingRequested -= OnSwapClothingRequested;
         Cache.Clear();
-        return Task.CompletedTask;
+        return UniTask.CompletedTask;
     }
-    public override Task ReloadAsync(CancellationToken token)
-    {
-        return Cache.ReloadCache(token);
 
-    }
-    public static void InvokeOnKitAccessChanged(Kit kit, ulong player, bool newAccess, KitAccessType newType)
+    public void InvokeOnKitAccessChanged(Kit kit, ulong player, bool newAccess, KitAccessType newType)
     {
-        if (OnKitAccessChanged != null)
-            UCWarfare.RunOnMainThread(() => OnKitAccessChanged?.Invoke(kit, player, newAccess, newType));
+        if (OnKitAccessChanged == null)
+            return;
+
+        UniTask.Create(async () =>
+        {
+            await UniTask.SwitchToMainThread();
+            OnKitAccessChanged?.Invoke(kit, player, newAccess, newType);
+        });
     }
-    public static void InvokeOnKitChanged(UCPlayer player, Kit? kit, Kit? oldKit)
+
+    public void InvokeOnKitChanged(UCPlayer player, Kit? kit, Kit? oldKit)
     {
-        if (OnKitAccessChanged != null)
-            UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, kit, oldKit));
+        if (OnKitChanged == null)
+            return;
+
+        UniTask.Create(async () =>
+        {
+            await UniTask.SwitchToMainThread();
+            OnKitChanged?.Invoke(player, kit, oldKit);
+        });
     }
-    public static void InvokeOnManualKitChanged(UCPlayer player, Kit? kit, Kit? oldKit)
+
+    public void InvokeOnManualKitChanged(UCPlayer player, Kit? kit, Kit? oldKit)
     {
-        if (OnManualKitChanged != null)
-            UCWarfare.RunOnMainThread(() => OnManualKitChanged?.Invoke(player, kit, oldKit));
+        if (OnManualKitChanged == null)
+            return;
+
+        UniTask.Create(async () =>
+        {
+            await UniTask.SwitchToMainThread();
+            OnManualKitChanged?.Invoke(player, kit, oldKit);
+        });
     }
 
     public async Task<Kit?> GetKit(uint pk, CancellationToken token = default, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
@@ -162,6 +205,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
 
         return await GetKit(dbContext, pk, token, set);
     }
+
     public async Task<Kit?> GetKit(IKitsDbContext dbContext, uint pk, CancellationToken token = default, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
     {
         Kit? kit = await (set?.Invoke(dbContext) ?? Set(dbContext)).FirstOrDefaultAsync(x => x.PrimaryKey == pk, token).ConfigureAwait(false);
@@ -211,34 +255,55 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
 
         return kit;
     }
-    void IPlayerConnectListener.OnPlayerConnecting(UCPlayer player)
+
+    void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
-        PlayerEquipment equipment = player.Player.equipment;
+        OnTeamPlayerCountChanged();
+        PlayerEquipment equipment = e.Player.UnturnedPlayer.equipment;
         for (int i = 0; i < 8; ++i)
             equipment.ServerClearItemHotkey((byte)i);
-
-        ((IPlayerConnectListener)Cache).OnPlayerConnecting(player);
     }
-    void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
-    {
-        ((IPlayerDisconnectListener)Cache).OnPlayerDisconnecting(player);
 
-        if (player.KitMenuData is { FavoritesDirty: true, FavoriteKits: { } fk })
+    [EventListener(Priority = int.MaxValue)]
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        OnTeamPlayerCountChanged();
+        if (e.Player.Kits.KitMenuData is { FavoritesDirty: true, FavoriteKits: { } fk })
         {
-            UCWarfare.RunTask(SaveFavorites, player, fk, CancellationToken.None);
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await SaveFavorites(e.Player, fk, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to run save favorites ticker loop.");
+                }
+            });
         }
     }
-    Task ITCPConnectedListener.OnConnected(CancellationToken token)
-    {
-        return ((ITCPConnectedListener)Boosting).OnConnected(token);
-    }
-    void IGameTickListener.Tick()
-    {
-        if (Data.Gamemode == null || !Data.Gamemode.EveryMinute || Provider.clients.Count <= 0)
-            return;
 
-        UCWarfare.RunTask(SaveAllPlayerFavorites, CancellationToken.None, ctx: "Save all players' favorite kits.");
+    void IEventListener<GroupChanged>.HandleEvent(GroupChanged e, IServiceProvider serviceProvider)
+    {
+        OnTeamPlayerCountChanged(e.Player);
     }
+
+    private void SaveFavoritesTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await SaveAllPlayerFavorites(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to run save favorites ticker loop.");
+            }
+        });
+    }
+
     public async Task<Kit?> GetKitFromSign(BarricadeDrop drop, UCPlayer looker, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
@@ -255,7 +320,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     {
         await UniTask.SwitchToMainThread(token);
         List<Task> tasks = new List<Task>(4);
-        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
             if (player.KitMenuData is not { FavoritesDirty: true, FavoriteKits: { } fk })
                 continue;
@@ -469,18 +534,18 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
         L.LogDebug($"Kit item at: {page}, ({x}, {y}) not found.");
         return null;
     }
-    void IQuestCompletedHandler.OnQuestCompleted(QuestCompleted e)
+
+    void IEventListener<QuestCompleted>.HandleEvent(QuestCompleted e, IServiceProvider serviceProvider)
     {
-        ((IQuestCompletedHandler)Cache).OnQuestCompleted(e);
         Signs.UpdateSigns(e.Player);
     }
-    private void OnPlayerLeaving(PlayerEvent e) => OnTeamPlayerCountChanged();
-    private void OnPlayerJoined(PlayerJoined e) => OnTeamPlayerCountChanged();
-    private void OnGroupChanged(GroupChanged e) => OnTeamPlayerCountChanged(e.Player);
-    internal void OnTeamPlayerCountChanged(UCPlayer? allPlayer = null)
+
+    internal void OnTeamPlayerCountChanged(WarfarePlayer? allPlayer = null)
     {
         if (allPlayer != null)
-            Warfare.Signs.UpdateKitSigns(allPlayer, null);
+        {
+            Signs.UpdateSigns(allPlayer);
+        }
 
         foreach (Kit item in Cache.KitDataByKey.Values)
         {
@@ -488,6 +553,7 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
                 Signs.UpdateSigns(item);
         }
     }
+
     private void OnPreDeath(PlayerLife life)
     {
         UCPlayer? player = UCPlayer.FromPlayer(life.player);
@@ -523,89 +589,6 @@ public partial class KitManager : BaseAsyncReloadSingleton, IQuestCompletedHandl
     }
     private void OnItemDropped(ItemDropped e)
     {
-        UCPlayer pl = e.Player;
-        if (e.Item != null)
-            pl.ItemDropTransformations.Add(new ItemDropTransformation(e.OldPage, e.OldX, e.OldY, e.Item));
-
-        if (e.Player.HotkeyBindings is not { Count: > 0 })
-            return;
-        CancellationToken tkn = UCWarfare.UnloadCancel;
-        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(e.Player.DisconnectToken, Data.Gamemode != null ? Data.Gamemode.UnloadToken : default);
-        if (e.Item == null)
-            return;
-
-        // move hotkey to a different item of the same type
-        UCWarfare.RunTask(static async (mngr, ev, tokens) =>
-        {
-            IPageKitItem? jar2 = await mngr.GetItemFromKit(ev.Player, ev.OldX, ev.OldY, ev.Item!, ev.OldPage, tokens.Token).ConfigureAwait(false);
-            if (jar2 == null || !ev.Player.IsOnline)
-                return;
-
-            await ev.Player.PurchaseSync.WaitAsync(tokens.Token).ConfigureAwait(false);
-            try
-            {
-                if (!ev.Player.IsOnline || ev.Player.HotkeyBindings is not { Count: > 0 })
-                    return;
-
-                Kit? activeKit = await ev.Player.GetActiveKit(tokens.Token).ConfigureAwait(false);
-
-                await UCWarfare.ToUpdate(tokens.Token);
-                if (!ev.Player.IsOnline || ev.Player.HotkeyBindings is not { Count: > 0 })
-                    return;
-
-                for (int i = 0; i < ev.Player.HotkeyBindings.Count; ++i)
-                {
-                    HotkeyBinding b = ev.Player.HotkeyBindings[i];
-
-                    if ((b.Item is not ISpecificKitItem item || jar2 is not ISpecificKitItem item2 || item.Item != item2.Item) &&
-                        (b.Item is not IAssetRedirectKitItem redir || jar2 is not IAssetRedirectKitItem redir2 || redir.RedirectType != redir2.RedirectType))
-                    {
-                        continue;
-                    }
-
-                    // found a binding for that item
-                    if (b.Item.X != jar2.X || b.Item.Y != jar2.Y || b.Item.Page != jar2.Page)
-                        continue;
-                    ItemAsset? asset = b.Item switch
-                    {
-                        ISpecificKitItem item3 => item3.Item.GetAsset<ItemAsset>(),
-                        IKitItem ki => ki.GetItem(activeKit, TeamManager.GetFactionSafe(ev.Player.GetTeam()), out _, out _),
-                        _ => null
-                    };
-                    if (asset == null)
-                        return;
-                    int hotkeyIndex = KitEx.GetHotkeyIndex(b.Slot);
-                    if (hotkeyIndex == byte.MaxValue)
-                        return;
-                    PlayerInventory inv = ev.Player.Player.inventory;
-                    // find new item to bind the item to
-                    for (int p = PlayerInventory.SLOTS; p < PlayerInventory.STORAGE; ++p)
-                    {
-                        SDG.Unturned.Items page = inv.items[p];
-                        int c = page.getItemCount();
-                        for (int index = 0; index < c; ++index)
-                        {
-                            ItemJar jar = page.getItem((byte)index);
-                            if (jar.x == jar2.X && jar.y == jar2.Y && p == (int)jar2.Page)
-                                continue;
-
-                            if (jar.GetAsset() is not { } asset2 || asset2.GUID != asset.GUID || !KitEx.CanBindHotkeyTo(asset2, (Page)p))
-                                continue;
-
-                            ev.Player.Player.equipment.ServerBindItemHotkey((byte)hotkeyIndex, asset, (byte)p, jar.x, jar.y);
-                            return;
-                        }
-                    }
-
-                    break;
-                }
-            }
-            finally
-            {
-                tokens.Dispose();
-                ev.Player.PurchaseSync.Release();
-            }
-        }, this, e, tokens, ctx: "Set keybind to new item after it's dropped.");
     }
     private void OnItemPickedUp(ItemPickedUp e)
     {

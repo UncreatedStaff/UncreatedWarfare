@@ -8,6 +8,6 @@ namespace Uncreated.Warfare.Services;
 /// </summary>
 public interface IEventListenerProvider
 {
-    IEnumerable<IAsyncEventListener<TEventArgs>> EnumerateAsyncListeners<TEventArgs>();
-    IEnumerable<IEventListener<TEventArgs>> EnumerateNormalListeners<TEventArgs>();
+    IEnumerable<IAsyncEventListener<TEventArgs>> EnumerateAsyncListeners<TEventArgs>(TEventArgs args);
+    IEnumerable<IEventListener<TEventArgs>> EnumerateNormalListeners<TEventArgs>(TEventArgs args);
 }

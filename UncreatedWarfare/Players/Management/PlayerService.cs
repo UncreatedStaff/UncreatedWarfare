@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Util.List;
@@ -23,8 +25,16 @@ public class PlayerService
     /// <remarks>
     /// Components can implement <see cref="IDisposable"/> if desired to run code before the player leaves.
     /// <see cref="MonoBehaviour"/>'s will be automatically destroyed.
+    /// 
+    /// Components can receive events, but any <see cref="IPlayerEvent"/> args will only be received if they're about the player that owns the component.
     /// </remarks>
-    public static readonly Type[] PlayerComponents = [ typeof(AudioRecordPlayerComponent), typeof(PlayerEventDispatcher) ];
+    public static readonly Type[] PlayerComponents =
+    [
+        typeof(AudioRecordPlayerComponent),
+        typeof(PlayerEventDispatcher),
+        typeof(ItemTrackingPlayerComponent),
+        typeof(KitPlayerComponent)
+    ];
 
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;
     private readonly PlayerDictionary<WarfarePlayer> _onlinePlayersDictionary;

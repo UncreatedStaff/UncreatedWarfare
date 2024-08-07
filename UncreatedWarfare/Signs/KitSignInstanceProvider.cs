@@ -12,6 +12,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider
     private readonly KitManager _kitManager;
     private string _kitId = null!;
     bool ISignInstanceProvider.CanBatchTranslate => false;
+    public string KitId => _kitId;
     public KitSignInstanceProvider(KitManager kitManager)
     {
         _kitManager = kitManager;

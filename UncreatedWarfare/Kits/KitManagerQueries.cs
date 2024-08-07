@@ -8,6 +8,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Layouts;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -406,7 +407,7 @@ partial class KitManager
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
         return kitHotkey;
     }
-    internal async Task SaveFavorites(UCPlayer player, IReadOnlyList<uint> favoriteKits, CancellationToken token = default)
+    internal async Task SaveFavorites(WarfarePlayer player, IReadOnlyList<uint> favoriteKits, CancellationToken token = default)
     {
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
 
@@ -426,7 +427,7 @@ partial class KitManager
         
         player.KitMenuData.FavoritesDirty = false;
     }
-    public async Task ResetLayout(UCPlayer player, uint kit, bool lockPurchaseSync, CancellationToken token = default)
+    public async Task ResetLayout(WarfarePlayer player, uint kit, bool lockPurchaseSync, CancellationToken token = default)
     {
         await using IKitsDbContext dbContext = new WarfareDbContext();
 

@@ -121,12 +121,12 @@ public partial class EventDispatcher2 : IHostedService
         // IEventListenerProviders
         foreach (IEventListenerProvider provider in _serviceProvider.GetServices<IEventListenerProvider>())
         {
-            foreach (IEventListener<TEventArgs> eventListener in provider.EnumerateNormalListeners<TEventArgs>())
+            foreach (IEventListener<TEventArgs> eventListener in provider.EnumerateNormalListeners(eventArgs))
             {
                 eventListeners.Add(new EventListenerResult { Listener = eventListener });
             }
 
-            foreach (IAsyncEventListener<TEventArgs> eventListener in provider.EnumerateAsyncListeners<TEventArgs>())
+            foreach (IAsyncEventListener<TEventArgs> eventListener in provider.EnumerateAsyncListeners(eventArgs))
             {
                 eventListeners.Add(new EventListenerResult { Flags = 1, Listener = eventListener });
             }

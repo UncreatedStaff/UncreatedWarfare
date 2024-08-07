@@ -2,7 +2,7 @@
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events;
-public class PlayerEvent
+public class PlayerEvent : IPlayerEvent
 {
     public required WarfarePlayer Player { get; init; }
     public CSteamID Steam64 => Player.Steam64;
@@ -30,4 +30,10 @@ public class PlayerEvent
     public bool MatchPlayer(SteamPlayer other) => other.playerID.steamID.m_SteamID == Player.Steam64.m_SteamID;
     public bool MatchPlayer(SteamPlayerID other) => other.steamID.m_SteamID == Player.Steam64.m_SteamID;
     public bool MatchPlayer(WarfarePlayer other) => other.Steam64 == Player.Steam64;
+}
+
+public interface IPlayerEvent
+{
+    WarfarePlayer Player { get; }
+    CSteamID Steam64 { get; }
 }

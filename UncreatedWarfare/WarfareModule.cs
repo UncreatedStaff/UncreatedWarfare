@@ -18,6 +18,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation;
@@ -213,6 +214,9 @@ public sealed class WarfareModule : IModuleNexus
         // Players
         serviceCollection.AddSingleton<PlayerService>();
         serviceCollection.AddSingleton<IEventListenerProvider, PlayerComponentListenerProvider>();
+
+        // Kits
+        KitManager.ConfigureServices(serviceCollection);
 
         // Layouts
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout());
