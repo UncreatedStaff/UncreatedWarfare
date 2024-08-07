@@ -1,0 +1,30 @@
+﻿# ClearCommand
+Description: "Clear inventories, items, vehicles, and buildables from the world."
+Parameters:
+  - Name: "inventory"
+    Alias: "inv"
+    Type: Verbatim
+    Parameters:
+      - Name: Player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Optional: true
+
+  - Name: "items"
+    Aliases: [ "item", "i" ]
+    Type: Verbatim
+    Parameters:
+      - Name: Range
+        Type: float
+        Optional: true
+        Description: "Distance to clear items around <caller />."
+
+  - Name: "vehicles"
+    Aliases: [ "veh", "vehicle", "v" ]
+    Type: Verbatim
+    Flags:
+      - Name: "e"
+        Description: "Only empty vehicles will be cleared."
+
+  - Name: "buildables"
+    Aliases: [ "structures", "struct", "s", "structure", "barricades", "barricade", "b" ]
+    Type: Verbatim

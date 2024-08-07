@@ -4,6 +4,9 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
+
+[Command("attach")]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class AttachCommand : IExecutableCommand
 {
     private const string Syntax = "/attach <item...> | (<remove> <sight|tact|grip|barrel|ammo>) | (<setammo> <amt>) | (<firemode> <safety|semi|auto|burst>)";

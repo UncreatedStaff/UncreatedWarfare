@@ -4,8 +4,7 @@ using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("blank")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[Command("blank"), MetadataFile]
 public sealed class BlankCommand : IExecutableCommand
 {
     /// <inheritdoc />

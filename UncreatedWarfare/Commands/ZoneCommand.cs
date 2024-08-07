@@ -10,7 +10,7 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Commands;
 
 [Command("zone")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class ZoneCommand : IExecutableCommand
 {
     private readonly ZoneStore _zoneStore;

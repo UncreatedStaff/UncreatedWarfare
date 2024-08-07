@@ -18,6 +18,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Steam.Models;
+using Uncreated.Warfare.Zones;
 using Types = SDG.Unturned.Types;
 
 namespace Uncreated.Warfare;
@@ -602,13 +603,6 @@ public static class F
             }
         }
         else success = true;
-    }
-    public static void SendSteamURL(this SteamPlayer player, string message, ulong s64) =>
-        player.SendURL(message, $"https://steamcommunity.com/profiles/{s64}/");
-    public static void SendURL(this SteamPlayer player, string message, string url)
-    {
-        if (player == null || url == null) return;
-        player.player.sendBrowserRequest(message, url);
     }
     public static bool CanStandAtLocation(Vector3 source) => PlayerStance.hasStandingHeightClearanceAtPosition(source);
     /// <remarks>Write-locks <see cref="ZoneList"/> if <paramref name="zones"/> is <see langword="true"/>.</remarks>

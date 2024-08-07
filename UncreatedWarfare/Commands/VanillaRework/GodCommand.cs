@@ -3,7 +3,7 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("god")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class GodCommand : IExecutableCommand
 {
     /// <inheritdoc />

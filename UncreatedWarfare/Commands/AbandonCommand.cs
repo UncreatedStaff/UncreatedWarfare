@@ -7,7 +7,7 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Commands;
 
 [Command("abandon", "av")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class AbandonCommand : IExecutableCommand
 {
     private readonly ZoneStore _zoneStore;

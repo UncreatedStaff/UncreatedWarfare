@@ -9,7 +9,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("shutdown"), Priority(1)]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class ShutdownCommand : IExecutableCommand
 {
     private const string Syntax = "/shutdown [instant|after|cancel|*time*] [reason]";

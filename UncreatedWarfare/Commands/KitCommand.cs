@@ -24,7 +24,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("blank")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public sealed class KitCommand : IExecutableCommand
 {
     private const string Syntax = "/kit <keybind|search|skills|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";

@@ -243,7 +243,7 @@ public class CommandParser(CommandDispatcher dispatcher)
                 string command = new string(ptr, cmdStart, cmdEnd - cmdStart + 1);
                 for (int k = 0; k < dispatcher.Commands.Count; ++k)
                 {
-                    CommandType cmd = dispatcher.Commands[k];
+                    CommandInfo cmd = dispatcher.Commands[k];
                     string c2 = cmd.CommandName;
                     if (command.Equals(c2, StringComparison.InvariantCultureIgnoreCase))
                     {

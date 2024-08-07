@@ -136,6 +136,7 @@
   <ItemGroup>
     <Using Remove="System.Net.Http" />
     <Using Remove="System.Text" />
+    <EmbeddedResource Include="Commands\ClearCommand.meta.yml" />
     <Using Include="JetBrains.Annotations" />
     <Using Include="SDG.Unturned" />
     <Using Include="Steamworks" />

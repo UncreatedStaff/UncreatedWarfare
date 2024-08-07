@@ -10,7 +10,7 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Commands;
 
 [Command("deploy", "dep", "warp", "warps", "tpa", "go", "goto", "fob", "deployfob", "df", "dp")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class DeployCommand : IExecutableCommand
 {
     private const string Syntax = "/deploy main -OR- /deploy <fob name>";

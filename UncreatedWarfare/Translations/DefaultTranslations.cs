@@ -753,26 +753,7 @@ internal static class T
     #endregion
 
     #endregion
-
-    #region GroupCommand
-    private const string SectionGroup = "Groups";
     
-    [TranslationData(SectionGroup, "Output from /group, tells the player their current group.", "Group ID", "Group Name", "Team Color (if applicable)")]
-    public static readonly Translation<ulong, string, Color> CurrentGroup = new Translation<ulong, string, Color>("<#e6e3d5>Group <#{2}>{0}</color>: <#{2}>{1}</color>");
-    
-    [TranslationData(SectionGroup, "Output from /group join <id>.", "Group ID", "Group Name", "Team Color (if applicable)", IsPrioritizedTranslation = false)]
-    public static readonly Translation<ulong, string, Color> JoinedGroup  = new Translation<ulong, string, Color>("<#e6e3d5>You have joined group <#{2}>{0}</color>: <#{2}>{1}</color>.");
-    
-    [TranslationData(SectionGroup, "Output from /group when the player is not in a group.", IsPrioritizedTranslation = false)]
-    public static readonly Translation NotInGroup           = new Translation("<#ff8c69>You aren't in a group.");
-    
-    [TranslationData(SectionGroup, "Output from /group join <id> when the player is already in that group.", IsPrioritizedTranslation = false)]
-    public static readonly Translation AlreadyInGroup       = new Translation("<#ff8c69>You are already in that group.");
-    
-    [TranslationData(SectionGroup, "Output from /group join <id> when the group is not found.", "Input", IsPrioritizedTranslation = false)]
-    public static readonly Translation<string> GroupNotFound = new Translation<string>("<#ff8c69>Could not find group <#4785ff>{0}</color>.");
-    #endregion
-
     #region LangCommand
     private const string SectionLanguages = "Languages";
     

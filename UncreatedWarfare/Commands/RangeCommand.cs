@@ -3,7 +3,7 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("range", "r")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class RangeCommand : IExecutableCommand
 {
     private const int Precision = 10;

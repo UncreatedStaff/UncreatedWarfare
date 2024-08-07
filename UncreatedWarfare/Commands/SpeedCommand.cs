@@ -3,7 +3,7 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("speed")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class SpeedCommand : IExecutableCommand
 {
     private const string Syntax = "/speed [player] <multiplier>";

@@ -1,9 +1,10 @@
 ﻿using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("jump", "jmp")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class JumpCommand : IExecutableCommand
 {
     private const string Syntax = "/jump [player] <multiplier>";
@@ -59,7 +60,7 @@ public class JumpCommand : IExecutableCommand
 
         Context.AssertOnDuty();
 
-        UCPlayer? target = Context.Player;
+        WarfarePlayer? target = Context.Player;
         
         if (Context.HasArgs(2) && (!Context.TryGet(0, out _, out target) || target == null))
         {
@@ -82,12 +83,12 @@ public class JumpCommand : IExecutableCommand
 
         multiplier = Mathf.Clamp(multiplier, 0f, 10f);
 
-        if (target.Player.movement.pluginJumpMultiplier == multiplier)
+        if (target.UnturnedPlayer.movement.pluginJumpMultiplier == multiplier)
         {
             throw Context.Reply(T.JumpMultiplierAlreadySet, multiplier);
         }
 
-        target.Player.movement.sendPluginJumpMultiplier(multiplier);
+        target.UnturnedPlayer.movement.sendPluginJumpMultiplier(multiplier);
         Context.Reply(T.SetJumpMultiplier, multiplier, target);
         return default;
     }

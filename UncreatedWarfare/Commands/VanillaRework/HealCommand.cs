@@ -4,7 +4,7 @@ using Uncreated.Warfare.Interaction;
 namespace Uncreated.Warfare.Commands;
 
 [Command("heal")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class HealCommand : IExecutableCommand
 {
     /// <inheritdoc />

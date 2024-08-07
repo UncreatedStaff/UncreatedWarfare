@@ -14,7 +14,7 @@ using Uncreated.Warfare.Vehicles;
 namespace Uncreated.Warfare.Commands;
 
 [Command("ammo")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class AmmoCommand : IExecutableCommand
 {
     private readonly DroppedItemTracker _itemTracker;

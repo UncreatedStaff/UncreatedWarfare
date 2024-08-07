@@ -10,7 +10,7 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Commands;
 
 [Command("give", "i", "item"), Priority(1)]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class GiveCommand : IExecutableCommand
 {
     private const string Syntax = "/i <item ...> [count = 1]";

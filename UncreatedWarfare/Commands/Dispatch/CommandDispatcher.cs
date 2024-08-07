@@ -8,20 +8,22 @@ using System.Reflection;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Commands.Dispatch;
 public class CommandDispatcher : IDisposable
 {
     private readonly WarfareModule _module;
     private readonly UserPermissionStore _permissions;
+    private readonly ILogger<CommandDispatcher> _logger;
     private ICommandUser? _currentVanillaCommandExecutor;
     public CommandParser Parser { get; }
-    public IReadOnlyList<CommandType> Commands { get; }
-    public CommandDispatcher(WarfareModule module, UserPermissionStore permissions)
+    public IReadOnlyList<CommandInfo> Commands { get; }
+    public CommandDispatcher(WarfareModule module, UserPermissionStore permissions, ILogger<CommandDispatcher> logger)
     {
         _module = module;
         _permissions = permissions;
+        _logger = logger;
 
         Parser = new CommandParser(this);
 
@@ -38,39 +40,71 @@ public class CommandDispatcher : IDisposable
             }
             catch
             {
-                L.LogDebug($"Unable to load referenced assembly {referencedAssembly}.");
+                logger.LogDebug("Unable to load referenced assembly {0}.", referencedAssembly);
             }
         }
 
         List<Type> types = Accessor.GetTypesSafe(assemblies, removeIgnored: true)
-            .Where(typeof(IExecutableCommand).IsAssignableFrom)
+            .Where(typeof(ICommand).IsAssignableFrom)
             .ToList();
 
-        List<CommandType> commands = new List<CommandType>(types.Count + Commander.commands.Count);
+        List<CommandInfo> parentCommands = new List<CommandInfo>(types.Count + Commander.commands.Count);
 
-        commands.AddRange(types.Select(type => new CommandType(type)));
-        commands.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+        foreach (Type commandType in types)
+        {
+            if (commandType.IsAbstract)
+                continue;
+
+            if (parentCommands.Any(x => x.Type == commandType))
+                continue;
+
+            CommandInfo info = new CommandInfo(commandType, logger, GetParentInfo(commandType, parentCommands, logger));
+
+            if (!info.IsSubCommand)
+                parentCommands.Add(info);
+        }
+
+        parentCommands.Sort((a, b) => b.Priority.CompareTo(a.Priority));
 
         // add vanilla commands
-        commands.AddRange(Commander.commands.Select(vanillaCommand => new CommandType(vanillaCommand)));
+        parentCommands.AddRange(Commander.commands.Select(vanillaCommand => new CommandInfo(vanillaCommand)));
 
-        Commands = new ReadOnlyCollection<CommandType>(commands);
+        Commands = new ReadOnlyCollection<CommandInfo>(parentCommands);
 
         ChatManager.onCheckPermissions += OnChatProcessing;
         CommandWindow.onCommandWindowInputted += OnCommandInput;
+        return;
+
+        // recursively create parent info's if they don't already exist for this command
+        static CommandInfo? GetParentInfo(Type commandType, List<CommandInfo> commands, ILogger logger)
+        {
+            if (!commandType.TryGetAttributeSafe(out SubCommandOfAttribute subCommand) || subCommand.ParentType == null || !typeof(ICommand).IsAssignableFrom(subCommand.ParentType))
+                return null;
+
+            CommandInfo? existingParentInfo = commands.FirstOrDefault(x => x.Type == subCommand.ParentType);
+            if (existingParentInfo == null)
+            {
+                existingParentInfo = new CommandInfo(subCommand.ParentType, logger, GetParentInfo(subCommand.ParentType, commands, logger));
+                if (!existingParentInfo.IsSubCommand)
+                    commands.Add(existingParentInfo);
+            }
+
+            return existingParentInfo;
+        }
     }
+
 
     /// <summary>
     /// Find information about a command by name.
     /// </summary>
-    public CommandType? FindCommand(string search)
+    public CommandInfo? FindCommand(string search)
     {
-        CommandType? cmd = F.StringFind(Commands, x => x.CommandName, x => x.Priority,
+        CommandInfo? cmd = F.StringFind(Commands, x => x.CommandName, x => x.Priority,
             x => x.CommandName.Length, search, descending: true, equalsOnly: true);
         if (cmd != null)
             return cmd;
 
-        foreach (CommandType command in Commands)
+        foreach (CommandInfo command in Commands)
         {
             if (command.Aliases != null)
             {
@@ -85,9 +119,25 @@ public class CommandDispatcher : IDisposable
     }
 
     /// <summary>
+    /// Find information about a command by name.
+    /// </summary>
+    public CommandInfo? FindCommand(Type commandType)
+    {
+        foreach (CommandInfo command in Commands)
+        {
+            if (command.Type == commandType)
+            {
+                return command;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Start executing a parsed command.
     /// </summary>
-    internal void ExecuteCommand(CommandType command, ICommandUser user, string[] args, string originalMessage)
+    internal void ExecuteCommand(CommandInfo command, ICommandUser user, string[] args, string originalMessage)
     {
         ThreadUtil.assertIsGameThread();
 
@@ -99,14 +149,108 @@ public class CommandDispatcher : IDisposable
 
         UniTask.Create(async () =>
         {
-            if (command.VanillaCommand != null)
-            {
-                await ExecuteVanillaCommandAsync(user, command.VanillaCommand, args);
-                return;
-            }
-
             await ExecuteCommandAsync(command, user, args, originalMessage);
         });
+    }
+
+    /// <summary>
+    /// Execute a parsed command.
+    /// </summary>
+    public async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, string originalMessage, CancellationToken token = default)
+    {
+        int offset;
+        if (!command.IsSubCommand)
+        {
+            ResolveSubCommand(ref command, args, out offset);
+        }
+        else
+        {
+            BacktrackSubCommand(command, ref args, out offset);
+        }
+
+        if (command.Type != typeof(HelpCommand) && offset < args.Length && (string.Equals(args[offset], "help", StringComparison.InvariantCultureIgnoreCase)
+                                                                            || string.Equals(args[offset], "hlep", StringComparison.InvariantCultureIgnoreCase)
+                                                                            || string.Equals(args[offset], "?", StringComparison.InvariantCultureIgnoreCase)))
+        {
+            CommandInfo? helpCommand = FindCommand(typeof(HelpCommand));
+            if (helpCommand != null)
+                command = helpCommand;
+        }
+
+        if (command.VanillaCommand != null)
+        {
+            await ExecuteVanillaCommandAsync(user, command.VanillaCommand, args, token);
+            return;
+        }
+
+        await ExecuteCommandAsync(command, user, args, originalMessage, offset, token);
+    }
+
+    private static void BacktrackSubCommand(CommandInfo command, ref string[] args, out int offset)
+    {
+        offset = 0;
+        for (CommandInfo? parent = command.ParentCommand; parent != null; parent = parent.ParentCommand)
+        {
+            ++offset;
+        }
+
+        if (offset == 0)
+            return;
+
+        string[] newArgs = new string[offset + args.Length];
+        Array.Copy(args, 0, newArgs, offset, args.Length);
+        for (CommandInfo subCommand = command; subCommand?.ParentCommand != null; subCommand = subCommand.ParentCommand)
+        {
+            newArgs[--offset] = subCommand.CommandName;
+        }
+    }
+
+    private static void ResolveSubCommand(ref CommandInfo command, IReadOnlyList<string> args, out int offset)
+    {
+        offset = 0;
+        if (command.SubCommands.Length == 0)
+            return;
+
+        for (int i = 0; i < args.Count; ++i)
+        {
+            string arg = args[i];
+            bool found = false;
+            for (int j = 0; j < command.SubCommands.Length; ++j)
+            {
+                CommandInfo parameter = command.SubCommands[j];
+                if (!arg.Equals(parameter.CommandName, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+
+                command = parameter;
+                found = true;
+                ++offset;
+                break;
+            }
+
+            if (found)
+                continue;
+
+            for (int j = 0; j < command.SubCommands.Length; ++j)
+            {
+                CommandInfo parameter = command.SubCommands[j];
+                for (int k = 0; k < parameter.Aliases.Length; ++k)
+                {
+                    if (!arg.Equals(parameter.Aliases[k], StringComparison.InvariantCultureIgnoreCase))
+                        continue;
+
+                    command = parameter;
+                    found = true;
+                    ++offset;
+                    break;
+                }
+
+                if (found)
+                    break;
+            }
+
+            if (!found)
+                return;
+        }
     }
 
     // todo
@@ -125,7 +269,7 @@ public class CommandDispatcher : IDisposable
         if (!await _permissions.HasPermissionAsync(user, new PermissionLeaf(vanillaCommand.command, unturned: true, warfare: false) /* unturned::command */, token))
         {
             await UniTask.SwitchToMainThread();
-            user.SendMessage(T.NoPermissions.Translate(user as UCPlayer));
+            user.SendMessage(T.NoPermissions.Translate(user as WarfarePlayer));
             return;
         }
 
@@ -137,7 +281,7 @@ public class CommandDispatcher : IDisposable
         }
         catch (Exception ex)
         {
-            L.LogError(ex);
+            _logger.LogError(ex, "Error executing vanilla command {0}.", Accessor.Formatter.Format(vanillaCommand.GetType()));
         }
         finally
         {
@@ -148,7 +292,7 @@ public class CommandDispatcher : IDisposable
     /// <summary>
     /// Execute a custom command.
     /// </summary>
-    private async UniTask ExecuteCommandAsync(CommandType command, ICommandUser user, string[] args, string originalMessage, CancellationToken token = default)
+    private async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, string originalMessage, int argumentOffset, CancellationToken token = default)
     {
         SemaphoreSlim? lockTaken = command.SynchronizedSemaphore;
         if (lockTaken != null)
@@ -156,72 +300,143 @@ public class CommandDispatcher : IDisposable
             await lockTaken.WaitAsync(token);
         }
 
+        CommandInfo? switchInfo = null;
+
+        CancellationTokenSource src = new CancellationTokenSource();
+        CancellationTokenSource linkedSrc = CancellationTokenSource.CreateLinkedTokenSource(token, src.Token);
         try
         {
             await UniTask.SwitchToMainThread();
 
-            CommandContext ctx = new CommandContext(user, args, originalMessage, command, _module.ScopedProvider);
-
-            IExecutableCommand cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(_module.ScopedProvider, command.Type, [ ctx ]);
-            ctx.Command = cmdInstance;
-
-            if (!CheckCommandOnCooldown(ctx))
-                return;
-
-            ctx.CheckIsolatedCooldown();
-
-            await AssertPermissions(command, ctx, token);
-
-            await UniTask.SwitchToMainThread();
-
-            try
+            CommandContext ctx = new CommandContext(user, linkedSrc.Token, args, originalMessage, command, this, _module.ScopedProvider)
             {
-                await cmdInstance.ExecuteAsync(token);
+                ArgumentOffset = argumentOffset
+            };
+
+            if (!command.IsExecutable)
+            {
+                ctx.SendHelp();
+            }
+            else
+            {
+                IExecutableCommand cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(_module.ScopedProvider, command.Type, [ctx]);
+                ctx.Command = cmdInstance;
+
+                if (!CheckCommandOnCooldown(ctx))
+                    return;
+
+                ctx.CheckIsolatedCooldown();
+
+                await AssertPermissions(command, ctx, token);
+
                 await UniTask.SwitchToMainThread();
 
-                if (!ctx.Responded)
+                try
                 {
-                    ctx.SendUnknownError();
+                    await cmdInstance.ExecuteAsync(token);
+                    src.Cancel();
+                    await UniTask.SwitchToMainThread();
+
+                    if (!ctx.Responded)
+                    {
+                        ctx.SendUnknownError();
+                    }
+                    CheckCommandShouldStartCooldown(ctx);
                 }
-                CheckCommandShouldStartCooldown(ctx);
-            }
-            catch (OperationCanceledException)
-            {
-                await UniTask.SwitchToMainThread();
-
-                ctx.Reply(T.ErrorCommandCancelled);
-                CheckCommandShouldStartCooldown(ctx);
-
-                L.LogDebug($"Execution of {command.CommandName} was cancelled for {ctx.CallerId}.");
-            }
-            catch (ControlException)
-            {
-                await UniTask.SwitchToMainThread();
-                if (!ctx.Responded)
+                catch (OperationCanceledException)
                 {
-                    ctx.SendUnknownError();
+                    src.Cancel();
+                    await UniTask.SwitchToMainThread();
+
+                    ctx.Reply(T.ErrorCommandCancelled);
+                    CheckCommandShouldStartCooldown(ctx);
+
+                    _logger.LogDebug("Execution of {0} was cancelled for {1}.", command.CommandName, ctx.CallerId.m_SteamID);
                 }
-                CheckCommandShouldStartCooldown(ctx);
+                catch (ControlException)
+                {
+                    src.Cancel();
+                    await UniTask.SwitchToMainThread();
+                    if (!ctx.Responded)
+                    {
+                        ctx.SendUnknownError();
+                    }
+                    CheckCommandShouldStartCooldown(ctx);
+                }
+                catch (Exception ex)
+                {
+                    src.Cancel();
+                    await UniTask.SwitchToMainThread();
+                    ctx.SendUnknownError();
+                    CheckCommandShouldStartCooldown(ctx);
+                    _logger.LogError(ex, "Execution of {0} failed for {1}.", command.CommandName, ctx.CallerId.m_SteamID);
+                }
             }
-            catch (Exception ex)
+
+            Type? switchCommand = ctx.SwitchCommand;
+            if (switchCommand != null)
             {
-                await UniTask.SwitchToMainThread();
-                ctx.SendUnknownError();
-                CheckCommandShouldStartCooldown(ctx);
-                L.LogError($"Execution of {command.CommandName} failed for {ctx.CallerId}.");
-                L.LogError(ex);
+                switchInfo = FindCommand(switchCommand);
+                if (switchInfo == null)
+                {
+                    _logger.LogError("Invalid switch command type: {0} in command {1}.", Accessor.Formatter.Format(switchCommand), Accessor.Formatter.Format(command.Type));
+                    return;
+                }
+
+                // special argument transformation handling for /help
+                if (switchInfo.Type == typeof(HelpCommand))
+                {
+                    args = ctx.ParametersWithFlags;
+                    if (args.Length > 0 && (args[^1].Equals("help", StringComparison.InvariantCultureIgnoreCase)
+                                            || args[^1].Equals("hlep", StringComparison.InvariantCultureIgnoreCase)
+                                            || args[^1].Equals("?", StringComparison.InvariantCultureIgnoreCase)))
+                    {
+                        // remove ending help in cases such as '/clear inventory help' and insert old command name as first argument
+                        Array.Copy(args, 0, args, 1, args.Length);
+                        args[0] = command.CommandName;
+                    }
+                    else
+                    {
+                        // insert old command name as first argument
+                        string[] newArgs = new string[args.Length + 1];
+                        Array.Copy(args, 0, newArgs, 1, args.Length);
+                        newArgs[0] = command.CommandName;
+                        args = newArgs;
+                    }
+                    
+                    // new args resemble '/help clear inventory'
+                }
+                else if (command.IsSubCommand)
+                {
+                    args = ctx.Parameters.ToArray();
+                }
+
+                _logger.LogDebug("Switching to command type {0} with args [ /{1} {2} ] from command type {3}.",
+                    Accessor.Formatter.Format(switchInfo.Type),
+                    switchInfo.CommandName,
+                    args.Length != 0 ? "\"" + string.Join("\" \"", args) + "\"" : 0,
+                    Accessor.Formatter.Format(command.Type)
+                );
             }
         }
         finally
         {
+            src.Dispose();
+            linkedSrc.Dispose();
             lockTaken?.Release();
         }
+
+        // run switch-to command
+        if (switchInfo == null)
+            return;
+
+        await ExecuteCommandAsync(switchInfo, user, args, originalMessage, token);
     }
 
     /// <summary>
     /// Throw a <see cref="CommandContext"/> if a command doesn't have permission to be ran by <paramref name="ctx"/>.
     /// </summary>
-    public static async UniTask AssertPermissions(CommandType command, CommandContext ctx, CancellationToken token = default)
+    public static async UniTask AssertPermissions(CommandInfo command, CommandContext ctx, CancellationToken token = default)
     {
         if (command.OtherPermissionsAreAnd)
         {
@@ -272,7 +487,7 @@ public class CommandDispatcher : IDisposable
             shouldExecuteCommand = false;
         else if (!shouldExecuteCommand)
         {
-            L.Log("Unknown command.", ConsoleColor.Red);
+            _logger.LogError("Unknown command.");
         }
     }
     internal bool CheckCommandOnCooldown(CommandContext context)
@@ -323,7 +538,7 @@ public class CommandDispatcher : IDisposable
         ChatManager.onCheckPermissions -= OnChatProcessing;
         CommandWindow.onCommandWindowInputted -= OnCommandInput;
 
-        foreach (CommandType commandInfo in Commands)
+        foreach (CommandInfo commandInfo in Commands)
         {
             commandInfo.SynchronizedSemaphore?.Dispose();
         }

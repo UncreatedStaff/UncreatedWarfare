@@ -11,7 +11,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands.VanillaRework;
 
 [Command("vehicle", "v", "veh"), Priority(1)]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class VehicleCommand : IExecutableCommand
 {
     private const string AdminSyntax = "/v <vehicle|kick|give|accept|deny> [player]";

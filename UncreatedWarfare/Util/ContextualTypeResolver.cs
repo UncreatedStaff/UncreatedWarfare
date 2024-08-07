@@ -39,6 +39,85 @@ internal static class ContextualTypeResolver
         if (type != null && (expectedBaseType == null || expectedBaseType.IsAssignableFrom(type)))
             return true;
 
+        if (type == null)
+        {
+            if (typeName.Equals("bool", StringComparison.Ordinal))
+            {
+                type = typeof(bool);
+            }
+            else if (typeName.Equals("byte", StringComparison.Ordinal))
+            {
+                type = typeof(byte);
+            }
+            else if (typeName.Equals("char", StringComparison.Ordinal))
+            {
+                type = typeof(char);
+            }
+            else if (typeName.Equals("decimal", StringComparison.Ordinal))
+            {
+                type = typeof(decimal);
+            }
+            else if (typeName.Equals("delegate", StringComparison.Ordinal))
+            {
+                type = typeof(Delegate);
+            }
+            else if (typeName.Equals("double", StringComparison.Ordinal))
+            {
+                type = typeof(double);
+            }
+            else if (typeName.Equals("enum", StringComparison.Ordinal))
+            {
+                type = typeof(Enum);
+            }
+            else if (typeName.Equals("float", StringComparison.Ordinal))
+            {
+                type = typeof(float);
+            }
+            else if (typeName.Equals("int", StringComparison.Ordinal))
+            {
+                type = typeof(int);
+            }
+            else if (typeName.Equals("long", StringComparison.Ordinal))
+            {
+                type = typeof(long);
+            }
+            else if (typeName.Equals("object", StringComparison.Ordinal))
+            {
+                type = typeof(object);
+            }
+            else if (typeName.Equals("sbyte", StringComparison.Ordinal))
+            {
+                type = typeof(sbyte);
+            }
+            else if (typeName.Equals("short", StringComparison.Ordinal))
+            {
+                type = typeof(short);
+            }
+            else if (typeName.Equals("string", StringComparison.Ordinal))
+            {
+                type = typeof(string);
+            }
+            else if (typeName.Equals("uint", StringComparison.Ordinal))
+            {
+                type = typeof(uint);
+            }
+            else if (typeName.Equals("ulong", StringComparison.Ordinal))
+            {
+                type = typeof(ulong);
+            }
+            else if (typeName.Equals("ushort", StringComparison.Ordinal))
+            {
+                type = typeof(ushort);
+            }
+            else if (typeName.Equals("void", StringComparison.Ordinal))
+            {
+                type = typeof(void);
+            }
+
+            if (type != null && (expectedBaseType == null || expectedBaseType.IsAssignableFrom(type)))
+                return true;
+        }
+
         // search by actual type name
         _allTypesCache ??= Accessor.GetTypesSafe(ThisAssembly);
         
@@ -55,13 +134,13 @@ internal static class ContextualTypeResolver
                 continue;
 
             if (index != -1)
-                return false;
+            {
+                index = -1;
+                break;
+            }
 
             index = i;
         }
-
-        if (index == -1)
-            return false;
 
         type = _allTypesCache[index];
         return true;

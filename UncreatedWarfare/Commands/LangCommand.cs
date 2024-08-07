@@ -5,7 +5,7 @@ using Uncreated.Warfare.Models.Localization;
 namespace Uncreated.Warfare.Commands;
 
 [Command("lang", "language", "foreign")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class LangCommand : IExecutableCommand
 {
     private const string Syntax = "/lang [current|reset|*language*]";

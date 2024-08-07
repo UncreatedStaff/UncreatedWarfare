@@ -4,14 +4,17 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands.Dispatch;
@@ -22,18 +25,42 @@ namespace Uncreated.Warfare.Commands.Dispatch;
 public class CommandContext : ControlException
 {
     public const string Default = "-";
+
     private readonly UserPermissionStore _permissionsStore;
     private readonly PlayerService _playerService;
+    private readonly CommandDispatcher _dispatcher;
+    private readonly string[] _parameters;
+    private readonly int _argumentCount;
+    private int _argumentOffset;
+
+    internal Type? SwitchCommand;
 
     /// <summary>
     /// Useful for sub-commands, offsets any parsing methods.
     /// </summary>
     /// <remarks>Increment this to skip one argument, for example.</remarks>
-    public int ArgumentOffset { get; set; }
+    public int ArgumentOffset
+    {
+        get => _argumentOffset;
+        set
+        {
+            _argumentOffset = Math.Clamp(value, 0, _argumentCount - 1);
+            if (_parameters.Length - _argumentOffset <= 0)
+            {
+                ArgumentCount = 0;
+                Parameters = new ArraySegment<string>(_parameters, 0, 0);
+            }
+            else
+            {
+                ArgumentCount = _argumentCount - _argumentOffset;
+                Parameters = new ArraySegment<string>(_parameters, _argumentOffset, ArgumentCount);
+            }
+        }
+    }
 
 #nullable disable
     /// <summary>
-    /// Player that called the command. Will be <see langword="null"/> if the command was called from console or some other source.
+    /// Player that called the command. Will be <see langword="null"/> if the command was called from console or some other source, but not marked as nullable for ease of use.
     /// </summary>
     public WarfarePlayer Player { get; }
 #nullable restore
@@ -44,39 +71,44 @@ public class CommandContext : ControlException
     public ICommandUser Caller { get; }
 
     /// <summary>
+    /// A token that is cancelled when the command finishes.s
+    /// </summary>
+    public CancellationToken Token { get; }
+
+    /// <summary>
     /// Whether or not the console was the caller of the command.
     /// </summary>
     public bool IsConsole { get; }
 
     /// <summary>
-    /// Command arguments (including flags) not including the name.
+    /// Command arguments not including the name or flags.
     /// </summary>
-    /// <remarks>This is not affected by <see cref="ArgumentOffset"/>.</remarks>
-    public string[] Parameters { get; }
+    /// <remarks>Adjusts depending on <see cref="ArgumentOffset"/>.</remarks>
+    public ArraySegment<string> Parameters { get; private set; }
 
     /// <summary>
-    /// Command arguments not including flags or the name.
+    /// Number of arguments provided not including the name or flags.
+    /// </summary>
+    /// <remarks>Adjusts depending on <see cref="ArgumentOffset"/>.</remarks>
+    public int ArgumentCount { get; private set; }
+
+    /// <summary>
+    /// Original argument array including flags.
     /// </summary>
     /// <remarks>This is not affected by <see cref="ArgumentOffset"/>.</remarks>
-    public string[] NonFlagParameters { get; }
+    public string[] ParametersWithFlags { get; }
+
+    /// <summary>
+    /// Number of arguments provided (not including flags).
+    /// </summary>
+    /// <remarks>This is not affected by <see cref="ArgumentOffset"/>.</remarks>
+    public int ArgumentCountWithFlags { get; }
 
     /// <summary>
     /// All command flags.
     /// </summary>
     /// <remarks>This is not affected by <see cref="ArgumentOffset"/>.</remarks>
     public string[] Flags { get; }
-
-    /// <summary>
-    /// Number of arguments and flags provided.
-    /// </summary>
-    /// <remarks>This is not affected by <see cref="ArgumentOffset"/>.</remarks>
-    public int ArgumentCount { get; }
-
-    /// <summary>
-    /// Number of arguments provided (not including flags).
-    /// </summary>
-    /// <remarks>This is not affected by <see cref="ArgumentOffset"/>.</remarks>
-    public int NonFlagArgumentCount { get; }
 
     /// <summary>
     /// Steam 64 id of the caller.
@@ -142,66 +174,66 @@ public class CommandContext : ControlException
     /// <summary>
     /// Type information about the command.
     /// </summary>
-    public CommandType CommandInfo { get; }
-    public CommandContext(ICommandUser user, string[] args, string originalMessage, CommandType commandInfo, IServiceProvider serviceProvider)
+    public CommandInfo CommandInfo { get; }
+    public CommandContext(ICommandUser user, CancellationToken token, string[] args, string originalMessage, CommandInfo commandInfo, CommandDispatcher dispatcher, IServiceProvider serviceProvider)
     {
         Command = null!;
         Caller = user;
+        Token = token;
         CommandInfo = commandInfo;
         Player = user as WarfarePlayer;
 
+        _dispatcher = dispatcher;
         _permissionsStore = serviceProvider.GetRequiredService<UserPermissionStore>();
         _playerService = serviceProvider.GetRequiredService<PlayerService>();
 
         IsConsole = user is null; // todo make console user
 
         OriginalMessage = originalMessage;
-        Parameters = args ?? Array.Empty<string>();
+        args ??= Array.Empty<string>();
 
         // flag parsing
         int flags = 0;
-        for (int i = 0; i < Parameters.Length; ++i)
+        for (int i = 0; i < args.Length; ++i)
         {
             if (IsFlag(Parameters[i]))
                 ++flags;
         }
 
-        NonFlagParameters = flags == 0 ? Parameters : new string[Parameters.Length - flags];
+        string[] nonFlagParameters = flags == 0 ? args : new string[args.Length - flags];
 
         if (flags > 0)
         {
             Flags = new string[flags];
-            for (int i = Parameters.Length - 1; i >= 0; --i)
+            for (int i = args.Length - 1; i >= 0; --i)
             {
-                if (IsFlag(Parameters[i]))
-                    Flags[--flags] = Parameters[i][1..];
+                if (IsFlag(args[i]))
+                    Flags[--flags] = args[i][1..];
             }
-            flags = Parameters.Length - Flags.Length;
-            for (int i = Parameters.Length - 1; i >= 0; --i)
+
+            flags = args.Length - Flags.Length;
+            for (int i = args.Length - 1; i >= 0; --i)
             {
-                if (!IsFlag(Parameters[i]))
-                    NonFlagParameters[--flags] = Parameters[i];
+                if (!IsFlag(args[i]))
+                    nonFlagParameters[--flags] = args[i];
+            }
+
+            for (int i = 0; i < nonFlagParameters.Length; ++i)
+            {
+                if (IsEscapedFlag(nonFlagParameters[i]))
+                    nonFlagParameters[i] = nonFlagParameters[i][1..];
             }
         }
         else Flags = Array.Empty<string>();
 
-        for (int i = 0; i < Parameters.Length; ++i)
-        {
-            if (IsEscapedFlag(Parameters[i]))
-                Parameters[i] = Parameters[i][1..];
-        }
+        ArgumentCountWithFlags = args.Length;
+        ParametersWithFlags = args;
 
-        if (flags != 0)
-        {
-            for (int i = 0; i < NonFlagParameters.Length; ++i)
-            {
-                if (IsEscapedFlag(NonFlagParameters[i]))
-                    NonFlagParameters[i] = NonFlagParameters[i][1..];
-            }
-        }
+        _parameters = nonFlagParameters;
+        _argumentCount = nonFlagParameters.Length;
+        ArgumentCount = _argumentCount;
+        Parameters = new ArraySegment<string>(nonFlagParameters);
 
-        ArgumentCount = Parameters.Length;
-        NonFlagArgumentCount = NonFlagParameters.Length;
         if (user is null)
         {
             IsConsole = true;
@@ -215,7 +247,7 @@ public class CommandContext : ControlException
 
         if (Player == null)
         {
-            Language = Localization.GetDefaultLanguage();
+            Language = serviceProvider.GetRequiredService<LanguageService>().GetDefaultLanguage();
             Culture = Warfare.Data.AdminLocale;
             ParseFormat = Culture.NumberFormat;
         }
@@ -227,10 +259,12 @@ public class CommandContext : ControlException
             IMGUI = Player is { Save.IMGUI: true };
         }
     }
+
     private static bool IsFlag(string arg)
     {
         return arg.Length > 1 && arg[0] == '-' && !char.IsDigit(arg[1]) && arg[1] != '.';
     }
+
     private static bool IsEscapedFlag(string arg)
     {
         return arg.Length > 2 && arg[0] == '\\' && arg[1] == '-' && !char.IsDigit(arg[2]) && arg[2] != '.';
@@ -253,7 +287,7 @@ public class CommandContext : ControlException
     public bool HasArgument(int position)
     {
         position -= ArgumentOffset;
-        return position > -1 && position < NonFlagArgumentCount;
+        return position > -1 && position < _argumentCount;
     }
 
     /// <summary>
@@ -263,7 +297,7 @@ public class CommandContext : ControlException
     public bool HasArgs(int count)
     {
         count -= ArgumentOffset;
-        return count > -1 && count <= NonFlagArgumentCount;
+        return count > -1 && count <= _argumentCount;
     }
 
     /// <summary>
@@ -273,7 +307,7 @@ public class CommandContext : ControlException
     public bool HasArgsExact(int count)
     {
         count -= ArgumentOffset;
-        return count == NonFlagArgumentCount;
+        return count == _argumentCount;
     }
 
     /// <summary>
@@ -284,10 +318,10 @@ public class CommandContext : ControlException
     public bool MatchParameter(int parameter, string value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
-        return Parameters[parameter].Equals(value, StringComparison.InvariantCultureIgnoreCase);
+        return _parameters[parameter].Equals(value, StringComparison.InvariantCultureIgnoreCase);
     }
 
     /// <summary>
@@ -298,10 +332,10 @@ public class CommandContext : ControlException
     public bool MatchParameter(int parameter, string value, string alternate)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
-        string v = Parameters[parameter];
+        string v = _parameters[parameter];
         return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate, StringComparison.InvariantCultureIgnoreCase);
     }
 
@@ -313,10 +347,10 @@ public class CommandContext : ControlException
     public bool MatchParameter(int parameter, string value, string alternate1, string alternate2)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
-        string v = Parameters[parameter];
+        string v = _parameters[parameter];
         return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate1, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate2, StringComparison.InvariantCultureIgnoreCase);
     }
 
@@ -328,10 +362,10 @@ public class CommandContext : ControlException
     public bool MatchParameter(int parameter, params string[] alternates)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
-        string v = Parameters[parameter];
+        string v = _parameters[parameter];
         for (int i = 0; i < alternates.Length; ++i)
         {
             if (v.Equals(alternates[i], StringComparison.InvariantCultureIgnoreCase))
@@ -468,9 +502,9 @@ public class CommandContext : ControlException
     public string? Get(int parameter)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
             return null;
-        return NonFlagParameters[parameter];
+        return _parameters[parameter];
     }
 
     /// <summary>
@@ -481,16 +515,16 @@ public class CommandContext : ControlException
     {
         if (length == 1) return Get(start);
         start += ArgumentOffset;
-        if (start < 0 || start >= NonFlagArgumentCount)
+        if (start < 0 || start >= _argumentCount)
             return null;
-        if (start == NonFlagArgumentCount - 1)
-            return NonFlagParameters[start];
+        if (start == _argumentCount - 1)
+            return _parameters[start];
         if (length == -1)
-            return string.Join(" ", NonFlagParameters, start, NonFlagArgumentCount - start);
+            return string.Join(" ", _parameters, start, _argumentCount - start);
         if (length < 1) return null;
-        if (start + length >= NonFlagArgumentCount)
-            length = NonFlagArgumentCount - start;
-        return string.Join(" ", NonFlagParameters, start, length);
+        if (start + length >= _argumentCount)
+            length = _argumentCount - start;
+        return string.Join(" ", _parameters, start, length);
     }
 
     /// <summary>
@@ -510,12 +544,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out string value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = null!;
             return false;
         }
-        value = NonFlagParameters[parameter];
+        value = _parameters[parameter];
         return true;
     }
 
@@ -526,13 +560,13 @@ public class CommandContext : ControlException
     public bool TryGet<TEnum>(int parameter, out TEnum value) where TEnum : unmanaged, Enum
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = default;
             return false;
         }
 
-        return Enum.TryParse(NonFlagParameters[parameter], true, out value);
+        return Enum.TryParse(_parameters[parameter], true, out value);
     }
 
     /// <summary>
@@ -542,13 +576,13 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out Color value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = Color.white;
             return false;
         }
 
-        return FormattingUtility.TryParseColor(NonFlagParameters[parameter], out value);
+        return HexStringHelper.TryParseColor(_parameters[parameter], CultureInfo.InvariantCulture, out value);
     }
 
     /// <summary>
@@ -558,13 +592,13 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out Color32 value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = Color.white;
             return false;
         }
 
-        return FormattingUtility.TryParseColor32(NonFlagParameters[parameter], out value);
+        return HexStringHelper.TryParseColor32(_parameters[parameter], CultureInfo.InvariantCulture, out value);
     }
 
     /// <summary>
@@ -574,12 +608,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out int value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return int.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return int.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -589,12 +623,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out byte value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return byte.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return byte.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -604,12 +638,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out short value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return short.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return short.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -619,12 +653,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out sbyte value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return sbyte.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return sbyte.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -634,12 +668,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out Guid value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = default;
             return false;
         }
-        return Guid.TryParse(NonFlagParameters[parameter], out value);
+        return Guid.TryParse(_parameters[parameter], out value);
     }
 
     /// <summary>
@@ -649,12 +683,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out uint value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return uint.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return uint.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -664,12 +698,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out ushort value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return ushort.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return ushort.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -679,12 +713,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out ulong value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return ulong.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return ulong.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -694,13 +728,13 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out bool value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = false;
             return false;
         }
 
-        string p = NonFlagParameters[parameter];
+        string p = _parameters[parameter];
         if (p.Equals("true", StringComparison.InvariantCultureIgnoreCase) ||
             p.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
             p.Equals("1", StringComparison.InvariantCultureIgnoreCase) ||
@@ -732,12 +766,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out float value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return float.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
+        return float.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
     }
 
     /// <summary>
@@ -747,12 +781,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out double value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return double.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return double.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -762,12 +796,12 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out decimal value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        return decimal.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return decimal.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -777,12 +811,12 @@ public class CommandContext : ControlException
     public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = default;
             return false;
         }
-        if (Enum.TryParse(NonFlagParameters[parameter], true, out TEnum value2))
+        if (Enum.TryParse(_parameters[parameter], true, out TEnum value2))
         {
             value = value2;
             return true;
@@ -797,12 +831,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref int value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        if (int.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out int value2))
+        if (int.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out int value2))
         {
             value = value2;
             return true;
@@ -817,12 +851,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref byte value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        if (byte.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out byte value2))
+        if (byte.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out byte value2))
         {
             value = value2;
             return true;
@@ -837,12 +871,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref sbyte value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        if (sbyte.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out sbyte value2))
+        if (sbyte.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out sbyte value2))
         {
             value = value2;
             return true;
@@ -857,12 +891,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref Guid value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = default;
             return false;
         }
-        if (Guid.TryParse(NonFlagParameters[parameter], out Guid value2))
+        if (Guid.TryParse(_parameters[parameter], out Guid value2))
         {
             value = value2;
             return true;
@@ -877,12 +911,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref uint value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        if (uint.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out uint value2))
+        if (uint.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out uint value2))
         {
             value = value2;
             return true;
@@ -897,12 +931,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref ushort value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        if (ushort.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out ushort value2))
+        if (ushort.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out ushort value2))
         {
             value = value2;
             return true;
@@ -917,12 +951,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref ulong value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        if (ulong.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out ulong value2))
+        if (ulong.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out ulong value2))
         {
             value = value2;
             return true;
@@ -937,12 +971,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref float value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        if (float.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
+        if (float.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
         {
             value = value2;
             return true;
@@ -957,12 +991,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref double value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        if (double.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
+        if (double.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
         {
             value = value2;
             return true;
@@ -977,12 +1011,12 @@ public class CommandContext : ControlException
     public bool TryGetRef(int parameter, ref decimal value)
     {
         parameter += ArgumentOffset;
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
             return false;
         }
-        if (decimal.TryParse(NonFlagParameters[parameter], NumberStyles.Number, ParseFormat, out decimal value2))
+        if (decimal.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out decimal value2))
         {
             value = value2;
             return true;
@@ -1007,14 +1041,14 @@ public class CommandContext : ControlException
             steam64 = CallerId.m_SteamID;
             return true;
         }
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             steam64 = 0;
             onlinePlayer = null;
             return false;
         }
 
-        string? s = remainder ? GetRange(parameter - ArgumentOffset) : NonFlagParameters[parameter];
+        string? s = remainder ? GetRange(parameter - ArgumentOffset) : _parameters[parameter];
         if (s != null)
         {
             if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
@@ -1053,14 +1087,14 @@ public class CommandContext : ControlException
             steam64 = CallerId.m_SteamID;
             return selection.Contains(Caller);
         }
-        if (parameter < 0 || parameter >= NonFlagArgumentCount)
+        if (parameter < 0 || parameter >= _argumentCount)
         {
             steam64 = 0;
             onlinePlayer = null;
             return false;
         }
 
-        string? s = remainder ? GetRange(parameter - ArgumentOffset) : NonFlagParameters[parameter];
+        string? s = remainder ? GetRange(parameter - ArgumentOffset) : _parameters[parameter];
         if (s == null)
         {
             steam64 = default;
@@ -1108,11 +1142,6 @@ public class CommandContext : ControlException
             multipleResultsFound = false;
             asset = null;
             return false;
-        }
-
-        if ((remainder || parameter == ArgumentCount - 1) && p[^1] == '\\')
-        {
-            p = p[..^1];
         }
 
         return UCAssetManager.TryGetAsset(p, out asset, out multipleResultsFound, allowMultipleResults, selector);
@@ -1596,20 +1625,6 @@ public class CommandContext : ControlException
     }
 
     /// <exception cref="CommandContext"/>
-    public void AssertGamemode<T>() where T : class, IGamemode
-    {
-        if (!Warfare.Data.Is<T>())
-            throw SendGamemodeError();
-    }
-
-    /// <exception cref="CommandContext"/>
-    public void AssertGamemode<T>(out T gamemode) where T : class, IGamemode
-    {
-        if (!Warfare.Data.Is(out gamemode))
-            throw SendGamemodeError();
-    }
-
-    /// <exception cref="CommandContext"/>
     public void AssertRanByPlayer()
     {
         if (IsConsole || Player == null || !Player.IsOnline)
@@ -1644,32 +1659,45 @@ public class CommandContext : ControlException
             throw Reply(T.NotOnDuty);
     }
 
-    /// <exception cref="CommandContext"/>
-    public void AssertHelpCheckNoUsage(int parameter, string helpMessage)
+    /// <summary>
+    /// Switch the current command context to run in /help.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Already in /help.</exception>
+    public Exception SendHelp() => SwitchToCommand<HelpCommand>();
+
+    /// <summary>
+    /// Switch the current command context to run another command type by throwing on the result of this function.
+    /// </summary>
+    /// <exception cref="ArgumentException">Not a command type.</exception>
+    /// <exception cref="InvalidOperationException">Already in that command.</exception>
+    public Exception SwitchToCommand<TCommandType>() where TCommandType : ICommand
     {
-        if (MatchParameter(parameter, "help"))
-            throw ReplyString(helpMessage);
+        Type type = typeof(TCommandType);
+        if (!type.IsAbstract || !type.IsClass)
+            throw new ArgumentException($"{Accessor.ExceptionFormatter.Format<TCommandType>()} is not a command type.");
+
+        if (Command is TCommandType)
+            throw new InvalidOperationException("Can not call SwitchToCommand from the same command type.");
+
+        SwitchCommand = type;
+        return this;
     }
 
-    /// <exception cref="CommandContext"/>
-    public void AssertHelpCheck(int parameter, string usage)
+    /// <summary>
+    /// Switch the current command context to run another command type by throwing on the result of this function.
+    /// </summary>
+    /// <exception cref="ArgumentException">Not a command type.</exception>
+    /// <exception cref="InvalidOperationException">Already in that command.</exception>
+    public Exception SwitchToCommand(Type commandType)
     {
-        if (MatchParameter(parameter, "help"))
-            throw SendCorrectUsage(usage);
-    }
+        if (!typeof(ICommand).IsAssignableFrom(commandType) || commandType.IsAbstract || !commandType.IsClass)
+            throw new ArgumentException($"{Accessor.ExceptionFormatter.Format(commandType)} is not a command type.");
 
-    /// <exception cref="CommandContext"/>
-    public void AssertHelpCheckNoUsage(int parameter, Translation helpMessage)
-    {
-        if (MatchParameter(parameter, "help"))
-            throw Reply(helpMessage);
-    }
+        if (commandType.IsInstanceOfType(Command))
+            throw new InvalidOperationException("Can not call SwitchToCommand from the same command type.");
 
-    /// <exception cref="CommandContext"/>
-    public void AssertHelpCheck(int parameter, Translation usage)
-    {
-        if (MatchParameter(parameter, "help"))
-            throw SendCorrectUsage(usage.Translate(Player, canUseIMGUI: true));
+        SwitchCommand = commandType;
+        return this;
     }
 
     /// <remarks>Thread Safe</remarks>
@@ -1764,8 +1792,40 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, string hex)
     {
-        FormattingUtility.TryParseColor(hex, out Color color);
+        HexStringHelper.TryParseColor(hex, CultureInfo.InvariantCulture, out Color color);
         return ReplyString(message, color);
+    }
+
+    /// <remarks>Thread Safe</remarks>
+    public Exception ReplyUrl(string message, string url)
+    {
+        if (Player == null)
+        {
+            ReplyString(message + ": " + url);
+            return this;
+        }
+
+        if (Thread.CurrentThread.IsGameThread())
+        {
+            Player.UnturnedPlayer.sendBrowserRequest(message, url);
+        }
+        else
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                Player.UnturnedPlayer.sendBrowserRequest(message, url);
+            });
+        }
+
+        Responded = true;
+        return this;
+    }
+
+    /// <remarks>Thread Safe</remarks>
+    public Exception ReplySteamProfileUrl(string message, CSteamID profileId)
+    {
+        return ReplyUrl(message, $"https://steamcommunity.com/profiles/{profileId.m_SteamID.ToString("D17", CultureInfo.InvariantCulture)}/");
     }
 
     /// <remarks>Thread Safe</remarks>

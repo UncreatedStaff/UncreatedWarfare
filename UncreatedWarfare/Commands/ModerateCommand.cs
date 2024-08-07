@@ -4,7 +4,7 @@ using Uncreated.Warfare.Moderation;
 namespace Uncreated.Warfare.Commands;
 
 [Command("moderate", "mod", "m")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public sealed class ModerateCommand : IExecutableCommand
 {
     /// <inheritdoc />

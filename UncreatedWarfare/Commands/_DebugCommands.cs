@@ -38,7 +38,7 @@ using Uncreated.Warfare.Squads.Commander;
 namespace Uncreated.Warfare.Commands;
 
 [SynchronizedCommand, Command("test", aliases: "tests")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class DebugCommand : IExecutableCommand
 {
     /// <inheritdoc />

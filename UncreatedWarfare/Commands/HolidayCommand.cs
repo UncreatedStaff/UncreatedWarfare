@@ -6,7 +6,7 @@ using Uncreated.Warfare.Commands.Permissions;
 namespace Uncreated.Warfare.Commands;
 
 [Command("holiday")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class HolidayCommand : IExecutableCommand
 {
     private static readonly PermissionLeaf PermissionSetHoliday = new PermissionLeaf("commands.holiday.set", unturned: false, warfare: true);

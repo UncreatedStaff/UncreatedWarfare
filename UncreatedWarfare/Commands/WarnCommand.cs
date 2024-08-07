@@ -3,7 +3,7 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("warn")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class WarnCommand : IExecutableCommand
 {
 #if false

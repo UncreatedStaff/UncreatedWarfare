@@ -4,7 +4,7 @@ using Uncreated.Warfare.Commands.Dispatch;
 namespace Uncreated.Warfare.Commands;
 
 [Command("confirm", "c")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 [Priority(-1)]
 public class ConfirmCommand : IExecutableCommand
 {
@@ -31,7 +31,7 @@ public class ConfirmCommand : IExecutableCommand
 }
 
 [Command("deny")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 [Priority(-1)]
 public class DenyCommand : IExecutableCommand
 {

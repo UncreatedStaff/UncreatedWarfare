@@ -13,7 +13,7 @@ using Uncreated.Warfare.Singletons;
 namespace Uncreated.Warfare.Commands;
 
 [Command("reload")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class ReloadCommand : IExecutableCommand
 {
     private readonly UserPermissionStore _permissions;

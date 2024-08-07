@@ -4,12 +4,17 @@
 /// A command that can be executed.
 /// </summary>
 [Translatable("Command")]
-public interface IExecutableCommand
+public interface ICommand;
+
+/// <summary>
+/// A command that can be executed.
+/// </summary>
+public interface IExecutableCommand : ICommand
 {
     /// <summary>
     /// The context used to execute the command.
     /// </summary>
-    CommandContext Context { set; }
+    CommandContext Context { get; set; }
 
     /// <summary>
     /// Actually execute the command.

@@ -3,7 +3,7 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("unmute")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class UnmuteCommand : IExecutableCommand
 {
 #if false

@@ -4,7 +4,7 @@ using Uncreated.Warfare.Squads;
 namespace Uncreated.Warfare.Commands;
 
 [Command("squad", "sqaud", "sq")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class SquadCommand : IExecutableCommand
 {
     private const string Syntax = "/squad <create|join|(un)lock|kick|leave|disband|promote> [parameters...]";

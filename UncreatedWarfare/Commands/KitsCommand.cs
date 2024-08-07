@@ -4,7 +4,7 @@ using Uncreated.Warfare.Kits;
 namespace Uncreated.Warfare.Commands;
 
 [Command("kits")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public sealed class KitsCommand : IExecutableCommand
 {
     private const string Syntax = "/kits";

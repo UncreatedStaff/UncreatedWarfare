@@ -53,7 +53,7 @@ public sealed class CommandStructure
         return Description;
     }
     /// <exception cref="BaseCommandContext"/>
-    public async UniTask OnHelpCommand(CommandContext ctx, CommandType cmd)
+    public async UniTask OnHelpCommand(CommandContext ctx, CommandInfo cmd)
     {
         if (string.IsNullOrEmpty(Description) && DescriptionTranslations == null && Parameters is not { Length: > 0 })
             return;

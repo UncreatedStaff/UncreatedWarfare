@@ -13,7 +13,7 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Commands;
 
 [Command("structure", "struct")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class StructureCommand : IExecutableCommand
 {
     private readonly BuildableSaver _saver;

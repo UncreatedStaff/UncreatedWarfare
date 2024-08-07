@@ -8,7 +8,7 @@ using Uncreated.Warfare.Vehicles;
 namespace Uncreated.Warfare.Commands;
 
 [Command("load")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class LoadCommand : IExecutableCommand
 {
     /// <inheritdoc />

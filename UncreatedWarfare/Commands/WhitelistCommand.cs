@@ -4,7 +4,7 @@ using Uncreated.Warfare.Logging;
 namespace Uncreated.Warfare.Commands;
 
 [Command("whitelist", "wh")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class WhitelistCommand : IExecutableCommand
 {
     /// <inheritdoc />

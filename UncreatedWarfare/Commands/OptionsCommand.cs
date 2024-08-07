@@ -5,7 +5,7 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Commands;
 
 [Command("options", "settings", "option", "config")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public sealed class OptionsCommand : IExecutableCommand
 {
     private const string Syntax = "/options <imgui> [value]";

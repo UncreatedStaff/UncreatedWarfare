@@ -8,7 +8,7 @@ using Uncreated.Warfare.Locations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("teleport", "tp"), Priority(1)]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class TeleportCommand : IExecutableCommand
 {
     private const string Syntax = "/tp <x y z|player|location|wp|jump [dstance]> - or - /tp <player> <x y z|player|location|wp>";

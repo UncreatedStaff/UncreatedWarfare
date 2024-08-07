@@ -8,7 +8,7 @@ using Uncreated.Warfare.Players.Management.Legacy;
 namespace Uncreated.Warfare.Commands;
 
 [Command("report")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class ReportCommand : IExecutableCommand
 {
     private const string Syntax = "/report <\"reasons\" | player> <reason> <custom message...>";

@@ -1,13 +1,21 @@
-﻿using Uncreated.Warfare.Commands.Dispatch;
+﻿using Microsoft.Extensions.Configuration;
+using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("discord", "dicsord")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class DiscordCommand : IExecutableCommand
 {
+    private readonly string? _discordInviteCode;
+
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public DiscordCommand(IConfiguration configuration)
+    {
+        _discordInviteCode = configuration["discord_invite_code"];
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -23,14 +31,13 @@ public class DiscordCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        if (Context.Caller is not null)
+        if (Context.Player != null)
         {
-            Context.Player.UnturnedPlayer.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
-            Context.Defer();
+            Context.ReplyUrl("Join our Discord Server", "https://discord.gg/" + _discordInviteCode);
         }
         else
         {
-            Context.ReplyString("https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+            Context.ReplyString("https://discord.gg/" + _discordInviteCode);
         }
 
         return default;

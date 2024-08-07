@@ -4,7 +4,7 @@ using Uncreated.Warfare.Commands.Dispatch;
 namespace Uncreated.Warfare.Commands;
 
 [Command("kick"), Priority(1)]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class KickCommand : IExecutableCommand
 {
 #if false

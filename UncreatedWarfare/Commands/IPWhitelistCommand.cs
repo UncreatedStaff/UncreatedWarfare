@@ -6,7 +6,7 @@ using Uncreated.Warfare.Players.Management.Legacy;
 namespace Uncreated.Warfare.Commands;
 
 [Command("ipwhitelist", "whitelistip", "whip", "ipwh", "iw")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class IPWhitelistCommand : IExecutableCommand
 {
     private const string Syntax = "/ipwhitelist <add|remove> <steam64> [ip = any]";

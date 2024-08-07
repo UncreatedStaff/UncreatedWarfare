@@ -7,7 +7,7 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("buy")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class BuyCommand : IExecutableCommand
 {
     private readonly RequestTranslations _translations;

@@ -3,7 +3,7 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("vanish")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class VanishCommand : IExecutableCommand
 {
     private const string Syntax = "/vanish";

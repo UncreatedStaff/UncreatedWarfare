@@ -7,7 +7,7 @@ using Uncreated.Warfare.Traits;
 namespace Uncreated.Warfare.Commands;
 
 [Command("trait")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class TraitCommand : IExecutableCommand
 {
     private const string Syntax = "/trait <give|take|clear|set>";

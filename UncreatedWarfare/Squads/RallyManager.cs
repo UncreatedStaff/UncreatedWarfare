@@ -70,7 +70,7 @@ public static class RallyManager
                     player.SendChat(T.RallyEnemiesNearby);
                     shouldAllow = false;
                 }
-                else if (!F.CanStandAtLocation(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
+                else if (!PlayerStance.hasStandingHeightClearanceAtPosition(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
                 {
                     player.SendChat(T.RallyObstructedPlace);
                     shouldAllow = false;

@@ -11,7 +11,7 @@ using Uncreated.Warfare.Vehicles;
 namespace Uncreated.Warfare.Commands;
 
 [Command("dev")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class DevCommand : IExecutableCommand
 {
     private const string Syntax = "/dev <caches|addintel|quickbuild|logmeta|checkvehicle|getpos|onfob|aatest> [parameters...]";

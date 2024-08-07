@@ -21,7 +21,7 @@ using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 namespace Uncreated.Warfare.Commands;
 
 [SynchronizedCommand, Command("request", "req")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class RequestCommand : ICompoundingCooldownCommand
 {
     private static readonly IAssetLink<ItemBarricadeAsset> KitSign = AssetLink.Create<ItemBarricadeAsset>("275dd81d60ae443e91f0655b8b7aa920");

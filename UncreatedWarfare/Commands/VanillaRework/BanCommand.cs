@@ -5,7 +5,7 @@ using Uncreated.Warfare.Commands.Dispatch;
 namespace Uncreated.Warfare.Commands;
 
 [Command("ban"), Priority(1)]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class BanCommand : IExecutableCommand
 {
     /// <inheritdoc />

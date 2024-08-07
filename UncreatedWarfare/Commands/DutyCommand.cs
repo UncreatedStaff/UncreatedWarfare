@@ -6,12 +6,13 @@ using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Commands;
 
 [SynchronizedCommand, Command("duty", "onduty", "offduty", "d")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class DutyCommand : IExecutableCommand
 {
     private readonly UserPermissionStore _permissions;
@@ -136,7 +137,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(T.DutyOffFeedback);
             Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), T.DutyOffBroadcast, Context.Player);
 
-            L.Log($"{Context.Player.Name.PlayerName} ({Context.CallerId.m_SteamID.ToString(Data.AdminLocale)}) went off duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
+            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(Data.AdminLocale)}) went off duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", Context.CallerId.m_SteamID);
 
             PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, false);
@@ -146,7 +147,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(T.DutyOnFeedback);
             Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), T.DutyOnBroadcast, Context.Player);
 
-            L.Log($"{Context.Player.Name.PlayerName} ({Context.CallerId.m_SteamID.ToString(Data.AdminLocale)}) went on duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
+            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(Data.AdminLocale)}) went on duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", Context.CallerId.m_SteamID);
 
             PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, true);
@@ -154,22 +155,22 @@ public class DutyCommand : IExecutableCommand
             GiveAdminPermissions(Context.Player, isAdmin);
         }
     }
-    private static void ClearAdminPermissions(UCPlayer player)
+    private static void ClearAdminPermissions(WarfarePlayer player)
     {
-        if (player.Player != null)
+        if (player.UnturnedPlayer != null)
         {
-            if (player.Player.look != null)
+            if (player.UnturnedPlayer.look != null)
             {
-                player.Player.look.sendFreecamAllowed(false);
-                player.Player.look.sendWorkzoneAllowed(false);
+                player.UnturnedPlayer.look.sendFreecamAllowed(false);
+                player.UnturnedPlayer.look.sendWorkzoneAllowed(false);
             }
 
-            if (player.Player.movement != null)
+            if (player.UnturnedPlayer.movement != null)
             {
-                if (player.Player.movement.pluginSpeedMultiplier != 1f)
-                    player.Player.movement.sendPluginSpeedMultiplier(1f);
-                if (player.Player.movement.pluginJumpMultiplier != 1f)
-                    player.Player.movement.sendPluginJumpMultiplier(1f);
+                if (player.UnturnedPlayer.movement.pluginSpeedMultiplier != 1f)
+                    player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(1f);
+                if (player.UnturnedPlayer.movement.pluginJumpMultiplier != 1f)
+                    player.UnturnedPlayer.movement.sendPluginJumpMultiplier(1f);
             }
         }
 
@@ -180,18 +181,15 @@ public class DutyCommand : IExecutableCommand
         Signs.UpdateKitSigns(player, null);
         Signs.UpdateLoadoutSigns(player);
     }
-    private static void GiveAdminPermissions(UCPlayer player, bool isAdmin)
+    private static void GiveAdminPermissions(WarfarePlayer player, bool isAdmin)
     {
-        if (player.Player.look != null)
+        if (player.UnturnedPlayer.look != null)
         {
-            player.Player.look.sendFreecamAllowed(isAdmin);
-            player.Player.look.sendWorkzoneAllowed(isAdmin);
+            player.UnturnedPlayer.look.sendFreecamAllowed(isAdmin);
+            player.UnturnedPlayer.look.sendWorkzoneAllowed(isAdmin);
         }
 
         Signs.UpdateKitSigns(player, null);
         Signs.UpdateLoadoutSigns(player);
-    }
-    public static void SetVanishMode(Player player, bool vanished)
-    {
     }
 }

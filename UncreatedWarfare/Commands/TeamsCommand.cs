@@ -5,7 +5,7 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Commands;
 
 [Command("teams", "team")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class TeamsCommand : IExecutableCommand
 {
     private const string Syntax = "/teams ";

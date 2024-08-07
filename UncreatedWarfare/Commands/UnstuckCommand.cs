@@ -3,7 +3,7 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("unstuck")]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[MetadataFile(nameof(GetHelpMetadata))]
 public class UnstuckCommand : IExecutableCommand
 {
     /// <inheritdoc />

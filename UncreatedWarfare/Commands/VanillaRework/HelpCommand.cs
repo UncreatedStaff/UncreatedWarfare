@@ -5,8 +5,8 @@ using Uncreated.Warfare.Commands.Dispatch;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("help", "commands", "tutorial", "h"), Priority(1)]
-[HelpMetadata(nameof(GetHelpMetadata))]
+[Command("help", "commands", "tutorial", "h", "?"), Priority(1)]
+[MetadataFile(nameof(GetHelpMetadata))]
 public sealed class HelpCommand : IExecutableCommand
 {
     private readonly CommandDispatcher _dispatcher;
@@ -55,7 +55,7 @@ public sealed class HelpCommand : IExecutableCommand
             return;
         }
 
-        CommandType? cmd = _dispatcher.FindCommand(range);
+        CommandInfo? cmd = _dispatcher.FindCommand(range);
 
         if (cmd == null)
         {
@@ -63,7 +63,7 @@ public sealed class HelpCommand : IExecutableCommand
             return;
         }
 
-        cmd.Structure?.OnHelpCommand(Context, cmd); // will throw exception if it has data
+        cmd.Metadata?.OnHelpCommand(Context, cmd); // will throw exception if it has data
 
         await CommandDispatcher.AssertPermissions(cmd, Context, token);
         await UniTask.SwitchToMainThread(token);
