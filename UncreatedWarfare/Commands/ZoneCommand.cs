@@ -1,10 +1,10 @@
 ﻿using SDG.NetTransport;
-using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;

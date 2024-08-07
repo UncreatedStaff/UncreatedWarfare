@@ -1,7 +1,7 @@
 ﻿#if DEBUG
 #endif
-using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Vehicles;
 

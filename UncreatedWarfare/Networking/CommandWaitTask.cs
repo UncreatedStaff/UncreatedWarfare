@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare;
 

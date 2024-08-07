@@ -1,8 +1,8 @@
 ﻿using System;
-using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 

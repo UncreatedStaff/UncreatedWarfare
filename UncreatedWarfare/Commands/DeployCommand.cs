@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Zones;

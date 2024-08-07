@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Commands;

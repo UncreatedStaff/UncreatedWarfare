@@ -2,12 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.Permissions;
 
 namespace Uncreated.Warfare.Commands;
 

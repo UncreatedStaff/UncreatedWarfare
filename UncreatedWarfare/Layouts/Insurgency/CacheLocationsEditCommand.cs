@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Players.Management.Legacy;
 

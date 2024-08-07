@@ -1,5 +1,5 @@
-﻿using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.FOBs;
+﻿using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;

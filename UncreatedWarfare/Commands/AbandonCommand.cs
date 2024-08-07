@@ -1,5 +1,5 @@
-﻿using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Components;
+﻿using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Zones;

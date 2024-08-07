@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
 

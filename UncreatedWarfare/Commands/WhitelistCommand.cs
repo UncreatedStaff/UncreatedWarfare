@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Commands.Dispatch;
+﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Commands;

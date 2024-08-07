@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
-using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Players.Permissions;
 
 namespace Uncreated.Warfare.Commands;
 

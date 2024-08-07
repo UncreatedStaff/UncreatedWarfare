@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Commands;

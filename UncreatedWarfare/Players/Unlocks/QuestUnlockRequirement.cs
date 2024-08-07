@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;

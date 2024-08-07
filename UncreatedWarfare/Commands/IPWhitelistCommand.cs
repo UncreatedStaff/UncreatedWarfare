@@ -1,5 +1,5 @@
 ﻿using System;
-using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players.Management.Legacy;
 

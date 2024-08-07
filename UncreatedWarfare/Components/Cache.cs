@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Commands.Dispatch;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Insurgency;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;

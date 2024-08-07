@@ -1,5 +1,5 @@
-﻿using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Commands.Permissions;
+﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands;

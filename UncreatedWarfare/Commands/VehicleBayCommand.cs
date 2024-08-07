@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Vehicles;
 using DelayType = Uncreated.Warfare.Vehicles.DelayType;
 

@@ -1,13 +1,13 @@
 ﻿using System;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Commands.Dispatch;
-using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands;
