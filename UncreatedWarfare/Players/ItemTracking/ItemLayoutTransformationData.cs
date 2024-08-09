@@ -1,8 +1,12 @@
 ﻿using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 
-namespace Uncreated.Warfare.Players.Layouts;
-public readonly struct LayoutTransformation
+namespace Uncreated.Warfare.Players.ItemTracking;
+
+/// <summary>
+/// Describes where one item moves to after requesting a kit.
+/// </summary>
+public readonly struct ItemLayoutTransformationData
 {
     public readonly uint Kit;
     public readonly Page OldPage;
@@ -13,7 +17,7 @@ public readonly struct LayoutTransformation
     public readonly byte NewY;
     public readonly byte NewRotation;
     public readonly KitLayoutTransformation Model;
-    public LayoutTransformation(Page oldPage, Page newPage, byte oldX, byte oldY, byte newX, byte newY, byte newRotation, uint kit, KitLayoutTransformation model)
+    public ItemLayoutTransformationData(Page oldPage, Page newPage, byte oldX, byte oldY, byte newX, byte newY, byte newRotation, uint kit, KitLayoutTransformation model)
     {
         OldPage = oldPage;
         NewPage = newPage;

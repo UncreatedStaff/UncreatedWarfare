@@ -25,9 +25,9 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Layouts;
+using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
@@ -100,8 +100,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public TeamSelectorData? TeamSelectorData;
     public Coroutine? StorageCoroutine;
     public RankStatus[]? RankData;
-    public List<uint>? AccessibleKits;
-    internal List<LayoutTransformation>? LayoutTransformations;
     public IBuff?[] ActiveBuffs = new IBuff?[BuffUI.MaxBuffs];
     public List<Trait> ActiveTraits = new List<Trait>(8);
     internal Action<byte, ItemJar> SendItemRemove;
@@ -957,137 +955,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, state);
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, state);
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, state);
-    }
-    public void RemoveSkillset(EPlayerSpeciality speciality, byte skill)
-    {
-        ThreadUtil.assertIsGameThread();
-        Skill[][] skills = Player.skills.skills;
-        if ((int)speciality >= skills.Length)
-            throw new ArgumentOutOfRangeException(nameof(speciality), "Speciality index is out of range.");
-        if (skill >= skills[(int)speciality].Length)
-            throw new ArgumentOutOfRangeException(nameof(skill), "Skill index is out of range.");
-        Skill skillObj = skills[(int)speciality][skill];
-        Skillset[] def = Skillset.DefaultSkillsets;
-        for (int d = 0; d < def.Length; ++d)
-        {
-            Skillset s = def[d];
-            if (s.Speciality == speciality && s.SkillIndex == skill)
-            {
-                if (s.Level != skillObj.level)
-                {
-                    L.LogDebug($"Setting server default: {s}.");
-                    s.ServerSet(this);
-                }
-                else
-                    L.LogDebug($"Server default already set: {s}.");
-
-                return;
-            }
-        }
-        byte defaultLvl = GetDefaultSkillLevel(speciality, skill);
-
-        if (skillObj.level != defaultLvl)
-        {
-            Player.skills.ServerSetSkillLevel((int)speciality, skill, defaultLvl);
-            L.LogDebug($"Setting game default: {new Skillset(speciality, skill, defaultLvl)}.");
-        }
-        else
-        {
-            L.LogDebug($"Game default already set: {new Skillset(speciality, skill, defaultLvl)}.");
-        }
-    }
-    public void EnsureSkillset(Skillset skillset)
-    {
-        ThreadUtil.assertIsGameThread();
-        if (!IsOnline)
-            return;
-        Skill[][] skills = Player.skills.skills;
-        if (skillset.SpecialityIndex >= skills.Length)
-            throw new ArgumentOutOfRangeException(nameof(skillset), "Speciality index is out of range.");
-        if (skillset.SkillIndex >= skills[skillset.SpecialityIndex].Length)
-            throw new ArgumentOutOfRangeException(nameof(skillset), "Skill index is out of range.");
-        Skill skill = skills[skillset.SpecialityIndex][skillset.SkillIndex];
-        if (skillset.Level != skill.level)
-        {
-            skillset.ServerSet(this);
-        }
-    }
-    public void EnsureDefaultSkillsets() => EnsureSkillsets(Array.Empty<Skillset>());
-    public void EnsureSkillsets(IEnumerable<Skillset> skillsets)
-    {
-        ThreadUtil.assertIsGameThread();
-        if (!IsOnline)
-            return;
-
-        Skillset[] def = Skillset.DefaultSkillsets;
-        Skillset[] arr = skillsets as Skillset[] ?? skillsets.ToArray();
-        Skill[][] skills = Player.skills.skills;
-        for (int specIndex = 0; specIndex < skills.Length; ++specIndex)
-        {
-            Skill[] specialtyArr = skills[specIndex];
-            for (int skillIndex = 0; skillIndex < specialtyArr.Length; ++skillIndex)
-            {
-                Skill skill = specialtyArr[skillIndex];
-                for (int i = 0; i < arr.Length; ++i)
-                {
-                    ref Skillset s = ref arr[i];
-                    if (s.SpecialityIndex != specIndex || s.SkillIndex != skillIndex)
-                        continue;
-
-                    if (s.Level != skill.level)
-                        s.ServerSet(this);
-
-                    goto c;
-                }
-                for (int d = 0; d < def.Length; ++d)
-                {
-                    ref Skillset s = ref def[d];
-                    if (s.SpecialityIndex != specIndex || s.SkillIndex != skillIndex)
-                        continue;
-                    
-                    if (s.Level != skill.level)
-                        s.ServerSet(this);
-
-                    goto c;
-                }
-
-                byte defaultLvl = GetDefaultSkillLevel((EPlayerSpeciality)specIndex, (byte)skillIndex);
-
-                if (skill.level != defaultLvl)
-                    Player.skills.ServerSetSkillLevel(specIndex, skillIndex, defaultLvl);
-                
-                c:;
-            }
-        }
-    }
-    public byte GetDefaultSkillLevel(EPlayerSpeciality speciality, byte skill)
-    {
-        Skill[][] skills = Player.skills.skills;
-        if ((int)speciality >= skills.Length)
-            throw new ArgumentOutOfRangeException(nameof(speciality), "Speciality index is out of range.");
-        if (skill >= skills[(int)speciality].Length)
-            throw new ArgumentOutOfRangeException(nameof(skill), "Skill index is out of range.");
-        int specIndex = (int)speciality;
-        if (Provider.modeConfigData.Players.Spawn_With_Max_Skills ||
-            specIndex == (int)EPlayerSpeciality.OFFENSE &&
-            (EPlayerOffense)skill is
-            EPlayerOffense.CARDIO or EPlayerOffense.EXERCISE or
-            EPlayerOffense.DIVING or EPlayerOffense.PARKOUR &&
-            Provider.modeConfigData.Players.Spawn_With_Stamina_Skills)
-        {
-            return skills[(int)speciality][skill].max;
-        }
-        if (SDG.Unturned.Level.getAsset() is { skillRules: { } } asset)
-        {
-            if (asset.skillRules.Length > specIndex && asset.skillRules[specIndex].Length > skill)
-            {
-                LevelAsset.SkillRule rule = asset.skillRules[specIndex][skill];
-                if (rule != null)
-                    return (byte)rule.defaultLevel;
-            }
-        }
-
-        return 0;
     }
 
     /// <remarks>Thread Safe</remarks>

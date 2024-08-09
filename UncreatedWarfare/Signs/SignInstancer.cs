@@ -34,15 +34,32 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         List<SignInstanceData> instances = new List<SignInstanceData>(8);
         foreach (Type signProviderType in Accessor.GetTypesSafe().Where(typeof(ISignInstanceProvider).IsAssignableFrom))
         {
-            if (signProviderType.IsAbstract || !signProviderType.IsClass || !signProviderType.TryGetAttributeSafe(out SignPrefixAttribute prefix))
+            if (signProviderType.IsAbstract || !signProviderType.IsClass)
                 return;
 
-            SignInstanceData data = new SignInstanceData(signProviderType, prefix.Prefix);
-            instances.Add(data);
+            foreach (SignPrefixAttribute prefix in signProviderType.GetAttributesSafe<SignPrefixAttribute>())
+            {
+                if (string.IsNullOrEmpty(prefix.Prefix))
+                    continue;
+
+                SignInstanceData data = new SignInstanceData(signProviderType, prefix.Prefix);
+                instances.Add(data);
+            }
         }
 
         _types = instances.ToArray();
         _batchBuffer = new string[_types.Length];
+    }
+
+    public ISignInstanceProvider? GetSignProvider(BarricadeDrop drop)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        if (drop.interactable is not InteractableSign)
+            throw new ArgumentException("Barricade must be sign.", nameof(drop));
+
+        _signProviders.TryGetValue(drop.instanceID, out ISignInstanceProvider? provider);
+        return provider;
     }
 
     public string GetSignText(BarricadeDrop drop, LanguageInfo language, CultureInfo culture)
@@ -50,11 +67,11 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         ThreadUtil.assertIsGameThread();
 
         if (drop.interactable is not InteractableSign sign)
-            throw new ArgumentException("Barricade must be sign.", nameof(sign));
+            throw new ArgumentException("Barricade must be sign.", nameof(drop));
 
         uint instanceId = drop.instanceID;
 
-        if (!_signProviders.TryGetValue(instanceId, out ISignInstanceProvider provider))
+        if (!_signProviders.TryGetValue(instanceId, out ISignInstanceProvider? provider))
         {
             return sign.text;
         }
@@ -67,7 +84,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         ThreadUtil.assertIsGameThread();
 
         if (drop.interactable is not InteractableSign sign)
-            throw new ArgumentException("Barricade must be sign.", nameof(sign));
+            throw new ArgumentException("Barricade must be sign.", nameof(drop));
 
         uint instanceId = drop.instanceID;
 

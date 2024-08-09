@@ -113,6 +113,9 @@ public static class JsonUtility
                     --arrayLevel;
                     break;
             }
+
+            if (objectLevel < 0)
+                break;
         }
         while (reader.Read());
 

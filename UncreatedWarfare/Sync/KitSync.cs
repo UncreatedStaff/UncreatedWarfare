@@ -161,7 +161,7 @@ public static class KitSync
             }
         });
     }
-    public static void OnKitDeleted(PrimaryKey kit)
+    public static void OnKitDeleted(uint kit)
     {
         if (_deleting == kit.Key)
             return;

@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Layouts.Teams;
@@ -12,8 +14,31 @@ public class Team : IEquatable<Team>
     public static readonly Team NoTeam = new Team
     {
         Id = 0,
-        Faction = new FactionInfo(),
-        GroupId = default
+        Faction = new FactionInfo
+        {
+            Name = "Unaffilated",
+            ShortName = "Unaffilated",
+            Abbreviation = "UA",
+            FactionId = "noteam",
+            NameTranslations =
+            {
+                { "en-us", "Unaffilated" }
+            },
+            ShortNameTranslations =
+            {
+                { "en-us", "Unaffilated" }
+            },
+            AbbreviationTranslations =
+            {
+                { "en-us", "UA" }
+            },
+            HexColor = "dddddd",
+            KitPrefix = "ua",
+            FlagImageURL = "https://i.imgur.com/z0HE5P3.png",
+            IsDefaultFaction = true
+        },
+        GroupId = default,
+        Configuration = ConfigurationHelper.EmptySection
     };
 
     /// <summary>
@@ -35,6 +60,11 @@ public class Team : IEquatable<Team>
     /// Id of the in-game group used for this team.
     /// </summary>
     public CSteamID GroupId { get; init; }
+
+    /// <summary>
+    /// Extra configuration about the team from the TeamManager config.
+    /// </summary>
+    public IConfigurationSection Configuration { get; internal set; }
 
     public List<Team> Opponents { get; } = new List<Team>();
 

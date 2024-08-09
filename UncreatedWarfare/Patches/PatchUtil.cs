@@ -16,6 +16,8 @@ internal static class PatchUtil
         LocalVariableInfo? v = body.LocalVariables.FirstOrDefault(x => x.LocalType == t);
         return v == null ? -1 : v.LocalIndex;
     }
+
+    [Obsolete("Use Accessor.GetMethod instead.")]
     internal static MethodInfo GetMethodInfo(Delegate method)
     {
         try
@@ -28,6 +30,7 @@ internal static class PatchUtil
             return null!;
         }
     }
+
     internal static bool PatchMethod(Delegate original, Delegate? prefix = null, Delegate? postfix = null, Delegate? transpiler = null, Delegate? finalizer = null)
     {
         if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return false;

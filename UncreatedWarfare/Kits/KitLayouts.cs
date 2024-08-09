@@ -3,7 +3,7 @@ using System.Linq;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Players.Layouts;
+using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
@@ -18,7 +18,7 @@ public class KitLayouts(KitManager manager)
 
         for (int i = 0; i < player.LayoutTransformations.Count; ++i)
         {
-            LayoutTransformation t = player.LayoutTransformations[i];
+            ItemLayoutTransformationData t = player.LayoutTransformations[i];
             if (t.Kit != kit)
                 continue;
 
@@ -26,7 +26,7 @@ public class KitLayouts(KitManager manager)
             if (i < 0) i = 0;
         }
     }
-    private void ReverseLayoutTransformation(LayoutTransformation transformation, UCPlayer player, IKitItem[] kitItems, uint kit, ref int i)
+    private void ReverseLayoutTransformation(ItemLayoutTransformationData transformation, UCPlayer player, IKitItem[] kitItems, uint kit, ref int i)
     {
         if (player.LayoutTransformations == null)
             return;
@@ -66,7 +66,7 @@ public class KitLayouts(KitManager manager)
                 L.LogDebug(" Unable to recursively move back.");
                 return;
             }
-            LayoutTransformation lt = player.LayoutTransformations[index];
+            ItemLayoutTransformationData lt = player.LayoutTransformations[index];
             player.LayoutTransformations.RemoveAtFast(index);
             if (i <= index)
                 --i;
@@ -76,10 +76,10 @@ public class KitLayouts(KitManager manager)
         inv.ReceiveDragItem((byte)transformation.NewPage, current.x, current.y, (byte)original.Page, original.X, original.Y, original.Rotation);
         L.LogDebug($"Reversing {transformation.NewPage}, ({current.x}, {current.y}) to {original.Page}, ({original.X}, {original.Y}) @ rot {original.Rotation}.");
     }
-    public List<LayoutTransformation> GetLayoutTransformations(UCPlayer player, uint kit)
+    public List<ItemLayoutTransformationData> GetLayoutTransformations(UCPlayer player, uint kit)
     {
         ThreadUtil.assertIsGameThread();
-        List<LayoutTransformation> output = new List<LayoutTransformation>(player.ItemTransformations.Count);
+        List<ItemLayoutTransformationData> output = new List<ItemLayoutTransformationData>(player.ItemTransformations.Count);
         SDG.Unturned.Items[] p = player.Player.inventory.items;
         for (int i = 0; i < player.ItemTransformations.Count; i++)
         {
@@ -87,7 +87,7 @@ public class KitLayouts(KitManager manager)
             SDG.Unturned.Items upage = p[(int)transformation.NewPage];
             ItemJar? jar = upage.getItem(upage.getIndex(transformation.NewX, transformation.NewY));
             if (jar != null && jar.item == transformation.Item)
-                output.Add(new LayoutTransformation(transformation.OldPage, transformation.NewPage, transformation.OldX, transformation.OldY, jar.x, jar.y, jar.rot, kit, new KitLayoutTransformation
+                output.Add(new ItemLayoutTransformationData(transformation.OldPage, transformation.NewPage, transformation.OldX, transformation.OldY, jar.x, jar.y, jar.rot, kit, new KitLayoutTransformation
                 {
                     KitId = kit,
                     NewPage = transformation.NewPage,

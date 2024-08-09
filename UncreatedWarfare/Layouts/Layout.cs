@@ -369,6 +369,7 @@ public class Layout : IDisposable, IEventListenerProvider
         }
 
         ITeamManager<Team> manager = (ITeamManager<Team>)ActivatorUtilities.CreateInstance(ServiceProvider, managerType, teamSection);
+        manager.Configuration = teamSection;
         teamSection.Bind(manager);
         TeamManager = manager;
         return UniTask.CompletedTask;

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -33,6 +34,11 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// Info about all teams, binded from configuration.
     /// </summary>
     public TwoSidedTeamInfo[] Teams { get; set; }
+
+    /// <summary>
+    /// Team manager extra configuration from config file.
+    /// </summary>
+    public IConfigurationSection Configuration { get; set; }
 
     /// <summary>
     /// If both Blufor and Opfor teams are specified.
@@ -78,14 +84,16 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         {
             Faction = factionInfo1 ?? throw new LayoutConfigurationException($"Unknown faction: {Teams[0].Faction}."),
             Id = 1,
-            GroupId = new CSteamID(1)
+            GroupId = new CSteamID(1),
+            Configuration = Configuration.GetSection("Teams:0")
         };
         
         _teams[1] = new Team
         {
             Faction = factionInfo2 ?? throw new LayoutConfigurationException($"Unknown faction: {Teams[1].Faction}."),
             Id = 2,
-            GroupId = new CSteamID(2)
+            GroupId = new CSteamID(2),
+            Configuration = Configuration.GetSection("Teams:1")
         };
 
         DecideTeams(out TwoSidedTeamRole team1Role, out TwoSidedTeamRole team2Role);

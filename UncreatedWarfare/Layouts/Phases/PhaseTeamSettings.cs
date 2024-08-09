@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Layouts.Teams;
+﻿using Microsoft.Extensions.Configuration;
+using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Layouts.Phases;
 
@@ -26,4 +27,9 @@ public class PhaseTeamSettings
     /// Display name on the toast, if any.
     /// </summary>
     public TranslationList? Name { get; set; }
+
+    /// <summary>
+    /// Extra configuration about the team, assign at initialization time.
+    /// </summary>
+    public IConfigurationSection Configuration { get; internal set; }
 }

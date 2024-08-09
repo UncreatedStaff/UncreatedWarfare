@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Util.Timing;
@@ -16,7 +17,7 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
     private readonly ILoopTickerFactory _tickerFactory;
     
     private ILoopTicker? _ticker;
-    public PreparationPhase(IServiceProvider serviceProvider) : base(serviceProvider)
+    public PreparationPhase(IServiceProvider serviceProvider, IConfigurationSection config) : base(serviceProvider, config)
     {
         _tickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
         _session = serviceProvider.GetRequiredService<Layout>();

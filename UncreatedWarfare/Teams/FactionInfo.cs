@@ -37,6 +37,9 @@ public class FactionInfo : ITranslationArgument, ICloneable
     public const string SouthAfrica = "southafrica";
     public const string Mozambique = "mozambique";
 
+    [JsonIgnore]
+    public bool IsDefaultFaction { get; internal set; }
+
     [Obsolete("Africa was split into individual countries.")]
     public const string LegacyAfrica = "africa";
 
@@ -644,6 +647,11 @@ public class FactionInfo : ITranslationArgument, ICloneable
             Masks = Masks.Clone(),
             Hats = Hats.Clone()
         };
+    }
+
+    public FactionInfo? NullIfDefault()
+    {
+        return IsDefaultFaction ? null : this;
     }
 
     public static async Task DownloadFactions(IFactionDbContext db, List<FactionInfo> list, bool uploadDefaultIfMissing, CancellationToken token = default)

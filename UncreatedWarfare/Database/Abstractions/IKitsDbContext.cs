@@ -3,7 +3,7 @@ using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Models.Users;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Skillsets;
 
 namespace Uncreated.Warfare.Database.Abstractions;
 public interface IKitsDbContext : IDbContext

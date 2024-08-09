@@ -1,13 +1,15 @@
-﻿using MySql.Data.MySqlClient;
+﻿using DanielWillett.SpeedBytes;
+using MySql.Data.MySqlClient;
 using System;
 using System.Globalization;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Util;
+using JsonException = Newtonsoft.Json.JsonException;
 
-namespace Uncreated.Warfare.Players;
+namespace Uncreated.Warfare.Players.Skillsets;
 
 [JsonConverter(typeof(SkillsetConverter))]
 public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
@@ -70,94 +72,84 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
         writer.Write(skillset.SkillIndex);
         writer.Write(skillset.Level);
     }
-    public void ServerSet(UCPlayer player)
+    public void ServerSet(WarfarePlayer player)
     {
         ThreadUtil.assertIsGameThread();
         if (player.IsOnline)
-            player.Player.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
+            player.UnturnedPlayer.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
     }
-    /// <exception cref="FormatException"/>
-    public static Skillset Read(MySqlDataReader reader, int colOffset = 0)
-    {
-        string type = reader.GetString(colOffset + 1);
-        byte level = reader.GetByte(colOffset + 2);
-        if (Enum.TryParse(type, true, out EPlayerOffense offense))
-            return new Skillset(offense, level);
-        if (Enum.TryParse(type, true, out EPlayerDefense defense))
-            return new Skillset(defense, level);
-        if (Enum.TryParse(type, true, out EPlayerSupport support))
-            return new Skillset(support, level);
-        throw new FormatException("Unable to find valid skill for skillset: \"" + type + "\" at level " + level + ".");
-    }
+
     public static Skillset Read(ref Utf8JsonReader reader)
     {
-        bool valFound = false;
-        bool lvlFound = false;
-        EPlayerSpeciality spec = default;
-        EPlayerOffense offense = default;
-        EPlayerDefense defense = default;
-        EPlayerSupport support = default;
-        byte level = 255;
-        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        SkillsetReadState state = default;
+        state.Level = byte.MaxValue;
+        JsonUtility.ReadTopLevelProperties(ref reader, ref state, action: (ref Utf8JsonReader reader, string propertyName, ref SkillsetReadState state) =>
         {
-            string? property = reader.GetString();
-            if (reader.Read() && property != null)
+            if (propertyName.Equals("offsense", StringComparison.Ordinal))
             {
-                switch (property)
+                state.Spec = EPlayerSpeciality.OFFENSE;
+                string? value = reader.GetString();
+                if (value != null && Enum.TryParse(value, true, out state.Offense))
                 {
-                    case "offense":
-                        spec = EPlayerSpeciality.OFFENSE;
-                        string? value2 = reader.GetString();
-                        if (value2 != null)
-                        {
-                            Enum.TryParse(value2, true, out offense);
-                            valFound = true;
-                        }
-                        break;
-                    case "defense":
-                        spec = EPlayerSpeciality.DEFENSE;
-                        string? value3 = reader.GetString();
-                        if (value3 != null)
-                        {
-                            Enum.TryParse(value3, true, out defense);
-                            valFound = true;
-                        }
-                        break;
-                    case "support":
-                        spec = EPlayerSpeciality.SUPPORT;
-                        string? value4 = reader.GetString();
-                        if (value4 != null)
-                        {
-                            Enum.TryParse(value4, true, out support);
-                            valFound = true;
-                        }
-                        break;
-                    case "level":
-                        if (reader.TryGetByte(out level))
-                        {
-                            lvlFound = true;
-                        }
-                        break;
+                    state.ValFound = true;
                 }
+                else throw new JsonException($"Invalid offense value: \"{value}\".");
             }
-        }
-        if (valFound && lvlFound)
-        {
-            switch (spec)
+            else if (propertyName.Equals("defense", StringComparison.Ordinal))
             {
-                case EPlayerSpeciality.OFFENSE:
-                    return new Skillset(offense, level);
-                case EPlayerSpeciality.DEFENSE:
-                    return new Skillset(defense, level);
-                case EPlayerSpeciality.SUPPORT:
-                    return new Skillset(support, level);
+                state.Spec = EPlayerSpeciality.DEFENSE;
+                string? value = reader.GetString();
+                if (value != null && Enum.TryParse(value, true, out state.Defense))
+                {
+                    state.ValFound = true;
+                }
+                else throw new JsonException($"Invalid defense value: \"{value}\".");
             }
-        }
-        L.Log("Error parsing skillset.");
-        return default;
+            else if (propertyName.Equals("support", StringComparison.Ordinal))
+            {
+                state.Spec = EPlayerSpeciality.SUPPORT;
+                string? value = reader.GetString();
+                if (value != null && Enum.TryParse(value, true, out state.Support))
+                {
+                    state.ValFound = true;
+                }
+                else throw new JsonException($"Invalid support value: \"{value}\".");
+            }
+            else
+            {
+                if (reader.TryGetByte(out state.Level))
+                {
+                    state.LvlFound = true;
+                }
+                else throw new JsonException($"Invalid level value: \"{reader.GetString()}\".");
+            }
+        });
+
+        if (!state.ValFound || !state.LvlFound)
+            throw new JsonException("Invalid skillset JSON format. Skill and/or level not found.");
+
+        return state.Spec switch
+        {
+            EPlayerSpeciality.OFFENSE => new Skillset(state.Offense, state.Level),
+            EPlayerSpeciality.DEFENSE => new Skillset(state.Defense, state.Level),
+            _ => new Skillset(state.Support, state.Level)
+        };
     }
+
+    private struct SkillsetReadState
+    {
+        public bool ValFound;
+        public bool LvlFound;
+        public EPlayerSpeciality Spec;
+        public EPlayerOffense Offense;
+        public EPlayerDefense Defense;
+        public EPlayerSupport Support;
+        public byte Level;
+    }
+
     public static void Write(Utf8JsonWriter writer, in Skillset skillset)
     {
+        writer.WriteStartObject();
         switch (skillset.Speciality)
         {
             case EPlayerSpeciality.OFFENSE:
@@ -170,7 +162,9 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
                 writer.WriteString("support", skillset.Support.ToString());
                 break;
         }
+
         writer.WriteNumber("level", skillset.Level);
+        writer.WriteEndObject();
     }
     public override bool Equals(object? obj) => obj is Skillset skillset && EqualsHelper(in skillset, true);
     private bool EqualsHelper(in Skillset skillset, bool compareLevel)
@@ -239,45 +233,6 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
     }
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(in b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(in b, true);
-    // ReSharper disable InconsistentNaming
-    public const string COLUMN_PK = "pk";
-    public const string COLUMN_SKILL = "Skill";
-    public const string COLUMN_LEVEL = "Level";
-    // ReSharper restore InconsistentNaming
-
-    public static readonly string SkillSqlEnumType = "enum('" + string.Join("','",
-        typeof(EPlayerOffense).GetEnumNames().Concat(typeof(EPlayerDefense).GetEnumNames())
-            .Concat(typeof(EPlayerSupport).GetEnumNames())) + "')";
-    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
-    {
-        if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
-        int ct = 3;
-        if (!oneToOne && hasPk)
-            ++ct;
-        Schema.Column[] columns = new Schema.Column[ct];
-        int index = 0;
-        if (!oneToOne && hasPk)
-        {
-            columns[0] = new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            };
-        }
-        else index = -1;
-        columns[++index] = new Schema.Column(fkColumn, SqlTypes.INCREMENT_KEY)
-        {
-            PrimaryKey = oneToOne,
-            AutoIncrement = oneToOne,
-            ForeignKey = true,
-            ForeignKeyColumn = mainPkColumn,
-            ForeignKeyTable = mainTable
-        };
-        columns[++index] = new Schema.Column(COLUMN_SKILL, SkillSqlEnumType);
-        columns[++index] = new Schema.Column(COLUMN_LEVEL, SqlTypes.BYTE);
-        return new Schema(tableName, columns, false, typeof(Skillset));
-    }
 }
 public sealed class SkillsetConverter : JsonConverter<Skillset>
 {

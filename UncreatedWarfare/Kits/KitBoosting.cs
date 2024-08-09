@@ -1,8 +1,6 @@
 ﻿using System;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare.Kits;
 public class KitBoosting(KitManager manager) : ITCPConnectedListener
@@ -17,7 +15,7 @@ public class KitBoosting(KitManager manager) : ITCPConnectedListener
     /// <exception cref="TimeoutException"/>
     public async Task<bool?> IsNitroBoosting(ulong player, CancellationToken token = default)
     {
-        bool?[]? state = await IsNitroBoosting(new ulong[] { player }, token).ConfigureAwait(false);
+        bool?[]? state = await IsNitroBoosting([ player ], token).ConfigureAwait(false);
         return state == null || state.Length < 1 ? null : state[0];
     }
     /// <exception cref="TimeoutException"/>

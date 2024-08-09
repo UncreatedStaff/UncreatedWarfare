@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Skillsets;
 
 namespace Uncreated.Warfare.Models.Base;
 public abstract class BaseSkillset : ICloneable

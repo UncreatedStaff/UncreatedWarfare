@@ -19,14 +19,15 @@ using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Networking.Purchasing;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Unlocks;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Models.Kits;
 
+// todo add delays to kits
 [Table("kits")]
-public class Kit : ITranslationArgument, ICloneable, IListItem
+public class Kit : ITranslationArgument, ICloneable
 {
     private int _listItemArrayVersion = -1;
     private int _listUnlockRequirementsArrayVersion = -1;
@@ -34,13 +35,6 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
     private IKitItem[]? _items;
     private UnlockRequirement[]? _unlockRequirements;
     private List<SimplifiedItemListEntry>? _simplifiedItemList;
-
-    [NotMapped]
-    PrimaryKey IListItem.PrimaryKey
-    {
-        get => new PrimaryKey(PrimaryKey);
-        set => PrimaryKey = value.Key;
-    }
 
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -364,7 +358,7 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
         CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
         if (displayName != null)
         {
-            LanguageInfo defaultLanguage = Warfare.Localization.GetDefaultLanguage();
+            LanguageInfo defaultLanguage = Localization.GetDefaultLanguage();
             Translations.Add(new KitTranslation
             {
                 Kit = this,
@@ -403,15 +397,16 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
             faction == TeamManager.Team2Faction && string.Equals(factionInfo?.FactionId, TeamManager.Team1Faction?.FactionId, StringComparison.Ordinal))
             return false;
 
-        if (FactionFilter.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid)
+        if (FactionFilter.NullOrEmpty() || faction is null || faction.PrimaryKey == 0)
             return true;
         
         for (int i = 0; i < FactionFilter.Count; ++i)
-            if (faction.PrimaryKey.Key == FactionFilter[i].FactionId)
+            if (faction.PrimaryKey == FactionFilter[i].FactionId)
                 return FactionFilterIsWhitelist;
 
         return !FactionFilterIsWhitelist;
     }
+
     public bool IsCurrentMapAllowed()
     {
         if (MapFilter.NullOrEmpty())
@@ -428,17 +423,31 @@ public class Kit : ITranslationArgument, ICloneable, IListItem
 
         return !MapFilterIsWhitelist;
     }
-    public bool MeetsUnlockRequirements(UCPlayer player)
+
+    public bool MeetsUnlockRequirementsFast(WarfarePlayer player)
     {
         if (UnlockRequirements is not { Length: > 0 }) return false;
         for (int i = 0; i < UnlockRequirements.Length; ++i)
         {
-            if (!UnlockRequirements[i].CanAccess(player))
+            if (!UnlockRequirements[i].CanAccessFast(player))
                 return false;
         }
 
         return true;
     }
+
+    public async Task<bool> MeetsUnlockRequirementsAsync(WarfarePlayer player, CancellationToken token = default)
+    {
+        if (UnlockRequirements is not { Length: > 0 }) return false;
+        for (int i = 0; i < UnlockRequirements.Length; ++i)
+        {
+            if (!await UnlockRequirements[i].CanAccessAsync(player, token))
+                return false;
+        }
+
+        return true;
+    }
+
     public string GetDisplayName(LanguageInfo? language = null, bool removeNewLine = true)
     {
         if (Translations is not { Count: > 0 }) return InternalName;

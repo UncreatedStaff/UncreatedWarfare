@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
@@ -96,7 +94,13 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// <exception cref="PlayerComponentNotFoundException">Component not found.</exception>
     public TComponentType Component<TComponentType>()
     {
-        return Components.OfType<TComponentType>().FirstOrDefault() ?? throw new PlayerComponentNotFoundException(typeof(TComponentType), this);
+        foreach (IPlayerComponent component in Components)
+        {
+            if (component is TComponentType comp)
+                return comp;
+        }
+
+        throw new PlayerComponentNotFoundException(typeof(TComponentType), this);
     }
 
     public void UpdateTeam(Team team)

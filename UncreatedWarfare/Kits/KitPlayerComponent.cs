@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Kits;
@@ -9,6 +10,7 @@ namespace Uncreated.Warfare.Kits;
 internal class KitPlayerComponent : IPlayerComponent
 {
     private KitManager _kitManager;
+    internal List<uint>? AccessibleKits;
     public WarfarePlayer Player { get; private set; }
 
     /// <summary>
@@ -30,6 +32,11 @@ internal class KitPlayerComponent : IPlayerComponent
     /// The branch of the player's current kit.
     /// </summary>
     public Branch ActiveBranch { get; private set; }
+
+    /// <summary>
+    /// If the player has a kit equipped.
+    /// </summary>
+    public bool HasKit => ActiveKitKey.HasValue;
 
     /// <summary>
     /// Get a copy of the kit from the kit cache if it's added. Use <see cref="GetActiveKitAsync"/> to get an up-to-date copy.

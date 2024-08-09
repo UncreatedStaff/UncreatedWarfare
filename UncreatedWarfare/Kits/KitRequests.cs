@@ -10,8 +10,9 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Layouts;
+using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
@@ -92,10 +93,9 @@ public class KitRequests
         }
 
         await UniTask.SwitchToMainThread(token);
-        ulong team = ctx.Caller.GetTeam();
 
         // already requested
-        uint? activeKit = ctx.Caller.ActiveKit;
+        uint? activeKit = ctx.Player.Component<KitPlayerComponent>().ActiveKitKey;
         if (activeKit.HasValue && activeKit.Value == kit.PrimaryKey)
             throw ctx.Reply(_translations.RequestKitAlreadyOwned);
 
@@ -108,11 +108,11 @@ public class KitRequests
             throw ctx.Reply(_translations.RequestKitMapBlacklisted);
 
         // faction filter
-        if (!kit.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
+        if (!kit.IsFactionAllowed(ctx.Player.Team.Faction.NullIfDefault()))
             throw ctx.Reply(_translations.RequestKitFactionBlacklisted);
 
         // check credits bought
-        if (kit is { IsPublicKit: true, CreditCost: > 0 } && !Manager.HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
+        if (kit is { IsPublicKit: true, CreditCost: > 0 } && !Manager.HasAccessQuick(kit, ctx.Player) && !UCWarfare.Config.OverrideKitRequirements)
         {
             if (ctx.Caller.CachedCredits >= kit.CreditCost)
                 throw ctx.Reply(_translations.RequestKitNotBought, kit.CreditCost);
@@ -134,7 +134,6 @@ public class KitRequests
 
         // cooldowns
         if (
-            Data.Gamemode.State == State.Active &&
             CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestKit, out Cooldown requestCooldown) &&
             !ctx.Caller.OnDutyOrAdmin() &&
             !UCWarfare.Config.OverrideKitRequirements &&
@@ -163,7 +162,7 @@ public class KitRequests
         if (!hasAccess)
         {
             // double check access against database
-            hasAccess = await Manager.HasAccess(kit, ctx.Caller.Steam64, token).ConfigureAwait(false);
+            hasAccess = await Manager.HasAccess(kit, ctx.CallerId.m_SteamID, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             if (!hasAccess)
             {
@@ -172,7 +171,7 @@ public class KitRequests
                 {
                     try
                     {
-                        bool nitroBoosting = await Manager.Boosting.IsNitroBoosting(ctx.CallerID, token).ConfigureAwait(false) ?? ctx.Caller.Save.WasNitroBoosting;
+                        bool nitroBoosting = await Manager.Boosting.IsNitroBoosting(ctx.CallerId.m_SteamID, token).ConfigureAwait(false) ?? ctx.Caller.Save.WasNitroBoosting;
                         await UniTask.SwitchToMainThread(token);
                         if (!nitroBoosting)
                             throw ctx.Reply(_translations.RequestKitMissingNitro);

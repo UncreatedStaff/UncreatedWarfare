@@ -9,8 +9,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Layouts;
-using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 
@@ -69,7 +68,7 @@ partial class KitManager
         {
             List<uint>?[] kitOutput = new List<uint>[players.Length];
             List<HotkeyBinding>?[] bindings = new List<HotkeyBinding>[players.Length];
-            List<LayoutTransformation>?[] layouts = new List<LayoutTransformation>[players.Length];
+            List<ItemLayoutTransformationData>?[] layouts = new List<ItemLayoutTransformationData>[players.Length];
 
             List<KitAccess> kitAccesses = await dbContext.KitAccess.Where(x => steam64Ids.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
             for (int i = 0; i < kitAccesses.Count; ++i)
@@ -143,10 +142,10 @@ partial class KitManager
                 if (index == -1 || layout.KitId == 0)
                     continue;
 
-                LayoutTransformation l = new LayoutTransformation(layout.OldPage, layout.NewPage, layout.OldX, layout.OldY,
+                ItemLayoutTransformationData l = new ItemLayoutTransformationData(layout.OldPage, layout.NewPage, layout.OldX, layout.OldY,
                     layout.NewX, layout.NewY, layout.NewRotation, layout.KitId, layout);
 
-                (layouts[index] ??= new List<LayoutTransformation>(16)).Add(l);
+                (layouts[index] ??= new List<ItemLayoutTransformationData>(16)).Add(l);
             }
 
             KitManager? singleton = GetSingletonQuick();
@@ -162,12 +161,12 @@ partial class KitManager
                 if (!player.IsOnline)
                     continue;
 
-                List<LayoutTransformation>? layouts2 = layouts[p];
+                List<ItemLayoutTransformationData>? layouts2 = layouts[p];
                 if (layouts2 is { Count: > 0 })
                 {
                     for (int i = 0; i < layouts2.Count; ++i)
                     {
-                        LayoutTransformation l = layouts2[i];
+                        ItemLayoutTransformationData l = layouts2[i];
                         Kit? kit = l.Model.Kit;
                         if (kit is null)
                         {
@@ -456,7 +455,7 @@ partial class KitManager
     public async Task SaveLayout(UCPlayer player, Kit kit, bool lockPurchaseSync, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
-        List<LayoutTransformation> active = Layouts.GetLayoutTransformations(player, kit.PrimaryKey);
+        List<ItemLayoutTransformationData> active = Layouts.GetLayoutTransformations(player, kit.PrimaryKey);
         List<(Page Page, Item Item, byte X, byte Y, byte Rotation, byte SizeX, byte SizeY)> inventory = new List<(Page, Item, byte, byte, byte, byte, byte)>(24);
         for (int pageIndex = 0; pageIndex < PlayerInventory.STORAGE; ++pageIndex)
         {
@@ -480,7 +479,7 @@ partial class KitManager
             IKitItem[] kitItems = kit.Items;
             for (int i = 0; i < active.Count; ++i)
             {
-                LayoutTransformation t = active[i];
+                ItemLayoutTransformationData t = active[i];
                 IPageKitItem? original = (IPageKitItem?)kitItems
                     .FirstOrDefault(x => x is IPageKitItem jar && jar.X == t.OldX && jar.Y == t.OldY && jar.Page == t.OldPage);
                 if (original == null)
@@ -576,7 +575,7 @@ partial class KitManager
                 }
                 if (colliding.Value.SizeX == sizeX1 && colliding.Value.SizeY == sizeY1)
                 {
-                    active.Add(new LayoutTransformation(jar.Page, orig.Page, jar.X, jar.Y, orig.X, orig.Y, orig.Rotation, kit.PrimaryKey, new KitLayoutTransformation
+                    active.Add(new ItemLayoutTransformationData(jar.Page, orig.Page, jar.X, jar.Y, orig.X, orig.Y, orig.Rotation, kit.PrimaryKey, new KitLayoutTransformation
                     {
                         Steam64 = steam64,
                         Kit = kit,
@@ -592,7 +591,7 @@ partial class KitManager
                 }
                 else if (colliding.Value.SizeX == sizeY1 && colliding.Value.SizeY == sizeX1)
                 {
-                    active.Add(new LayoutTransformation(jar.Page, orig.Page, jar.X, jar.Y, orig.X, orig.Y, (byte)(orig.Rotation + 1 % 4), kit.PrimaryKey, new KitLayoutTransformation
+                    active.Add(new ItemLayoutTransformationData(jar.Page, orig.Page, jar.X, jar.Y, orig.X, orig.Y, (byte)(orig.Rotation + 1 % 4), kit.PrimaryKey, new KitLayoutTransformation
                     {
                         Steam64 = steam64,
                         Kit = kit,

@@ -189,6 +189,9 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton(this);
         serviceCollection.AddSingleton(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)));
 
+        // UI
+        serviceCollection.AddSingleton<KitMenuUI>();
+
         // event handlers
         serviceCollection.AddTransient<VehicleSpawnedHandler>();
 

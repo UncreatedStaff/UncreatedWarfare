@@ -9,10 +9,12 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
@@ -21,7 +23,7 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Kits;
 
 public delegate void KitAccessCallback(Kit kit, ulong player, bool newAccess, KitAccessType newType);
-public delegate void KitChanged(UCPlayer player, Kit? kit, Kit? oldKit);
+public delegate void KitChanged(WarfarePlayer player, Kit? kit, Kit? oldKit);
 
 public static class KitEx
 {
@@ -310,9 +312,9 @@ public static class KitEx
         };
     }
     public static float GetTeamLimit(this Kit kit) => kit.TeamLimit ?? KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(kit.Class);
-    public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
+    public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
     {
-        ulong t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
+        Team t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;
         if (!requireCounts && kit.TeamLimit >= 1f)
@@ -324,9 +326,9 @@ public static class KitEx
             return false;
         return currentPlayers + 1 > allowedPlayers;
     }
-    public static bool IsClassLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
+    public static bool IsClassLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
     {
-        ulong t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
+        Team t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;
         if (!requireCounts && (kit.TeamLimit >= 1f))

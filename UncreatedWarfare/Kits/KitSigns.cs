@@ -10,6 +10,27 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
     private readonly SignInstancer _signs = serviceProvider.GetRequiredService<SignInstancer>();
     public KitManager Manager { get; } = manager;
 
+    /// <summary>
+    /// Get the kit a sign refers to from a given player's perspective.
+    /// </summary>
+    public async Task<Kit?> GetKitFromSign(BarricadeDrop drop, CSteamID looker, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
+
+        KitSignInstanceProvider? signProvider = _signs.GetSignProvider(drop) as KitSignInstanceProvider;
+
+        if (signProvider == null)
+            return null;
+
+        if (signProvider.LoadoutNumber <= 0)
+        {
+            return signProvider.KitId == null ? null : await Manager.FindKit(signProvider.KitId, token, true, KitManager.Set);
+        }
+
+        Kit? kit = await Manager.Loadouts.GetLoadout(looker.m_SteamID, signProvider.LoadoutNumber, token).ConfigureAwait(false);
+        return kit;
+    }
+
     /// <remarks>Thread Safe</remarks>
     public void UpdateSigns()
     {

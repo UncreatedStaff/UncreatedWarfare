@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
 
 namespace Uncreated.Warfare.Layouts.Teams;
 
@@ -27,4 +28,9 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// The group admins can join when placing buildables or doing other duties where they shouldn't be in a group.
     /// </summary>
     CSteamID AdminGroupId { get; }
+
+    /// <summary>
+    /// Team manager extra configuration from config file.
+    /// </summary>
+    IConfigurationSection Configuration { get; internal set; }
 }

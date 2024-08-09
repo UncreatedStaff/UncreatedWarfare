@@ -1,24 +1,32 @@
-﻿using SDG.NetTransport;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Framework.UI;
+using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits;
 
 [UnturnedUI(BasePath = "Background/BkgrMask")]
 public class KitMenuUI : UnturnedUI
 {
+    private readonly PlayerService _playerService;
+    private readonly KitManager _kitManager;
+    private readonly ZoneStore _zoneStore;
     private const bool RichIcons = true;
     private const EPluginWidgetFlags DisabledWidgets = EPluginWidgetFlags.ShowLifeMeters |
                                                        EPluginWidgetFlags.ShowCenterDot |
@@ -33,6 +41,9 @@ public class KitMenuUI : UnturnedUI
     public const int TabCount = 4;
     public const int IncludedItemsCount = 17;
     /* LOGIC */
+
+    // this doesn't actually exist but is used to store UI data.
+    public readonly UnturnedUIElement Parent = new UnturnedUIElement("~/root");
 
     // enable these to clear all, will disable themselves
     public readonly UnturnedUIElement LogicClearAll     = new UnturnedUIElement("~/anim_logic_clear_all");
@@ -181,8 +192,12 @@ public class KitMenuUI : UnturnedUI
     public readonly string[] ClassIconCache;
 
     public string[]? DefaultLanguageCache;
-    public KitMenuUI() : base(Gamemode.Config.UIKitMenu.GetId())
+    public KitMenuUI(PlayerService playerService, KitManager kitManager, ZoneStore zoneStore) : base(Gamemode.Config.UIKitMenu.GetId())
     {
+        _playerService = playerService;
+        _kitManager = kitManager;
+        _zoneStore = zoneStore;
+
         DropdownButtons = new UnturnedButton[(int)ClassConverter.MaxClass + 1];
         DefaultClassCache = new string[DropdownButtons.Length];
         ClassIconCache = new string[DropdownButtons.Length];
@@ -234,9 +249,22 @@ public class KitMenuUI : UnturnedUI
         CacheLanguages();
     }
 
+    private KitMenuUIData GetData(WarfarePlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        KitMenuUIData? data = UnturnedUIDataSource.GetData<KitMenuUIData>(player.Steam64, Parent);
+        if (data != null)
+            return data;
+
+        data = new KitMenuUIData(this, Parent, player);
+        UnturnedUIDataSource.AddData(data);
+        return data;
+    }
+
     private void KitClickedIntl(UnturnedButton button, Player player)
     {
-        UCPlayer? ucp = UCPlayer.FromPlayer(player);
+        WarfarePlayer? ucp = _playerService.GetOnlinePlayer(player);
         if (ucp != null)
         {
             int index = Array.FindIndex(Kits, kit => kit.Root == button);
@@ -244,15 +272,15 @@ public class KitMenuUI : UnturnedUI
                 OnKitClicked(index, ucp);
         }
     }
-    internal void OnFavoritesRefreshed(UCPlayer player)
+    internal void OnFavoritesRefreshed(WarfarePlayer player)
     {
-        if (!player.KitMenuData.IsOpen)
+        if (!GetData(player).IsOpen)
             return;
         RefreshList(player);
     }
     private void FavoriteClickedIntl(UnturnedButton button, Player player)
     {
-        UCPlayer? ucp = UCPlayer.FromPlayer(player);
+        WarfarePlayer? ucp = _playerService.GetOnlinePlayer(player);
         if (ucp == null)
             return;
 
@@ -270,20 +298,23 @@ public class KitMenuUI : UnturnedUI
     }*/
     private void OnClosed(UnturnedButton button, Player player)
     {
-        if (UCPlayer.FromPlayer(player) is { } pl)
+        if (_playerService.GetOnlinePlayer(player) is { } pl)
         {
-            pl.KitMenuData.IsOpen = false;
+            GetData(pl).IsOpen = false;
         }
 
         player.enablePluginWidgetFlag(DisabledWidgets);
         player.disablePluginWidgetFlag(EnabledWidgets);
     }
 
-    public void OpenUI(UCPlayer player)
+    public void OpenUI(WarfarePlayer player)
     {
         ITransportConnection c = player.Connection;
-        player.KitMenuData.ActiveTeam = player.GetTeam();
-        if (!player.KitMenuData.IsAlive)
+
+        KitMenuUIData data = GetData(player);
+
+        data.ActiveTeam = player.GetTeam();
+        if (!data.IsAlive)
         {
             SendToPlayer(c);
             if (player.Locale.LanguageInfo.IsDefault)
@@ -298,12 +329,15 @@ public class KitMenuUI : UnturnedUI
             SwitchToTab(player, 0);
         }
 
-        player.KitMenuData.Tab = 0;
-        player.KitMenuData.IsOpen = true;
-        player.Player.disablePluginWidgetFlag(DisabledWidgets);
-        player.Player.enablePluginWidgetFlag(EnabledWidgets);
+        data.Tab = 0;
+        data.IsOpen = true;
+
+        // todo proper widget management
+        player.UnturnedPlayer.disablePluginWidgetFlag(DisabledWidgets);
+        player.UnturnedPlayer.enablePluginWidgetFlag(EnabledWidgets);
     }
-    private string TranslateClass(Class @class, UCPlayer player)
+
+    private string TranslateClass(Class @class, WarfarePlayer player)
     {
         int cl = (int)@class;
         if (player.Locale.LanguageInfo.IsDefault && DefaultClassCache.Length > cl)
@@ -311,25 +345,28 @@ public class KitMenuUI : UnturnedUI
 
         return Localization.TranslateEnum(@class, player.Locale.LanguageInfo);
     }
+
     private void OnReload()
     {
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            if (pl.KitMenuData.IsAlive)
-            {
-                if (pl.Locale.LanguageInfo.IsDefault)
-                    SetCachedValues(pl.Connection);
-                else
-                    SetCachedValuesToOther(pl.Connection, pl.Locale.LanguageInfo, pl.Locale.CultureInfo);
-                if (pl.KitMenuData.IsOpen)
-                {
-                    LogicSetTabs[pl.KitMenuData.Tab].SetVisibility(pl.Connection, true);
-                    SwitchToTab(pl, pl.KitMenuData.Tab);
-                }
-            }
+            KitMenuUIData data = GetData(player);
+            if (!data.IsAlive)
+                continue;
+
+            if (player.Locale.LanguageInfo.IsDefault)
+                SetCachedValues(player.Connection);
+            else
+                SetCachedValuesToOther(player.Connection, player.Locale.LanguageInfo, player.Locale.CultureInfo);
+
+            if (!data.IsOpen)
+                continue;
+
+            LogicSetTabs[data.Tab].SetVisibility(player.Connection, true);
+            SwitchToTab(player, data.Tab);
         }
     }
+
     private void SetCachedValuesToOther(ITransportConnection c, LanguageInfo language, CultureInfo culture)
     {
         LblTabBaseKits.SetText(c, T.KitMenuUITabBaseKits.Translate(language, culture));
@@ -384,28 +421,33 @@ public class KitMenuUI : UnturnedUI
         LblStatsTitle.SetText(c, DefaultLanguageCache[22]);
         LblActionsTitle.SetText(c, DefaultLanguageCache[23]);
     }
-    private void SwitchToTab(UCPlayer player, byte tab)
+
+    private void SwitchToTab(WarfarePlayer player, byte tab)
     {
         L.LogDebug("Switching to tab " + tab);
         if (tab >= TabCount) return;
-        player.KitMenuData.IsOpen = true;
-        player.KitMenuData.Tab = tab;
+
+        KitMenuUIData data = GetData(player);
+
+        data.IsOpen = true;
+        data.Tab = tab;
         RefreshList(player);
 
-        if (player.KitMenuData.Filter == Class.None)
+        if (data.Filter == Class.None)
         {
             DropdownSelectedName.SetText(player.Connection, string.Empty);
             DropdownSelectedClass.SetText(player.Connection, string.Empty);
         }
         else
         {
-            DropdownSelectedName.SetText(player.Connection, TranslateClass(player.KitMenuData.Filter, player));
-            DropdownSelectedClass.SetText(player.Connection, player.KitMenuData.Filter.GetIcon().ToString());
+            DropdownSelectedName.SetText(player.Connection, TranslateClass(data.Filter, player));
+            DropdownSelectedClass.SetText(player.Connection, data.Filter.GetIcon().ToString());
         }
     }
-    private void RefreshSelected(UCPlayer player)
+
+    private void RefreshSelected(WarfarePlayer player)
     {
-        Kit? selected = player.KitMenuData.SelectedKit;
+        Kit? selected = GetData(player).SelectedKit;
         if (selected is null)
         {
             LogicClearKit.SetVisibility(player.Connection, true);
@@ -414,7 +456,8 @@ public class KitMenuUI : UnturnedUI
 
         OpenKit(player, selected);
     }
-    private void OpenKit(UCPlayer player, Kit kit)
+
+    private void OpenKit(WarfarePlayer player, Kit kit)
     {
         if (DefaultLanguageCache == null)
             CacheLanguages();
@@ -519,13 +562,11 @@ public class KitMenuUI : UnturnedUI
         //     ValStatsPlaytime.SetText(c, Localization.GetTimeFromMinutes(((int)kitStats.PlaytimeMinutes), player));
         // }
 
-        KitManager? manager = KitManager.GetSingletonQuick();
-
-        if (TeamManager.IsInMain(player) && Data.Is<IKitRequests>())
+        if (_zoneStore.IsInMainBase(player))
         {
-            if (kit.IsRequestable(player.Faction))
+            if (kit.IsRequestable(player.Team.Faction))
             {
-                if (kit is { IsPublicKit: true, CreditCost: <= 0 } || (manager != null && manager.HasAccessQuick(kit, player)))
+                if (kit is { IsPublicKit: true, CreditCost: <= 0 } || (_kitManager.HasAccessQuick(kit, player)))
                     LblActionsActionButton.SetText(c, DefaultLanguageCache![24]);
                 else
                     LblActionsActionButton.SetText(c, DefaultLanguageCache![30]);
@@ -550,7 +591,8 @@ public class KitMenuUI : UnturnedUI
             BtnActionsStaff1.SetVisibility(c, false);
         }
     }
-    private string GetTypeString(UCPlayer player, KitType type)
+
+    private string GetTypeString(WarfarePlayer player, KitType type)
     {
         if (DefaultLanguageCache != null && player.Locale.LanguageInfo.IsDefault)
             return DefaultLanguageCache[
@@ -564,28 +606,32 @@ public class KitMenuUI : UnturnedUI
             _               => T.KitMenuUIKitTypeLabelSpecial
         }).Translate(player.Locale.LanguageInfo);
     }
-    private void RefreshList(UCPlayer player)
+
+    private void RefreshList(WarfarePlayer player)
     {
-        player.KitMenuData.RefreshKitList();
+        GetData(player).RefreshKitList();
         SendKitList(player);
         RefreshSelected(player);
     }
-    private void SendKitList(UCPlayer player)
+
+    private void SendKitList(WarfarePlayer player)
     {
         LogicClearList.SetVisibility(player.Connection, true);
-        for (int i = 0; i < player.KitMenuData.Kits.Length; ++i)
+        KitMenuUIData data = GetData(player);
+        for (int i = 0; i < data.Kits.Length; ++i)
         {
-            if (player.KitMenuData.Kits[i] is { } kit)
+            if (data.Kits[i] is { } kit)
             {
-                SendKit(player, i, kit, player.KitMenuData.Favorited[i]);
+                SendKit(player, i, kit, data.Favorited[i]);
             }
         }
     }
-    private void SendKit(UCPlayer player, int index, Kit kit, bool favorited)
+
+    private void SendKit(WarfarePlayer player, int index, Kit kit, bool favorited)
     {
         ITransportConnection c = player.Connection;
-        KitManager? manager = KitManager.GetSingletonQuick();
-        bool hasAccess = manager != null && manager.HasAccessQuick(kit, player);
+
+        bool hasAccess = _kitManager.HasAccessQuick(kit, player);
         ListedKit kitUi = Kits[index];
         if (kit.Type != KitType.Loadout)
             kitUi.FavoriteIcon.SetText(c, favorited ? "<#fd0>¼" : "¼");
@@ -646,84 +692,86 @@ public class KitMenuUI : UnturnedUI
     }
     private void OnClassButtonClicked(UnturnedButton button, Player player)
     {
-        if (UCPlayer.FromPlayer(player) is { } ucp)
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+
+        Class @class = (Class)Array.IndexOf(DropdownButtons, button);
+        if (@class > ClassConverter.MaxClass)
+            return;
+        ITransportConnection tc = player.channel.owner.transportConnection;
+
+        GetData(ucp).Filter = @class;
+        RefreshList(ucp);
+        if (@class == Class.None)
         {
-            Class @class = (Class)Array.IndexOf(DropdownButtons, button);
-            if (@class > ClassConverter.MaxClass)
-                return;
-            ITransportConnection tc = player.channel.owner.transportConnection;
-
-            ucp.KitMenuData.Filter = @class;
-            RefreshList(ucp);
-            if (@class == Class.None)
-            {
-                DropdownSelectedName.SetText(tc, string.Empty);
-                DropdownSelectedClass.SetText(tc, string.Empty);
-                return;
-            }
-
-            // update dropdown text to translated value
-            string text = ucp.Locale.LanguageInfo.IsDefault ? DefaultClassCache[(int)@class] : Localization.TranslateEnum(@class, ucp.Locale.LanguageInfo);
-
-            DropdownSelectedName.SetText(tc, text);
-            DropdownSelectedClass.SetText(tc, new string(@class.GetIcon(), 1));
+            DropdownSelectedName.SetText(tc, string.Empty);
+            DropdownSelectedClass.SetText(tc, string.Empty);
+            return;
         }
+
+        // update dropdown text to translated value
+        string text = ucp.Locale.LanguageInfo.IsDefault ? DefaultClassCache[(int)@class] : Localization.TranslateEnum(@class, ucp.Locale.LanguageInfo);
+
+        DropdownSelectedName.SetText(tc, text);
+        DropdownSelectedClass.SetText(tc, new string(@class.GetIcon(), 1));
     }
-    private void OnKitClicked(int kitIndex, UCPlayer player)
+    private void OnKitClicked(int kitIndex, WarfarePlayer player)
     {
-        if (player.KitMenuData.Kits.Length > kitIndex && player.KitMenuData.Kits[kitIndex] is { } kit)
+        KitMenuUIData data = GetData(player);
+        if (data.Kits.Length > kitIndex && data.Kits[kitIndex] is { } kit)
             OpenKit(player, kit);
     }
-    private void OnFavoriteToggled(int kitIndex, UCPlayer player)
+    private void OnFavoriteToggled(int kitIndex, WarfarePlayer player)
     {
-        if (player.KitMenuData.Kits.Length <= kitIndex || player.KitMenuData.Kits[kitIndex] is not { } kit || kit.Type == KitType.Loadout)
+        KitMenuUIData data = GetData(player);
+        if (data.Kits.Length <= kitIndex || data.Kits[kitIndex] is not { } kit || kit.Type == KitType.Loadout)
             return;
 
-        bool fav = player.KitMenuData.Favorited[kitIndex] = !player.KitMenuData.Favorited[kitIndex];
+        bool fav = data.Favorited[kitIndex] = !data.Favorited[kitIndex];
         Kits[kitIndex].FavoriteIcon.SetText(player.Connection, fav ? "<#fd0>¼" : "¼");
-        player.KitMenuData.FavoritesDirty = true;
+        data.FavoritesDirty = true;
         L.LogDebug((fav ? "Favorited " : "Unfavorited ") + kit.InternalName);
         if (fav)
-            (player.KitMenuData.FavoriteKits ??= new List<uint>(8)).Add(kit.PrimaryKey);
+            (data.FavoriteKits ??= new List<uint>(8)).Add(kit.PrimaryKey);
         else
-            player.KitMenuData.FavoriteKits?.RemoveAll(x => x == kit.PrimaryKey);
+            data.FavoriteKits?.RemoveAll(x => x == kit.PrimaryKey);
     }
     private void OnActionButtonClicked(UnturnedButton button, Player player)
     {
-        if (UCPlayer.FromPlayer(player) is not { } pl)
-            return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
 
-        if (!TeamManager.IsInMain(pl) || !Data.Is<IKitRequests>())
+        if (!_zoneStore.IsInMainBase(ucp))
         {
-            LogicActionButton.SetVisibility(pl.Connection, false);
+            LogicActionButton.SetVisibility(ucp.Connection, false);
             return;
         }
 
-        if (pl.KitMenuData.SelectedKit is not { } proxy)
+        uint? selectedKitPk = GetData(ucp).SelectedKit;
+
+        if (!selectedKitPk.HasValue)
             return;
 
-        CancellationToken tkn = pl.DisconnectToken;
+        CancellationToken tkn = ucp.DisconnectToken;
         CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(Data.Gamemode.UnloadToken);
-        UCWarfare.RunTask(async tokens =>
+        Task.Run(async () =>
         {
+            Kit? kit = null;
             try
             {
-                KitManager? manager = KitManager.GetSingletonQuick();
-
-                if (manager == null)
+                kit = await _kitManager.GetKit(selectedKitPk.Value, tokens.Token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
+                if (kit == null)
                     return;
 
-                proxy = await manager.GetKit(proxy.PrimaryKey, tokens.Token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
-                if (proxy == null)
-                    return;
-
-                await manager.Requests.RequestKit(proxy, CommandContext.CreateTemporary(pl), tokens.Token);
+                await _kitManager.Requests.RequestKit(kit, ucp, tokens.Token);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error requesting kit {0} ({1}).", selectedKitPk, kit?.InternalName ?? "unknown kit");
             }
             finally
             {
                 tokens.Dispose();
             }
-        }, tokens, ctx: "Request kit from kit UI.");
+        });
     }
 
     private void OnStaffButton1Clicked(UnturnedButton button, Player player)
@@ -740,23 +788,23 @@ public class KitMenuUI : UnturnedUI
     }
     private void OnTabClickedBaseKits(UnturnedButton button, Player player)
     {
-        if (UCPlayer.FromPlayer(player) is { } pl)
-            SwitchToTab(pl, 0);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        SwitchToTab(ucp, 0);
     }
     private void OnTabClickedEliteKits(UnturnedButton button, Player player)
     {
-        if (UCPlayer.FromPlayer(player) is { } pl)
-            SwitchToTab(pl, 1);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        SwitchToTab(ucp, 1);
     }
     private void OnTabClickedLoadouts(UnturnedButton button, Player player)
     {
-        if (UCPlayer.FromPlayer(player) is { } pl)
-            SwitchToTab(pl, 2);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        SwitchToTab(ucp, 2);
     }
     private void OnTabClickedSpecialKits(UnturnedButton button, Player player)
     {
-        if (UCPlayer.FromPlayer(player) is { } pl)
-            SwitchToTab(pl, 3);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        SwitchToTab(ucp, 3);
     }
 
     public class ListedKit
@@ -805,39 +853,40 @@ public class KitMenuUI : UnturnedUI
     }
 }
 
-public sealed class KitMenuUIData : IPlayerComponent
+public sealed class KitMenuUIData : IUnturnedUIData
 {
-    public UCPlayer Player { get; set; }
+    private readonly IServiceProvider _serviceProvider;
+    private FactionInfo? _faction;
+    private KitManager? _manager;
+
+    public WarfarePlayer Player { get; set; }
+    public UnturnedUI Owner { get; set; }
+    public UnturnedUIElement Element { get; set; }
+    CSteamID IUnturnedUIData.Player => Player.Steam64;
+
     public ulong ActiveTeam { get; set; }
     public byte Tab { get; set; }
     public Class Filter { get; set; }
-    public Kit? SelectedKit { get; set; }
+    public uint? SelectedKit { get; set; }
     public bool IsAlive { get; set; }
     public bool IsOpen { get; set; }
     public bool FavoritesDirty { get; set; }
     public Kit[] Kits { get; set; } = Array.Empty<Kit>();
     public List<uint>? FavoriteKits { get; set; }
     public bool[] Favorited { get; set; } = Array.Empty<bool>();
-    private FactionInfo? _faction;
-    private KitManager? _manager;
-    private UCPlayer? _viewLensPlayer;
-    public void Init()
-    {
 
+    public KitMenuUIData(UnturnedUI owner, UnturnedUIElement element, WarfarePlayer player, IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+        Owner = owner;
+        Element = element;
+        Player = player;
     }
     internal void RefreshKitList()
     {
-        KitManager? manager = KitManager.GetSingletonQuick();
-        if (manager == null)
-        {
-            Kits = Array.Empty<Kit>();
-            return;
-        }
+        KitManager manager = _serviceProvider.GetRequiredService<KitManager>();
 
-        _viewLensPlayer = Player;
-        UCPlayer.TryApplyViewLens(ref _viewLensPlayer);
-
-        _faction = _viewLensPlayer.Faction;
+        _faction = Player.Team.Faction;
         _manager = manager;
 
         Func<Kit, bool> predicate = Tab switch
@@ -876,7 +925,6 @@ public sealed class KitMenuUIData : IPlayerComponent
             Favorited = new bool[Kits.Length];
         for (int i = 0; i < Kits.Length; ++i)
             Favorited[i] = FavoriteKits != null && FavoriteKits.Contains(Kits[i].PrimaryKey);
-        _viewLensPlayer = null;
 
         _manager = null;
         _faction = null;
@@ -888,8 +936,8 @@ public sealed class KitMenuUIData : IPlayerComponent
         => x is { Type: KitType.Elite } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction);
     private bool KitListLoadoutPredicate(Kit x)
         => x is { Type: KitType.Loadout } && (Filter == Class.None || x.Class == Filter) && x is { Class: > Class.Unarmed, Requestable: true } &&
-           (Player.OnDuty() && x.Creator == Player.Steam64 || _manager!.HasAccessQuick(x, _viewLensPlayer!));
+           (Player.OnDuty() && Player.Equals(x.Creator) || _manager!.HasAccessQuick(x, Player!));
     private bool KitListSpecialPredicate(Kit x)
         => x is { Type: KitType.Special } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction)
-           && (Player.OnDuty() || _manager!.HasAccessQuick(x, _viewLensPlayer!));
+           && (Player.OnDuty() || _manager!.HasAccessQuick(x, Player!));
 }

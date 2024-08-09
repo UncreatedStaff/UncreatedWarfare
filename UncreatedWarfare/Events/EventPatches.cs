@@ -1,11 +1,11 @@
-﻿using HarmonyLib;
+﻿using DanielWillett.ReflectionTools;
+using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Harmony;
-using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Random = UnityEngine.Random;
 
@@ -17,26 +17,26 @@ internal static class EventPatches
     {
         _fail = false;
         PatchUtil.PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(PreDetonate), postfix: PatchUtil.GetMethodInfo(PostDetonate));
+            prefix: Accessor.GetMethod(PreDetonate), postfix: Accessor.GetMethod(PostDetonate));
 
         PatchUtil.PatchMethod(typeof(InteractableVehicle).GetMethod("explode", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(ExplodeVehicle));
+            prefix: Accessor.GetMethod(ExplodeVehicle));
 
         PatchUtil.PatchMethod(typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(RocketOnTriggerEnter));
+            prefix: Accessor.GetMethod(RocketOnTriggerEnter));
 
         PatchUtil.PatchMethod(typeof(PlayerLife).GetMethod("doDamage", BindingFlags.NonPublic | BindingFlags.Instance), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(PlayerDamageRequested));
+            prefix: Accessor.GetMethod(PlayerDamageRequested));
 
         if (MthdRemoveItem != null)
         {
             if (MthdAddItem != null)
             {
                 PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveDragItem), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-                    transpiler: PatchUtil.GetMethodInfo(TranspileReceiveDragItem));
+                    transpiler: Accessor.GetMethod(TranspileReceiveDragItem));
 
                 PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveSwapItem), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-                    transpiler: PatchUtil.GetMethodInfo(TranspileReceiveSwapItem));
+                    transpiler: Accessor.GetMethod(TranspileReceiveSwapItem));
             }
             else
             {
@@ -49,34 +49,13 @@ internal static class EventPatches
         }
 
         PatchUtil.PatchMethod(typeof(ItemManager).GetMethod(nameof(ItemManager.ReceiveTakeItemRequest), BindingFlags.Public | BindingFlags.Static), ref _fail,
-            transpiler: PatchUtil.GetMethodInfo(TranspileReceiveTakeItemRequest));
+            transpiler: Accessor.GetMethod(TranspileReceiveTakeItemRequest));
 
-        if (!PatchUtil.PatchMethod(typeof(InteractablePower).GetMethod("CalculateIsConnectedToPower", BindingFlags.NonPublic | BindingFlags.Instance), prefix: PatchUtil.GetMethodInfo(OnCalculatingPower)))
+        if (!PatchUtil.PatchMethod(typeof(InteractablePower).GetMethod("CalculateIsConnectedToPower", BindingFlags.NonPublic | BindingFlags.Instance), prefix: Accessor.GetMethod(OnCalculatingPower)))
             Data.UseElectricalGrid = false;
 
         PatchUtil.PatchMethod(typeof(ObjectManager).GetMethod(nameof(ObjectManager.ReceiveToggleObjectBinaryStateRequest), BindingFlags.Public | BindingFlags.Static), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(OnReceiveToggleObjectBinaryStateRequest));
-
-        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapShirtRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapShirtRequest));
-
-        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapPantsRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapPantsRequest));
-
-        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapHatRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapHatRequest));
-
-        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapBackpackRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapBackpackRequest));
-
-        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapVestRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapVestRequest));
-
-        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapMaskRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapMaskRequest));
-
-        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapGlassesRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapGlassesRequest));
+            prefix: Accessor.GetMethod(OnReceiveToggleObjectBinaryStateRequest));
     }
 
     // SDG.Unturned.InteractableCharge.detonate
@@ -258,20 +237,6 @@ internal static class EventPatches
         __result = fg.IsInteractableEnabled(__instance);
         return false;
     }
-    private static bool OnReceiveSwapShirtRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
-        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Shirt, pl, page, x, y);
-    private static bool OnReceiveSwapPantsRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
-        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Pants, pl, page, x, y);
-    private static bool OnReceiveSwapHatRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
-        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Hat, pl, page, x, y);
-    private static bool OnReceiveSwapBackpackRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
-        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Backpack, pl, page, x, y);
-    private static bool OnReceiveSwapVestRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
-        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Vest, pl, page, x, y);
-    private static bool OnReceiveSwapMaskRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
-        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Mask, pl, page, x, y);
-    private static bool OnReceiveSwapGlassesRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
-        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Glasses, pl, page, x, y);
 
     private static bool OnReceiveToggleObjectBinaryStateRequest(in ServerInvocationContext context, byte x, byte y, ushort index, bool isUsed)
     {
@@ -320,7 +285,7 @@ internal static class EventPatches
                         yield return new CodeInstruction(OpCodes.Ldc_I4_0);                 
                     yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 8 : 7));  // rot_1
                     yield return new CodeInstruction(swap ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                    yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(EventDispatcher.OnDraggedOrSwappedItem));
+                    yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(EventDispatcher.OnDraggedOrSwappedItem));
                     L.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " post event.");
                     continue;
                 }
@@ -339,7 +304,7 @@ internal static class EventPatches
                     yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)6); // y_1
                     yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)7); // rot_1
                     yield return new CodeInstruction(swap ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                    yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(EventDispatcher.OnDraggingOrSwappingItem));
+                    yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(EventDispatcher.OnDraggingOrSwappingItem));
                     yield return new CodeInstruction(OpCodes.Brtrue, lbl);       // return if cancelled
                     yield return new CodeInstruction(OpCodes.Ret);
                     L.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " requested event.");
@@ -394,7 +359,7 @@ internal static class EventPatches
                     yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)lcl); // to_page
                 else
                     yield return new CodeInstruction(OpCodes.Ldnull);
-                yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(EventDispatcher.OnPickedUpItem));
+                yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(EventDispatcher.OnPickedUpItem));
                 L.LogDebug("Patched ReceiveTakeItemRequest.");
             }
 

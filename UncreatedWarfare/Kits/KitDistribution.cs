@@ -1,58 +1,85 @@
-﻿using SDG.NetTransport;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Players.Layouts;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.ItemTracking;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 
-public class KitDistribution(KitManager manager)
+public class KitDistribution(KitManager manager, IServiceProvider serviceProvider)
 {
+    private readonly PlayerService _playerService = serviceProvider.GetRequiredService<PlayerService>();
     public KitManager Manager { get; } = manager;
 
+    /// <summary>
+    /// Dequip the given kit from all players and give them their default kits instead.
+    /// </summary>
     /// <remarks>Thread Safe</remarks>
     public async Task DequipKit(Kit kit, bool manual, CancellationToken token = default)
     {
-        Kit? t1def = null;
-        Kit? t2def = null;
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        await UniTask.SwitchToMainThread(token);
+
+        List<KeyValuePair<Team, Kit?>> defaultCache = new List<KeyValuePair<Team, Kit?>>(2);
+
+        List<Task> dequipTasks = new List<Task>();
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            uint? activeKit = pl.ActiveKit;
+            uint? activeKit = player.Component<KitPlayerComponent>().ActiveKitKey;
             if (!activeKit.HasValue || activeKit.Value != kit.PrimaryKey)
                 continue;
 
-            ulong team = pl.GetTeam();
-            if (team == 1 && (t1def ??= await Manager.GetDefaultKit(1ul, token, x => KitManager.RequestableSet(x, false))) != null)
-                await Manager.Requests.GiveKit(pl, t1def == kit ? null : t1def, manual, false, token);
-            else if (team == 2 && (t2def ??= await Manager.GetDefaultKit(2ul, token)) != null)
-                await Manager.Requests.GiveKit(pl, t2def == kit ? null : t2def, manual, false, token);
-            else
-                await Manager.Requests.GiveKit(pl, null, manual, false, token);
+            dequipTasks.Add(Task.Run(async () =>
+            {
+                Kit? defaultKit = null;
+
+                Team team = player.Team;
+
+                if (team.IsValid)
+                {
+                    KeyValuePair<Team, Kit?> cacheEntry = defaultCache.Find(x => x.Key == team);
+                    defaultKit = cacheEntry.Value;
+                    if (cacheEntry.Key == null)
+                    {
+                        defaultKit = await Manager.GetDefaultKit(team, token, x => KitManager.RequestableSet(x, false));
+                        defaultCache.Add(new KeyValuePair<Team, Kit?>(team, defaultKit));
+                    }
+                }
+
+                await Manager.Requests.GiveKit(player, defaultKit == kit ? null : defaultKit, manual, false, token);
+            }, token));
         }
+
+        await Task.WhenAll(dequipTasks);
     }
+
+    /// <summary>
+    /// Dequip <paramref name="player"/>'s kit and give them their default kit instead.
+    /// </summary>
     /// <remarks>Thread Safe</remarks>
-    public async Task DequipKit(UCPlayer player, bool manual, CancellationToken token = default)
+    public async Task DequipKit(WarfarePlayer player, bool manual, CancellationToken token = default)
     {
-        ulong team = player.GetTeam();
-        Kit? dkit = await Manager.GetDefaultKit(team, token, x => KitManager.RequestableSet(x, false));
-        if (dkit != null)
-            await Manager.Requests.GiveKit(player, dkit, manual, true, token);
-        else
-            await Manager.Requests.GiveKit(player, null, manual, false, token);
+        Kit? defaultKit = await Manager.GetDefaultKit(player.Team, token, x => KitManager.RequestableSet(x, false));
+        await Manager.Requests.GiveKit(player, defaultKit, manual, false, token);
     }
+
+    /// <summary>
+    /// Dequip <paramref name="player"/>'s kit if it's <paramref name="kit"/> and give them their default kit instead.
+    /// </summary>
     /// <remarks>Thread Safe</remarks>
-    public Task DequipKit(UCPlayer player, bool manual, Kit kit, CancellationToken token = default)
+    public Task DequipKit(WarfarePlayer player, bool manual, Kit kit, CancellationToken token = default)
     {
-        uint? activeKit = player.ActiveKit;
+        uint? activeKit = player.Component<KitPlayerComponent>().ActiveKitKey;
         if (activeKit is not null && activeKit == kit.PrimaryKey)
         {
             return DequipKit(player, manual, token);
@@ -64,32 +91,36 @@ public class KitDistribution(KitManager manager)
     /// <summary>
     /// Add the items to a player's inventory.
     /// </summary>
-    public void DistributeKitItems(UCPlayer player, Kit? kit, bool clearInventory = true, bool sendActionTip = true, bool ignoreAmmobags = false)
+    public void DistributeKitItems(WarfarePlayer player, Kit? kit, bool clearInventory = true, bool sendActionTip = true, bool ignoreAmmobags = false)
     {
         ThreadUtil.assertIsGameThread();
         if (clearInventory)
             ItemUtility.ClearInventory(player, !Data.UseFastKits);
 
-        player.ItemTransformations.Clear();
-        player.ItemDropTransformations.Clear();
-        player.Player.equipment.dequip();
+        ItemTrackingPlayerComponent itemTracker = player.Component<ItemTrackingPlayerComponent>();
+        itemTracker.Reset();
+
+        player.UnturnedPlayer.equipment.dequip();
         if (kit == null)
         {
             ItemUtility.UpdateSlots(player);
             return;
         }
 
-        LayoutTransformation[] layout = player.LayoutTransformations == null || !player.HasDownloadedKitData || kit.PrimaryKey == 0
-            ? Array.Empty<LayoutTransformation>()
-            : player.LayoutTransformations.Where(x => x.Kit == kit.PrimaryKey).ToArray();
+        KitPlayerComponent kitComponent = player.Component<KitPlayerComponent>();
+        PlayerInventory inventory = player.UnturnedPlayer.inventory;
 
-        FactionInfo? faction = player.Faction;
+        ItemLayoutTransformationData[] layout = itemTracker.LayoutTransformations == null || !kitComponent.HasDownloadedKitData || kit.PrimaryKey == 0
+            ? Array.Empty<ItemLayoutTransformationData>()
+            : itemTracker.LayoutTransformations.Where(x => x.Kit == kit.PrimaryKey).ToArray();
+
+        FactionInfo? faction = player.Team.Faction.NullIfDefault();
 
         IKitItem[] items = kit.Items;
 
         if (Data.UseFastKits)
         {
-            NetId id = player.Player.clothing.GetNetId();
+            NetId id = player.UnturnedPlayer.clothing.GetNetId();
             int flag = 0;
             bool hasPlayedEffect = false;
             for (int i = 0; i < items.Length; ++i)
@@ -152,11 +183,11 @@ public class KitDistribution(KitManager manager)
                 })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
             }
 
-            SDG.Unturned.Items[] p = player.Player.inventory.items;
+            SDG.Unturned.Items[] p = inventory.items;
 
-            bool ohi = Data.GetOwnerHasInventory(player.Player.inventory);
+            bool ohi = Data.GetOwnerHasInventory(inventory);
             if (ohi)
-                Data.SetOwnerHasInventory(player.Player.inventory, false);
+                Data.SetOwnerHasInventory(inventory, false);
 
             List<(Item, IPageKitItem)>? toAddLater = null;
             for (int i = 0; i < items.Length; ++i)
@@ -195,7 +226,7 @@ public class KitDistribution(KitManager manager)
                 // find layout override
                 for (int j = 0; j < layout.Length; ++j)
                 {
-                    ref LayoutTransformation l = ref layout[j];
+                    ref ItemLayoutTransformationData l = ref layout[j];
                     if (l.OldPage != givePage || l.OldX != giveX || l.OldY != giveY)
                         continue;
 
@@ -274,7 +305,7 @@ public class KitDistribution(KitManager manager)
 
                     if (layoutAffected)
                     {
-                        player.ItemTransformations.Add(new ItemTransformation(jar.Page, givePage, jar.X, jar.Y, giveX, giveY, itm));
+                        itemTracker.ItemTransformations.Add(new ItemTransformation(jar.Page, givePage, jar.X, jar.Y, giveX, giveY, itm));
                     }
                     page.addItem(giveX, giveY, giveRot, itm);
                 }
@@ -289,16 +320,16 @@ public class KitDistribution(KitManager manager)
                 for (int i = 0; i < toAddLater.Count; ++i)
                 {
                     (Item item, IPageKitItem jar) = toAddLater[i];
-                    if (!player.Player.inventory.tryAddItemAuto(item, false, false, false, !hasPlayedEffect))
+                    if (!inventory.tryAddItemAuto(item, false, false, false, !hasPlayedEffect))
                     {
                         ItemManager.dropItem(item, player.Position, !hasPlayedEffect, true, false);
-                        player.ItemDropTransformations.Add(new ItemDropTransformation(jar.Page, jar.X, jar.Y, item));
+                        itemTracker.ItemDropTransformations.Add(new ItemDropTransformation(jar.Page, jar.X, jar.Y, item));
                     }
                     else
                     {
                         for (int pageIndex = 0; pageIndex < PlayerInventory.STORAGE; ++pageIndex)
                         {
-                            SDG.Unturned.Items page = player.Player.inventory.items[pageIndex];
+                            SDG.Unturned.Items page = inventory.items[pageIndex];
                             int c = page.getItemCount();
                             for (int index = 0; index < c; ++index)
                             {
@@ -306,7 +337,7 @@ public class KitDistribution(KitManager manager)
                                 if (jar2.item != item)
                                     continue;
 
-                                player.ItemTransformations.Add(new ItemTransformation(jar.Page, (Page)pageIndex, jar.X, jar.Y, jar2.x, jar2.y, item));
+                                itemTracker.ItemTransformations.Add(new ItemTransformation(jar.Page, (Page)pageIndex, jar.X, jar.Y, jar2.x, jar2.y, item));
                                 goto exit;
                             }
                         }
@@ -318,74 +349,59 @@ public class KitDistribution(KitManager manager)
                 }
             }
             if (ohi)
-                Data.SetOwnerHasInventory(player.Player.inventory, true);
+                Data.SetOwnerHasInventory(inventory, true);
             ItemUtility.SendPages(player);
         }
         else
         {
             foreach (IKitItem item in items)
             {
-                if (item is IClothingKitItem clothing)
-                {
-                    ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
-                    if (asset is null)
-                    {
-                        ReportItemError(kit, item, null);
-                        return;
-                    }
-                    if (clothing.Type == ClothingType.Shirt)
-                    {
-                        if (asset is ItemShirtAsset shirt)
-                            player.Player.clothing.askWearShirt(shirt, 100, state, true);
-                        else goto e;
-                    }
-                    else if (clothing.Type == ClothingType.Pants)
-                    {
-                        if (asset is ItemPantsAsset pants)
-                            player.Player.clothing.askWearPants(pants, 100, state, true);
-                        else goto e;
-                    }
-                    else if (clothing.Type == ClothingType.Vest)
-                    {
-                        if (asset is ItemVestAsset vest)
-                            player.Player.clothing.askWearVest(vest, 100, state, true);
-                        else goto e;
-                    }
-                    else if (clothing.Type == ClothingType.Hat)
-                    {
-                        if (asset is ItemHatAsset hat)
-                            player.Player.clothing.askWearHat(hat, 100, state, true);
-                        else goto e;
-                    }
-                    else if (clothing.Type == ClothingType.Mask)
-                    {
-                        if (asset is ItemMaskAsset mask)
-                            player.Player.clothing.askWearMask(mask, 100, state, true);
-                        else goto e;
-                    }
-                    else if (clothing.Type == ClothingType.Backpack)
-                    {
-                        if (asset is ItemBackpackAsset backpack)
-                            player.Player.clothing.askWearBackpack(backpack, 100, state, true);
-                        else goto e;
-                    }
-                    else if (clothing.Type == ClothingType.Glasses)
-                    {
-                        if (asset is ItemGlassesAsset glasses)
-                            player.Player.clothing.askWearGlasses(glasses, 100, state, true);
-                        else goto e;
-                    }
-                    else
-                        goto e;
-
+                if (item is not IClothingKitItem clothing)
                     continue;
-                    e:
-                    ReportItemError(kit, item, asset);
-                    Item uitem = new Item(asset.id, amt, 100, state);
-                    if (!player.Player.inventory.tryAddItem(uitem, true))
-                    {
-                        ItemManager.dropItem(uitem, player.Position, false, true, true);
-                    }
+
+                ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
+                if (asset is null)
+                {
+                    ReportItemError(kit, item, null);
+                    return;
+                }
+
+                switch (clothing.Type)
+                {
+                    case ClothingType.Shirt when asset is ItemShirtAsset shirt:
+                        player.UnturnedPlayer.clothing.askWearShirt(shirt, 100, state, true);
+                        continue;
+
+                    case ClothingType.Pants when asset is ItemPantsAsset pants:
+                        player.UnturnedPlayer.clothing.askWearPants(pants, 100, state, true);
+                        continue;
+
+                    case ClothingType.Vest when asset is ItemVestAsset vest:
+                        player.UnturnedPlayer.clothing.askWearVest(vest, 100, state, true);
+                        continue;
+
+                    case ClothingType.Hat when asset is ItemHatAsset hat:
+                        player.UnturnedPlayer.clothing.askWearHat(hat, 100, state, true);
+                        continue;
+
+                    case ClothingType.Mask when asset is ItemMaskAsset mask:
+                        player.UnturnedPlayer.clothing.askWearMask(mask, 100, state, true);
+                        continue;
+
+                    case ClothingType.Backpack when asset is ItemBackpackAsset backpack:
+                        player.UnturnedPlayer.clothing.askWearBackpack(backpack, 100, state, true);
+                        continue;
+
+                    case ClothingType.Glasses when asset is ItemGlassesAsset glasses:
+                        player.UnturnedPlayer.clothing.askWearGlasses(glasses, 100, state, true);
+                        continue;
+                }
+
+                ReportItemError(kit, item, asset);
+                Item uitem = new Item(asset.id, amt, 100, state);
+                if (!inventory.tryAddItem(uitem, true))
+                {
+                    ItemManager.dropItem(uitem, player.Position, false, true, true);
                 }
             }
 
@@ -402,8 +418,8 @@ public class KitDistribution(KitManager manager)
                 }
 
                 Item uitem = new Item(asset.id, amt, 100, state);
-                if ((item is not IPageKitItem jar || !player.Player.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
-                    && !player.Player.inventory.tryAddItem(uitem, true))
+                if ((item is not IPageKitItem jar || !inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
+                    && !inventory.tryAddItem(uitem, true))
                 {
                     ItemManager.dropItem(uitem, player.Position, false, true, true);
                 }
@@ -422,10 +438,10 @@ public class KitDistribution(KitManager manager)
         }
 
         // equip primary or secondary
-        if (player.Player.inventory.getItemCount((byte)Page.Primary) > 0)
-            player.Player.equipment.ServerEquip((byte)Page.Primary, 0, 0);
-        else if (player.Player.inventory.getItemCount((byte)Page.Secondary) > 0)
-            player.Player.equipment.ServerEquip((byte)Page.Secondary, 0, 0);
+        if (inventory.getItemCount((byte)Page.Primary) > 0)
+            player.UnturnedPlayer.equipment.ServerEquip((byte)Page.Primary, 0, 0);
+        else if (inventory.getItemCount((byte)Page.Secondary) > 0)
+            player.UnturnedPlayer.equipment.ServerEquip((byte)Page.Secondary, 0, 0);
     }
 
     private static void ReportItemError(Kit kit, IKitItem item, ItemAsset? asset)

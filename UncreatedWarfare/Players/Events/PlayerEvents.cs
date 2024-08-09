@@ -18,5 +18,6 @@ public class PlayerEvents : IEventListener<GroupChanged>
 
         e.Player.UpdateTeam(newTeam);
 
+        // todo  note: GroupChanged needs to be invoked when the player joins into the same game as when they left, since that's how we'll know when a player is actually joining the battle
     }
 }

@@ -13,9 +13,9 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
@@ -655,14 +655,13 @@ public sealed class KitCommand : IExecutableCommand
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
             {
+                await UniTask.SwitchToMainThread(token);
                 if (fav && manager.IsFavoritedQuick(kit.PrimaryKey, player))
                 {
-                    await UniTask.SwitchToMainThread(token);
                     throw Context.Reply(T.KitFavoriteAlreadyFavorited, kit);
                 }
                 else if (!fav && !manager.IsFavoritedQuick(kit.PrimaryKey, player))
                 {
-                    await UniTask.SwitchToMainThread(token);
                     throw Context.Reply(T.KitFavoriteAlreadyUnfavorited, kit);
                 }
                 else

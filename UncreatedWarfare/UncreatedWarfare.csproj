@@ -106,7 +106,10 @@
     <PackageReference Include="DanielWillett.SpeedBytes" Version="[1.1.2,)" />
     <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="[1.1.1,)" />
     <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="[1.0.0,)" />
-    <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease9" />
+    <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease01, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease01, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease01, 2)" />
+    <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease10" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
 
     <!-- for the love of god do not touch these version numbers -->
@@ -163,18 +166,6 @@
     <Using Include="Microsoft.Extensions.Logging.ILogger">
       <Alias>ILogger</Alias>
     </Using>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="DanielWillett.ModularRPCs">
-      <HintPath>..\..\ModularRPCs\ModularRPCs\bin\Release\netstandard2.1\DanielWillett.ModularRPCs.dll</HintPath>
-    </Reference>
-    <Reference Include="DanielWillett.ModularRPCs.WebSockets">
-      <HintPath>..\..\ModularRPCs\ModularRPCs.WebSockets\bin\Release\netstandard2.1\DanielWillett.ModularRPCs.WebSockets.dll</HintPath>
-    </Reference>
-    <Reference Include="DanielWillett.ModularRPCs.Unity">
-      <HintPath>..\..\ModularRPCs\ModularRPCs.Unity\bin\Release\net461\DanielWillett.ModularRPCs.Unity.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <!-- Installation -->

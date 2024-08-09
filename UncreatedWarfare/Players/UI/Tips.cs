@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Players.UI;
 

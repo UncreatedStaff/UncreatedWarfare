@@ -1,21 +1,23 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
-public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKitsDbContext, new()
+public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider serviceProvider) where TDbContext : IKitsDbContext, new()
 {
+    private readonly PlayerService _playerService = serviceProvider.GetRequiredService<PlayerService>();
     public KitManager Manager { get; } = manager;
 
     /// <summary>Indexed from 1.</summary>
@@ -23,14 +25,17 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
     {
         return GetLoadout(player.Steam64, loadoutId, token);
     }
+
     private async Task<List<Kit>> GetLoadouts(IKitsDbContext dbContext, ulong steam64, CancellationToken token = default)
     {
         List<Kit> kits = await dbContext.Kits
             .Where(x => x.Type == KitType.Loadout && x.Access.Any(y => y.Steam64 == steam64))
             .ToListAsync(token);
 
-        if (UCPlayer.FromID(steam64) is { } player)
+        if (_playerService.GetOnlinePlayerOrNull(steam64) is { } player)
         {
+            await UniTask.SwitchToMainThread(token);
+
             return kits
                 .OrderByDescending(x => Manager.IsFavoritedQuick(x.PrimaryKey, player))
                 .ThenBy(x => x.InternalName ?? string.Empty)
@@ -39,14 +44,16 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return kits;
     }
+
     private async Task<List<Kit>> GetLoadouts(ulong steam64, CancellationToken token = default)
     {
         await using IKitsDbContext dbContext = new TDbContext();
 
         return await GetLoadouts(dbContext, steam64, token).ConfigureAwait(false);
     }
+
     /// <summary>Indexed from 1. Use with purchase sync.</summary>
-    public Kit? GetLoadoutQuick(ulong steam64, int loadoutId)
+    public async Task<Kit?> GetLoadoutQuick(ulong steam64, int loadoutId, CancellationToken token = default)
     {
         if (loadoutId <= 0)
             throw new ArgumentOutOfRangeException(nameof(loadoutId));
@@ -57,8 +64,10 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
                         KitEx.ParseStandardLoadoutId(x.InternalName, out ulong player) != -1 &&
                         player == steam64);
 
-        if (UCPlayer.FromID(steam64) is { } player)
+        if (_playerService.GetOnlinePlayerOrNull(steam64) is { } player)
         {
+            await UniTask.SwitchToMainThread(token);
+
             kits = kits
                 .OrderByDescending(x => Manager.IsFavoritedQuick(x.PrimaryKey, player))
                 .ThenBy(x => x.InternalName ?? string.Empty);
@@ -72,6 +81,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return null;
     }
+
     /// <summary>Indexed from 1.</summary>
     public async Task<Kit?> GetLoadout(ulong steam64, int loadoutId, CancellationToken token = default)
     {
@@ -82,10 +92,12 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return loadoutId > loadouts.Count ? null : loadouts[loadoutId - 1];
     }
+
     public async Task<string> GetFreeLoadoutName(ulong playerId)
     {
         return KitEx.GetLoadoutName(playerId, await GetFreeLoadoutId(playerId));
     }
+
     /// <summary>Indexed from 1.</summary>
     public async Task<int> GetFreeLoadoutId(ulong playerId)
     {
@@ -93,6 +105,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return await GetFreeLoadoutId(dbContext, playerId).ConfigureAwait(false);
     }
+
     /// <summary>Indexed from 1.</summary>
     public async Task<int> GetFrGetFreeLoadoutIdeeLoadoutId(ulong playerId, CancellationToken token = default)
     {
@@ -100,6 +113,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return await GetFreeLoadoutId(dbContext, playerId, token).ConfigureAwait(false);
     }
+
     /// <summary>Indexed from 1.</summary>
     public async Task<int> GetFreeLoadoutId(IKitsDbContext dbContext, ulong playerId, CancellationToken token = default)
     {
@@ -134,6 +148,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
     }
+
     public async Task<(Kit?, StandardErrorCode)> UpgradeLoadout(ulong fromPlayer, ulong player, Class @class, string loadoutName, CancellationToken token = default)
     {
         Kit? kit = await Manager.FindKit(loadoutName, token, true, KitManager.FullSet).ConfigureAwait(false);
@@ -188,6 +203,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return (kit, StandardErrorCode.Success);
     }
+
     public async Task<(Kit?, StandardErrorCode)> UnlockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
     {
         Kit? existing = await Manager.FindKit(loadoutName, token, true, KitManager.FullSet).ConfigureAwait(false);
@@ -223,6 +239,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return (existing, StandardErrorCode.Success);
     }
+
     public async Task<(Kit?, StandardErrorCode)> LockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
     {
         ulong player = 0;
@@ -253,6 +270,7 @@ public class KitLoadouts<TDbContext>(KitManager manager) where TDbContext : IKit
 
         return (kit, StandardErrorCode.Success);
     }
+
     public async Task<(Kit, StandardErrorCode)> CreateLoadout(ulong fromPlayer, ulong player, Class @class, string displayName, CancellationToken token = default)
     {
         string loadoutName = await GetFreeLoadoutName(player).ConfigureAwait(false);

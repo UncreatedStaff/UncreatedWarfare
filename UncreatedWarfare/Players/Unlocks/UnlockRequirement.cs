@@ -32,12 +32,17 @@ public abstract class UnlockRequirement : ICloneable
     /// <summary>
     /// If a player passes the requirements. This check can do some caching, mainly for signs.
     /// </summary>
-    public abstract bool CanAccessFast(UCPlayer player);
+    public abstract bool CanAccessFast(WarfarePlayer player);
 
     /// <summary>
     /// Full check if a player passes the requirements.
     /// </summary>
-    public virtual UniTask<bool> CanAccessAsync(UCPlayer player) => UniTask.FromResult(CanAccessFast(player));
+    public virtual async UniTask<bool> CanAccessAsync(WarfarePlayer player, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
+
+        return CanAccessFast(player);
+    }
 
     /// <summary>
     /// Get the text that shows on a sign when the player is missing the requirement.

@@ -1,12 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using Microsoft.Extensions.Configuration;
+using System.Globalization;
 using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Layouts.Phases;
 public class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSettings : PhaseTeamSettings
 {
-    private readonly ITeamManager<Team> _teamManager;
+    protected ITeamManager<Team> TeamManager;
     public bool IsActive { get; private set; }
     public TimeSpan? Duration { get; set; }
 
@@ -26,7 +27,7 @@ public class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSettings : Phase
     public BasePhase(IServiceProvider serviceProvider, IConfigurationSection config)
     {
         Configuration = config;
-        _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
+        TeamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
     }
 
     public virtual UniTask InitializePhaseAsync(CancellationToken token = default)
@@ -37,7 +38,8 @@ public class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSettings : Phase
         for (int i = 0; i < Teams.Length; i++)
         {
             TTeamSettings settings = Teams[i];
-            settings.TeamInfo = _teamManager.FindTeam(settings.Team);
+            settings.TeamInfo = TeamManager.FindTeam(settings.Team);
+            settings.Configuration = Configuration.GetSection($"Teams:{i.ToString(CultureInfo.InvariantCulture)}");
         }
 
         return UniTask.CompletedTask;
