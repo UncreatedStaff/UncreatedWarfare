@@ -1,17 +1,14 @@
 ﻿using DanielWillett.ReflectionTools;
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Traits;
@@ -202,10 +199,10 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         Coroutine = null;
         Destroy(this);
     }
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags) => Data is null
-        ? Translation.Null(flags)
-        : (Data as ITranslationArgument).Translate(language, format, target, culture, ref flags);
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        return Data is null ? formatter.Format<object>(null, in parameters) : (Data as ITranslationArgument).Translate(formatter, in parameters);
+    }
 }
 
 public class TraitData : ITranslationArgument
@@ -346,17 +343,17 @@ public class TraitData : ITranslationArgument
     [FormatDisplay(typeof(Trait), "Colored Description")]
     [FormatDisplay("Colored Description")]
     public const string FormatColorDescription = "cd";
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         if (format is not null && !format.Equals(FormatName, StringComparison.Ordinal))
         {
             if (format.Equals(FormatTypeName, StringComparison.Ordinal))
                 return TypeName;
             if (format.Equals(FormatDescription, StringComparison.Ordinal))
                 return DescriptionTranslations != null
-                    ? DescriptionTranslations.Translate(language, string.Empty).Replace('\n', ' ')
-                    : Translation.Null(flags & TranslationFlags.NoRichText);
+                    ? DescriptionTranslations.Translate(parameters.Language, string.Empty).Replace('\n', ' ')
+                    : formatter.Format<object>(null, new ValueFormatParameters(in parameters, parameters.Options & TranslationOptions.NoRichText));
             if (format.Equals(FormatColorTypeName, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), TypeName, flags);
             if (format.Equals(FormatColorName, StringComparison.Ordinal))

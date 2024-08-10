@@ -15,8 +15,12 @@ public class TranslationValue
     private int _imguiColorStrippedValueStart;
     private int _imguiColorStrippedValueLength;
 
+    private string? _colorStrippedValueCache;
+    private string? _colorStrippedIMGUIValueCache;
+
 #nullable disable
     private Pluralization[] _pluralizations;
+    private Pluralization[] _colorStrippedPluralizations;
 
     /// <summary>
     /// Translation this value belongs to.
@@ -37,6 +41,18 @@ public class TranslationValue
     /// Value converted to IMGUI compatability. IMGUI uses full color tags instead of the TMPro shortcut.
     /// </summary>
     public string IMGUIValue { get; private set; }
+
+    /// <summary>
+    /// The value of the translation, with pluralizations replaced with their singular values and the outer color span removed.
+    /// </summary>
+    /// <remarks>Use <see cref="ColorStrippedValueSpan"/> if possible.</remarks>
+    public string ColorStrippedValue => _colorStrippedValueCache ??= new string(ColorStrippedValueSpan);
+
+    /// <summary>
+    /// Value converted to IMGUI compatability with the outer color span removed. IMGUI uses full color tags instead of the TMPro shortcut.
+    /// </summary>
+    /// <remarks>Use <see cref="ColorStrippedIMGUIValueSpan"/> if possible.</remarks>
+    public string ColorStrippedIMGUIValue => _colorStrippedIMGUIValueCache ??= new string(ColorStrippedIMGUIValueSpan);
 #nullable restore
 
     /// <summary>
@@ -47,12 +63,12 @@ public class TranslationValue
     /// <summary>
     /// Span of text excluding the background color.
     /// </summary>
-    public ReadOnlySpan<char> ColorStrippedValue => Value.AsSpan(_colorStrippedValueStart, _colorStrippedValueLength);
+    public ReadOnlySpan<char> ColorStrippedValueSpan => Value.AsSpan(_colorStrippedValueStart, _colorStrippedValueLength);
 
     /// <summary>
     /// Span of text excluding the background color (IMGUI).
     /// </summary>
-    public ReadOnlySpan<char> ColorStrippedIMGUIValue => IMGUIValue.AsSpan(_imguiColorStrippedValueStart, _imguiColorStrippedValueLength);
+    public ReadOnlySpan<char> ColorStrippedIMGUIValueSpan => IMGUIValue.AsSpan(_imguiColorStrippedValueStart, _imguiColorStrippedValueLength);
 
     /// <summary>
     /// Offset into the <see cref="Value"/> string the color-stripped value starts.
@@ -69,6 +85,32 @@ public class TranslationValue
         Translation = translation;
         SetValue(value);
     }
+
+    internal Pluralization[] GetPluralizers(in TranslationArguments args)
+    {
+        return args.UseUncoloredTranslation ? _colorStrippedPluralizations : _pluralizations;
+    }
+
+    public ReadOnlySpan<char> GetValueSpan(bool useIMGUI, bool useUncoloredTranslation)
+    {
+        if (useIMGUI)
+        {
+            return useUncoloredTranslation ? ColorStrippedIMGUIValueSpan : IMGUIValue;
+        }
+
+        return useUncoloredTranslation ? ColorStrippedValueSpan : Value;
+    }
+    
+    public string GetValueString(bool useIMGUI, bool useUncoloredTranslation)
+    {
+        if (useIMGUI)
+        {
+            return useUncoloredTranslation ? ColorStrippedIMGUIValue : IMGUIValue;
+        }
+
+        return useUncoloredTranslation ? ColorStrippedValue : Value;
+    }
+
     public void SetValue(string value)
     {
         string? imguiString = null;
@@ -78,5 +120,19 @@ public class TranslationValue
 
         Color = TranslationFormattingUtility.ExtractColor(Value, out _colorStrippedValueStart, out _colorStrippedValueLength);
         TranslationFormattingUtility.ExtractColor(IMGUIValue, out _imguiColorStrippedValueStart, out _imguiColorStrippedValueLength);
+
+        _colorStrippedPluralizations = new Pluralization[_pluralizations.Length];
+        for (int i = 0; i < _colorStrippedPluralizations.Length; ++i)
+        {
+            ref Pluralization original = ref _pluralizations[i];
+
+            _colorStrippedPluralizations[i] = new Pluralization(
+                original.StartIndex + _colorStrippedValueStart,
+                _imguiColorStrippedValueStart,
+                original.WordLength,
+                original.Argument,
+                original.IsInverted
+            );
+        }
     }
 }

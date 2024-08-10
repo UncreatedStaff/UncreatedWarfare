@@ -6,6 +6,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
@@ -499,7 +500,7 @@ public class ActionManager : ISessionHostedService
             }
         }
     }
-    private static void TryLoadSupplies(UCPlayer caller, int amount, IAssetLink<ItemAsset>? supplyItem, bool build)
+    private static void TryLoadSupplies(WarfarePlayer caller, int amount, IAssetLink<ItemAsset>? supplyItem, bool build)
     {
         if (!supplyItem.TryGetAsset(out ItemAsset? supplyAsset))
             return;

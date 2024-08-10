@@ -15,17 +15,22 @@ public class Translation : IDisposable
     public bool IsInitialized { get; private set; }
     public TranslationOptions Options { get; }
     public virtual int ArgumentCount => 0;
+
+    public TranslationService TranslationService { get; private set; } = null!;
+    public LanguageService LanguageService { get; private set; } = null!;
+
     public Translation(string defaultValue, TranslationOptions options = default)
     {
         _defaultText = defaultValue;
         Key = string.Empty;
         Options = options;
     }
+
     public TranslationValue GetValueForLanguage(LanguageInfo? language)
     {
         AssertInitialized();
 
-        string langCode = language?.Code ?? TranslationService.DefaultLanguage;
+        string langCode = language?.Code ?? LanguageService.DefaultCultureCode;
 
         if (Table.TryGetValue(langCode, out TranslationValue value))
             return value;
@@ -38,32 +43,39 @@ public class Translation : IDisposable
         
         return value;
     }
+
     internal virtual void Initialize(
         string key,
         IDictionary<TranslationLanguageKey, TranslationValue> underlyingTable,
         TranslationCollection collection,
         LanguageService languageService,
+        TranslationService translationService,
         TranslationData data)
     {
         Key = key;
         Data = data;
 
+        LanguageService = languageService;
+        TranslationService = translationService;
         Original = new TranslationValue(languageService.GetDefaultLanguage(), _defaultText, this);
         Collection = collection;
         Table = new SharedTranslationDictionary(this, underlyingTable);
         IsInitialized = true;
-        Table[TranslationService.DefaultLanguage] = Original;
+        Table[languageService.DefaultCultureCode] = Original;
     }
+
     protected internal void AssertInitialized()
     {
         if (!IsInitialized)
             throw new InvalidOperationException("This translation has not been initialized.");
     }
+
     internal void UpdateValue(string value, LanguageInfo language)
     {
         AssertInitialized();
         Table.AddOrUpdate(new TranslationValue(language, value, this));
     }
+
     public void Dispose()
     {
         Table.Clear();

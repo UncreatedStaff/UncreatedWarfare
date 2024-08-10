@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
@@ -21,7 +22,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider
         KitId = null!;
     }
 
-    public void Initialize(BarricadeDrop barricade, string extraInfo)
+    public void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
         if (((InteractableSign)barricade.interactable).text.StartsWith("loadout_"))
         {

@@ -35,6 +35,8 @@ public class LanguageInfo : ITranslationArgument
 
     public bool HasTranslationSupport { get; set; }
 
+    public bool SupportsPluralization { get; set; }
+
     public bool RequiresIMGUI { get; set; }
 
     [Column(TypeName = "char(5)")]

@@ -4,6 +4,61 @@ namespace Uncreated.Warfare.Util;
 public static class SpanExtensions
 {
     /// <summary>
+    /// Concat 2 spans without allocating extra memory.
+    /// </summary>
+    public static unsafe string Concat(this ReadOnlySpan<char> span, ReadOnlySpan<char> span2)
+    {
+        fixed (char* ptr = span)
+        fixed (char* ptr2 = span2)
+        {
+            Concat2SpanState state = default;
+            state.Span1Ptr = ptr;
+            state.Span1Len = span.Length;
+            state.Span2Ptr = ptr2;
+            state.Span2Len = span2.Length;
+            return string.Create(span.Length + span2.Length, state, (span, state) =>
+            {
+                new ReadOnlySpan<char>(state.Span1Ptr, state.Span1Len).CopyTo(span);
+                new ReadOnlySpan<char>(state.Span2Ptr, state.Span2Len).CopyTo(span[state.Span1Len..]);
+            });
+        }
+    }
+
+    private unsafe struct Concat2SpanState
+    {
+        public char* Span1Ptr;
+        public int Span1Len;
+        public char* Span2Ptr;
+        public int Span2Len;
+    }
+
+    /// <summary>
+    /// Concat a span and string without allocating extra memory.
+    /// </summary>
+    public static unsafe string Concat(this ReadOnlySpan<char> span, string str)
+    {
+        fixed (char* ptr = span)
+        {
+            ConcatSpan2StringState state = default;
+            state.Span1Ptr = ptr;
+            state.Span1Len = span.Length;
+            state.String = str;
+            return string.Create(span.Length + str.Length, state, (span, state) =>
+            {
+                new ReadOnlySpan<char>(state.Span1Ptr, state.Span1Len).CopyTo(span);
+                state.String.AsSpan().CopyTo(span[state.Span1Len..]);
+            });
+        }
+    }
+
+    private unsafe struct ConcatSpan2StringState
+    {
+        public char* Span1Ptr;
+        public int Span1Len;
+        public string String;
+    }
+
+    /// <summary>
     /// Gets the index of an object in a span with an offset.
     /// </summary>
     public static int IndexOf<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> value, int startIndex) where T : IEquatable<T>

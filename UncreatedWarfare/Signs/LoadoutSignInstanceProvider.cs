@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
@@ -17,7 +18,7 @@ public class LoadoutSignInstanceProvider : ISignInstanceProvider
         _kitManager = kitManager;
     }
 
-    public void Initialize(BarricadeDrop barricade, string extraInfo)
+    public void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
         if (!int.TryParse(extraInfo, out _loadoutId))
             _loadoutId = -1;

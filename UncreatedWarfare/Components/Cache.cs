@@ -5,7 +5,7 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Insurgency;
 using Uncreated.Warfare.Locations;
@@ -13,9 +13,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Util;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Components;
 
@@ -105,8 +103,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         _component?.SpawnAttackIcon();
     }
     
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
     {
         if (format is not null)
         {
@@ -125,19 +122,19 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         if (team == 0 || team != Team)
         {
             if (ctx is not null)
-                throw ctx.Reply(T.DeployableNotFound, Name);
+                throw ctx.Reply(_translations.DeployableNotFound, Name);
             return false;
         }
         if (NearbyAttackers.Count != 0)
         {
             if (ctx is not null)
-                throw ctx.Reply(T.DeployEnemiesNearby, this);
+                throw ctx.Reply(_translations.DeployEnemiesNearby, this);
             return false;
         }
         if (_component == null)
         {
             if (ctx is not null)
-                throw ctx.Reply(T.DeployDestroyed, this);
+                throw ctx.Reply(_translations.DeployDestroyed, this);
             return false;
         }
 
@@ -149,19 +146,19 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         if (team == 0 || team != Team)
         {
             if (chat)
-                player.SendChat(T.DeployCancelled);
+                player.SendChat(_translations.DeployCancelled);
             return false;
         }
         if (NearbyAttackers.Count != 0)
         {
             if (chat)
-                player.SendChat(T.DeployEnemiesNearbyTick, this);
+                player.SendChat(_translations.DeployEnemiesNearbyTick, this);
             return false;
         }
         if (_component == null)
         {
             if (chat)
-                player.SendChat(T.DeployDestroyed);
+                player.SendChat(_translations.DeployDestroyed);
             return false;
         }
 

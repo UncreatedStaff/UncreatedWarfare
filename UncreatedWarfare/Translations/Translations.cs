@@ -19,6 +19,8 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare;
@@ -44,11 +46,11 @@ public class TranslationOld
     public TranslationFlags Flags => _flags;
     protected string InvalidValue => "Translation Error - " + Key;
     internal TranslationDataAttribute? AttributeData { get; set; }
-    public Translation(string @default, TranslationFlags flags) : this(@default)
+    public TranslationOld(string @default, TranslationFlags flags) : this(@default)
     {
         _flags = flags;
     }
-    public Translation(string @default)
+    public TranslationOld(string @default)
     {
         _defaultData = new TranslationValue(Localization.GetDefaultLanguage(), @default, _flags);
         ProcessValue(_defaultData, Flags);
@@ -108,34 +110,6 @@ public class TranslationOld
             Team = team;
             Flags = flags;
             Culture = culture ?? Data.LocalLocale;
-        }
-    }
-    protected readonly struct ArgumentSpan
-    {
-        public readonly int Argument;
-        public readonly int StartIndex;
-        public readonly int Length;
-        public readonly bool Inverted;
-        public ArgumentSpan(int argument, int startIndex, int length, bool inverted)
-        {
-            Argument = argument;
-            StartIndex = startIndex;
-            Length = length;
-            Inverted = inverted;
-        }
-        public void Pluralize(in TranslationHelper helper, ref string value, ref int offset)
-        {
-            int index = StartIndex + offset;
-            if (index >= value.Length)
-                return;
-            int len = Length;
-            if (len > value.Length - index)
-                len = value.Length - index;
-            L.LogDebug($"Argument: {Argument}, index {index} for {len} char. Inverted: {Inverted}");
-            string plural = Translation.Pluralize(helper.Language, helper.Culture, value.Substring(index, len), helper.Flags | TranslationFlags.Plural);
-            L.LogDebug($"Value: {plural} ({value.Substring(index, len)})");
-            offset += plural.Length - len;
-            value = value.Substring(0, index) + plural + value.Substring(index + len);
         }
     }
 
@@ -1025,128 +999,6 @@ public class TranslationOld
         }
 
         internal void ResetConsole() => _console = null;
-    }
-    public static string Pluralize(LanguageInfo language, CultureInfo? culture, string word, TranslationFlags flags)
-    {
-        if ((flags & TranslationFlags.NoPlural) == TranslationFlags.NoPlural || word.Length < 3 || (flags & TranslationFlags.Plural) == 0)
-            return word;
-        //culture ??= LanguageAliasSet.GetCultureInfo(language);
-        if (language.Code.Equals(Languages.EnglishUS, StringComparison.OrdinalIgnoreCase))
-        {
-            if (word.Equals("is", StringComparison.InvariantCulture))
-                return "are";
-            if (word.Equals("was", StringComparison.InvariantCulture))
-                return "were";
-            if (word.Equals("did", StringComparison.InvariantCulture))
-                return "do";
-            if (word.Equals("comes", StringComparison.InvariantCulture))
-                return "come";
-            if (word.Equals("it", StringComparison.InvariantCulture))
-                return "they";
-            if (word.Equals("a ", StringComparison.InvariantCulture) || word.Equals(" a", StringComparison.InvariantCulture))
-                return string.Empty;
-            if (word.Equals("an ", StringComparison.InvariantCulture) || word.Equals(" an", StringComparison.InvariantCulture))
-                return string.Empty;
-            string[] words = word.Split(' ');
-            bool hOthWrds = words.Length > 1;
-            string otherWords = string.Empty;
-            string str = hOthWrds ? words[words.Length - 1] : word;
-            if (str.Length < 2)
-                return word;
-            if (hOthWrds)
-                otherWords = string.Join(" ", words, 0, words.Length - 1) + " ";
-            bool isPCaps = char.IsUpper(str[0]);
-            str = str.ToLowerInvariant();
-
-            if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
-                return word + "ren";
-            if (str.Equals("bunker", StringComparison.OrdinalIgnoreCase))
-                return word + "s";
-            if (str.Equals("goose", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Geese" : "geese");
-            if (str.Equals("wall", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Wall" : "wall");
-            if (str.Equals("tooth", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Teeth" : "teeth");
-            if (str.Equals("foot", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Feet" : "feet");
-            if (str.Equals("mouse", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Mice" : "mice");
-            if (str.Equals("die", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Dice" : "dice");
-            if (str.Equals("person", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "People" : "people");
-            if (str.Equals("axis", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Axes" : "axes");
-            if (str.Equals("ammo", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Ammo" : "ammo");
-            if (str.Equals("radio", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Radios" : "radios");
-            if (str.Equals("mortar", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Mortars" : "mortars");
-
-            if (str.EndsWith("man", StringComparison.OrdinalIgnoreCase))
-                return str.Substring(0, str.Length - 2) + (char.IsUpper(str[str.Length - 2]) ? "E" : "e") + str[str.Length - 1];
-
-            char last = str[str.Length - 1];
-            if (char.IsDigit(last))
-                return word + "s";
-            char slast = str[str.Length - 2];
-
-            if (last is 's' or 'x' or 'z' || (last is 'h' && slast is 's' or 'c'))
-                return word + "es";
-
-            if (str.Equals("roof", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("belief", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("chef", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("chief", StringComparison.OrdinalIgnoreCase)
-                )
-                goto s;
-            if (last is 'f')
-                return word.Substring(0, word.Length - 1) + "ves";
-
-            if (last is 'e' && slast is 'f')
-                return word.Substring(0, word.Length - 2) + "ves";
-
-            if (last is 'y')
-                if (!(slast is 'a' or 'e' or 'i' or 'o' or 'u'))
-                    return word.Substring(0, word.Length - 1) + "ies";
-                else goto s;
-
-            if (str.Equals("photo", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("piano", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("halo", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("volcano", StringComparison.OrdinalIgnoreCase)
-               )
-                goto s;
-
-            if (last is 'o')
-                return word + "es";
-
-            if (last is 's' && slast is 'u')
-                return word.Substring(0, word.Length - 2) + "i";
-
-            if (last is 's' && slast is 'i')
-                return word.Substring(0, word.Length - 2) + "es";
-
-            if (str.Equals("sheep", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("series", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("species", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("moose", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("fish", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("swine", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("buffalo", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("shrimp", StringComparison.OrdinalIgnoreCase) ||
-                str.Equals("trout", StringComparison.OrdinalIgnoreCase) ||
-                (str.EndsWith("craft", StringComparison.OrdinalIgnoreCase) && str.Length > 5) ||
-                str.Equals("deer", StringComparison.OrdinalIgnoreCase))
-                return word;
-
-            s:
-            return word + "s";
-        }
-
-        return word;
     }
     public static unsafe void ReplaceTMProRichText(ref string value, TranslationFlags flags)
     {
@@ -2048,10 +1900,6 @@ public enum TranslationFlags
     SkipColorize = 131072
 }
 
-public interface ITranslationArgument
-{
-    string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags);
-}
 public sealed class TranslationOld<T0> : TranslationOld
 {
     private readonly string? _arg0Fmt;

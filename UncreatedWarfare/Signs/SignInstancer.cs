@@ -288,7 +288,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         string extraInfo = text.Length <= data.Prefix.Length + 1 || text[data.Prefix.Length] != '_' ? text.Substring(data.Prefix.Length) : text.Substring(data.Prefix.Length + 1);
         try
         {
-            provider.Initialize(e.Barricade, extraInfo);
+            provider.Initialize(e.Barricade, extraInfo, _serviceProvider);
         }
         catch (Exception ex)
         {

@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine.Assertions.Must;
 
 namespace Uncreated.Warfare.Translations;
 
@@ -60,5 +61,10 @@ public enum TranslationOptions
     /// <summary>
     /// Use for translations to be used on non-TMPro UI. Convert to &lt;color=#ffffff&gt; format, doesn't replace already existing TMPro tags.
     /// </summary>
-    UnityUINoReplace = UI | TranslateWithUnityRichText
+    UnityUINoReplace = UI | TranslateWithUnityRichText,
+
+    /// <summary>
+    /// Tells <see cref="ITranslationValueFormatter"/>'s to not add rich text to arguments. All rich text will also be removed from the original translation.
+    /// </summary>
+    NoRichText = 1 << 6
 }

@@ -1,6 +1,10 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
+using System.Linq;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Collections;
 
 namespace Uncreated.Warfare.Signs;
 
@@ -9,16 +13,27 @@ namespace Uncreated.Warfare.Signs;
 /// </summary>
 internal class TranslatableSignInstanceProvider : ISignInstanceProvider
 {
+    private readonly TranslationService _translationService;
     private string _translationKey = null!;
-    private Translation? _translation;
+    private SignTranslation? _translation;
 
     /// <inheritdoc />
     bool ISignInstanceProvider.CanBatchTranslate => true;
 
-    void ISignInstanceProvider.Initialize(BarricadeDrop barricade, string extraInfo)
+    public TranslatableSignInstanceProvider(TranslationService translationService)
+    {
+        _translationService = translationService;
+    }
+
+    void ISignInstanceProvider.Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
         _translationKey = extraInfo;
-        _translation = Translation.FromSignId(_translationKey);
+
+        SignTranslations translations = _translationService.Get<SignTranslations>();
+
+        _translation = translations.Translations.Values
+            .OfType<SignTranslation>()
+            .FirstOrDefault(x => string.Equals(x.SignId, _translationKey, StringComparison.Ordinal));
     }
 
     public string Translate(LanguageInfo language, CultureInfo culture, WarfarePlayer? player)

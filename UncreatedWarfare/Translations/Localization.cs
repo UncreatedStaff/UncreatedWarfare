@@ -12,6 +12,7 @@ using System.Text.Json.Serialization;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
@@ -1368,7 +1369,7 @@ public struct LanguageSet : IEnumerator<WarfarePlayer>
     public readonly LanguageInfo Language;
     public readonly CultureInfo CultureInfo;
     public readonly bool IsDefault;
-    public ulong Team = 0;
+    public Team? Team = null;
     public List<WarfarePlayer> Players { get; }
     public readonly bool IMGUI;
     private int _index;

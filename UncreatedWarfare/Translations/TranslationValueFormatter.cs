@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
+using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Translations;
@@ -26,17 +27,37 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         new ToStringValueFormatter()
     };
 
-    public ReadOnlySpan<char> Format<T>(T? value, in ValueFormatParameters parameters)
+    /// <inheritdoc />
+    public string Format<T>(T? value, in ValueFormatParameters parameters)
+    {
+        string formattedValue = FormatIntl(value, in parameters);
+
+        IArgumentAddon[] addons = parameters.Format.FormatAddons;
+        for (int i = 0; i < addons.Length; ++i)
+        {
+            formattedValue = addons[i].ApplyAddon(formattedValue, in parameters);
+        }
+
+        return formattedValue;
+    }
+
+    private string FormatIntl<T>(T? value, in ValueFormatParameters parameters)
     {
         if (Equals(value, null))
         {
             return FormatNull(in parameters);
         }
 
+        if (value is ITranslationArgument preDefined)
+        {
+            return preDefined.Translate(this, in parameters);
+        }
+
         IValueFormatter<T> valueFormatter = GetValueFormatter<T>();
 
         return valueFormatter.Format(value, in parameters);
     }
+
     private IValueFormatter<T> GetValueFormatter<T>()
     {
         return (IValueFormatter<T>)_valueFormatters.GetOrAdd(typeof(T), type =>
@@ -79,12 +100,11 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         });
     }
 
-    private string FormatNull(in ValueFormatParameters parameters)
+    private static string FormatNull(in ValueFormatParameters parameters)
     {
         if ((parameters.Options & TranslationOptions.TranslateWithUnityRichText) != 0)
             return NullColorUnity;
 
-        // todo check for no color in value arguments
-        return NullColorTMPro;
+        return (parameters.Options & TranslationOptions.NoRichText) != 0 ? NullNoColor : NullColorTMPro;
     }
 }

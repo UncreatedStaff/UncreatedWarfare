@@ -8,6 +8,8 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -17,6 +19,8 @@ public class DutyCommand : IExecutableCommand
 {
     private readonly UserPermissionStore _permissions;
     private readonly WarfareModule _warfare;
+    private readonly SignInstancer _signs;
+    private readonly DutyCommandTranslations _translations;
 
     private const string Syntax = "/duty";
     private const string Help = "Swap your duty status between on and off. For admins and trial admins.";
@@ -24,10 +28,12 @@ public class DutyCommand : IExecutableCommand
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    internal DutyCommand(UserPermissionStore permissions, WarfareModule warfare)
+    internal DutyCommand(UserPermissionStore permissions, WarfareModule warfare, SignInstancer signs, TranslationInjection<DutyCommandTranslations> translations)
     {
+        _translations = translations.Value;
         _permissions = permissions;
         _warfare = warfare;
+        _signs = signs;
     }
 
     /// <summary>
@@ -134,8 +140,8 @@ public class DutyCommand : IExecutableCommand
         {
             ClearAdminPermissions(Context.Player);
 
-            Context.Reply(T.DutyOffFeedback);
-            Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), T.DutyOffBroadcast, Context.Player);
+            Context.Reply(_translations.DutyOffFeedback);
+            Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), _translations.DutyOffBroadcast, Context.Player);
 
             L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(Data.AdminLocale)}) went off duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", Context.CallerId.m_SteamID);
@@ -144,8 +150,8 @@ public class DutyCommand : IExecutableCommand
         }
         else
         {
-            Context.Reply(T.DutyOnFeedback);
-            Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), T.DutyOnBroadcast, Context.Player);
+            Context.Reply(_translations.DutyOnFeedback);
+            Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), _translations.DutyOnBroadcast, Context.Player);
 
             L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(Data.AdminLocale)}) went on duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", Context.CallerId.m_SteamID);
@@ -155,7 +161,7 @@ public class DutyCommand : IExecutableCommand
             GiveAdminPermissions(Context.Player, isAdmin);
         }
     }
-    private static void ClearAdminPermissions(WarfarePlayer player)
+    private void ClearAdminPermissions(WarfarePlayer player)
     {
         if (player.UnturnedPlayer != null)
         {
@@ -178,10 +184,9 @@ public class DutyCommand : IExecutableCommand
         player.VanishMode = false;
         player.GodMode = false;
 
-        Signs.UpdateKitSigns(player, null);
-        Signs.UpdateLoadoutSigns(player);
+        _signs.UpdateSigns<KitSignInstanceProvider>(player);
     }
-    private static void GiveAdminPermissions(WarfarePlayer player, bool isAdmin)
+    private void GiveAdminPermissions(WarfarePlayer player, bool isAdmin)
     {
         if (player.UnturnedPlayer.look != null)
         {
@@ -189,7 +194,23 @@ public class DutyCommand : IExecutableCommand
             player.UnturnedPlayer.look.sendWorkzoneAllowed(isAdmin);
         }
 
-        Signs.UpdateKitSigns(player, null);
-        Signs.UpdateLoadoutSigns(player);
+        _signs.UpdateSigns<KitSignInstanceProvider>(player);
     }
+}
+
+public class DutyCommandTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Duty Command";
+
+    [TranslationData("Sent to a player when they go on duty.", IsPriorityTranslation = false)]
+    public readonly Translation DutyOnFeedback = new Translation("<#c6d4b8>You are now <#95ff4a>on duty</color>.");
+
+    [TranslationData("Sent to a player when they go off duty.", IsPriorityTranslation = false)]
+    public readonly Translation DutyOffFeedback = new Translation("<#c6d4b8>You are now <#ff8c4a>off duty</color>.");
+
+    [TranslationData("Sent to all players when a player goes on duty (gains permissions).")]
+    public readonly Translation<IPlayer> DutyOnBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#95ff4a>on duty</color>.");
+
+    [TranslationData("Sent to all players when a player goes off duty (loses permissions).")]
+    public readonly Translation<IPlayer> DutyOffBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#ff8c4a>off duty</color>.");
 }

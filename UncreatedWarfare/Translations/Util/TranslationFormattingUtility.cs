@@ -98,6 +98,7 @@ public static class TranslationFormattingUtility
 
         return firstColor ?? Color.white;
     }
+
     private static int FormatIMGUIString(ReadOnlySpan<char> original, Span<char> output, int finalDepth)
     {
         ReadOnlySpan<char> startTag = ColorStartTag.AsSpan();
@@ -132,6 +133,7 @@ public static class TranslationFormattingUtility
         }
         return index + 1;
     }
+
     private static int GetIMGUIStringLength(ReadOnlySpan<char> original, out int finalDepth)
     {
         int depth = 0;
@@ -166,6 +168,7 @@ public static class TranslationFormattingUtility
         finalDepth = depth;
         return lenToAdd + original.Length;
     }
+
     private static bool TryReadTMProColorTag(ReadOnlySpan<char> original, int stInd, ref Color32 color, ref int endPos, out int clrSize)
     {
         clrSize = 0;
@@ -205,6 +208,7 @@ public static class TranslationFormattingUtility
         endPos = origEnd;
         return true;
     }
+
     private static bool TryMatchEndColorTag(ReadOnlySpan<char> original, int stInd, ref int endPos)
     {
         // assume character 0 is already '<'.
@@ -256,6 +260,7 @@ public static class TranslationFormattingUtility
     /// Less error-prone <see cref="string.Format(string,object[])"/> using spans.
     /// Only works with <see cref="string"/>s and doesn't take the format into account.
     /// </summary>
+    /// <param name="indices">The first index is assumed to be zero, this is a list of all the following indices.</param>
     public static string FormatString(ReadOnlySpan<char> format, ReadOnlySpan<char> strings, ReadOnlySpan<int> indices)
     {
         if (format.Length < 3)
@@ -268,6 +273,7 @@ public static class TranslationFormattingUtility
 
         return new string(output[..formattedStrLen]);
     }
+
     private static int FormatString(Span<char> output, ReadOnlySpan<char> format, ReadOnlySpan<char> strings, ReadOnlySpan<int> indices)
     {
         ReadOnlySpan<char> formatVal = default;
@@ -299,6 +305,7 @@ public static class TranslationFormattingUtility
         format.Slice(lastFormattingArgEndPt + 1, amtToCopy).CopyTo(output[index..]);
         return index + amtToCopy;
     }
+
     private static int GetFormattedStringLength(ReadOnlySpan<char> format, ReadOnlySpan<char> strings, ReadOnlySpan<int> indices)
     {
         ReadOnlySpan<char> formatVal = default;

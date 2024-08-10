@@ -23,7 +23,6 @@ public abstract class TranslationCollection
     public abstract ITranslationStorage Storage { get; }
     public ITranslationService TranslationService { get; private set; }
     public LanguageService LanguageService { get; private set; }
-    public ITranslationValueFormatter ValueFormatter { get; private set; }
     public IReadOnlyDictionary<string, Translation> Translations { get; private set; }
 #nullable restore
 
@@ -50,7 +49,6 @@ public abstract class TranslationCollection
         Translations = new ReadOnlyDictionary<string, Translation>(_translations);
 
         _languageDataStore = serviceProvider.GetRequiredService<ICachableLanguageDataStore>();
-        ValueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
 
         // get logger for parent collection type
         _logger = (ILogger)serviceProvider

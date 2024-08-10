@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Uncreated.Warfare.Translations;
 public class TranslationService : ITranslationService
@@ -11,10 +12,13 @@ public class TranslationService : ITranslationService
     private readonly ConcurrentDictionary<Type, TranslationCollection> _collections;
     private readonly IServiceProvider _serviceProvider;
     public IReadOnlyDictionary<Type, TranslationCollection> TranslationCollections { get; }
+    public ITranslationValueFormatter ValueFormatter { get; private set; }
     public TranslationService(IServiceProvider serviceProvider)
     {
         _collections = new ConcurrentDictionary<Type, TranslationCollection>();
         _serviceProvider = serviceProvider;
+
+        ValueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
 
         TranslationCollections = new ReadOnlyDictionary<Type, TranslationCollection>(_collections);
     }

@@ -21,6 +21,7 @@ public class LanguageService : IAsyncEventListener<PlayerPending>, IHostedServic
     private readonly ICachableLanguageDataStore? _languageDataStoreCache;
 
     private LanguageInfo? _fallback;
+    private CultureInfo? _defaultCulture;
 
     /// <summary>
     /// The configured default language code from system config.
@@ -87,9 +88,13 @@ public class LanguageService : IAsyncEventListener<PlayerPending>, IHostedServic
     /// <remarks>Always returns a value.</remarks>
     public CultureInfo GetDefaultCulture()
     {
+        if (_defaultCulture != null)
+            return _defaultCulture;
+
         if (!TryGetCultureInfo(DefaultCultureCode, out CultureInfo culture))
             culture = CultureInfo.CurrentCulture;
 
+        _defaultCulture = culture;
         return culture;
     }
 
