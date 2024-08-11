@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Random = System.Random;
 
 namespace Uncreated.Warfare.Util;
 

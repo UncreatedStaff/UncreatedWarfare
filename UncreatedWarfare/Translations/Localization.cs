@@ -22,6 +22,7 @@ using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare;
@@ -86,108 +87,6 @@ public static class LocalizationOld
                 ((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
                 ? (UnityRichTextColorBaseStart + hex + RichTextColorEnd + inner + RichTextColorClosingTag)
                 : (TMProRichTextColorBase + hex + RichTextColorEnd + inner + RichTextColorClosingTag));
-    }
-    public static string Translate<T>(this T translatable, LanguageInfo language, ulong team, string? fmt = null, bool imgui = false) where T : ITranslationArgument
-    {
-        return Translate(translatable, language, GetCultureInfo(language), team, fmt, imgui);
-    }
-    public static string Translate<T>(this T translatable, LanguageInfo language, CultureInfo? culture, ulong team, string? fmt = null, bool imgui = false) where T : ITranslationArgument
-    {
-        TranslationFlags flags = TranslationFlags.ForChat;
-        if (imgui)
-            flags |= TranslationFlags.UseUnityRichText;
-        switch (team)
-        {
-            case 1:
-                flags |= TranslationFlags.Team1;
-                break;
-            case 2:
-                flags |= TranslationFlags.Team2;
-                break;
-        }
-        return translatable.Translate(language, fmt, null, culture ?? GetCultureInfo(language), ref flags);
-    }
-    public static string Translate<T>(this T translatable, UCPlayer player, string? fmt = null) where T : ITranslationArgument
-    {
-        TranslationFlags flags = TranslationFlags.ForChat;
-        if (player.Save.IMGUI)
-            flags |= TranslationFlags.UseUnityRichText;
-        switch (player.GetTeam())
-        {
-            case 1:
-                flags |= TranslationFlags.Team1;
-                break;
-            case 2:
-                flags |= TranslationFlags.Team2;
-                break;
-        }
-        return translatable.Translate(player.Locale.LanguageInfo, fmt, player, player.Locale.CultureInfo, ref flags);
-    }
-    public static string Translate<T>(this T translatable, CommandContext ctx, string? fmt = null) where T : ITranslationArgument
-    {
-        TranslationFlags flags = TranslationFlags.ForChat;
-
-        if (ctx.IMGUI)
-            flags |= TranslationFlags.UseUnityRichText;
-
-        if (!ctx.IsConsole)
-        {
-            switch (ctx.Player.GetTeam())
-            {
-                case 1:
-                    flags |= TranslationFlags.Team1;
-                    break;
-                case 2:
-                    flags |= TranslationFlags.Team2;
-                    break;
-            }
-        }
-
-        return translatable.Translate(ctx.Language, fmt, ctx.Player, ctx.Culture, ref flags);
-    }
-    public static string Translate<T0>(this Translation<T0> translation, UCPlayer? player, T0 arg0)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string Translate<T0, T1>(this Translation<T0, T1> translation, UCPlayer? player, T0 arg0, T1 arg1)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, arg1, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, arg1, arg2, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, arg1, arg2, arg3, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, arg1, arg2, arg3, arg4, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, arg1, arg2, arg3, arg4, arg5, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, arg1, arg2, arg3, arg4, arg5, arg6, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-    {
-        return translation.Translate(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player is null ? 0 : player.GetTeam());
-    }
-    public static string TranslateUnsafe(Translation translation, UCPlayer? player, object?[] formatting, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
-    {
-        return translation.TranslateUnsafe(player?.Locale.LanguageInfo, player?.Locale.CultureInfo, formatting, player, player is null ? 0 : player.GetTeam(), canUseIMGUI, flags);
     }
     public static string GetTimeFromMinutes(int seconds) => GetTimeFromSeconds(seconds * 60, GetDefaultLanguage(), Data.LocalLocale);
     public static string GetTimeFromSeconds(int seconds) => GetTimeFromSeconds(seconds, GetDefaultLanguage(), Data.LocalLocale);

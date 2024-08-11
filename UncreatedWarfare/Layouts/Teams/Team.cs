@@ -32,7 +32,7 @@ public class Team : IEquatable<Team>
             {
                 { "en-us", "UA" }
             },
-            HexColor = "dddddd",
+            Color = new Color(0.7058823529f, 0.7058823529f, 0.7058823529f, 1f), // 0xb4b4b4
             KitPrefix = "ua",
             FlagImageURL = "https://i.imgur.com/z0HE5P3.png",
             IsDefaultFaction = true

@@ -25,6 +25,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
@@ -191,6 +192,9 @@ public sealed class WarfareModule : IModuleNexus
 
         // UI
         serviceCollection.AddSingleton<KitMenuUI>();
+        serviceCollection.AddSingleton<ActionMenuUI>();
+        serviceCollection.AddSingleton<SquadMenuUI>();
+        serviceCollection.AddSingleton<SquadListUI>();
 
         // event handlers
         serviceCollection.AddTransient<VehicleSpawnedHandler>();

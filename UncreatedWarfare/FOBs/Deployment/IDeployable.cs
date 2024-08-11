@@ -1,5 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
 public interface IDeployable : ITranslationArgument

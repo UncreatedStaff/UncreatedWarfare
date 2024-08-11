@@ -13,14 +13,14 @@ namespace Uncreated.Warfare.Signs;
 /// </summary>
 internal class TranslatableSignInstanceProvider : ISignInstanceProvider
 {
-    private readonly TranslationService _translationService;
+    private readonly ITranslationService _translationService;
     private string _translationKey = null!;
     private SignTranslation? _translation;
 
     /// <inheritdoc />
     bool ISignInstanceProvider.CanBatchTranslate => true;
 
-    public TranslatableSignInstanceProvider(TranslationService translationService)
+    public TranslatableSignInstanceProvider(ITranslationService translationService)
     {
         _translationService = translationService;
     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
@@ -7,9 +8,11 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Actions;
@@ -19,10 +22,16 @@ namespace Uncreated.Warfare.Actions;
 /// </summary>
 public class ActionManager : ISessionHostedService
 {
+    private readonly IServiceProvider _serviceProvider;
+    private readonly PlayerService _playerService;
+
     private readonly ActionMenuUI _ui;
-    public ActionManager()
+    public ActionManager(IServiceProvider serviceProvider)
     {
-        _ui = new ActionMenuUI();
+        _serviceProvider = serviceProvider;
+        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+
+        _ui = serviceProvider.GetRequiredService<ActionMenuUI>();
 
         _ui.NeedMedic.OnClicked += NeedMedic;
         _ui.NeedAmmo.OnClicked += NeedAmmo;
@@ -114,13 +123,13 @@ public class ActionManager : ISessionHostedService
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
+        TrackingWhereEnumerable<WarfarePlayer> viewers = _playerService.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             p.KitClass == Class.Medic &&
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionNeedMedic, GamemodeOld.Config.EffectActionNearbyMedic, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedMedicChat, T.NeedMedicToast);
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionNeedMedic, GamemodeOld.Config.EffectActionNearbyMedic, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedMedicChat, T.NeedMedicToast);
         action.Start();
         CloseUI(caller);
     }
@@ -135,7 +144,7 @@ public class ActionManager : ISessionHostedService
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionNeedAmmo, GamemodeOld.Config.EffectActionNearbyAmmo, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedAmmoChat, T.NeedAmmoToast);
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionNeedAmmo, GamemodeOld.Config.EffectActionNearbyAmmo, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedAmmoChat, T.NeedAmmoToast);
         action.Start();
         CloseUI(caller);
     }
@@ -152,7 +161,7 @@ public class ActionManager : ISessionHostedService
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionNeedRide, null, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedRideChat, T.NeedRideToast)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionNeedRide, null, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedRideChat, T.NeedRideToast)
         {
             CheckValid = () => !caller.IsInVehicle
         };
@@ -169,7 +178,7 @@ public class ActionManager : ISessionHostedService
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionNeedSupport, null, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedSupportChat, T.NeedSupportToast);
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionNeedSupport, null, viewers, updateFrequency: 0.5f, lifeTime: 10, ActionOrigin.FollowCaller, ActionType.SimpleRequest, T.NeedSupportChat, T.NeedSupportToast);
         action.Start();
         CloseUI(caller);
     }
@@ -208,7 +217,7 @@ public class ActionManager : ISessionHostedService
             p.KitClass == Class.Pilot &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionHeliPickup, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerPosition, ActionType.SquadleaderRequest, T.HeliPickupChat, T.HeliPickupToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionHeliPickup, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerPosition, ActionType.SquadleaderRequest, T.HeliPickupChat, T.HeliPickupToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -243,7 +252,7 @@ public class ActionManager : ISessionHostedService
             p.IsInSameVehicleAs(caller) &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionHeliDropoff, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, ActionOrigin.AtCallerWaypoint, ActionType.SquadleaderRequest, T.HeliDropoffChat, T.HeliDropoffToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionHeliDropoff, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, ActionOrigin.AtCallerWaypoint, ActionType.SquadleaderRequest, T.HeliDropoffChat, T.HeliDropoffToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -283,7 +292,7 @@ public class ActionManager : ISessionHostedService
             (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround))) &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionSuppliesBuild, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, ActionOrigin.AtCallerPosition, ActionType.SquadleaderRequest, T.SuppliesBuildChat, T.SuppliesBuildToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionSuppliesBuild, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, ActionOrigin.AtCallerPosition, ActionType.SquadleaderRequest, T.SuppliesBuildChat, T.SuppliesBuildToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -326,7 +335,7 @@ public class ActionManager : ISessionHostedService
             (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround))) &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionSuppliesAmmo, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerPosition, ActionType.SquadleaderRequest, T.SuppliesAmmoChat, T.SuppliesAmmoToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionSuppliesAmmo, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerPosition, ActionType.SquadleaderRequest, T.SuppliesAmmoChat, T.SuppliesAmmoToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -369,7 +378,7 @@ public class ActionManager : ISessionHostedService
             (p.IsInVehicle && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsAssaultAircraft) &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionAirSupport, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.SquadleaderRequest, T.AirSupportChat, T.AirSupportToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionAirSupport, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.SquadleaderRequest, T.AirSupportChat, T.AirSupportToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -405,7 +414,7 @@ public class ActionManager : ISessionHostedService
             (p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsArmor) &&
             p.Player != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionArmorSupport, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.SquadleaderRequest, T.ArmorSupportChat, T.ArmorSupportToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionArmorSupport, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.SquadleaderRequest, T.ArmorSupportChat, T.ArmorSupportToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -543,7 +552,7 @@ public class ActionManager : ISessionHostedService
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionAttack, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.AttackToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionAttack, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.AttackToast, squadWide: true)
         {
             CheckValid = () => !F.IsInMain(caller)
         };
@@ -558,7 +567,7 @@ public class ActionManager : ISessionHostedService
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionDefend, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.DefendToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionDefend, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.DefendToast, squadWide: true)
         {
             CheckValid = () => !F.IsInMain(caller)
         };
@@ -573,7 +582,7 @@ public class ActionManager : ISessionHostedService
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionMove, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.MoveToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionMove, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.MoveToast, squadWide: true)
         {
             CheckValid = () => !F.IsInMain(caller)
         };
@@ -588,7 +597,7 @@ public class ActionManager : ISessionHostedService
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.BuildToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerLookTarget, ActionType.Order, null, T.BuildToast, squadWide: true)
         {
             CheckValid = () => !F.IsInMain(caller)
         };
@@ -603,7 +612,7 @@ public class ActionManager : ISessionHostedService
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionAttack, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.AttackToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionAttack, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.AttackToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -631,7 +640,7 @@ public class ActionManager : ISessionHostedService
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionDefend, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.DefendToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionDefend, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.DefendToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -659,7 +668,7 @@ public class ActionManager : ISessionHostedService
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionMove, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.MoveToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionMove, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.MoveToast, squadWide: true)
         {
             CheckValid = () =>
             {
@@ -687,7 +696,7 @@ public class ActionManager : ISessionHostedService
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
 
-        Action action = new Action(caller, GamemodeOld.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.BuildToast, squadWide: true)
+        Action action = new Action(this, _serviceProvider, caller, GamemodeOld.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, ActionOrigin.AtCallerWaypoint, ActionType.Order, null, T.BuildToast, squadWide: true)
         {
             CheckValid = () =>
             {

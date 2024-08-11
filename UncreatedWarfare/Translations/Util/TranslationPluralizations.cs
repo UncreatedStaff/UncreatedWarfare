@@ -5,15 +5,6 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Translations.Util;
 internal static class TranslationPluralizations
 {
-    internal static Pluralization[] GetPluralizations(ref string value, ref string? imguiString)
-    {
-        imguiString ??= TranslationFormattingUtility.CreateIMGUIString(value);
-
-        // todo
-
-        return Array.Empty<Pluralization>();
-    }
-
     /// <summary>
     /// Convert a word to it's plural form. Currently only supported in english but more languages could be added later.
     /// </summary>
@@ -21,14 +12,14 @@ internal static class TranslationPluralizations
     /// Also supports some present tense verbs that get switched to past tense when pluralized.
     /// 'a ' or 'an ' (with the space) can be pluralized to an empty string to go from 'a apple' to 'apples', for example.
     /// </remarks>
-    internal static string Pluralize(string word, LanguageInfo language)
+    internal static string Pluralize(ReadOnlySpan<char> word, LanguageInfo language)
     {
         if (word.Length < 3)
-            return word;
+            return new string(word);
 
         if (!language.Code.Equals(Languages.Languages.EnglishUS, StringComparison.OrdinalIgnoreCase))
         {
-            return word;
+            return new string(word);
         }
 
         if (word.Equals("is", StringComparison.InvariantCulture))
@@ -47,24 +38,22 @@ internal static class TranslationPluralizations
             return string.Empty;
 
         // split input into words
-        ReadOnlySpan<char> wordSpan = word.AsSpan();
-
-        int size = wordSpan.Count(' ');
+        int size = word.Count(' ');
 
         Span<Range> ranges = stackalloc Range[size];
 
-        ranges = ranges[..wordSpan.Split(ranges, ' ', true, true, StringSplitOptions.RemoveEmptyEntries)];
+        ranges = ranges[..word.Split(ranges, ' ', true, true, StringSplitOptions.RemoveEmptyEntries)];
 
         bool hasOtherWords = ranges.Length > 1;
         ReadOnlySpan<char> otherWords = default;
 
-        scoped ReadOnlySpan<char> str = hasOtherWords ? wordSpan[ranges[^1]] : wordSpan;
+        scoped ReadOnlySpan<char> str = hasOtherWords ? word[ranges[^1]] : word;
 
         if (str.Length < 2)
-            return word;
+            return new string(word);
 
         if (hasOtherWords)
-            otherWords = wordSpan.Slice(0, ranges[^1].Start.GetOffset(wordSpan.Length));
+            otherWords = word.Slice(0, ranges[^1].Start.GetOffset(word.Length));
 
         bool isPCaps = char.IsUpper(str[0]);
         Span<char> lower = stackalloc char[str.Length];
@@ -73,9 +62,9 @@ internal static class TranslationPluralizations
 
         // exceptions
         if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
-            return word + "ren";
+            return word.Concat("ren");
         if (str.Equals("bunker", StringComparison.OrdinalIgnoreCase))
-            return word + "s";
+            return word.Concat("s");
         if (str.Equals("goose", StringComparison.OrdinalIgnoreCase))
             return otherWords.Concat(isPCaps ? "Geese" : "geese");
         if (str.Equals("wall", StringComparison.OrdinalIgnoreCase))
@@ -104,12 +93,12 @@ internal static class TranslationPluralizations
 
         char last = str[^1];
         if (char.IsDigit(last))
-            return wordSpan.Concat("s");
+            return word.Concat("s");
 
         char slast = str[^2];
 
         if (last is 's' or 'x' or 'z' || (last is 'h' && slast is 's' or 'c'))
-            return wordSpan.Concat("es");
+            return word.Concat("es");
 
         if (str.Equals("roof", StringComparison.OrdinalIgnoreCase) ||
             str.Equals("belief", StringComparison.OrdinalIgnoreCase) ||
@@ -119,14 +108,14 @@ internal static class TranslationPluralizations
             goto justAddS;
 
         if (last is 'f')
-            return wordSpan[..(word.Length - 1)].Concat("ves");
+            return word[..^1].Concat("ves");
 
         if (last is 'e' && slast is 'f')
-            return wordSpan[..(word.Length - 2)].Concat("ves");
+            return word[..^2].Concat("ves");
 
         if (last is 'y')
             if (!(slast is 'a' or 'e' or 'i' or 'o' or 'u'))
-                return word.AsSpan(0, word.Length - 1).Concat("ies");
+                return word[..^1].Concat("ies");
             else goto justAddS;
 
         if (str.Equals("photo", StringComparison.OrdinalIgnoreCase) ||
@@ -137,13 +126,13 @@ internal static class TranslationPluralizations
             goto justAddS;
 
         if (last is 'o')
-            return wordSpan.Concat("es");
+            return word.Concat("es");
 
         if (last is 's' && slast is 'u')
-            return wordSpan[..(word.Length - 2)].Concat("i");
+            return word[..^2].Concat("i");
 
         if (last is 's' && slast is 'i')
-            return wordSpan[..(word.Length - 2)].Concat("es");
+            return word[..^2].Concat("es");
 
         // identity pluralizations
         if (str.Equals("sheep", StringComparison.OrdinalIgnoreCase) ||
@@ -157,29 +146,35 @@ internal static class TranslationPluralizations
             str.Equals("trout", StringComparison.OrdinalIgnoreCase) ||
             (str.EndsWith("craft", StringComparison.OrdinalIgnoreCase) && str.Length > 5) || // aircraft, etc
             str.Equals("deer", StringComparison.OrdinalIgnoreCase))
-            return word;
+            return new string(word);
 
         justAddS:
-        return word + "s";
+        return word.Concat("s");
     }
-}
 
-/// <summary>
-/// Represents a word that is pluralized based on an argument's value being '1' or not.
-/// </summary>
-internal struct Pluralization
-{
-    public int StartIndex;
-    public int IMGUIStartIndex;
-    public int WordLength;
-    public int Argument;
-    public bool IsInverted;
-    public Pluralization(int startIndex, int imguiStartIndex, int wordLength, int argument, bool isInverted)
+    public static bool IsOne(object? obj) => obj is IConvertible conv && IsOne(conv);
+    public static bool IsOne(IConvertible conv)
     {
-        StartIndex = startIndex;
-        IMGUIStartIndex = imguiStartIndex;
-        Argument = argument;
-        WordLength = wordLength;
-        IsInverted = isInverted;
+        TypeCode tc = conv.GetTypeCode();
+        return tc switch
+        {
+            TypeCode.Boolean => (bool)conv,
+            TypeCode.Char => (char)conv == 1,
+            TypeCode.SByte => (sbyte)conv == 1,
+            TypeCode.Byte => (byte)conv == 1,
+            TypeCode.Int16 => (short)conv == 1,
+            TypeCode.UInt16 => (ushort)conv == 1,
+            TypeCode.Int32 => (int)conv == 1,
+            TypeCode.UInt32 => (uint)conv == 1,
+            TypeCode.Int64 => (long)conv == 1,
+            TypeCode.UInt64 => (ulong)conv == 1,
+            TypeCode.Single => Math.Abs((float)conv - 1) <= float.Epsilon,
+            TypeCode.Double => Math.Abs((double)conv - 1) <= double.Epsilon,
+            TypeCode.Decimal => ((decimal)conv).Equals(1m),
+            TypeCode.DateTime => ((DateTime)conv).Ticks == 1,
+            TypeCode.String => ((string)conv).Equals("1", StringComparison.InvariantCultureIgnoreCase) ||
+                               ((string)conv).Equals("one", StringComparison.InvariantCultureIgnoreCase),
+            _ => false
+        };
     }
 }

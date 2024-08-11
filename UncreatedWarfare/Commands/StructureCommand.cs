@@ -1,8 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events.Barricades;
-using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
@@ -319,7 +317,7 @@ public class StructureCommand : IExecutableCommand
             {
                 FactionInfo? info = TeamManager.GetFactionSafe(s64);
                 if (info != null)
-                    str64 = info.GetName(Context.Language).Colorize(info.HexColor, Context.IMGUI);
+                    str64 = info.GetName(Context.Language).Colorize(info.Color, Context.IMGUI);
             }
 
             Context.Reply(T.StructureSaveSetProperty!, grp ? "Group" : "Owner", asset, str64);

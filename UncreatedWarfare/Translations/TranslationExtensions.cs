@@ -4,6 +4,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 // ReSharper disable once CheckNamespace (i want this to be accessible everywhere)
 namespace Uncreated.Warfare;
@@ -13,6 +14,197 @@ namespace Uncreated.Warfare;
 /// </summary>
 public static class TranslationExtensions
 {
+    #region ITranslationArgument
+    /// <summary>
+    /// Shortcut for translating a <see cref="ITranslationArgument"/> manually using the default language and culture settings.
+    /// </summary>
+    /// <param name="format">Format information for the translation. This can just be a <see cref="string"/>.</param>
+    public static string Translate(this ITranslationArgument argument, ITranslationService translationService, ArgumentFormat format = default, bool imgui = false, TranslationOptions options = TranslationOptions.None)
+    {
+        if (imgui && (options & TranslationOptions.NoRichText) == 0)
+            options |= TranslationOptions.TranslateWithUnityRichText;
+
+        ValueFormatParameters parameters = new ValueFormatParameters(-1,
+            translationService.LanguageService.GetDefaultCulture(),
+            translationService.LanguageService.GetDefaultLanguage(),
+            options, in format, null, null, null, 0
+        );
+
+        return translationService.ValueFormatter.Format(argument, in parameters);
+    }
+
+    /// <summary>
+    /// Shortcut for translating a <see cref="ITranslationArgument"/> manually using the given language and culture settings.
+    /// </summary>
+    /// <param name="format">Format information for the translation. This can just be a <see cref="string"/>.</param>
+    public static string Translate(this ITranslationArgument argument, ITranslationService translationService, LanguageInfo? language, CultureInfo? culture, ArgumentFormat format = default, bool imgui = false, TranslationOptions options = TranslationOptions.None)
+    {
+        if (imgui && (options & TranslationOptions.NoRichText) == 0)
+            options |= TranslationOptions.TranslateWithUnityRichText;
+
+        language ??= translationService.LanguageService.GetDefaultLanguage();
+        culture ??= translationService.LanguageService.GetDefaultCulture();
+
+        ValueFormatParameters parameters = new ValueFormatParameters(-1, culture, language, options, in format, null, null, null, 0);
+
+        return translationService.ValueFormatter.Format(argument, in parameters);
+    }
+
+    /// <summary>
+    /// Shortcut for translating a <see cref="ITranslationArgument"/> manually using a player's translation settings.
+    /// </summary>
+    /// <param name="format">Format information for the translation. This can just be a <see cref="string"/>.</param>
+    public static string Translate(this ITranslationArgument argument, ITranslationService translationService, WarfarePlayer player, ArgumentFormat format = default, bool canUseIMGUI = false, TranslationOptions options = TranslationOptions.None)
+    {
+        if (canUseIMGUI && (options & TranslationOptions.NoRichText) == 0 && player.Save.IMGUI)
+            options |= TranslationOptions.TranslateWithUnityRichText;
+
+        ValueFormatParameters parameters = new ValueFormatParameters(-1, player.Locale.CultureInfo, player.Locale.LanguageInfo, options, in format, player.Team, player, null, 0);
+
+        return translationService.ValueFormatter.Format(argument, in parameters);
+    }
+
+    /// <summary>
+    /// Shortcut for translating a <see cref="ITranslationArgument"/> manually using a set of player's settings.
+    /// </summary>
+    /// <param name="format">Format information for the translation. This can just be a <see cref="string"/>.</param>
+    public static string Translate(this ITranslationArgument argument, ITranslationService translationService, in LanguageSet set, ArgumentFormat format = default, bool canUseIMGUI = false, TranslationOptions options = TranslationOptions.None)
+    {
+        if (set.Players.Count == 1)
+        {
+            return argument.Translate(translationService, set.Players[0], format, canUseIMGUI, options);
+        }
+
+        if (canUseIMGUI && (options & TranslationOptions.NoRichText) == 0 && set.IMGUI)
+            options |= TranslationOptions.TranslateWithUnityRichText;
+
+        ValueFormatParameters parameters = new ValueFormatParameters(-1, set.CultureInfo, set.Language, options, in format, set.Team, null, null, 0);
+
+        return translationService.ValueFormatter.Format(argument, in parameters);
+    }
+
+    #endregion
+
+    #region unsafe
+    /// <summary>
+    /// Translate a translation using default language and settings using an object[] instead of generic arguments.
+    /// </summary>
+    /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(null);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        return translation.TranslateUnsafe(in arguments, formatting);
+    }
+
+    /// <summary>
+    /// Translate a translation for a player using an object[] instead of generic arguments.
+    /// </summary>
+    /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, WarfarePlayer player, bool canUseIMGUI = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, false, player, translation.Options);
+
+        return translation.TranslateUnsafe(in arguments, formatting);
+    }
+
+    /// <summary>
+    /// Translate a translation for a set of players using an object[] instead of generic arguments.
+    /// </summary>
+    /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, in LanguageSet set, bool canUseIMGUI = false)
+    {
+        if (set.Players.Count == 1)
+        {
+            return translation.Translate(set.Players[0]);
+        }
+
+        TranslationValue value = translation.GetValueForLanguage(set.Language);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        return translation.TranslateUnsafe(in arguments, formatting);
+    }
+
+    /// <summary>
+    /// Translate a translation for a set of players using an object[] instead of generic arguments.
+    /// </summary>
+    /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(language);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+
+        return translation.TranslateUnsafe(in arguments, formatting);
+    }
+
+    /// <summary>
+    /// Translate a translation using default language and settings and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, out Color color, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(null);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.TranslateUnsafe(in arguments, formatting);
+    }
+
+    /// <summary>
+    /// Translate a translation for a player and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
+    /// </summary>
+    /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, true, player, translation.Options);
+
+        color = value.Color;
+        return translation.TranslateUnsafe(in arguments, formatting);
+    }
+
+    /// <summary>
+    /// Translate a translation for a set of players and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
+    /// </summary>
+    /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    {
+        if (set.Players.Count == 1)
+        {
+            return translation.Translate(set.Players[0], out color);
+        }
+
+        TranslationValue value = translation.GetValueForLanguage(set.Language);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.TranslateUnsafe(in arguments, formatting);
+    }
+
+    /// <summary>
+    /// Translate a translation for a set of players and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
+    /// </summary>
+    /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(language);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.TranslateUnsafe(in arguments, formatting);
+    }
+    #endregion
+
     #region 0-arg
     private static void AssertNoArgs(Translation translation)
     {
@@ -135,7 +327,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation using default language and settings.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0>(this Translation<T0> translation, T0 arg0, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -160,7 +351,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0>(this Translation<T0> translation, T0 arg0, in LanguageSet set, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -178,7 +368,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0>(this Translation<T0> translation, T0 arg0, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -191,7 +380,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0>(this Translation<T0> translation, T0 arg0, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -205,7 +393,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation for a player and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0>(this Translation<T0> translation, T0 arg0, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
@@ -219,7 +406,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0>(this Translation<T0> translation, T0 arg0, LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -238,7 +424,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0>(this Translation<T0> translation, T0 arg0, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -254,7 +439,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation using default language and settings.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -279,7 +463,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, in LanguageSet set, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -297,7 +480,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -310,7 +492,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -324,7 +505,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation for a player and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
@@ -338,7 +518,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -357,7 +536,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -373,7 +551,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation using default language and settings.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -398,7 +575,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, in LanguageSet set, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -416,7 +592,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -429,7 +604,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -443,7 +617,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation for a player and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
@@ -457,7 +630,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -476,7 +648,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -492,7 +663,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation using default language and settings.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -517,7 +687,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, in LanguageSet set, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -535,7 +704,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -548,7 +716,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -562,7 +729,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation for a player and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
@@ -576,7 +742,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -595,7 +760,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -611,7 +775,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation using default language and settings.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -636,7 +799,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, in LanguageSet set, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -654,7 +816,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -667,7 +828,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -681,7 +841,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation for a player and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
@@ -695,7 +854,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -714,7 +872,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -730,7 +887,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation using default language and settings.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -755,7 +911,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, in LanguageSet set, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -773,7 +928,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -786,7 +940,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -800,7 +953,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation for a player and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
@@ -814,7 +966,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -833,7 +984,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -849,7 +999,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation using default language and settings.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -874,7 +1023,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, in LanguageSet set, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -892,7 +1040,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation for a set of players.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -905,7 +1052,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
@@ -919,7 +1065,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation for a player and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
@@ -933,7 +1078,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
@@ -952,7 +1096,6 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
@@ -961,6 +1104,342 @@ public static class TranslationExtensions
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+    }
+    #endregion
+
+    #region 8-arg
+    /// <summary>
+    /// Translate a 8-arg translation using default language and settings.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(null);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+
+    /// <summary>
+    /// Translate a 8-arg translation for a player.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer player, bool canUseIMGUI = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, false, player, translation.Options);
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+
+    /// <summary>
+    /// Translate a 8-arg translation for a set of players.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, in LanguageSet set, bool canUseIMGUI = false)
+    {
+        if (set.Players.Count == 1)
+        {
+            return translation.Translate(set.Players[0]);
+        }
+
+        TranslationValue value = translation.GetValueForLanguage(set.Language);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+
+    /// <summary>
+    /// Translate a 8-arg translation for a set of players.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(language);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+
+    /// <summary>
+    /// Translate a 8-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out Color color, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(null);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+
+    /// <summary>
+    /// Translate a 8-arg translation for a player and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, true, player, translation.Options);
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+
+    /// <summary>
+    /// Translate a 8-arg translation for a set of players and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    {
+        if (set.Players.Count == 1)
+        {
+            return translation.Translate(set.Players[0], out color);
+        }
+
+        TranslationValue value = translation.GetValueForLanguage(set.Language);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+
+    /// <summary>
+    /// Translate a 8-arg translation for a set of players and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(language);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+    #endregion
+
+    #region 9-arg
+    /// <summary>
+    /// Translate a 9-arg translation using default language and settings.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(null);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+
+    /// <summary>
+    /// Translate a 9-arg translation for a player.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer player, bool canUseIMGUI = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, false, player, translation.Options);
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+
+    /// <summary>
+    /// Translate a 9-arg translation for a set of players.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, in LanguageSet set, bool canUseIMGUI = false)
+    {
+        if (set.Players.Count == 1)
+        {
+            return translation.Translate(set.Players[0]);
+        }
+
+        TranslationValue value = translation.GetValueForLanguage(set.Language);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+
+    /// <summary>
+    /// Translate a 9-arg translation for a set of players.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(language);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+
+    /// <summary>
+    /// Translate a 9-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out Color color, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(null);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+
+    /// <summary>
+    /// Translate a 9-arg translation for a player and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, true, player, translation.Options);
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+
+    /// <summary>
+    /// Translate a 9-arg translation for a set of players and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    {
+        if (set.Players.Count == 1)
+        {
+            return translation.Translate(set.Players[0], out color);
+        }
+
+        TranslationValue value = translation.GetValueForLanguage(set.Language);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+
+    /// <summary>
+    /// Translate a 9-arg translation for a set of players and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(language);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+    #endregion
+
+    #region 10-arg
+    /// <summary>
+    /// Translate a 10-arg translation using default language and settings.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(null);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+
+    /// <summary>
+    /// Translate a 10-arg translation for a player.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer player, bool canUseIMGUI = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, false, player, translation.Options);
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+
+    /// <summary>
+    /// Translate a 10-arg translation for a set of players.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, in LanguageSet set, bool canUseIMGUI = false)
+    {
+        if (set.Players.Count == 1)
+        {
+            return translation.Translate(set.Players[0]);
+        }
+
+        TranslationValue value = translation.GetValueForLanguage(set.Language);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+
+    /// <summary>
+    /// Translate a 10-arg translation for a set of players.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(language);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+
+    /// <summary>
+    /// Translate a 10-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out Color color, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(null);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+
+    /// <summary>
+    /// Translate a 10-arg translation for a player and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, true, player, translation.Options);
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+
+    /// <summary>
+    /// Translate a 10-arg translation for a set of players and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    {
+        if (set.Players.Count == 1)
+        {
+            return translation.Translate(set.Players[0], out color);
+        }
+
+        TranslationValue value = translation.GetValueForLanguage(set.Language);
+
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+
+    /// <summary>
+    /// Translate a 10-arg translation for a set of players and output the background <paramref name="color"/> of the message.
+    /// </summary>
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    {
+        TranslationValue value = translation.GetValueForLanguage(language);
+
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+
+        color = value.Color;
+        return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
     #endregion
 }

@@ -12,19 +12,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "C:\SteamCMD\steamapps\common\U3DS\Unturned.exe", "{9701D4BC-4033-469E-B9B6-E00D2B4AF150}"
-	ProjectSection(DebuggerProjectSystem) = preProject
-		PortSupplier = 00000000-0000-0000-0000-000000000000
-		Executable = C:\SteamCMD\steamapps\common\U3DS\Unturned.exe
-		RemoteMachine = DANIEL-DESKTOP
-		StartingDirectory = C:\SteamCMD\steamapps\common\U3DS
-		Arguments = -batchmode -nographics -LogBadMessages -disableModule/DevkitServer -disableModule/DevkitServer.Launcher -disableModule/UncreatedWarfare -disableModule/OpenMod.Unturned +InternetServer\UncreatedSeason4
-		Environment = Default
-		LaunchingEngine = fb0d4648-f776-4980-95f8-bb7f36ebc1ee
-		UseLegacyDebugEngines = No
-		LaunchSQLEngine = No
-		AttachLaunchAction = No
-		IORedirection = Auto
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

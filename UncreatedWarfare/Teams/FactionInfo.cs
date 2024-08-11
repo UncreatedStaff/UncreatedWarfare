@@ -10,6 +10,9 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Teams;
 public class FactionInfo : ITranslationArgument, ICloneable
@@ -67,7 +70,7 @@ public class FactionInfo : ITranslationArgument, ICloneable
     public string KitPrefix { get; set; }
 
     [JsonPropertyName("color")]
-    public string HexColor { get; set; }
+    public Color Color { get; set; }
 
     [JsonPropertyName("unarmed")]
     public uint? UnarmedKit { get; set; }
@@ -147,14 +150,14 @@ public class FactionInfo : ITranslationArgument, ICloneable
         AbbreviationTranslations = new TranslationList(4);
     }
 
-    public FactionInfo(string factionId, string name, string abbreviation, string? shortName, string hexColor, uint? unarmedKit, string kitPrefix, string flagImage = UnknownTeamImgURL)
+    public FactionInfo(string factionId, string name, string abbreviation, string? shortName, Color color, uint? unarmedKit, string kitPrefix, string flagImage = UnknownTeamImgURL)
         : this()
     {
         FactionId = factionId;
         Name = name;
         Abbreviation = abbreviation;
         ShortName = shortName;
-        HexColor = hexColor;
+        Color = color;
         UnarmedKit = unarmedKit;
         FlagImageURL = flagImage;
         KitPrefix = kitPrefix;
@@ -167,7 +170,7 @@ public class FactionInfo : ITranslationArgument, ICloneable
         Name = model.Name;
         Abbreviation = model.Abbreviation;
         ShortName = model.ShortName;
-        HexColor = model.HexColor;
+        Color = HexStringHelper.TryParseColor(model.HexColor, CultureInfo.InvariantCulture, out Color color) ? color : Color.white;
         UnarmedKit = model.UnarmedKitId;
         FlagImageURL = model.FlagImageUrl;
         Emoji = model.Emoji;
@@ -195,7 +198,7 @@ public class FactionInfo : ITranslationArgument, ICloneable
         PrimaryKey = model.PrimaryKey;
         Abbreviation = model.Abbreviation;
         ShortName = model.ShortName;
-        HexColor = model.HexColor;
+        Color = model.Color;
         UnarmedKit = model.UnarmedKit;
         FlagImageURL = model.FlagImageURL;
         Emoji = model.Emoji;
@@ -223,7 +226,7 @@ public class FactionInfo : ITranslationArgument, ICloneable
             Name = Name,
             ShortName = ShortName,
             Abbreviation = Abbreviation,
-            HexColor = HexColor,
+            HexColor = HexStringHelper.FormatHexColor(Color),
             UnarmedKitId = UnarmedKit,
             FlagImageUrl = FlagImageURL,
             Emoji = Emoji,
@@ -570,38 +573,46 @@ public class FactionInfo : ITranslationArgument, ICloneable
     [FormatDisplay("Colored Abbreviation")]
     public const string FormatColorAbbreviation = "ac";
 
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         if (format is not null)
         {
             if (format.Equals(FormatColorDisplayName, StringComparison.Ordinal))
-                return Localization.Colorize(HexColor, GetName(language), flags);
+                return Localization.Colorize(Color, GetName(parameters.Language), parameters.IMGUI);
+            
             if (format.Equals(FormatShortName, StringComparison.Ordinal))
-                return GetShortName(language);
+                return GetShortName(parameters.Language);
+            
             if (format.Equals(FormatColorShortName, StringComparison.Ordinal))
-                return Localization.Colorize(HexColor, GetShortName(language), flags);
+                return Localization.Colorize(Color, GetShortName(parameters.Language), parameters.IMGUI);
+            
             if (format.Equals(FormatAbbreviation, StringComparison.Ordinal))
-                return GetAbbreviation(language);
+                return GetAbbreviation(parameters.Language);
+            
             if (format.Equals(FormatColorAbbreviation, StringComparison.Ordinal))
-                return Localization.Colorize(HexColor, GetAbbreviation(language), flags);
+                return Localization.Colorize(Color, GetAbbreviation(parameters.Language), parameters.IMGUI);
+
             if (format.Equals(FormatId, StringComparison.Ordinal) ||
                 format.Equals(FormatColorId, StringComparison.Ordinal))
             {
                 ulong team = 0;
+
                 if (TeamManager.Team1Faction == this)
                     team = 1;
                 else if (TeamManager.Team2Faction == this)
                     team = 2;
                 else if (TeamManager.AdminFaction == this)
                     team = 3;
-                if (format.Equals(FormatId, StringComparison.Ordinal))
-                    return team.ToString(culture ?? Data.LocalLocale);
 
-                return Localization.Colorize(HexColor, team.ToString(culture ?? Data.LocalLocale), flags);
+                if (format.Equals(FormatId, StringComparison.Ordinal))
+                    return team.ToString(parameters.Culture);
+
+                return Localization.Colorize(Color, team.ToString(parameters.Culture), parameters.IMGUI);
             }
         }
-        return GetName(language);
+
+        return GetName(parameters.Language);
     }
 
     public string GetName(LanguageInfo? language)
@@ -632,7 +643,7 @@ public class FactionInfo : ITranslationArgument, ICloneable
 
     public object Clone()
     {
-        return new FactionInfo(FactionId, Name, Abbreviation, ShortName, HexColor, UnarmedKit, KitPrefix, FlagImageURL)
+        return new FactionInfo(FactionId, Name, Abbreviation, ShortName, Color, UnarmedKit, KitPrefix, FlagImageURL)
         {
             PrimaryKey = PrimaryKey,
             Ammo = Ammo?.Clone() as IAssetLink<ItemAsset>,

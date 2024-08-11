@@ -56,11 +56,6 @@ public readonly ref struct TranslationArguments
     /// </summary>
     public readonly CultureInfo Culture;
 
-    /// <summary>
-    /// The relevant list of pluralized words for the current raw translation.
-    /// </summary>
-    internal Pluralization[] Pluralizers => ValueSet.GetPluralizers(in this);
-
     public TranslationArguments(TranslationValue valueSet, bool useIMGUI, bool useUncoloredTranslation, WarfarePlayer player, TranslationOptions options)
         : this(valueSet, useIMGUI, useUncoloredTranslation, player.Locale.LanguageInfo, player, player.Team, options, player.Locale.CultureInfo)
     {

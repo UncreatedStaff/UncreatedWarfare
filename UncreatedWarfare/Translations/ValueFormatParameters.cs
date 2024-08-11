@@ -17,9 +17,14 @@ public readonly ref struct ValueFormatParameters
     public readonly ArgumentFormat Format;
     public readonly Func<int, object?>? ArgumentAccessor;
     public readonly int ArgumentCount;
+
+    /// <summary>
+    /// If unity rich text should be used over TMPro rich text.
+    /// </summary>
+    public bool IMGUI => (Options & TranslationOptions.TranslateWithUnityRichText) != 0;
     public ValueFormatParameters(in ValueFormatParameters parameters, TranslationOptions flags)
         : this (parameters.Argument, parameters.Culture, parameters.Language, flags, in parameters.Format, parameters.Team, parameters.Player, parameters.ArgumentAccessor, parameters.ArgumentCount) { }
-    public ValueFormatParameters(int argument, in TranslationArguments args, in ArgumentFormat format, Func<int, object?> argumentAccessor, int argumentCount)
+    public ValueFormatParameters(int argument, in TranslationArguments args, in ArgumentFormat format, Func<int, object?>? argumentAccessor, int argumentCount)
         : this (argument, args.Culture, args.Language, args.Options, in format, args.Team, args.Player, argumentAccessor, argumentCount) { }
     public ValueFormatParameters(int argument, CultureInfo culture, LanguageInfo language, TranslationOptions options, in ArgumentFormat format, Team? team, WarfarePlayer? player, Func<int, object?>? argumentAccessor, int argumentCount)
     {

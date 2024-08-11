@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -15,7 +14,6 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
@@ -25,9 +23,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
@@ -35,6 +31,8 @@ using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
@@ -1116,9 +1114,10 @@ public readonly struct OfflinePlayerName(CSteamID steam64, string name) : IPlaye
 {
     public CSteamID Steam64 { get; } = steam64;
     public string Name { get; } = name;
-    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         UCPlayer? pl = UCPlayer.FromCSteamID(Steam64);
+        string? format = parameters.Format.Format;
         if (format is null) goto end;
 
         if (format.Equals(UCPlayer.FormatCharacterName, StringComparison.Ordinal) ||
@@ -1166,9 +1165,9 @@ public struct OfflinePlayer : IPlayer
             _names = pl.Name;
         return _names.HasValue;
     }
-    public readonly string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    public readonly string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         UCPlayer? pl = UCPlayer.FromCSteamID(Steam64);
         if (format is null || !_names.HasValue) goto end;
         PlayerNames names = _names.Value;
@@ -1192,135 +1191,5 @@ public struct OfflinePlayer : IPlayer
             return Localization.Colorize(hex, _s64.m_SteamID.ToString(culture ?? Data.LocalLocale), flags);
         end:
         return _s64.m_SteamID.ToString(culture ?? Data.LocalLocale);
-    }
-}
-
-public class PlayerSave
-{
-    public const uint DataVersion = 6;
-    public readonly ulong Steam64;
-    [CommandSettable]
-    public ulong Team;
-    [CommandSettable]
-    public uint KitId;
-    public string SquadName = string.Empty;
-    public ulong SquadLeader;
-    public byte SquadLockedId;
-    [CommandSettable]
-    public bool HasQueueSkip;
-    [CommandSettable]
-    public ulong LastGame;
-    [CommandSettable]
-    public bool ShouldRespawnOnJoin;
-    [CommandSettable]
-    public bool IsOtherDonator;
-    [CommandSettable]
-    public bool IMGUI;
-    [CommandSettable]
-    public bool TrackQuests = true;
-    [CommandSettable]
-    public bool WasNitroBoosting;
-    public PlayerSave(ulong s64)
-    {
-        Steam64 = s64;
-    }
-    public PlayerSave(UCPlayer player)
-    {
-        Steam64 = player.Steam64;
-        Apply(player);
-    }
-    internal void Apply(UCPlayer player)
-    {
-        if (player.Steam64 != Steam64)
-            throw new ArgumentException("Player does not own this save.", nameof(player));
-
-        Team = player.GetTeam();
-        KitId = player.ActiveKit ?? 0;
-        if (player.Squad != null && player.Squad.Leader.Steam64 != Steam64)
-        {
-            SquadName = player.Squad.Name;
-            SquadLeader = player.Squad.Leader.Steam64;
-            SquadLockedId = player.Squad.LockedId;
-        }
-        LastGame = Data.Gamemode == null ? 0 : Data.Gamemode.GameId;
-    }
-    /// <summary>Players / 76561198267927009_0 / Uncreated_S2 / PlayerSave.dat</summary>
-    private static string GetPath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players",
-        steam64.ToString(Data.AdminLocale) + "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale),
-        "PlayerSave.dat");
-    public static void WriteToSaveFile(PlayerSave save)
-    {
-        ThreadUtil.assertIsGameThread();
-        Block block = new Block();
-        block.writeUInt32(DataVersion);
-        block.writeByte((byte)save.Team);
-        block.writeUInt32(save.KitId);
-        block.writeString(save.SquadName);
-        block.writeUInt64(save.SquadLeader);
-        block.writeByte(save.SquadLockedId);
-        block.writeBoolean(save.HasQueueSkip);
-        block.writeInt64((long)save.LastGame);
-        block.writeBoolean(save.ShouldRespawnOnJoin);
-        block.writeBoolean(save.IsOtherDonator);
-        block.writeBoolean(save.IMGUI);
-        block.writeBoolean(save.WasNitroBoosting);
-        block.writeBoolean(save.TrackQuests);
-        ServerSavedata.writeBlock(GetPath(save.Steam64), block);
-    }
-    public static bool HasPlayerSave(ulong player)
-    {
-        return PlayerManager.FromID(player) is not null || ServerSavedata.fileExists(GetPath(player));
-    }
-    public static bool TryReadSaveFile(ulong player, out PlayerSave save)
-    {
-        ThreadUtil.assertIsGameThread();
-        UCPlayer? pl = PlayerManager.FromID(player);
-        string path = GetPath(player);
-        if (pl?.Save != null)
-        {
-            save = pl.Save;
-            if (!ServerSavedata.fileExists(path))
-                WriteToSaveFile(save);
-            return true;
-        }
-        if (!ServerSavedata.fileExists(path))
-        {
-            save = null!;
-            return false;
-        }
-        Block block = ServerSavedata.readBlock(path, 0);
-        uint dv = block.readUInt32();
-        save = new PlayerSave(player);
-        if (dv > 0)
-        {
-            save.Team = block.readByte();
-            if (dv < 6)
-                block.readString();
-            else
-                save.KitId = block.readUInt32();
-            save.SquadName = block.readString();
-            if (dv > 2)
-            {
-                save.SquadLeader = block.readUInt64();
-                save.SquadLockedId = block.readByte();
-            }
-            save.HasQueueSkip = block.readBoolean();
-            save.LastGame = (ulong)block.readInt64();
-            save.ShouldRespawnOnJoin = block.readBoolean();
-            save.IsOtherDonator = block.readBoolean();
-            if (dv > 1)
-            {
-                save.IMGUI = block.readBoolean();
-                if (dv > 3)
-                {
-                    save.WasNitroBoosting = block.readBoolean();
-                    if (dv > 4)
-                    {
-                        save.TrackQuests = block.readBoolean();
-                    }
-                }
-            }
-        }
-        return true;
     }
 }

@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 using JsonException = Newtonsoft.Json.JsonException;
 
@@ -193,19 +195,19 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
 
     [FormatDisplay("No Level")]
     public const string FormatNoLevel = "nl";
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         string b = Speciality switch
         {
             EPlayerSpeciality.DEFENSE => Localization.TranslateEnum(Defense, language),
             EPlayerSpeciality.OFFENSE => Localization.TranslateEnum(Offense, language),
             EPlayerSpeciality.SUPPORT => Localization.TranslateEnum(Support, language),
-            _ => SpecialityIndex.ToString(culture) + "." + SkillIndex.ToString(culture)
+            _ => SpecialityIndex.ToString(parameters.Culture) + "." + SkillIndex.ToString(parameters.Culture)
         };
         if (format != null && format.Equals(FormatNoLevel, StringComparison.Ordinal))
             return b;
-        return b + " Level " + Level.ToString(culture);
+        return b + " Level " + Level.ToString(parameters.Culture);
     }
 
     public bool Equals(Skillset other) => EqualsHelper(in other, true);

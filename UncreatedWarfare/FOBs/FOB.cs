@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -16,13 +15,14 @@ using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.GameData;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
@@ -1192,9 +1192,9 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public const string FormatGridLocation = "g";
     [FormatDisplay(typeof(IDeployable), "Name")]
     public const string FormatName = "n";
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         if (format is not null)
         {
             if (format.Equals(FormatNameColored, StringComparison.Ordinal))

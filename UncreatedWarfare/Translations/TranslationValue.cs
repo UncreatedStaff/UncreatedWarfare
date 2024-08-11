@@ -19,8 +19,8 @@ public class TranslationValue
     private string? _colorStrippedIMGUIValueCache;
 
 #nullable disable
-    private Pluralization[] _pluralizations;
-    private Pluralization[] _colorStrippedPluralizations;
+    private ArgumentSpan[] _pluralizations;
+    private ArgumentSpan[] _imguiPluralizations;
 
     /// <summary>
     /// Translation this value belongs to.
@@ -86,9 +86,22 @@ public class TranslationValue
         SetValue(value);
     }
 
-    internal Pluralization[] GetPluralizers(in TranslationArguments args)
+    internal ArgumentSpan[] GetPluralizations(in TranslationArguments args, out int argumentOffset)
     {
-        return args.UseUncoloredTranslation ? _colorStrippedPluralizations : _pluralizations;
+        if (!args.Language.SupportsPluralization)
+        {
+            argumentOffset = 0;
+            return Array.Empty<ArgumentSpan>();
+        }
+
+        if (args.UseIMGUI)
+        {
+            argumentOffset = args.UseUncoloredTranslation ? _imguiColorStrippedValueStart : 0;
+            return _imguiPluralizations;
+        }
+
+        argumentOffset = args.UseUncoloredTranslation ? _colorStrippedValueStart : 0;
+        return _pluralizations;
     }
 
     public ReadOnlySpan<char> GetValueSpan(bool useIMGUI, bool useUncoloredTranslation)
@@ -113,26 +126,22 @@ public class TranslationValue
 
     public void SetValue(string value)
     {
-        string? imguiString = null;
-        _pluralizations = TranslationPluralizations.GetPluralizations(ref value, ref imguiString);
-        Value = value;
-        IMGUIValue = imguiString ?? TranslationFormattingUtility.CreateIMGUIString(value);
+        _pluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newValue, value, 'p');
+        Value = newValue ?? value;
+
+        if (_pluralizations.Length > 0)
+        {
+            string imguiUnformatted = TranslationFormattingUtility.CreateIMGUIString(Value);
+            _imguiPluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newIMGUIString, imguiUnformatted, 'p');
+            IMGUIValue = newIMGUIString ?? imguiUnformatted;
+        }
+        else
+        {
+            _imguiPluralizations = _pluralizations;
+            IMGUIValue = TranslationFormattingUtility.CreateIMGUIString(Value);
+        }
 
         Color = TranslationFormattingUtility.ExtractColor(Value, out _colorStrippedValueStart, out _colorStrippedValueLength);
         TranslationFormattingUtility.ExtractColor(IMGUIValue, out _imguiColorStrippedValueStart, out _imguiColorStrippedValueLength);
-
-        _colorStrippedPluralizations = new Pluralization[_pluralizations.Length];
-        for (int i = 0; i < _colorStrippedPluralizations.Length; ++i)
-        {
-            ref Pluralization original = ref _pluralizations[i];
-
-            _colorStrippedPluralizations[i] = new Pluralization(
-                original.StartIndex + _colorStrippedValueStart,
-                _imguiColorStrippedValueStart,
-                original.WordLength,
-                original.Argument,
-                original.IsInverted
-            );
-        }
     }
 }

@@ -41,6 +41,20 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         return formattedValue;
     }
 
+    /// <inheritdoc />
+    public string Format(object? value, in ValueFormatParameters parameters, Type? formatType = null)
+    {
+        string formattedValue = FormatIntl(value, in parameters, formatType);
+
+        IArgumentAddon[] addons = parameters.Format.FormatAddons;
+        for (int i = 0; i < addons.Length; ++i)
+        {
+            formattedValue = addons[i].ApplyAddon(formattedValue, in parameters);
+        }
+
+        return formattedValue;
+    }
+
     private string FormatIntl<T>(T? value, in ValueFormatParameters parameters)
     {
         if (Equals(value, null))
@@ -57,10 +71,29 @@ public class TranslationValueFormatter : ITranslationValueFormatter
 
         return valueFormatter.Format(value, in parameters);
     }
-
-    private IValueFormatter<T> GetValueFormatter<T>()
+    
+    private string FormatIntl(object? value, in ValueFormatParameters parameters, Type? formatType)
     {
-        return (IValueFormatter<T>)_valueFormatters.GetOrAdd(typeof(T), type =>
+        if (Equals(value, null))
+        {
+            return FormatNull(in parameters);
+        }
+
+        if (value is ITranslationArgument preDefined)
+        {
+            return preDefined.Translate(this, in parameters);
+        }
+
+        formatType ??= value.GetType() ?? typeof(object);
+        IValueFormatter valueFormatter = GetValueFormatter(formatType);
+
+        return valueFormatter.Format(value, in parameters);
+    }
+
+    private IValueFormatter<T> GetValueFormatter<T>() => (IValueFormatter<T>)GetValueFormatter(typeof(T));
+    private IValueFormatter GetValueFormatter(Type type)
+    {
+        return (IValueFormatter)_valueFormatters.GetOrAdd(type, type =>
         {
             Type lookingForFormatterType = typeof(IValueFormatter<>).MakeGenericType(type);
             foreach (object valueFormatter in _valueFormatterTypes)

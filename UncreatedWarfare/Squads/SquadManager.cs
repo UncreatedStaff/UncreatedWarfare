@@ -1,21 +1,22 @@
 ﻿using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
+using Microsoft.Extensions.Configuration;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Squads.UI;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using static Uncreated.Warfare.Squads.UI.SquadListUI;
 using static Uncreated.Warfare.Squads.UI.SquadMenuUI;
 
@@ -23,15 +24,20 @@ namespace Uncreated.Warfare.Squads;
 
 public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener, IJoinedTeamListener, IUIListener, IGameTickListener
 {
+    private readonly SquadMenuUI _menuUI;
+    private readonly SquadListUI _listUI;
+
     public const int SQUAD_MAX_MEMBERS = 6;
-    
-    public SquadManager() : base("squad") { }
+
+    public SquadManager(SquadMenuUI menuUI, SquadListUI listUI)
+    {
+        _menuUI = menuUI;
+        _listUI = listUI;
+    }
 
     public new static SquadConfigData Config => _singleton.IsLoaded() ? _singleton.ConfigurationFile.Data : null!;
     public static readonly List<Squad> Squads = new List<Squad>(12);
     private static SquadManager _singleton;
-    public static readonly SquadMenuUI MenuUI = new SquadMenuUI();
-    public static readonly SquadListUI ListUI = new SquadListUI();
     public static readonly UnturnedUI RallyUI = new UnturnedUI(Gamemode.Config.UIRally.GetId(), hasElements: false);
     public static readonly string[] SquadNames =
     {
@@ -154,12 +160,12 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     {
         RallyUI.ClearFromPlayer(player.channel.owner.transportConnection);
     }
-    public static void SendSquadMenu(UCPlayer player, Squad squad, bool holdMemberCountUpdate = false)
+    public static void SendSquadMenu(WarfarePlayer player, Squad squad, bool holdMemberCountUpdate = false)
     {
         _singleton.AssertLoaded();
-        ITransportConnection c = player.Player.channel.owner.transportConnection;
+        ITransportConnection c = player.UnturnedPlayer.channel.owner.transportConnection;
         MenuUI.SendToPlayer(c);
-        MenuUI.Header.SetText(c, T.SquadsUIHeaderPlayerCount.Translate(player, false, squad, squad.Members.Count, SQUAD_MAX_MEMBERS));
+        MenuUI.Header.SetText(c, T.SquadsUIHeaderPlayerCount.Translate(squad, squad.Members.Count, SQUAD_MAX_MEMBERS, player));
         MenuUI.Lock.SetVisibility(c, squad.IsLocked);
         int i = 0;
         int num = Math.Min(squad.Members.Count, MenuUI.Members.Length);
@@ -191,7 +197,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 OtherSquad ui = MenuUI.Squads[sq];
                 ui.Root.SetVisibility(c, true);
                 ui.MemberCount.SetText(c,
-                    (Squads[s].IsLocked ? T.SquadsUIPlayerCountSmallLocked : T.SquadsUIPlayerCountSmall).Translate(player, false, Squads[s].Members.Count, SQUAD_MAX_MEMBERS));
+                    (Squads[s].IsLocked ? T.SquadsUIPlayerCountSmallLocked : T.SquadsUIPlayerCountSmall).Translate(Squads[s].Members.Count, SQUAD_MAX_MEMBERS, player));
                 s2++;
             }
             for (; s2 < MenuUI.Squads.Length - 1; s2++)
@@ -206,10 +212,11 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         _singleton.AssertLoaded();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            WarfarePlayer player = PlayerManager.OnlinePlayers[i];
             if (player.GetTeam() != team) continue;
-            ITransportConnection c = player.Player.channel.owner.transportConnection;
-            if (player.Squad is not null) // if the player's in a squad update the squad menu other squad's list, else update the main squad list.
+            ITransportConnection c = player.Connection;
+            SquadPlayerComponent comp = player.Component<SquadPlayerComponent>();
+            if (comp.Squad is not null) // if the player's in a squad update the squad menu other squad's list, else update the main squad list.
             {
                 int s2 = 0;
                 MenuUI.Squads[0].Root.SetVisibility(c, true);
@@ -217,13 +224,13 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 for (int s = 0; s < Squads.Count; s++)
                 {
                     int sq;
-                    if (Squads[s] == player.Squad || Squads[s].Team != team) continue;
+                    if (Squads[s] == comp.Squad || Squads[s].Team != team) continue;
                     if ((sq = s2 + 1) >= MenuUI.Squads.Length) break;
 
                     OtherSquad ui = MenuUI.Squads[sq];
                     ui.Root.SetVisibility(c, true);
                     ui.MemberCount.SetText(c,
-                        (Squads[s].IsLocked ? T.SquadsUIPlayerCountSmallLocked : T.SquadsUIPlayerCountSmall).Translate(player, false, Squads[s].Members.Count, SQUAD_MAX_MEMBERS));
+                        (Squads[s].IsLocked ? T.SquadsUIPlayerCountSmallLocked : T.SquadsUIPlayerCountSmall).Translate(Squads[s].Members.Count, SQUAD_MAX_MEMBERS, player));
                     s2++;
                 }
                 for (; s2 < MenuUI.Squads.Length - 1; s2++)
@@ -249,8 +256,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                     ui.Name.SetText(c, sq.HasRally ? sq.Name.Colorize("5eff87") : sq.Name);
                     ui.MemberCount.SetText(player.Connection,
                         sq.IsLocked
-                            ? T.SquadsUIPlayerCountListLocked.Translate(player, false, sq.Members.Count, SQUAD_MAX_MEMBERS, Gamemode.Config.UIIconLocked)
-                            : T.SquadsUIPlayerCountList.Translate(player, false, sq.Members.Count, SQUAD_MAX_MEMBERS)
+                            ? T.SquadsUIPlayerCountListLocked.Translate(sq.Members.Count, SQUAD_MAX_MEMBERS, Gamemode.Config.UIIconLocked, player)
+                            : T.SquadsUIPlayerCountList.Translate(sq.Members.Count, SQUAD_MAX_MEMBERS, player)
                     );
                     s2++;
                 }
@@ -890,10 +897,9 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     [FormatDisplay("Squad Name")]
     public const string FormatName = "n";
 
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags) =>
-        FormatColorName.Equals(format, StringComparison.Ordinal)
-            ? Localization.Colorize(Teams.TeamManager.GetTeamHexColor(Team), Name, flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters) =>
+        FormatColorName.Equals(parameters.Format.Format, StringComparison.Ordinal)
+            ? Localization.Colorize(Teams.TeamManager.GetTeamHexColor(Team), Name, parameters.Options)
             : Name;
 }
 

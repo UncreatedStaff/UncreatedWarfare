@@ -1,14 +1,14 @@
 ﻿using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Players;
 
@@ -92,6 +92,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// </summary>
     /// <remarks>Always returns a value or throws.</remarks>
     /// <exception cref="PlayerComponentNotFoundException">Component not found.</exception>
+    [Pure]
     public TComponentType Component<TComponentType>()
     {
         foreach (IPlayerComponent component in Components)
@@ -132,15 +133,15 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         return _playerNameHelper.ToString();
     }
 
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         // todo make this a proper implementation later.
-        return new OfflinePlayer(in _playerNameHelper).Translate(language, format, target, culture, ref flags);
+        return new OfflinePlayer(in _playerNameHelper).Translate(formatter, in parameters);
     }
 
     public bool Equals(IPlayer other)
     {
-        return Steam64.m_SteamID == other.Steam64;
+        return Steam64.m_SteamID == other.Steam64.m_SteamID;
     }
 
     public bool Equals(WarfarePlayer other)
@@ -150,7 +151,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
 
     public override bool Equals(object? obj)
     {
-        return obj is IPlayer player && Steam64.m_SteamID == player.Steam64;
+        return obj is IPlayer player && Steam64.m_SteamID == player.Steam64.m_SteamID;
     }
 
     public override int GetHashCode()
@@ -159,9 +160,6 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     }
 
     bool ICommandUser.IsSuperUser => false;
-
-    ulong IPlayer.Steam64 => throw new NotImplementedException();
-
     void ICommandUser.SendMessage(string message)
     {
         ChatManager.serverSendMessage(message, Palette.AMBIENT, null, SteamPlayer, EChatMode.SAY, useRichTextFormatting: true);

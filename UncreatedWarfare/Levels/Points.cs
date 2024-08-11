@@ -8,21 +8,23 @@ using System.Text.Json.Serialization;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Records;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
@@ -1482,8 +1484,9 @@ public class PointsConfig : JSONConfigData
     {
         if (TryGetVehicleType(reward, out VehicleType vtype))
         {
-            return T.XPToastVehicleDestroyed.Translate(language, culture, vtype);
+            return T.XPToastVehicleDestroyed.Translate(vtype, language, culture);
         }
+
         Translation? t = reward switch
         {
             XPReward.UnloadSupplies => T.XPToastSuppliesUnloaded,
@@ -1511,7 +1514,7 @@ public class PointsConfig : JSONConfigData
         };
         if (t == null)
             return "{" + reward.ToString().ToUpperInvariant() + "}";
-        return t.Translate(language, culture);
+        return t.Translate(language);
     }
 
     public sealed class XPRewardData
@@ -1574,51 +1577,53 @@ public class PointsConfig : JSONConfigData
 }
 public struct CreditsParameters
 {
-    public readonly UCPlayer? Player;
-    public readonly ulong Steam64;
+    public readonly WarfarePlayer? Player;
+    public readonly CSteamID Steam64;
     public readonly int Amount;
-    public readonly ulong Team;
+    public readonly Team Team;
     public bool IsPunishment = false;
     /// <summary>Prevents updating stats.</summary>
     public bool IsPurchase = false;
     public float StartingMultiplier = 1f;
     public string? Message;
 
-    public static CreditsParameters WithTranslation(UCPlayer player, Translation translation, int amount) =>
-        new CreditsParameters(player, player.GetTeam(), amount, translation.Translate(player));
-    public static CreditsParameters WithTranslation<T0>(UCPlayer player, Translation<T0> translation, T0 arg0, int amount) =>
-        new CreditsParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0));
-    public static CreditsParameters WithTranslation<T0, T1>(UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount) =>
-        new CreditsParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0, arg1));
-    public static CreditsParameters WithTranslation(UCPlayer player, ulong team, Translation translation, int amount) =>
+    public static CreditsParameters WithTranslation(WarfarePlayer player, Translation translation, int amount) =>
+        new CreditsParameters(player, player.Team, amount, translation.Translate(player));
+    public static CreditsParameters WithTranslation<T0>(WarfarePlayer player, Translation<T0> translation, T0 arg0, int amount) =>
+        new CreditsParameters(player, player.Team, amount, translation.Translate(arg0, player));
+    public static CreditsParameters WithTranslation<T0, T1>(WarfarePlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount) =>
+        new CreditsParameters(player, player.Team, amount, translation.Translate(arg0, arg1, player));
+    public static CreditsParameters WithTranslation(WarfarePlayer player, Team team, Translation translation, int amount) =>
         new CreditsParameters(player, team, amount, translation.Translate(player));
-    public static CreditsParameters WithTranslation<T0>(UCPlayer player, ulong team, Translation<T0> translation, T0 arg0, int amount) =>
-        new CreditsParameters(player, team, amount, translation.Translate(player, false, arg0));
-    public static CreditsParameters WithTranslation<T0, T1>(UCPlayer player, ulong team, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount) =>
-        new CreditsParameters(player, team, amount, translation.Translate(player, false, arg0, arg1));
-    public CreditsParameters(ulong player, ulong team, int amount)
+    public static CreditsParameters WithTranslation<T0>(WarfarePlayer player, Team team, Translation<T0> translation, T0 arg0, int amount) =>
+        new CreditsParameters(player, team, amount, translation.Translate(arg0, player));
+    public static CreditsParameters WithTranslation<T0, T1>(WarfarePlayer player, Team team, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount) =>
+        new CreditsParameters(player, team, amount, translation.Translate(arg0, arg1, player));
+    public CreditsParameters(CSteamID player, Team team, int amount)
     {
-        if (!Util.IsValidSteam64Id(player))
+        if (player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
+
         Steam64 = player;
-        Player = UCPlayer.FromID(player);
+        Player = null;
         Amount = amount;
         Team = team;
         Message = null;
         IsPunishment = amount < 0;
     }
-    public CreditsParameters(ulong player, ulong team, int amount, string? message, bool isPunishment = true)
+    public CreditsParameters(CSteamID player, Team team, int amount, string? message, bool isPunishment = true)
     {
-        if (!Util.IsValidSteam64Id(player))
+        if (player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
+
         Steam64 = player;
-        Player = UCPlayer.FromID(player);
+        Player = null;
         Team = team;
         Amount = amount;
         Message = message;
         IsPunishment = amount < 0 && isPunishment;
     }
-    public CreditsParameters(UCPlayer player, ulong team, int amount)
+    public CreditsParameters(WarfarePlayer player, Team team, int amount)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
         Steam64 = player.Steam64;
@@ -1627,7 +1632,7 @@ public struct CreditsParameters
         Message = null;
         IsPunishment = amount < 0;
     }
-    public CreditsParameters(UCPlayer player, ulong team, int amount, string? message, bool isPunishment = true)
+    public CreditsParameters(WarfarePlayer player, Team team, int amount, string? message, bool isPunishment = true)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
         Steam64 = player.Steam64;
@@ -1642,10 +1647,10 @@ public struct CreditsParameters
 }
 public class XPParameters
 {
-    public readonly UCPlayer? Player;
-    public readonly ulong Steam64;
+    public readonly WarfarePlayer? Player;
+    public readonly CSteamID Steam64;
     public readonly int Amount;
-    public readonly ulong Team;
+    public readonly Team Team;
 
     public XPReward Reward;
     public string? Message;
@@ -1658,91 +1663,95 @@ public class XPParameters
     public float? OverrideCreditPercentage;
     public float? OverrideReputationPercentage;
     public int? OverrideReputationAmount;
-    public static XPParameters WithTranslation(UCPlayer player, Translation translation, int amount, bool awardCredits = true) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player), awardCredits);
-    public static XPParameters WithTranslation<T0>(UCPlayer player, Translation<T0> translation, T0 arg0, int amount, bool awardCredits = true) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0), awardCredits);
-    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount, bool awardCredits = true) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0, arg1), awardCredits);
-    public static XPParameters WithTranslation(UCPlayer player, ulong team, Translation translation, int amount, bool awardCredits = true) =>
+    public static XPParameters WithTranslation(WarfarePlayer player, Translation translation, int amount, bool awardCredits = true) =>
+        new XPParameters(player, player.Team, amount, translation.Translate(player), awardCredits);
+    public static XPParameters WithTranslation<T0>(WarfarePlayer player, Translation<T0> translation, T0 arg0, int amount, bool awardCredits = true) =>
+        new XPParameters(player, player.Team, amount, translation.Translate(arg0, player), awardCredits);
+    public static XPParameters WithTranslation<T0, T1>(WarfarePlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount, bool awardCredits = true) =>
+        new XPParameters(player, player.Team, amount, translation.Translate(arg0, arg1, player, false), awardCredits);
+    public static XPParameters WithTranslation(WarfarePlayer player, Team team, Translation translation, int amount, bool awardCredits = true) =>
         new XPParameters(player, team, amount, translation.Translate(player), awardCredits);
-    public static XPParameters WithTranslation<T0>(UCPlayer player, ulong team, Translation<T0> translation, T0 arg0, int amount, bool awardCredits = true) =>
-        new XPParameters(player, team, amount, translation.Translate(player, false, arg0), awardCredits);
-    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, ulong team, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount, bool awardCredits = true) =>
-        new XPParameters(player, team, amount, translation.Translate(player, false, arg0, arg1), awardCredits);
-    public static XPParameters WithTranslation(UCPlayer player, Translation translation, XPReward reward) =>
-        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player), true);
-    public static XPParameters WithTranslation<T0>(UCPlayer player, Translation<T0> translation, T0 arg0, XPReward reward) =>
-        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player, false, arg0), true);
-    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward) =>
-        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player, false, arg0, arg1), true);
-    public static XPParameters WithTranslation(UCPlayer player, ulong team, Translation translation, XPReward reward) =>
+    public static XPParameters WithTranslation<T0>(WarfarePlayer player, Team team, Translation<T0> translation, T0 arg0, int amount, bool awardCredits = true) =>
+        new XPParameters(player, team, amount, translation.Translate(arg0, player), awardCredits);
+    public static XPParameters WithTranslation<T0, T1>(WarfarePlayer player, Team team, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount, bool awardCredits = true) =>
+        new XPParameters(player, team, amount, translation.Translate(arg0, arg1, player), awardCredits);
+    public static XPParameters WithTranslation(WarfarePlayer player, Translation translation, XPReward reward) =>
+        new XPParameters(player, player.Team, reward, translation.Translate(player), true);
+    public static XPParameters WithTranslation<T0>(WarfarePlayer player, Translation<T0> translation, T0 arg0, XPReward reward) =>
+        new XPParameters(player, player.Team, reward, translation.Translate(arg0, player), true);
+    public static XPParameters WithTranslation<T0, T1>(WarfarePlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward) =>
+        new XPParameters(player, player.Team, reward, translation.Translate(arg0, arg1, player), true);
+    public static XPParameters WithTranslation(WarfarePlayer player, Team team, Translation translation, XPReward reward) =>
         new XPParameters(player, team, reward, translation.Translate(player), true);
-    public static XPParameters WithTranslation<T0>(UCPlayer player, ulong team, Translation<T0> translation, T0 arg0, XPReward reward) =>
-        new XPParameters(player, team, reward, translation.Translate(player, false, arg0), true);
-    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, ulong team, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward) =>
-        new XPParameters(player, team, reward, translation.Translate(player, false, arg0, arg1), true);
-    public static XPParameters WithTranslation(UCPlayer player, Translation translation, XPReward reward, int amount) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player), true) { Reward = reward };
-    public static XPParameters WithTranslation<T0>(UCPlayer player, Translation<T0> translation, T0 arg0, XPReward reward, int amount) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0), true) { Reward = reward };
-    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward, int amount) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0, arg1), true) { Reward = reward };
-    public static XPParameters WithTranslation(UCPlayer player, ulong team, Translation translation, XPReward reward, int amount) =>
+    public static XPParameters WithTranslation<T0>(WarfarePlayer player, Team team, Translation<T0> translation, T0 arg0, XPReward reward) =>
+        new XPParameters(player, team, reward, translation.Translate(arg0, player), true);
+    public static XPParameters WithTranslation<T0, T1>(WarfarePlayer player, Team team, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward) =>
+        new XPParameters(player, team, reward, translation.Translate(arg0, arg1, player), true);
+    public static XPParameters WithTranslation(WarfarePlayer player, Translation translation, XPReward reward, int amount) =>
+        new XPParameters(player, player.Team, amount, translation.Translate(player), true) { Reward = reward };
+    public static XPParameters WithTranslation<T0>(WarfarePlayer player, Translation<T0> translation, T0 arg0, XPReward reward, int amount) =>
+        new XPParameters(player, player.Team, amount, translation.Translate(arg0, player), true) { Reward = reward };
+    public static XPParameters WithTranslation<T0, T1>(WarfarePlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward, int amount) =>
+        new XPParameters(player, player.Team, amount, translation.Translate(arg0, arg1, player), true) { Reward = reward };
+    public static XPParameters WithTranslation(WarfarePlayer player, Team team, Translation translation, XPReward reward, int amount) =>
         new XPParameters(player, team, amount, translation.Translate(player), true) { Reward = reward };
-    public static XPParameters WithTranslation<T0>(UCPlayer player, ulong team, Translation<T0> translation, T0 arg0, XPReward reward, int amount) =>
-        new XPParameters(player, team, amount, translation.Translate(player, false, arg0), true) { Reward = reward };
-    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, ulong team, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward, int amount) =>
-        new XPParameters(player, team, amount, translation.Translate(player, false, arg0, arg1), true) { Reward = reward };
-    public XPParameters(ulong player, ulong team, int amount)
+    public static XPParameters WithTranslation<T0>(WarfarePlayer player, Team team, Translation<T0> translation, T0 arg0, XPReward reward, int amount) =>
+        new XPParameters(player, team, amount, translation.Translate(arg0, player), true) { Reward = reward };
+    public static XPParameters WithTranslation<T0, T1>(WarfarePlayer player, Team team, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward, int amount) =>
+        new XPParameters(player, team, amount, translation.Translate(arg0, arg1, player), true) { Reward = reward };
+    public XPParameters(CSteamID player, Team team, int amount)
     {
-        if (!Util.IsValidSteam64Id(player))
+        if (player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
+
         Steam64 = player;
-        Player = UCPlayer.FromID(player);
+        Player = null;
         Amount = amount;
         Team = team;
         AwardCredits = true;
         Message = null;
         Reward = XPReward.Custom;
     }
-    public XPParameters(ulong player, ulong team, XPReward reward)
+    public XPParameters(CSteamID player, Team team, XPReward reward)
     {
-        if (!Util.IsValidSteam64Id(player))
+        if (player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
+
         Steam64 = player;
-        Player = UCPlayer.FromID(player);
+        Player = null;
         Amount = 0;
         Team = team;
         AwardCredits = true;
         Message = null;
         Reward = reward;
     }
-    public XPParameters(ulong player, ulong team, int amount, string? message, bool awardCredits)
+    public XPParameters(CSteamID player, Team team, int amount, string? message, bool awardCredits)
     {
-        if (!Util.IsValidSteam64Id(player))
+        if (player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
+
         Steam64 = player;
-        Player = UCPlayer.FromID(player);
+        Player = null;
         Team = team;
         Amount = amount;
         Message = message;
         AwardCredits = awardCredits;
         Reward = XPReward.Custom;
     }
-    public XPParameters(ulong player, ulong team, XPReward reward, string? message, bool awardCredits)
+    public XPParameters(CSteamID player, Team team, XPReward reward, string? message, bool awardCredits)
     {
-        if (!Util.IsValidSteam64Id(player))
+        if (player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
+
         Steam64 = player;
-        Player = UCPlayer.FromID(player);
+        Player = null;
         Team = team;
         Amount = 0;
         Message = message;
         AwardCredits = awardCredits;
         Reward = reward;
     }
-    public XPParameters(UCPlayer player, ulong team, int amount)
+    public XPParameters(WarfarePlayer player, Team team, int amount)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
         Steam64 = player.Steam64;
@@ -1752,7 +1761,7 @@ public class XPParameters
         Message = null;
         Reward = XPReward.Custom;
     }
-    public XPParameters(UCPlayer player, ulong team, XPReward reward)
+    public XPParameters(WarfarePlayer player, Team team, XPReward reward)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
         Steam64 = player.Steam64;
@@ -1762,7 +1771,7 @@ public class XPParameters
         Message = null;
         Reward = reward;
     }
-    public XPParameters(UCPlayer player, ulong team, XPReward reward, string? message, bool awardCredits)
+    public XPParameters(WarfarePlayer player, Team team, XPReward reward, string? message, bool awardCredits)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
         Steam64 = player.Steam64;
@@ -1772,7 +1781,7 @@ public class XPParameters
         AwardCredits = awardCredits;
         Reward = reward;
     }
-    public XPParameters(UCPlayer player, ulong team, int amount, string? message, bool awardCredits)
+    public XPParameters(WarfarePlayer player, Team team, int amount, string? message, bool awardCredits)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
         Steam64 = player.Steam64;

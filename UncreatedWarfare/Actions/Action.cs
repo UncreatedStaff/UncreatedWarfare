@@ -1,33 +1,42 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Actions;
 
 public class Action
 {
+    private readonly ActionManager _actionManager;
+    private readonly ITranslationService _translationService;
+
+    private readonly ActionComponent _component;
     private readonly EffectAsset? _viewerEffect;
     private readonly EffectAsset? _callerEffect;
-    private readonly List<UCPlayer> _viewers;
-    private readonly List<UCPlayer> _toastReceivers;
+    private readonly TrackingWhereEnumerable<WarfarePlayer> _viewers;
+    private readonly TrackingWhereEnumerable<WarfarePlayer> _toastReceivers;
     private readonly ActionOrigin _origin;
     private readonly ActionType _type;
     private readonly Vector3? _initialPosition;
     protected readonly int LifeTime;
     protected readonly float UpdateFrequency;
     protected bool SquadWide;
-    private readonly ActionComponent _component;
 
     private readonly Translation<Color>? _chatMessage;
     private readonly Translation? _toast;
-    public UCPlayer Caller { get; }
+    public WarfarePlayer Caller { get; }
     public Vector3? InitialPosition => _initialPosition;
-    public Action(UCPlayer caller, IAssetLink<EffectAsset> viewerEffect, IAssetLink<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
-        : this(caller, viewerEffect, callerEffect, viewers, viewers, updateFrequency, lifeTime, origin, type, chatMessage, toast, squadWide) { }
-    public Action(UCPlayer caller, IAssetLink<EffectAsset> viewerEffect, IAssetLink<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, IEnumerable<UCPlayer> toastReceivers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
+    public Action(ActionManager actionManager, IServiceProvider serviceProvider, WarfarePlayer caller, IAssetLink<EffectAsset> viewerEffect, IAssetLink<EffectAsset>? callerEffect, TrackingWhereEnumerable<WarfarePlayer> viewers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
+        : this(actionManager, serviceProvider, caller, viewerEffect, callerEffect, viewers, viewers, updateFrequency, lifeTime, origin, type, chatMessage, toast, squadWide) { }
+    public Action(ActionManager actionManager, IServiceProvider serviceProvider, WarfarePlayer caller, IAssetLink<EffectAsset> viewerEffect, IAssetLink<EffectAsset>? callerEffect, TrackingWhereEnumerable<WarfarePlayer> viewers, TrackingWhereEnumerable<WarfarePlayer> toastReceivers, float updateFrequency, int lifeTime, ActionOrigin origin, ActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
     {
+        _actionManager = actionManager;
+        _translationService = serviceProvider.GetRequiredService<ITranslationService>();
         Caller = caller;
 
         if (!viewerEffect.TryGetAsset(out _viewerEffect))
@@ -41,8 +50,8 @@ public class Action
         }
 
         LifeTime = lifeTime;
-        _viewers = viewers.ToList();
-        _toastReceivers = ReferenceEquals(viewers, toastReceivers) ? _viewers : toastReceivers.ToList();
+        _viewers = viewers;
+        _toastReceivers = toastReceivers;
         UpdateFrequency = updateFrequency;
         SquadWide = squadWide;
         _origin = origin;
@@ -53,7 +62,7 @@ public class Action
         switch (_origin)
         {
             case ActionOrigin.AtCallerLookTarget:
-                Transform look = caller.Player.look.aim;
+                Transform look = caller.UnturnedPlayer.look.aim;
                 _initialPosition = Physics.Raycast(look.position, look.forward, out RaycastHit hit, 800) ? hit.point : null;
                 break;
 
@@ -62,7 +71,7 @@ public class Action
                 break;
 
             case ActionOrigin.AtCallerWaypoint:
-                Vector3 marker = caller.Player.quests.markerPosition;
+                Vector3 marker = caller.UnturnedPlayer.quests.markerPosition;
                 _initialPosition = new Vector3(marker.x, F.GetTerrainHeightAt2DPoint(marker.x, marker.z), marker.z);
                 break;
 
@@ -71,7 +80,7 @@ public class Action
                 break;
         }
 
-        ActionComponent[] existing = Caller.Player.transform.gameObject.GetComponents<ActionComponent>();
+        ActionComponent[] existing = caller.UnturnedPlayer.transform.gameObject.GetComponents<ActionComponent>();
         L.LogDebug("Existing actions: " + existing.Length);
         foreach (ActionComponent component in existing)
         {
@@ -82,7 +91,7 @@ public class Action
             component.Action.Cancel();
         }
 
-        _component = Caller.Player.transform.gameObject.AddComponent<ActionComponent>();
+        _component = caller.UnturnedPlayer.transform.gameObject.AddComponent<ActionComponent>();
     }
     public void Start()
     {
@@ -121,7 +130,7 @@ public class Action
         if (_toast is null)
             return;
 
-        foreach (UCPlayer? player in _toastReceivers.Where(x => x.IsOnline))
+        foreach (WarfarePlayer? player in _toastReceivers)
         {
             if (_toast is Translation<string> t) // TODO: better way to do account for different types of translations / clean up
                 Tips.TryGiveTip(player, 5, t, SquadWide && Caller.Squad != null ? Caller.Squad.Name : Caller.NickName);
@@ -129,15 +138,15 @@ public class Action
                 Tips.TryGiveTip(player, 5, _toast);
         }
     }
-    public static void SayTeam(UCPlayer caller, Translation<Color>? chatMessage)
+
+    public static void SayTeam(WarfarePlayer caller, Translation<Color>? chatMessage)
     {
         if (chatMessage is null)
             return;
 
-        ulong team = caller.GetTeam();
-        Color teamColor = Teams.TeamManager.GetTeamColor(team);
+        Color teamColor = caller.Team.Faction.Color;
 
-        foreach (LanguageSet set in LanguageSet.OnTeam(team))
+        foreach (LanguageSet set in LanguageSet.OnTeam(caller.Team))
         {
             string translation = chatMessage.Translate(set.Language, teamColor);
             while (set.MoveNext())
@@ -146,6 +155,7 @@ public class Action
             }
         }
     }
+
     public delegate bool CheckValidHandler();
     public delegate bool CheckCompleteHandler();
     public delegate void FinishedHandler();
@@ -171,12 +181,12 @@ public class Action
         {
             Vector3 position = _action._origin == ActionOrigin.FollowCaller ? transform.position : _action._initialPosition!.Value;
             if (_action._viewerEffect != null)
-                F.TriggerEffectReliable(_action._viewerEffect, Data.GetPooledTransportConnectionList(_action._viewers.Where(x => x.IsOnline).Select(x => x.Connection), _action._viewers.Count), position);
+                F.TriggerEffectReliable(_action._viewerEffect, Data.GetPooledTransportConnectionList(_action._viewers.Select(x => x.Connection), Provider.clients.Count / 2), position);
 
             if (_action._callerEffect == null)
                 return;
 
-            foreach (UCPlayer player in _action._viewers.Where(x => x.IsOnline))
+            foreach (WarfarePlayer player in _action._viewers)
             {
                 F.TriggerEffectReliable(_action._callerEffect, player.Connection, player.Position);
             }

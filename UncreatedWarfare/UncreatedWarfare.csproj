@@ -111,6 +111,7 @@
     <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease01, 2)" />
     <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease10" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
+    <PackageReference Include="JetBrains.Annotations" Version="[2018.2.1,)" Aliases="JetBrains" />
 
     <!-- for the love of god do not touch these version numbers -->
 
@@ -135,11 +136,20 @@
   </ItemGroup>
   <!-- ReSharper restore VulnerablePackage -->
 
-  <!-- Global Usings -->
+  <!-- Embedded Files -->
+  <ItemGroup>
+
+    <EmbeddedResource Include="$(SolutionDir)Translation README.md" />
+
+    <!-- Commands -->
+    <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
+
+  </ItemGroup>
+
+  <!-- Global Usings (JetBrains annotations imports are in Properties/JetBrains.Annotations.cs) -->
   <ItemGroup>
     <Using Remove="System.Net.Http" />
     <Using Remove="System.Text" />
-    <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
     <Using Include="JetBrains.Annotations" />
     <Using Include="SDG.Unturned" />
     <Using Include="Steamworks" />
