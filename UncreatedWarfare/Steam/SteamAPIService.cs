@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam.Models;
 using UnityEngine.Networking;
 
@@ -15,11 +17,37 @@ public class SteamAPIService
     private const string BaseUrl = "https://api.steampowered.com/";
     private readonly IConfiguration _systemConfig;
     private readonly ILogger<SteamAPIService> _logger;
+    private readonly PlayerService _playerService;
 
-    public SteamAPIService(IConfiguration systemConfig, ILogger<SteamAPIService> logger)
+    public SteamAPIService(IConfiguration systemConfig, ILogger<SteamAPIService> logger, PlayerService playerService)
     {
         _systemConfig = systemConfig;
         _logger = logger;
+        _playerService = playerService;
+    }
+
+    public async UniTask TryDownloadAllPlayerSummaries(bool allowCache = true, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
+
+        List<ulong>? players = null;
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            if (!allowCache || player.CachedSteamProfile == null)
+                (players ??= new List<ulong>(_playerService.OnlinePlayers.Count)).Add(player.Steam64.m_SteamID);
+        }
+
+        if (players == null)
+            return;
+
+        PlayerSummary[] summaries = await GetPlayerSummaries(players, token);
+        for (int j = 0; j < summaries.Length; ++j)
+        {
+            PlayerSummary summary = summaries[j];
+            WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(summary.Steam64);
+            if (player != null)
+                player.CachedSteamProfile = summary;
+        }
     }
 
     public async UniTask<PlayerSummary?> GetPlayerSummary(ulong player, CancellationToken token = default)

@@ -11,8 +11,11 @@ using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation;
@@ -20,6 +23,14 @@ namespace Uncreated.Warfare.Moderation;
 [UnturnedUI(BasePath = "Container/Backdrop/PageModeration")]
 internal partial class ModerationUI : UnturnedUI
 {
+    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
+    private readonly ITranslationValueFormatter _valueFormatter;
+
+    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
+    private readonly PlayerService _playerService;
+
+    private readonly SteamAPIService _steamAPI;
+
     public const int ModerationHistoryLength = 30;
     public const string PositiveReputationColor = "00cc00";
     public const string NegativeReputationColor = "cc0000";
@@ -27,8 +38,7 @@ internal partial class ModerationUI : UnturnedUI
     public const string DateTimeFormatInput = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss";
 
     private readonly List<UCPlayer> _tempPlayerSearchBuffer = new List<UCPlayer>(Provider.maxPlayers);
-    public static ModerationUI Instance { get; } = new ModerationUI();
-
+    
     /* HEADERS */
     public LabeledButton[] Headers { get; } =
     {
@@ -55,10 +65,6 @@ internal partial class ModerationUI : UnturnedUI
         UseData = true
     };
     public UnturnedEnumButton<PlayerSearchMode> ModerationPlayerSearchModeButton { get; }
-        = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "ModerationButtonToggleOnline", "./ModerationButtonToggleOnlineLabel")
-        {
-            TextFormatter = (v, player) => "View - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
-        };
 
     /* MODERATION HISTORY LIST */
     public ModerationHistoryEntry[] ModerationHistory { get; } = ElementPatterns.CreateArray<ModerationHistoryEntry>("ModerationList/Viewport/Content/ModerationEntry_{0}", 1, to: ModerationHistoryLength);
@@ -91,17 +97,7 @@ internal partial class ModerationUI : UnturnedUI
             TextFormatter = (v, _) => v == ModerationEntryType.None ? "Type - Any" : ("Type - " + GetModerationTypeButtonText(v))
         };
     public UnturnedEnumButton<ModerationHistorySearchMode> ModerationHistorySearchTypeButton { get; }
-        = new UnturnedEnumButton<ModerationHistorySearchMode>(ModerationHistorySearchMode.Message, "ModerationButtonToggleSearchMode",
-            "./ModerationButtonToggleSearchModeLabel", null, "./ModerationButtonToggleSearchModeRightClickListener")
-        {
-            TextFormatter = (v, player) => "Search - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
-        };
     public UnturnedEnumButton<ModerationHistorySortMode> ModerationHistorySortModeButton { get; }
-        = new UnturnedEnumButton<ModerationHistorySortMode>(ModerationHistorySortMode.Latest, "ModerationButtonToggleSortType",
-            "./ModerationButtonToggleSortTypeLabel", null, "./ModerationButtonToggleSortTypeRightClickListener")
-        {
-            TextFormatter = (v, player) => "Sort - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
-        };
 
     /* MODERATION SELECTED ENTRY */
     public UnturnedUIElement ModerationInfoRoot { get; } = new UnturnedUIElement("ModerationInfo/Viewport/ModerationInfoContent");
@@ -189,12 +185,33 @@ internal partial class ModerationUI : UnturnedUI
         );
     }, 1, to: 4);
 
-    public ModerationUI() : base(GamemodeOld.Config.UIModerationMenu.GetId(), debugLogging: false)
+    public ModerationUI(ITranslationValueFormatter valueFormatter, PlayerService playerService, SteamAPIService steamAPI) : base(GamemodeOld.Config.UIModerationMenu.GetId(), debugLogging: false)
     {
+        _valueFormatter = valueFormatter;
+        _playerService = playerService;
+        _steamAPI = steamAPI;
+
+        ModerationHistorySearchTypeButton = new UnturnedEnumButton<ModerationHistorySearchMode>(ModerationHistorySearchMode.Message, "ModerationButtonToggleSearchMode",
+            "./ModerationButtonToggleSearchModeLabel", null, "./ModerationButtonToggleSearchModeRightClickListener")
+        {
+            TextFormatter = (v, player) => "Search - " + _valueFormatter.FormatEnum(v, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
+        };
+
+        ModerationHistorySortModeButton = new UnturnedEnumButton<ModerationHistorySortMode>(ModerationHistorySortMode.Latest, "ModerationButtonToggleSortType",
+            "./ModerationButtonToggleSortTypeLabel", null, "./ModerationButtonToggleSortTypeRightClickListener")
+        {
+            TextFormatter = (v, player) => "Sort - " + _valueFormatter.FormatEnum(v, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
+        };
+
+        ModerationPlayerSearchModeButton = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "ModerationButtonToggleOnline", "./ModerationButtonToggleOnlineLabel")
+        {
+            TextFormatter = (v, player) => "View - " + _valueFormatter.FormatEnum(v, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
+        };
+
         MuteTypeTracker = new UnturnedEnumButtonTracker<MuteType>(MuteType.Both, ModerationActionToggleButton1)
         {
             Ignored = MuteType.None,
-            TextFormatter = (type, player) => "Mute Type - " + Localization.TranslateEnum(type, Localization.GetLanguageCached(player.channel.owner.playerID.steamID.m_SteamID))
+            TextFormatter = (type, player) => "Mute Type - " + _valueFormatter.FormatEnum(type, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
         };
 
         ButtonClose.OnClicked += OnButtonCloseClicked;
@@ -548,7 +565,7 @@ internal partial class ModerationUI : UnturnedUI
 
         UpdateSelectedPlayer(player);
 
-        await PlayerManager.TryDownloadAllPlayerSummaries(token: token);
+        await _steamAPI.TryDownloadAllPlayerSummaries(token: token);
         await UniTask.SwitchToMainThread(token);
 
         ModerationData data = GetOrAddModerationData(player);
@@ -799,9 +816,9 @@ internal partial class ModerationUI : UnturnedUI
                 {
                     PlayerNames name = names[i2];
                     PlayerListEntry entry = ModerationPlayerList[i2];
-                    entry.SteamId.SetText(connection, name.Steam64.ToString(CultureInfo.InvariantCulture));
+                    entry.SteamId.SetText(connection, name.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
                     entry.Name.SetText(connection, name.PlayerName);
-                    if (Data.ModerationSql.TryGetAvatar(name.Steam64, AvatarSize.Small, out string avatarUrl))
+                    if (Data.ModerationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
                         entry.ProfilePicture.SetImage(connection, avatarUrl);
                     else
                         entry.ProfilePicture.SetImage(connection, string.Empty);
@@ -810,7 +827,7 @@ internal partial class ModerationUI : UnturnedUI
                     if (i2 >= data.InfoActorCount)
                         entry.Root.SetVisibility(player.Connection, true);
 
-                    data.PlayerList[i2] = name.Steam64;
+                    data.PlayerList[i2] = name.Steam64.m_SteamID;
                 }
 
                 for (; i2 < data.PlayerCount; ++i2)
@@ -822,14 +839,14 @@ internal partial class ModerationUI : UnturnedUI
                 data.PlayerCount = ct;
 
                 
-                await Data.ModerationSql.CacheAvatars(names.Select(x => x.Steam64), token);
+                await Data.ModerationSql.CacheAvatars(names.Select(x => x.Steam64.m_SteamID), token);
 #if DEBUG
                 ThreadUtil.assertIsGameThread();
 #endif
                 for (int i = 0; i < ct; ++i)
                 {
                     PlayerNames name = names[i];
-                    if (Data.ModerationSql.TryGetAvatar(name.Steam64, AvatarSize.Small, out string avatarUrl))
+                    if (Data.ModerationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
                         ModerationPlayerList[i].ProfilePicture.SetImage(connection, avatarUrl);
                 }
             });

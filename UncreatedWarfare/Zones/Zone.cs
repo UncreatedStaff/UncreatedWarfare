@@ -6,6 +6,8 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Zones;
 public class Zone : IDeployable
@@ -125,7 +127,7 @@ public class Zone : IDeployable
         return TimeSpan.FromSeconds(FOBManager.Config.DeployMainDelay);
     }
 
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         return Name;
     }

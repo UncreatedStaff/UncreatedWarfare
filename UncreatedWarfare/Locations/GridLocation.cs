@@ -6,6 +6,8 @@ using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Locations;
 
@@ -327,8 +329,7 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// <returns>String representation of the grid, formatted like A1-1.</returns>
     public override string ToString() => ToString(X, Y, Index);
 
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags) => ToString();
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters) => ToString();
 
     /// <summary>
     /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.

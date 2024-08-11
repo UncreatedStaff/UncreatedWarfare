@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Seasons;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Models.Buildables;
 
@@ -90,8 +90,7 @@ public class BuildableSave : ITranslationArgument
     public IList<BuildableStorageItem>? Items { get; set; }
     public IList<BuildableInstanceId>? InstanceIds { get; set; }
 
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         return Item.GetAsset<ItemAsset>()?.itemName ?? Item.ToString();
     }

@@ -1144,30 +1144,6 @@ public class DebugCommand : IExecutableCommand
         Context.Defer();
     }
 
-    private void setholiday()
-    {
-        Context.AssertRanByConsole();
-
-        if (!Context.TryGet(0, out ENPCHoliday holiday))
-            throw Context.ReplyString("Invalid holiday. Must be field in ENPCHoliday.");
-        
-        FieldInfo? field = typeof(HolidayUtil).GetField("holidayOverride", BindingFlags.Static | BindingFlags.NonPublic);
-        if (field == null)
-            throw Context.ReplyString("Unable to find 'HolidayUtil.holidayOverride' field.");
-
-        field.SetValue(null, holiday);
-        Context.ReplyString("Set active holiday to " + Localization.TranslateEnum(holiday, Context.Language));
-
-        field = typeof(Provider).GetField("authorityHoliday", BindingFlags.Static | BindingFlags.NonPublic);
-        if (holiday == ENPCHoliday.NONE)
-        {
-            MethodInfo? method = typeof(HolidayUtil).GetMethod("BackendGetActiveHoliday", BindingFlags.Static | BindingFlags.NonPublic);
-            if (method != null)
-                holiday = (ENPCHoliday)method.Invoke(null, Array.Empty<object>());
-        }
-                
-        field?.SetValue(null, holiday);
-    }
     private void startloadout()
     {
         Context.AssertRanByPlayer();
@@ -1182,47 +1158,7 @@ public class DebugCommand : IExecutableCommand
 
         ItemUtility.GiveItems(Context.Player, items, true);
 
-        Context.ReplyString($"Given {items.Length} default item{(items.Length == 1 ? string.Empty : "s")} for a {Localization.TranslateEnum(@class, Context.Language)} loadout.");
-    }
-
-    private async UniTask viewlens(CancellationToken token)
-    {
-        Context.AssertRanByPlayer();
-
-        Context.AssertOnDuty();
-
-        if (Context.MatchParameter(0, "clear", "none", "me"))
-        {
-            Context.Player.ViewLens = null;
-            Context.ReplyString("Removed view lens.");
-
-            UCWarfare.I.UpdateLangs(Context.Player, false);
-        }
-        else if (Context.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer, remainder: true))
-        {
-            Context.Player.ViewLens = s64 == Context.CallerId.m_SteamID ? null : s64;
-            if (s64 == Context.CallerId.m_SteamID)
-            {
-                Context.ReplyString("Removed view lens.");
-            }
-            else if (onlinePlayer != null)
-            {
-                Context.ReplyString("Set view lens to " + onlinePlayer.Translate(Context, UCPlayer.FormatColoredPlayerName) +
-                                " (" + onlinePlayer.Translate(Context, UCPlayer.FormatColoredSteam64) + ")'s perspective. Clear with <#fff>/test viewlens clear</color>.");
-            }
-            else
-            {
-                PlayerNames names = await F.GetPlayerOriginalNamesAsync(s64, token).ConfigureAwait(false);
-                await UniTask.SwitchToMainThread(token);
-                Context.ReplyString("Set view lens to " + names.PlayerName + " (" + s64.ToString(Context.Culture) + ")'s perspective. Clear with <#fff>/test viewlens clear</color>.");
-            }
-
-            UCWarfare.I.UpdateLangs(Context.Player, false);
-        }
-        else
-        {
-            Context.SendCorrectUsage("/test viewlens <player ...> - Simulates UI from another player's perspective.");
-        }
+        Context.ReplyString($"Given {items.Length} default item{(items.Length == 1 ? string.Empty : "s")} for a {@class} loadout.");
     }
 
     private void dumpfob()

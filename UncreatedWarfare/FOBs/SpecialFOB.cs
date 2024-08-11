@@ -3,13 +3,17 @@ using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.FOBs;
@@ -124,21 +128,25 @@ public class SpecialFOB : IFOB, IGameTickListener, IDisposable
         }
     }
 
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
+
         if (format is not null)
         {
             if (format.Equals(FOB.FormatNameColored, StringComparison.Ordinal))
-                return Localization.Colorize(UIColor ?? TeamManager.GetTeamHexColor(Team), Name, flags);
+                return Localization.Colorize(UIColor ?? TeamManager.GetTeamHexColor(Team), Name, parameters.Options);
+
             if (format.Equals(FOB.FormatLocationName, StringComparison.Ordinal))
                 return ClosestLocation;
+
             if (format.Equals(FOB.FormatGridLocation, StringComparison.Ordinal))
                 return GridLocation.ToString();
         }
+
         return Name;
     }
-    bool IDeployable.CheckDeployable(UCPlayer player, CommandContext? ctx)
+    bool IDeployable.CheckDeployable(WarfarePlayer player, CommandContext? ctx)
     {
         ulong team = player.GetTeam();
         if (team == 0 || team != Team)
@@ -153,7 +161,7 @@ public class SpecialFOB : IFOB, IGameTickListener, IDisposable
             throw ctx.Reply(T.DeployNotSpawnable, this);
         return false;
     }
-    bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
+    bool IDeployable.CheckDeployableTick(WarfarePlayer player, bool chat)
     {
         ulong team = player.GetTeam();
         if (team == 0 || team != Team)
@@ -168,14 +176,14 @@ public class SpecialFOB : IFOB, IGameTickListener, IDisposable
             player.SendChat(T.DeployNotSpawnableTick, this);
         return false;
     }
-    void IDeployable.OnDeploy(UCPlayer player, bool chat)
+    void IDeployable.OnDeploy(WarfarePlayer player, bool chat)
     {
         ActionLog.Add(ActionLogType.DeployToLocation, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team), player);
         if (chat)
             player.SendChat(T.DeploySuccess, this);
     }
 
-    float IDeployable.GetDelay() => FOBManager.Config.DeployFOBDelay;
+    TimeSpan IDeployable.GetDelay(WarfarePlayer player) => FOBManager.Config.DeployFOBDelay;
 
     public void Dump(UCPlayer? target)
     {

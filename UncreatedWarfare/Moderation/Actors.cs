@@ -17,6 +17,12 @@ public static class Actors
     /// Try to create a standard actor from an ID.
     /// </summary>
     /// <remarks>Invalid steam IDs will be assumed to be Discord IDs. IDs 0-2 are reserved for Console, Anti-Cheat, and BattlEye in that order.</remarks>
+    public static IModerationActor GetActor(CSteamID id) => GetActor(id.m_SteamID);
+
+    /// <summary>
+    /// Try to create a standard actor from an ID.
+    /// </summary>
+    /// <remarks>Invalid steam IDs will be assumed to be Discord IDs. IDs 0-2 are reserved for Console, Anti-Cheat, and BattlEye in that order.</remarks>
     public static IModerationActor GetActor(ulong id)
     {
         if (id == 0ul || id == Provider.server.m_SteamID)

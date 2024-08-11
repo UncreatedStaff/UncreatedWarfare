@@ -15,10 +15,11 @@ using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -37,12 +38,8 @@ public static class KitEx
     public static readonly int WeaponTextMaxCharLimit = 128;
     public static readonly int SignTextMaxCharLimit = 50;
     public static readonly int MaxStateArrayLimit = 18;
-    public static async Task WriteKitLocalization(LanguageInfo language, string path, bool writeMising, CancellationToken token = default)
+    public static async Task WriteKitLocalization(LanguageInfo language, ITranslationService translationService, string path, bool writeMising, CancellationToken token = default)
     {
-        KitManager? manager = KitManager.GetSingletonQuick();
-        if (manager == null)
-            return;
-
         List<Kit> kits;
         await using (IKitsDbContext context = new WarfareDbContext())
         {
@@ -59,15 +56,16 @@ public static class KitEx
             Kit kit = kits[i];
             if (kit is not { Class: > Class.Unarmed })
                 continue;
-            if (WriteKitIntl(kit, language, writer, writeMising) && i != kits.Count - 1)
+            if (WriteKitIntl(kit, language, translationService, writer, writeMising) && i != kits.Count - 1)
                 writer.WriteLine();
         }
     }
-    private static bool WriteKitIntl(Kit kit, LanguageInfo language, TextWriter writer, bool writeMising)
+
+    private static bool WriteKitIntl(Kit kit, LanguageInfo language, ITranslationService translationService, TextWriter writer, bool writeMising)
     {
         bool isDefaultValue = false;
         string? value = null;
-        LanguageInfo def = Localization.GetDefaultLanguage();
+        LanguageInfo def = translationService.LanguageService.GetDefaultLanguage();
         if (kit.Translations != null)
         {
             KitTranslation? translation = kit.Translations.FirstOrDefault(x => x.LanguageId == language.Key);
@@ -78,6 +76,7 @@ public static class KitEx
                 value = kit.Translations.FirstOrDefault(x => x.LanguageId == def.Key)?.Value;
             }
         }
+
         if (value == null)
         {
             if (!writeMising)
@@ -89,33 +88,40 @@ public static class KitEx
         string? @default = kit.Translations?.FirstOrDefault(x => x.LanguageId == def.Key)?.Value;
         if (@default != null)
             @default = @default.Replace("\r", string.Empty).Replace("\n", "<br>");
+
         value = value.Replace("\r", string.Empty).Replace("\n", "<br>");
-        writer.WriteLine("# " + kit.GetDisplayName(Localization.GetDefaultLanguage()) + " (ID: " + kit.InternalName + ")");
+        writer.WriteLine("# " + kit.GetDisplayName(def) + " (ID: " + kit.InternalName + ")");
         if (kit.WeaponText != null)
             writer.WriteLine("#  Weapons: " + kit.WeaponText);
-        writer.WriteLine("#  Class:   " + Localization.TranslateEnum(kit.Class, Localization.GetDefaultLanguage()));
-        writer.WriteLine("#  Type:    " + Localization.TranslateEnum(kit.Type, Localization.GetDefaultLanguage()));
+
+        writer.WriteLine("#  Class:   " + translationService.ValueFormatter.FormatEnum(kit.Class, def));
+        writer.WriteLine("#  Type:    " + translationService.ValueFormatter.FormatEnum(kit.Type, def));
+
         FactionInfo? factionInfo = kit.FactionInfo;
         if (factionInfo != null)
-            writer.WriteLine("#  Faction: " + factionInfo.GetName(Localization.GetDefaultLanguage()));
+            writer.WriteLine("#  Faction: " + factionInfo.GetName(def));
+
         if (!isDefaultValue && @default != null)
         {
             writer.WriteLine("# Default: \"" + @default + "\".");
         }
+
         writer.WriteLine(kit.InternalName + ": " + value);
         return true;
     }
+
     public static void UpdateLastEdited(this Kit kit, ulong player)
     {
-        if (Util.IsValidSteam64Id(player))
-        {
-            kit.LastEditor = player;
-            kit.LastEditedTimestamp = DateTimeOffset.UtcNow;
-        }
+        if (new CSteamID(player).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            return;
+        
+        kit.LastEditor = player;
+        kit.LastEditedTimestamp = DateTimeOffset.UtcNow;
     }
-    public static bool ContainsItem(this Kit kit, Guid guid, ulong team, bool checkClothes = false)
+
+    public static bool ContainsItem(this Kit kit, Guid guid, Team team, bool checkClothes = false)
     {
-        FactionInfo? faction = TeamManager.GetFactionSafe(team);
+        FactionInfo? faction = team.Faction.NullIfDefault();
         for (int i = 0; i < kit.Items.Length; ++i)
         {
             IKitItem itm = kit.Items[i];
@@ -136,9 +142,11 @@ public static class KitEx
                     return true;
             }
         }
+
         return false;
     }
-    public static bool ContainsItem(this Kit kit, IAssetLink<ItemAsset>? assetLink, ulong team, bool checkClothes = false)
+
+    public static bool ContainsItem(this Kit kit, IAssetLink<ItemAsset>? assetLink, Team team, bool checkClothes = false)
     {
         if (assetLink == null)
             return false;
@@ -146,6 +154,7 @@ public static class KitEx
         Guid guid = assetLink.Guid;
         return kit.ContainsItem(guid, team, checkClothes);
     }
+
     public static int CountItems(this Kit kit, IAssetLink<ItemAsset>? assetLink, bool checkClothes = false)
     {
         if (assetLink == null)
@@ -154,6 +163,7 @@ public static class KitEx
         Guid guid = assetLink.Guid;
         return kit.CountItems(guid, checkClothes);
     }
+
     public static int CountItems(this Kit kit, Guid guid, bool checkClothes = false)
     {
         int count = 0;
@@ -196,6 +206,7 @@ public static class KitEx
 
         return ld;
     }
+
     /// <summary>Indexed from 1.</summary>
     /// <returns>-1 if operation results in an overflow or invalid characters are found, otherwise, the id of the loadout.</returns>
     public static int GetLoadoutId(ReadOnlySpan<char> chars)
@@ -218,6 +229,7 @@ public static class KitEx
     }
 
     public static string GetLoadoutName(ulong player, int id) => player.ToString("D17", Data.AdminLocale) + "_" + GetLoadoutLetter(id);
+
     /// <summary>Indexed from 1.</summary>
     public static unsafe string GetLoadoutLetter(int id)
     {
@@ -237,6 +249,7 @@ public static class KitEx
         }
         return new string(ptr, 0, len);
     }
+
     public static byte GetKitItemTypeId(IKitItem item)
     {
         if (item is SpecificPageKitItem)
@@ -250,6 +263,7 @@ public static class KitEx
 
         return 0;
     }
+
     public static IKitItem? GetEmptyKitItem(byte id)
     {
         if (id is 0 or > 4)
@@ -264,18 +278,21 @@ public static class KitEx
             4 => typeof(AssetRedirectClothingKitItem),
         });
     }
+
     public static string GetFlagIcon(this Faction? faction)
     {
         if (faction is not { SpriteIndex: not null })
             return "<sprite index=0/>";
         return "<sprite index=" + faction.SpriteIndex.Value.ToString(Data.AdminLocale) + "/>";
     }
+
     public static string GetFlagIcon(this FactionInfo? faction)
     {
         if (faction is not { TMProSpriteIndex: not null })
             return "<sprite index=0/>";
         return "<sprite index=" + faction.TMProSpriteIndex.Value.ToString(Data.AdminLocale) + "/>";
     }
+
     public static char GetIcon(this Class @class)
     {
         if (SquadManager.Config is { Classes: { Length: > 0 } arr })
@@ -311,35 +328,67 @@ public static class KitEx
             _ => '±'
         };
     }
+
     public static float GetTeamLimit(this Kit kit) => kit.TeamLimit ?? KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(kit.Class);
-    public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
+
+    public static bool IsLimited(this Kit kit, PlayerService playerService, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
     {
-        Team t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;
+
         if (!requireCounts && kit.TeamLimit >= 1f)
+        {
             return false;
-        IEnumerable<UCPlayer> friendlyPlayers = t == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == t);
-        allowedPlayers = Mathf.CeilToInt(kit.GetTeamLimit() * friendlyPlayers.Count());
-        currentPlayers = friendlyPlayers.Count(k => k.ActiveKit.HasValue && k.ActiveKit.Value == kit.PrimaryKey);
+        }
+
+        IEnumerable<WarfarePlayer> friendlyPlayers = team == null
+            ? playerService.OnlinePlayers
+            : playerService.OnlinePlayersOnTeam(team);
+
+        int ttl = 0;
+        foreach (WarfarePlayer player in friendlyPlayers)
+        {
+            ++ttl;
+            if (player.Component<KitPlayerComponent>().ActiveKitKey is { } pk && pk == kit.PrimaryKey)
+                ++currentPlayers;
+        }
+        
+        allowedPlayers = Mathf.CeilToInt(kit.GetTeamLimit() * ttl);
         if (kit.TeamLimit >= 1f)
+        {
             return false;
+        }
+
         return currentPlayers + 1 > allowedPlayers;
     }
-    public static bool IsClassLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
+
+    public static bool IsClassLimited(this Kit kit, PlayerService playerService, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
     {
-        Team t = team is 1 or 2 ? team : TeamManager.GetTeamNumber(kit.FactionInfo);
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;
         if (!requireCounts && (kit.TeamLimit >= 1f))
             return false;
-        IEnumerable<UCPlayer> friendlyPlayers = t == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == t);
-        allowedPlayers = Mathf.CeilToInt(kit.GetTeamLimit() * friendlyPlayers.Count());
-        currentPlayers = friendlyPlayers.Count(k => k.KitClass == kit.Class);
+
+        IEnumerable<WarfarePlayer> friendlyPlayers = team == null
+            ? playerService.OnlinePlayers
+            : playerService.OnlinePlayersOnTeam(team);
+
+        int ttl = 0;
+        foreach (WarfarePlayer player in friendlyPlayers)
+        {
+            ++ttl;
+            if (player.Component<KitPlayerComponent>().ActiveClass == kit.Class)
+                ++currentPlayers;
+        }
+
+        allowedPlayers = Mathf.CeilToInt(kit.GetTeamLimit() * ttl);
+
         if (kit.TeamLimit >= 1f)
             return false;
+
         return currentPlayers + 1 > allowedPlayers;
     }
+
     public static bool TryParseClass(string val, out Class @class)
     {
         if (Enum.TryParse(val, true, out @class))

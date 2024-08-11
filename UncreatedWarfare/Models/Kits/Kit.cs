@@ -22,6 +22,8 @@ using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Models.Kits;
 
@@ -478,18 +480,18 @@ public class Kit : ITranslationArgument, ICloneable
     public const string DisplayNameFormat = "d";
     [FormatDisplay("Class (" + nameof(Warfare.Kits.Class) + ")")]
     public const string ClassFormat = "c";
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         if (format is not null)
         {
             if (format.Equals(IdFormat, StringComparison.Ordinal))
                 return InternalName;
             if (format.Equals(ClassFormat, StringComparison.Ordinal))
-                return Warfare.Localization.TranslateEnum(Class, language);
+                return formatter.FormatEnum(Class, parameters.Language);
         }
 
-        return GetDisplayName(language);
+        return GetDisplayName(parameters.Language);
     }
 
     public object Clone() => new Kit(InternalName, this);

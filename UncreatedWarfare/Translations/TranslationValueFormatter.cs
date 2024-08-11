@@ -1,22 +1,33 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Configuration;
+using Uncreated.Warfare.Exceptions;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Addons;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations;
 public class TranslationValueFormatter : ITranslationValueFormatter
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly LanguageService _languageService;
+    private readonly Type _enumFormatter;
 
     private const string NullColorTMPro = "<#569cd6><b>null</b></color>";
     private const string NullColorUnity = "<color=#569cd6><b>null</b></color>";
     private const string NullNoColor = "null";
 
     private readonly ConcurrentDictionary<Type, object> _valueFormatters = new ConcurrentDictionary<Type, object>();
-    public TranslationValueFormatter(IServiceProvider serviceProvider)
+    public TranslationValueFormatter(IServiceProvider serviceProvider, IConfiguration systemConfig)
     {
+        _enumFormatter = ContextualTypeResolver.ResolveType(systemConfig["translations:enum_formatter_type"], typeof(IEnumFormatter))
+            ?? throw new InvalidOperationException("No enum formatter configured in 'enum_formatter_type'.");
+
         _serviceProvider = serviceProvider;
+        _languageService = serviceProvider.GetRequiredService<LanguageService>();
     }
 
     // in order of priority. can either be a type or the object itself for singletons
@@ -53,6 +64,26 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         }
 
         return formattedValue;
+    }
+
+    public string FormatEnum<TEnum>(TEnum value, LanguageInfo? language) where TEnum : unmanaged, Enum
+    {
+        return ((IEnumFormatter<TEnum>)GetValueFormatter<TEnum>()).GetValue(value, language ?? _languageService.GetDefaultLanguage());
+    }
+
+    public string FormatEnum(object value, Type enumType, LanguageInfo? language)
+    {
+        return ((IEnumFormatter)GetValueFormatter(enumType)).GetValue(value, language ?? _languageService.GetDefaultLanguage());
+    }
+
+    public string FormatEnumName<TEnum>(LanguageInfo? language) where TEnum : unmanaged, Enum
+    {
+        return ((IEnumFormatter<TEnum>)GetValueFormatter<TEnum>()).GetName(language ?? _languageService.GetDefaultLanguage());
+    }
+
+    public string FormatEnumName(Type enumType, LanguageInfo? language)
+    {
+        return ((IEnumFormatter)GetValueFormatter(enumType)).GetName(language ?? _languageService.GetDefaultLanguage());
     }
 
     private string FormatIntl<T>(T? value, in ValueFormatParameters parameters)
@@ -95,6 +126,11 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     {
         return (IValueFormatter)_valueFormatters.GetOrAdd(type, type =>
         {
+            if (type.IsEnum)
+            {
+                return ActivatorUtilities.CreateInstance(_serviceProvider, typeof(PropertiesEnumValueFormatter<>).MakeGenericType(type));
+            }
+
             Type lookingForFormatterType = typeof(IValueFormatter<>).MakeGenericType(type);
             foreach (object valueFormatter in _valueFormatterTypes)
             {

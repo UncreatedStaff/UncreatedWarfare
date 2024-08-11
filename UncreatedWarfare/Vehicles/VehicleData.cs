@@ -11,6 +11,9 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -241,12 +244,12 @@ public class VehicleData : ITranslationArgument, IListItem
     public const string COLORED_NAME = "cn";
     [FormatDisplay("Vehicle Name")]
     public const string NAME = "n";
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         string name = Assets.find(VehicleID) is VehicleAsset va ? va.vehicleName : VehicleID.ToString("N");
         if (format is not null && format.Equals(COLORED_NAME, StringComparison.Ordinal))
-            return Localization.Colorize(TeamManager.GetTeamHexColor(Team), name, flags);
+            return Localization.Colorize(TeamManager.GetTeamHexColor(Team), name, parameters.Options);
         return name;
     }
 }

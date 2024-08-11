@@ -1,12 +1,15 @@
 ﻿using SDG.NetTransport;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Layouts.UI;
 
 [UnturnedUI(BasePath = "Canvas/Circles")]
 public class CaptureUI : UnturnedUI
 {
+    private readonly ITranslationValueFormatter _valueFormatter;
+
     public readonly UnturnedLabel Background = new UnturnedLabel("BackgroundCircle");
     public readonly UnturnedLabel Foreground = new UnturnedLabel("BackgroundCircle/ForegroundCircle");
     public readonly UnturnedLabel T1CountIcon = new UnturnedLabel("BackgroundCircle/ForegroundCircle/T1CountIcon");
@@ -14,7 +17,10 @@ public class CaptureUI : UnturnedUI
     public readonly UnturnedLabel T2CountIcon = new UnturnedLabel("BackgroundCircle/ForegroundCircle/T2CountIcon");
     public readonly UnturnedLabel T2Count = new UnturnedLabel("BackgroundCircle/ForegroundCircle/T2CountIcon/T2Count");
     public readonly UnturnedLabel Status = new UnturnedLabel("Status");
-    public CaptureUI() : base(Gamemode.Config.UICapture.GetId(), reliable: false) { }
+    public CaptureUI(ITranslationValueFormatter valueFormatter) : base(Gamemode.Config.UICapture.GetId(), reliable: false)
+    {
+        _valueFormatter = valueFormatter;
+    }
 
     public void Send(UCPlayer player, in CaptureUIParameters p)
     {
@@ -25,7 +31,7 @@ public class CaptureUI : UnturnedUI
             return;
         }
         GetColors(p.Team, p.Type, out string backcolor, out string forecolor);
-        string translation = p.Type is EFlagStatus.BLANK ? string.Empty : Localization.TranslateEnum(p.Type, player.Locale.LanguageInfo);
+        string translation = p.Type is EFlagStatus.BLANK ? string.Empty : _valueFormatter.FormatEnum(p.Type, player.Locale.LanguageInfo);
         string desc = new string(Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(p.Points)], 1);
         if (p.Type is not EFlagStatus.BLANK and not EFlagStatus.DONT_DISPLAY && Gamemode.Config.UICaptureShowPointCount)
             translation += " (" + p.Points.ToString(player.Locale.CultureInfo) + "/" + Flag.MaxPoints.ToString(player.Locale.CultureInfo) + ")";

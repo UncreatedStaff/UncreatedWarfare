@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare;
 
@@ -134,15 +133,15 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
 }
 public class CooldownConfig : JSONConfigData
 {
-    public RotatableConfig<float> DeployFOBCooldownMin { get; set; }
-    public RotatableConfig<float> DeployFOBCooldownMax { get; set; }
-    public RotatableConfig<int> DeployFOBPlayersMin { get; set; }
-    public RotatableConfig<int> DeployFOBPlayersMax { get; set; }
-    public RotatableConfig<float> DeployFOBCooldownAlpha { get; set; }
-    public RotatableConfig<float> RequestKitCooldown { get; set; }
-    public RotatableConfig<float> RequestVehicleCooldown { get; set; }
-    public RotatableConfig<float> ReviveXPCooldown { get; set; }
-    public RotatableConfig<float> GlobalTraitCooldown { get; set; }
+    public float DeployFOBCooldownMin { get; set; }
+    public float DeployFOBCooldownMax { get; set; }
+    public int DeployFOBPlayersMin { get; set; }
+    public int DeployFOBPlayersMax { get; set; }
+    public float DeployFOBCooldownAlpha { get; set; }
+    public float RequestKitCooldown { get; set; }
+    public float RequestVehicleCooldown { get; set; }
+    public float ReviveXPCooldown { get; set; }
+    public float GlobalTraitCooldown { get; set; }
     public override void SetDefaults()
     {
         DeployFOBCooldownMin = 60;
@@ -200,17 +199,20 @@ public class Cooldown(UCPlayer player, CooldownType cooldownType, float duration
     [FormatDisplay("Short Time (3h 40m)")]
     /// <summary>3h 4m 20s</summary>
     public const string FormatTimeShort = "tl2";
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         if (!string.IsNullOrEmpty(format))
         {
             if (format.Equals(FormatName, StringComparison.Ordinal))
-                return Localization.TranslateEnum(CooldownType, language);
+                return formatter.FormatEnum(CooldownType, parameters.Language);
+
             if (format.Equals(FormatTimeLong, StringComparison.Ordinal))
                 return Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language, culture);
+
             if (format.Equals(FormatTimeShort, StringComparison.Ordinal))
                 return ToString();
+
             return Timeleft.ToString(format);
         }
 

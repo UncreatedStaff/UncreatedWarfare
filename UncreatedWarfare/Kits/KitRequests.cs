@@ -23,10 +23,12 @@ public class KitRequests
 {
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly RequestTranslations _translations;
+    private readonly ITranslationValueFormatter _valueFormatter;
     public KitManager Manager { get; }
     public KitRequests(KitManager manager, IServiceProvider serviceProvider)
     {
         _droppedItemTracker = serviceProvider.GetRequiredService<DroppedItemTracker>();
+        _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<RequestTranslations>>().Value;
         Manager = manager;
     }
@@ -64,7 +66,7 @@ public class KitRequests
             ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
             return;
         }
-        ctx.LogAction(ActionLogType.RequestKit, $"Loadout {KitEx.GetLoadoutLetter(KitEx.ParseStandardLoadoutId(loadout.InternalName))}: {loadout.InternalName}, Team {team}, Class: {Localization.TranslateEnum(loadout.Class)}");
+        ctx.LogAction(ActionLogType.RequestKit, $"Loadout {KitEx.GetLoadoutLetter(KitEx.ParseStandardLoadoutId(loadout.InternalName))}: {loadout.InternalName}, Team {team}, Class: {_valueFormatter.FormatEnum(loadout.Class, ctx.Language)}");
 
         if (!await GrantKitRequest(ctx, loadout, token).ConfigureAwait(false))
         {
@@ -193,7 +195,7 @@ public class KitRequests
         if (kit.IsLimited(out _, out allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
             throw ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
 
-        ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.InternalName}, Team {team}, Class: {Localization.TranslateEnum(kit.Class)}");
+        ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.InternalName}, Team {team}, Class: {_valueFormatter.FormatEnum(kit.Class, ctx.Language)}");
 
         if (!await GrantKitRequest(ctx, kit, token).ConfigureAwait(false))
         {

@@ -13,6 +13,8 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Components;
@@ -103,12 +105,13 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         _component?.SpawnAttackIcon();
     }
     
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         if (format is not null)
         {
             if (format.Equals(FOB.FormatNameColored, StringComparison.Ordinal))
-                return Localization.Colorize(UIColor, Name, flags);
+                return Localization.Colorize(UIColor, Name, parameters.Options);
             else if (format.Equals(FOB.FormatLocationName, StringComparison.Ordinal))
                 return ClosestLocation;
             else if (format.Equals(FOB.FormatGridLocation, StringComparison.Ordinal))

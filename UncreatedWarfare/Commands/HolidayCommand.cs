@@ -2,6 +2,7 @@
 using System.Reflection;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -9,10 +10,16 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class HolidayCommand : IExecutableCommand
 {
+    private readonly ITranslationValueFormatter _valueFormatter;
     private static readonly PermissionLeaf PermissionSetHoliday = new PermissionLeaf("commands.holiday.set", unturned: false, warfare: true);
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public HolidayCommand(ITranslationValueFormatter valueFormatter)
+    {
+        _valueFormatter = valueFormatter;
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -56,7 +63,7 @@ public class HolidayCommand : IExecutableCommand
         }
 
         field.SetValue(null, holiday);
-        Context.ReplyString("Set active holiday to " + Localization.TranslateEnum(holiday, Context.Language));
+        Context.ReplyString("Set active holiday to " + _valueFormatter.FormatEnum(holiday, Context.Language));
 
         field = typeof(Provider).GetField("authorityHoliday", BindingFlags.Static | BindingFlags.NonPublic);
         if (holiday == ENPCHoliday.NONE)

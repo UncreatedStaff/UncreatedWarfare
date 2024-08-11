@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Players.Management.Legacy;
 
@@ -122,8 +124,7 @@ public struct PlayerNames : IPlayer
     public static bool operator !=(PlayerNames left, PlayerNames right) => left.Steam64.m_SteamID != right.Steam64.m_SteamID;
     public override bool Equals(object? obj) => obj is PlayerNames pn && Steam64.m_SteamID == pn.Steam64.m_SteamID;
     public override int GetHashCode() => Steam64.GetHashCode();
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags) => new OfflinePlayer(in this).Translate(language, format, target, culture, ref flags);
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters) => new OfflinePlayer(in this).Translate(formatter, in parameters);
 
     public static string SelectPlayerName(PlayerNames names) => names.PlayerName;
     public static string SelectCharacterName(PlayerNames names) => names.CharacterName;

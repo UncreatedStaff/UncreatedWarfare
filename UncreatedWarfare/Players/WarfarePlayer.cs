@@ -7,6 +7,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
@@ -26,6 +27,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     public BinaryPlayerSave Save { get; }
     public WarfarePlayerLocale Locale { get; }
     public SemaphoreSlim PurchaseSync { get; }
+    public PlayerSummary CachedSteamProfile { get; internal set; }
 
     /// <summary>
     /// If the player this object represents is currently online. Set to false *after* the leave event is fired.

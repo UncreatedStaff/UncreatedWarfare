@@ -191,8 +191,12 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)));
 
         // UI
+        serviceCollection.AddSingleton<ModerationUI>();
+
         serviceCollection.AddSingleton<KitMenuUI>();
+
         serviceCollection.AddSingleton<ActionMenuUI>();
+
         serviceCollection.AddSingleton<SquadMenuUI>();
         serviceCollection.AddSingleton<SquadListUI>();
 

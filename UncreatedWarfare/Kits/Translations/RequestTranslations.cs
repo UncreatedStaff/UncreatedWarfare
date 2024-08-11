@@ -1,5 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Quests;

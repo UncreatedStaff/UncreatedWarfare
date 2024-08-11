@@ -6,9 +6,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Traits;
@@ -355,18 +357,18 @@ public class TraitData : ITranslationArgument
                     ? DescriptionTranslations.Translate(parameters.Language, string.Empty).Replace('\n', ' ')
                     : formatter.Format<object>(null, new ValueFormatParameters(in parameters, parameters.Options & TranslationOptions.NoRichText));
             if (format.Equals(FormatColorTypeName, StringComparison.Ordinal))
-                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), TypeName, flags);
+                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), TypeName, parameters.Options);
             if (format.Equals(FormatColorName, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null
-                    ? NameTranslations.Translate(language, TypeName).Replace('\n', ' ')
-                    : TypeName, flags);
+                    ? NameTranslations.Translate(parameters.Language, TypeName).Replace('\n', ' ')
+                    : TypeName, parameters.Options);
             if (format.Equals(FormatColorDescription, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), DescriptionTranslations != null
                     ? DescriptionTranslations.Translate(language, string.Empty).Replace('\n', ' ')
-                    : Translation.Null(flags & TranslationFlags.NoRichText), flags);
+                    : Translation.Null(parameters.Options & TranslationFlags.NoRichText), parameters.Options);
         }
         return NameTranslations != null
-            ? NameTranslations.Translate(language, TypeName).Replace('\n', ' ')
+            ? NameTranslations.Translate(parameters.Language, TypeName).Replace('\n', ' ')
             : TypeName;
     }
 }

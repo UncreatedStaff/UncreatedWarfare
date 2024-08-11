@@ -23,12 +23,13 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using Cache = Uncreated.Warfare.Components.Cache;
@@ -1654,14 +1655,14 @@ public class BuildableData : ITranslationArgument
     [JsonPropertyName("dontAutoWhitelist")]
     public bool DontAutoWhitelist { get; set; }
 
-    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        string? format = parameters.Format.Format;
         if (Emplacement is not null && Emplacement.EmplacementVehicle.TryGetAsset(out VehicleAsset? vasset))
         {
             string name = vasset.vehicleName;
             if (format is not null && format.Equals(T.FormatRarityColor))
-                return Localization.Colorize(ColorUtility.ToHtmlStringRGB(ItemTool.getRarityColorUI(vasset.rarity)), name, flags);
+                return Localization.Colorize(HexStringHelper.FormatHexColor(ItemTool.getRarityColorUI(vasset.rarity)), name, parameters.Options);
 
             return name;
         }
@@ -1670,9 +1671,9 @@ public class BuildableData : ITranslationArgument
         {
             string name = GetItemName(iasset.itemName);
             if (format is not null && format.Equals(T.FormatRarityColor))
-                return Localization.Colorize(ColorUtility.ToHtmlStringRGB(ItemTool.getRarityColorUI(iasset.rarity)), name, flags);
-            else
-                return name;
+                return Localization.Colorize(HexStringHelper.FormatHexColor(ItemTool.getRarityColorUI(iasset.rarity)), name, parameters.Options);
+            
+            return name;
         }
 
         if (Emplacement is not null)
@@ -1681,17 +1682,17 @@ public class BuildableData : ITranslationArgument
             {
                 string name = GetItemName(iasset.itemName);
                 if (format is not null && format.Equals(T.FormatRarityColor))
-                    return Localization.Colorize(ColorUtility.ToHtmlStringRGB(ItemTool.getRarityColorUI(iasset.rarity)), name, flags);
-                else
-                    return name;
+                    return Localization.Colorize(HexStringHelper.FormatHexColor(ItemTool.getRarityColorUI(iasset.rarity)), name, parameters.Options);
+                
+                return name;
             }
             if (Emplacement.Ammo.TryGetAsset(out iasset))
             {
                 string name = GetItemName(iasset.itemName);
                 if (format is not null && format.Equals(T.FormatRarityColor))
-                    return Localization.Colorize(ColorUtility.ToHtmlStringRGB(ItemTool.getRarityColorUI(iasset.rarity)), name, flags);
-                else
-                    return name;
+                    return Localization.Colorize(HexStringHelper.FormatHexColor(ItemTool.getRarityColorUI(iasset.rarity)), name, parameters.Options);
+                
+                return name;
             }
         }
 
@@ -1703,7 +1704,7 @@ public class BuildableData : ITranslationArgument
             return itemName;
         }
 
-        return Localization.TranslateEnum(Type, language);
+        return formatter.FormatEnum(Type, parameters.Language);
     }
 
     public override string ToString()

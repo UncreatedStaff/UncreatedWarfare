@@ -7,7 +7,7 @@ using System.Text.Json;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
@@ -16,16 +16,28 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Deaths;
 public class DeathMessageResolver
 {
     private readonly EventDispatcher2 _dispatcher;
     private readonly ILogger<DeathMessageResolver> _logger;
-    public DeathMessageResolver(EventDispatcher2 dispatcher, ILogger<DeathMessageResolver> logger)
+    private readonly ITranslationValueFormatter _valueFormatter;
+    private readonly LanguageService _languageService;
+
+    public DeathMessageResolver(
+        EventDispatcher2 dispatcher,
+        ILogger<DeathMessageResolver> logger,
+        ITranslationValueFormatter valueFormatter,
+        LanguageService languageService
+        )
     {
         _dispatcher = dispatcher;
         _logger = logger;
+        _valueFormatter = valueFormatter;
+        _languageService = languageService;
     }
 
     /*
@@ -502,7 +514,7 @@ public class DeathMessageResolver
             }
         }
 
-        str = await TranslateMessage(Localization.GetDefaultLanguage(), Data.AdminLocale, e, true, token);
+        str = await TranslateMessage(_languageService.GetDefaultLanguage(), Data.AdminLocale, e, true, token);
         Log(tk, str, e);
 
         e.DefaultMessage = str!;
@@ -759,7 +771,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         }
 
         if (causes is null)
-            return Localization.TranslateEnum(args.Cause, language) + " Dead: " + args.Player.Names.CharacterName;
+            return _valueFormatter.FormatEnum(args.Cause, language) + " Dead: " + args.Player.Names.CharacterName;
         rtn:
         int i = FindDeathCause(language, causes, args);
 
@@ -771,7 +783,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         if (val is null)
         {
             if (isDefault)
-                return Localization.TranslateEnum(args.Cause, language) + " Dead: " + args.Player.Names.CharacterName;
+                return _valueFormatter.FormatEnum(args.Cause, language) + " Dead: " + args.Player.Names.CharacterName;
             causes = _defaultTranslations;
             isDefault = true;
             goto rtn;
@@ -823,7 +835,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             }
             if (!language.IsDefault && _translationList.TryGetValue(L.Default, out causes))
             {
-                language = Localization.GetDefaultLanguage();
+                language = _languageService.GetDefaultLanguage();
                 continue;
             }
             if (causes != _defaultTranslations)
@@ -908,7 +920,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     /// </summary>
     private async UniTask<string> TranslateDeath(string template, PlayerDied e, LanguageInfo? language, IFormatProvider formatProvider, bool useSteamNames, CancellationToken token = default)
     {
-        language ??= Localization.GetDefaultLanguage();
+        language ??= _languageService.GetDefaultLanguage();
 
         string? killerName = null;
         if (e.Instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
@@ -948,7 +960,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         [
             useSteamNames ? e.Player.Names.PlayerName : e.Player.Names.CharacterName, // {0}
             killerName ?? string.Empty,                                               // {1}
-            Localization.TranslateEnum(e.Limb, language),                             // {2}
+            _valueFormatter.FormatEnum(e.Limb, language),                                  // {2}
             itemName ?? string.Empty,                                                 // {3}
             e.KillDistance.ToString("F0", formatProvider),                            // {4}
             thirdPartyName ?? string.Empty,                                           // {5}
@@ -964,8 +976,8 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         {
             _logger.LogWarning("Formatting error for template: \"{0}\" ({1}:{2}:{3}).",
                 template,
-                Localization.TranslateEnum(e.MessageCause),
-                Localization.TranslateEnum(e.MessageFlags),
+                _valueFormatter.FormatEnum(e.MessageCause, language),
+                _valueFormatter.FormatEnum(e.MessageFlags, language),
                 language.Code.ToUpper()
             );
 

@@ -12,6 +12,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Util;
 using UnityEngine.Networking;
@@ -91,7 +92,7 @@ internal partial class ModerationUI
 
         return true;
     }
-    private void LoadActionMenu(UCPlayer player, bool editingExisting)
+    private void LoadActionMenu(WarfarePlayer player, bool editingExisting)
     {
         ModerationData data = GetOrAddModerationData(player);
 
@@ -166,9 +167,9 @@ internal partial class ModerationUI
 
             ModerationSelectedActor mainActor = ModerationActionActors[0];
             mainActor.Root.SetVisibility(c, true);
-            mainActor.Name.SetText(c, player.Name.PlayerName);
+            mainActor.Name.SetText(c, player.Names.PlayerName);
             mainActor.YouButton.SetVisibility(c, false);
-            mainActor.Steam64Input.SetText(c, player.Steam64.ToString(CultureInfo.InvariantCulture));
+            mainActor.Steam64Input.SetText(c, player.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
             mainActor.RoleInput.SetText(c, RelatedActor.RolePrimaryAdmin);
             mainActor.AsAdminToggleState.SetVisibility(c, false);
             mainActor.AsAdminToggleButton.SetVisibility(c, false);
@@ -181,11 +182,11 @@ internal partial class ModerationUI
             mainEvidence.PreviewRoot.SetVisibility(c, false);
             mainEvidence.PreviewName.SetVisibility(c, false);
             mainEvidence.NoPreviewName.SetText(c, string.Empty);
-            mainEvidence.ActorName.SetText(c, player.Name.PlayerName);
+            mainEvidence.ActorName.SetText(c, player.Names.PlayerName);
             mainEvidence.TimestampInput.SetText(c, evidence.Timestamp.UtcDateTime.ToString(DateTimeFormatInput));
             mainEvidence.MessageInput.SetText(c, string.Empty);
             mainEvidence.LinkInput.SetText(c, string.Empty);
-            mainEvidence.Steam64Input.SetText(c, player.Steam64.ToString(CultureInfo.InvariantCulture));
+            mainEvidence.Steam64Input.SetText(c, player.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
             mainEvidence.YouButton.SetVisibility(c, false);
             mainEvidence.RemoveButton.SetVisibility(c, false);
 
@@ -235,7 +236,7 @@ internal partial class ModerationUI
                     index = presets.Length;
                 PunishmentPreset preset = presets[index - 1];
                 data.PendingPresetValue = preset;
-                string str = Localization.TranslateEnum(preset.PrimaryModerationType);
+                string str = _valueFormatter.FormatEnum(preset.PrimaryModerationType, player.Locale.LanguageInfo);
 
                 if (preset.PrimaryDuration.HasValue)
                 {
@@ -254,11 +255,11 @@ internal partial class ModerationUI
                             : (FormattingUtility.ToTimeString(preset.SecondaryDuration.Value) + " ");
                     }
 
-                    str += Localization.TranslateEnum(preset.SecondaryModerationType!.Value);
+                    str += _valueFormatter.FormatEnum(preset.SecondaryModerationType!.Value, player.Locale.LanguageInfo);
                 }
 
                 ModerationActionTypeHeader.SetText(c, str);
-                ModerationActionPresetHeader.SetText(c, Localization.TranslateEnum(data.PendingPreset) + " | Level " + nextLevel);
+                ModerationActionPresetHeader.SetText(c, _valueFormatter.FormatEnum(data.PendingPreset, player.Locale.LanguageInfo) + " | Level " + nextLevel);
                 CreateInstances(data, player);
 
                 UpdateArgumentTypes(player, editingExisting);

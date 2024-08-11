@@ -19,6 +19,7 @@ using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
@@ -27,6 +28,7 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public sealed class KitCommand : IExecutableCommand
 {
+    private readonly ITranslationValueFormatter _valueFormatter;
     private const string Syntax = "/kit <keybind|search|skills|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
     private const string Help = "Admin command to manage kits; creating, deleting, editing, and giving/removing access is done through this command.";
 
@@ -44,6 +46,11 @@ public sealed class KitCommand : IExecutableCommand
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public KitCommand(ITranslationValueFormatter valueFormatter)
+    {
+        _valueFormatter = valueFormatter;
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -1368,9 +1375,9 @@ public sealed class KitCommand : IExecutableCommand
             {
                 throw Context.Reply(T.KitInvalidSkillsetLevel, specialty switch
                 {
-                    EPlayerSpeciality.DEFENSE => Localization.TranslateEnum((EPlayerDefense)skillset, Context.Language),
-                    EPlayerSpeciality.OFFENSE => Localization.TranslateEnum((EPlayerOffense)skillset, Context.Language),
-                    EPlayerSpeciality.SUPPORT => Localization.TranslateEnum((EPlayerSupport)skillset, Context.Language),
+                    EPlayerSpeciality.DEFENSE => _valueFormatter.FormatEnum((EPlayerDefense)skillset, Context.Language),
+                    EPlayerSpeciality.OFFENSE => _valueFormatter.FormatEnum((EPlayerOffense)skillset, Context.Language),
+                    EPlayerSpeciality.SUPPORT => _valueFormatter.FormatEnum((EPlayerSupport)skillset, Context.Language),
                     _ => skillset.ToString()
                 }, level);
             }
@@ -1442,9 +1449,9 @@ public sealed class KitCommand : IExecutableCommand
             }
             throw Context.Reply(T.KitInvalidSkillsetLevel, specialty switch
             {
-                EPlayerSpeciality.DEFENSE => Localization.TranslateEnum((EPlayerDefense)skillset, Context.Language),
-                EPlayerSpeciality.OFFENSE => Localization.TranslateEnum((EPlayerOffense)skillset, Context.Language),
-                EPlayerSpeciality.SUPPORT => Localization.TranslateEnum((EPlayerSupport)skillset, Context.Language),
+                EPlayerSpeciality.DEFENSE => _valueFormatter.FormatEnum((EPlayerDefense)skillset, Context.Language),
+                EPlayerSpeciality.OFFENSE => _valueFormatter.FormatEnum((EPlayerOffense)skillset, Context.Language),
+                EPlayerSpeciality.SUPPORT => _valueFormatter.FormatEnum((EPlayerSupport)skillset, Context.Language),
                 _ => skillset.ToString()
             }, level);
         }
