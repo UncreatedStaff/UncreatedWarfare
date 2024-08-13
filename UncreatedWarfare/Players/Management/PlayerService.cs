@@ -9,6 +9,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Players.Management;
@@ -33,7 +34,8 @@ public class PlayerService
         typeof(AudioRecordPlayerComponent),
         typeof(PlayerEventDispatcher),
         typeof(ItemTrackingPlayerComponent),
-        typeof(KitPlayerComponent)
+        typeof(KitPlayerComponent),
+        typeof(ToastManager)
     ];
 
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;

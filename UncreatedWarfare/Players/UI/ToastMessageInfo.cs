@@ -21,22 +21,78 @@ public sealed class ToastMessageInfo
 {
     private bool _durationOverridden;
     private float _duration;
+
+    /// <summary>
+    /// Toast style this info represents.
+    /// </summary>
     public ToastMessageStyle Style { get; }
+
+    /// <summary>
+    /// Overlapping toasts are split up into channels. Each channel can only show one toast at a time.
+    /// </summary>
     public int Channel { get; }
-    public Guid Guid { get; private set; }
-    public ushort Id { get; private set; }
-    public EffectAsset? Asset { get; private set; }
+
+    /// <summary>
+    /// The effect to send to the player.
+    /// </summary>
+    public IAssetLink<EffectAsset> Asset { get; private set; }
+    
+    /// <summary>
+    /// If this toast should inturrupt whatever toast is currently playing instead of queueing after it plays.
+    /// </summary>
     public bool Inturrupt { get; }
+
+    /// <summary>
+    /// If this effect needs to be cleared when it's <see cref="Duration"/> is over.
+    /// </summary>
+    /// <remarks>Most effects will use Lifetime = X and Lifetime_Spread = 0 to auto-clear.</remarks>
     public bool RequiresClearing { get; }
+
+    /// <summary>
+    /// Should this effect be sent with a high reliability (in terms of how it's networked).
+    /// </summary>
     public bool Reliable { get; set; } = true;
+
+    /// <summary>
+    /// Unique key for UI that requires clearing or setting values.
+    /// </summary>
     public short Key { get; }
+
+    /// <summary>
+    /// Optional managed UI to use.
+    /// </summary>
     public UnturnedUI? UI { get; }
+
+    /// <summary>
+    /// Callback to invoke when sending with a managed <see cref="UI"/>.
+    /// </summary>
     public SendToastWithCustomUI? SendCallback { get; }
+
+    /// <summary>
+    /// Widget flags to disable when the UI is sent.
+    /// </summary>
     public EPluginWidgetFlags DisableFlags { get; set; } = EPluginWidgetFlags.None;
+    
+    /// <summary>
+    /// Widget flags to enable when the UI is sent.
+    /// </summary>
     public EPluginWidgetFlags EnableFlags { get; set; } = EPluginWidgetFlags.None;
+
+    /// <summary>
+    /// Names of all text components in order of their arguments ({0}, etc). <see cref="CanResend"/> must be set to <see langword="true"/> for this to work.
+    /// </summary>
+    /// <remarks>Embedding plugin keys only works when the value is sent separately.</remarks>
     public string[] ResendNames { get; set; } = Array.Empty<string>();
+
+    /// <summary>
+    /// If <see cref="ResendNames"/> have been configured to allow resending the text components when 
+    /// </summary>
     public bool CanResend { get; }
     public bool RequiresResend { get; }
+
+    /// <summary>
+    /// Number of actual slots in the UI that will be sent an empty string if not supplied as an argument.
+    /// </summary>
     public int ClearableSlots { get; set; }
     public float Duration
     {
@@ -72,11 +128,11 @@ public sealed class ToastMessageInfo
         Inturrupt = inturrupt;
         CanResend = canResend;
         RequiresResend = requiresResend && canResend;
-        Key = requiresClearing || inturrupt || canResend ? UnturnedUIKeyPool.Claim() : (short)-1;
+        Key = requiresClearing || canResend ? UnturnedUIKeyPool.Claim() : (short)-1;
     }
     public void UpdateAsset(IAssetLink<EffectAsset> assetContainer)
     {
-        Asset = assetContainer.GetAsset();
+        Asset = assetContainer;
         UI?.LoadFromConfig(Asset);
         if (!Assets.isLoading)
         {

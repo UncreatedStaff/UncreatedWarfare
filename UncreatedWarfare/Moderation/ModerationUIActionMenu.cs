@@ -20,7 +20,7 @@ using UnityEngine.Networking;
 namespace Uncreated.Warfare.Moderation;
 internal partial class ModerationUI
 {
-    private void EndEditInActionMenu(UCPlayer player)
+    private void EndEditInActionMenu(WarfarePlayer player)
     {
         ModerationData data = GetOrAddModerationData(player);
 
@@ -48,7 +48,7 @@ internal partial class ModerationUI
         data.Actors.Clear();
         data.Evidence.Clear();
     }
-    public bool EditEntry(UCPlayer player, ModerationEntry entry)
+    public bool EditEntry(WarfarePlayer player, ModerationEntry entry)
     {
         if (entry.IsLegacy && entry is not Punishment)
             return false;

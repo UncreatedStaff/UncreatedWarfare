@@ -11,6 +11,7 @@ using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Steam;
@@ -304,10 +305,7 @@ internal partial class ModerationUI : UnturnedUI
 
     private void OnReset(UnturnedButton button, Player player)
     {
-        UCPlayer? ucp = UCPlayer.FromPlayer(player);
-        if (ucp == null)
-            return;
-
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
         ModerationData data = GetOrAddModerationData(ucp);
         data.SelectedPlayer = 0ul;
         EndEditInActionMenu(ucp);
@@ -320,7 +318,7 @@ internal partial class ModerationUI : UnturnedUI
         ModerationHistorySortModeButton.SetDefault(player);
         ModerationHistorySearch.SetText(ucp, string.Empty);
 
-        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(ucp.CSteamID, ModerationHistorySearch);
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(ucp.Steam64, ModerationHistorySearch);
         if (textBoxData != null)
             textBoxData.Text = string.Empty;
 
@@ -356,10 +354,7 @@ internal partial class ModerationUI : UnturnedUI
         if (index == -1)
             return;
 
-        UCPlayer? ucp = UCPlayer.FromPlayer(player);
-
-        if (ucp == null)
-            return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
 
         ModerationData data = GetOrAddModerationData(ucp);
         if (data.PlayerList == null || index >= data.PlayerList.Length)
@@ -381,10 +376,7 @@ internal partial class ModerationUI : UnturnedUI
         if (index == -1)
             return;
 
-        UCPlayer? ucp = UCPlayer.FromPlayer(player);
-
-        if (ucp == null)
-            return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
 
         ModerationData data = GetOrAddModerationData(ucp);
         index += data.HistoryPage * ModerationHistory.Length;
@@ -404,35 +396,31 @@ internal partial class ModerationUI : UnturnedUI
     }
     private void OnModerationPlayerSearchTextUpdated(UnturnedTextBox button, Player player, string text)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer != null)
-            SendModerationPlayerList(ucPlayer);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        SendModerationPlayerList(ucp);
     }
     private void OnButtonCloseClicked(UnturnedButton button, Player player)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer != null)
-            Close(ucPlayer);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        Close(ucp);
     }
     private void TryQueueHistoryUpdate(Player player, int ms = 500)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer == null)
-            return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
 
         UniTask.Create(async () =>
         {
-            ModerationData mod = GetOrAddModerationData(ucPlayer);
+            ModerationData mod = GetOrAddModerationData(ucp);
             int v = Interlocked.Increment(ref mod.HistorySearchUpdateVersion);
 
             if (ms > 0)
             {
-                await UniTask.Delay(ms, cancellationToken: ucPlayer.DisconnectToken);
+                await UniTask.Delay(ms, cancellationToken: ucp.DisconnectToken);
                 if (v != mod.HistorySearchUpdateVersion)
                     return;
             }
 
-            await RefreshModerationHistory(ucPlayer, ucPlayer.DisconnectToken);
+            await RefreshModerationHistory(ucp, ucp.DisconnectToken);
         });
     }
     private void OnModerationHistorySortModeUpdated(UnturnedEnumButtonTracker<ModerationHistorySortMode> button, Player player, ModerationHistorySortMode value)
@@ -458,23 +446,24 @@ internal partial class ModerationUI : UnturnedUI
     private void OnModerationHistoryNext(UnturnedButton button, Player player)
     {
         ModerationData data = GetOrAddModerationData(player.channel.owner.playerID.steamID.m_SteamID);
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        WarfarePlayer? ucp = _playerService.GetOnlinePlayerOrNull(player);
+
         ++data.HistoryPage;
 
         ModerationHistoryNextButton.Disable(player);
         ModerationHistoryBackButton.Disable(player);
         ModerationHistoryPage.Disable(player);
-        ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucPlayer?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
+        ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucp?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
 
         TryQueueHistoryUpdate(player, 0);
     }
     private void OnModerationHistoryPageTyped(UnturnedTextBox textBox, Player player, string text)
     {
         ModerationData data = GetOrAddModerationData(player.channel.owner.playerID.steamID.m_SteamID);
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        WarfarePlayer? ucp = _playerService.GetOnlinePlayerOrNull(player);
         if (!int.TryParse(text, out int page))
         {
-            ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucPlayer?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
+            ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucp?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
             return;
         }
 
@@ -487,14 +476,14 @@ internal partial class ModerationUI : UnturnedUI
         ModerationHistoryNextButton.Disable(player);
         ModerationHistoryBackButton.Disable(player);
         ModerationHistoryPage.Disable(player);
-        ModerationHistoryPage.SetText(player, (page + 1).ToString((IFormatProvider?)ucPlayer?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
+        ModerationHistoryPage.SetText(player, (page + 1).ToString((IFormatProvider?)ucp?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
 
         TryQueueHistoryUpdate(player, 0);
     }
     private void OnModerationHistoryBack(UnturnedButton button, Player player)
     {
         ModerationData data = GetOrAddModerationData(player.channel.owner.playerID.steamID.m_SteamID);
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        WarfarePlayer? ucp = _playerService.GetOnlinePlayerOrNull(player);
         --data.HistoryPage;
         if (data.HistoryPage < 0)
             data.HistoryPage = 0;
@@ -502,11 +491,11 @@ internal partial class ModerationUI : UnturnedUI
         ModerationHistoryNextButton.Disable(player);
         ModerationHistoryBackButton.Disable(player);
         ModerationHistoryPage.Disable(player);
-        ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucPlayer?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
+        ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucp?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
 
         TryQueueHistoryUpdate(player, 0);
     }
-    public async UniTask Open(UCPlayer player, CancellationToken token = default)
+    public async UniTask Open(WarfarePlayer player, CancellationToken token = default)
     {
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
         await UniTask.SwitchToMainThread(token);
@@ -515,8 +504,8 @@ internal partial class ModerationUI : UnturnedUI
             TeamSelector.Instance.Close(player);
 
         player.ModalNeeded = true;
-        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
-        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+        player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
 
         if (!player.HasModerationUI)
         {
@@ -531,7 +520,7 @@ internal partial class ModerationUI : UnturnedUI
         data.InfoEvidenceCount = 0;
         await SetPage(player, Page.Moderation, false, token);
     }
-    public void Close(UCPlayer player)
+    public void Close(WarfarePlayer player)
     {
         ThreadUtil.assertIsGameThread();
 
@@ -541,7 +530,7 @@ internal partial class ModerationUI : UnturnedUI
         ClearFromPlayer(player.Connection);
         player.HasModerationUI = false;
     }
-    public async UniTask SetPage(UCPlayer player, Page page, bool isAlreadyInView, CancellationToken token = default)
+    public async UniTask SetPage(WarfarePlayer player, Page page, bool isAlreadyInView, CancellationToken token = default)
     {
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
         if (page is not Page.Moderation and not Page.Players and not Page.Tickets and not Page.Logs)
@@ -559,7 +548,7 @@ internal partial class ModerationUI : UnturnedUI
             _ => PrepareLogsPage(player, token)
         });
     }
-    private async UniTask PrepareModerationPage(UCPlayer player, CancellationToken token = default)
+    private async UniTask PrepareModerationPage(WarfarePlayer player, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
@@ -606,25 +595,25 @@ internal partial class ModerationUI : UnturnedUI
 
         await RefreshModerationHistory(player, token);
     }
-    private UniTask PreparePlayersPage(UCPlayer player, CancellationToken token = default)
+    private UniTask PreparePlayersPage(WarfarePlayer player, CancellationToken token = default)
     {
         return UniTask.CompletedTask;
     }
-    private UniTask PrepareTicketsPage(UCPlayer player, CancellationToken token = default)
+    private UniTask PrepareTicketsPage(WarfarePlayer player, CancellationToken token = default)
     {
         return UniTask.CompletedTask;
     }
-    private UniTask PrepareLogsPage(UCPlayer player, CancellationToken token = default)
+    private UniTask PrepareLogsPage(WarfarePlayer player, CancellationToken token = default)
     {
         return UniTask.CompletedTask;
     }
-    public ModerationData? GetModerationData(UCPlayer player)
+    public ModerationData? GetModerationData(WarfarePlayer player)
     {
         ThreadUtil.assertIsGameThread();
 
         return UnturnedUIDataSource.GetData<ModerationData>(player.CSteamID, Headers[(int)Page.Moderation].Button);
     }
-    public ModerationData GetOrAddModerationData(UCPlayer player) => GetOrAddModerationData(player.Steam64);
+    public ModerationData GetOrAddModerationData(WarfaerPlayer player) => GetOrAddModerationData(player.Steam64);
     public ModerationData GetOrAddModerationData(ulong steam64)
     {
         ThreadUtil.assertIsGameThread();

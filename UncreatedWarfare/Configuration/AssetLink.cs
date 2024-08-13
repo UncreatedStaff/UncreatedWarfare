@@ -1,4 +1,5 @@
 ﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,7 +9,9 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Models.Localization;
+using Uncreated.Framework.UI;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -559,6 +562,22 @@ public static class AssetLink
     }
 
     /// <summary>
+    /// Read an asset link from a configuration section.
+    /// </summary>
+    public static IAssetLink<TAsset> GetAssetLink<TAsset>(this IConfiguration configuration) where TAsset : Asset
+    {
+        return configuration.Get<IAssetLink<TAsset>>() ?? new AssetLinkImpl<TAsset>(0);
+    }
+
+    /// <summary>
+    /// Read an asset link from a configuration at a given <paramref name="key"/> path.
+    /// </summary>
+    public static IAssetLink<TAsset> GetAssetLink<TAsset>(this IConfiguration configuration, string key) where TAsset : Asset
+    {
+        return configuration.GetValue<IAssetLink<TAsset>>(key) ?? new AssetLinkImpl<TAsset>(0);
+    }
+
+    /// <summary>
     /// Write an <see cref="IAssetLink{TAsset}"/> to a json writer.
     /// </summary>
     internal static void WriteJson(Utf8JsonWriter writer, IAssetLink<Asset>? assetLink)
@@ -868,17 +887,17 @@ public static class AssetLink
             return "\"" + asset.name + "\"";
         }
 
-        public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+        public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
         {
             if (GetAsset() is { } asset)
             {
-                return Translation.ToString(asset, language, culture ?? CultureInfo.InvariantCulture, format, null, flags);
+                return formatter.Format(asset, in parameters);
             }
 
             if (Guid != Guid.Empty)
-                return Guid.ToString("N", culture);
+                return Guid.ToString("N", parameters.Culture);
 
-            return Id.ToString("D0", culture);
+            return Id.ToString("D0", parameters.Culture);
         }
 
         public override bool Equals(object? obj)

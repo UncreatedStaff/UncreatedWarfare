@@ -42,8 +42,8 @@ public static class ConfigurationHelper
     /// </summary>
     /// <remarks><paramref name="filePath"/> must be in the Warfare folder.</remarks>
     [MustUseReturnValue]
-    [System.Diagnostics.Contracts.Pure]
-    public static IDisposable ListenForFileUpdate(string filePath, System.Action onUpdated)
+    [Pure]
+    public static IDisposable ListenForFileUpdate(string filePath, Action onUpdated)
     {
         return ChangeToken.OnChange(
             () => FileProvider.Watch(filePath),
@@ -61,7 +61,7 @@ public static class ConfigurationHelper
     /// <summary>
     /// Bind config data to a <see cref="IConfiguration"/> instance.
     /// </summary>
-    [System.Diagnostics.Contracts.Pure]
+    [Pure]
     public static TConfigData ParseConfigData<TConfigData>(this IConfiguration config) where TConfigData : JSONConfigData, new()
     {
         TConfigData? data;
