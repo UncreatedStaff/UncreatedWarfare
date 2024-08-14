@@ -1263,7 +1263,7 @@ public static class LocalizationOld
     }
 }
 
-public struct LanguageSet : IEnumerator<WarfarePlayer>
+public struct LanguageSetOld : IEnumerator<WarfarePlayer>
 {
     public readonly LanguageInfo Language;
     public readonly CultureInfo CultureInfo;
