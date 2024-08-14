@@ -47,7 +47,7 @@ public abstract class UnlockRequirement : ICloneable
     /// <summary>
     /// Get the text that shows on a sign when the player is missing the requirement.
     /// </summary>
-    public abstract string GetSignText(UCPlayer player);
+    public abstract string GetSignText(WarfarePlayer player);
 
     /// <summary>
     /// Read from JSON in the newer format, which does store the type.

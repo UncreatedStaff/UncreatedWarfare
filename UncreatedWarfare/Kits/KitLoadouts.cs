@@ -4,17 +4,21 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using DanielWillett.ModularRpcs.Annotations;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
+
+[RpcClass]
 public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider serviceProvider) where TDbContext : IKitsDbContext, new()
 {
     private readonly PlayerService _playerService = serviceProvider.GetRequiredService<PlayerService>();
@@ -149,14 +153,34 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
         return lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
     }
 
-    public async Task<(Kit?, StandardErrorCode)> UpgradeLoadout(ulong fromPlayer, ulong player, Class @class, string loadoutName, CancellationToken token = default)
+    /// <summary>
+    /// Start upgrading a loadout to the current season.
+    /// </summary>
+    /// <remarks>
+    /// The kit's <see cref="Kit.Disabled"/> property will be set to <see langword="true"/>, and the sign will change to 'being set up by admin', etc.
+    /// The kit should be 'unlocked' when it's done using <see cref="UnlockLoadout"/>.
+    /// </remarks>
+    /// <param name="adminInstigator">The admin that handled the ticket.</param>
+    /// <param name="player">The owner of the loadout.</param>
+    /// <param name="class">The new class to set for the loadout.</param>
+    /// <param name="loadoutInternalId">The internal name of the kit, ex. '76500000000000000_a'.</param>
+    /// <returns>The upgraded kit.</returns>
+    /// <exception cref="KitNotFoundException"/>
+    /// <exception cref="InvalidOperationException">Kit is already up to date.</exception>
+    [RpcReceive]
+    public async Task<Kit> UpgradeLoadout(CSteamID adminInstigator, CSteamID player, Class @class, string loadoutInternalId, CancellationToken token = default)
     {
-        Kit? kit = await Manager.FindKit(loadoutName, token, true, KitManager.FullSet).ConfigureAwait(false);
-        if (kit is null)
-            return (kit, StandardErrorCode.NotFound);
+        Kit? kit = await Manager.FindKit(loadoutInternalId, token, true, KitManager.FullSet).ConfigureAwait(false);
+        
+        if (kit == null)
+        {
+            throw new KitNotFoundException(loadoutInternalId);
+        }
 
         if (kit.Season >= UCWarfare.Season)
-            return (kit, StandardErrorCode.InvalidData);
+        {
+            throw new InvalidOperationException($"Kit is already up to date for season {UCWarfare.Season}.");
+        }
 
         await using IKitsDbContext dbContext = new WarfareDbContext();
 
@@ -167,7 +191,7 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
         kit.Class = @class;
         kit.Faction = null;
         kit.FactionId = null;
-        kit.UpdateLastEdited(fromPlayer);
+        kit.UpdateLastEdited(adminInstigator.m_SteamID);
         kit.SetItemArray(KitDefaults<WarfareDbContext>.GetDefaultLoadoutItems(@class), dbContext);
         kit.SetUnlockRequirementArray(Array.Empty<UnlockRequirement>(), dbContext);
         kit.RequiresNitro = false;
@@ -186,25 +210,27 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
 
         dbContext.Update(kit);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutName} (#{kit.PrimaryKey}). Class: {oldClass} -> {@class}. Old Faction: {oldFaction?.FactionId ?? "none"}", fromPlayer);
+        ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutInternalId} (#{kit.PrimaryKey}). Class: {oldClass} -> {@class}. Old Faction: {oldFaction?.FactionId ?? "none"}", adminInstigator);
 
-        if (!await Manager.HasAccess(kit, player, token))
+        if (!await Manager.HasAccess(kit, player.m_SteamID, token))
         {
-            await Manager.GiveAccess(kit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
-            KitSync.OnAccessChanged(player);
-            ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
+            await Manager.GiveAccess(kit, player.m_SteamID, KitAccessType.Purchase, token).ConfigureAwait(false);
+            KitSync.OnAccessChanged(player.m_SteamID);
+            ActionLog.Add(ActionLogType.ChangeKitAccess, player.m_SteamID.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutInternalId + ", REASON: " + KitAccessType.Purchase, adminInstigator);
         }
 
         await UniTask.SwitchToMainThread(token);
-        if (UCPlayer.FromID(player) is { } pl)
-            Signs.UpdateLoadoutSigns(pl);
+
+        WarfarePlayer? pl = _playerService.GetOnlinePlayerOrNull(player);
+        if (pl != null)
+            Manager.Signs.UpdateSigns(pl);
 
         await Manager.Distribution.DequipKit(kit, true, token).ConfigureAwait(false);
 
-        return (kit, StandardErrorCode.Success);
+        return kit;
     }
 
-    public async Task<(Kit?, StandardErrorCode)> UnlockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
+    public async Task<Kit> UnlockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
     {
         Kit? existing = await Manager.FindKit(loadoutName, token, true, KitManager.FullSet).ConfigureAwait(false);
         if (existing is null)

@@ -3,6 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DanielWillett.ModularRpcs.DependencyInjection;
+using DanielWillett.ModularRpcs.Reflection;
+using DanielWillett.ModularRpcs.Routing;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -80,13 +83,15 @@ public partial class KitManager :
 
         MenuUI = serviceProvider.GetRequiredService<KitMenuUI>();
 
+        IRpcRouter rpcRouter = serviceProvider.GetRequiredService<IRpcRouter>();
+
         Cache = new KitDataCache(this);
         Distribution = new KitDistribution(this, serviceProvider);
         Requests = new KitRequests(this, serviceProvider);
         Signs = new KitSigns(this, serviceProvider);
         Layouts = new KitLayouts(this);
         Boosting = new KitBoosting(this);
-        Loadouts = new KitLoadouts<WarfareDbContext>(this, serviceProvider);
+        Loadouts = ProxyGenerator.Instance.CreateProxy<KitLoadouts<WarfareDbContext>>(rpcRouter, [ this, serviceProvider ]);
         Defaults = new KitDefaults<WarfareDbContext>(this);
 
         _favoritesTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromMinutes(1d), TimeSpan.FromMinutes(1d), false, SaveFavoritesTick);

@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Kits.Translations;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
@@ -12,11 +14,17 @@ namespace Uncreated.Warfare.Players.Unlocks;
 
 public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockRequirement>
 {
+    private readonly RequestTranslations _reqTranslations;
     public Guid QuestId { get; set; }
     public Guid[] UnlockPresets { get; set; } = Array.Empty<Guid>();
 
+    public QuestUnlockRequirement(TranslationInjection<RequestTranslations> reqTranslations)
+    {
+        _reqTranslations = reqTranslations.Value;
+    }
+
     /// <inheritdoc />
-    public override bool CanAccessFast(UCPlayer player)
+    public override bool CanAccessFast(WarfarePlayer player)
     {
         for (int i = 0; i < UnlockPresets.Length; i++)
         {
@@ -27,15 +35,15 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     }
 
     /// <inheritdoc />
-    public override string GetSignText(UCPlayer player)
+    public override string GetSignText(WarfarePlayer player)
     {
         bool access = CanAccessFast(player);
         if (access)
             return T.KitRequiredQuestsComplete.Translate(player);
         if (Assets.find(QuestId) is QuestAsset quest)
-            return T.KitRequiredQuest.Translate(player, false, quest, UCWarfare.GetColor("kit_level_unavailable"));
+            return T.KitRequiredQuest.Translate(quest, UCWarfare.GetColor("kit_level_unavailable"), player);
 
-        return T.KitRequiredQuestsMultiple.Translate(player, false, UnlockPresets.Length, UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length == 1 ? string.Empty : "S");
+        return T.KitRequiredQuestsMultiple.Translate(UnlockPresets.Length, UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length == 1 ? string.Empty : "S", player);
     }
 
     /// <inheritdoc />
@@ -117,7 +125,7 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     /// <inheritdoc />
     public override object Clone()
     {
-        QuestUnlockRequirement req = new QuestUnlockRequirement
+        QuestUnlockRequirement req = new QuestUnlockRequirement(new TranslationInjection<RequestTranslations>(_reqTranslations))
         {
             QuestId = QuestId,
             UnlockPresets = new Guid[UnlockPresets.Length]
@@ -131,11 +139,11 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     {
         if (Assets.find(QuestId) is not QuestAsset asset)
         {
-            return ctx.Reply(T.RequestKitQuestIncomplete, null!);
+            return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, null!);
         }
 
         QuestManager.TryAddQuest(ctx.Player, asset);
-        return ctx.Reply(T.RequestKitQuestIncomplete, asset);
+        return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, asset);
     }
 
     /// <inheritdoc />
@@ -143,11 +151,11 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     {
         if (Assets.find(QuestId) is not QuestAsset asset)
         {
-            return ctx.Reply(T.RequestVehicleQuestIncomplete, null!);
+            return ctx.Reply(_reqTranslations.RequestVehicleQuestIncomplete, null!);
         }
 
         QuestManager.TryAddQuest(ctx.Player, asset);
-        return ctx.Reply(T.RequestVehicleQuestIncomplete, asset);
+        return ctx.Reply(_reqTranslations.RequestVehicleQuestIncomplete, asset);
     }
 
     /// <inheritdoc />

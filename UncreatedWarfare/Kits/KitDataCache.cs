@@ -1,25 +1,25 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Kits;
 
 /// <summary>
 /// Caches kits based on who's online.
 /// </summary>
-public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerDisconnectListener, IQuestCompletedHandler
+public class KitDataCache(KitManager manager) : IAsyncEventListener<PlayerJoined>, IEventListener<PlayerLeft>, IEventListener<QuestCompleted>
 {
     public KitManager Manager { get; } = manager;
     internal ConcurrentDictionary<string, Kit> KitDataById { get; } = new ConcurrentDictionary<string, Kit>(StringComparer.OrdinalIgnoreCase);
@@ -106,7 +106,7 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
         return kit;
     }
 
-    async void IPlayerConnectListener.OnPlayerConnecting(UCPlayer player)
+    async UniTask IAsyncEventListener<PlayerJoined>.HandleEventAsync(PlayerJoined e, IServiceProvider serviceProvider, CancellationToken token)
     {
         foreach (Kit kit in KitDataById.Values)
         {
@@ -115,19 +115,19 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
 
             for (int j = 0; j < kit.UnlockRequirements.Length; j++)
             {
-                if (kit.UnlockRequirements[j] is not QuestUnlockRequirement { UnlockPresets.Length: > 0 } req || req.CanAccess(player))
+                if (kit.UnlockRequirements[j] is not QuestUnlockRequirement { UnlockPresets.Length: > 0 } req || req.CanAccessFast(e.Player))
                     continue;
 
                 if (Assets.find(req.QuestId) is QuestAsset quest)
-                    QuestManager.TryAddQuest(player, quest);
+                    QuestManager.TryAddQuest(e.Player, quest);
                 else
                     L.LogWarning("Unknown quest id " + req.QuestId + " in kit requirement for " + kit.InternalName);
 
                 for (int r = 0; r < req.UnlockPresets.Length; r++)
                 {
-                    BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
+                    BaseQuestTracker? tracker = QuestManager.CreateTracker(e.Player, req.UnlockPresets[r]);
                     if (tracker == null)
-                        L.LogWarning("Failed to create tracker for kit " + kit.InternalName + ", player " + player.Name.PlayerName);
+                        L.LogWarning("Failed to create tracker for kit " + kit.InternalName + ", player " + e.Player.Names.PlayerName);
                 }
             }
         }
@@ -135,9 +135,9 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
         try
         {
             await using WarfareDbContext dbContext = new WarfareDbContext();
-            ulong steam64 = player.Steam64;
+            ulong steam64 = e.Steam64.m_SteamID;
 
-            CancellationToken tkn = player.DisconnectToken;
+            CancellationToken tkn = e.Player.DisconnectToken;
             using CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
 
             List<Kit> kits = await IncludeCachedKitData(dbContext.Kits)
@@ -146,10 +146,10 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
                     x.Access.Any(y => y.Steam64 == steam64))
                 .ToListAsync(tkn);
 
-            if (!player.IsOnline)
+            if (!e.Player.IsOnline)
                 return;
             
-            await UCWarfare.ToUpdate(player.DisconnectToken);
+            await UniTask.SwitchToMainThread(e.Player.DisconnectToken);
 
             foreach (Kit kit in kits)
             {
@@ -164,7 +164,23 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
         }
     }
 
-    void IQuestCompletedHandler.OnQuestCompleted(QuestCompleted e)
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        List<uint>? kits = e.Player.Component<KitPlayerComponent>().AccessibleKits;
+        if (kits == null)
+            return;
+
+        foreach (Kit kit in KitDataByKey.Values)
+        {
+            if (kit.Type != KitType.Loadout || !kits.Contains(kit.PrimaryKey))
+                continue;
+
+            KitDataById.TryRemove(kit.InternalName, out _);
+            KitDataByKey.TryRemove(kit.PrimaryKey, out _);
+        }
+    }
+
+    void IEventListener<QuestCompleted>.HandleEvent(QuestCompleted e, IServiceProvider serviceProvider)
     {
         if (!e.Player.IsOnline)
             return;
@@ -176,55 +192,42 @@ public class KitDataCache(KitManager manager) : IPlayerConnectListener, IPlayerD
 
             for (int j = 0; j < kit.UnlockRequirements.Length; j++)
             {
-                if (kit.UnlockRequirements[j] is not QuestUnlockRequirement { UnlockPresets.Length: > 0 } req || req.CanAccess(e.Player))
+                if (kit.UnlockRequirements[j] is not QuestUnlockRequirement { UnlockPresets.Length: > 0 } req || req.CanAccessFast(e.Player))
                     continue;
 
                 for (int r = 0; r < req.UnlockPresets.Length; r++)
                 {
                     if (req.UnlockPresets[r] != e.PresetKey)
                         continue;
-                    
-                    e.Break();
+
+                    e.Cancel();
                     return;
                 }
             }
         }
     }
 
-    void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
-    {
-        if (player.AccessibleKits == null)
-            return;
-
-        foreach (Kit kit in KitDataByKey.Values)
-        {
-            if (kit.Type != KitType.Loadout || !player.AccessibleKits.Contains(kit.PrimaryKey))
-                continue;
-
-            KitDataById.TryRemove(kit.InternalName, out _);
-            KitDataByKey.TryRemove(kit.PrimaryKey, out _);
-        }
-    }
-
-    internal void OnNitroUpdated(UCPlayer player, byte state)
+    internal void OnNitroUpdated(WarfarePlayer player, byte state)
     {
         foreach (Kit kit in KitDataByKey.Values)
         {
             if (kit is { RequiresNitro: true })
-                Signs.UpdateKitSigns(player, kit.InternalName);
+            {
+                Manager.Signs.UpdateSigns(kit.InternalName, player);
+            }
         }
 
         if (state == 0)
         {
-            UCWarfare.RunTask(static async (mngr, player, tkn) =>
+            Task.Run(async () =>
             {
-                Kit? activeKit = await player.GetActiveKit(tkn).ConfigureAwait(false);
+                Kit? activeKit = await player.Component<KitPlayerComponent>().GetActiveKitAsync(player.DisconnectToken).ConfigureAwait(false);
 
                 if (activeKit is { RequiresNitro: true })
                 {
-                    await mngr.TryGiveRiflemanKit(player, true, true, player.DisconnectToken);
+                    await Manager.TryGiveRiflemanKit(player, true, true, player.DisconnectToken);
                 }
-            }, Manager, player, player.DisconnectToken, ctx: $"Checking for removing kit from {player} after losing nitro boost.");
+            }, player.DisconnectToken);
         }
     }
 }

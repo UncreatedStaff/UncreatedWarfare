@@ -13,7 +13,9 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Squads;
 
@@ -37,7 +39,7 @@ public static class QuestManager
         ReadQuestDatas();
     }
     /// <summary>Generate and register a random tracker with the provided data to the player.</summary>
-    public static BaseQuestTracker? CreateTracker(BaseQuestData data, UCPlayer player)
+    public static BaseQuestTracker? CreateTracker(BaseQuestData data, WarfarePlayer player)
     {
         BaseQuestTracker? tracker = data.CreateTracker(player);
         if (tracker != null)
@@ -48,8 +50,8 @@ public static class QuestManager
         return tracker;
     }
     /// <summary>Find, generate, and register a tracker using a <paramref name="key"/> and a set <see cref="IQuestPreset"/>.</summary>
-    /// <returns>A tracker using a <see cref="IQuestPreset"/> that is matched by <see cref="IQuestPreset.Key"/> and <see cref="IQuestPreset.Team"/> (or 0), or <see langword="null"/> if no preset is found.</returns>
-    public static BaseQuestTracker? CreateTracker(UCPlayer player, Guid key)
+    /// <returns>A tracker using a <see cref="IQuestPreset"/> that is matched by <see cref="IQuestPreset.Key"/> and <see cref="Team"/> (or 0), or <see langword="null"/> if no preset is found.</returns>
+    public static BaseQuestTracker? CreateTracker(WarfarePlayer player, Guid key)
     {
         ulong team = player.GetTeam();
         // look for one that matches their team first.
@@ -129,25 +131,25 @@ public static class QuestManager
         OnQuestStarted(tracker);
         RegisteredTrackers.Add(tracker);
     }
-    internal static void CheckNeedsToUntrack(UCPlayer? player)
+    internal static void CheckNeedsToUntrack(WarfarePlayer? player)
     {
         if (player != null && !player.Save.TrackQuests)
             UntrackQuest(player);
     }
 
-    public static void TryAddQuest(UCPlayer player, Guid guid)
+    public static void TryAddQuest(WarfarePlayer player, Guid guid)
     {
         if (player == null)
             return;
         if (Assets.find(guid) is QuestAsset qa)
             TryAddQuest(player, qa);
     }
-    public static void TryAddQuest(UCPlayer player, QuestAsset qa)
+    public static void TryAddQuest(WarfarePlayer player, QuestAsset qa)
     {
         ThreadUtil.assertIsGameThread();
         if (player == null)
             return;
-        PlayerQuests pq = player.Player.quests;
+        PlayerQuests pq = player.UnturnedPlayer.quests;
         for (int i = 0; i < pq.questsList.Count; ++i)
         {
             if (pq.questsList[i].asset is { } qa2 && qa.GUID == qa2.GUID)
@@ -160,14 +162,14 @@ public static class QuestManager
         pq.ServerAddQuest(qa);
         CheckNeedsToUntrack(player);
     }
-    public static void UntrackQuest(UCPlayer player)
+    public static void UntrackQuest(WarfarePlayer player)
     {
         ThreadUtil.assertIsGameThread();
-        if (player.Player.quests.GetTrackedQuest() is { } qa)
-            player.Player.quests.ServerAddQuest(qa);
+        if (player.UnturnedPlayer.quests.GetTrackedQuest() is { } qa)
+            player.UnturnedPlayer.quests.ServerAddQuest(qa);
     }
     /// <summary>Run on disconnect.</summary>
-    public static void DeregisterOwnedTrackers(UCPlayer player)
+    public static void DeregisterOwnedTrackers(WarfarePlayer player)
     {
         for (int i = RegisteredTrackers.Count - 1; i >= 0; i--)
         {
@@ -178,7 +180,7 @@ public static class QuestManager
             }
         }
     }
-    public static void PrintAllQuests(UCPlayer? player)
+    public static void PrintAllQuests(WarfarePlayer? player)
     {
         /*
         L.Log("All quests:");
@@ -313,7 +315,7 @@ public static class QuestManager
         }
         L.LogDebug("Quest updated: " + tracker.GetDisplayString());
     }
-    public static bool QuestComplete(this UCPlayer player, Guid key)
+    public static bool QuestComplete(this WarfarePlayer player, Guid key)
     {
         if (player.CompletedQuests == null) GetCompletedQuests(player);
         return player.CompletedQuests!.Contains(key);
@@ -614,7 +616,7 @@ public static class QuestManager
             t.Player.Player.quests.sendSetFlag(t.Flag, t.FlagValue);
         }
     }
-    private static void GetCompletedQuests(UCPlayer player)
+    private static void GetCompletedQuests(WarfarePlayer player)
     {
         string folder = Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", player.Steam64.ToString(Data.AdminLocale) +
                         "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale), "Quests") + Path.DirectorySeparatorChar;
@@ -666,12 +668,12 @@ public static class QuestManager
     }
     #endregion
     #region events
-    public static void OnBuildableBuilt(UCPlayer constructor, BuildableData buildable)
+    public static void OnBuildableBuilt(WarfarePlayer constructor, BuildableData buildable)
     {
         foreach (INotifyBuildableBuilt tracker in RegisteredTrackers.OfType<INotifyBuildableBuilt>())
             tracker.OnBuildableBuilt(constructor, buildable);
     }
-    public static void OnFOBBuilt(UCPlayer constructor, FOB fob)
+    public static void OnFOBBuilt(WarfarePlayer constructor, FOB fob)
     {
         foreach (INotifyFOBBuilt tracker in RegisteredTrackers.OfType<INotifyFOBBuilt>())
             tracker.OnFOBBuilt(constructor, fob);
@@ -691,7 +693,7 @@ public static class QuestManager
         foreach (INotifyOnFlagNeutralized tracker in RegisteredTrackers.OfType<INotifyOnFlagNeutralized>())
             tracker.OnFlagNeutralized(participants, neutralizer);
     }
-    public static void OnRevive(UCPlayer reviver, UCPlayer revived)
+    public static void OnRevive(WarfarePlayer reviver, WarfarePlayer revived)
     {
         foreach (INotifyOnRevive tracker in RegisteredTrackers.OfType<INotifyOnRevive>())
             tracker.OnPlayerRevived(reviver, revived);
@@ -701,7 +703,7 @@ public static class QuestManager
         foreach (INotifyGameOver tracker in RegisteredTrackers.OfType<INotifyGameOver>())
             tracker.OnGameOver(winner);
     }
-    public static void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal)
+    public static void OnGainedXP(WarfarePlayer player, int amtGained, int total, int gameTotal)
     {
         foreach (INotifyGainedXP tracker in RegisteredTrackers.OfType<INotifyGainedXP>())
             tracker.OnGainedXP(player, amtGained, total, gameTotal);
@@ -711,12 +713,12 @@ public static class QuestManager
         foreach (INotifyRallyActive tracker in RegisteredTrackers.OfType<INotifyRallyActive>())
             tracker.OnRallyActivated(rally);
     }
-    public static void OnPlayerSpawnedAtBunker(BunkerComponent component, UCPlayer spawner)
+    public static void OnPlayerSpawnedAtBunker(BunkerComponent component, WarfarePlayer spawner)
     {
         foreach (INotifyBunkerSpawn tracker in RegisteredTrackers.OfType<INotifyBunkerSpawn>())
             tracker.OnPlayerSpawnedAtBunker(component, spawner);
     }
-    public static void OnVehicleDestroyed(VehicleDestroyed e, UCPlayer instigator)
+    public static void OnVehicleDestroyed(VehicleDestroyed e, WarfarePlayer instigator)
     {
         foreach (INotifyVehicleDestroyed tracker in RegisteredTrackers.OfType<INotifyVehicleDestroyed>())
             tracker.OnVehicleDestroyed(e, instigator);

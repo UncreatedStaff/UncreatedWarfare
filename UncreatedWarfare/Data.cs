@@ -22,7 +22,6 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Players.Management.Legacy;
