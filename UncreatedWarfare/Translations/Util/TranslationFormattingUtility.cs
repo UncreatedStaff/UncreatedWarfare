@@ -27,7 +27,7 @@ public static class TranslationFormattingUtility
     /// <summary>
     /// Isolates the color tag that surrounds the entire message, if any. Also returns span arguments to be able to reconstruct that.
     /// </summary>
-    public static Color ExtractColor(ReadOnlySpan<char> text, out int innerStartIndex, out int innerLength)
+    public static Color32? ExtractColor(ReadOnlySpan<char> text, out int innerStartIndex, out int innerLength)
     {
         innerStartIndex = 0;
         innerLength = text.Length;
@@ -96,7 +96,7 @@ public static class TranslationFormattingUtility
             }
         }
 
-        return firstColor ?? Color.white;
+        return firstColor;
     }
 
     private static int FormatIMGUIString(ReadOnlySpan<char> original, Span<char> output, int finalDepth)

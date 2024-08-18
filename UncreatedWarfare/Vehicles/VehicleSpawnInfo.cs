@@ -31,7 +31,7 @@ public class VehicleSpawnInfo
     /// </summary>
     internal void LinkVehicle(InteractableVehicle vehicle)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (vehicle == LinkedVehicle)
             return;
@@ -54,7 +54,7 @@ public class VehicleSpawnInfo
     /// </summary>
     internal void UnlinkVehicle()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         InteractableVehicle? oldVehicle = LinkedVehicle;
         if (oldVehicle is null)

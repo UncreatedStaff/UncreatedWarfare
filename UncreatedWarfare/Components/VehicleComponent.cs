@@ -159,7 +159,7 @@ public class VehicleComponent : MonoBehaviour
 
     internal void UnlinkFromSpawn(VehicleSpawnInfo spawnInfo)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (spawnInfo == null)
             throw new ArgumentNullException(nameof(spawnInfo));
@@ -179,7 +179,7 @@ public class VehicleComponent : MonoBehaviour
 
     internal void LinkToSpawn(VehicleSpawnInfo spawnInfo)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (spawnInfo == null)
             throw new ArgumentNullException(nameof(spawnInfo));

@@ -456,7 +456,7 @@ public class UserPermissionStore : IAsyncDisposable
 
     private void ReadPermissionGroups()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!File.Exists(_permissionGroupFilePath))
         {

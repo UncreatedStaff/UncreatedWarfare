@@ -10,6 +10,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Players.Management;
@@ -38,6 +39,8 @@ public class PlayerService
         typeof(ToastManager)
     ];
 
+    // keep up with a separate array that's replaced every time so the value can be used in multi-threaded operations
+    private WarfarePlayer[] _threadsafeList;
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;
     private readonly PlayerDictionary<WarfarePlayer> _onlinePlayersDictionary;
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers { get; }
@@ -51,10 +54,21 @@ public class PlayerService
     {
         _serviceProvider = serviceProvider;
         _onlinePlayers = new TrackingList<WarfarePlayer>();
+        _threadsafeList = Array.Empty<WarfarePlayer>();
         _onlinePlayersDictionary = new PlayerDictionary<WarfarePlayer>(Provider.maxPlayers);
         OnlinePlayers = _onlinePlayers.AsReadOnly();
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<PlayerService>();
+    }
+
+    public IReadOnlyList<WarfarePlayer> GetThreadsafePlayerList()
+    {
+        if (GameThread.IsCurrent)
+        {
+            return OnlinePlayers;
+        }
+
+        return _threadsafeList;
     }
 
     // todo add variation of PendingAsyncData
@@ -76,6 +90,11 @@ public class PlayerService
             WarfarePlayer joined = new WarfarePlayer(player, logger, components.AsReadOnly());
             _onlinePlayers.Add(joined);
             _onlinePlayersDictionary.Add(joined, joined);
+
+            WarfarePlayer[] newList = new WarfarePlayer[_threadsafeList.Length + 1];
+            Array.Copy(_threadsafeList, 0, newList, 0, _threadsafeList.Length);
+            newList[^1] = joined;
+            _threadsafeList = newList;
             
             for (int i = 0; i < components.Count; ++i)
             {
@@ -97,6 +116,22 @@ public class PlayerService
 
             _onlinePlayers.Remove(player);
             _onlinePlayersDictionary.Remove(player.Steam64);
+
+            for (int i = 0; i < _threadsafeList.Length; ++i)
+            {
+                WarfarePlayer pl = _threadsafeList[i];
+                if (!ReferenceEquals(pl, player))
+                    continue;
+                
+                WarfarePlayer[] newList = new WarfarePlayer[_threadsafeList.Length - 1];
+                if (i != 0)
+                    Array.Copy(_threadsafeList, 0, newList, 0, i);
+                if (i != _threadsafeList.Length - 1)
+                    Array.Copy(_threadsafeList, i + 1, newList, i, _threadsafeList.Length - i - 1);
+                
+                _threadsafeList = newList;
+                break;
+            }
 
             player.ApplyOfflineState();
             return player;
@@ -159,7 +194,7 @@ public class PlayerService
 #if DEBUG
         // putting this in here just because this function will be used so much
         // that it's better to not add any extra code if possible
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 #endif
 
         // ReSharper disable once InconsistentlySynchronizedField
@@ -182,7 +217,7 @@ public class PlayerService
 #if DEBUG
         // putting this in here just because this function will be used so much
         // that it's better to not add any extra code if possible
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 #endif
 
         // ReSharper disable once InconsistentlySynchronizedField

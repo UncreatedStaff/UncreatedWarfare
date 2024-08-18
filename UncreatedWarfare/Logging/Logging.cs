@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Logging;
 
@@ -354,7 +355,7 @@ public static class L
             LogAsLibrary("[DEBUG] " + info, color);
         else if (UCWarfare.Config.Debug)
         {
-            if (UCWarfare.IsMainThread)
+            if (GameThread.IsCurrent)
             {
                 AddLine("[DEBUG] " + info, color);
                 if (_outputToConsoleMethod is null)
@@ -389,7 +390,7 @@ public static class L
             LogAsLibrary("[INFO]  " + info, color);
         else
         {
-            if (UCWarfare.IsMainThread)
+            if (GameThread.IsCurrent)
             {
                 AddLine("[INFO]  " + info, color);
                 if (_outputToConsoleMethod is null)
@@ -438,7 +439,7 @@ public static class L
             LogAsLibrary(msg, color);
         else
         {
-            if (UCWarfare.IsMainThread)
+            if (GameThread.IsCurrent)
             {
                 AddLine(msg, color);
                 if (_outputToConsoleMethod is null)
@@ -475,7 +476,7 @@ public static class L
             LogAsLibrary(msg, color);
         else
         {
-            if (UCWarfare.IsMainThread)
+            if (GameThread.IsCurrent)
             {
                 AddLine(msg, color);
                 if (_outputToConsoleMethod is null)
@@ -513,7 +514,7 @@ public static class L
         }
         else
         {
-            if (UCWarfare.IsMainThread)
+            if (GameThread.IsCurrent)
                 WriteExceptionIntl(ex, cleanStack, _indention, method);
             else
                 ThreadQueue.Queue.RunOnMainThread(() => WriteExceptionIntl(ex, cleanStack, _indention, method));
@@ -693,7 +694,7 @@ public static class L
         [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestRunCommand)]
         internal static void ReceiveCommand(MessageContext context, string command)
         {
-            if (UCWarfare.IsMainThread)
+            if (GameThread.IsCurrent)
                 RunCommand(command);
             else
                 UCWarfare.RunOnMainThread(() => RunCommand(command));
@@ -718,7 +719,7 @@ public static class L
             if (logLevel is not LogLevel.Warning and not LogLevel.Critical and not LogLevel.Error && !string.IsNullOrWhiteSpace(_categoryName))
                 str = "[" + _categoryName + "] " + str;
 
-            if (UCWarfare.IsMainThread)
+            if (GameThread.IsCurrent)
             {
                 SendLogIntl(logLevel, str, eventId);
             }

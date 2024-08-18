@@ -185,7 +185,7 @@ public class ActiveZoneCluster : IDisposable
     // clean-up colliders and GameObjects
     public void Dispose()
     {
-        if (Thread.CurrentThread.IsGameThread())
+        if (GameThread.IsCurrent)
         {
             DisposeIntl();
         }

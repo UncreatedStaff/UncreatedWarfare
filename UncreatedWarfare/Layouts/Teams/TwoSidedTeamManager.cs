@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Exceptions;
@@ -20,6 +21,7 @@ namespace Uncreated.Warfare.Layouts.Teams;
 public class TwoSidedTeamManager : ITeamManager<Team>
 {
     private readonly ILogger<TwoSidedTeamManager> _logger;
+    private readonly IServiceProvider _serviceProvider;
     private readonly Team[] _teams = new Team[2];
     private int _blufor;
     private int _opfor;
@@ -57,9 +59,10 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <exception cref="InvalidOperationException">There is no Opfor team.</exception>
     public Team Opfor => _opfor == -1 ? throw new InvalidOperationException("This layout does not have an Opfor team.") : _teams[_opfor];
 
-    public TwoSidedTeamManager(ILogger<TwoSidedTeamManager> logger)
+    public TwoSidedTeamManager(ILogger<TwoSidedTeamManager> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
+        _serviceProvider = serviceProvider;
         AllTeams = new ReadOnlyCollection<Team>(_teams);
     }
 
@@ -70,7 +73,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             throw new LayoutConfigurationException(this, "Expected exactly 2 team infos in the 'Teams' section.");
 
         FactionInfo? factionInfo1, factionInfo2;
-        await using (IGameDataDbContext dbContext = new WarfareDbContext())
+        await using (IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>())
         {
             Faction f1 = await TeamUtility.ResolveTeamFactionHint(Teams[0].Faction, dbContext, this, token);
             Faction f2 = await TeamUtility.ResolveTeamFactionHint(Teams[1].Faction, dbContext, this, token);

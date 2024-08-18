@@ -197,7 +197,7 @@ public class PolygonProximity : IPolygonProximity
 
     internal static void CalculateAreaAndVolume(Transform transform, float? minHeight, float? maxHeight, IReadOnlyList<Vector2> points, out float area, out float surfaceArea, out float volume)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float ttlArea = 0;
         float sideSurfaceArea = 0;

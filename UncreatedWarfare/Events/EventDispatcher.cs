@@ -7,6 +7,13 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Items;
+using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Items;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Projectiles;
+using Uncreated.Warfare.Events.Models.Structures;
+using Uncreated.Warfare.Events.Models.Throwables;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
@@ -14,6 +21,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Events;
@@ -114,10 +122,10 @@ public static class EventDispatcher
     {
         try
         {
-            if (mainThread && !UCWarfare.IsMainThread)
+            if (mainThread && !GameThread.IsCurrent)
             {
                 await UniTask.SwitchToMainThread(token);
-                ThreadUtil.assertIsGameThread();
+                GameThread.AssertCurrent();
             }
 
             await @delegate.Invoke(request, token).ConfigureAwait(true);

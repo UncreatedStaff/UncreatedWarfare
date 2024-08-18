@@ -175,7 +175,7 @@ public static class TranslationExtensions
     /// Translate a translation for a set of players and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -406,7 +406,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -518,7 +518,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -630,7 +630,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -742,7 +742,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -854,7 +854,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -966,7 +966,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -1078,7 +1078,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -1190,7 +1190,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 8-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -1302,7 +1302,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 9-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -1414,7 +1414,7 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 10-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {

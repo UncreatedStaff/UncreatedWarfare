@@ -468,7 +468,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     }
     public static Squad CreateSquad(UCPlayer leader, ulong team)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         _singleton.AssertLoaded();
         string name = FindUnusedSquadName(team);
         Squad squad = new Squad(name, leader, team, leader.KitBranch);

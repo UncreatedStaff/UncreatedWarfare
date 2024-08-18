@@ -285,7 +285,7 @@ public class KitRequests
     }
     private void GrantKit(WarfarePlayer player, Kit? kit, bool tip = true)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!player.IsOnline)
             return;
         if (UCWarfare.Config.ModifySkillLevels)

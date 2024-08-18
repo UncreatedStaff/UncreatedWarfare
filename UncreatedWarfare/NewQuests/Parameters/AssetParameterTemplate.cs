@@ -66,7 +66,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
     /// <exception cref="NotSupportedException">Not on the game thread.</exception>
     public QuestParameterValue<Guid> CreateValueOnGameThread()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new AssetParameterValue(this);
     }
@@ -382,7 +382,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                     break;
 
                 case ParameterValueType.Wildcard when selType == ParameterSelectionType.Selective:
-                    if (Thread.CurrentThread.IsGameThread())
+                    if (GameThread.IsCurrent)
                     {
                         _mainWorkingThreadList ??= new List<TAsset>(16);
                         try

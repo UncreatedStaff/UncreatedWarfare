@@ -358,7 +358,7 @@ public static class F
     }
     public static void TriggerEffectReliable(EffectAsset asset, ITransportConnection connection, Vector3 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         TriggerEffectParameters p = new TriggerEffectParameters(asset)
         {
             position = position,
@@ -371,7 +371,7 @@ public static class F
         => TriggerEffectReliable(asset, Provider.GatherRemoteClientConnectionsWithinSphere(position, range), position);
     public static void TriggerEffectReliable(EffectAsset asset, PooledTransportConnectionList connection, Vector3 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         TriggerEffectParameters p = new TriggerEffectParameters(asset)
         {
             position = position,
@@ -382,7 +382,7 @@ public static class F
     }
     public static void TriggerEffectUnreliable(EffectAsset asset, ITransportConnection connection, Vector3 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         TriggerEffectParameters p = new TriggerEffectParameters(asset)
         {
             position = position,
@@ -395,7 +395,7 @@ public static class F
         => TriggerEffectUnreliable(asset, Provider.GatherRemoteClientConnectionsWithinSphere(position, range), position);
     public static void TriggerEffectUnreliable(EffectAsset asset, PooledTransportConnectionList connection, Vector3 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         TriggerEffectParameters p = new TriggerEffectParameters(asset)
         {
             position = position,
@@ -786,7 +786,7 @@ public static class F
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
     public static bool SetOwnerOrGroup(BarricadeDrop drop, ulong? owner = null, ulong? group = null)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!owner.HasValue && !group.HasValue)
             return false;
         BarricadeData bdata = drop.GetServersideData();
@@ -943,7 +943,7 @@ public static class F
     /// </summary>
     public static void SetOwnerOrGroup(StructureDrop drop, ulong? owner = null, ulong? group = null)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!owner.HasValue && !group.HasValue)
             return;
         StructureData sdata = drop.GetServersideData();
@@ -999,7 +999,7 @@ public static class F
     {
         if (!Level.isLoaded)
             throw new Exception("Level not loaded.");
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (state.Length < 17)
         {
             displayData = null;
@@ -1436,7 +1436,7 @@ public static class F
     }
     public static bool ServerTrackQuest(this UCPlayer player, QuestAsset quest)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (player is not { IsOnline: true })
             return false;
         QuestAsset? current = player.Player.quests.GetTrackedQuest();
@@ -1453,7 +1453,7 @@ public static class F
     }
     public static bool ServerUntrackQuest(this UCPlayer player, QuestAsset quest)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (player is not { IsOnline: true })
             return false;
         QuestAsset current = player.Player.quests.GetTrackedQuest();
@@ -1774,7 +1774,7 @@ public static class F
         PlayerSummary? playerSummary = await Steam.SteamAPIService.GetPlayerSummary(steam64, token);
         await UniTask.SwitchToMainThread(token);
 #if DEBUG
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 #endif
 
         if (playerSummary != null && UCWarfare.IsLoaded)

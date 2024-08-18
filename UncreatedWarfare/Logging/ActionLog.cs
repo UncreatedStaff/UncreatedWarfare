@@ -96,7 +96,7 @@ public class ActionLog : MonoBehaviour
     /// <exception cref="NotSupportedException"/>
     public static void AddPriority(ActionLogType type, string? data = null, ulong player = 0)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
         _instance.Update();
     }

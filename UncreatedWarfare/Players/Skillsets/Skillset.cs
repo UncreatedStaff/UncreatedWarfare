@@ -76,7 +76,7 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
     }
     public void ServerSet(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (player.IsOnline)
             player.UnturnedPlayer.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
     }

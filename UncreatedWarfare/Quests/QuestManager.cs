@@ -146,7 +146,7 @@ public static class QuestManager
     }
     public static void TryAddQuest(WarfarePlayer player, QuestAsset qa)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (player == null)
             return;
         PlayerQuests pq = player.UnturnedPlayer.quests;
@@ -164,7 +164,7 @@ public static class QuestManager
     }
     public static void UntrackQuest(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (player.UnturnedPlayer.quests.GetTrackedQuest() is { } qa)
             player.UnturnedPlayer.quests.ServerAddQuest(qa);
     }

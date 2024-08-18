@@ -35,7 +35,7 @@ public abstract class QuestTracker
     protected virtual void ReadProgress(ref Utf8JsonReader reader) { }
     protected void InvokeUpdate()
     {
-        if (Thread.CurrentThread.IsGameThread())
+        if (GameThread.IsCurrent)
         {
             HandleUpdated(false);
 

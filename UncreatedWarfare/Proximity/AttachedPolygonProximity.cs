@@ -30,7 +30,7 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             Bounds bounds = _polygon.worldBounds;
             return AttachmentRoot == null ? bounds : new Bounds(AttachmentRoot.TransformPoint(bounds.center), AttachmentRoot.TransformVector(bounds.size));
@@ -45,7 +45,7 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             if (AttachmentRoot == null)
                 return _polygon.internalVolume;
@@ -72,7 +72,7 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             if (AttachmentRoot == null)
                 return _polygon.surfaceArea;
@@ -99,7 +99,7 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             if (AttachmentRoot == null)
                 return _polygon.Area;
@@ -159,7 +159,7 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     /// <inheritdoc />
     public bool TestPoint(Vector3 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? position : AttachmentRoot.InverseTransformPoint(position);
         return _polygon.TestPoint(worldPos);
@@ -168,7 +168,7 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     /// <inheritdoc />
     public bool TestPoint(Vector2 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? position : AttachmentRoot.InverseTransformPoint(position);
         return _polygon.TestPoint(new Vector2(worldPos.x, worldPos.z));

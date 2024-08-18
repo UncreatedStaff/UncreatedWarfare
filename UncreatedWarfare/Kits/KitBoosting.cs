@@ -9,7 +9,7 @@ public class KitBoosting(KitManager manager) : ITCPConnectedListener
     public KitManager Manager { get; } = manager;
     public bool IsNitroBoostingQuick(ulong player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         return PlayerSave.TryReadSaveFile(player, out PlayerSave save) && save.WasNitroBoosting;
     }
     /// <exception cref="TimeoutException"/>
@@ -57,7 +57,7 @@ public class KitBoosting(KitManager manager) : ITCPConnectedListener
     }
     internal void OnNitroBoostingUpdated(ulong player, byte state)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (state is 0 or 1)
         {
             if (!PlayerSave.TryReadSaveFile(player, out PlayerSave save))

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -29,6 +30,7 @@ namespace Uncreated.Warfare.Commands;
 public sealed class KitCommand : IExecutableCommand
 {
     private readonly ITranslationValueFormatter _valueFormatter;
+    private readonly IServiceProvider _serviceProvider;
     private const string Syntax = "/kit <keybind|search|skills|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
     private const string Help = "Admin command to manage kits; creating, deleting, editing, and giving/removing access is done through this command.";
 
@@ -47,9 +49,10 @@ public sealed class KitCommand : IExecutableCommand
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public KitCommand(ITranslationValueFormatter valueFormatter)
+    public KitCommand(ITranslationValueFormatter valueFormatter, IServiceProvider serviceProvider)
     {
         _valueFormatter = valueFormatter;
+        _serviceProvider = serviceProvider;
     }
 
     /// <summary>
@@ -595,7 +598,7 @@ public sealed class KitCommand : IExecutableCommand
             if (Data.GetChatFilterViolation(newName) is { } chatFilterViolation)
                 throw Context.Reply(T.KitRenameFilterVoilation, chatFilterViolation);
 
-            await using IKitsDbContext dbContext = new WarfareDbContext();
+            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
             LanguageInfo defaultLanguage = Localization.GetDefaultLanguage();
 
@@ -720,7 +723,7 @@ public sealed class KitCommand : IExecutableCommand
                         throw Context.Reply(T.KitCancelOverride);
                     }
 
-                    await using IKitsDbContext dbContext = new WarfareDbContext();
+                    await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
                     IKitItem[] oldItems = kit.Items;
                     kit.SetItemArray(ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true), dbContext);
@@ -759,7 +762,7 @@ public sealed class KitCommand : IExecutableCommand
                 else if (Context.HasArgs(3))
                     throw Context.Reply(T.ClassNotFoundCreateKit, Context.Get(2)!);
 
-                await using IKitsDbContext dbContext2 = new WarfareDbContext();
+                await using IKitsDbContext dbContext2 = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
                 if (@class == Class.None) @class = Class.Unarmed;
                 kit = new Kit(kitName, @class, KitDefaults<WarfareDbContext>.GetDefaultBranch(@class), type, SquadLevel.Member, faction);
@@ -807,7 +810,7 @@ public sealed class KitCommand : IExecutableCommand
                     
                     kit.UpdateLastEdited(Context.CallerId.m_SteamID);
 
-                    await using IKitsDbContext dbContext = new WarfareDbContext();
+                    await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
                     dbContext.Remove(kit);
                     await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
@@ -845,7 +848,7 @@ public sealed class KitCommand : IExecutableCommand
                     {
                         if (kit.Season != UCWarfare.Season)
                         {
-                            await using IKitsDbContext dbContext = new WarfareDbContext();
+                            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
                             kit.Season = UCWarfare.Season;
                             dbContext.Update(kit);
@@ -887,7 +890,7 @@ public sealed class KitCommand : IExecutableCommand
                     {
                         if (kit.Disabled)
                         {
-                            await using IKitsDbContext dbContext = new WarfareDbContext();
+                            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
                             kit.Disabled = false;
                             dbContext.Update(kit);
@@ -927,7 +930,7 @@ public sealed class KitCommand : IExecutableCommand
                     {
                         if (!kit.Disabled)
                         {
-                            await using IKitsDbContext dbContext = new WarfareDbContext();
+                            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
                             kit.Disabled = true;
                             dbContext.Update(kit);
@@ -1007,7 +1010,7 @@ public sealed class KitCommand : IExecutableCommand
                     if (kit == null)
                         throw Context.Reply(T.KitNotFound, kitName);
 
-                    await using IKitsDbContext dbContext = new WarfareDbContext();
+                    await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
                     if (Context.MatchParameter(1, "level", "lvl"))
                     {
@@ -1265,7 +1268,7 @@ public sealed class KitCommand : IExecutableCommand
                     Creator = Context.CallerId.m_SteamID
                 };
 
-                await using (IKitsDbContext dbContext = new WarfareDbContext())
+                await using (IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>())
                 {
                     await dbContext.AddAsync(kit, token).ConfigureAwait(false);
                     await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
@@ -1328,7 +1331,7 @@ public sealed class KitCommand : IExecutableCommand
                 if (oldKit != null)
                     throw Context.Reply(T.KitNameTaken, loadout.InternalName);
 
-                await using (IKitsDbContext dbContext = new WarfareDbContext())
+                await using (IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>())
                 {
                     await dbContext.AddAsync(loadout, token).ConfigureAwait(false);
 
@@ -1393,7 +1396,7 @@ public sealed class KitCommand : IExecutableCommand
                 if (kit is null)
                     throw Context.Reply(T.KitNotFound, kitName);
 
-                await using IKitsDbContext dbContext = new WarfareDbContext();
+                await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
                 List<KitSkillset> skillsets = kit.Skillsets;
                 for (int i = 0; i < skillsets.Count; ++i)

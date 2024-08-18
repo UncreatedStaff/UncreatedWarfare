@@ -547,7 +547,7 @@ public static class Data
     }
     public static void HideAllUI(UCPlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         IUncreatedSingleton[] singletons = Singletons.GetSingletons();
         for (int i = 0; i < singletons.Length; ++i)
         {
@@ -557,7 +557,7 @@ public static class Data
     }
     public static void ShowAllUI(UCPlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         IUncreatedSingleton[] singletons = Singletons.GetSingletons();
         for (int i = 0; i < singletons.Length; ++i)
         {
@@ -567,7 +567,7 @@ public static class Data
     }
     public static void UpdateAllUI(UCPlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         IUncreatedSingleton[] singletons = Singletons.GetSingletons();
         for (int i = 0; i < singletons.Length; ++i)
         {

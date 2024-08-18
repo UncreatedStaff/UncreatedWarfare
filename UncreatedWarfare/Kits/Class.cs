@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using SDG.Framework.Utilities;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -170,7 +171,7 @@ public sealed class ClassArrayConverter : JsonConverter<Class[]>
             return reader.TokenType == JsonTokenType.Null ? null! : [ _conv.Read(ref reader, typeToConvert, options) ];
         }
 
-        bool pool = UCWarfare.IsMainThread;
+        bool pool = GameThread.IsCurrent;
         List<Class> classes = pool ? ListPool<Class>.claim() : new List<Class>(4);
         try
         {
@@ -215,7 +216,7 @@ public sealed class ClassCollectionConverter : JsonConverter<ICollection<Class>>
             return reader.TokenType == JsonTokenType.Null ? null! : [ _conv.Read(ref reader, typeToConvert, options) ];
         }
 
-        bool pool = UCWarfare.IsMainThread;
+        bool pool = GameThread.IsCurrent;
         List<Class> classes = pool ? ListPool<Class>.claim() : new List<Class>(4);
         try
         {
@@ -260,7 +261,7 @@ public sealed class ClassCollectionReadonlyConverter : JsonConverter<IReadOnlyCo
             return reader.TokenType == JsonTokenType.Null ? null! : [ _conv.Read(ref reader, typeToConvert, options) ];
         }
 
-        bool pool = UCWarfare.IsMainThread;
+        bool pool = GameThread.IsCurrent;
         List<Class> classes = pool ? ListPool<Class>.claim() : new List<Class>(4);
         try
         {

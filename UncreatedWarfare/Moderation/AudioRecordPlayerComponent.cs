@@ -121,7 +121,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     }
     public NativeArray<byte> CreateNativeArray()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         NativeArray<byte> array = new NativeArray<byte>(_byteCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
@@ -148,7 +148,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     }
     public void WriteMetaFile(Stream writeTo, bool includeData = false, bool leaveOpen = true)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         MetaWriter.Stream = writeTo;
         try
@@ -165,7 +165,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     }
     public void WriteMetaFile(ByteWriter writer, bool includeData = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         writer.Write(DataVersion | (includeData ? 1 << 31 : 0));
         writer.Write((byte)1); // player count
@@ -173,7 +173,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     }
     public static void WriteMetaFileForPlayers(IEnumerable<UCPlayer> players, Stream writeTo, bool includeData = false, bool leaveOpen = true)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         MetaWriter.Stream = writeTo;
         try
@@ -190,7 +190,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     }
     public static void WriteMetaFileForPlayers(ByteWriter writer, IEnumerable<UCPlayer> players, bool includeData = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         writer.Write(DataVersion | (includeData ? 1 << 31 : 0));
         List<AudioRecordPlayerComponent> playerComps = players.Select(Get).ToList();

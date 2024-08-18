@@ -897,7 +897,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public bool IsOnFOB(WarfarePlayer player, out IFOB fob)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         _singleton.AssertLoaded();
 
         for (int i = 0; i < _singleton._fobs.Count; ++i)
@@ -914,7 +914,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static bool IsOnFOB<TFOB>(WarfarePlayer player, out TFOB fob) where TFOB : class, IRadiusFOB
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         _singleton.AssertLoaded();
 
         for (int i = 0; i < _singleton._fobs.Count; ++i)
@@ -931,7 +931,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public SpecialFOB RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         _singleton.AssertLoaded();
         SpecialFOB fob = new SpecialFOB(name, point, team, color, disappearAroundEnemies);
         _singleton.AddFOB(fob);
@@ -940,7 +940,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static Cache RegisterNewCache(IBuildable drop, ulong team, CacheLocation location)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         _singleton.AssertLoaded();
         
         int number;
@@ -966,7 +966,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public void DeleteFOB(IFOB fob, ulong instigator = 0)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         Deployment.CancelDeploymentsTo(fob);
         ulong team = fob.Team;
 

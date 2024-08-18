@@ -28,7 +28,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateBarricades()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator((byte)(Regions.WORLD_SIZE / 2), (byte)(Regions.WORLD_SIZE / 2), true, true);
     }
@@ -40,7 +40,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateBarricades(Vector3 center)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
         {
@@ -58,7 +58,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateBarricades(Vector3 center, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
         {
@@ -75,7 +75,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateBarricades(byte x, byte y)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator(x, y, true, true);
     }
@@ -87,7 +87,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateBarricades(RegionCoord region)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator(region.x, region.y, true, true);
     }
@@ -100,7 +100,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateBarricades(byte x, byte y, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator(x, y, true, true, maxRegionDistance);
     }
@@ -113,7 +113,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateBarricades(RegionCoord region, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator(region.x, region.y, true, true, maxRegionDistance);
     }
@@ -125,7 +125,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator((byte)(Regions.WORLD_SIZE / 2), (byte)(Regions.WORLD_SIZE / 2), true, false);
     }
@@ -137,7 +137,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(Vector3 center)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
         {
@@ -155,7 +155,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(Vector3 center, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
         {
@@ -172,7 +172,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(byte x, byte y)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator(x, y, true, false);
     }
@@ -184,7 +184,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(RegionCoord region)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator(region.x, region.y, true, false);
     }
@@ -197,7 +197,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(byte x, byte y, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator(x, y, true, false, maxRegionDistance);
     }
@@ -210,7 +210,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(RegionCoord region, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator(region.x, region.y, true, false, maxRegionDistance);
     }
@@ -222,7 +222,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeIterator EnumeratePlantedBarricades()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new BarricadeIterator((byte)(Regions.WORLD_SIZE / 2), (byte)(Regions.WORLD_SIZE / 2), false, true);
     }
@@ -258,7 +258,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo FindBarricade(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
         while (iterator.MoveNext())
@@ -294,7 +294,7 @@ public static class BarricadeUtility
     /// <exception cref="ArgumentException"><paramref name="barricade"/> is not a sign.</exception>
     public static void SetServersideSignText(BarricadeDrop barricade, string text)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         
         if (barricade.interactable is not InteractableSign sign)
             throw new ArgumentException("Barricade must be a sign.", nameof(barricade));
@@ -323,7 +323,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo FindBarricade(uint instanceId, IAssetLink<ItemBarricadeAsset> expectedAsset, Vector3 expectedPosition)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         BarricadeInfo foundByPosition = default;
 
@@ -459,7 +459,7 @@ public static class BarricadeUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -498,7 +498,7 @@ public static class BarricadeUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         BarricadeInfo closest = default;
@@ -541,7 +541,7 @@ public static class BarricadeUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -583,7 +583,7 @@ public static class BarricadeUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         BarricadeInfo closest = default;
@@ -625,7 +625,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo GetClosestBarricadeInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -660,7 +660,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo GetClosestBarricade(Vector3 position, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         BarricadeInfo closest = default;
@@ -699,7 +699,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo GetClosestBarricadeInRange(Vector3 position, float radius, ulong group, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -738,7 +738,7 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo GetClosestBarricade(Vector3 position, ulong group, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         BarricadeInfo closest = default;
@@ -785,7 +785,7 @@ public static class BarricadeUtility
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -824,7 +824,7 @@ public static class BarricadeUtility
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         BarricadeInfo closest = default;
@@ -867,7 +867,7 @@ public static class BarricadeUtility
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -910,7 +910,7 @@ public static class BarricadeUtility
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         BarricadeInfo closest = default;
@@ -957,7 +957,7 @@ public static class BarricadeUtility
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalBarricadesFound = 0;
@@ -997,7 +997,7 @@ public static class BarricadeUtility
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int totalBarricadesFound = 0;
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
@@ -1053,7 +1053,7 @@ public static class BarricadeUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalBarricadesFound = 0;
@@ -1093,7 +1093,7 @@ public static class BarricadeUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int totalBarricadesFound = 0;
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
@@ -1144,7 +1144,7 @@ public static class BarricadeUtility
     [Pure]
     public static int CountBarricadesInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalBarricadesFound = 0;

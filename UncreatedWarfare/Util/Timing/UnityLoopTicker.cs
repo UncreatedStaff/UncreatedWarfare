@@ -58,7 +58,7 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
             return;
 
         _lastInvokedAt = _createdAt;
-        bool isGameThread = Thread.CurrentThread.IsGameThread();
+        bool isGameThread = GameThread.IsCurrent;
         if (isGameThread)
         {
             if (initialDelay == TimeSpan.Zero)
@@ -109,7 +109,7 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
         if (coroutine == null)
             return;
 
-        if (Thread.CurrentThread.IsGameThread())
+        if (GameThread.IsCurrent)
         {
             TimeUtility.StaticStopCoroutine(coroutine);
         }

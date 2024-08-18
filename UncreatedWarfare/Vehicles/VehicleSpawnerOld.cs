@@ -75,7 +75,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     private static readonly List<BarricadeDrop> WorkingToUpdate = new List<BarricadeDrop>(32);
     private void OnPlayerEnterMain(UCPlayer player, ulong team)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         try
         {
             WriteWait();
@@ -155,7 +155,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     void IFlagCapturedListener.OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner) => UpdateFlagSigns();
     private void UpdateFlagSigns()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         Signs.UpdateVehicleBaySigns(null);
     }
     private void DropFlaresStart(UCPlayer player, /*float timeDown, */ref bool handled)
@@ -214,7 +214,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     async Task ILevelStartListenerAsync.OnLevelReady(CancellationToken token)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         WriteWait();
         try
         {
@@ -423,7 +423,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
         {
             if (seat == 0 && excludeDriver)
@@ -440,7 +440,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     public static bool TryGetFirstNonCrewSeat(InteractableVehicle vehicle, VehicleData data, out byte seat)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         for (seat = 0; seat < vehicle.passengers.Length; seat++)
         {
             Passenger passenger = vehicle.passengers[seat];
@@ -455,7 +455,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     public static bool TryGetFirstNonDriverSeat(InteractableVehicle vehicle, out byte seat)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         seat = 0;
         do
         {
@@ -466,7 +466,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     public static bool IsOwnerInVehicle(InteractableVehicle vehicle, UCPlayer owner)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (vehicle.lockedOwner == CSteamID.Nil || owner == null) return false;
 
         foreach (Passenger passenger in vehicle.passengers)
@@ -478,7 +478,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     public static int CountCrewmen(InteractableVehicle vehicle, VehicleData data)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         int count = 0;
         for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
         {
@@ -510,7 +510,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     private static void OnVehicleExit(ExitVehicle e)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (e.OldPassengerIndex == 0 && e.Vehicle.transform.TryGetComponent(out VehicleComponent comp))
             comp.LastDriverTime = Time.realtimeSinceStartup;
         if (KitDefaults<WarfareDbContext>.ShouldDequipOnExitVehicle(e.Player.KitClass))
@@ -518,7 +518,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     private static void OnVehicleExitRequested(ExitVehicleRequested e)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!e.Player.OnDuty() && e.ExitLocation.y - F.GetHeightAt2DPoint(e.ExitLocation.x, e.ExitLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
         {
             if (!FOBManager.Config.Buildables.Exists(v => v.Type == BuildableType.Emplacement && v.Emplacement is not null && v.Emplacement.EmplacementVehicle is not null && v.Emplacement.EmplacementVehicle.Guid == e.Vehicle.asset.GUID))
@@ -530,7 +530,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     private void OnVehicleEnterRequested(EnterVehicleRequested e)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!VehicleUtility.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
         {
             e.Cancel();
@@ -571,7 +571,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
     }
     private void OnVehicleSwapSeatRequested(VehicleSwapSeatRequested e)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!VehicleUtility.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
         {
             e.Cancel();
@@ -982,7 +982,7 @@ public class VehicleSpawn : IListItem
     public InteractableVehicle? LinkedVehicle
     {
         get => _linkedVehicle;
-        set { ThreadUtil.assertIsGameThread(); _linkedVehicle = value; }
+        set { GameThread.AssertCurrent(); _linkedVehicle = value; }
     }
 
     /// <remarks>Getter can lock <see cref="VehicleBay"/> write semaphore.</remarks>
@@ -1099,7 +1099,7 @@ public class VehicleSpawn : IListItem
     }
     public void LinkNewVehicle(InteractableVehicle vehicle)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         LinkedVehicle = vehicle;
         Transform? model = Structure?.Item?.Buildable?.Model;
         if (model != null && model.TryGetComponent(out VehicleBayComponent comp))
@@ -1110,7 +1110,7 @@ public class VehicleSpawn : IListItem
     }
     public void Unlink()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         ReportInfo("Unlinked vehicle: " + (LinkedVehicle == null ? "<no prev linked>" : (LinkedVehicle.asset.vehicleName + ", " + LinkedVehicle.instanceID)) + ".");
         LinkedVehicle = null;
         Transform? model = Structure?.Item?.Buildable?.Model;
@@ -1143,7 +1143,7 @@ public class VehicleSpawn : IListItem
     }
     public void UpdateSign()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         IBuildable? sign = Sign?.Item?.Buildable;
         if (sign is null || sign.Model == null || sign.Drop is not BarricadeDrop drop) return;
         if (TeamManager.PlayerBaseStatus != null && TeamManager.Team1Main.IsInside(sign.Model.transform.position))

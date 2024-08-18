@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;
 
@@ -153,7 +154,7 @@ public partial class EventDispatcher2 : IHostedService
         {
             try
             {
-                if ((underlying[i].Flags & 4) != 0 && Environment.CurrentManagedThreadId != WarfareModule.GameThreadId)
+                if ((underlying[i].Flags & 4) != 0 && !GameThread.IsCurrent)
                 {
                     await UniTask.SwitchToMainThread(token);
                 }
@@ -173,7 +174,7 @@ public partial class EventDispatcher2 : IHostedService
             catch (ControlException) { }
             catch (Exception ex)
             {
-                if (Environment.CurrentManagedThreadId != WarfareModule.GameThreadId)
+                if (!GameThread.IsCurrent)
                 {
                     await UniTask.SwitchToMainThread(CancellationToken.None);
                 }
@@ -202,7 +203,7 @@ public partial class EventDispatcher2 : IHostedService
         }
 
         // release list back to pool
-        if (Thread.CurrentThread.IsGameThread())
+        if (GameThread.IsCurrent)
         {
             ListPool<EventListenerResult>.release(eventListeners);
         }

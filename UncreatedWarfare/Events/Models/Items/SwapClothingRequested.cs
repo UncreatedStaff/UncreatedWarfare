@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 
@@ -119,7 +120,7 @@ public class SwapClothingRequested : CancellablePlayerEvent
     /// <returns><see langword="true"/> if the selected item exists and it's type matches the clothing type required, otherwise <see langword="false"/>.</returns>
     public bool TryChangeItem(Page page, byte x, byte y)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         PlayerInventory inventory = Player.UnturnedPlayer.inventory;
         byte index = inventory.getIndex((byte)page, x, y);

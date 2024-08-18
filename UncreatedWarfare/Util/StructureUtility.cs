@@ -17,7 +17,7 @@ public static class StructureUtility
     [Pure]
     public static StructureIterator EnumerateStructures()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new StructureIterator((byte)(Regions.WORLD_SIZE / 2), (byte)(Regions.WORLD_SIZE / 2));
     }
@@ -29,7 +29,7 @@ public static class StructureUtility
     [Pure]
     public static StructureIterator EnumerateStructures(Vector3 center)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
         {
@@ -46,7 +46,7 @@ public static class StructureUtility
     [Pure]
     public static StructureIterator EnumerateStructures(byte x, byte y)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new StructureIterator(x, y);
     }
@@ -58,7 +58,7 @@ public static class StructureUtility
     [Pure]
     public static StructureIterator EnumerateStructures(RegionCoord region)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new StructureIterator(region.x, region.y);
     }
@@ -94,7 +94,7 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo FindStructure(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
         while (iterator.MoveNext())
@@ -119,7 +119,7 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo FindStructure(uint instanceId, IAssetLink<ItemStructureAsset> expectedAsset, Vector3 expectedPosition)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         StructureInfo foundByPosition = default;
 
@@ -236,7 +236,7 @@ public static class StructureUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -274,7 +274,7 @@ public static class StructureUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         StructureInfo closest = default;
@@ -316,7 +316,7 @@ public static class StructureUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -358,7 +358,7 @@ public static class StructureUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         StructureInfo closest = default;
@@ -400,7 +400,7 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -434,7 +434,7 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
         StructureInfo closest = default;
@@ -472,7 +472,7 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, ulong group, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -510,7 +510,7 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, ulong group, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
         StructureInfo closest = default;
@@ -556,7 +556,7 @@ public static class StructureUtility
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -594,7 +594,7 @@ public static class StructureUtility
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         StructureInfo closest = default;
@@ -636,7 +636,7 @@ public static class StructureUtility
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -678,7 +678,7 @@ public static class StructureUtility
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         StructureInfo closest = default;
@@ -724,7 +724,7 @@ public static class StructureUtility
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalStructuresFound = 0;
@@ -764,7 +764,7 @@ public static class StructureUtility
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int totalStructuresFound = 0;
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
@@ -800,7 +800,7 @@ public static class StructureUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalStructuresFound = 0;
@@ -840,7 +840,7 @@ public static class StructureUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int totalStructuresFound = 0;
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
@@ -872,7 +872,7 @@ public static class StructureUtility
     [Pure]
     public static int CountStructuresInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalStructuresFound = 0;

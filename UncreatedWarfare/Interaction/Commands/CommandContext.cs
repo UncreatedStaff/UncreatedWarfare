@@ -1805,7 +1805,7 @@ public class CommandContext : ControlException
             return this;
         }
 
-        if (Thread.CurrentThread.IsGameThread())
+        if (GameThread.IsCurrent)
         {
             Player.UnturnedPlayer.sendBrowserRequest(message, url);
         }

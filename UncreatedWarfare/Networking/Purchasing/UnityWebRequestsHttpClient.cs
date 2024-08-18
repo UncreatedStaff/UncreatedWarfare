@@ -118,7 +118,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
                 }
             }
 
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
 #if TELEMETRY
             _stopwatch.Stop();

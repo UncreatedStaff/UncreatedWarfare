@@ -139,7 +139,7 @@ public class CommandDispatcher : IDisposable
     /// </summary>
     internal void ExecuteCommand(CommandInfo command, ICommandUser user, string[] args, string originalMessage)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         // take off common trailing slash when missing the enter key
         if (args.Length > 0 && args[^1].EndsWith('\\'))

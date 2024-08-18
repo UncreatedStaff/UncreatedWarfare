@@ -172,7 +172,7 @@ public static class DailyQuests
     }
     public static void TrackDailyQuest(UCPlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (player.Save.TrackQuests && Assets.find(_quests[_index].Guid) is QuestAsset qa)
             player.ServerTrackQuest(qa);
     }

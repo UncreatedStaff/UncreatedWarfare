@@ -106,7 +106,7 @@ public class ZoneStore : IHostedService
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public ITrackingProximity<Collider> CreateColliderForZone(Zone zone)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         // avoid making GameObject if it'll error
         if (zone.Shape is not ZoneShape.AABB and not ZoneShape.Cylinder and not ZoneShape.Sphere and not ZoneShape.Polygon

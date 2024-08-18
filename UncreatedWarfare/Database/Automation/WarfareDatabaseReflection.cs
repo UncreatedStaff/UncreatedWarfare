@@ -13,6 +13,7 @@ using Uncreated.Warfare.Database.ValueGenerators;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Database.Automation;
 public static class WarfareDatabaseReflection
@@ -27,9 +28,9 @@ public static class WarfareDatabaseReflection
         valueConverters.Add(typeof(HWID), typeof(HWIDValueConverter));
         valueConverters.Add(typeof(IPAddress), typeof(IPAddressValueConverter));
         valueConverters.Add(typeof(IPv4Range), typeof(IPv4RangeValueConverter));
-        valueConverters.Add(typeof(PrimaryKey), typeof(PrimaryKeyValueConverter));
         valueConverters.Add(typeof(DateTimeOffset), typeof(DateTimeOffsetValueConverter));
     }
+
     public static void ApplyValueConverterConfig(ModelBuilder modelBuilder, Action<Dictionary<Type, Type>>? modValueConverters = null)
     {
         Dictionary<Type, Type> valueConverters = new Dictionary<Type, Type>(16);

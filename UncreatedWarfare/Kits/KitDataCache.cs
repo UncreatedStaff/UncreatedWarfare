@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -19,7 +20,7 @@ namespace Uncreated.Warfare.Kits;
 /// <summary>
 /// Caches kits based on who's online.
 /// </summary>
-public class KitDataCache(KitManager manager) : IAsyncEventListener<PlayerJoined>, IEventListener<PlayerLeft>, IEventListener<QuestCompleted>
+public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) : IAsyncEventListener<PlayerJoined>, IEventListener<PlayerLeft>, IEventListener<QuestCompleted>
 {
     public KitManager Manager { get; } = manager;
     internal ConcurrentDictionary<string, Kit> KitDataById { get; } = new ConcurrentDictionary<string, Kit>(StringComparer.OrdinalIgnoreCase);
@@ -72,7 +73,7 @@ public class KitDataCache(KitManager manager) : IAsyncEventListener<PlayerJoined
     }
     public async Task ReloadCache(CancellationToken token)
     {
-        await using WarfareDbContext dbContext = new WarfareDbContext();
+        await using WarfareDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
         ulong[] online = PlayerManager.GetOnlinePlayersArray();
 
         List<Kit> kits = await IncludeCachedKitData(dbContext.Kits)
@@ -90,7 +91,7 @@ public class KitDataCache(KitManager manager) : IAsyncEventListener<PlayerJoined
     }
     public async Task<Kit?> ReloadCache(uint pk, CancellationToken token)
     {
-        await using WarfareDbContext dbContext = new WarfareDbContext();
+        await using WarfareDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
 
         Kit? kit = await IncludeCachedKitData(dbContext.Kits)
             .FirstOrDefaultAsync(x => x.PrimaryKey == pk, token);
@@ -134,7 +135,7 @@ public class KitDataCache(KitManager manager) : IAsyncEventListener<PlayerJoined
 
         try
         {
-            await using WarfareDbContext dbContext = new WarfareDbContext();
+            await using WarfareDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
             ulong steam64 = e.Steam64.m_SteamID;
 
             CancellationToken tkn = e.Player.DisconnectToken;

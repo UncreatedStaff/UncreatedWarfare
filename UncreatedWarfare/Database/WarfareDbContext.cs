@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Storage;
 using System;
+using Microsoft.Extensions.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Logging;
@@ -18,12 +19,16 @@ using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Database;
 #pragma warning disable CS8644
-public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext, IWhitelistDbContext
+public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext, IWhitelistDbContext, IHostedService
 {
-    internal static string? ConnStringOverride = null;
+    private readonly string _connectionString;
+    private readonly bool _sensitiveDataLogging;
+
+    private readonly ILogger<WarfareDbContext> _logger;
     
     public DbSet<LanguageInfo> Languages => Set<LanguageInfo>();
     public DbSet<LanguagePreferences> LanguagePreferences => Set<LanguagePreferences>();
@@ -50,22 +55,50 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<BuildableSave> Saves => Set<BuildableSave>();
     public DbSet<ItemWhitelist> Whitelists => Set<ItemWhitelist>();
 
+    public WarfareDbContext(IConfiguration sysConfig, ILogger<WarfareDbContext> logger)
+    {
+        _logger = logger;
+
+        IConfiguration databaseSection = sysConfig.GetSection("database");
+
+        string? connectionStringType = sysConfig["connection_string_name"];
+
+        if (string.IsNullOrWhiteSpace(connectionStringType))
+            connectionStringType = "warfare-db";
+
+        string? connectionString = sysConfig.GetConnectionString(connectionStringType);
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException($"Missing connection string: \"{connectionStringType}\".");
+
+        if (databaseSection.GetValue<bool>("sensitive_data_logging"))
+        {
+            _logger.LogInformation("Sensitive data logging is enabled.");
+            _sensitiveDataLogging = true;
+        }
+
+        _connectionString = connectionString;
+    }
+
     /* configure database settings */
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        string connectionString = ConnStringOverride ?? UCWarfare.Config.SqlConnectionString ?? (UCWarfare.Config.RemoteSQL ?? UCWarfare.Config.SQL).GetConnectionString("UCWarfare", true, true);
-
-        optionsBuilder.UseMySql(connectionString, x => x
+        optionsBuilder.UseMySql(_connectionString, x => x
             .CharSet(CharSet.Utf8Mb4)
             .CharSetBehavior(CharSetBehavior.AppendToAllColumns));
 
-        // optionsBuilder.EnableSensitiveDataLogging();
+        if (_sensitiveDataLogging)
+        {
+            optionsBuilder.EnableSensitiveDataLogging();
+        }
 
         IDbContextOptionsBuilderInfrastructure settings = optionsBuilder;
         
         // for some reason default logging completely crashes the server
-        CoreOptionsExtension extension = (optionsBuilder.Options.FindExtension<CoreOptionsExtension>() ?? new CoreOptionsExtension())
-            .WithLoggerFactory(new L.UCLoggerFactory() { DebugLogging = false });
+        CoreOptionsExtension extension = (
+                optionsBuilder.Options.FindExtension<CoreOptionsExtension>() ?? new CoreOptionsExtension()
+            ).WithLoggerFactory(new L.UCLoggerFactory { DebugLogging = false });
+
         settings.AddOrUpdateExtension(extension);
     }
 
@@ -88,6 +121,23 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder);
 
         Console.WriteLine("Model created.");
+    }
+
+    async UniTask IHostedService.StartAsync(CancellationToken token)
+    {
+        try
+        {
+            await Database.MigrateAsync(token);
+        }
+        finally
+        {
+            await DisposeAsync();
+        }
+    }
+
+    UniTask IHostedService.StopAsync(CancellationToken token)
+    {
+        return DisposeAsync().AsUniTask();
     }
 }
 #pragma warning restore CS8644

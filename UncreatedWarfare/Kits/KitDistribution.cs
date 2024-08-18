@@ -93,7 +93,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
     /// </summary>
     public void DistributeKitItems(WarfarePlayer player, Kit? kit, bool clearInventory = true, bool sendActionTip = true, bool ignoreAmmobags = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (clearInventory)
             ItemUtility.ClearInventory(player, !Data.UseFastKits);
 

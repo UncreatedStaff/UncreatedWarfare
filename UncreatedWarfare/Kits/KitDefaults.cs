@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
@@ -10,7 +12,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
-public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKitsDbContext, new()
+public class KitDefaults<TDbContext>(KitManager manager, IServiceProvider serviceProvider) where TDbContext : IKitsDbContext
 {
     public KitManager Manager { get; } = manager;
 
@@ -68,7 +70,7 @@ public class KitDefaults<TDbContext>(KitManager manager) where TDbContext : IKit
     {
         List<IKitItem> items = new List<IKitItem>(DefaultKitItems.Length + 6);
         items.AddRange(DefaultKitItems);
-        await using IKitsDbContext dbContext = new TDbContext();
+        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<TDbContext>();
         Kit? existing = await dbContext.Kits.FirstOrDefaultAsync(x => x.InternalName == name, token).ConfigureAwait(false);
         if (existing != null)
         {

@@ -17,7 +17,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectIterator EnumerateObjects()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new ObjectIterator();
     }
@@ -29,7 +29,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectIterator EnumerateObjects(Vector3 center)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
         {
@@ -47,7 +47,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectIterator EnumerateObjects(Vector3 center, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
         {
@@ -64,7 +64,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectIterator EnumerateObjects(RegionCoord region)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new ObjectIterator(region.x, region.y);
     }
@@ -76,7 +76,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectIterator EnumerateObjects(byte x, byte y)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new ObjectIterator(x, y);
     }
@@ -89,7 +89,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectIterator EnumerateObjects(RegionCoord region, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new ObjectIterator(region.x, region.y, maxRegionDistance);
     }
@@ -102,7 +102,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectIterator EnumerateObjects(byte x, byte y, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new ObjectIterator(x, y, maxRegionDistance);
     }
@@ -152,7 +152,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo FindObject(Transform transform)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (transform == null)
             return default;
@@ -220,7 +220,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo FindObject(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
         while (iterator.MoveNext())
@@ -245,7 +245,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo FindObject(uint instanceId, IAssetLink<ObjectAsset> expectedAsset, Vector3 expectedPosition)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ObjectInfo foundByPosition = default;
 
@@ -330,7 +330,7 @@ public static class LevelObjectUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -369,7 +369,7 @@ public static class LevelObjectUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         ObjectInfo closest = default;
@@ -408,7 +408,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo GetClosestObjectInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -443,7 +443,7 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo GetClosestObject(Vector3 position, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         ObjectInfo closest = default;
@@ -486,7 +486,7 @@ public static class LevelObjectUtility
         if (objectSelector == null)
             throw new ArgumentNullException(nameof(objectSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -525,7 +525,7 @@ public static class LevelObjectUtility
         if (objectSelector == null)
             throw new ArgumentNullException(nameof(objectSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         ObjectInfo closest = default;
@@ -568,7 +568,7 @@ public static class LevelObjectUtility
         if (objectSelector == null)
             throw new ArgumentNullException(nameof(objectSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalObjectsFound = 0;
@@ -609,7 +609,7 @@ public static class LevelObjectUtility
         if (objectSelector == null)
             throw new ArgumentNullException(nameof(objectSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int totalObjectsFound = 0;
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
@@ -645,7 +645,7 @@ public static class LevelObjectUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalObjectsFound = 0;
@@ -686,7 +686,7 @@ public static class LevelObjectUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int totalObjectsFound = 0;
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
@@ -718,7 +718,7 @@ public static class LevelObjectUtility
     [Pure]
     public static int CountObjectsInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalObjectsFound = 0;

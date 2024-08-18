@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.UI;
 public sealed class ToastManager : IPlayerComponent
@@ -125,7 +126,7 @@ public sealed class ToastManager : IPlayerComponent
     {
         CheckOutOfBoundsToastMessageStyle(message.Style);
 
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             QueueIntl(in message);
         else
         {
@@ -144,7 +145,7 @@ public sealed class ToastManager : IPlayerComponent
         CheckOutOfBoundsToastMessageStyle(style);
         ToastMessageInfo info = ToastMessages[(int)style];
 
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             SkipExpirationIntl(info.Channel);
         else
         {
@@ -159,7 +160,7 @@ public sealed class ToastManager : IPlayerComponent
     /// <remarks>Thread Safe</remarks>
     public void SkipExpiration(int channel)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             SkipExpirationIntl(channel);
         else
         {

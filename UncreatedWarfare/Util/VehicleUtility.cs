@@ -22,7 +22,7 @@ public static class VehicleUtility
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public static bool TryGetVehicleFromTrunkStorage([NotNullWhen(true)] Items? trunk, [MaybeNullWhen(false)] out InteractableVehicle vehicle)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (trunk is null)
         {
@@ -54,7 +54,7 @@ public static class VehicleUtility
         if (player is null)
             throw new ArgumentNullException(nameof(player));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (Data.SendSwapVehicleSeats == null)
         {

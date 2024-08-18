@@ -1196,7 +1196,7 @@ public static class EventFunctions
     }
     private static void PlaceMarker(UCPlayer ucplayer, Vector3 point, bool requireSquad, bool placeMarkerOnMap)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (placeMarkerOnMap)
             ucplayer.Player.quests.replicateSetMarker(true, point);
         EffectAsset marker = ucplayer.GetMarker();
@@ -1233,7 +1233,7 @@ public static class EventFunctions
     public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer, EffectAsset marker)
     {
         if (marker == null) return;
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (ucplayer.Squad == null)
         {
             EffectManager.ClearEffectByGuid(marker.GUID, ucplayer.Player.channel.owner.transportConnection);

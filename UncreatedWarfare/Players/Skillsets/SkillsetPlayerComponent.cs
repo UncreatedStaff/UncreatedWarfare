@@ -20,7 +20,7 @@ public class SkillsetPlayerComponent : IPlayerComponent
     /// </summary>
     public void ResetSkillset(EPlayerSpeciality speciality, byte skill)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Player.IsOnline)
             return;
@@ -68,7 +68,7 @@ public class SkillsetPlayerComponent : IPlayerComponent
     /// </summary>
     public void EnsureSkillset(Skillset skillset)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!Player.IsOnline)
             return;
 
@@ -97,7 +97,7 @@ public class SkillsetPlayerComponent : IPlayerComponent
     /// <remarks>If a value isn't overridden, the values from <see cref="Skillset.DefaultSkillsets"/> will be used.</remarks>
     public void EnsureSkillsets(IEnumerable<Skillset> skillsets)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!Player.IsOnline)
             return;
 

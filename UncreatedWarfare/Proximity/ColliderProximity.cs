@@ -32,7 +32,7 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, ID
         Func<Collider, bool>? validationCheck = null
     )
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (_initialized)
             throw new InvalidOperationException("Already initialized.");
@@ -163,7 +163,7 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, ID
 
     public void Dispose()
     {
-        if (Thread.CurrentThread.IsGameThread())
+        if (GameThread.IsCurrent)
         {
             DisposeIntl();
         }

@@ -949,7 +949,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public int CompareTo(UCPlayer obj) => Steam64.CompareTo(obj.Steam64);
     public void SetCosmeticStates(bool state)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, state);
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, state);
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, state);
@@ -959,7 +959,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     /// <param name="amount">Net amount to add to the player's reputation. Can be negative to subtract.</param>
     public void AddReputation(int amount)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
         {
             Patches.LifePatches.IsSettingReputation = true;
             try
@@ -1069,7 +1069,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         if (playerSummary != null)
             CachedSteamProfile = playerSummary;
 #if DEBUG
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 #endif
 
         if (playerSummary != null && UCWarfare.IsLoaded)
@@ -1126,7 +1126,7 @@ public readonly struct OfflinePlayerName(CSteamID steam64, string name) : IPlaye
             return Name;
         if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
             goto end;
-        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (UCWarfare.IsMainThread && PlayerSave.TryReadSaveFile(Steam64.m_SteamID, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
+        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (GameThread.IsCurrent && PlayerSave.TryReadSaveFile(Steam64.m_SteamID, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
         if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal) ||
             format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal) ||
             format.Equals(UCPlayer.FormatColoredPlayerName, StringComparison.Ordinal))
@@ -1180,7 +1180,7 @@ public struct OfflinePlayer : IPlayer
             return names.PlayerName;
         if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
             goto end;
-        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (UCWarfare.IsMainThread && PlayerSave.TryReadSaveFile(_s64.m_SteamID, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
+        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (GameThread.IsCurrent && PlayerSave.TryReadSaveFile(_s64.m_SteamID, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
         if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal))
             return Localization.Colorize(hex, names.CharacterName, flags);
         if (format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal))

@@ -441,7 +441,7 @@ public static class UCAssetManager
     private static readonly DatParser _parser = new DatParser();
     private static void GetData(string filePath, out DatDictionary assetData, out string? assetError, out byte[] hash, out DatDictionary? translationData, out DatDictionary? fallbackTranslationData)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         string directoryName = Path.GetDirectoryName(filePath)!;
         using FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -466,7 +466,7 @@ public static class UCAssetManager
     }
     public static DatDictionary ReadFileWithoutHash(string path)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         using FileStream fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         using StreamReader inputReader = new StreamReader(fileStream);

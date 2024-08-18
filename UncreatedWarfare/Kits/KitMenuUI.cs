@@ -257,7 +257,7 @@ public class KitMenuUI : UnturnedUI
 
     private KitMenuUIData GetData(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         KitMenuUIData? data = UnturnedUIDataSource.GetData<KitMenuUIData>(player.Steam64, Parent);
         if (data != null)

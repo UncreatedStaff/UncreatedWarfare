@@ -124,7 +124,7 @@ public class WarfarePlayerLocale
         if (OnLocaleUpdated == null)
             return;
         // ReSharper disable once ConstantConditionalAccessQualifier
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
         {
             try
             {

@@ -2,6 +2,7 @@
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
 public class DeploymentService : ISessionHostedService
@@ -43,7 +44,7 @@ public class DeploymentService : ISessionHostedService
     /// </summary>
     public void CancelDeploymentsTo(IDeployable location, bool chat)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (location == null)
             throw new ArgumentNullException(nameof(location));

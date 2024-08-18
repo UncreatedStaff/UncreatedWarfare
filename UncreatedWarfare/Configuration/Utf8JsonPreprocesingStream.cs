@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Configuration;
 
@@ -164,7 +165,7 @@ public class Utf8JsonPreProcessingStream : Stream
     {
         int len = (int)Math.Min(int.MaxValue, Length);
         byte[] buffer;
-        if (allowStaticBuffer && Thread.CurrentThread.IsGameThread())
+        if (allowStaticBuffer && GameThread.IsCurrent)
         {
             buffer = _readBuffer ??= new byte[len];
             if (buffer.Length < len)

@@ -29,7 +29,7 @@ public static class ItemUtility
         if (items == null)
             throw new ArgumentNullException(nameof(items));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new ItemPageIterator(items, reverse);
     }
@@ -41,7 +41,7 @@ public static class ItemUtility
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new DroppedItemIterator();
     }
@@ -53,7 +53,7 @@ public static class ItemUtility
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(Vector3 center)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
         {
@@ -71,7 +71,7 @@ public static class ItemUtility
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(Vector3 center, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.tryGetCoordinate(center, out byte x, out byte y))
         {
@@ -88,7 +88,7 @@ public static class ItemUtility
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(RegionCoord region)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new DroppedItemIterator(region.x, region.y);
     }
@@ -100,7 +100,7 @@ public static class ItemUtility
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(byte x, byte y)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new DroppedItemIterator(x, y);
     }
@@ -113,7 +113,7 @@ public static class ItemUtility
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(RegionCoord region, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new DroppedItemIterator(region.x, region.y, maxRegionDistance);
     }
@@ -126,7 +126,7 @@ public static class ItemUtility
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(byte x, byte y, byte maxRegionDistance)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return new DroppedItemIterator(x, y, maxRegionDistance);
     }
@@ -161,7 +161,7 @@ public static class ItemUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         PlayerInventory inv = player.inventory;
 
@@ -199,7 +199,7 @@ public static class ItemUtility
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         PlayerInventory inv = player.inventory;
 
@@ -255,7 +255,7 @@ public static class ItemUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalItemsFound = 0;
@@ -298,7 +298,7 @@ public static class ItemUtility
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalItemsFound = 0;
@@ -338,7 +338,7 @@ public static class ItemUtility
     /// <returns>Number of items destroyed.</returns>
     public static int DestroyDroppedItemsInRange(Vector3 position, float radius, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalItemsFound = 0;
@@ -379,7 +379,7 @@ public static class ItemUtility
         if (item == null)
             throw new ArgumentNullException(nameof(item));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ItemInfo itemInfo = FindItem(item.instanceID, item.point);
 
@@ -401,7 +401,7 @@ public static class ItemUtility
         if (item == null)
             throw new ArgumentNullException(nameof(item));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ItemInfo itemInfo = FindItem(item.instanceID, item.point);
 
@@ -420,7 +420,7 @@ public static class ItemUtility
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, bool playTakeItemSound = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.checkSafe(x, y))
             throw new ArgumentOutOfRangeException("(x, y)", "X and/or Y coordinate invalid.");
@@ -438,7 +438,7 @@ public static class ItemUtility
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, WarfarePlayer pickUpPlayer, bool playTakeItemSound)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!Regions.checkSafe(x, y))
             throw new ArgumentOutOfRangeException("(x, y)", "X and/or Y coordinate invalid.");
@@ -472,7 +472,7 @@ public static class ItemUtility
     /// </summary>
     public static IKitItem[] ItemsFromInventory(UCPlayer player, bool addClothes = true, bool addItems = true, bool findAssetRedirects = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!addItems && !addClothes)
             return Array.Empty<IKitItem>();
         List<IKitItem> items = new List<IKitItem>(32);
@@ -573,7 +573,7 @@ public static class ItemUtility
     /// </summary>
     public static void UpdateSlots(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!player.IsOnline)
             return;
         // removes the primaries/secondaries from the third person model
@@ -586,7 +586,7 @@ public static class ItemUtility
     /// </summary>
     public static void ClearInventory(WarfarePlayer player, bool clothes = true)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!player.IsOnline)
             return;
         player.ItemTransformations.Clear();
@@ -702,7 +702,7 @@ public static class ItemUtility
     /// </summary>
     public static void GiveItems(WarfarePlayer player, IKitItem[] items, bool clear)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!player.IsOnline)
             return;
 
@@ -951,7 +951,7 @@ public static class ItemUtility
     /// </summary>
     public static void SendPages(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!player.IsOnline)
             return;
         Items[] il = player.UnturnedPlayer.inventory.items;
@@ -986,7 +986,7 @@ public static class ItemUtility
     /// </summary>
     public static ItemJar? GetHeldItem(WarfarePlayer player, out Page page)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (player.IsOnline)
         {
             PlayerEquipment eq = player.UnturnedPlayer.equipment;
@@ -1093,7 +1093,7 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo FindItem(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
         while (iterator.MoveNext())
@@ -1118,7 +1118,7 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo FindItem(uint instanceId, IAssetLink<ItemAsset> expectedAsset, Vector3 expectedPosition)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ItemInfo foundByPosition = default;
 
@@ -1202,7 +1202,7 @@ public static class ItemUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -1241,7 +1241,7 @@ public static class ItemUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         ItemInfo closest = default;
@@ -1280,7 +1280,7 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo GetClosestItemInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -1315,7 +1315,7 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo GetClosestItem(Vector3 position, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         ItemInfo closest = default;
@@ -1358,7 +1358,7 @@ public static class ItemUtility
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         float sqrRadius = radius * radius;
@@ -1397,7 +1397,7 @@ public static class ItemUtility
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
         ItemInfo closest = default;
@@ -1440,7 +1440,7 @@ public static class ItemUtility
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalItemsFound = 0;
@@ -1481,7 +1481,7 @@ public static class ItemUtility
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int totalItemsFound = 0;
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
@@ -1517,7 +1517,7 @@ public static class ItemUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalItemsFound = 0;
@@ -1558,7 +1558,7 @@ public static class ItemUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int totalItemsFound = 0;
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions();
@@ -1590,7 +1590,7 @@ public static class ItemUtility
     [Pure]
     public static int CountItemsInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
         int totalItemsFound = 0;

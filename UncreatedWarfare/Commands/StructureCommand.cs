@@ -428,7 +428,7 @@ public class StructureCommand : IExecutableCommand
     }
     private async Task ExamineVehicle(InteractableVehicle vehicle, UCPlayer player, bool sendurl, CancellationToken token = default)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (vehicle.lockedOwner == default || vehicle.lockedOwner == Steamworks.CSteamID.Nil)
         {
             player.SendChat(T.StructureExamineNotLocked);
@@ -464,7 +464,7 @@ public class StructureCommand : IExecutableCommand
     }
     private async Task ExamineBarricade(BarricadeDrop bdrop, UCPlayer player, bool sendurl, CancellationToken token = default)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (bdrop != null)
         {
             BarricadeData data = bdrop.GetServersideData();
@@ -497,7 +497,7 @@ public class StructureCommand : IExecutableCommand
     }
     private async Task ExamineStructure(StructureDrop sdrop, UCPlayer player, bool sendurl, CancellationToken token = default)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (sdrop != null)
         {
             StructureData data = sdrop.GetServersideData();

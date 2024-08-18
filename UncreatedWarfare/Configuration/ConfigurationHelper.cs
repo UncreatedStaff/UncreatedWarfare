@@ -88,7 +88,10 @@ public static class ConfigurationHelper
         return data;
     }
 
-    private static void AddJsonOrYamlFile(IConfigurationBuilder configBuilder, string path, bool optional = false, bool reloadOnChange = false)
+    /// <summary>
+    /// Add a file source as either a JSON or YAML file, depending on the file extension.
+    /// </summary>
+    public static void AddJsonOrYamlFile(IConfigurationBuilder configBuilder, string path, bool optional = false, bool reloadOnChange = false)
     {
         ReadOnlySpan<char> ext = Path.GetExtension(path.AsSpan());
         if (ext.Equals(".json", StringComparison.OrdinalIgnoreCase))

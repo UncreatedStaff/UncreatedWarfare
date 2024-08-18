@@ -1,10 +1,11 @@
-using System;
-using System.Collections.Generic;
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
+using System;
+using System.Collections.Generic;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations;
 
@@ -22,9 +23,11 @@ public class LanguageSets
     public LanguageSetEnumerator AllPlayersExcept(CSteamID steam64) => PlayersWhere(pl => pl.Steam64.m_SteamID != steam64.m_SteamID);
     public LanguageSetEnumerator AllPlayersExcept(IPlayer player) => PlayersWhere(pl => pl.Steam64.m_SteamID != player.Steam64.m_SteamID);
 
+    // ReSharper disable InconsistentNaming
     public LanguageSetEnumerator AllPlayersExcept(params ulong[] steam64s) => PlayersWhere(pl => Array.IndexOf(steam64s, pl.Steam64.m_SteamID) == -1);
     public LanguageSetEnumerator AllPlayersExcept(params CSteamID[] steam64s) => PlayersWhere(pl => Array.IndexOf(steam64s, pl.Steam64) == -1);
-    public LanguageSetEnumerator AllPlayersExcept(params IPlayer[] players) => PlayersWhere(pl => Array.FindIndex(players, pl2 => pl.Steam64.m_SteamID == pl.Steam64.m_SteamID) == -1);
+    public LanguageSetEnumerator AllPlayersExcept(params IPlayer[] players) => PlayersWhere(pl => Array.FindIndex(players, pl2 => pl.Steam64.m_SteamID == pl2.Steam64.m_SteamID) == -1);
+    // ReSharper restore InconsistentNaming
 
     public LanguageSetEnumerator PlayersOnTeam(Team team) => PlayersWhere(pl => pl.Team == team);
 
@@ -36,12 +39,14 @@ public class LanguageSets
 
     public LanguageSetEnumerator PlayersWhere(Func<WarfarePlayer, bool>? selector)
     {
-        ThreadUtil.assertIsGameThread();
+        IReadOnlyList<WarfarePlayer> playerList = _playerService.GetThreadsafePlayerList();
 
-        List<LanguageSet> sets = ListPool<LanguageSet>.claim();
-        List<WarfarePlayer> players = ListPool<WarfarePlayer>.claim();
+        bool pool = GameThread.IsCurrent;
+
+        List<LanguageSet> sets = pool ? ListPool<LanguageSet>.claim() : new List<LanguageSet>(selector == null ? 8 : 4);
+        List<WarfarePlayer> players = pool ? ListPool<WarfarePlayer>.claim() : new List<WarfarePlayer>(selector == null ? Provider.clients.Count : Provider.clients.Count / 2);
         
-        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        foreach (WarfarePlayer player in playerList)
         {
             if (selector != null && !selector(player))
                 continue;
@@ -87,6 +92,6 @@ public class LanguageSets
             sets[i] = set;
         }
 
-        return new LanguageSetEnumerator(sets, players);
+        return new LanguageSetEnumerator(sets, players, pool);
     }
 }

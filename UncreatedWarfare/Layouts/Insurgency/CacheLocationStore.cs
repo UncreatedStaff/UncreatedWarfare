@@ -49,7 +49,7 @@ public class CacheLocationStore : ISessionHostedService
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public bool AddCacheLocation(CacheLocation location, bool save = true)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (_locationsIntl.Contains(location))
             return false;
@@ -67,7 +67,7 @@ public class CacheLocationStore : ISessionHostedService
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public bool RemoveCacheLocation(CacheLocation location, bool save = true)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!_locationsIntl.Remove(location))
             return false;
@@ -83,7 +83,7 @@ public class CacheLocationStore : ISessionHostedService
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Reload()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (!File.Exists(FileName))
         {
@@ -127,7 +127,7 @@ public class CacheLocationStore : ISessionHostedService
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Save()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         string? dir = Path.GetDirectoryName(FileName);
         if (dir != null)

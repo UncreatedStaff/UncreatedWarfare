@@ -10,6 +10,7 @@ namespace Uncreated.Warfare.Translations;
 public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlayer>
 {
     private ArraySegment<WarfarePlayer> _players;
+    private int _index;
     internal int StartIndex;
     internal int Count;
     public readonly ArraySegment<WarfarePlayer> Players => _players;
@@ -26,6 +27,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         Culture = culture;
         Team = team;
         IMGUI = imgui;
+        _index = -1;
 
         Reset();
     }
@@ -37,10 +39,16 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         Culture = set.Culture;
         Team = set.Team;
         IMGUI = set.IMGUI;
+        _index = -1;
 
         Reset();
     }
+
     internal void SetPlayers(ArraySegment<WarfarePlayer> players) => _players = players;
+
+    /// <summary>
+    /// Check if a player's language settings is on par with this set.
+    /// </summary>
     public readonly bool Includes(WarfarePlayer player)
     {
         return player.Save.IMGUI == IMGUI
@@ -49,32 +57,40 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
                && player.Team == Team;
     }
 
+    public readonly PooledTransportConnectionList GatherTransportConnections()
+    {
+        PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Players.Count);
+        foreach (WarfarePlayer pl in Players)
+        {
+            if (pl.IsOnline)
+                list.Add(pl.Connection);
+        }
+
+        return list;
+    }
+
     public void Reset()
     {
-        _enumerator = Players.GetEnumerator();
+        _index = -1;
     }
 
     public bool MoveNext()
     {
-        if (!_enumerator.MoveNext())
-        {
-            Next = null!;
+        ++_index;
+        if (_index >= _players.Count)
             return false;
-        }
-        
-        Next = _enumerator.Current;
+
+        Next = _players[_index];
         return true;
     }
 
-    public readonly IEnumerator<WarfarePlayer> GetEnumerator()
+    public LanguageSet GetEnumerator()
     {
-        return _enumerator;
+        return this with { _index = -1 };
     }
 
-    readonly IEnumerator IEnumerable.GetEnumerator()
-    {
-        return _enumerator;
-    }
+    IEnumerator<WarfarePlayer> IEnumerable<WarfarePlayer>.GetEnumerator() => GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     public readonly void Dispose() { }
 }

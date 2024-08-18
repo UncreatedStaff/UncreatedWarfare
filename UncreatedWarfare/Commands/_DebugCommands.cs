@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
@@ -25,6 +26,8 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Translations;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 #if DEBUG
@@ -40,8 +43,15 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class DebugCommand : IExecutableCommand
 {
+    private readonly IServiceProvider _serviceProvider;
+
     /// <inheritdoc />
     public CommandContext Context { get; set; }
+
+    public DebugCommand(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
 
     /// <summary>
     /// Get /help metadata about this command.
@@ -1302,7 +1312,7 @@ public class DebugCommand : IExecutableCommand
     {
         Context.AssertRanByConsole();
 
-        await using WarfareDbContext dbContext = new WarfareDbContext();
+        await using WarfareDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
         HashSet<ulong> s64s = new HashSet<ulong>(8192);
 

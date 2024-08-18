@@ -10,6 +10,7 @@ using System.Reflection.Emit;
 using System.Text.Json;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Util;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Moderation;
@@ -51,7 +52,7 @@ public class AudioRecordManager
 
     public async UniTask<AudioConvertResult> TryWriteWavAsync(byte[] multipartData, Stream writeTo, bool leaveOpen = true, CancellationToken token = default)
     {
-        if (!UCWarfare.IsMainThread)
+        if (!GameThread.IsCurrent)
         {
             await UniTask.SwitchToMainThread(token);
         }

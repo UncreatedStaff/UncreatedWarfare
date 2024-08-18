@@ -333,7 +333,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     public float GetProxyScore(UCPlayer enemy)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (Bunker == null || enemy.Player.life.isDead || enemy.IsInVehicle)
             return 0;
@@ -470,7 +470,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     public void UpdateRadioState(RadioComponent.RadioState state)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (Radio == null)
         {
             Destroy();
@@ -564,7 +564,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     public void Destroy()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (_isBeingDestroyed)
             return;
         _isBeingDestroyed = true;
@@ -678,7 +678,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     public void OffloadNearbyLogisticsVehicle()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         VehicleInfoStore infoStore = /* todo */ null!;
 
@@ -901,7 +901,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     public void UpdateResourceUI(bool build, bool ammo, bool foblist = true)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (!build && !ammo)
             return;
         if (foblist && Data.Singletons.TryGetSingleton(out FOBManager fobManager))

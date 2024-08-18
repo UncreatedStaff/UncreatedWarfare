@@ -20,7 +20,7 @@ public static class RandomUtility
     /// </summary>
     public static int GetInteger()
     {
-        return Environment.CurrentManagedThreadId == WarfareModule.GameThreadId
+        return GameThread.IsCurrent
             ? UnityEngine.Random.Range(0, int.MaxValue)
             : GetNonGameThreadRandom().Next();
     }
@@ -33,7 +33,7 @@ public static class RandomUtility
         if (upperExclusive == 1)
             return 0;
 
-        return Environment.CurrentManagedThreadId == WarfareModule.GameThreadId
+        return GameThread.IsCurrent
             ? UnityEngine.Random.Range(0, upperExclusive)
             : GetNonGameThreadRandom().Next(upperExclusive);
     }
@@ -46,7 +46,7 @@ public static class RandomUtility
         if (lowerInclusive == upperExclusive - 1)
             return lowerInclusive;
 
-        return Environment.CurrentManagedThreadId == WarfareModule.GameThreadId
+        return GameThread.IsCurrent
             ? UnityEngine.Random.Range(lowerInclusive, upperExclusive)
             : GetNonGameThreadRandom().Next(lowerInclusive, upperExclusive);
     }
@@ -56,7 +56,7 @@ public static class RandomUtility
     /// </summary>
     public static float GetFloat()
     {
-        return Environment.CurrentManagedThreadId == WarfareModule.GameThreadId
+        return GameThread.IsCurrent
             ? UnityEngine.Random.value
             : (float)GetNonGameThreadRandom().NextDouble();
     }
@@ -76,7 +76,7 @@ public static class RandomUtility
     /// </summary>
     public static float GetFloat(float lowerInclusive, float upperInclusive)
     {
-        return Environment.CurrentManagedThreadId == WarfareModule.GameThreadId
+        return GameThread.IsCurrent
             ? UnityEngine.Random.Range(lowerInclusive, upperInclusive)
             : (float)GetNonGameThreadRandom().NextDouble() * (upperInclusive - lowerInclusive) + lowerInclusive;
     }
@@ -86,7 +86,7 @@ public static class RandomUtility
     /// </summary>
     public static double GetDouble()
     {
-        return Environment.CurrentManagedThreadId == WarfareModule.GameThreadId
+        return GameThread.IsCurrent
             ? UnityEngine.Random.value
             : (float)GetNonGameThreadRandom().NextDouble();
     }

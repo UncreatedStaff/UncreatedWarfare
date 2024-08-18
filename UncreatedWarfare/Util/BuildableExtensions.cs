@@ -15,7 +15,7 @@ public static class BuildableExtensions
         if (buildable == null)
             throw new ArgumentNullException(nameof(buildable));
 
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         try
         {

@@ -6,6 +6,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction;
 
@@ -14,7 +15,7 @@ public static class Chat
     public const int MaxMessageSize = 2047;
     internal static void SendSingleMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer recipient)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (Data.SendChatIndividual == null)
         {
@@ -41,7 +42,7 @@ public static class Chat
     {
         if (player?.player == null)
             return;
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             SendSingleMessage(message, color, EChatMode.SAY, null, true, player);
         else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, color, EChatMode.SAY, null, true, player));
     }
@@ -54,7 +55,7 @@ public static class Chat
     {
         if (player?.player == null)
             return;
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player);
         else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player));
     }
@@ -67,7 +68,7 @@ public static class Chat
     {
         if (player?.player == null)
             return;
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player);
         else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player));
     }
@@ -381,7 +382,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast(Translation translation)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation));
@@ -407,7 +408,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0>(Translation<T0> translation, T0 arg0)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0));
@@ -433,7 +434,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0, arg1);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1));
@@ -459,7 +460,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0, arg1, arg2);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2));
@@ -485,7 +486,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0, arg1, arg2, arg3);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3));
@@ -511,7 +512,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4));
@@ -537,7 +538,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5));
@@ -563,7 +564,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6));
@@ -589,7 +590,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7));
@@ -615,7 +616,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8));
@@ -641,7 +642,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         else
             UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9));
@@ -672,7 +673,7 @@ public static class Chat
     }
     private static void SendTranslationChat(string value, Translation translation, Color textColor, WarfarePlayer player)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             SendSingleMessage(value, textColor, EChatMode.SAY, null, (translation.Flags & TranslationFlags.NoRichText) == 0, player.SteamPlayer);
         else
             UCWarfare.RunOnMainThread(() => SendSingleMessage(value, textColor, EChatMode.SAY, null, (translation.Flags & TranslationFlags.NoRichText) == 0, player.SteamPlayer));

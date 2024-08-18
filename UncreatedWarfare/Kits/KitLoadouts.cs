@@ -1,10 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using DanielWillett.ModularRpcs.Annotations;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using DanielWillett.ModularRpcs.Annotations;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
@@ -105,7 +105,7 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
     /// <summary>Indexed from 1.</summary>
     public async Task<int> GetFreeLoadoutId(ulong playerId)
     {
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
 
         return await GetFreeLoadoutId(dbContext, playerId).ConfigureAwait(false);
     }
@@ -113,7 +113,7 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
     /// <summary>Indexed from 1.</summary>
     public async Task<int> GetFrGetFreeLoadoutIdeeLoadoutId(ulong playerId, CancellationToken token = default)
     {
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
 
         return await GetFreeLoadoutId(dbContext, playerId, token).ConfigureAwait(false);
     }
@@ -182,7 +182,7 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
             throw new InvalidOperationException($"Kit is already up to date for season {UCWarfare.Season}.");
         }
 
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
 
         Class oldClass = kit.Class;
         FactionInfo? oldFaction = kit.FactionInfo;
@@ -237,7 +237,7 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
             return (existing, StandardErrorCode.NotFound);
         ulong player = 0;
 
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
 
         ActionLog.Add(ActionLogType.UnlockLoadout, loadoutName, fromPlayer);
 
@@ -270,7 +270,7 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
     {
         ulong player = 0;
 
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
 
         Kit? kit = await Manager.FindKit(loadoutName, token, exactMatchOnly: true, KitManager.FullSet).ConfigureAwait(false);
         if (kit == null)
@@ -304,7 +304,7 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
         if (kit != null)
             return (kit, StandardErrorCode.GenericError);
 
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
 
         IKitItem[] items = KitDefaults<WarfareDbContext>.GetDefaultLoadoutItems(@class);
         kit = new Kit(loadoutName, @class, KitDefaults<WarfareDbContext>.GetDefaultBranch(@class), KitType.Loadout, SquadLevel.Member, null)

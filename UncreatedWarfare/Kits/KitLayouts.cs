@@ -12,7 +12,7 @@ public class KitLayouts(KitManager manager)
     public KitManager Manager { get; } = manager;
     internal void TryReverseLayoutTransformations(UCPlayer player, IKitItem[] kitItems, uint kit)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (player.LayoutTransformations is not { Count: > 0 })
             return;
 
@@ -78,7 +78,7 @@ public class KitLayouts(KitManager manager)
     }
     public List<ItemLayoutTransformationData> GetLayoutTransformations(UCPlayer player, uint kit)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         List<ItemLayoutTransformationData> output = new List<ItemLayoutTransformationData>(player.ItemTransformations.Count);
         SDG.Unturned.Items[] p = player.Player.inventory.items;
         for (int i = 0; i < player.ItemTransformations.Count; i++)

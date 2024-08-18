@@ -18,7 +18,7 @@ public class AttachedSphereProximity : IAttachedSphereProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             Bounds bounds = _sphere.worldBounds;
             return AttachmentRoot == null ? bounds : new Bounds(AttachmentRoot.TransformPoint(bounds.center), AttachmentRoot.TransformVector(bounds.size));
@@ -33,7 +33,7 @@ public class AttachedSphereProximity : IAttachedSphereProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             float rad = Sphere.radius;
             Vector3 scale = AttachmentRoot != null ? AttachmentRoot.lossyScale : Vector3.one;
@@ -46,7 +46,7 @@ public class AttachedSphereProximity : IAttachedSphereProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             float rad = Sphere.radius;
             Vector3 scale = AttachmentRoot != null ? AttachmentRoot.lossyScale : Vector3.one;
@@ -68,7 +68,7 @@ public class AttachedSphereProximity : IAttachedSphereProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             float rad = Sphere.radius;
             Vector3 scale = AttachmentRoot != null ? AttachmentRoot.lossyScale : Vector3.one;
@@ -108,7 +108,7 @@ public class AttachedSphereProximity : IAttachedSphereProximity
     /// <inheritdoc />
     public bool TestPoint(Vector3 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? Vector3.zero : AttachmentRoot.InverseTransformPoint(position);
         return _sphere.TestPoint(position - worldPos);
@@ -117,7 +117,7 @@ public class AttachedSphereProximity : IAttachedSphereProximity
     /// <inheritdoc />
     public bool TestPoint(Vector2 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? Vector3.zero : AttachmentRoot.InverseTransformPoint(position);
         return _sphere.TestPoint(new Vector2(position.x - worldPos.x, position.y - worldPos.z));

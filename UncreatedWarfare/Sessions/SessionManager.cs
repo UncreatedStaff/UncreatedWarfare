@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -6,25 +7,30 @@ using System.Linq;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 // ReSharper disable InconsistentlySynchronizedField
 
 namespace Uncreated.Warfare.Sessions;
 public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPlayerPostInitListenerAsync
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly ConcurrentDictionary<ulong, SessionRecord> _sessions = new ConcurrentDictionary<ulong, SessionRecord>();
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
+
+    public SessionManager(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
 
     public override bool AwaitLoad => true;
     protected override async Task LoadAsync(CancellationToken token)
@@ -51,7 +57,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
             _sessions.Clear();
         }
 
-        await using IGameDataDbContext dbContext = new WarfareDbContext();
+        await using IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
         foreach (KeyValuePair<ulong, SessionRecord> session in sessions)
             EndSession(dbContext, session.Value, true);
@@ -69,7 +75,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
             try
             {
                 await UniTask.SwitchToMainThread(token);
-                await using IGameDataDbContext dbContext = new WarfareDbContext();
+                await using IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
                 SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
                 player.CurrentSession = record;
 
@@ -114,7 +120,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
                 List<Task> tasks = new List<Task>(onlinePlayers.Length);
                 bool anyPrev = false;
 
-                await using IGameDataDbContext dbContext = new WarfareDbContext();
+                await using IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
                 for (int i = 0; i < onlinePlayers.Length; ++i)
                 {
@@ -188,7 +194,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
     }
     private SessionRecord StartCreatingSession(IGameDataDbContext dbContext, UCPlayer player, bool startedGame, out SessionRecord? previous)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         SessionRecord record;
         lock (_sessions)
         {
@@ -345,7 +351,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
 
         UCWarfare.RunTask(async token =>
         {
-            await using IGameDataDbContext dbContext = new WarfareDbContext();
+            await using IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
             EndSession(dbContext, record, Data.Gamemode != null && Data.Gamemode.State is State.Finished or State.Discarded, false);
             await SaveSession(dbContext, record, token);
@@ -389,7 +395,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
     /// <summary>
     /// Fixes the dates on any sessions that didn't get terminated properly (server crashed, etc). Accurate to +/- 10 seconds.
     /// </summary>
-    public static async Task CheckForTerminatedSessions(CancellationToken token = default)
+    public async Task CheckForTerminatedSessions(CancellationToken token = default)
     {
         DateTimeOffset? lastHeartbeat = ServerHeartbeatTimer.GetLastBeat();
         if (lastHeartbeat.HasValue)
@@ -397,7 +403,7 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
             L.Log($"Server last online: {lastHeartbeat.Value} ({(DateTime.UtcNow - lastHeartbeat.Value.UtcDateTime):g} ago). Checking for sessions that were terminated unexpectedly.", ConsoleColor.Magenta);
 
             int ct;
-            await using (IGameDataDbContext dbContext = new WarfareDbContext())
+            await using (IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>())
             {
                 byte region = UCWarfare.Config.RegionKey;
                 List<SessionRecord> records = await dbContext.Sessions.Where(x => x.UnexpectedTermination && x.EndedTimestamp == null && x.Game.Region == region).ToListAsync(token);

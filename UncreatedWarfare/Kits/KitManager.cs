@@ -207,7 +207,7 @@ public partial class KitManager :
 
     public async Task<Kit?> GetKit(uint pk, CancellationToken token = default, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
     {
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
         return await GetKit(dbContext, pk, token, set);
     }
@@ -224,7 +224,7 @@ public partial class KitManager :
     /// <remarks>Thread Safe</remarks>
     public async Task<Kit?> FindKit(string id, CancellationToken token = default, bool exactMatchOnly = true, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
     {
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
         return await FindKit(dbContext, id, token, exactMatchOnly, set);
     }
@@ -299,7 +299,7 @@ public partial class KitManager :
 
     private async Task ValidateKits(CancellationToken token = default)
     {
-        await using WarfareDbContext dbContext = new WarfareDbContext();
+        await using WarfareDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
         List<Kit> allKits = await Set(dbContext)
             .Include(x => x.MapFilter)
             .Include(x => x.FactionFilter)
@@ -322,7 +322,7 @@ public partial class KitManager :
 
     // todo private async Task CountTranslations(CancellationToken token = default)
     // {
-    //     await using IKitsDbContext dbContext = new WarfareDbContext();
+    //     await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
     // 
     //     List<Kit> allKits = await dbContext.Kits
     //         .Include(x => x.Translations)
@@ -359,7 +359,7 @@ public partial class KitManager :
     {
         ITeamManager<Team> teamManager = _serviceProvider.GetRequiredService<ITeamManager<Team>>();
 
-        await using IFactionDbContext factionDbContext = new WarfareDbContext();
+        await using IFactionDbContext factionDbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
         factionDbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         foreach (Team team in teamManager.AllTeams)
@@ -618,7 +618,7 @@ public partial class KitManager :
 
     public async Task<Kit?> TryGiveRiflemanKit(WarfarePlayer player, bool manual, bool tip, CancellationToken token = default)
     {
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
         List<Kit> kits = await dbContext.Kits
             .Include(x => x.FactionFilter)
@@ -677,7 +677,7 @@ public partial class KitManager :
 
     public async Task<Kit?> GetRecommendedSquadleaderKit(ulong team, CancellationToken token = default)
     {
-        await using IKitsDbContext dbContext = new WarfareDbContext();
+        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
         List<Kit> kits = await dbContext.Kits
             .Where(x => x.Class == Class.Squadleader && !x.Disabled && x.Type == KitType.Public).ToListAsync(token).ConfigureAwait(false);
@@ -693,7 +693,7 @@ public partial class KitManager :
 
     public Kit? GetRandomPublicKit()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         List<Kit> kits = new List<Kit>(Cache.KitDataByKey.Values.Where(x => x is { IsPublicKit: true, Requestable: true }));
         return kits.Count == 0 ? null : kits[RandomUtility.GetIndex((ICollection)kits)];
@@ -1078,7 +1078,7 @@ public partial class KitManager :
     /// <summary>Use with purchase sync.</summary>
     public bool IsFavoritedQuick(uint kit, WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (kit == 0)
             return false;
@@ -1102,7 +1102,7 @@ public partial class KitManager :
             await player.PurchaseSync.WaitAsync(token);
         try
         {
-            await using IKitsDbContext dbContext = new WarfareDbContext();
+            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
             ulong s64 = player.Steam64.m_SteamID;
 
             await UniTask.SwitchToMainThread(token);
@@ -1221,7 +1221,7 @@ public partial class KitManager :
     /// </summary>
     internal void InvokeAfterMajorKitUpdate(Kit kit, bool manual)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (kit is null)
             return;

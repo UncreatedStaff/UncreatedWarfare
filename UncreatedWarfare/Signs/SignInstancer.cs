@@ -53,7 +53,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     public ISignInstanceProvider? GetSignProvider(BarricadeDrop drop)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (drop.interactable is not InteractableSign)
             throw new ArgumentException("Barricade must be sign.", nameof(drop));
@@ -64,7 +64,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     public string GetSignText(BarricadeDrop drop, LanguageInfo language, CultureInfo culture)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (drop.interactable is not InteractableSign sign)
             throw new ArgumentException("Barricade must be sign.", nameof(drop));
@@ -81,7 +81,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     public string GetSignText(BarricadeDrop drop, WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (drop.interactable is not InteractableSign sign)
             throw new ArgumentException("Barricade must be sign.", nameof(drop));
@@ -98,7 +98,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     public int UpdateSigns()
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int ct = 0;
         foreach (LanguageSet set in LanguageSet.All())
@@ -111,7 +111,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     public int UpdateSigns<TProvider>() where TProvider : class, ISignInstanceProvider
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int ct = 0;
         foreach (LanguageSet set in LanguageSet.All())
@@ -124,7 +124,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     public int UpdateSigns<TProvider>(Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         int ct = 0;
         foreach (LanguageSet set in LanguageSet.All())
@@ -146,7 +146,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     public int UpdateSigns(LanguageSet set)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         for (int i = 0; i < _batchBuffer.Length; ++i)
             _batchBuffer[i] = null;
@@ -172,7 +172,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     public int UpdateSigns<TProvider>(LanguageSet set) where TProvider : class, ISignInstanceProvider
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         string? batchTranslate = null;
         bool hasCanBatch = false, canBatch = false;
@@ -195,7 +195,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     public int UpdateSigns<TProvider>(LanguageSet set, Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         string? batchTranslate = null;
         bool hasCanBatch = false, canBatch = false;

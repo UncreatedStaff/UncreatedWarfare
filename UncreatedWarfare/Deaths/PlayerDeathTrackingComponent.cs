@@ -3,6 +3,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Deaths;
 internal class PlayerDeathTrackingComponent : MonoBehaviour
@@ -87,7 +88,7 @@ internal class PlayerDeathTrackingComponent : MonoBehaviour
     /// </summary>
     public static PlayerDeathTrackingComponent GetOrAdd(Player player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (player.TryGetComponent(out PlayerDeathTrackingComponent component))
         {

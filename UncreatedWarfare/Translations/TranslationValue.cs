@@ -141,7 +141,9 @@ public class TranslationValue
             IMGUIValue = TranslationFormattingUtility.CreateIMGUIString(Value);
         }
 
-        Color = TranslationFormattingUtility.ExtractColor(Value, out _colorStrippedValueStart, out _colorStrippedValueLength);
+        Color? cNormal = TranslationFormattingUtility.ExtractColor(Value, out _colorStrippedValueStart, out _colorStrippedValueLength);
+        Color = cNormal.HasValue ? cNormal.Value with { a = 1f } : Color.white;
+
         TranslationFormattingUtility.ExtractColor(IMGUIValue, out _imguiColorStrippedValueStart, out _imguiColorStrippedValueLength);
     }
 }

@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
@@ -26,7 +27,7 @@ public class AssetBan : DurationPunishment
     public VehicleType[] VehicleTypeFilter { get; set; } = Array.Empty<VehicleType>();
     internal void FillFromText(string? text)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (string.IsNullOrWhiteSpace(text)
             || text.Equals("*", StringComparison.InvariantCultureIgnoreCase)
@@ -224,7 +225,7 @@ public class AssetBan : DurationPunishment
             {
                 List<VehicleType> list;
                 bool pooled = false;
-                if (UCWarfare.IsLoaded && UCWarfare.IsMainThread)
+                if (UCWarfare.IsLoaded && GameThread.IsCurrent)
                 {
                     pooled = true;
                     list = ListPool<VehicleType>.claim();

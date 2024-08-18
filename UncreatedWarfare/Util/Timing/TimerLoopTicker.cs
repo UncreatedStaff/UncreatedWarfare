@@ -123,7 +123,7 @@ public class TimerLoopTicker<TState> : ILoopTicker<TState>
 
     private void InvokeTimer(object? state)
     {
-        if (QueueOnGameThread && !Thread.CurrentThread.IsGameThread())
+        if (QueueOnGameThread && !GameThread.IsCurrent)
         {
             InvokeMainThread();
         }

@@ -18,7 +18,7 @@ public class CommandParser(CommandDispatcher dispatcher)
     /// </summary>
     public unsafe bool TryRunCommand(ICommandUser user, ReadOnlySpan<char> message, ref bool shouldList, bool requirePrefix)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (message == null || message.Length < (requirePrefix ? 2 : 1)) goto notCommand;
         int cmdStart = -1;

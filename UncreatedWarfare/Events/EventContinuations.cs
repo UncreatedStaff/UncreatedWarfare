@@ -1,4 +1,6 @@
-﻿namespace Uncreated.Warfare.Events;
+﻿using Uncreated.Warfare.Util;
+
+namespace Uncreated.Warfare.Events;
 public static class EventContinuations
 {
     /// <summary>
@@ -6,7 +8,7 @@ public static class EventContinuations
     /// </summary>
     public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuationAsync<TArgs> continuation) where TArgs : ICancellable
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         UniTask<bool> task = eventDispatcher.DispatchEventAsync(eventArgs, token);
 
@@ -35,7 +37,7 @@ public static class EventContinuations
     /// </summary>
     public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuation<TArgs> continuation) where TArgs : ICancellable
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         UniTask<bool> task = eventDispatcher.DispatchEventAsync(eventArgs, token);
 

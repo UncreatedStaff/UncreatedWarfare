@@ -522,7 +522,7 @@ internal partial class ModerationUI : UnturnedUI
     }
     public void Close(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         player.ModalNeeded = false;
         player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
@@ -609,14 +609,14 @@ internal partial class ModerationUI : UnturnedUI
     }
     public ModerationData? GetModerationData(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         return UnturnedUIDataSource.GetData<ModerationData>(player.CSteamID, Headers[(int)Page.Moderation].Button);
     }
     public ModerationData GetOrAddModerationData(WarfaerPlayer player) => GetOrAddModerationData(player.Steam64);
     public ModerationData GetOrAddModerationData(ulong steam64)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ModerationData? data = UnturnedUIDataSource.GetData<ModerationData>(new CSteamID(steam64), Headers[(int)Page.Moderation].Button);
         if (data == null)
@@ -711,7 +711,7 @@ internal partial class ModerationUI : UnturnedUI
     }
     public void SendModerationPlayerList(UCPlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ITransportConnection connection = player.Connection;
 
@@ -830,7 +830,7 @@ internal partial class ModerationUI : UnturnedUI
                 
                 await Data.ModerationSql.CacheAvatars(names.Select(x => x.Steam64.m_SteamID), token);
 #if DEBUG
-                ThreadUtil.assertIsGameThread();
+                GameThread.AssertCurrent();
 #endif
                 for (int i = 0; i < ct; ++i)
                 {
@@ -843,7 +843,7 @@ internal partial class ModerationUI : UnturnedUI
     }
     public void SelectEntry(UCPlayer player, ModerationEntry? entry)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ModerationData data = GetOrAddModerationData(player);
         if (entry != null && data.SelectedEntry == entry)

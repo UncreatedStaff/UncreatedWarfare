@@ -7,6 +7,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
@@ -41,7 +42,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
 
     public void CancelDeployment(bool chat)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (CurrentDeployment == null)
             return;
@@ -62,7 +63,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
 
     public bool TryStartDeployment(IDeployable location, DeploySettings settings = default)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (CurrentDeployment != null)
         {
             CancelDeployment(true);

@@ -175,7 +175,7 @@ public class UCWarfare : MonoBehaviour
 
         L.Log("Migrating database changes...", ConsoleColor.Magenta);
 
-        await using (IDbContext dbContext = new WarfareDbContext())
+        await using (IDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>())
         {
             try
             {
@@ -459,8 +459,6 @@ public class UCWarfare : MonoBehaviour
         Data.ShowAllUI(player);
     }
 
-    public static bool IsMainThread => Thread.CurrentThread == ThreadUtil.gameThread;
-
     [UsedImplicitly]
     private void Update()
     {
@@ -480,7 +478,7 @@ public class UCWarfare : MonoBehaviour
     
     public async Task UnloadAsync(CancellationToken token)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         FullyLoaded = false;
         try
         {
@@ -505,7 +503,7 @@ public class UCWarfare : MonoBehaviour
                 }
                 await ToUpdate(token);
 
-                // save pending damage records
+                // save pending damage records todo migrate
                 if (PlayerManager.OnlinePlayers.Any(player => player.DamageRecords.Count > 0))
                 {
                     try
@@ -543,7 +541,7 @@ public class UCWarfare : MonoBehaviour
                 Data.ModerationSql.OnNewModerationEntryAdded -= OffenseManager.OnNewModerationEntryAdded;
             }
 
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
             if (Solver != null)
             {
                 Destroy(Solver);
@@ -597,7 +595,7 @@ public class UCWarfare : MonoBehaviour
             }
 
             await ToUpdate(token);
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
             L.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
             L.Log("Unsubscribing from events...", ConsoleColor.Magenta);
@@ -625,7 +623,7 @@ public class UCWarfare : MonoBehaviour
         {
             await Data.Singletons.UnloadAllAsync(token);
             await ToUpdate(token);
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
         }
 
         Data.NilSteamPlayer = null!;

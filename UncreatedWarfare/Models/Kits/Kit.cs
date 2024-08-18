@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
@@ -24,6 +23,7 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Models.Kits;
 
@@ -560,7 +560,7 @@ public class Kit : ITranslationArgument, ICloneable
         }
 
         L.LogDebug($"Buidling item array for {GetDisplayName()}...");
-        bool pooled = UCWarfare.IsLoaded && UCWarfare.IsMainThread;
+        bool pooled = UCWarfare.IsLoaded && GameThread.IsCurrent;
         List<IKitItem> tempList = pooled ? ListPool<IKitItem>.claim() : new List<IKitItem>(models.Length);
         try
         {
@@ -654,7 +654,7 @@ public class Kit : ITranslationArgument, ICloneable
             return;
         }
 
-        bool pooled = UCWarfare.IsLoaded && UCWarfare.IsMainThread;
+        bool pooled = UCWarfare.IsLoaded && GameThread.IsCurrent;
         List<UnlockRequirement> tempList = pooled ? ListPool<UnlockRequirement>.claim() : new List<UnlockRequirement>(models.Length);
         try
         {

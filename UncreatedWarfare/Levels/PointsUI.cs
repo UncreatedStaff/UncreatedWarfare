@@ -30,7 +30,7 @@ public class XPUI : UnturnedUI
     public XPUI() : base(Gamemode.Config.UIXPPanel.GetId(), reliable: false) { }
     public void SendTo(UCPlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         ITransportConnection c = player.Connection;
         L.LogDebug("Sending xp ui to " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");
 
@@ -66,7 +66,7 @@ public class XPUI : UnturnedUI
     public void Update(UCPlayer player, bool full)
     {
         L.LogDebug("Updating xp ui for " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if (player.HasUIHidden || Data.Gamemode.LeaderboardUp())
             return;
         if ((player.PointsDirtyMask & 0b10000000) == 0)
@@ -119,7 +119,7 @@ public class CreditsUI : UnturnedUI
     public void SendTo(UCPlayer player)
     {
         L.LogDebug("Sending creds ui to " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         SendToPlayer(player.Connection, GetCreditsString(player));
         player.PointsDirtyMask &= unchecked((byte)~0b01011000);
         if (player.HasUIHidden || Data.Gamemode.LeaderboardUp())
@@ -132,7 +132,7 @@ public class CreditsUI : UnturnedUI
     public void Update(UCPlayer player, bool full)
     {
         L.LogDebug("Updating creds ui for " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         if ((!full && (player.PointsDirtyMask & 0b00001000) == 0) || player.HasUIHidden || Data.Gamemode.LeaderboardUp())
             return;
         if ((player.PointsDirtyMask & 0b10000000) == 0)

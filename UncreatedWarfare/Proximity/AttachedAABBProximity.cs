@@ -20,7 +20,7 @@ public class AttachedAABBProximity : IAttachedAABBProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             Bounds bounds = _aabb.worldBounds;
             return AttachmentRoot == null ? bounds : new Bounds(AttachmentRoot.TransformPoint(bounds.center), AttachmentRoot.TransformVector(bounds.size));
@@ -33,7 +33,7 @@ public class AttachedAABBProximity : IAttachedAABBProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             Vector3 size = _aabb.Dimensions.size;
             
@@ -53,7 +53,7 @@ public class AttachedAABBProximity : IAttachedAABBProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             Vector3 extents = _aabb.Dimensions.extents;
 
@@ -73,7 +73,7 @@ public class AttachedAABBProximity : IAttachedAABBProximity
     {
         get
         {
-            ThreadUtil.assertIsGameThread();
+            GameThread.AssertCurrent();
 
             Vector3 extents = _aabb.Dimensions.extents;
 
@@ -129,7 +129,7 @@ public class AttachedAABBProximity : IAttachedAABBProximity
     /// <inheritdoc />
     public bool TestPoint(Vector3 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? Vector3.zero : AttachmentRoot.InverseTransformPoint(position);
         return _aabb.TestPoint(position - worldPos);
@@ -138,7 +138,7 @@ public class AttachedAABBProximity : IAttachedAABBProximity
     /// <inheritdoc />
     public bool TestPoint(Vector2 position)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? Vector3.zero : AttachmentRoot.InverseTransformPoint(position);
         return _aabb.TestPoint(new Vector2(position.x - worldPos.x, position.y - worldPos.z));

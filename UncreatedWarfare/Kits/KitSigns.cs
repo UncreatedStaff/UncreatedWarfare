@@ -3,6 +3,7 @@ using System;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
@@ -34,7 +35,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
     /// <remarks>Thread Safe</remarks>
     public void UpdateSigns()
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             UpdateSignsIntl(null);
         else
         {
@@ -49,7 +50,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
     /// <remarks>Thread Safe</remarks>
     public void UpdateSigns(WarfarePlayer player)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             UpdateSignsIntl(player);
         else
         {
@@ -65,7 +66,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
     /// <remarks>Thread Safe</remarks>
     public void UpdateSigns(Kit kit)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             UpdateSignsIntl(kit, null);
         else
         {
@@ -81,7 +82,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
     /// <remarks>Thread Safe</remarks>
     public void UpdateSigns(Kit kit, WarfarePlayer player)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             UpdateSignsIntl(kit, player);
         else
         {
@@ -98,7 +99,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
     /// <remarks>Thread Safe</remarks>
     public void UpdateSigns(string kitId)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             UpdateSignsIntl(kitId, null);
         else
         {
@@ -114,7 +115,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
     /// <remarks>Thread Safe</remarks>
     public void UpdateSigns(string kitId, WarfarePlayer player)
     {
-        if (UCWarfare.IsMainThread)
+        if (GameThread.IsCurrent)
             UpdateSignsIntl(kitId, player);
         else
         {

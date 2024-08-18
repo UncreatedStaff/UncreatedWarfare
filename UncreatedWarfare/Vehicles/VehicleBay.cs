@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
@@ -15,6 +16,7 @@ using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -81,7 +83,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (Whitelister.Loaded && !_hasWhitelisted) // whitelist all vehicle bay items
             {
-                if (!UCWarfare.IsMainThread)
+                if (!GameThread.IsCurrent)
                     await UniTask.SwitchToMainThread(token);
                 WhitelistItems();
             }
@@ -93,11 +95,11 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     async Task IDeclareWinListenerAsync.OnWinnerDeclared(ulong winner, CancellationToken token)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (!UCWarfare.IsMainThread)
+            if (!GameThread.IsCurrent)
                 await UniTask.SwitchToMainThread(token);
             VehicleSpawner.GetSingletonQuick()?.AbandonAllVehicles(true);
         }
@@ -112,7 +114,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     private async Task SendQuests(UCPlayer player, CancellationToken token = default)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -165,21 +167,21 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     public async Task AddRequestableVehicle(InteractableVehicle vehicle, CancellationToken token = default)
     {
         AssertLoadedIntl();
-        if (!UCWarfare.IsMainThread)
+        if (!GameThread.IsCurrent)
             await UCWarfare.ToUpdate();
         VehicleData data = new VehicleData(vehicle.asset.GUID)
         {
             PrimaryKey = PrimaryKey.NotAssigned
         };
         data.SaveMetaData(vehicle);
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         await AddOrUpdate(data, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> RemoveRequestableVehicle(Guid vehicle, CancellationToken token = default)
     {
         AssertLoadedIntl();
-        if (!UCWarfare.IsMainThread)
+        if (!GameThread.IsCurrent)
             await UCWarfare.ToUpdate();
         SqlItem<VehicleData>? data = await GetDataProxy(vehicle, token).ConfigureAwait(false);
         if (data is not null)
@@ -302,7 +304,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 return (SetPropertyResult.ObjectNotFound, null);
         }
 
-        if (!UCWarfare.IsMainThread)
+        if (!GameThread.IsCurrent)
             await UCWarfare.ToUpdate();
         return await SetPropertyNoLock(item, property, value, true, token).ConfigureAwait(false);
     }
@@ -322,7 +324,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (proxy.Item == null)
                 return false;
-            if (!UCWarfare.IsMainThread)
+            if (!GameThread.IsCurrent)
                 await UCWarfare.ToUpdate();
             if (proxy.Item.CrewSeats == null)
             {
@@ -358,7 +360,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (proxy.Item == null)
                 return false;
-            if (!UCWarfare.IsMainThread)
+            if (!GameThread.IsCurrent)
                 await UCWarfare.ToUpdate();
             if (proxy.Item.CrewSeats == null || proxy.Item.CrewSeats.Length == 0)
                 return false;
@@ -399,7 +401,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (proxy.Item == null)
                 return false;
-            if (!UCWarfare.IsMainThread)
+            if (!GameThread.IsCurrent)
                 await UCWarfare.ToUpdate();
             if (clone)
             {

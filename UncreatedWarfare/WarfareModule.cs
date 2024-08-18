@@ -39,7 +39,6 @@ using Module = SDG.Framework.Modules.Module;
 namespace Uncreated.Warfare;
 public sealed class WarfareModule : IModuleNexus
 {
-    internal static int GameThreadId = -1;
     private static EventDispatcher2? _dispatcher;
 
 #nullable disable
@@ -104,8 +103,10 @@ public sealed class WarfareModule : IModuleNexus
 
     void IModuleNexus.initialize()
     {
+        // will setup the main thread in GameThread before asserting
+        GameThread.AssertCurrent();
+
         Singleton = this;
-        GameThreadId = ThreadUtil.gameThread.ManagedThreadId;
         _gameObjectHost = new GameObject("Uncreated.Warfare");
         _cancellationTokenSource = new CancellationTokenSource();
 
