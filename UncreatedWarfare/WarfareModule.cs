@@ -19,6 +19,7 @@ using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation;
@@ -229,6 +230,7 @@ public sealed class WarfareModule : IModuleNexus
 
         // Kits
         KitManager.ConfigureServices(serviceCollection);
+        serviceCollection.AddSingleton<WhitelistService>();
 
         // Layouts
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout());

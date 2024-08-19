@@ -1,15 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SDG.NetTransport;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Buildables;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Buildables;
@@ -17,18 +17,23 @@ namespace Uncreated.Warfare.Buildables;
 /// <summary>
 /// Responsible for saving structures or barricades that are restored if they're destroyed.
 /// </summary>
-public class BuildableSaver : ISessionHostedService
+public class BuildableSaver : ISessionHostedService, IDisposable
 {
     private readonly IBuildablesDbContext _dbContext;
     private readonly ILogger<BuildableSaver> _logger;
+    private readonly PlayerService _playerService;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+    private readonly SignInstancer? _signs;
+
     private List<BuildableSave>? _saves;
-    public BuildableSaver(IBuildablesDbContext dbContext, ILogger<BuildableSaver> logger)
+    public BuildableSaver(IBuildablesDbContext dbContext, ILogger<BuildableSaver> logger, PlayerService playerService, IServiceProvider serviceProvider)
     {
         dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
+        _signs = serviceProvider.GetService<SignInstancer>();
         _dbContext = dbContext;
         _logger = logger;
+        _playerService = playerService;
     }
 
     async UniTask ISessionHostedService.StartAsync(CancellationToken token)
@@ -85,6 +90,11 @@ public class BuildableSaver : ISessionHostedService
     UniTask ISessionHostedService.StopAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
+    }
+
+    void IDisposable.Dispose()
+    {
+        _semaphore.Dispose();
     }
 
     /// <summary>
@@ -458,8 +468,8 @@ public class BuildableSaver : ISessionHostedService
     private bool RestoreSave(List<BuildableSave>? saves, int index, BuildableSave save)
     {
         object? drop = save.IsStructure
-            ? StructureUtility.FindStructure(save.InstanceId, save.Position)
-            : BarricadeUtility.FindBarricade(save.InstanceId, save.Position);
+            ? StructureUtility.FindStructure(save.InstanceId, save.Position).Drop
+            : BarricadeUtility.FindBarricade(save.InstanceId, save.Position).Drop;
 
         ItemAsset? asset = save.IsStructure
             ? save.Item.GetAsset<ItemStructureAsset>()
@@ -477,7 +487,7 @@ public class BuildableSaver : ISessionHostedService
         );
 
         bool dirty = false;
-        if (!rot2.AlmostEquals(rotation))
+        if (!rot2.IsNearlyEqual(rotation))
         {
             save.Rotation = rot2;
             dirty = true;
@@ -597,7 +607,7 @@ public class BuildableSaver : ISessionHostedService
             if (MeasurementTool.angleToByte(angle.x) != rotX
                 || MeasurementTool.angleToByte(angle.y) != rotY
                 || MeasurementTool.angleToByte(angle.z) != rotZ
-                || !sData.point.AlmostEquals(save.Position))
+                || !sData.point.IsNearlyEqual(save.Position))
             {
                 _logger.LogInformation("Moving misplaced structure {0} ({1} - {2}) at pos: {3} rot: {4}.", save.Id, save.Item, asset.FriendlyName, save.Position, save.Rotation);
                 StructureManager.ServerSetStructureTransform(sDrop.model, save.Position, Quaternion.Euler(save.Rotation));
@@ -612,7 +622,7 @@ public class BuildableSaver : ISessionHostedService
 
             if (sData.owner != save.Owner || sData.group != save.Group)
             {
-                F.SetOwnerOrGroup(sDrop, save.Owner, save.Group);
+                StructureUtility.SetOwnerOrGroup(sDrop, new CSteamID(save.Owner), new CSteamID(save.Group));
             }
 
             return dirty;
@@ -626,7 +636,7 @@ public class BuildableSaver : ISessionHostedService
         if (MeasurementTool.angleToByte(angle.x) != rotX
             || MeasurementTool.angleToByte(angle.y) != rotY
             || MeasurementTool.angleToByte(angle.z) != rotZ
-            || !bData.point.AlmostEquals(save.Position))
+            || !bData.point.IsNearlyEqual(save.Position))
         {
             _logger.LogInformation("Moving misplaced structure {0} ({1} - {2}) at pos: {3} rot: {4}.", save.Id, save.Item, asset.FriendlyName, save.Position, save.Rotation);
             BarricadeManager.ServerSetBarricadeTransform(bDrop.model, save.Position, Quaternion.Euler(save.Rotation));
@@ -771,7 +781,7 @@ public class BuildableSaver : ISessionHostedService
 
             if (bData.owner != save.Owner || bData.group != save.Group)
             {
-                replicated = F.SetOwnerOrGroup(bDrop, save.Owner, save.Group);
+                replicated = BarricadeUtility.SetOwnerOrGroup(bDrop, _playerService, _signs, new CSteamID(save.Owner), new CSteamID(save.Group));
             }
 
             if (save.State is not { Length: 0 })
@@ -781,7 +791,7 @@ public class BuildableSaver : ISessionHostedService
             }
 
             if (!replicated && isDifferent)
-                ReplicateBarricadeState(bDrop);
+                BarricadeUtility.ReplicateBarricadeState(bDrop, _playerService, _signs);
 
             return dirty;
         }
@@ -810,7 +820,7 @@ public class BuildableSaver : ISessionHostedService
 
         if (bData.owner != save.Owner || bData.group != save.Group)
         {
-            replicated = F.SetOwnerOrGroup(bDrop, save.Owner, save.Group);
+            replicated = BarricadeUtility.SetOwnerOrGroup(bDrop, _playerService, _signs, new CSteamID(save.Owner), new CSteamID(save.Group));
             state = bData.barricade.state ?? Array.Empty<byte>();
 
             bool isDifferent2 = state.Length != expectedState.Length;
@@ -834,78 +844,8 @@ public class BuildableSaver : ISessionHostedService
         }
 
         if (!replicated && isDifferent)
-            ReplicateBarricadeState(bDrop);
+            BarricadeUtility.ReplicateBarricadeState(bDrop, _playerService, _signs);
 
         return dirty;
-    }
-    
-    private static void ReplicateBarricadeState(BarricadeDrop bDrop)
-    {
-        if (Data.SendUpdateBarricadeState == null)
-            return;
-
-        BarricadeData bData = bDrop.GetServersideData();
-        BarricadeManager.tryGetRegion(bDrop.model, out byte x, out byte y, out ushort plant, out _);
-        
-        switch (bDrop.interactable)
-        {
-            // client-side state is different for storages so players can't know what's in storages without opening them
-            case InteractableStorage storage:
-                byte[] state;
-                if (storage.isDisplay)
-                {
-                    Block block = new Block();
-
-                    if (storage.displayItem != null)
-                        block.write(storage.displayItem.id, storage.displayItem.quality, storage.displayItem.state ?? Array.Empty<byte>());
-                    else
-                        block.step += 4;
-
-                    block.write(storage.displaySkin, storage.displayMythic,
-                        storage.displayTags ?? string.Empty,
-                        storage.displayDynamicProps ?? string.Empty, storage.rot_comp);
-
-                    byte[] b = block.getBytes(out int size);
-                    state = new byte[size + sizeof(ulong) * 2];
-                    Buffer.BlockCopy(b, 0, state, sizeof(ulong) * 2, size);
-                }
-                else
-                {
-                    state = new byte[sizeof(ulong) * 2];
-                }
-
-                Buffer.BlockCopy(bData.barricade.state, 0, state, 0, sizeof(ulong) * 2);
-                Data.SendUpdateBarricadeState.Invoke(bDrop.GetNetId(), ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
-                break;
-
-            // client-side signs requires separate translation
-            case InteractableSign sign when sign.text.StartsWith(Signs.Prefix, StringComparison.Ordinal):
-                NetId id = bDrop.GetNetId();
-                state = null!;
-                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                {
-                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                    if (plant == ushort.MaxValue && !Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
-                        continue;
-
-                    byte[] text = Encoding.UTF8.GetBytes(Signs.GetClientText(bDrop, pl));
-                    int txtLen = Math.Min(text.Length, byte.MaxValue - 17);
-                    if (state == null || state.Length != txtLen + 17)
-                    {
-                        state = new byte[txtLen + 17];
-                        Buffer.BlockCopy(bData.barricade.state, 0, state, 0, sizeof(ulong) * 2);
-                        state[16] = (byte)txtLen;
-                    }
-
-                    Buffer.BlockCopy(text, 0, state, 17, txtLen);
-                    Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, pl.Connection, state);
-                }
-
-                break;
-
-            default:
-                Data.SendUpdateBarricadeState.Invoke(bDrop.GetNetId(), ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), bData.barricade.state);
-                break;
-        }
     }
 }

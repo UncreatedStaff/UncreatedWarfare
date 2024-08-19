@@ -28,7 +28,7 @@ partial class EventDispatcher2
             RegionPosition = new RegionCoord(x, y),
             Rotation = Quaternion.Euler(angleX, angleY, angleZ),
             Owner = new CSteamID(owner),
-            OriginalPlacer = UCPlayer.FromID(owner),
+            OriginalPlacer = _playerService.GetOnlinePlayerOrNull(owner),
             GroupOwner = new CSteamID(group)
         };
 
@@ -57,8 +57,8 @@ partial class EventDispatcher2
     {
         StructureData data = drop.GetServersideData();
 
-        UCPlayer? owner = new CSteamID(data.owner).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
-            ? UCPlayer.FromID(data.owner)
+        WarfarePlayer? owner = new CSteamID(data.owner).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
+            ? _playerService.GetOnlinePlayerOrNull(data.owner)
             : null;
 
         Regions.tryGetCoordinate(data.point, out byte x, out byte y);
@@ -115,8 +115,6 @@ partial class EventDispatcher2
         {
             WorkingDestroyInfo.Clear();
         }
-
-        UniTask<bool> task;
 
         // handle ISalvageInfo components
         structure.model.GetComponents(_workingSalvageInfos);

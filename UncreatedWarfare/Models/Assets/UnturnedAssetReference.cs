@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Models.Assets;
@@ -18,6 +19,11 @@ public readonly struct UnturnedAssetReference
     }
 
 
+    public UnturnedAssetReference(IAssetContainer assetContainer)
+    {
+        Guid = assetContainer.Guid;
+        Id = Guid == Guid.Empty ? assetContainer.Id : (ushort)0;
+    }
     public UnturnedAssetReference(Guid guid)
     {
         Guid = guid;

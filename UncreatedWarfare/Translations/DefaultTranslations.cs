@@ -1312,38 +1312,6 @@ internal static class T
     public static readonly Translation<string, ItemAsset, string> StructureSaveSetProperty = new Translation<string, ItemAsset, string>("<#a0ad8e>Set <#8ce4ff>{0}</color> for {1} save to: <#ffffff>{2}</color>.", arg1Fmt: FormatRarityColor);
     #endregion
 
-    #region Whitelist
-    private const string SectionWhitelist = "Whitelist";
-    [TranslationData(SectionWhitelist, IsPriorityTranslation = false)]
-    public static readonly Translation<ItemAsset> WhitelistAdded = new Translation<ItemAsset>("<#a0ad8e>Whitelisted item: {0}.", FormatRarityColor);
-    [TranslationData(SectionWhitelist, IsPriorityTranslation = false)]
-    public static readonly Translation<ItemAsset, int> WhitelistSetAmount = new Translation<ItemAsset, int>("<#a0ad8e>Amount for whitelisted item: {0} set to {1}.", FormatRarityColor);
-    [TranslationData(SectionWhitelist, IsPriorityTranslation = false)]
-    public static readonly Translation<ItemAsset> WhitelistRemoved = new Translation<ItemAsset>("<#a0ad8e>Removed whitelist for: {0}.", FormatRarityColor);
-    [TranslationData(SectionWhitelist, IsPriorityTranslation = false)]
-    public static readonly Translation<ItemAsset> WhitelistAlreadyAdded = new Translation<ItemAsset>("<#ff8c69>{0} is already whitelisted.", FormatRarityColor);
-    [TranslationData(SectionWhitelist, IsPriorityTranslation = false)]
-    public static readonly Translation<ItemAsset> WhitelistAlreadyRemoved = new Translation<ItemAsset>("<#ff8c69>{0} is not whitelisted.", FormatRarityColor);
-    [TranslationData(SectionWhitelist, IsPriorityTranslation = false)]
-    public static readonly Translation<string> WhitelistItemNotID = new Translation<string>("<#ff8c69><uppercase>{0}</uppercase> couldn't be read as an <#cedcde>ITEM ID</color>.");
-    [TranslationData(SectionWhitelist, IsPriorityTranslation = false)]
-    public static readonly Translation<string> WhitelistMultipleResults = new Translation<string>("<#ff8c69><uppercase>{0}</uppercase> found multiple results, please narrow your search or use an <#cedcde>ITEM ID</color>.");
-    [TranslationData(SectionWhitelist, IsPriorityTranslation = false)]
-    public static readonly Translation<string> WhitelistInvalidAmount = new Translation<string>("<#ff8c69><uppercase>{0}</uppercase> couldn't be read as a <#cedcde>AMOUNT</color> (1-250).");
-    [TranslationData(SectionWhitelist)]
-    public static readonly Translation<ItemAsset> WhitelistProhibitedPickup = new Translation<ItemAsset>("<#ff8c69>{0} can't be picked up.", FormatRarityColor + FormatPlural);
-    [TranslationData(SectionWhitelist)]
-    public static readonly Translation<ItemAsset> WhitelistProhibitedSalvage = new Translation<ItemAsset>("<#ff8c69>{0} can't be salvaged.", FormatRarityColor + FormatPlural);
-    [TranslationData(SectionWhitelist)]
-    public static readonly Translation<ItemAsset> WhitelistProhibitedPickupAmt = new Translation<ItemAsset>("<#ff8c69>You can't carry any more {0}.", FormatRarityColor + FormatPlural);
-    [TranslationData(SectionWhitelist)]
-    public static readonly Translation<ItemAsset> WhitelistProhibitedPlace = new Translation<ItemAsset>("<#ff8c69>You're not allowed to place {0}.", FormatRarityColor + FormatPlural);
-    [TranslationData(SectionWhitelist)]
-    public static readonly Translation<int, ItemAsset> WhitelistProhibitedPlaceAmt = new Translation<int, ItemAsset>("<#ff8c69>You're not allowed to place more than {0} {1}.", FormatRarityColor + FormatPlural + "{0}");
-    [TranslationData(SectionWhitelist)]
-    public static readonly Translation WhitelistNoKit = new Translation("<#ff8c69>Get a kit first before you can pick up items.");
-    #endregion
-
     #region Vehicles
     private const string SectionVehicles = "Vehicles";
     private const string SectionVehicleBay = "Vehicle Bay";

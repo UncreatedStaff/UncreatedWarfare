@@ -165,7 +165,7 @@ public class PlayerService
         return components;
     }
 
-    private void RemoveComponents(WarfarePlayer player)
+    private static void RemoveComponents(WarfarePlayer player)
     {
         foreach (IPlayerComponent component in player.Components)
         {
@@ -191,11 +191,7 @@ public class PlayerService
 
     public WarfarePlayer GetOnlinePlayer(ulong steam64)
     {
-#if DEBUG
-        // putting this in here just because this function will be used so much
-        // that it's better to not add any extra code if possible
         GameThread.AssertCurrent();
-#endif
 
         // ReSharper disable once InconsistentlySynchronizedField
         if (!_onlinePlayersDictionary.TryGetValue(Unsafe.As<ulong, CSteamID>(ref steam64), out WarfarePlayer? player))
@@ -214,11 +210,7 @@ public class PlayerService
 
     public WarfarePlayer? GetOnlinePlayerOrNull(ulong steam64)
     {
-#if DEBUG
-        // putting this in here just because this function will be used so much
-        // that it's better to not add any extra code if possible
         GameThread.AssertCurrent();
-#endif
 
         // ReSharper disable once InconsistentlySynchronizedField
         _onlinePlayersDictionary.TryGetValue(Unsafe.As<ulong, CSteamID>(ref steam64), out WarfarePlayer? player);

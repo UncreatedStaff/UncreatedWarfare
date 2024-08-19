@@ -2,7 +2,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StackCleaner;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations.Languages;
 
@@ -16,8 +18,9 @@ public class TranslationService : ITranslationService
     public IReadOnlyDictionary<Type, TranslationCollection> TranslationCollections { get; }
     public ITranslationValueFormatter ValueFormatter { get; }
     public LanguageService LanguageService { get; }
+    public StackColorFormatType TerminalColoring { get; }
     public LanguageSets SetOf { get; }
-    public TranslationService(IServiceProvider serviceProvider)
+    public TranslationService(IServiceProvider serviceProvider, IConfiguration systemConfig)
     {
         PlayerService playerService = serviceProvider.GetRequiredService<PlayerService>();
 
@@ -30,6 +33,10 @@ public class TranslationService : ITranslationService
         TranslationCollections = new ReadOnlyDictionary<Type, TranslationCollection>(_collections);
 
         SetOf = new LanguageSets(playerService);
+
+        TerminalColoring = !string.IsNullOrWhiteSpace(systemConfig["logging:terminal_coloring"])
+            ? systemConfig.GetValue<StackColorFormatType>("logging:terminal_coloring")
+            : StackColorFormatType.ExtendedANSIColor;
     }
 
     public T Get<T>() where T : TranslationCollection, new()
@@ -57,6 +64,17 @@ public interface ITranslationService
     /// Service used to handle per-player language and culture settings.
     /// </summary>
     LanguageService LanguageService { get; }
+
+    /// <summary>
+    /// Accessor for enumerating certain player groups based on their language settings.
+    /// </summary>
+    LanguageSets SetOf { get; }
+
+    /// <summary>
+    /// The coloring style used for terminals.
+    /// </summary>
+    /// <remarks>Only <see cref="StackColorFormatType.ANSIColor"/> and <see cref="StackColorFormatType.ExtendedANSIColor"/> is supported.</remarks>
+    StackColorFormatType TerminalColoring { get; }
 
     /// <summary>
     /// Get a translation collection from this provider.

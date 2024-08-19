@@ -11,19 +11,13 @@ public class BarricadeComponent : MonoBehaviour, IManualOnDestroy
     public uint EditTick;
     public Player? Player;
     public Guid BarricadeGUID;
-    public float CreateTime;
 
-    [UsedImplicitly]
-    private void Awake()
-    {
-        CreateTime = Time.realtimeSinceStartup;
-    }
     public void Destroy()
     {
         Destroy(this);
     }
 
-    public void ManualOnDestroy() => Destroy(this);
+    void IManualOnDestroy.ManualOnDestroy() => Destroy(this);
 }
 
 public interface ISalvageInfo

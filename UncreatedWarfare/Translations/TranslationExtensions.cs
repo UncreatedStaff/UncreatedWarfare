@@ -78,7 +78,7 @@ public static class TranslationExtensions
         if (canUseIMGUI && (options & TranslationOptions.NoRichText) == 0 && set.IMGUI)
             options |= TranslationOptions.TranslateWithUnityRichText;
 
-        ValueFormatParameters parameters = new ValueFormatParameters(-1, set.CultureInfo, set.Language, options, in format, set.Team, null, null, 0);
+        ValueFormatParameters parameters = new ValueFormatParameters(-1, set.Culture, set.Language, options, in format, set.Team, null, null, 0);
 
         return translationService.ValueFormatter.Format(argument, in parameters);
     }
@@ -90,11 +90,14 @@ public static class TranslationExtensions
     /// Translate a translation using default language and settings using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, bool imgui = false)
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.TranslateUnsafe(in arguments, formatting);
     }
@@ -147,11 +150,14 @@ public static class TranslationExtensions
     /// Translate a translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, out Color color, bool imgui = false)
+    public static string TranslateUnsafe(this Translation translation, object[] formatting, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.TranslateUnsafe(in arguments, formatting);
@@ -216,12 +222,12 @@ public static class TranslationExtensions
     /// Translate a 0-arg translation using default language and settings.
     /// </summary>
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
-    public static string Translate(this Translation translation, bool imgui = false)
+    public static string Translate(this Translation translation, bool imgui = false, bool forTerminal = false)
     {
         AssertNoArgs(translation);
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        return value.GetValueString(imgui, false);
+        return value.GetValueString(imgui, false, forTerminal);
     }
 
     /// <summary>
@@ -233,7 +239,7 @@ public static class TranslationExtensions
         AssertNoArgs(translation);
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
 
-        return value.GetValueString(canUseIMGUI && player.Save.IMGUI, false);
+        return value.GetValueString(canUseIMGUI && player.Save.IMGUI, false, false);
     }
 
     /// <summary>
@@ -250,7 +256,7 @@ public static class TranslationExtensions
         AssertNoArgs(translation);
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
-        return value.GetValueString(canUseIMGUI && set.IMGUI, false);
+        return value.GetValueString(canUseIMGUI && set.IMGUI, false, false);
     }
 
     /// <summary>
@@ -262,20 +268,20 @@ public static class TranslationExtensions
         AssertNoArgs(translation);
 
         TranslationValue value = translation.GetValueForLanguage(language);
-        return value.GetValueString(imgui, false);
+        return value.GetValueString(imgui, false, false);
     }
 
     /// <summary>
     /// Translate a 0-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
-    public static string Translate(this Translation translation, out Color color, bool imgui = false)
+    public static string Translate(this Translation translation, out Color color, bool imgui = false, bool forTerminal = false)
     {
         AssertNoArgs(translation);
         TranslationValue value = translation.GetValueForLanguage(null);
 
         color = value.Color;
-        return value.GetValueString(imgui, true);
+        return value.GetValueString(imgui, true, forTerminal);
     }
 
     /// <summary>
@@ -288,7 +294,7 @@ public static class TranslationExtensions
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
 
         color = value.Color;
-        return value.GetValueString(canUseIMGUI && player.Save.IMGUI, true);
+        return value.GetValueString(canUseIMGUI && player.Save.IMGUI, true, false);
     }
 
     /// <summary>
@@ -306,7 +312,7 @@ public static class TranslationExtensions
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
         color = value.Color;
-        return value.GetValueString(canUseIMGUI && set.IMGUI, true);
+        return value.GetValueString(canUseIMGUI && set.IMGUI, true, false);
     }
 
     /// <summary>
@@ -319,7 +325,7 @@ public static class TranslationExtensions
         TranslationValue value = translation.GetValueForLanguage(language);
 
         color = value.Color;
-        return value.GetValueString(imgui, true);
+        return value.GetValueString(imgui, true, false);
     }
     #endregion
 
@@ -327,11 +333,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, bool imgui = false)
+    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.Translate(in arguments, arg0);
     }
@@ -380,11 +389,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, out Color color, bool imgui = false)
+    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0);
@@ -439,11 +451,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, bool imgui = false)
+    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.Translate(in arguments, arg0, arg1);
     }
@@ -492,11 +507,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, out Color color, bool imgui = false)
+    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1);
@@ -551,11 +569,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, bool imgui = false)
+    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.Translate(in arguments, arg0, arg1, arg2);
     }
@@ -604,11 +625,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2);
@@ -663,11 +687,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3);
     }
@@ -716,11 +743,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3);
@@ -775,11 +805,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4);
     }
@@ -828,11 +861,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4);
@@ -887,12 +923,15 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
-
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5);
     }
 
@@ -940,11 +979,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5);
@@ -999,11 +1041,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
     }
@@ -1052,11 +1097,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
@@ -1111,11 +1159,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 8-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
@@ -1164,11 +1215,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 8-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
@@ -1223,11 +1277,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 9-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
@@ -1276,11 +1333,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 9-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
@@ -1335,11 +1395,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 10-arg translation using default language and settings.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
@@ -1388,11 +1451,14 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 10-arg translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationOptions translationOptions = translation.Options;
+        if (forTerminal)
+            translationOptions |= TranslationOptions.ForTerminal;
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);

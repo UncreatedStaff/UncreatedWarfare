@@ -1,7 +1,14 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SDG.NetTransport;
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Text;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Util.Region;
 
 namespace Uncreated.Warfare.Util;
@@ -300,10 +307,10 @@ public static class BarricadeUtility
             throw new ArgumentException("Barricade must be a sign.", nameof(barricade));
 
         byte[] state = barricade.GetServersideData().barricade.state;
-        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(text);
-        if (bytes.Length > byte.MaxValue - 18)
+        byte[] bytes = Encoding.UTF8.GetBytes(text);
+        if (17 + bytes.Length > byte.MaxValue)
         {
-            L.LogWarning(text + " is too long to go on a sign! (SetSignTextServerOnly)");
+            L.LogWarning(text + " is too long to go on a sign! (SetServersideSignText)");
             return;
         }
         byte[] newState = new byte[17 + bytes.Length];
@@ -313,6 +320,364 @@ public static class BarricadeUtility
             Buffer.BlockCopy(bytes, 0, newState, 17, bytes.Length);
         BarricadeManager.updateState(barricade.model, newState, newState.Length);
         sign.updateState(barricade.asset, newState);
+    }
+    
+    /// <summary>
+    /// Get the exact length in bytes of the client-side state for a storage.
+    /// </summary>
+    public static int GetClientsideStorageStateLength(InteractableStorage storage)
+    {
+        if (!storage.isDisplay)
+        {
+            return sizeof(ulong) * 2;
+        }
+
+        int length = 4;
+        if (storage.displayItem != null)
+            length += storage.displayItem.state.Length;
+
+        length += 7;
+        if (storage.displayTags != null)
+            length += storage.displayTags.Length;
+        if (storage.displayDynamicProps != null)
+            length += storage.displayDynamicProps.Length;
+
+        return length;
+    }
+
+    /// <summary>
+    /// Write the bytes of the client-side state for a storage.
+    /// </summary>
+    /// <remarks>Use <see cref="GetClientsideStorageStateLength"/> to pre-calculate the length.</remarks>
+    /// <exception cref="ArgumentException">Output is not long enough for the full state.</exception>
+    /// <exception cref="OverflowException">Displayed item's state or display metadata is longer than 255 elements.</exception>
+    public static int WriteClientsideStorageState(Span<byte> output, InteractableStorage storage, CSteamID owner, CSteamID group)
+    {
+        if (output.Length < sizeof(ulong) * 2)
+            throw new ArgumentException("Output not long enough for state.", nameof(output));
+
+        BitConverter.TryWriteBytes(output, owner.m_SteamID);
+        BitConverter.TryWriteBytes(output[sizeof(ulong)..], group.m_SteamID);
+        int index = sizeof(ulong) * 2;
+
+        if (!storage.isDisplay)
+            return index;
+
+        if (output.Length - index < 11)
+            throw new ArgumentException("Output not long enough for state.", nameof(output));
+
+        if (storage.displayItem != null)
+        {
+            BitConverter.TryWriteBytes(output[index..], storage.displayItem.id);
+            index += sizeof(ushort);
+            output[index++] = storage.displayItem.quality;
+            output[index++] = checked( (byte)(storage.displayItem.state?.Length ?? 0) );
+            if (storage.displayItem.state is { Length: > 0 })
+            {
+                Span<byte> state = storage.displayItem.state;
+                if (output.Length - index < state.Length + 7)
+                    throw new ArgumentException("Output not long enough for state.", nameof(output));
+
+                state.CopyTo(output[index..]);
+                index += state.Length;
+            }
+        }
+        else
+        {
+            Unsafe.WriteUnaligned(ref output[index], 0);
+            index += sizeof(int);
+        }
+
+        BitConverter.TryWriteBytes(output[index..], storage.displaySkin);
+        index += sizeof(ushort);
+        BitConverter.TryWriteBytes(output[index..], storage.displayMythic);
+        index += sizeof(ushort);
+
+        if (!string.IsNullOrEmpty(storage.displayTags))
+        {
+            byte byteCt   = checked( (byte)Encoding.UTF8.GetByteCount(storage.displayTags) );
+            if (output.Length - index < byteCt + 3)
+                throw new ArgumentException("Output not long enough for state.", nameof(output));
+            output[index] = checked( (byte)Encoding.UTF8.GetBytes(storage.displayTags, output.Slice(index + 1, byteCt)) );
+            index += byteCt + 1;
+        }
+        else
+        {
+            ++index;
+            output[index] = 0;
+        }
+
+        if (!string.IsNullOrEmpty(storage.displayDynamicProps))
+        {
+            byte byteCt   = checked( (byte)Encoding.UTF8.GetByteCount(storage.displayDynamicProps) );
+            if (output.Length - index < byteCt + 2)
+                throw new ArgumentException("Output not long enough for state.", nameof(output));
+            output[index] = checked( (byte)Encoding.UTF8.GetBytes(storage.displayDynamicProps, output.Slice(index + 1, byteCt)) );
+            index += byteCt + 1;
+        }
+        else
+        {
+            ++index;
+            output[index] = 0;
+        }
+
+        output[index] = storage.rot_comp;
+        return index + 1;
+    }
+
+    /// <summary>
+    /// Sends the given <paramref name="stateToReplicate"/>, which defaults to the barricade's state if <see langword="null"/> to all relevant clients.
+    /// </summary>
+    /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/> (due to reflection failure or out of bounds barricade).</returns>
+    public static bool ReplicateBarricadeState(BarricadeDrop drop, IServiceProvider? serviceProvider, byte[]? stateToReplicate = null)
+    {
+        return ReplicateBarricadeState(drop, serviceProvider.GetRequiredService<PlayerService>(), serviceProvider.GetService<SignInstancer>(), stateToReplicate);
+    }
+
+    /// <summary>
+    /// Sends the given <paramref name="stateToReplicate"/>, which defaults to the barricade's state if <see langword="null"/> to all relevant clients.
+    /// </summary>
+    /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/> (due to reflection failure or out of bounds barricade).</returns>
+    public static bool ReplicateBarricadeState(BarricadeDrop drop, PlayerService playerService, SignInstancer? signs, byte[]? stateToReplicate = null)
+    {
+        if (Data.SendUpdateBarricadeState == null || !BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
+            return false;
+
+        BarricadeData bData = drop.GetServersideData();
+        NetId id = drop.GetNetId();
+
+        stateToReplicate ??= bData.barricade.state;
+
+        switch (drop.interactable)
+        {
+            // special case to handle the client-side state difference between storages
+            case InteractableStorage storage:
+                byte[] state = new byte[GetClientsideStorageStateLength(storage)];
+                WriteClientsideStorageState(
+                    state,
+                    storage,
+                    new CSteamID(stateToReplicate.Length >= sizeof(ulong) * 2 ? BitConverter.ToUInt64(stateToReplicate, 0) : bData.owner),
+                    new CSteamID(stateToReplicate.Length >= sizeof(ulong) * 2 ? BitConverter.ToUInt64(stateToReplicate, sizeof(ulong)) : bData.group)
+                );
+                Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
+                break;
+
+            // special case to handle sign translations being replicated to the right players
+            case InteractableSign:
+                if (signs == null || !signs.IsInstanced(drop))
+                {
+                    // don't translate the sign
+                    Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), stateToReplicate);
+                    break;
+                }
+
+                state = null!;
+                byte[]? utf8Buffer = null;
+                foreach (WarfarePlayer player in playerService.OnlinePlayers)
+                {
+                    if (plant == ushort.MaxValue &&
+                        !Regions.checkArea(x, y, player.UnturnedPlayer.movement.region_x, player.UnturnedPlayer.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
+                        continue;
+
+                    ReadOnlySpan<char> signText = signs.GetSignText(drop, player);
+
+                    int byteCt = Math.Min(Encoding.UTF8.GetByteCount(signText), byte.MaxValue - 17);
+                    if (utf8Buffer == null || utf8Buffer.Length < byteCt)
+                    {
+                        utf8Buffer = new byte[byteCt];
+                    }
+
+                    byteCt = Encoding.UTF8.GetBytes(signText, utf8Buffer.AsSpan(0, byteCt));
+                    if (state == null || state.Length != byteCt + 17)
+                    {
+                        state = new byte[byteCt + 17];
+                        if (stateToReplicate.Length >= sizeof(ulong) * 2)
+                        {
+                            Buffer.BlockCopy(stateToReplicate, 0, state, 0, sizeof(ulong) * 2);
+                        }
+                        state[sizeof(ulong) * 2] = (byte)byteCt;
+                    }
+
+                    Buffer.BlockCopy(utf8Buffer, 0, state, sizeof(ulong) * 2, byteCt);
+                    Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, player.Connection, state);
+                }
+
+                break;
+
+            default:
+                Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), stateToReplicate);
+                break;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Set the owner and/or group of a barricade.
+    /// </summary>
+    /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
+    public static bool SetOwnerOrGroup(BarricadeDrop drop, IServiceProvider serviceProvider, CSteamID? owner = null, CSteamID? group = null)
+    {
+        return SetOwnerOrGroup(drop, serviceProvider.GetRequiredService<PlayerService>(), serviceProvider.GetService<SignInstancer>(), owner, group);
+    }
+
+    /// <summary>
+    /// Set the owner and/or group of a barricade.
+    /// </summary>
+    /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
+    public static bool SetOwnerOrGroup(BarricadeDrop drop, PlayerService playerService, SignInstancer? signs, CSteamID? owner = null, CSteamID? group = null)
+    {
+        GameThread.AssertCurrent();
+        if (!owner.HasValue && !group.HasValue)
+            return false;
+        BarricadeData bdata = drop.GetServersideData();
+        ulong o = owner?.m_SteamID ?? bdata.owner;
+        ulong g = group?.m_SteamID ?? bdata.group;
+        BarricadeManager.changeOwnerAndGroup(drop.model, o, g);
+        byte[] oldSt = bdata.barricade.state;
+        byte[] state;
+        switch (drop.interactable)
+        {
+            // special case to handle the client-side state difference between storages
+            case InteractableStorage storage:
+                if (oldSt.Length < sizeof(ulong) * 2)
+                    oldSt = new byte[sizeof(ulong) * 2];
+                BitConverter.TryWriteBytes(oldSt, o);
+                BitConverter.TryWriteBytes(oldSt.AsSpan(sizeof(ulong)), o);
+                BarricadeManager.updateState(drop.model, oldSt, oldSt.Length);
+                drop.ReceiveUpdateState(oldSt);
+
+                if (Data.SendUpdateBarricadeState == null || !BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
+                    return false;
+
+                state = new byte[GetClientsideStorageStateLength(storage)];
+                WriteClientsideStorageState(state, storage, new CSteamID(o), new CSteamID(g));
+                Data.SendUpdateBarricadeState.Invoke(drop.GetNetId(), ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
+                return true;
+
+            // special case to handle sign translations being replicated to the right players
+            case InteractableSign:
+                if (oldSt.Length < sizeof(ulong) * 2 + 1)
+                    oldSt = new byte[sizeof(ulong) * 2 + 1];
+                BitConverter.TryWriteBytes(oldSt, o);
+                BitConverter.TryWriteBytes(oldSt.AsSpan(sizeof(ulong)), o);
+                if (signs == null
+                    || !signs.IsInstanced(drop)
+                    || Data.SendUpdateBarricadeState == null
+                    || !BarricadeManager.tryGetRegion(drop.model, out x, out y, out plant, out _)
+                )
+                {
+                    // don't translate the sign
+                    BarricadeManager.updateReplicatedState(drop.model, oldSt, oldSt.Length);
+                    return true;
+                }
+
+                BarricadeManager.updateState(drop.model, oldSt, oldSt.Length);
+                drop.ReceiveUpdateState(oldSt);
+                NetId id = drop.GetNetId();
+                state = null!;
+                byte[]? utf8Buffer = null;
+                foreach (WarfarePlayer player in playerService.OnlinePlayers)
+                {
+                    if (plant == ushort.MaxValue && !Regions.checkArea(x, y,
+                            player.UnturnedPlayer.movement.region_x, player.UnturnedPlayer.movement.region_y,
+                            BarricadeManager.BARRICADE_REGIONS))
+                        continue;
+
+                    ReadOnlySpan<char> signText = signs.GetSignText(drop, player);
+
+                    int byteCt = Math.Min(Encoding.UTF8.GetByteCount(signText), byte.MaxValue - 17);
+                    if (utf8Buffer == null || utf8Buffer.Length < byteCt)
+                    {
+                        utf8Buffer = new byte[byteCt];
+                    }
+
+                    byteCt = Encoding.UTF8.GetBytes(signText, utf8Buffer.AsSpan(0, byteCt));
+                    if (state == null || state.Length != byteCt + 17)
+                    {
+                        state = new byte[byteCt + 17];
+                        Buffer.BlockCopy(oldSt, 0, state, 0, sizeof(ulong) * 2);
+                        state[sizeof(ulong) * 2] = (byte)byteCt;
+                    }
+
+                    Buffer.BlockCopy(utf8Buffer, 0, state, 17, byteCt);
+                    Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, player.Connection, state);
+                }
+
+                return true;
+        }
+
+        switch (drop.asset.build)
+        {
+            case EBuild.DOOR:
+            case EBuild.GATE:
+            case EBuild.SHUTTER:
+            case EBuild.HATCH:
+                state = new byte[17];
+                BitConverter.TryWriteBytes(state, o);
+                BitConverter.TryWriteBytes(state.AsSpan(sizeof(ulong)), o);
+                state[16] = (byte)(oldSt[16] > 0 ? 1 : 0);
+                break;
+
+            case EBuild.BED:
+                state = BitConverter.GetBytes(o);
+                break;
+
+            case EBuild.STORAGE:
+            case EBuild.SENTRY:
+            case EBuild.SENTRY_FREEFORM:
+            case EBuild.SIGN:
+            case EBuild.SIGN_WALL:
+            case EBuild.NOTE:
+            case EBuild.LIBRARY:
+            case EBuild.MANNEQUIN:
+                state = oldSt.Length < sizeof(ulong) * 2
+                    ? new byte[sizeof(ulong) * 2]
+                    : oldSt.CloneBytes();
+                BitConverter.TryWriteBytes(state, o);
+                BitConverter.TryWriteBytes(state.AsSpan(sizeof(ulong)), o);
+                break;
+
+            case EBuild.SPIKE:
+            case EBuild.WIRE:
+            case EBuild.CHARGE:
+            case EBuild.BEACON:
+            case EBuild.CLAIM:
+                state = oldSt.Length == 0 ? oldSt : Array.Empty<byte>();
+                if (drop.interactable is InteractableCharge charge)
+                {
+                    charge.owner = o;
+                    charge.group = g;
+                }
+                else if (drop.interactable is InteractableClaim claim)
+                {
+                    claim.owner = o;
+                    claim.group = g;
+                }
+                break;
+
+            default:
+                state = oldSt;
+                break;
+        }
+
+        bool isDifferent = state.Length != oldSt.Length;
+        if (!isDifferent)
+        {
+            for (int i = 0; i < state.Length; ++i)
+            {
+                if (state[i] == oldSt[i])
+                    continue;
+
+                isDifferent = true;
+                break;
+            }
+        }
+
+        if (isDifferent)
+            BarricadeManager.updateReplicatedState(drop.model, state, state.Length);
+
+        return isDifferent;
     }
 
     /// <summary>
@@ -1182,6 +1547,7 @@ public readonly struct BarricadeInfo
 {
 #nullable disable
     public BarricadeDrop Drop { get; }
+    public BarricadeData Data => Drop?.GetServersideData();
 #nullable restore
     public bool HasValue => Drop != null;
 

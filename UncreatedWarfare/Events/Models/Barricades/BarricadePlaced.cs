@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
@@ -12,7 +13,7 @@ public class BarricadePlaced
     /// <summary>
     /// The owner of the barricade, if they're online.
     /// </summary>
-    public required UCPlayer? Owner { get; init; }
+    public required WarfarePlayer? Owner { get; init; }
 
     /// <summary>
     /// The barricade's object and model data.

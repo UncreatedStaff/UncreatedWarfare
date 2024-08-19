@@ -1,4 +1,6 @@
-﻿namespace Uncreated.Warfare.Events.Models.Structures;
+﻿using Uncreated.Warfare.Players;
+
+namespace Uncreated.Warfare.Events.Models.Structures;
 
 /// <summary>
 /// Event listener args which handles <see cref="StructureManager.onStructureSpawned"/>.
@@ -8,7 +10,7 @@ public class StructurePlaced
     /// <summary>
     /// The owner of the structure, if they're online.
     /// </summary>
-    public required UCPlayer? Owner { get; init; }
+    public required WarfarePlayer? Owner { get; init; }
 
     /// <summary>
     /// The structure's object and model data.

@@ -11,4 +11,6 @@ public interface ITranslationValueFormatter
     string FormatEnum(object value, Type enumType, LanguageInfo? language);
     string FormatEnumName<TEnum>(LanguageInfo? language) where TEnum : unmanaged, Enum;
     string FormatEnumName(Type enumType, LanguageInfo? language);
+
+    string Colorize(ReadOnlySpan<char> text, Color32 color, TranslationOptions options);
 }

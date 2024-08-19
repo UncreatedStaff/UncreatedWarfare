@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,11 +28,18 @@ public interface ICachableLanguageDataStore : ILanguageDataStore
     Task ReloadCache(CancellationToken token = default);
 }
 
-public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore where TDbContext : ILanguageDbContext, new()
+public class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore where TDbContext : ILanguageDbContext
 {
+    private readonly IServiceProvider _serviceProvider;
     private List<LanguageInfo>? _langs;
     private Dictionary<string, LanguageInfo>? _codes;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
+    public MySqlLanguageDataStore(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
+
     public IReadOnlyList<LanguageInfo> Languages { get; private set; }
     public Task Initialize(CancellationToken token = default) => Task.CompletedTask;
     public Task WriteWaitAsync(CancellationToken token = default) => _semaphore.WaitAsync(token);
@@ -119,7 +127,7 @@ public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageData
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using ILanguageDbContext dbContext = new TDbContext();
+            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<TDbContext>();
             if (info.Key == 0)
                 await dbContext.Languages.AddAsync(info, token);
             else
@@ -151,7 +159,7 @@ public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageData
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using ILanguageDbContext dbContext = new TDbContext();
+            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<TDbContext>();
             if (!await dbContext.LanguagePreferences.AnyAsync(x => x.Steam64 == preferences.Steam64, token).ConfigureAwait(false))
                 await dbContext.LanguagePreferences.AddAsync(preferences, token);
             else
@@ -178,7 +186,7 @@ public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageData
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using ILanguageDbContext dbContext = new TDbContext();
+            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<TDbContext>();
             LanguagePreferences? pref = await dbContext.LanguagePreferences.FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
             return pref ?? new LanguagePreferences
             {
@@ -215,7 +223,7 @@ public abstract class MySqlLanguageDataStore<TDbContext> : ICachableLanguageData
     }
     public async Task GetLanguages(IList<LanguageInfo> outputList, CancellationToken token = default)
     {
-        await using ILanguageDbContext dbContext = new TDbContext();
+        await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<TDbContext>();
         List<LanguageInfo> info = await Include(dbContext.Languages).ToListAsync(token).ConfigureAwait(false);
         if (outputList is List<LanguageInfo> list)
             list.AddRange(info);

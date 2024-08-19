@@ -10,8 +10,8 @@ using Uncreated.Warfare.Logging;
 namespace Uncreated.Warfare.Util;
 public static class FormattingUtility
 {
-    private static char[][]? _tags;
-    private static RemoveRichTextOptions[]? _tagFlags;
+    internal static char[][]? AllRichTextTags;
+    internal static RemoveRichTextOptions[]? AllRichTextTagFlags;
     public static Regex TimeRegex { get; } = new Regex(@"([\d\.]+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     /// <summary>
@@ -654,43 +654,6 @@ public static class FormattingUtility
                color.g << 8 |
                color.b;
     }
-
-    /// <summary>
-    /// Get the closest <see cref="ConsoleColor"/> to the given ARGB data.
-    /// </summary>
-    public static ConsoleColor ToConsoleColor(int argb)
-    {
-        int bits = ((argb >> 16) & byte.MaxValue) > 128 || ((argb >> 8) & byte.MaxValue) > 128 || (argb & byte.MaxValue) > 128 ? 8 : 0;
-        if (((argb >> 16) & byte.MaxValue) > 180)
-            bits |= 4;
-        if (((argb >> 8) & byte.MaxValue) > 180)
-            bits |= 2;
-        if ((argb & byte.MaxValue) > 180)
-            bits |= 1;
-        return (ConsoleColor)bits;
-    }
-
-    /// <summary>
-    /// Get a <see cref="Color"/> estimation of <paramref name="color"/>.
-    /// </summary>
-    public static Color FromConsoleColor(ConsoleColor color)
-    {
-        int c = (int)color;
-        float r = 0f, g = 0f, b = 0f;
-        if ((c & 8) == 8)
-        {
-            r += 0.5f;
-            g += 0.5f;
-            b += 0.5f;
-        }
-        if ((c & 4) == 4)
-            r += 0.25f;
-        if ((c & 2) == 2)
-            g += 0.25f;
-        if ((c & 1) == 1)
-            b += 0.25f;
-        return new Color(r, g, b);
-    }
     private static unsafe void Append(ref char[] arr, char* data, int index, int length)
     {
         if (length == 0) return;
@@ -721,7 +684,7 @@ public static class FormattingUtility
             L.LogError(string.Empty);
         }
     }
-    private static unsafe bool CompareRichTextTag(char* data, int endIndex, int index, RemoveRichTextOptions options)
+    internal static unsafe bool CompareRichTextTag(char* data, int endIndex, int index, RemoveRichTextOptions options)
     {
         ++index;
         if (data[index] == '/')
@@ -739,11 +702,11 @@ public static class FormattingUtility
 
         int length = endIndex - index;
         bool found = false;
-        for (int j = 0; j < _tags!.Length; ++j)
+        for (int j = 0; j < AllRichTextTags!.Length; ++j)
         {
-            char[] tag = _tags[j];
+            char[] tag = AllRichTextTags[j];
             if (tag.Length != length) continue;
-            if ((options & _tagFlags![j]) == 0)
+            if ((options & AllRichTextTagFlags![j]) == 0)
                 continue;
             bool matches = true;
             for (int k = 0; k < length; ++k)
@@ -767,9 +730,9 @@ public static class FormattingUtility
 
         return found;
     }
-    private static void CheckTags()
+    internal static void CheckTags()
     {
-        _tags ??=
+        AllRichTextTags ??=
         [
             "align".ToCharArray(),
             "allcaps".ToCharArray(),
@@ -812,7 +775,7 @@ public static class FormattingUtility
             "voffset".ToCharArray(),
             "width".ToCharArray()
         ];
-        _tagFlags ??=
+        AllRichTextTagFlags ??=
         [
             RemoveRichTextOptions.Align,
             RemoveRichTextOptions.Uppercase,
@@ -1015,7 +978,7 @@ public enum RemoveRichTextOptions : ulong
     /// <summary>
     /// All rich text tags.
     /// </summary>
-    All = Align | Alpha | Bold | LineBreak | CharacterSpacing | Font | FontWeight | Gradient | Italic | Indent |
+    All = Align | Alpha | Bold | LineBreak | Color | CharacterSpacing | Font | FontWeight | Gradient | Italic | Indent |
           LineHeight | LineIndent | Link | Lowercase | Material | Margin | Mark | Monospace | NoLineBreak |
           NoParse | PageBreak | Position | Quad | Rotate | Strikethrough | Size | Smallcaps | Space | Sprite |
           Style | Subscript | Superscript | Underline | Uppercase | VerticalOffset | TextWidth

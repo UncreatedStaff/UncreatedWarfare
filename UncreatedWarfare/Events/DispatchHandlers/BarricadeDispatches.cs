@@ -69,7 +69,7 @@ partial class EventDispatcher2
             RegionPosition = coords,
             Rotation = new Vector3(angleX, angleY, angleZ),
             Owner = new CSteamID(owner),
-            OriginalPlacer = UCPlayer.FromID(owner),
+            OriginalPlacer = _playerService.GetOnlinePlayerOrNull(owner),
             GroupOwner = new CSteamID(group)
         };
 
@@ -115,8 +115,10 @@ partial class EventDispatcher2
     {
         BarricadeData data = drop.GetServersideData();
 
-        UCPlayer? owner = new CSteamID(data.owner).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
-            ? UCPlayer.FromID(data.owner)
+        BuildableComponent.GetOrAdd(drop);
+
+        WarfarePlayer? owner = new CSteamID(data.owner).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
+            ? _playerService.GetOnlinePlayerOrNull(data.owner)
             : null;
 
         Regions.tryGetCoordinate(data.point, out byte x, out byte y);

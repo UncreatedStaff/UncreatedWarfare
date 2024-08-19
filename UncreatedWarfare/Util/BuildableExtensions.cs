@@ -1,6 +1,13 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using System.Text;
+using Microsoft.Extensions.DependencyInjection;
+using SDG.NetTransport;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Signs;
 
 namespace Uncreated.Warfare.Util;
 public static class BuildableExtensions
@@ -50,5 +57,25 @@ public static class BuildableExtensions
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Set the owner or group of a buildable.
+    /// </summary>
+    /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
+    public static bool SetOwnerOrGroup(this IBuildable obj, IServiceProvider serviceProvider, CSteamID? owner = null, CSteamID? group = null)
+    {
+        switch (obj.Drop)
+        {
+            case BarricadeDrop bdrop:
+                return BarricadeUtility.SetOwnerOrGroup(bdrop, serviceProvider, owner, group);
+
+            case StructureDrop sdrop:
+                StructureUtility.SetOwnerOrGroup(sdrop, owner, group);
+                return true;
+
+            default:
+                throw new InvalidOperationException($"Unable to get drop from IBuildable of type \"{obj.Drop?.GetType().AssemblyQualifiedName ?? "null"}\".");
+        }
     }
 }

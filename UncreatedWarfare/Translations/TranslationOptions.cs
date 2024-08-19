@@ -65,5 +65,20 @@ public enum TranslationOptions
     /// <summary>
     /// Tells <see cref="ITranslationValueFormatter"/>'s to not add rich text to arguments. All rich text will also be removed from the original translation.
     /// </summary>
-    NoRichText = 1 << 6
+    NoRichText = 1 << 6,
+
+    /// <summary>
+    /// Tells the translator to prioritize using virtual terminal sequences instead of TMPro or Unity rich text.
+    /// </summary>
+    TranslateWithTerminalRichText = 1 << 7,
+
+    /// <summary>
+    /// Tells the translator to replace any rich text codes with the equivalent virtual terminal sequences.
+    /// </summary>
+    ReplaceRichTextWithTerminalRichText = 1 << 8,
+
+    /// <summary>
+    /// Configures the translator to output text that can be easily viewed from the termnial.
+    /// </summary>
+    ForTerminal = NoRichText | TranslateWithTerminalRichText | ReplaceRichTextWithTerminalRichText
 }

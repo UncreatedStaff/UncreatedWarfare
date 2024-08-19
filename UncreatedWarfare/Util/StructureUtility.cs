@@ -64,6 +64,18 @@ public static class StructureUtility
     }
 
     /// <summary>
+    /// Set the owner and/or group of a structure.
+    /// </summary>
+    public static void SetOwnerOrGroup(StructureDrop drop, CSteamID? owner = null, CSteamID? group = null)
+    {
+        GameThread.AssertCurrent();
+        if (!owner.HasValue && !group.HasValue)
+            return;
+        StructureData sdata = drop.GetServersideData();
+        StructureManager.changeOwnerAndGroup(drop.model, owner?.m_SteamID ?? sdata.owner, group?.m_SteamID ?? sdata.group);
+    }
+
+    /// <summary>
     /// Find a structure by it's instance ID.
     /// </summary>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
@@ -910,6 +922,7 @@ public readonly struct StructureInfo
 {
 #nullable disable
     public StructureDrop Drop { get; }
+    public StructureData Data => Drop?.GetServersideData();
 #nullable restore
     public bool HasValue => Drop != null;
 

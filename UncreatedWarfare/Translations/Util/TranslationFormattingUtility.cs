@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using StackCleaner;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations.Util;
@@ -7,22 +8,110 @@ public static class TranslationFormattingUtility
 {
     private const string ColorEndTag = "</color>";
     private const string ColorStartTag = "color=#";
+#pragma warning disable CS8500
+
+    /// <summary>
+    /// Adds the correct color tags around text based on which flags are enabled in <paramref name="options"/>.
+    /// </summary>
+    public static unsafe string Colorize(ReadOnlySpan<char> text, Color32 color, TranslationOptions options, StackColorFormatType terminalColoring)
+    {
+        if ((options & TranslationOptions.NoRichText) != 0)
+        {
+            return new string(text);
+        }
+
+        if ((options & TranslationOptions.TranslateWithTerminalRichText) != 0)
+        {
+            return terminalColoring switch
+            {
+                StackColorFormatType.ExtendedANSIColor => TerminalColorHelper.WrapMessageWithColor(TerminalColorHelper.ToArgb(color), text),
+                StackColorFormatType.ANSIColor => TerminalColorHelper.WrapMessageWithColor(TerminalColorHelper.ToConsoleColor(TerminalColorHelper.ToArgb(color)), text),
+                _ => new string(text)
+            };
+        }
+
+        if ((options & TranslationOptions.TranslateWithUnityRichText) != 0)
+        {
+            ColorizeState state = default;
+            state.Color = color;
+            state.Text = &text;
+
+            int len = 23 + text.Length;
+            if (color.a != 255)
+                len += 2;
+
+            return string.Create(len, state, (span, state) =>
+            {
+                span[0] = '<';
+                ColorStartTag.AsSpan().CopyTo(span[1..]);
+                int index = color.a != 255 ? 8 : 6;
+                HexStringHelper.FormatHexColor(state.Color, span.Slice(8, index));
+                index += 8;
+                span[index] = '>';
+                ++index;
+                state.Text->CopyTo(span[index..]);
+                index += state.Text->Length;
+                ColorEndTag.AsSpan().CopyTo(span[index..]);
+            });
+        }
+        else
+        {
+            ColorizeState state = default;
+            state.Color = color;
+            state.Text = &text;
+
+            int len = 17 + text.Length;
+            if (color.a != 255)
+                len += 2;
+
+            return string.Create(len, state, (span, state) =>
+            {
+                span[0] = '<';
+                span[1] = '#';
+                int index = color.a != 255 ? 8 : 6;
+                HexStringHelper.FormatHexColor(state.Color, span.Slice(2, index));
+                index += 2;
+                span[index] = '>';
+                ++index;
+                state.Text->CopyTo(span[index..]);
+                index += state.Text->Length;
+                ColorEndTag.AsSpan().CopyTo(span[index..]);
+            });
+        }
+    }
+    private unsafe struct ColorizeState
+    {
+        public Color32 Color;
+        public ReadOnlySpan<char>* Text;
+    }
 
     /// <summary>
     /// Converts a translation that was written with TMPro tags for convenience to IMGUI (Unity) rich text.
     /// </summary>
-    public static string CreateIMGUIString(ReadOnlySpan<char> original)
+    public static unsafe string CreateIMGUIString(ReadOnlySpan<char> original)
     {
         if (original.Length < 6)
             return new string(original);
 
         int newStrLen = GetIMGUIStringLength(original, out int finalDepth);
-        Span<char> newStr = stackalloc char[newStrLen];
 
-        int len = FormatIMGUIString(original, newStr, finalDepth);
+        CreateIMGUIStringState state = default;
+        state.FinalDepth = finalDepth;
+        state.Original = &original;
 
-        return new string(newStr[..len]);
+        return string.Create(newStrLen, state, (span, state) =>
+        {
+            FormatIMGUIString(*state.Original, span, state.FinalDepth);
+        });
     }
+
+    private unsafe struct CreateIMGUIStringState
+    {
+        public ReadOnlySpan<char>* Original;
+        public int FinalDepth;
+    }
+
+#pragma warning restore CS8500
 
     /// <summary>
     /// Isolates the color tag that surrounds the entire message, if any. Also returns span arguments to be able to reconstruct that.
@@ -99,7 +188,7 @@ public static class TranslationFormattingUtility
         return firstColor;
     }
 
-    private static int FormatIMGUIString(ReadOnlySpan<char> original, Span<char> output, int finalDepth)
+    private static void FormatIMGUIString(ReadOnlySpan<char> original, Span<char> output, int finalDepth)
     {
         ReadOnlySpan<char> startTag = ColorStartTag.AsSpan();
 
@@ -122,7 +211,7 @@ public static class TranslationFormattingUtility
         }
 
         if (finalDepth == 0)
-            return index + 1;
+            return;
 
         ReadOnlySpan<char> endTag = ColorEndTag.AsSpan();
 
@@ -131,7 +220,6 @@ public static class TranslationFormattingUtility
             endTag.CopyTo(output[(index + 1)..]);
             index += endTag.Length;
         }
-        return index + 1;
     }
 
     private static int GetIMGUIStringLength(ReadOnlySpan<char> original, out int finalDepth)

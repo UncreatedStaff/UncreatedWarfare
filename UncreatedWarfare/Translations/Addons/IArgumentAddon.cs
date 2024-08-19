@@ -1,5 +1,8 @@
-﻿namespace Uncreated.Warfare.Translations.Addons;
+﻿using System;
+
+namespace Uncreated.Warfare.Translations.Addons;
 public interface IArgumentAddon
 {
-    string ApplyAddon(string text, in ValueFormatParameters args);
+    string DisplayName { get; }
+    string ApplyAddon(ITranslationValueFormatter formatter, string text, TypedReference value, in ValueFormatParameters args);
 }

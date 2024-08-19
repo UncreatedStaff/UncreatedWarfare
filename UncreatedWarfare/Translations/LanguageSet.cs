@@ -11,6 +11,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
 {
     private ArraySegment<WarfarePlayer> _players;
     private int _index;
+    private bool _isSinglePlayer;
     internal int StartIndex;
     internal int Count;
     public readonly ArraySegment<WarfarePlayer> Players => _players;
@@ -28,8 +29,6 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         Team = team;
         IMGUI = imgui;
         _index = -1;
-
-        Reset();
     }
 
     public LanguageSet(in LanguageSet set)
@@ -40,17 +39,41 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         Team = set.Team;
         IMGUI = set.IMGUI;
         _index = -1;
-
-        Reset();
     }
 
-    internal void SetPlayers(ArraySegment<WarfarePlayer> players) => _players = players;
+    public LanguageSet(WarfarePlayer player)
+    {
+        Next = player;
+        _isSinglePlayer = true;
+        _index = -1;
+        IMGUI = player.Save.IMGUI;
+        Language = player.Locale.LanguageInfo;
+        Culture = player.Locale.CultureInfo;
+        Team = player.Team;
+    }
+
+    internal void SetPlayers(ArraySegment<WarfarePlayer> players)
+    {
+        if (players.Count == 1)
+        {
+            _isSinglePlayer = true;
+            Next = players[0];
+        }
+        else
+        {
+            _isSinglePlayer = false;
+            _players = players;
+        }
+    }
 
     /// <summary>
     /// Check if a player's language settings is on par with this set.
     /// </summary>
     public readonly bool Includes(WarfarePlayer player)
     {
+        if (_isSinglePlayer)
+            return Next.Equals(player);
+
         return player.Save.IMGUI == IMGUI
                && player.Locale.LanguageInfo.Equals(Language)
                && player.Locale.CultureInfo.Equals(Culture)
@@ -59,14 +82,48 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
 
     public readonly PooledTransportConnectionList GatherTransportConnections()
     {
-        PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Players.Count);
-        foreach (WarfarePlayer pl in Players)
+        if (_isSinglePlayer)
         {
-            if (pl.IsOnline)
-                list.Add(pl.Connection);
+            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(1);
+            if (Next.IsOnline)
+                list.Add(Next.Connection);
+            return list;
         }
+        else
+        {
+            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Players.Count);
+            foreach (WarfarePlayer pl in Players)
+            {
+                if (pl.IsOnline)
+                    list.Add(pl.Connection);
+            }
 
-        return list;
+            return list;
+        }
+    }
+
+    public readonly PooledTransportConnectionList GatherTransportConnections(byte x, byte y, byte area)
+    {
+        if (_isSinglePlayer)
+        {
+            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(1);
+            PlayerMovement movement = Next.UnturnedPlayer.movement;
+            if (Next.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
+                list.Add(Next.Connection);
+            return list;
+        }
+        else
+        {
+            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Players.Count);
+            foreach (WarfarePlayer pl in Players)
+            {
+                PlayerMovement movement = Next.UnturnedPlayer.movement;
+                if (pl.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
+                    list.Add(pl.Connection);
+            }
+
+            return list;
+        }
     }
 
     public void Reset()
@@ -76,6 +133,11 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
 
     public bool MoveNext()
     {
+        if (_isSinglePlayer)
+        {
+            return _index == -1;
+        }
+
         ++_index;
         if (_index >= _players.Count)
             return false;

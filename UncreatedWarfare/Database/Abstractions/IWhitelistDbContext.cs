@@ -2,7 +2,7 @@
 using Uncreated.Warfare.Models;
 
 namespace Uncreated.Warfare.Database.Abstractions;
-public interface IWhitelistDbContext
+public interface IWhitelistDbContext : IDbContext
 {
     DbSet<ItemWhitelist> Whitelists { get; }
 

@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Signs;
@@ -24,11 +25,13 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
     private readonly Dictionary<uint, ISignInstanceProvider> _signProviders = new Dictionary<uint, ISignInstanceProvider>(256);
     private readonly Dictionary<uint, int> _signProviderTypeIndexes = new Dictionary<uint, int>(256);
     private readonly ILogger<SignInstancer> _logger;
+    private readonly ITranslationService _translationService;
 
-    public SignInstancer(IServiceProvider serviceProvider, ILogger<SignInstancer> logger)
+    public SignInstancer(IServiceProvider serviceProvider, ILogger<SignInstancer> logger, ITranslationService translationService)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _translationService = translationService;
 
         // find all ISignInstanceProvider's
         List<SignInstanceData> instances = new List<SignInstanceData>(8);
@@ -49,6 +52,16 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
         _types = instances.ToArray();
         _batchBuffer = new string[_types.Length];
+    }
+
+    public bool IsInstanced(BarricadeDrop drop)
+    {
+        GameThread.AssertCurrent();
+
+        if (drop.interactable is not InteractableSign)
+            throw new ArgumentException("Barricade must be sign.", nameof(drop));
+
+        return _signProviders.ContainsKey(drop.instanceID);
     }
 
     public ISignInstanceProvider? GetSignProvider(BarricadeDrop drop)
@@ -101,7 +114,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         GameThread.AssertCurrent();
 
         int ct = 0;
-        foreach (LanguageSet set in LanguageSet.All())
+        foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
             ct += UpdateSigns(set);
         }
@@ -114,7 +127,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         GameThread.AssertCurrent();
 
         int ct = 0;
-        foreach (LanguageSet set in LanguageSet.All())
+        foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
             ct += UpdateSigns<TProvider>(set);
         }
@@ -127,7 +140,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         GameThread.AssertCurrent();
 
         int ct = 0;
-        foreach (LanguageSet set in LanguageSet.All())
+        foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
             ct += UpdateSigns(set, selector);
         }
@@ -230,8 +243,8 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         string? text;
         if (canBatch)
         {
-            text = batchTranslate ??= provider.Translate(set.Language, set.CultureInfo, null);
-            Data.SendChangeText.Invoke(netId, ENetReliability.Unreliable, set.GatherTransportConnectionList(region.x, region.y, BarricadeManager.BARRICADE_REGIONS), text);
+            text = batchTranslate ??= provider.Translate(set.Language, set.Culture, null);
+            Data.SendChangeText.Invoke(netId, ENetReliability.Unreliable, set.GatherTransportConnections(region.x, region.y, BarricadeManager.BARRICADE_REGIONS), text);
         }
         else while (set.MoveNext())
         {
@@ -239,7 +252,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
             if (!Regions.checkArea(movement.region_x, movement.region_y, region.x, region.y, BarricadeManager.BARRICADE_REGIONS))
                 continue;
 
-            text = provider.Translate(set.Language, set.CultureInfo, set.Next);
+            text = provider.Translate(set.Language, set.Culture, set.Next);
             Data.SendChangeText.Invoke(netId, ENetReliability.Unreliable, set.Next.Connection, text);
         }
     }

@@ -29,20 +29,12 @@ public class Whitelister : ListSingleton<WhitelistItem>
     public override void Load()
     {
         ItemManager.onTakeItemRequested += OnItemPickup;
-        EventDispatcher.SalvageBarricadeRequested += OnBarricadeSalvageRequested;
-        EventDispatcher.SalvageStructureRequested += OnStructureSalvageRequested;
-        StructureManager.onDeployStructureRequested += OnStructurePlaceRequested;
-        BarricadeManager.onModifySignRequested += OnEditSignRequest;
         _singleton = this;
     }
 
     public override void Unload()
     {
         _singleton = null!;
-        BarricadeManager.onModifySignRequested -= OnEditSignRequest;
-        StructureManager.onDeployStructureRequested -= OnStructurePlaceRequested;
-        EventDispatcher.SalvageStructureRequested -= OnStructureSalvageRequested;
-        EventDispatcher.SalvageBarricadeRequested -= OnBarricadeSalvageRequested;
         ItemManager.onTakeItemRequested -= OnItemPickup;
     }
     internal void OnStructureDamageRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)

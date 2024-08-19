@@ -25,7 +25,6 @@ public class Translation : IDisposable
     public bool IsInitialized { get; private set; }
     public TranslationOptions Options { get; }
     public virtual int ArgumentCount => 0;
-
     public ITranslationService TranslationService { get; private set; } = null!;
     public LanguageService LanguageService { get; private set; } = null!;
 
@@ -91,7 +90,7 @@ public class Translation : IDisposable
     /// <remarks><paramref name="formattingParameters"/> have already been verified to be the correct type by this point.</remarks>
     protected virtual string UnsafeTranslateIntl(in TranslationArguments arguments, object?[] formattingParameters)
     {
-        return arguments.ValueSet.GetValueString(arguments.UseIMGUI, arguments.UseUncoloredTranslation);
+        return arguments.ValueSet.GetValueString(arguments.UseIMGUI, arguments.UseUncoloredTranslation, (arguments.Options & TranslationOptions.ForTerminal) != 0);
     }
 
     protected internal void AssertInitialized()

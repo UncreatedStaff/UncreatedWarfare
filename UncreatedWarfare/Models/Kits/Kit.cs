@@ -399,7 +399,7 @@ public class Kit : ITranslationArgument, ICloneable
             faction == TeamManager.Team2Faction && string.Equals(factionInfo?.FactionId, TeamManager.Team1Faction?.FactionId, StringComparison.Ordinal))
             return false;
 
-        if (FactionFilter.NullOrEmpty() || faction is null || faction.PrimaryKey == 0)
+        if (FactionFilter.IsNullOrEmpty() || faction is null || faction.PrimaryKey == 0)
             return true;
         
         for (int i = 0; i < FactionFilter.Count; ++i)
@@ -411,7 +411,7 @@ public class Kit : ITranslationArgument, ICloneable
 
     public bool IsCurrentMapAllowed()
     {
-        if (MapFilter.NullOrEmpty())
+        if (MapFilter.IsNullOrEmpty())
             return true;
         int map = MapScheduler.Current;
         if (map != -1)
