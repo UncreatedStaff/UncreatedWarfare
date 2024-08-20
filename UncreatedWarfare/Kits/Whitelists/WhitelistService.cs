@@ -29,7 +29,7 @@ public class WhitelistService :
     IAsyncEventListener<PlaceBarricadeRequested>,
     IAsyncEventListener<PlaceStructureRequested>,
     IAsyncEventListener<ChangeSignTextRequested>,
-    IAsyncEventListener<ItemPickedUp>,
+    IAsyncEventListener<ItemPickupRequested>,
     IDisposable
 {
     private readonly IWhitelistDbContext _dbContext;

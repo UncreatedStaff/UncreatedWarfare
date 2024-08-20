@@ -6,6 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Items;
 /// <summary>
 /// Invoked when a player tries to swap their clothes to another item or remove clothes completely.
 /// </summary>
+[EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory" ])]
 public class SwapClothingRequested : CancellablePlayerEvent
 {
     /// <summary>

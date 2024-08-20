@@ -1,6 +1,8 @@
 ﻿using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Models.Items;
+
+[EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory" ])]
 public class ItemMoveRequested : CancellablePlayerEvent
 {
     public Page OldPage { get; }

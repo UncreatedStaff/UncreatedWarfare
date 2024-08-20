@@ -1,6 +1,8 @@
 ﻿using System;
 
 namespace Uncreated.Warfare.Events.Models.Items;
+
+[EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory" ])]
 public class CraftRequested : CancellablePlayerEvent
 {
     private ItemAsset _item;

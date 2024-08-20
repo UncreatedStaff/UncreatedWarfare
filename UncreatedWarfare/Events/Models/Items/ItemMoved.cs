@@ -1,6 +1,7 @@
 ﻿using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Models.Items;
+
 public class ItemMoved : PlayerEvent
 {
     public Page OldPage { get; }
