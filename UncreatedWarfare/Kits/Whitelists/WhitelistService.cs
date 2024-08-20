@@ -15,6 +15,7 @@ using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
@@ -303,7 +304,7 @@ public class WhitelistService :
             return;
         }
 
-        int maximumPlacedBarricades = Math.Max(equippedKit!.CountItems(assetContainer), whitelistAmount);
+        int maximumPlacedBarricades = equippedKit == null ? whitelistAmount : Math.Max(equippedKit.CountItems(assetContainer), whitelistAmount);
 
         if (maximumPlacedBarricades == 0)
         {
@@ -380,7 +381,7 @@ public class WhitelistService :
             return;
         }
 
-        int maximumPlacedStructures = Math.Max(equippedKit!.CountItems(assetContainer), whitelistAmount);
+        int maximumPlacedStructures = equippedKit == null ? whitelistAmount : Math.Max(equippedKit.CountItems(assetContainer), whitelistAmount);
 
         if (maximumPlacedStructures == 0)
         {
@@ -425,6 +426,55 @@ public class WhitelistService :
         {
             _chatService.Send(e.OriginalPlacer, _translations.WhitelistProhibitedPlaceAmt, amountNeededToDestroy, e.Asset);
             e.Cancel();
+        }
+    }
+
+    [EventListener(RequiresMainThread = true)]
+    async UniTask IAsyncEventListener<ItemPickupRequested>.HandleEventAsync(ItemPickupRequested e, IServiceProvider serviceProvider, CancellationToken token)
+    {
+        if (e.Player == null || e.Player.OnDuty())
+            return;
+
+        IAssetLink<ItemAsset> assetContainer = AssetLink.Create(e.Asset);
+
+        int whitelistAmount = await GetWhitelistedAmount(assetContainer, token);
+        await UniTask.SwitchToMainThread(token);
+
+        if (whitelistAmount == -1)
+            return;
+
+        // don't allow putting kit items or non-whitelisted items in storage
+        if (e.DestinationPage == Page.Storage && whitelistAmount == 0)
+        {
+            e.Cancel();
+            return;
+        }
+
+        Kit? equippedKit = e.Player.Component<KitPlayerComponent>().CachedKit;
+
+        if (equippedKit == null && whitelistAmount == 0)
+        {
+            e.Cancel();
+            _chatService.Send(e.Player, _translations.WhitelistNoKit);
+            return;
+        }
+
+        int maximumItems = equippedKit == null ? whitelistAmount : Math.Max(equippedKit.CountItems(assetContainer), whitelistAmount);
+
+        int itemCount = ItemUtility.CountItems(e.PlayerObject, assetContainer, maximumItems);
+
+        if (itemCount >= maximumItems)
+        {
+            if (whitelistAmount == 0)
+            {
+                e.Cancel();
+                _chatService.Send(e.Player, _translations.WhitelistProhibitedPlace, e.Asset);
+            }
+            else
+            {
+                e.Cancel();
+                _chatService.Send(e.Player, _translations.WhitelistProhibitedPlaceAmt, maximumItems, e.Asset);
+            }
         }
     }
 

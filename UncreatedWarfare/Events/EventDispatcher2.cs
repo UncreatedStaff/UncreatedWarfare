@@ -66,6 +66,9 @@ public partial class EventDispatcher2 : IHostedService
         VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnToggleVehicleLockRequested;
         VehicleManager.OnToggledVehicleLock += VehicleManagerOnToggledVehicleLock;
 
+        /* Items */
+        ItemManager.onTakeItemRequested += OnTakeItemRequested;
+
         return UniTask.CompletedTask;
     }
 
@@ -90,6 +93,9 @@ public partial class EventDispatcher2 : IHostedService
         /* Vehicles */
         VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnToggleVehicleLockRequested;
         VehicleManager.OnToggledVehicleLock -= VehicleManagerOnToggledVehicleLock;
+
+        /* Items */
+        ItemManager.onTakeItemRequested -= OnTakeItemRequested;
 
         return UniTask.CompletedTask;
     }
