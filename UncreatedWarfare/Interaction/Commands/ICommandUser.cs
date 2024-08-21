@@ -7,6 +7,16 @@ public interface ICommandUser
     bool IsSuperUser { get; }
 
     /// <summary>
+    /// If <see cref="SendMessage"/> outputs to a terminal.
+    /// </summary>
+    bool IsTerminal { get; }
+
+    /// <summary>
+    /// If <see cref="SendMessage"/> should use IMGUI (Unity rich text) for coloring.
+    /// </summary>
+    bool IMGUI { get; }
+
+    /// <summary>
     /// Steam ID of this actor where applicable, or zero.
     /// </summary>
     CSteamID Steam64 { get; }

@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Storage;
 using System;
-using Microsoft.Extensions.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Logging;
@@ -61,7 +61,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
 
         IConfiguration databaseSection = sysConfig.GetSection("database");
 
-        string? connectionStringType = sysConfig["connection_string_name"];
+        string? connectionStringType = databaseSection["connection_string_name"];
 
         if (string.IsNullOrWhiteSpace(connectionStringType))
             connectionStringType = "warfare-db";
@@ -118,9 +118,9 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         modelBuilder.Entity<HomebaseAuthenticationKey>();
 
         /* Adds preset value converters */
-        WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder);
+        WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder, _logger);
 
-        Console.WriteLine("Model created.");
+        _logger.LogInformation("Model created.");
     }
 
     async UniTask IHostedService.StartAsync(CancellationToken token)

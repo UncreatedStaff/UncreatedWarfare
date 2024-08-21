@@ -1,0 +1,80 @@
+﻿# KitCommand
+Description: "Manage kits."
+Aliases: [ "k", "whale" ]
+Parameters:
+    # /kit give
+  - Name: give
+    Alias: g
+    Type: Verbatim
+    Description: "Grant <param 'kit' /> or the kit on <target /> sign to <param 'Player' />."
+    Parameters:
+      - Name: kit
+        Type: Uncreated.Warfare.Models.Kits.Kit
+        Optional: true
+        Description: "Grant <param 'kit' /> to <caller />."
+        Parameters:
+          - Name: player
+            Type: Uncreated.Warfare.Players.IPlayer
+            Optional: true
+            Description: "Grant <param 'Kit' /> to <param 'Player' />."
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Optional: true
+        Description: "Grant the kit on <target /> sign to <param 'player' />."
+      - Name: "loadout"
+        Alias: "l"
+        Type: Verbatim
+        Optional: true
+        Description: "Grant <param 'Kit' /> to <caller />."
+        Parameters:
+          - Name: class
+            Type: Uncreated.Warfare.Kits.Class
+            Description: "Grant the default inventory for a <param 'Class'/> loadout to <caller />."
+            Parameters:
+              - Name: player
+                Type: Uncreated.Warfare.Players.IPlayer
+                Optional: true
+                Description: "Grant the default inventory for a <param 'Class'/> loadout to <param 'Player' />."
+    # /kit hotkey
+  - Name: hotkey
+    Aliases: [ keybind, bind ]
+    Description: "Manage automatically assigned hotkey's for your equipped kit."
+    Parameters:
+      - Name: add
+        Aliases: [ create, new ]
+        Type: Verbatim
+        Description: "Add a hotkey bind to your currently held item that will be assigned when you request your current kit."
+        Parameters:
+          - Name: slot
+            Type: byte
+            Range: "#[3,4,5,6,7,8,9,0]"
+      - Name: remove
+        Aliases: [ delete, cancel ]
+        Type: Verbatim
+        Description: "Remove a hotkey bind from an item for your current kit."
+        Parameters:
+          - Name: slot
+            Type: byte
+            Range: "#[3,4,5,6,7,8,9,0]"
+      - Name: slot
+        Type: byte
+        Range: "#[3,4,5,6,7,8,9,0]"
+        Description: "Add a hotkey bind to your currently held item that will be assigned when you request your current kit."
+  # /kit favorite
+  - Name: favorite
+    Aliases: [ favourite, favour, favor, fav, star ]
+    Description: "Star or favorite a kit so it's highlighted and shows up higher in the Kit menu."
+    Parameters:
+      - Name: kit
+        Type: Uncreated.Warfare.Models.Kits.Kit
+        Optional: true
+        Description: "Star or favorite <param 'kit' /> so it's highlighted and shows up higher in the Kit menu."
+  # /kit unfavorite
+  - Name: unfavorite
+    Aliases: [ unfavourite, unfavour, unfavor, unfav, unstar ]
+    Description: "Remove the star or favorite on a previously favorited kit."
+    Parameters:
+      - Name: kit
+        Type: Uncreated.Warfare.Models.Kits.Kit
+        Optional: true
+        Description: "Remove the star or favorite on <param 'kit' />."

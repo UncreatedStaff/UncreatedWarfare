@@ -36,6 +36,20 @@ public sealed class SubCommandOfAttribute : Attribute
 }
 
 /// <summary>
+/// Allows a parent command to automatically redirect to a child command instead of running it's body or throwing help if it has none.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+[BaseTypeRequired(typeof(ICommand))]
+public sealed class RedirectCommandToAttribute : Attribute
+{
+    public Type CommandType { get; }
+    public RedirectCommandToAttribute(Type commandType)
+    {
+        CommandType = commandType;
+    }
+}
+
+/// <summary>
 /// Define the name of the root project folder for this assembly, mainly if it's not equal to the assembly name or the assembly name without periods.
 /// </summary>
 [AttributeUsage(AttributeTargets.Assembly)]

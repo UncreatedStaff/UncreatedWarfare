@@ -14,8 +14,6 @@ namespace Uncreated.Warfare.Translations;
 public class TranslationValueFormatter : ITranslationValueFormatter
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly LanguageService _languageService;
-    private readonly ITranslationService _translationService;
     private readonly Type _enumFormatter;
 
     private const string NullNoColor = "null";
@@ -23,6 +21,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     private const string NullColorTMPro = "<#569cd6><b>null</b></color>";
     private const string NullANSI = "\u001b[94mnull\u001b[39m";
     private const string NullExtendedANSI = "\u001b[38;2;86;156;214mnull\u001b[39m";
+    public LanguageService LanguageService { get; }
+    public ITranslationService TranslationService { get; }
 
     private readonly ConcurrentDictionary<Type, object> _valueFormatters = new ConcurrentDictionary<Type, object>();
     public TranslationValueFormatter(IServiceProvider serviceProvider, IConfiguration systemConfig)
@@ -31,8 +31,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter
             ?? throw new InvalidOperationException("No enum formatter configured in 'enum_formatter_type'.");
 
         _serviceProvider = serviceProvider;
-        _languageService = serviceProvider.GetRequiredService<LanguageService>();
-        _translationService = serviceProvider.GetRequiredService<ITranslationService>();
+        LanguageService = serviceProvider.GetRequiredService<LanguageService>();
+        TranslationService = serviceProvider.GetRequiredService<ITranslationService>();
     }
 
     // in order of priority. can either be a type or the object itself for singletons
@@ -48,11 +48,14 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     {
         string formattedValue = FormatIntl(value, in parameters);
 
-        IArgumentAddon[] addons = parameters.Format.FormatAddons;
+        IArgumentAddon[]? addons = parameters.Format.FormatAddons;
         TypedReference typeRef = __makeref(value);
-        for (int i = 0; i < addons.Length; ++i)
+        if (addons != null)
         {
-            formattedValue = addons[i].ApplyAddon(this, formattedValue, typeRef, in parameters);
+            for (int i = 0; i < addons.Length; ++i)
+            {
+                formattedValue = addons[i].ApplyAddon(this, formattedValue, typeRef, in parameters);
+            }
         }
 
         return formattedValue;
@@ -63,11 +66,15 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     {
         string formattedValue = FormatIntl(value, in parameters, formatType);
 
-        IArgumentAddon[] addons = parameters.Format.FormatAddons;
+        IArgumentAddon[]? addons = parameters.Format.FormatAddons;
         TypedReference typeRef = __makeref(value);
-        for (int i = 0; i < addons.Length; ++i)
+
+        if (addons != null)
         {
-            formattedValue = addons[i].ApplyAddon(this, formattedValue, typeRef, in parameters);
+            for (int i = 0; i < addons.Length; ++i)
+            {
+                formattedValue = addons[i].ApplyAddon(this, formattedValue, typeRef, in parameters);
+            }
         }
 
         return formattedValue;
@@ -75,22 +82,22 @@ public class TranslationValueFormatter : ITranslationValueFormatter
 
     public string FormatEnum<TEnum>(TEnum value, LanguageInfo? language) where TEnum : unmanaged, Enum
     {
-        return ((IEnumFormatter<TEnum>)GetValueFormatter<TEnum>()).GetValue(value, language ?? _languageService.GetDefaultLanguage());
+        return ((IEnumFormatter<TEnum>)GetValueFormatter<TEnum>()).GetValue(value, language ?? LanguageService.GetDefaultLanguage());
     }
 
     public string FormatEnum(object value, Type enumType, LanguageInfo? language)
     {
-        return ((IEnumFormatter)GetValueFormatter(enumType)).GetValue(value, language ?? _languageService.GetDefaultLanguage());
+        return ((IEnumFormatter)GetValueFormatter(enumType)).GetValue(value, language ?? LanguageService.GetDefaultLanguage());
     }
 
     public string FormatEnumName<TEnum>(LanguageInfo? language) where TEnum : unmanaged, Enum
     {
-        return ((IEnumFormatter<TEnum>)GetValueFormatter<TEnum>()).GetName(language ?? _languageService.GetDefaultLanguage());
+        return ((IEnumFormatter<TEnum>)GetValueFormatter<TEnum>()).GetName(language ?? LanguageService.GetDefaultLanguage());
     }
 
     public string FormatEnumName(Type enumType, LanguageInfo? language)
     {
-        return ((IEnumFormatter)GetValueFormatter(enumType)).GetName(language ?? _languageService.GetDefaultLanguage());
+        return ((IEnumFormatter)GetValueFormatter(enumType)).GetName(language ?? LanguageService.GetDefaultLanguage());
     }
 
     private string FormatIntl<T>(T? value, in ValueFormatParameters parameters)
@@ -178,7 +185,7 @@ public class TranslationValueFormatter : ITranslationValueFormatter
 
     public string Colorize(ReadOnlySpan<char> text, Color32 color, TranslationOptions options)
     {
-        return TranslationFormattingUtility.Colorize(text, color, options, _translationService.TerminalColoring);
+        return TranslationFormattingUtility.Colorize(text, color, options, TranslationService.TerminalColoring);
     }
 
     private string FormatNull(in ValueFormatParameters parameters)
@@ -190,7 +197,7 @@ public class TranslationValueFormatter : ITranslationValueFormatter
 
         if ((parameters.Options & TranslationOptions.TranslateWithTerminalRichText) != 0)
         {
-            return _translationService.TerminalColoring switch
+            return TranslationService.TerminalColoring switch
             {
                 StackColorFormatType.ExtendedANSIColor => NullExtendedANSI,
                 StackColorFormatType.ANSIColor => NullANSI,

@@ -1,13 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
@@ -27,7 +26,7 @@ namespace Uncreated.Warfare.Commands;
 
 [Command("blank")]
 [MetadataFile(nameof(GetHelpMetadata))]
-public sealed class KitCommand : IExecutableCommand
+public sealed class KitCommandOld : IExecutableCommand
 {
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly IServiceProvider _serviceProvider;
@@ -49,7 +48,7 @@ public sealed class KitCommand : IExecutableCommand
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public KitCommand(ITranslationValueFormatter valueFormatter, IServiceProvider serviceProvider)
+    public KitCommandOld(ITranslationValueFormatter valueFormatter, IServiceProvider serviceProvider)
     {
         _valueFormatter = valueFormatter;
         _serviceProvider = serviceProvider;
@@ -424,94 +423,6 @@ public sealed class KitCommand : IExecutableCommand
         Context.AssertArgs(1, "/kit <bind|rename|layout|favorite|unfavorite> - Customize your experience with kits.");
         Context.AssertHelpCheck(0, "/kit <bind|rename|layout|favorite|unfavorite> - Customize your experience with kits.");
 
-        if (Context.MatchParameter(0, "hotkey", "keybind", "bind"))
-        {
-            Context.AssertRanByPlayer();
-
-            await Context.AssertPermissions(PermissionKeybind, token);
-
-            bool add = Context.MatchParameter(1, "add", "create", "new") || Context.HasArgsExact(2);
-            if ((add || Context.MatchParameter(1, "remove", "delete", "cancel")) && Context.TryGet(Context.ArgumentCount - 1, out byte slot) && KitEx.ValidSlot(slot))
-            {
-                await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    PlayerEquipment equipment = Context.Player.UnturnedPlayer.equipment;
-                    Kit? kit = await Context.Player.GetActiveKit(token).ConfigureAwait(false);
-                    if (kit is null)
-                        throw Context.Reply(T.AmmoNoKit);
-                    
-                    if (add)
-                    {
-                        IPageKitItem? item = await manager.GetHeldItemFromKit(Context.Player, token).ConfigureAwait(false);
-                        await UniTask.SwitchToMainThread(token);
-
-                        if (item == null)
-                            throw Context.Reply(T.KitHotkeyNotHoldingItem);
-
-                        ItemAsset? asset = item is ISpecificKitItem i2
-                            ? i2.Item.GetAsset<ItemAsset>()
-                            : item.GetItem(kit, TeamManager.GetFactionSafe(Context.Player.GetTeam()), out _, out _);
-                        if (asset == null)
-                            throw Context.Reply(T.KitHotkeyNotHoldingItem);
-
-                        if (!KitEx.CanBindHotkeyTo(asset, item.Page))
-                            throw Context.Reply(T.KitHotkeyNotHoldingValidItem, asset);
-
-                        await manager.AddHotkey(kit.PrimaryKey, Context.CallerId.m_SteamID, slot, item, token).ConfigureAwait(false);
-                        await UniTask.SwitchToMainThread(token);
-                        if (Context.Player.HotkeyBindings != null)
-                        {
-                            // remove duplicates / conflicts
-                            Context.Player.HotkeyBindings.RemoveAll(x =>
-                                x.Kit == kit.PrimaryKey && (x.Slot == slot ||
-                                                                          x.Item.X == item.X &&
-                                                                          x.Item.Y == item.Y &&
-                                                                          x.Item.Page == item.Page));
-                        }
-                        else Context.Player.HotkeyBindings = new List<HotkeyBinding>(32);
-
-                        Context.Player.HotkeyBindings.Add(new HotkeyBinding(kit.PrimaryKey, slot, item, new KitHotkey
-                        {
-                            Steam64 = Context.CallerId.m_SteamID,
-                            KitId = kit.PrimaryKey,
-                            Item = item is ISpecificKitItem item2 ? item2.Item : null,
-                            Redirect = item is IAssetRedirectKitItem redir ? redir.RedirectType : null,
-                            X = item.X,
-                            Y = item.Y,
-                            Page = item.Page,
-                            Slot = slot
-                        }));
-
-                        byte index = KitEx.GetHotkeyIndex(slot);
-
-                        if (KitEx.CanBindHotkeyTo(asset, (Page)equipment.equippedPage))
-                        {
-                            equipment.ServerBindItemHotkey(index, asset,
-                                equipment.equippedPage, equipment.equipped_x,
-                                equipment.equipped_y);
-                        }
-                        throw Context.Reply(T.KitHotkeyBinded, asset, slot, kit);
-                    }
-                    else
-                    {
-                        bool removed = await manager.RemoveHotkey(kit.PrimaryKey, Context.CallerId.m_SteamID, slot, token).ConfigureAwait(false);
-                        await UniTask.SwitchToMainThread(token);
-                        if (!removed)
-                            throw Context.Reply(T.KitHotkeyNotFound, slot, kit);
-
-                        byte index = KitEx.GetHotkeyIndex(slot);
-                        equipment.ServerClearItemHotkey(index);
-                        throw Context.Reply(T.KitHotkeyUnbinded, slot, kit);
-                    }
-                }
-                finally
-                {
-                    Context.Player.PurchaseSync.Release();
-                }
-            }
-            throw Context.SendCorrectUsage("/kit keybind [add (default)|remove] <key (3-9 or 0)>");
-        }
         if (Context.MatchParameter(0, "layout", "loadout", "customize"))
         {
             Context.AssertRanByPlayer();
@@ -629,73 +540,6 @@ public sealed class KitCommand : IExecutableCommand
             Context.LogAction(ActionLogType.SetKitProperty, kit.FactionId + ": SIGN TEXT >> \"" + newName + "\" (using /kit rename)");
             manager.Signs.UpdateSigns(kit);
             throw Context.Reply(T.KitRenamed, ldIdStr, oldName, newName);
-        }
-
-        bool fav = Context.MatchParameter(0, "favorite", "favourite", "favour", "favor", "fav", "star");
-        if (fav || Context.MatchParameter(0, "unfavorite", "unfavourite", "unfavour", "unfavor", "unfav", "unstar"))
-        {
-            Context.AssertRanByPlayer();
-
-            await Context.AssertPermissions(PermissionFavorite, token);
-            await UniTask.SwitchToMainThread(token);
-
-            Context.AssertHelpCheck(1, "/kit <fav|unfav> (look at kit sign <b>or</b> [kit id]) - Favorite or unfavorite your kit or loadout.");
-            Kit? kit;
-            UCPlayer player = Context.Player;
-            UCPlayer.TryApplyViewLens(ref player);
-            if (Context.TryGetRange(1, out string? kitName))
-            {
-                kit = await manager.FindKit(kitName, token).ConfigureAwait(false);
-            }
-            else if (Context.TryGetBarricadeTarget(out BarricadeDrop? drop))
-            {
-                kitName = drop.interactable is InteractableSign sign ? sign.text : null!;
-                kit = Signs.GetKitFromSign(drop, out int loadoutId);
-                if (loadoutId > 0)
-                    kit = await manager.Loadouts.GetLoadout(player, loadoutId, token).ConfigureAwait(false);
-            }
-            else
-                throw Context.SendCorrectUsage("/kit <fav|unfav> (look at kit sign <b>or</b> [kit id]) - Favorite or unfavorite your kit or loadout.");
-            
-            if (kit == null)
-            {
-                await UniTask.SwitchToMainThread(token);
-                throw Context.Reply(T.KitNotFound, kitName.Replace(Signs.Prefix, string.Empty));
-            }
-            await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                await UniTask.SwitchToMainThread(token);
-                if (fav && manager.IsFavoritedQuick(kit.PrimaryKey, player))
-                {
-                    throw Context.Reply(T.KitFavoriteAlreadyFavorited, kit);
-                }
-                else if (!fav && !manager.IsFavoritedQuick(kit.PrimaryKey, player))
-                {
-                    throw Context.Reply(T.KitFavoriteAlreadyUnfavorited, kit);
-                }
-                else
-                {
-                    if (fav)
-                        (player.KitMenuData.FavoriteKits ??= new List<uint>(8)).Add(kit.PrimaryKey);
-                    else if (player.KitMenuData.FavoriteKits != null)
-                        player.KitMenuData.FavoriteKits.RemoveAll(x => x == kit.PrimaryKey);
-                    player.KitMenuData.FavoritesDirty = true;
-                    
-                    await manager.SaveFavorites(player, (IReadOnlyList<uint>?)player.KitMenuData.FavoriteKits ?? Array.Empty<uint>(), token).ConfigureAwait(false);
-                }
-                await UniTask.SwitchToMainThread(token);
-
-                Context.Reply(fav ? T.KitFavorited : T.KitUnfavorited, kit);
-            }
-            finally
-            {
-                player.PurchaseSync.Release();
-            }
-
-            await UniTask.SwitchToMainThread(token);
-            Signs.UpdateKitSigns(player, null);
-            return;
         }
 
         Context.AssertOnDuty();
@@ -953,45 +797,6 @@ public sealed class KitCommand : IExecutableCommand
             }
             else
                 Context.SendCorrectUsage("/kit <lock> <id>");
-        }
-        else if (Context.MatchParameter(0, "give", "g"))
-        {
-            await Context.AssertPermissions(PermissionGive, token);
-
-            Context.AssertHelpCheck(1, "/kit <give|g> [id] (or look at a sign) - Equips you with the kit with the id provided.");
-
-            Context.AssertRanByPlayer();
-            BarricadeDrop? drop = null;
-            if (Context.TryGet(1, out string kitName) || Context.TryGetBarricadeTarget(out drop))
-            {
-                Kit? kit = kitName == null ? null : await manager.FindKit(kitName, token, true, x => KitManager.RequestableSet(x, false));
-                if (kit == null && drop != null)
-                {
-                    kit = Signs.GetKitFromSign(drop, out int loadout);
-                    if (loadout > 0)
-                    {
-                        UCPlayer pl = Context.Player;
-                        UCPlayer.TryApplyViewLens(ref pl);
-                        kit = await manager.Loadouts.GetLoadout(pl, loadout, token).ConfigureAwait(false);
-                    }
-
-                    if (kit != null)
-                        kit = await manager.GetKit(kit.PrimaryKey, token, x => KitManager.RequestableSet(x, false));
-                }
-                
-                if (kit != null)
-                {
-                    Class @class = kit.Class;
-                    await manager.Requests.GiveKit(Context.Player, kit, true, true, token).ConfigureAwait(false);
-                    await UniTask.SwitchToMainThread(token);
-                    Context.LogAction(ActionLogType.GiveKit, kitName);
-                    Context.Reply(T.RequestSignGiven, @class);
-                }
-                else
-                    throw Context.Reply(T.KitNotFound, kitName);
-            }
-            else
-                Context.SendCorrectUsage("/kit <give|g> [id]");
         }
         else if (Context.MatchParameter(0, "set", "s"))
         {

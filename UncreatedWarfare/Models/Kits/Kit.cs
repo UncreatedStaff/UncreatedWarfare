@@ -22,6 +22,8 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 
@@ -45,21 +47,6 @@ public class Kit : ITranslationArgument, ICloneable
 
     [JsonIgnore]
     public Faction? Faction { get; set; }
-    
-    public FactionInfo? FactionInfo
-    {
-        get
-        {
-            if (!UCWarfare.IsLoaded)
-                throw new SingletonUnloadedException(typeof(UCWarfare));
-
-            uint? factionId = FactionId ?? Faction?.Key;
-            if (!factionId.HasValue)
-                return null;
-
-            return TeamManager.GetFactionInfo(factionId.Value);
-        }
-    }
 
     [ForeignKey(nameof(Faction))]
     [Column("Faction")]
@@ -270,14 +257,14 @@ public class Kit : ITranslationArgument, ICloneable
         SquadLevel = copy.SquadLevel;
         if (clone)
         {
-            Skillsets = [.. F.CloneList(copy.Skillsets)];
-            ItemModels = [.. F.CloneList(copy.ItemModels)];
+            Skillsets = [.. CollectionUtility.CloneList(copy.Skillsets)];
+            ItemModels = [.. CollectionUtility.CloneList(copy.ItemModels)];
             if (copyCachedLists)
             {
-                UnlockRequirementsModels = [.. F.CloneList(copy.UnlockRequirementsModels)];
-                FactionFilter = [.. F.CloneList(copy.FactionFilter)];
-                MapFilter = [.. F.CloneList(copy.MapFilter)];
-                Translations = [.. F.CloneList(copy.Translations)];
+                UnlockRequirementsModels = [.. CollectionUtility.CloneList(copy.UnlockRequirementsModels)];
+                FactionFilter = [.. CollectionUtility.CloneList(copy.FactionFilter)];
+                MapFilter = [.. CollectionUtility.CloneList(copy.MapFilter)];
+                Translations = [.. CollectionUtility.CloneList(copy.Translations)];
             }
         }
         else
@@ -450,17 +437,17 @@ public class Kit : ITranslationArgument, ICloneable
         return true;
     }
 
-    public string GetDisplayName(LanguageInfo? language = null, bool removeNewLine = true)
+    public string GetDisplayName(LanguageService languageService, LanguageInfo? language = null, bool removeNewLine = true)
     {
         if (Translations is not { Count: > 0 }) return InternalName;
         string rtn;
-        language ??= Warfare.Localization.GetDefaultLanguage();
+        language ??= languageService.GetDefaultLanguage();
         KitTranslation? translation = Translations.FirstOrDefault(x => x.LanguageId == language.Key);
         if (translation != null)
             rtn = translation.Value ?? InternalName;
         else if (!language.IsDefault)
         {
-            language = Warfare.Localization.GetDefaultLanguage();
+            language = languageService.GetDefaultLanguage();
             translation = Translations.FirstOrDefault(x => x.LanguageId == language.Key);
             if (translation != null)
                 rtn = translation.Value ?? InternalName;
@@ -474,24 +461,17 @@ public class Kit : ITranslationArgument, ICloneable
         return rtn;
     }
 
-    [FormatDisplay("Kit Id")]
-    public const string IdFormat = "i";
-    [FormatDisplay("Display Name")]
-    public const string DisplayNameFormat = "d";
-    [FormatDisplay("Class (" + nameof(Warfare.Kits.Class) + ")")]
-    public const string ClassFormat = "c";
+    public static readonly SpecialFormat FormatId = new SpecialFormat("Kit Id", "i");
+    public static readonly SpecialFormat FormatDisplayName = new SpecialFormat("Display Name", "d");
+    public static readonly SpecialFormat FormatClass = new SpecialFormat("Class", "c");
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        string? format = parameters.Format.Format;
-        if (format is not null)
-        {
-            if (format.Equals(IdFormat, StringComparison.Ordinal))
-                return InternalName;
-            if (format.Equals(ClassFormat, StringComparison.Ordinal))
-                return formatter.FormatEnum(Class, parameters.Language);
-        }
+        if (FormatId.Match(in parameters))
+            return InternalName;
+        if (FormatClass.Match(in parameters))
+            return formatter.FormatEnum(Class, parameters.Language);
 
-        return GetDisplayName(parameters.Language);
+        return GetDisplayName(formatter.LanguageService, parameters.Language);
     }
 
     public object Clone() => new Kit(InternalName, this);

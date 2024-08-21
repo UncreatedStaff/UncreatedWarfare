@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Ranks;
@@ -98,7 +95,7 @@ internal static class T
     public static readonly Translation PlayersOnly = new Translation("<#ff8c69>This command can not be called from console.");
 
     [TranslationData(SectionCommonErrors, "A command or feature is on cooldown.")]
-    public static readonly Translation<Cooldown, string> CommandCooldown = new Translation<Cooldown, string>("<#ff8c69>You can't use <#fff>/{1}</color> for another <#aaa>{0}</color>.", Cooldown.FormatTimeLong, FormatLowercase);
+    public static readonly Translation<Cooldown, string> CommandCooldown = new Translation<Cooldown, string>("<#ff8c69>You can't use <#fff>/{1}</color> for another <#aaa>{0}</color>.", arg0Fmt: Cooldown.FormatTimeLong, arg1Fmt: FormatLowercase);
 
     [TranslationData(SectionCommonErrors, "A player name or ID search turned up no results.")]
     public static readonly Translation PlayerNotFound = new Translation("<#ff8c69>Player not found.");
@@ -128,7 +125,7 @@ internal static class T
     public static readonly Translation NotOnDuty = new Translation("<#ff8c69>You must be on duty to execute that command.");
 
     [TranslationData(SectionCommonErrors, "The value of a parameter was not in a valid time span format.", "Inputted text.")]
-    public static readonly Translation<string> InvalidTime = new Translation<string>("<#ff8c69><#d09595>{0}</color> should be in a valid <#cedcde>TIME SPAN</color> format. Example: <#d09595>10d12h</color>, <#d09595>4mo15d12h</color>, <#d09595>2y</color>, <#d09595>permanent</color>.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<string> InvalidTime = new Translation<string>("<#ff8c69><#d09595>{0}</color> should be in a valid <#cedcde>TIME SPAN</color> format. Example: <#d09595>10d12h</color>, <#d09595>4mo15d12h</color>, <#d09595>2y</color>, <#d09595>permanent</color>.", arg0Fmt: UCPlayer.FormatCharacterName);
     #endregion
 
     #region Flags
@@ -138,34 +135,34 @@ internal static class T
     public static readonly Translation NotOnCaptureTeam = new Translation("<#ff8c69>You're not on a valid team.");
 
     [TranslationData(SectionFlags, "Sent when the player enters the capture radius of an active flag.", "Objective in question")]
-    public static readonly Translation<Flag> EnteredCaptureRadius = new Translation<Flag>("<#e6e3d5>You have entered the capture radius of {0}.", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> EnteredCaptureRadius = new Translation<Flag>("<#e6e3d5>You have entered the capture radius of {0}.", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent when the player leaves the capture radius of an active flag.", "Objective in question")]
-    public static readonly Translation<Flag> LeftCaptureRadius = new Translation<Flag>("<#ff8c69>You have left the capture radius of {0}.", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> LeftCaptureRadius = new Translation<Flag>("<#ff8c69>You have left the capture radius of {0}.", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to all players on a flag that's being captured by their team (from neutral).", "Objective in question")]
-    public static readonly Translation<Flag> FlagCapturing = new Translation<Flag>("<#e6e3d5>Your team is capturing {0}!", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> FlagCapturing = new Translation<Flag>("<#e6e3d5>Your team is capturing {0}!", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to all players on a flag that's being captured by the other team.", "Objective in question")]
-    public static readonly Translation<Flag> FlagLosing = new Translation<Flag>("<#ff8c69>Your team is losing {0}!", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> FlagLosing = new Translation<Flag>("<#ff8c69>Your team is losing {0}!", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to all players on a flag when it begins being contested.", "Objective in question")]
-    public static readonly Translation<Flag> FlagContested = new Translation<Flag>("<#c$contested$>{0} is contested, eliminate some enemies to secure it!", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> FlagContested = new Translation<Flag>("<#c$contested$>{0} is contested, eliminate some enemies to secure it!", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to all players on a flag that's being cleared by their team (from the other team's ownership).", "Objective in question")]
-    public static readonly Translation<Flag> FlagClearing = new Translation<Flag>("<#e6e3d5>Your team is clearing {0}!", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> FlagClearing = new Translation<Flag>("<#e6e3d5>Your team is clearing {0}!", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to all players on a flag when it gets secured by their team.", "Objective in question")]
-    public static readonly Translation<Flag> FlagSecured = new Translation<Flag>("<#c$secured$>{0} is secure for now, keep up the defense.", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> FlagSecured = new Translation<Flag>("<#c$secured$>{0} is secure for now, keep up the defense.", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to a player that walks in the radius of a flag that isn't their team's objective.", "Objective in question")]
-    public static readonly Translation<Flag> FlagNoCap = new Translation<Flag>("<#c$nocap$>{0} is not your objective, check the right of your screen to see which points to attack and defend.", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> FlagNoCap = new Translation<Flag>("<#c$nocap$>{0} is not your objective, check the right of your screen to see which points to attack and defend.", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to a player that walks in the radius of a flag that is owned by the other team and enough of the other team is on the flag so they can't contest the point.", "Objective in question")]
-    public static readonly Translation<Flag> FlagNotOwned = new Translation<Flag>("<#c$nocap$>{0} is owned by the enemies. Get more players to capture it.", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> FlagNotOwned = new Translation<Flag>("<#c$nocap$>{0} is owned by the enemies. Get more players to capture it.", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to a player that walks in the radius of a flag that is owned by the other team and has been locked from recapture.", "Objective in question")]
-    public static readonly Translation<Flag> FlagLocked = new Translation<Flag>("<#c$locked$>{0} has already been captured, try to protect the objective to win.", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> FlagLocked = new Translation<Flag>("<#c$locked$>{0} has already been captured, try to protect the objective to win.", arg0Fmt: Flag.COLOR_NAME_FORMAT);
 
     [TranslationData(SectionFlags, "Sent to all players when a flag gets neutralized.", "Objective in question")]
     public static readonly Translation<Flag> FlagNeutralized = new Translation<Flag>("<#e6e3d5>{0} has been neutralized!", TranslationOptions.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
@@ -180,7 +177,7 @@ internal static class T
     public static readonly Translation UndiscoveredFlag = new Translation("<color=#c$undiscovered_flag$>unknown</color>", TranslationOptions.UnityUI);
 
     [TranslationData(SectionFlags, "Shows in place of the objective name for an undiscovered flag or objective.")]
-    public static readonly Translation UndiscoveredFlagNoColor = new Translation("unknown", TranslationOptions.NoColorOptimization);
+    public static readonly Translation UndiscoveredFlagNoColor = new Translation("unknown");
     
     [TranslationData(SectionFlags, "Shows on the Capture UI when the player's team is capturing a flag they're on.")]
     public static readonly Translation UICapturing = new Translation("CAPTURING",     TranslationOptions.UnityUI);
@@ -219,8 +216,8 @@ internal static class T
     #region Zones
     private const string SectionZones = "Zones";
 
-    [TranslationData(SectionZones, FormattingDescriptions = [ "X (m)", "Y (m)", "Z (m)", "Yaw (°)"])]
-    public static readonly Translation<float, float, float, float> ZoneUtilLocation = new Translation<float, float, float, float>("<#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.", "0.##", "0.##", "0.##", "0.##");
+    [TranslationData(SectionZones, Parameters = [ "X (m)", "Y (m)", "Z (m)", "Yaw (°)"])]
+    public static readonly Translation<float, float, float, float> ZoneUtilLocation = new Translation<float, float, float, float>("<#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.", arg0Fmt: "0.##", arg1Fmt: "0.##", arg2Fmt: "0.##", arg3Fmt: "0.##");
 
     [TranslationData(SectionZones)]
     public static readonly Translation ZoneNoResultsLocation = new Translation("<#ff8c69>You aren't in any existing zone.");
@@ -235,13 +232,13 @@ internal static class T
     public static readonly Translation<int, Zone> ZoneVisualizeSuccess = new Translation<int, Zone>("<#e6e3d5>Spawned {0} particles around <color=#cedcde>{1}</color>.", arg1Fmt: Flag.NAME_FORMAT);
 
     [TranslationData(SectionZones, IsPriorityTranslation = false)]
-    public static readonly Translation<Zone> ZoneGoSuccess = new Translation<Zone>("<#e6e3d5>Teleported to <#5a6e5c>{0}</color>.", Flag.NAME_FORMAT);
+    public static readonly Translation<Zone> ZoneGoSuccess = new Translation<Zone>("<#e6e3d5>Teleported to <#5a6e5c>{0}</color>.", arg0Fmt: Flag.NAME_FORMAT);
 
     [TranslationData(SectionZones, IsPriorityTranslation = false)]
     public static readonly Translation<string> ZoneGoSuccessRaw = new Translation<string>("<#e6e3d5>Teleported to <#cedcde>{0}</color>.");
 
     [TranslationData(SectionZones, IsPriorityTranslation = false)]
-    public static readonly Translation<GridLocation> ZoneGoSuccessGridLocation = new Translation<GridLocation>("<#e6e3d5>Teleported to <#ff8c69>{0}</color>.", Flag.NAME_FORMAT);
+    public static readonly Translation<GridLocation> ZoneGoSuccessGridLocation = new Translation<GridLocation>("<#e6e3d5>Teleported to <#ff8c69>{0}</color>.", arg0Fmt: Flag.NAME_FORMAT);
     #endregion
 
     #region Players
@@ -251,7 +248,7 @@ internal static class T
     public static readonly Translation DiscordNotLinked = new Translation("<#9cffb3>Your account must be linked in our Discord server to use this command.");
 
     [TranslationData(SectionPlayers, "Gets sent to a player who's discord is not linked to their steam account (part 2).", "Player's Steam64 ID")]
-    public static readonly Translation<IPlayer> DiscordNotLinked2 = new Translation<IPlayer>("<#9cffb3>Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", UCPlayer.FormatColoredSteam64);
+    public static readonly Translation<IPlayer> DiscordNotLinked2 = new Translation<IPlayer>("<#9cffb3>Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", arg0Fmt: UCPlayer.FormatColoredSteam64);
 
     [TranslationData(SectionPlayers, "Gets broadcasted when a player connects.", "Connecting player")]
     public static readonly Translation<IPlayer> PlayerConnected = new Translation<IPlayer>("<#e6e3d5>{0} joined the server.");
@@ -260,46 +257,46 @@ internal static class T
     public static readonly Translation<IPlayer> PlayerDisconnected = new Translation<IPlayer>("<#e6e3d5>{0} left the server.");
 
     [TranslationData(SectionPlayers, "Kick message for a player that suffers from a rare bug which will cause GameObject.get_transform() to throw a NullReferenceException (not return null). They are kicked if this happens.", "Discord Join Code")]
-    public static readonly Translation<string> NullTransformKickMessage = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<string> NullTransformKickMessage = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).");
 
     [TranslationData(SectionPlayers, "Gets sent to a player when their message gets blocked by the chat filter.", "Section of the message that matched the chat filter.")]
     public static readonly Translation<string> ChatFilterFeedback = new Translation<string>("<#ff8c69>Our chat filter flagged <#fdfdfd>{0}</color>, so the message wasn't sent.");
     
     [TranslationData(SectionPlayers, "Gets sent to a player when their message gets blocked by the chat filter.", "Amount of alphanumeric characters in succession.")]
-    public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.");
     
     [TranslationData(SectionPlayers, "Gets sent to a player if they're banned when they join.")]
-    public static readonly Translation<string, int> RejectBanned = new Translation<string, int>("You are banned for {1}: \"{0}\".", TranslationOptions.NoColorOptimization, arg1Fmt: FormatTimeLongAbbreviated);
+    public static readonly Translation<string, int> RejectBanned = new Translation<string, int>("You are banned for {1}: \"{0}\".", arg1Fmt: FormatTimeLongAbbreviated);
 
     [TranslationData(SectionPlayers, "Gets sent to a player if they're permanently banned when they join.")]
-    public static readonly Translation<string> RejectPermanentBanned = new Translation<string>("You are permanently banned: \"{0}\".", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<string> RejectPermanentBanned = new Translation<string>("You are permanently banned: \"{0}\".");
     
     [TranslationData(SectionPlayers, "Gets sent to a player when their nick name gets blocked by the chat filter.", "Violating text.")]
-    public static readonly Translation<string> NameProfanityNickNameKickMessage = new Translation<string>("Your nickname is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<string> NameProfanityNickNameKickMessage = new Translation<string>("Your nickname is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.");
     
     [TranslationData(SectionPlayers, "Gets sent to a player when their character name gets blocked by the chat filter.", "Violating text.")]
-    public static readonly Translation<string> NameProfanityCharacterNameKickMessage = new Translation<string>("Your character name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<string> NameProfanityCharacterNameKickMessage = new Translation<string>("Your character name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.");
     
     [TranslationData(SectionPlayers, "Gets sent to a player when their player name gets blocked by the chat filter.", "Violating text.")]
-    public static readonly Translation<string> NameProfanityPlayerNameKickMessage = new Translation<string>("Your Steam name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<string> NameProfanityPlayerNameKickMessage = new Translation<string>("Your Steam name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.");
     
     [TranslationData(SectionPlayers, "Gets sent to a player who is attempting to main camp the other team.")]
     public static readonly Translation AntiMainCampWarning = new Translation("<#fa9e9e>Stop <b><#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.");
     
     [TranslationData(SectionPlayers, "Gets sent to a player who is trying to place a non-whitelisted barricade on a vehicle.", "Barricade being placed")]
-    public static readonly Translation<ItemBarricadeAsset> NoPlacementOnVehicle = new Translation<ItemBarricadeAsset>("<#fa9e9e>You can't place {0} on a vehicle!</color>", FormatRarityColor + FormatPlural);
+    public static readonly Translation<ItemBarricadeAsset> NoPlacementOnVehicle = new Translation<ItemBarricadeAsset>("<#fa9e9e>You can't place {0} on a vehicle!</color>", arg0Fmt: FormatRarityColor + FormatPlural);
     
     [TranslationData(SectionPlayers, "Generic message sent when a player is placing something in a place they shouldn't.", "Item being placed")]
-    public static readonly Translation<ItemAsset> ProhibitedPlacement = new Translation<ItemAsset>("<#fa9e9e>You're not allowed to place {0} here.", FormatRarityColor + FormatPlural);
+    public static readonly Translation<ItemAsset> ProhibitedPlacement = new Translation<ItemAsset>("<#fa9e9e>You're not allowed to place {0} here.", arg0Fmt: FormatRarityColor + FormatPlural);
     
     [TranslationData(SectionPlayers, "Generic message sent when a player is dropping an item where they shouldn't.", "Item being dropped", "Zone or flag the player is dropping their item in.")]
-    public static readonly Translation<ItemAsset, IZone> ProhibitedDropZone = new Translation<ItemAsset, IZone>("<#fa9e9e>You're not allowed to drop {0} in {1}.", FormatRarityColor + FormatPlural, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<ItemAsset, IDeployable> ProhibitedDropZone = new Translation<ItemAsset, IDeployable>("<#fa9e9e>You're not allowed to drop {0} in {1}.", arg0Fmt: FormatRarityColor + FormatPlural, arg1Fmt: Flag.COLOR_NAME_DISCOVER_FORMAT);
     
     [TranslationData(SectionPlayers, "Generic message sent when a player is picking up an item where they shouldn't.", "Item being picked up", "Zone or flag the player is picking up their item in.")]
-    public static readonly Translation<ItemAsset, IZone> ProhibitedPickupZone = new Translation<ItemAsset, IZone>("<#fa9e9e>You're not allowed to pick up {0} in {1}.", FormatRarityColor + FormatPlural, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<ItemAsset, IDeployable> ProhibitedPickupZone = new Translation<ItemAsset, IDeployable>("<#fa9e9e>You're not allowed to pick up {0} in {1}.", arg0Fmt: FormatRarityColor + FormatPlural, arg1Fmt: Flag.COLOR_NAME_DISCOVER_FORMAT);
     
     [TranslationData(SectionPlayers, "Generic message sent when a player is placing something in a zone they shouldn't be.", "Item being placed", "Zone or flag the player is placing their item in.")]
-    public static readonly Translation<ItemAsset, IZone> ProhibitedPlacementZone = new Translation<ItemAsset, IZone>("<#fa9e9e>You're not allowed to place {0} in {1}.", FormatRarityColor + FormatPlural, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<ItemAsset, IDeployable> ProhibitedPlacementZone = new Translation<ItemAsset, IDeployable>("<#fa9e9e>You're not allowed to place {0} in {1}.", arg0Fmt: FormatRarityColor + FormatPlural, arg1Fmt: Flag.COLOR_NAME_DISCOVER_FORMAT);
     
     [TranslationData(SectionPlayers, "Sent when a player tries to steal a battery.")]
     public static readonly Translation NoStealingBatteries = new Translation("<#fa9e9e>Stealing batteries is not allowed.</color>");
@@ -308,7 +305,7 @@ internal static class T
     public static readonly Translation NoLeavingGroup = new Translation("<#fa9e9e>You are not allowed to manually change groups, use <#cedcde>/teams</color> instead.");
     
     [TranslationData(SectionPlayers, "Message sent when a player tries to place a non-whitelisted item in a storage inventory.", "Item being stored")]
-    public static readonly Translation<ItemAsset> ProhibitedStoring = new Translation<ItemAsset>("<#fa9e9e>You are not allowed to store {0}.", FormatRarityColor + FormatPlural);
+    public static readonly Translation<ItemAsset> ProhibitedStoring = new Translation<ItemAsset>("<#fa9e9e>You are not allowed to store {0}.", arg0Fmt: FormatRarityColor + FormatPlural);
     
     [TranslationData(SectionPlayers, "Sent when a player tries to point or mark while not a squad leader.")]
     public static readonly Translation MarkerNotInSquad = new Translation("<#fa9e9e>Only your squad can see markers. Create a squad with <#cedcde>/squad create</color> to use this feature.");
@@ -320,7 +317,7 @@ internal static class T
     public static readonly Translation<string> InactivityWarning = new Translation<string>("<#fa9e9e>You will be AFK-Kicked in <#cedcde>{0}</color> if you don't move.</color>");
     
     [TranslationData(SectionPlayers, "Broadcasted when a player is removed from the game by BattlEye.", "Player being kicked.")]
-    public static readonly Translation<IPlayer> BattlEyeKickBroadcast = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#feed00>BattlEye</color>.", UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer> BattlEyeKickBroadcast = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#feed00>BattlEye</color>.", arg0Fmt: UCPlayer.FormatPlayerName);
     
     [TranslationData(SectionPlayers, "Sent when an unauthorized player attempts to edit a sign.")]
     public static readonly Translation ProhibitedSignEditing = new Translation("<#ff8c69>You are not allowed to edit that sign.");
@@ -370,7 +367,7 @@ internal static class T
     [TranslationData(SectionLeaderboard)]
     public static readonly Translation<FactionInfo> WinnerTitle                 = new Translation<FactionInfo>("{0} Wins!", TranslationOptions.UnityUI, FactionInfo.FormatColorShortName);
 
-    [TranslationData(SectionLeaderboard, FormattingDescriptions = new string[] { "Distance", "Gun Name", "Player" })]
+    [TranslationData(SectionLeaderboard, Parameters = [ "Distance", "Gun Name", "Player" ])]
     public static readonly Translation<float, ItemAsset, IPlayer> LongestShot     = new Translation<float, ItemAsset, IPlayer>("{0}m - {1}\n{2}", TranslationOptions.UnityUI, "F1", arg2Fmt: UCPlayer.FormatColoredCharacterName);
     #endregion
 
@@ -766,30 +763,30 @@ internal static class T
     public static readonly Translation LanguageRefreshed                 = new Translation("<#f53b3b>Refreshed all signs and UI.");
     
     [TranslationData(SectionLanguages, "Output from /lang current, tells the player their selected language.", "Current Language")]
-    public static readonly Translation<LanguageInfo> LanguageCurrent = new Translation<LanguageInfo>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> LanguageCurrent = new Translation<LanguageInfo>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang <language>, tells the player their new language.", "New Language")]
-    public static readonly Translation<LanguageInfo> ChangedLanguage = new Translation<LanguageInfo>("<#f53b3b>Changed your language to <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> ChangedLanguage = new Translation<LanguageInfo>("<#f53b3b>Changed your language to <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang <language> when the player is using already that language.", "Current Language")]
-    public static readonly Translation<LanguageInfo> LangAlreadySet  = new Translation<LanguageInfo>("<#ff8c69>You are already set to <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> LangAlreadySet  = new Translation<LanguageInfo>("<#ff8c69>You are already set to <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang reset, tells the player their language changed to the default language.", "Default Language")]
-    public static readonly Translation<LanguageInfo> ResetLanguage   = new Translation<LanguageInfo>("<#f53b3b>Reset your language to <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> ResetLanguage   = new Translation<LanguageInfo>("<#f53b3b>Reset your language to <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang reset when the player is using already that language.", "Default Language")]
-    public static readonly Translation<LanguageInfo> ResetCurrent    = new Translation<LanguageInfo>("<#ff8c69>You are already on the default language: <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> ResetCurrent    = new Translation<LanguageInfo>("<#ff8c69>You are already on the default language: <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang <language> when the language isn't found.", "Input language")]
     public static readonly Translation<string> LanguageNotFound          = new Translation<string>("<#dd1111>We don't have translations for <#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.");
 
     [TranslationData(SectionLanguages, "Tells the player that IMGUI is recommended for this language and how to enable it (part 1).", "Language id")]
-    public static readonly Translation<LanguageInfo> IMGUITip1       = new Translation<LanguageInfo>("<#f53b3b>{0} recommends using IMGUI mode. do <#fff>/options imgui true</color>...", LanguageInfo.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> IMGUITip1       = new Translation<LanguageInfo>("<#f53b3b>{0} recommends using IMGUI mode. do <#fff>/options imgui true</color>...", arg0Fmt: LanguageInfo.FormatDisplayName);
     [TranslationData(SectionLanguages, "Tells the player that IMGUI is recommended for this language and how to enable it (part 2).")]
     public static readonly Translation IMGUITip2                         = new Translation("<#f53b3b>... go to your steam launch options and add <#fff>-Glazier IMGUI</color> to them.");
 
     [TranslationData(SectionLanguages, "Tells the player that IMGUI is not recommended for this language and how to enable it (part 1).", "Language id")]
-    public static readonly Translation<LanguageInfo> NoIMGUITip1     = new Translation<LanguageInfo>("<#f53b3b>{0} recommends not using IMGUI mode. do <#fff>/options imgui false</color>...", LanguageInfo.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> NoIMGUITip1     = new Translation<LanguageInfo>("<#f53b3b>{0} recommends not using IMGUI mode. do <#fff>/options imgui false</color>...", arg0Fmt: LanguageInfo.FormatDisplayName);
     [TranslationData(SectionLanguages, "Tells the player that IMGUI is not recommended for this language and how to enable it (part 2).")]
     public static readonly Translation NoIMGUITip2 = new Translation("<#f53b3b>... go to your steam launch options and remove <#fff>-Glazier IMGUI</color>.");
     #endregion
@@ -806,137 +803,10 @@ internal static class T
     public static readonly Translation WelcomeMessageTitle = new Translation("Welcome to Uncreated Warfare", TranslationOptions.TMProUI);
     #endregion
 
-    #region KitCommand
-    private const string SectionKits = "Kits";
-    
-    [TranslationData(SectionKits, "Sent when the player creates a new kit with /kit create <name>", "New Kit", IsPriorityTranslation = false)]
-    public static readonly Translation<Kit> KitCreated          = new Translation<Kit>("<#a0ad8e>Created kit: <#fff>{0}</color>.", Kit.IdFormat);
-    
-    [TranslationData(SectionKits, "Sent when the player overwrites the items in a kit with /kit create <name>", "Overwritten Kit", IsPriorityTranslation = false)]
-    public static readonly Translation<Kit> KitOverwrote        = new Translation<Kit>("<#a0ad8e>Overwritten items for kit: <#fff>{0}</color>.", Kit.IdFormat);
-    
-    [TranslationData(SectionKits, "Sent when the player tries overwriting the items in a kit with /kit create <name>. They must /confirm first.", "Overwritten Kit", "Overwritten Kit", IsPriorityTranslation = false)]
-    public static readonly Translation<Kit, Kit> KitConfirmOverride = new Translation<Kit, Kit>("<#c480d9>Type <#aaa>/confirm</color> in the next 10 seconds if you want to override the items in <#fff>{0}</color> (<#aaa>{1}</color>).", Kit.IdFormat, Kit.DisplayNameFormat);
-    
-    [TranslationData(SectionKits, "Sent when the player tries deleting kit with /kit delete <name>. They must /confirm first.", "Deleting Kit", "Deleting Kit", IsPriorityTranslation = false)]
-    public static readonly Translation<Kit, Kit> KitConfirmDelete = new Translation<Kit, Kit>("<#c480d9>Type <#aaa>/confirm</color> in the next 10 seconds if you want to delete <#fff>{0}</color> (<#aaa>{1}</color>).", Kit.IdFormat, Kit.DisplayNameFormat);
-    
-    [TranslationData(SectionKits, "Sent when the player doesn't /confirm in time for overwriting kit items.", IsPriorityTranslation = false)]
-    public static readonly Translation KitCancelOverride        = new Translation("<#ff8c69>Item override cancelled.");
-
-    [TranslationData(SectionKits, "Sent when the player doesn't /confirm in time for deleting a kit.", IsPriorityTranslation = false)]
-    public static readonly Translation KitCancelDelete          = new Translation("<#ff8c69>Deleting kit cancelled.");
-    
-    [TranslationData(SectionKits, "Sent when the player copies a kit with /kit copyfrom <source> <name>", "Source Kit", "New Kit", IsPriorityTranslation = false)]
-    public static readonly Translation<Kit, Kit> KitCopied      = new Translation<Kit, Kit>("<#a0ad8e>Copied data from <#c7b197>{0}</color> into a new kit: <#fff>{1}</color>.", Kit.IdFormat, Kit.IdFormat);
-    
-    [TranslationData(SectionKits, "Sent when the player deletes a kit with /kit delete <name>", IsPriorityTranslation = false)]
-    public static readonly Translation<Kit> KitDeleted          = new Translation<Kit>("<#a0ad8e>Deleted kit: <#fff>{0}</color>.", Kit.IdFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<string> KitSearchResults = new Translation<string>("<#a0ad8e>Matches: <i>{0}</i>.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitAccessGivenDm    = new Translation<Kit>("<#a0ad8e>You were given access to the kit: <#fff>{0}</color>.", Kit.IdFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitAccessRevokedDm  = new Translation<Kit>("<#a0ad8e>Your access to <#fff>{0}</color> was revoked.", Kit.IdFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation KitHotkeyNotHoldingItem  = new Translation("<#ff8c69>You must be holding an item from your kit to set a hotkey.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<ItemAsset> KitHotkeyNotHoldingValidItem = new Translation<ItemAsset>("<#ff8c69><#ffe6d7>{0}</color> can not be eqipped in a hotkey slot <#ddd>(3-9 and 0)</color>.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<ItemAsset, byte, Kit> KitHotkeyBinded   = new Translation<ItemAsset, byte, Kit>("<#a0ad8e>Binded <#e8e2d1>{0}</color> to slot <#e8e2d1>{1}</color> for <#fff>{2}</color>.", arg2Fmt: Kit.DisplayNameFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<byte, Kit> KitHotkeyUnbinded            = new Translation<byte, Kit>("<#a0ad8e>Unbinded slot <#e8e2d1>{0}</color> for <#fff>{1}</color>.", arg1Fmt: Kit.DisplayNameFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<byte, Kit> KitHotkeyNotFound            = new Translation<byte, Kit>("<#ff8c69>Slot <#e8e2d1>{0}</color> for <#fff>{1}</color> was not binded.", arg1Fmt: Kit.DisplayNameFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitLayoutsNotSupported             = new Translation<Kit>("<#ff8c69>A custom layout is not allowed for <#fff>{0}</color>.", Kit.DisplayNameFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitLayoutSaved                     = new Translation<Kit>("<#a0ad8e>Custom layout for <#fff>{0}</color> saved.", Kit.DisplayNameFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitLayoutReset                     = new Translation<Kit>("<#a0ad8e>Custom layout for <#fff>{0}</color> reset.", Kit.DisplayNameFormat);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<string> KitLanguageNotFound             = new Translation<string>("<#ff8c69>Language not found: <#fff>{0}</color>.");
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<string, Kit, string> KitPropertySet     = new Translation<string, Kit, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg1Fmt: Kit.IdFormat);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<string> KitNameTaken                    = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> already exists.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<string> KitNotFound                     = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> doesn't exist.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitRenameNotLoadout                = new Translation<Kit>("<#ff8c69><#fff>{0}</color> isn't a loadout.", Kit.DisplayNameFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<string> KitRenameFilterVoilation        = new Translation<string>("<#ff8c69>Your name violates our chat filter near: <#fff>'{0}'</color>.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<string, string, string> KitRenamed      = new Translation<string, string, string>("<#a0ad8e>Renamed loadout <#fff>{0}</color> from <#ddd>\"{1}\"</color> to <#ddd>\"{2}\"</color>.");
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<string> KitPropertyNotFound             = new Translation<string>("<#ff8c69>Kits don't have a <#eee>{0}</color> property.");
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<string> KitPropertyProtected            = new Translation<string>("<#ff8c69><#eee>{0}</color> can not be changed on kits.");
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, Kit> KitAlreadyHasAccess       = new Translation<IPlayer, Kit>("<#ff8c69>{0} already has access to <#fff>{1}</color>.", UCPlayer.FormatColoredCharacterName, Kit.IdFormat);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess   = new Translation<IPlayer, Kit>("<#ff8c69>{0} doesn't have access to <#fff>{1}</color>.", UCPlayer.FormatColoredCharacterName, Kit.IdFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Cooldown> KitOnCooldown                 = new Translation<Cooldown>("<#ff8c69>You can request this kit again in: <#bafeff>{0}</color>.", Cooldown.FormatTimeShort);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Cooldown> KitOnGlobalCooldown           = new Translation<Cooldown>("<#ff8c69>You can request another kit again in: <#bafeff>{0}</color>.", Cooldown.FormatTimeShort);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, ulong, Kit> KitAccessGiven           = new Translation<IPlayer, ulong, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.FormatColoredPlayerName, arg2Fmt: Kit.IdFormat);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, ulong, Kit> KitAccessRevoked         = new Translation<IPlayer, ulong, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.FormatColoredPlayerName, arg2Fmt: Kit.IdFormat);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<string, Type, string> KitInvalidPropertyValue = new Translation<string, Type, string>("<#ff8c69><#fff>{2}</color> isn't a valid value for <#eee>{0}</color> (<#aaa>{1}</color>).");
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<Class, IPlayer, ulong, Kit> LoadoutCreated    = new Translation<Class, IPlayer, ulong, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: UCPlayer.FormatColoredCharacterName, arg3Fmt: Kit.IdFormat);
-    [TranslationData(SectionKits)]
-    public static readonly Translation<ItemAsset> KitProhibitedPickupAmt             = new Translation<ItemAsset>("<#ff8c69>Your kit does not allow you to have any more {0}.", FormatRarityColor + FormatPlural);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<string> FactionNotFoundCreateKit              = new Translation<string>("<#ff8c69>Unable to find a faction called <#fff>{0}</color>.");
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<string> ClassNotFoundCreateKit                = new Translation<string>("<#ff8c69>There is no kit class named <#fff>{0}</color>.");
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<string> TypeNotFoundCreateKit                 = new Translation<string>("<#ff8c69>There is no kit type named <#fff>{0}</color>. Use: 'public', 'elite', 'special', 'loadout'.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitFavoriteAlreadyFavorited              = new Translation<Kit>("<#ff8c69><#e8e2d1>{0}</color> is already <#fd0>favorited</color>.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitFavoriteAlreadyUnfavorited            = new Translation<Kit>("<#ff8c69><#e8e2d1>{0}</color> is already <#fff>unfavorited</color>.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitFavorited                             = new Translation<Kit>("<#a0ad8e>Added <#e8e2d1>{0}</color> to your <#fd0>favorites</color>.");
-    [TranslationData(SectionKits)]
-    public static readonly Translation<Kit> KitUnfavorited                           = new Translation<Kit>("<#a0ad8e>Removed <#e8e2d1>{0}</color> from your <#fd0>favorites</color>.");
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation KitLoadoutIdBadFormat                         = new Translation("Kit name must be in format: <b>765XXXXXXXXXXXXXX_X..</b>.");
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<Kit, Class> LoadoutUpgraded                   = new Translation<Kit, Class>("<#a0ad8e>Upgraded <#e8e2d1>{0}</color> to a new <#fff>{1}</color> kit.", Kit.DisplayNameFormat, FormatUppercase);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<Kit> KitUpgraded                              = new Translation<Kit>("<#a0ad8e>Upgraded <#e8e2d1>{0}</color>.", Kit.DisplayNameFormat);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<Kit> KitUnlocked                              = new Translation<Kit>("<#a0ad8e>Unlocked <#e8e2d1>{0}</color>.", Kit.DisplayNameFormat);
-    [TranslationData(SectionKits, IsPriorityTranslation = false)]
-    public static readonly Translation<Kit> KitLocked                                = new Translation<Kit>("<#a0ad8e>Locked <#e8e2d1>{0}</color>.", Kit.DisplayNameFormat);
-    [TranslationData(SectionKits, IsPriorityTranslation = true)]
-    public static readonly Translation<Kit> DMLoadoutUnlocked                        = new Translation<Kit>("<#a0ad8e>Your kit, <#e8e2d1>{0}</color>, is ready.", Kit.DisplayNameFormat);
-
-    [TranslationData(SectionKits, "Sent when the caller doesn't enter a valid integer for level.", "Skill name", "Max level", IsPriorityTranslation = false)]
-    public static readonly Translation<string, int> KitInvalidSkillsetLevel          = new Translation<string, int>("<#ff8c69>Please give a level between <#fff>0</color> and <#fff>{1}</color> for <#ddd>{0}</color>");
-
-    [TranslationData(SectionKits, "Sent when the caller doesn't enter a valid integer for level.", "Skill name", "Max level", IsPriorityTranslation = false)]
-    public static readonly Translation<string> KitInvalidSkillset                    = new Translation<string>("<#ff8c69>\"<#fff>{0}</color>\" is not a valid skill name, use the displayed value in-game.");
-
-    [TranslationData(SectionKits, "Sent when the skillset requested to be removed isn't present.", "Skill set", IsPriorityTranslation = false)]
-    public static readonly Translation<Skillset, Kit> KitSkillsetNotFound            = new Translation<Skillset, Kit>("<#ff8c69>\"<#ddd>{0}</color>\" is not overridden by <#fff>{1}</color>.", Skillset.FormatNoLevel, Kit.DisplayNameFormat);
-
-    [TranslationData(SectionKits, "Sent when a skillset is removed.", "Skill set", "Kit target", IsPriorityTranslation = false)]
-    public static readonly Translation<Skillset, Kit> KitSkillsetRemoved             = new Translation<Skillset, Kit>("<#a0ad8e>\"<#ddd>{0}</color>\" was removed from <#fff>{1}</color>.", arg1Fmt: Kit.DisplayNameFormat);
-
-    [TranslationData(SectionKits, "Sent when a skillset is added.", "Skill set", "Kit target", IsPriorityTranslation = false)]
-    public static readonly Translation<Skillset, Kit> KitSkillsetAdded               = new Translation<Skillset, Kit>("<#a0ad8e>\"<#ddd>{0}</color>\" was added to <#fff>{1}</color>.", arg1Fmt: Kit.DisplayNameFormat);
-    #endregion
-
     #region RangeCommand
     private const string SectionRange = "Range Command";
     [TranslationData(SectionRange)]
-    public static readonly Translation<float> RangeOutput  = new Translation<float>("<#9e9c99>The range to your squad's marker is: <#8aff9f>{0}m</color>.", "N0");
+    public static readonly Translation<float> RangeOutput  = new Translation<float>("<#9e9c99>The range to your squad's marker is: <#8aff9f>{0}m</color>.", arg0Fmt: "N0");
     [TranslationData(SectionRange)]
     public static readonly Translation RangeNoMarker       = new Translation("<#9e9c99>You squad has no marker.");
     [TranslationData(SectionRange)]
@@ -950,21 +820,21 @@ internal static class T
     [TranslationData(SectionSquads)]
     public static readonly Translation SquadNotOnTeam               = new Translation("<#a89791>You can't join a squad unless you're on a team.");
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadCreated          = new Translation<Squad>("<#a0ad8e>You created {0} squad.", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadCreated          = new Translation<Squad>("<#a0ad8e>You created {0} squad.", arg0Fmt: Squad.FormatColorName);
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadJoined           = new Translation<Squad>("<#a0ad8e>You joined {0} squad.", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadJoined           = new Translation<Squad>("<#a0ad8e>You joined {0} squad.", arg0Fmt: Squad.FormatColorName);
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadLeft             = new Translation<Squad>("<#a7a8a5>You left {0} squad.", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadLeft             = new Translation<Squad>("<#a7a8a5>You left {0} squad.", arg0Fmt: Squad.FormatColorName);
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadDisbanded        = new Translation<Squad>("<#a7a8a5>{0} squad was disbanded.", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadDisbanded        = new Translation<Squad>("<#a7a8a5>{0} squad was disbanded.", arg0Fmt: Squad.FormatColorName);
     [TranslationData(SectionSquads)]
     public static readonly Translation SquadLockedSquad             = new Translation("<#a7a8a5>You <#6be888>locked</color> your squad.");
     [TranslationData(SectionSquads)]
     public static readonly Translation SquadUnlockedSquad           = new Translation("<#999e90>You <#fff>unlocked</color> your squad.");
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadPromoted         = new Translation<Squad>("<#999e90>You're now the <#cedcde>squad leader</color> of {0}.", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadPromoted         = new Translation<Squad>("<#999e90>You're now the <#cedcde>squad leader</color> of {0}.", arg0Fmt: Squad.FormatColorName);
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadKicked           = new Translation<Squad>("<#ae8f8f>You were kicked from {0} squad.", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadKicked           = new Translation<Squad>("<#ae8f8f>You were kicked from {0} squad.", arg0Fmt: Squad.FormatColorName);
     [TranslationData(SectionSquads)]
     public static readonly Translation<string> SquadNotFound        = new Translation<string>("<#ae8f8f>Failed to find a squad called \"<#c$neutral$>{0}</color>\". You can also use the first letter of the squad name.");
     [TranslationData(SectionSquads)]
@@ -974,19 +844,19 @@ internal static class T
     [TranslationData(SectionSquads)]
     public static readonly Translation SquadNotSquadLeader          = new Translation("<#ae8f8f>You're not the leader of your squad.");
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadLocked           = new Translation<Squad>("<#a89791>{0} is locked.", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadLocked           = new Translation<Squad>("<#a89791>{0} is locked.", arg0Fmt: Squad.FormatColorName);
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadFull             = new Translation<Squad>("<#a89791>{0} is full.", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadFull             = new Translation<Squad>("<#a89791>{0} is full.", arg0Fmt: Squad.FormatColorName);
     [TranslationData(SectionSquads)]
     public static readonly Translation SquadTargetNotInSquad        = new Translation("<#a89791>That player isn't in a squad.");
     [TranslationData(SectionSquads)]
-    public static readonly Translation<IPlayer> SquadPlayerJoined   = new Translation<IPlayer>("<#b9bdb3>{0} joined your squad.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> SquadPlayerJoined   = new Translation<IPlayer>("<#b9bdb3>{0} joined your squad.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionSquads)]
-    public static readonly Translation<IPlayer> SquadPlayerLeft     = new Translation<IPlayer>("<#b9bdb3>{0} left your squad.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> SquadPlayerLeft     = new Translation<IPlayer>("<#b9bdb3>{0} left your squad.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionSquads)]
-    public static readonly Translation<IPlayer> SquadPlayerPromoted = new Translation<IPlayer>("<#b9bdb3>{0} was promoted to <#cedcde>squad leader</color>.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> SquadPlayerPromoted = new Translation<IPlayer>("<#b9bdb3>{0} was promoted to <#cedcde>squad leader</color>.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionSquads)]
-    public static readonly Translation<IPlayer> SquadPlayerKicked   = new Translation<IPlayer>("<#b9bdb3>{0} was kicked from your squad.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> SquadPlayerKicked   = new Translation<IPlayer>("<#b9bdb3>{0} was kicked from your squad.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionSquads)]
     public static readonly Translation SquadsDisabled               = new Translation("<#a89791>Squads are disabled in this gamemode.");
     [TranslationData(SectionSquads)]
@@ -1042,7 +912,7 @@ internal static class T
     [TranslationData(SectionRallies)]
     public static readonly Translation RallyNoDeny = new Translation("<#959c8c>You aren't waiting on a <#c$rally$>rally</color> deployment.");
     [TranslationData(SectionRallies)]
-    public static readonly Translation<Cooldown> RallyCooldown = new Translation<Cooldown>("<#959c8c>You can rally your squad again in: <#e3c27f>{0}</color>", Cooldown.FormatTimeLong);
+    public static readonly Translation<Cooldown> RallyCooldown = new Translation<Cooldown>("<#959c8c>You can rally your squad again in: <#e3c27f>{0}</color>", arg0Fmt: Cooldown.FormatTimeLong);
     [TranslationData(SectionRallies)]
     public static readonly Translation RallyObstructedPlace = new Translation("<#959c8c>This rally point is obstructed, find a more open place to put it.");
     [TranslationData(SectionRallies)]
@@ -1112,7 +982,7 @@ internal static class T
     [TranslationData(SectionLoad)]
     public static readonly Translation LoadUsage = new Translation("<#b3a6a2>Try typing: '<#e6d1b3>/load ammo <amount|'half'></color>' or '<#e6d1b3>/load build <amount|'half'></color>'.");
     [TranslationData(SectionLoad)]
-    public static readonly Translation<string> LoadInvalidAmount = new Translation<string>("<#b3a6a2>'{0}' is not a valid amount of supplies.", FormatUppercase);
+    public static readonly Translation<string> LoadInvalidAmount = new Translation<string>("<#b3a6a2>'{0}' is not a valid amount of supplies.", arg0Fmt: FormatUppercase);
     [TranslationData(SectionLoad)]
     public static readonly Translation LoadNotInMain = new Translation("<#b3a6a2>You must be in <#cedcde>MAIN</color> to load up this vehicle.");
     [TranslationData(SectionLoad)]
@@ -1128,28 +998,27 @@ internal static class T
     #endregion
 
     #region Announcements
-    private const string SectionAnnouncements = "Announcements";
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people to join the discord by typing /discord.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people to join the discord by typing /discord.")]
     public static readonly Translation AnnouncementDiscord = new Translation("<#b3b3b3>Have you joined our <#7483c4>Discord</color> server yet? Type <#7483c4>/discord</color> to join.");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people how to return to base from FOBs.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people how to return to base from FOBs.")]
     public static readonly Translation AnnouncementDeployMain = new Translation("<#c2b7a5>You can deploy back to main by doing <#ffffff>/deploy main</color> while near a friendly FOB.");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people the best ways to earn XP.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people the best ways to earn XP.")]
     public static readonly Translation AnnouncementRankUp = new Translation("<#92a692>Capture <#ffffff>flags</color> and build <#ffffff>FOBs</color> to rank up and earn respect amongst your team.");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people not to waste assets.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people not to waste assets.")]
     public static readonly Translation AnnouncementDontWasteAssets = new Translation("<#c79675>Do not waste vehicles, ammo, build, or other assets! You may risk punishment if you're reported or caught.");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people to communicate and listen to higher-ups.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people to communicate and listen to higher-ups.")]
     public static readonly Translation AnnouncementListenToSuperiors = new Translation("<#a2a7ba>Winning requires coordination and teamwork. Listen to your superior officers, and communicate!");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people to build FOBs to help their team.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people to build FOBs to help their team.")]
     public static readonly Translation AnnouncementBuildFOBs = new Translation("<#9da6a6>Building <color=#54e3ff>FOBs</color> is vital for advancing operations. Grab a logistics truck and go build one!");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people to join or create a squad.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people to join or create a squad.")]
     public static readonly Translation AnnouncementSquads = new Translation("<#c2b7a5>Join a squad with <#ffffff>/squad join</color> or create one with <#ffffff>/squad create</color> to earn extra XP among other benefits.");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people about the different way our chat works.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people about the different way our chat works.")]
     public static readonly Translation AnnouncementChatChanges = new Translation("<#a2a7ba>Use area chat while in a squad to communicate with only them or group chat to communicate with your entire <#54e3ff>team</color>.");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people about the abandon command.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people about the abandon command.")]
     public static readonly Translation AnnouncementAbandon = new Translation("<#b3b3b3>Done with your vehicle? Type <#ffffff>/abandon</color> while in main base to get some credits back and free up the vehicle for your team.");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people about soloing.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people about soloing.")]
     public static readonly Translation AnnouncementSoloing = new Translation("<#c79675>Soloing armor vehicles, attack helis, and jets is against the rules. Make sure you have a passenger for these vehicles.");
-    [TranslationData(Section = SectionAnnouncements, Description = "Announcement telling people about reporting with /report.", IsAnnounced = true)]
+    [TranslationData(Description = "Announcement telling people about reporting with /report.")]
     public static readonly Translation AnnouncementReport = new Translation("<#c2b7a5>See someone breaking rules? Use the <#ffffff>/report</color> command to help admins see context about the report.</color>");
     #endregion
 
@@ -1158,49 +1027,49 @@ internal static class T
     [TranslationData(SectionKick, IsPriorityTranslation = false)]
     public static readonly Translation NoReasonProvided                       = new Translation("<#9cffb3>You must provide a reason.");
     [TranslationData(SectionKick, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> KickSuccessFeedback           = new Translation<IPlayer>("<#00ffff>You kicked <#d8addb>{0}</color>.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> KickSuccessFeedback           = new Translation<IPlayer>("<#00ffff>You kicked <#d8addb>{0}</color>.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionKick)]
-    public static readonly Translation<IPlayer, IPlayer> KickSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer, IPlayer> KickSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#" + TeamManager.AdminColorHex + ">{1}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatPlayerName);
     [TranslationData(SectionKick)]
-    public static readonly Translation<IPlayer> KickSuccessBroadcastOperator  = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by an operator.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> KickSuccessBroadcastOperator  = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by an operator.", arg0Fmt: UCPlayer.FormatCharacterName);
     #endregion
 
     #region Ban Command
     private const string SectionBan = "Ban";
     [TranslationData(SectionBan, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> BanPermanentSuccessFeedback           = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> BanPermanentSuccessFeedback           = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionBan)]
-    public static readonly Translation<IPlayer, IPlayer> BanPermanentSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer, IPlayer> BanPermanentSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned by <#" + TeamManager.AdminColorHex + ">{1}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatPlayerName);
     [TranslationData(SectionBan)]
-    public static readonly Translation<IPlayer> BanPermanentSuccessBroadcastOperator  = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned by an operator.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> BanPermanentSuccessBroadcastOperator  = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned by an operator.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionBan, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, string> BanSuccessFeedback            = new Translation<IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{1}</color>.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer, string> BanSuccessFeedback            = new Translation<IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{1}</color>.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionBan)]
-    public static readonly Translation<IPlayer, IPlayer, string> BanSuccessBroadcast  = new Translation<IPlayer, IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{2}</color> by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer, IPlayer, string> BanSuccessBroadcast  = new Translation<IPlayer, IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{2}</color> by <#" + TeamManager.AdminColorHex + ">{1}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatPlayerName);
     [TranslationData(SectionBan)]
-    public static readonly Translation<IPlayer, string> BanSuccessBroadcastOperator   = new Translation<IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{1}</color> by an operator.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer, string> BanSuccessBroadcastOperator   = new Translation<IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{1}</color> by an operator.", arg0Fmt: UCPlayer.FormatCharacterName);
     #endregion
 
     #region Unban Command
     private const string SectionUnban = "Unban";
     [TranslationData(SectionUnban, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> UnbanNotBanned = new Translation<IPlayer>("<#9cffb3><#d8addb>{0}</color> is not currently banned.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> UnbanNotBanned = new Translation<IPlayer>("<#9cffb3><#d8addb>{0}</color> is not currently banned.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionUnban, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> UnbanSuccessFeedback = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was unbanned.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> UnbanSuccessFeedback = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was unbanned.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionUnban)]
-    public static readonly Translation<IPlayer, IPlayer> UnbanSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was unbanned by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer, IPlayer> UnbanSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was unbanned by <#" + TeamManager.AdminColorHex + ">{1}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatPlayerName);
     [TranslationData(SectionUnban)]
-    public static readonly Translation<IPlayer> UnbanSuccessBroadcastOperator = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unbanned by an operator.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> UnbanSuccessBroadcastOperator = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unbanned by an operator.", arg0Fmt: UCPlayer.FormatCharacterName);
     #endregion
 
     #region Warn Command
     private const string SectionWarn = "Warn";
     [TranslationData(SectionWarn, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> WarnSuccessFeedback           = new Translation<IPlayer>("<#ffff00>You warned <#d8addb>{0}</color>.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> WarnSuccessFeedback           = new Translation<IPlayer>("<#ffff00>You warned <#d8addb>{0}</color>.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionWarn)]
-    public static readonly Translation<IPlayer, IPlayer> WarnSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer, IPlayer> WarnSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by <#" + TeamManager.AdminColorHex + ">{1}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatPlayerName);
     [TranslationData(SectionWarn)]
-    public static readonly Translation<IPlayer> WarnSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by an operator.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> WarnSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by an operator.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionWarn)]
     public static readonly Translation<IPlayer, string> WarnSuccessDM         = new Translation<IPlayer, string>("<color=#ffff00><color=#" + TeamManager.AdminColorHex + ">{0}</color> warned you for <color=#ffffff>{1}</color>.</color>", TranslationOptions.TMProUI, UCPlayer.FormatPlayerName);
     [TranslationData(SectionWarn)]
@@ -1212,21 +1081,21 @@ internal static class T
     #region Mute Command
     private const string SectionMute = "Mute";
     [TranslationData(SectionMute, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessFeedback = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted.", UCPlayer.FormatCharacterName, UCPlayer.FormatSteam64, FormatLowercase);
+    public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessFeedback = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatSteam64, arg2Fmt: FormatLowercase);
     [TranslationData(SectionMute, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessFeedback  = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted for <#9cffb3>{2}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatSteam64, arg3Fmt: FormatLowercase);
+    public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessFeedback  = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted for <#9cffb3>{2}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatSteam64, arg3Fmt: FormatLowercase);
     [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessBroadcastOperator  = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by an operator.", UCPlayer.FormatCharacterName, UCPlayer.FormatSteam64, FormatLowercase);
+    public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessBroadcastOperator  = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by an operator.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatSteam64, arg2Fmt: FormatLowercase);
     [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, IPlayer, MuteType, IPlayer> MutePermanentSuccessBroadcast = new Translation<IPlayer, IPlayer, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by <#" + TeamManager.AdminColorHex + ">{3}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatSteam64, FormatLowercase, UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer, IPlayer, MuteType, IPlayer> MutePermanentSuccessBroadcast = new Translation<IPlayer, IPlayer, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by <#" + TeamManager.AdminColorHex + ">{3}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatSteam64, arg2Fmt: FormatLowercase, arg3Fmt: UCPlayer.FormatPlayerName);
     [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessBroadcastOperator   = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by an operator for <#9cffb3>{2}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatSteam64, arg3Fmt: FormatLowercase);
+    public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessBroadcastOperator   = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by an operator for <#9cffb3>{2}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatSteam64, arg3Fmt: FormatLowercase);
     [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, IPlayer, string, MuteType, IPlayer> MuteSuccessBroadcast  = new Translation<IPlayer, IPlayer, string, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by <#" + TeamManager.AdminColorHex + ">{4}</color> for <#9cffb3>{2}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatSteam64, arg3Fmt: FormatLowercase, arg4Fmt: UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer, IPlayer, string, MuteType, IPlayer> MuteSuccessBroadcast  = new Translation<IPlayer, IPlayer, string, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by <#" + TeamManager.AdminColorHex + ">{4}</color> for <#9cffb3>{2}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatSteam64, arg3Fmt: FormatLowercase, arg4Fmt: UCPlayer.FormatPlayerName);
     [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, string, string, MuteType> MuteSuccessDM  = new Translation<IPlayer, string, string, MuteType>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> <#9cffb3>{3}</color> muted you for <#9cffb3>{2}</color> because: <#9cffb3>{1}</color>.", UCPlayer.FormatPlayerName, arg3Fmt: FormatLowercase);
+    public static readonly Translation<IPlayer, string, string, MuteType> MuteSuccessDM  = new Translation<IPlayer, string, string, MuteType>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> <#9cffb3>{3}</color> muted you for <#9cffb3>{2}</color> because: <#9cffb3>{1}</color>.", arg0Fmt: UCPlayer.FormatPlayerName, arg3Fmt: FormatLowercase);
     [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, string, MuteType> MuteSuccessDMPermanent = new Translation<IPlayer, string, MuteType>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> permanently <#9cffb3>{2}</color> muted you because: <#9cffb3>{1}</color>.", UCPlayer.FormatPlayerName, arg2Fmt: FormatLowercase);
+    public static readonly Translation<IPlayer, string, MuteType> MuteSuccessDMPermanent = new Translation<IPlayer, string, MuteType>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> permanently <#9cffb3>{2}</color> muted you because: <#9cffb3>{1}</color>.", arg0Fmt: UCPlayer.FormatPlayerName, arg2Fmt: FormatLowercase);
     [TranslationData(SectionMute)]
     public static readonly Translation<string, string, MuteType> MuteSuccessDMOperator   = new Translation<string, string, MuteType>("<#ffff00>An operator <#9cffb3>{2}</color> muted you for <#9cffb3>{1}</color> because: <#9cffb3>{0}</color>.", arg2Fmt: FormatLowercase);
     [TranslationData(SectionMute)]
@@ -1235,21 +1104,21 @@ internal static class T
     [TranslationData(SectionMute)]
     public static readonly Translation<string> MuteTextChatFeedbackPermanent  = new Translation<string>("<#ffff00>You're permanently muted in text chat because: <#9cffb3>{0}</color>.");
     [TranslationData(SectionMute)]
-    public static readonly Translation<DateTime, string> MuteTextChatFeedback = new Translation<DateTime, string>("<#ffff00>You're muted in text chat until <#cedcde>{0}</color> because <#9cffb3>{1}</color>.", "r");
+    public static readonly Translation<DateTime, string> MuteTextChatFeedback = new Translation<DateTime, string>("<#ffff00>You're muted in text chat until <#cedcde>{0}</color> because <#9cffb3>{1}</color>.", arg0Fmt: "r");
     #endregion
 
     #region Unmute Command
     private const string SectionUnmute = "Unmute";
     [TranslationData(SectionUnmute, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> UnmuteNotMuted                  = new Translation<IPlayer>("<#9cffb3><#d8addb>{0}</color> is not currently muted.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> UnmuteNotMuted                  = new Translation<IPlayer>("<#9cffb3><#d8addb>{0}</color> is not currently muted.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionUnmute, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> UnmuteSuccessFeedback           = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> UnmuteSuccessFeedback           = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionUnmute)]
-    public static readonly Translation<IPlayer, IPlayer> UnmuteSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.FormatCharacterName, UCPlayer.FormatPlayerName);
+    public static readonly Translation<IPlayer, IPlayer> UnmuteSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted by <#" + TeamManager.AdminColorHex + ">{1}</color>.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatPlayerName);
     [TranslationData(SectionUnmute)]
-    public static readonly Translation<IPlayer> UnmuteSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted by an operator.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> UnmuteSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted by an operator.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionUnmute)]
-    public static readonly Translation<IPlayer> UnmuteSuccessDM                 = new Translation<IPlayer>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> unmuted you.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer> UnmuteSuccessDM                 = new Translation<IPlayer>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> unmuted you.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionUnmute)]
     public static readonly Translation UnmuteSuccessDMOperator                  = new Translation("<#ffff00>An operator unmuted you.");
     #endregion
@@ -1261,7 +1130,7 @@ internal static class T
     [TranslationData(SectionSpeed, IsPriorityTranslation = false)]
     public static readonly Translation<float> SpeedMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Speed multiplier is already set to <#fff>{0}</color>.");
     [TranslationData(SectionSpeed, IsPriorityTranslation = false)]
-    public static readonly Translation<float, IPlayer> SetSpeedMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", "0.##", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<float, IPlayer> SetSpeedMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", arg0Fmt: "0.##", arg1Fmt: UCPlayer.FormatColoredCharacterName);
     #endregion
 
     #region Jump Command
@@ -1271,7 +1140,7 @@ internal static class T
     [TranslationData(SectionJump, IsPriorityTranslation = false)]
     public static readonly Translation<float> JumpMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Jump multiplier is already set to <#fff>{0}</color>.");
     [TranslationData(SectionJump, IsPriorityTranslation = false)]
-    public static readonly Translation<float, IPlayer> SetJumpMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", "0.##", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<float, IPlayer> SetJumpMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", arg0Fmt: "0.##", arg1Fmt: UCPlayer.FormatColoredCharacterName);
     #endregion
 
     #region Strutures
@@ -1318,9 +1187,9 @@ internal static class T
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset> VehicleStaging = new Translation<VehicleAsset>("<#b3a6a2>You can't enter a {0} during the <#cedcde>STAGING PHASE</color>.");
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleWaitForOwner = new Translation<IPlayer>("<#bda897>Only the owner, {0}, can enter the driver's seat right now.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> VehicleWaitForOwner = new Translation<IPlayer>("<#bda897>Only the owner, {0}, can enter the driver's seat right now.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer, Squad> VehicleWaitForOwnerOrSquad = new Translation<IPlayer, Squad>("<#bda897>Only the owner, {0}, or members of {1} Squad can enter the driver's seat right now.", UCPlayer.FormatColoredCharacterName, Squad.FormatColorName);
+    public static readonly Translation<IPlayer, Squad> VehicleWaitForOwnerOrSquad = new Translation<IPlayer, Squad>("<#bda897>Only the owner, {0}, or members of {1} Squad can enter the driver's seat right now.", arg0Fmt: UCPlayer.FormatColoredCharacterName, arg1Fmt: Squad.FormatColorName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation VehicleNoKit = new Translation("<#ff684a>You can't get in a vehicle without a kit.");
     [TranslationData(SectionVehicles)]
@@ -1341,15 +1210,15 @@ internal static class T
     [TranslationData(SectionVehicles)]
     public static readonly Translation VehicleMustBeLookingAtLinkedVehicle = new Translation("<#ff8c69>You must be looking at a vehicle or own only one nearby.");
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<FactionInfo> VehicleNotOnSameTeam = new Translation<FactionInfo>("<#ff8c69>This vehicle is on {0} but you're not.", FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<FactionInfo> VehicleNotOnSameTeam = new Translation<FactionInfo>("<#ff8c69>This vehicle is on {0} but you're not.", arg0Fmt: FactionInfo.FormatColorDisplayName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleLinkedVehicleNotOwnedByCaller = new Translation<IPlayer>("<#ff8c69>This vehicle is owned by {0}.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleLinkedVehicleNotOwnedByCaller = new Translation<IPlayer>("<#ff8c69>This vehicle is owned by {0}.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset, IPlayer> VehicleGiven = new Translation<VehicleAsset, IPlayer>("<#d1bda7>Gave your <#a0ad8e>{0}</color> to {1}.", arg1Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset, IPlayer> VehicleGivenDm = new Translation<VehicleAsset, IPlayer>("<#d1bda7>{1} gave you their <#a0ad8e>{0}</color>.", arg1Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleTargetNotInVehicle = new Translation<IPlayer>("<#ff8c69>{0} is not in a vehicle.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleTargetNotInVehicle = new Translation<IPlayer>("<#ff8c69>{0} is not in a vehicle.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<int> VehicleSeatNotValidOutOfRange = new Translation<int>("<#ff8c69>That vehicle doesn't have <#ddd>{0}</color> ${p:0:seat}.");
     [TranslationData(SectionVehicles)]
@@ -1363,7 +1232,7 @@ internal static class T
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset, IPlayer, int> VehicleKickedPlayer = new Translation<VehicleAsset, IPlayer, int>("<#d1bda7>Kicked {1} out of seat <#ddd>#{2}</color> in your <#ccc>{0}</color>.", arg1Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleSwappedSeats = new Translation<IPlayer>("<#d1bda7>Swapped seats with {0}.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleSwappedSeats = new Translation<IPlayer>("<#d1bda7>Swapped seats with {0}.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset, int> VehicleEnterFailed = new Translation<VehicleAsset, int>("<#ff8c69>Unable to put you in seat <#ddd>#{1}</color> of your <#ccc>{0}</color>.");
     [TranslationData(SectionVehicles)]
@@ -1371,38 +1240,38 @@ internal static class T
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset, IPlayer> VehicleSwapRequestNotInSameVehicle = new Translation<VehicleAsset, IPlayer>("<#ff8c69>You must be in the same <#ccc>{0}</color> as {1}.", arg1Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer, int, IPlayer> VehicleSwapRequestAlreadySent = new Translation<IPlayer, int, IPlayer>("<#ff8c69>{0} already has a pending swap request from {2}, try again in <#ccc>{1}</color> ${p:1:second}.", UCPlayer.FormatColoredNickName, arg2Fmt: UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer, int, IPlayer> VehicleSwapRequestAlreadySent = new Translation<IPlayer, int, IPlayer>("<#ff8c69>{0} already has a pending swap request from {2}, try again in <#ccc>{1}</color> ${p:1:second}.", arg0Fmt: UCPlayer.FormatColoredNickName, arg2Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer, int, string> VehicleSentSwapRequestDm = new Translation<IPlayer, int, string>("<#d1bda7>{0} wants to swap from seat <#ddd>#{1}</color> with you. Do <#fff>{2}</color> to respond.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer, int, string> VehicleSentSwapRequestDm = new Translation<IPlayer, int, string>("<#d1bda7>{0} wants to swap from seat <#ddd>#{1}</color> with you. Do <#fff>{2}</color> to respond.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer, int, int> VehicleSwapRequestSent = new Translation<IPlayer, int, int>("<#d1bda7>Sent {0} a swap request for seat <#ddd>#{1}</color>. They have <#ccc>{2}</color> ${p:2:second} to respond.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer, int, int> VehicleSwapRequestSent = new Translation<IPlayer, int, int>("<#d1bda7>Sent {0} a swap request for seat <#ddd>#{1}</color>. They have <#ccc>{2}</color> ${p:2:second} to respond.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleSwapRequestDeniedByTarget = new Translation<IPlayer>("<#d1a8a8>{0} denied your swap request.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleSwapRequestDeniedByTarget = new Translation<IPlayer>("<#d1a8a8>{0} denied your swap request.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleSwapRequestTimedOutByTarget = new Translation<IPlayer>("<#d1a8a8>{0} didn't respond to your swap request.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleSwapRequestTimedOutByTarget = new Translation<IPlayer>("<#d1a8a8>{0} didn't respond to your swap request.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleSwapRequestAcceptedByTarget = new Translation<IPlayer>("<#d1bda7>{0} accepted your swap request.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleSwapRequestAcceptedByTarget = new Translation<IPlayer>("<#d1bda7>{0} accepted your swap request.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation VehicleSwapRequestNotSent = new Translation("<#d1a8a8>You do not have any pending swap requests.");
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleSwapRequestDenied = new Translation<IPlayer>("<#d1a8a8>Denied {0}'s swap request.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleSwapRequestDenied = new Translation<IPlayer>("<#d1a8a8>Denied {0}'s swap request.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
-    public static readonly Translation<IPlayer> VehicleSwapRequestAccepted = new Translation<IPlayer>("<#d1bda7>Accepted {0}'s swap request.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> VehicleSwapRequestAccepted = new Translation<IPlayer>("<#d1bda7>Accepted {0}'s swap request.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset> VehicleTooFarAway = new Translation<VehicleAsset>("<#ff8c69>Your {0} is too far away.");
 
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayAdded = new Translation<VehicleAsset>("<#a0ad8e>Added {0} to the vehicle bay.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBayAdded = new Translation<VehicleAsset>("<#a0ad8e>Added {0} to the vehicle bay.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayRemoved = new Translation<VehicleAsset>("<#a0ad8e>Removed {0} from the vehicle bay.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBayRemoved = new Translation<VehicleAsset>("<#a0ad8e>Removed {0} from the vehicle bay.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
     public static readonly Translation<string, VehicleAsset, string> VehicleBaySetProperty = new Translation<string, VehicleAsset, string>("<#a0ad8e>Set <#8ce4ff>{0}</color> for vehicle {1} to: <#ffffff>{2}</color>.", arg1Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBaySavedMeta = new Translation<VehicleAsset>("<#a0ad8e>Successfuly set the rearm list for vehicle {0} from your inventory.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBaySavedMeta = new Translation<VehicleAsset>("<#a0ad8e>Successfuly set the rearm list for vehicle {0} from your inventory.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayClearedItems = new Translation<VehicleAsset>("<#a0ad8e>Successfuly cleared the rearm list for vehicle {0} from your inventory.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBayClearedItems = new Translation<VehicleAsset>("<#a0ad8e>Successfuly cleared the rearm list for vehicle {0} from your inventory.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset, int> VehicleBaySetItems = new Translation<VehicleAsset, int>("<#a0ad8e>Successfuly set the rearm list for vehicle {0} from your inventory. It will now drop <#8ce4ff>{1}</color> ${p:1:item} on restock.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset, int> VehicleBaySetItems = new Translation<VehicleAsset, int>("<#a0ad8e>Successfuly set the rearm list for vehicle {0} from your inventory. It will now drop <#8ce4ff>{1}</color> ${p:1:item} on restock.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
     public static readonly Translation<byte, VehicleAsset> VehicleBaySeatAdded = new Translation<byte, VehicleAsset>("<#a0ad8e>Made seat <#ffffff>#{0}</color> a crewman seat for {1}.", arg1Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
@@ -1414,9 +1283,9 @@ internal static class T
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
     public static readonly Translation VehicleBayNoTarget = new Translation("<#ff8c69>Look at a vehicle, spawn pad, or sign to use this command.");
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayAlreadyAdded = new Translation<VehicleAsset>("<#ff8c69>{0} is already added to the vehicle bay.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBayAlreadyAdded = new Translation<VehicleAsset>("<#ff8c69>{0} is already added to the vehicle bay.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayNotAdded = new Translation<VehicleAsset>("<#ff8c69>{0} has not been added to the vehicle bay.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBayNotAdded = new Translation<VehicleAsset>("<#ff8c69>{0} has not been added to the vehicle bay.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
     public static readonly Translation<string> VehicleBayInvalidProperty = new Translation<string>("<#ff8c69>{0} isn't a valid a vehicle property. Try putting 'Faction', 'RespawnTime', 'CreditCost' etc.");
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
@@ -1432,25 +1301,25 @@ internal static class T
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
     public static readonly Translation<int> VehicleBayRemovedDelay = new Translation<int>("<#a0ad8e>Removed {0} matching ${p:0:delay}.");
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBaySpawnRegistered = new Translation<VehicleAsset>("<#a0ad8e>Successfully registered spawn. {0} will spawn here.", FormatRarityColor + FormatPlural);
+    public static readonly Translation<VehicleAsset> VehicleBaySpawnRegistered = new Translation<VehicleAsset>("<#a0ad8e>Successfully registered spawn. {0} will spawn here.", arg0Fmt: FormatRarityColor + FormatPlural);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBaySpawnDeregistered = new Translation<VehicleAsset>("<#a0ad8e>Successfully deregistered {0} spawn.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBaySpawnDeregistered = new Translation<VehicleAsset>("<#a0ad8e>Successfully deregistered {0} spawn.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
     public static readonly Translation VehicleBayLinkStarted = new Translation("<#a0ad8e>Started linking, do <#ddd>/vb link</color> on the sign now.");
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayLinkFinished = new Translation<VehicleAsset>("<#a0ad8e>Successfully linked vehicle sign to a {0} vehicle bay.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBayLinkFinished = new Translation<VehicleAsset>("<#a0ad8e>Successfully linked vehicle sign to a {0} vehicle bay.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayUnlinked = new Translation<VehicleAsset>("<#a0ad8e>Successfully unlinked {0} vehicle sign.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBayUnlinked = new Translation<VehicleAsset>("<#a0ad8e>Successfully unlinked {0} vehicle sign.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
     public static readonly Translation VehicleBayLinkNotStarted = new Translation("<#ff8c69>You must do /vb link on a vehicle bay first.");
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayForceSuccess = new Translation<VehicleAsset>("<#a0ad8e>Skipped timer for that {0} vehicle bay.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBayForceSuccess = new Translation<VehicleAsset>("<#a0ad8e>Skipped timer for that {0} vehicle bay.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
     public static readonly Translation<string> VehicleBayInvalidInput = new Translation<string>("<#ff8c69><#fff>{0}</color> is not a valid vehicle.");
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<ItemAsset> VehicleBayInvalidBayItem = new Translation<ItemAsset>("<#ff8c69>{0} are not valid vehicle bays.", FormatRarityColor + FormatPlural);
+    public static readonly Translation<ItemAsset> VehicleBayInvalidBayItem = new Translation<ItemAsset>("<#ff8c69>{0} are not valid vehicle bays.", arg0Fmt: FormatRarityColor + FormatPlural);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBaySpawnAlreadyRegistered = new Translation<VehicleAsset>("<#ff8c69>This spawn is already registered to a {0}. Unregister it first with <#fff>/vb unreg</color>.", FormatRarityColor);
+    public static readonly Translation<VehicleAsset> VehicleBaySpawnAlreadyRegistered = new Translation<VehicleAsset>("<#ff8c69>This spawn is already registered to a {0}. Unregister it first with <#fff>/vb unreg</color>.", arg0Fmt: FormatRarityColor);
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
     public static readonly Translation VehicleBaySpawnNotRegistered = new Translation("<#ff8c69>This vehicle bay is not registered.");
     [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
@@ -1484,65 +1353,65 @@ internal static class T
     #region Traits
     private const string SectionTraits = "Traits";
     [TranslationData(SectionTraits, "Sent when the player leaves their post as squad leader while under the effect of a trait requiring squad leader.", "The trait requiring squad leader")]
-    public static readonly Translation<Trait> TraitDisabledSquadLeaderDemoted = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until it expires or you become <#cedcde>SQUAD LEADER</color> again.", TraitData.FormatName);
+    public static readonly Translation<Trait> TraitDisabledSquadLeaderDemoted = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until it expires or you become <#cedcde>SQUAD LEADER</color> again.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player leaves a squad while under the effect of a trait requiring a squad.", "The trait requiring a squad")]
-    public static readonly Translation<Trait> TraitDisabledSquadLeft = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until you join a <#cedcde>SQUAD</color> again.", TraitData.FormatName);
+    public static readonly Translation<Trait> TraitDisabledSquadLeft = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until you join a <#cedcde>SQUAD</color> again.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player equips a kit that's not supported by the trait.", "The trait requiring a kit")]
-    public static readonly Translation<Trait> TraitDisabledKitNotSupported = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until you switch to a supported kit type.", TraitData.FormatName);
+    public static readonly Translation<Trait> TraitDisabledKitNotSupported = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until you switch to a supported kit type.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player performs an action that allows their trait to be reactivated.", "The trait being reactivated")]
-    public static readonly Translation<Trait> TraitReactivated = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> has been reactivated.", TraitData.FormatName);
+    public static readonly Translation<Trait> TraitReactivated = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> has been reactivated.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when one of a player's traits expires through time.", "The trait that expired")]
-    public static readonly Translation<TraitData> TraitExpiredTime = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> has expired and is no longer active.", TraitData.FormatName);
+    public static readonly Translation<TraitData> TraitExpiredTime = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> has expired and is no longer active.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when one of a player's traits expires through death.", "The trait that expired")]
-    public static readonly Translation<TraitData> TraitExpiredDeath = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> has expired after your death and is no longer active.", TraitData.FormatName);
+    public static readonly Translation<TraitData> TraitExpiredDeath = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> has expired after your death and is no longer active.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait which is locked by the current gamemode.", "The locked trait", "Current gamemode")]
-    public static readonly Translation<TraitData, Gamemode> RequestTraitGamemodeLocked = new Translation<TraitData, Gamemode>("<#ff8c69><#c$trait$>{0}</color> is <#c$locked$>locked</color> during <#cedcde><uppercase>{1}</uppercase></color> games.", TraitData.FormatName);
+    public static readonly Translation<TraitData, Gamemode> RequestTraitGamemodeLocked = new Translation<TraitData, Gamemode>("<#ff8c69><#c$trait$>{0}</color> is <#c$locked$>locked</color> during <#cedcde><uppercase>{1}</uppercase></color> games.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait while they already have it.", "The existing trait")]
-    public static readonly Translation<TraitData> TraitAlreadyActive = new Translation<TraitData>("<#ff8c69>You are already under <#c$trait$>{0}</color>'s effects.", TraitData.FormatName);
+    public static readonly Translation<TraitData> TraitAlreadyActive = new Translation<TraitData>("<#ff8c69>You are already under <#c$trait$>{0}</color>'s effects.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait meant for another team.", "The trait", "Trait's intended team")]
-    public static readonly Translation<TraitData, FactionInfo> RequestTraitWrongTeam = new Translation<TraitData, FactionInfo>("<#ff8c69>You can only use <#c$trait$>{0}</color> on {1}.", TraitData.FormatName, FactionInfo.FormatColorShortName);
+    public static readonly Translation<TraitData, FactionInfo> RequestTraitWrongTeam = new Translation<TraitData, FactionInfo>("<#ff8c69>You can only use <#c$trait$>{0}</color> on {1}.", arg0Fmt: TraitData.FormatName, arg1Fmt: FactionInfo.FormatColorShortName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait without a kit.")]
     public static readonly Translation RequestTraitNoKit = new Translation("<#ff8c69>Request a kit before trying to request traits.");
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait with a kit class the trait doesn't allow.", "The trait", "Invalid class")]
-    public static readonly Translation<TraitData, Class> RequestTraitClassLocked = new Translation<TraitData, Class>("<#ff8c69>You can't use <#c$trait$>{0}</color> while a <#cedcde><uppercase>{1}</uppercase></color> kit is equipped.", TraitData.FormatName);
+    public static readonly Translation<TraitData, Class> RequestTraitClassLocked = new Translation<TraitData, Class>("<#ff8c69>You can't use <#c$trait$>{0}</color> while a <#cedcde><uppercase>{1}</uppercase></color> kit is equipped.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait while under the global trait cooldown.", "Global cooldown shared between all traits")]
-    public static readonly Translation<Cooldown> RequestTraitGlobalCooldown = new Translation<Cooldown>("<#ff8c69>You can request a trait again in <#cedcde>{0}</color>.", Cooldown.FormatTimeShort);
+    public static readonly Translation<Cooldown> RequestTraitGlobalCooldown = new Translation<Cooldown>("<#ff8c69>You can request a trait again in <#cedcde>{0}</color>.", arg0Fmt: Cooldown.FormatTimeShort);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait while under the individual trait cooldown.", "Trait on cooldown", "Individual cooldown for this trait")]
-    public static readonly Translation<TraitData, Cooldown> RequestTraitSingleCooldown = new Translation<TraitData, Cooldown>("<#ff8c69>You can request <#c$trait$>{0}</color> again in <#cedcde>{1}</color>.", TraitData.FormatName, Cooldown.FormatTimeShort);
+    public static readonly Translation<TraitData, Cooldown> RequestTraitSingleCooldown = new Translation<TraitData, Cooldown>("<#ff8c69>You can request <#c$trait$>{0}</color> again in <#cedcde>{1}</color>.", arg0Fmt: TraitData.FormatName, arg1Fmt: Cooldown.FormatTimeShort);
     [TranslationData(SectionTraits, "Sent when the player tries to request a buff when they already have the max amount (6).")]
     public static readonly Translation RequestTraitTooManyBuffs = new Translation("<#ff8c69>You can't have more than <#cedcde>six</color> buffs active at once.");
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait which requires squad leader while not being squad leader or in a squad.", "Trait being requested")]
-    public static readonly Translation<TraitData> RequestTraitNotSquadLeader = new Translation<TraitData>("<#ff8c69>You have to be a <#cedcde>SQUAD LEADER</color> to request <#c$trait$>{0}</color>.", TraitData.FormatName);
+    public static readonly Translation<TraitData> RequestTraitNotSquadLeader = new Translation<TraitData>("<#ff8c69>You have to be a <#cedcde>SQUAD LEADER</color> to request <#c$trait$>{0}</color>.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait which requires squad leader while not in a squad.", "Trait being requested")]
-    public static readonly Translation<TraitData> RequestTraitNoSquad = new Translation<TraitData>("<#ff8c69>You have to be in a <#cedcde>SQUAD</color> to request <#c$trait$>{0}</color>.", TraitData.FormatName);
+    public static readonly Translation<TraitData> RequestTraitNoSquad = new Translation<TraitData>("<#ff8c69>You have to be in a <#cedcde>SQUAD</color> to request <#c$trait$>{0}</color>.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait while too low of a level.", "Trait being requested", "Required Level")]
-    public static readonly Translation<TraitData, LevelData> RequestTraitLowLevel = new Translation<TraitData, LevelData>("<#ff8c69>You must be at least <#cedcde>{1}</color> to request <#c$trait$>{0}</color>.", TraitData.FormatName, LevelData.FormatName);
+    public static readonly Translation<TraitData, LevelData> RequestTraitLowLevel = new Translation<TraitData, LevelData>("<#ff8c69>You must be at least <#cedcde>{1}</color> to request <#c$trait$>{0}</color>.", arg0Fmt: TraitData.FormatName, arg1Fmt: LevelData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait while too low of a rank.", "Trait being requested", "Required Rank")]
-    public static readonly Translation<TraitData, RankData> RequestTraitLowRank = new Translation<TraitData, RankData>("<#ff8c69>You must be at least {1} to request <#c$trait$>{0}</color>.", TraitData.FormatName, RankData.FormatColorName);
+    public static readonly Translation<TraitData, RankData> RequestTraitLowRank = new Translation<TraitData, RankData>("<#ff8c69>You must be at least {1} to request <#c$trait$>{0}</color>.", arg0Fmt: TraitData.FormatName, arg1Fmt: RankData.FormatColorName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait while missing a completed quest.", "Trait being requested", "Required Rank")]
-    public static readonly Translation<TraitData, QuestAsset> RequestTraitQuestIncomplete = new Translation<TraitData, QuestAsset>("<#ff8c69>You must be at least {1} to request <#c$trait$>{0}</color>.", TraitData.FormatName);
+    public static readonly Translation<TraitData, QuestAsset> RequestTraitQuestIncomplete = new Translation<TraitData, QuestAsset>("<#ff8c69>You must be at least {1} to request <#c$trait$>{0}</color>.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player successfully requests a trait.", "Trait being requested")]
-    public static readonly Translation<TraitData> RequestTraitGiven = new Translation<TraitData>("<#a8918a>Your <#c$trait$>{0}</color> has been activated.", TraitData.FormatName);
+    public static readonly Translation<TraitData> RequestTraitGiven = new Translation<TraitData>("<#a8918a>Your <#c$trait$>{0}</color> has been activated.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player successfully requests a trait with a timer.", "Trait being requested", "Time left")]
-    public static readonly Translation<TraitData, string> RequestTraitGivenTimer = new Translation<TraitData, string>("<#a8918a>Your <#c$trait$>{0}</color> has been activated. It will expire in <#cedcde>{1}</color>.", TraitData.FormatName);
+    public static readonly Translation<TraitData, string> RequestTraitGivenTimer = new Translation<TraitData, string>("<#a8918a>Your <#c$trait$>{0}</color> has been activated. It will expire in <#cedcde>{1}</color>.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player successfully requests a trait that expires on death.", "Trait being requested")]
-    public static readonly Translation<TraitData> RequestTraitGivenUntilDeath = new Translation<TraitData>("<#a8918a>Your <#c$trait$>{0}</color> has been activated. It will last until you die.", TraitData.FormatName);
+    public static readonly Translation<TraitData> RequestTraitGivenUntilDeath = new Translation<TraitData>("<#a8918a>Your <#c$trait$>{0}</color> has been activated. It will last until you die.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player successfully requests a trait but it's still staging phase.", "Trait being requested")]
-    public static readonly Translation<TraitData> TraitAwaitingStagingPhase = new Translation<TraitData>("<#a8918a><#c$trait$>{0}</color> will be activated once <#cedcde>STAGING PHASE</color> is over.", TraitData.FormatName);
+    public static readonly Translation<TraitData> TraitAwaitingStagingPhase = new Translation<TraitData>("<#a8918a><#c$trait$>{0}</color> will be activated once <#cedcde>STAGING PHASE</color> is over.", arg0Fmt: TraitData.FormatName);
     #region Trait Command
     private const string SectionTraitCommand = "Traits / Trait Command";
     [TranslationData(SectionTraitCommand, "Shown when a trait name is not able to be matched up with a TraitData.", "Inputted search")]
     public static readonly Translation<string> TraitNotFound = new Translation<string>("<#66ffcc>Unable to find a trait named <#fff>{0}</color>.");
     [TranslationData(SectionTraitCommand, "Shown when a trait is removed.", "Trait that got removed.")]
-    public static readonly Translation<TraitData> TraitRemoved = new Translation<TraitData>("<#66ffcc>Removed <#c$trait$>{0}</color>.", TraitData.FormatName);
+    public static readonly Translation<TraitData> TraitRemoved = new Translation<TraitData>("<#66ffcc>Removed <#c$trait$>{0}</color>.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraitCommand, "Shown when someone tries to remove a trait which they don't have.", "Trait the player tried to remove")]
-    public static readonly Translation<TraitData> TraitNotActive = new Translation<TraitData>("<#ff8c69>You're not under <#c$trait$>{0}</color>'s effects.", TraitData.FormatName);
+    public static readonly Translation<TraitData> TraitNotActive = new Translation<TraitData>("<#ff8c69>You're not under <#c$trait$>{0}</color>'s effects.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraitCommand, "Shown when someone tries to clear their traits with no traits.")]
     public static readonly Translation NoTraitsToClear = new Translation("<#ff8c69>You have no active traits.");
     [TranslationData(SectionTraitCommand, "Shown when someone clears their traits.", "Number of traits removed.")]
     public static readonly Translation<int> TraitsCleared = new Translation<int>("<#66ffcc>Removed {0} trait(s).");
     [TranslationData(SectionTraitCommand, "Shown when someone clears their traits.", "Target trait", "Property name", "Value")]
-    public static readonly Translation<TraitData, string, string> TraitSetProperty = new Translation<TraitData, string, string>("<#66ffcc>Set <#c$trait$>{0}</color> / <#fff>{1}</color> to <uppercase><#cedcde>{2}</color></uppercase>.", TraitData.FormatTypeName);
+    public static readonly Translation<TraitData, string, string> TraitSetProperty = new Translation<TraitData, string, string>("<#66ffcc>Set <#c$trait$>{0}</color> / <#fff>{1}</color> to <uppercase><#cedcde>{2}</color></uppercase>.", arg0Fmt: TraitData.FormatTypeName);
     [TranslationData(SectionTraitCommand, "Shown when someone enteres an invalid property name to /trait set.", "Input text")]
     public static readonly Translation<string> TraitInvalidProperty = new Translation<string>("<#ff8c69><uppercase><#cedcde>{0}</color></uppercase> is not a valid property name for traits.");
     [TranslationData(SectionTraitCommand, "Shown when someone enteres an invalid property name to /trait set.", "Value", "Property name")]
@@ -1553,125 +1422,125 @@ internal static class T
     #region Trait Signs
     private const string SectionTraitSigns = "Traits / Sign";
     [TranslationData(SectionTraitSigns, "Shows instead of the credits when Credit Cost is 0.")]
-    public static readonly Translation TraitSignFree = new Translation("<#c$kit_level_dollars_owned$>FREE</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation TraitSignFree = new Translation("<#c$kit_level_dollars_owned$>FREE</color>");
     [TranslationData(SectionTraitSigns, "Shows instead of the unlock requirements when a trait is unlocked.")]
-    public static readonly Translation TraitSignUnlocked = new Translation("<#99ff99>Unlocked</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation TraitSignUnlocked = new Translation("<#99ff99>Unlocked</color>");
     [TranslationData(SectionTraitSigns, "Shows when you're not in a squad and it's required.")]
-    public static readonly Translation TraitSignRequiresSquad = new Translation("<#c$vbs_delay$>Join a Squad</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation TraitSignRequiresSquad = new Translation("<#c$vbs_delay$>Join a Squad</color>");
     [TranslationData(SectionTraitSigns, "Shows when you're not in a squad or not a squad leader and it's required.")]
-    public static readonly Translation TraitSignRequiresSquadLeader = new Translation("<#c$vbs_delay$>Squad Leaders Only</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation TraitSignRequiresSquadLeader = new Translation("<#c$vbs_delay$>Squad Leaders Only</color>");
     [TranslationData(SectionTraitSigns, "Shows when you dont have a kit or have an unarmed kit.")]
-    public static readonly Translation TraitSignNoKit = new Translation("<#c$vbs_delay$>Request a Kit</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation TraitSignNoKit = new Translation("<#c$vbs_delay$>Request a Kit</color>");
     [TranslationData(SectionTraitSigns, "Shows when the trait is locked in the current gamemode.")]
-    public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>");
     [TranslationData(SectionTraitSigns, "Shows when the kit class you have isn't compatible with the trait.", "Class name")]
-    public static readonly Translation<Class> TraitSignClassBlacklisted = new Translation<Class>("<#c$vbs_delay$>Locked for {0}</color>", TranslationOptions.NoColorOptimization, FormatPlural);
+    public static readonly Translation<Class> TraitSignClassBlacklisted = new Translation<Class>("<#c$vbs_delay$>Locked for {0}</color>", arg0Fmt: FormatPlural);
     [TranslationData(SectionTraitSigns, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 1 class.", "Class name")]
-    public static readonly Translation<Class> TraitSignClassWhitelisted1 = new Translation<Class>("<#c$vbs_delay$>{0} Required</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Class> TraitSignClassWhitelisted1 = new Translation<Class>("<#c$vbs_delay$>{0} Required</color>");
     [TranslationData(SectionTraitSigns, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 2 classes.", "Class name")]
-    public static readonly Translation<Class, Class> TraitSignClassWhitelisted2 = new Translation<Class, Class>("<#c$vbs_delay$>{0} or {1} Required</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Class, Class> TraitSignClassWhitelisted2 = new Translation<Class, Class>("<#c$vbs_delay$>{0} or {1} Required</color>");
     [TranslationData(SectionTraitSigns, "Shows when you currently have the trait and it expires in time.", "Minutes", "Seconds")]
-    public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", arg1Fmt: "D2");
     [TranslationData(SectionTraitSigns, "Shows when you currently have the trait and it expires on death.")]
-    public static readonly Translation TraitSignAlreadyActiveDeath = new Translation("<#c$vbs_delay$>Already Active</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation TraitSignAlreadyActiveDeath = new Translation("<#c$vbs_delay$>Already Active</color>");
     [TranslationData(SectionTraitSigns, "Shows when you are on either global or individual cooldown (whichever is longer).", "Minutes", "Seconds")]
-    public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#c$vbs_delay$>On Cooldown: {0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#c$vbs_delay$>On Cooldown: {0}:{1}</color>", arg1Fmt: "D2");
     #endregion
     #region Trait Interactions
     private const string SectionTraitInteractions = "Traits / Interactions";
     [TranslationData(SectionTraitInteractions, "Sent when the player consumes their self-revive.", "Self-revive trait data.")]
-    public static readonly Translation<TraitData> TraitUsedSelfRevive = new Translation<TraitData>("<#c$trait$>{0}</color> <#d97568>consumed</color>.", TraitData.FormatName);
+    public static readonly Translation<TraitData> TraitUsedSelfRevive = new Translation<TraitData>("<#c$trait$>{0}</color> <#d97568>consumed</color>.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraitInteractions, "Sent when the player tries to use their self-revive on cooldown.", "Self-revive trait data.", "Time string")]
-    public static readonly Translation<TraitData, string> TraitSelfReviveCooldown = new Translation<TraitData, string>("<#c$trait$>{0}</color> can not be used for another {1}.", TraitData.FormatName);
+    public static readonly Translation<TraitData, string> TraitSelfReviveCooldown = new Translation<TraitData, string>("<#c$trait$>{0}</color> can not be used for another {1}.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraitInteractions, "Sent when the player isn't in a vehicle with Ace Armor.", "Ace armor trait data.")]
-    public static readonly Translation<TraitData> AceArmorDisabledNotInVehicle = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> is disabled until you are driving an <#cedcde>ARMORED</color> vehicle.", TraitData.FormatName);
+    public static readonly Translation<TraitData> AceArmorDisabledNotInVehicle = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> is disabled until you are driving an <#cedcde>ARMORED</color> vehicle.", arg0Fmt: TraitData.FormatName);
     #endregion
     #endregion
 
     #region Request Signs
     private const string SectionRequestSigns = "Kit Signs";
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitFree = new Translation("<#c$kit_free$>FREE</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitFree = new Translation("<#c$kit_free$>FREE</color>");
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>");
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitNitroBoostOwned = new Translation("<#f66fe6>BOOSTING</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitNitroBoostOwned = new Translation("<#f66fe6>BOOSTING</color>");
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitNitroBoostNotOwned = new Translation("<#9b59b6>NITRO BOOST</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitNitroBoostNotOwned = new Translation("<#9b59b6>NITRO BOOST</color>");
     [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>");
     [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>");
     [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#c$kit_level_dollars$>$ {0}</color>", TranslationOptions.NoColorOptimization, "N2");
-    [TranslationData(SectionRequestSigns, FormattingDescriptions = new string[] { "Level", "Color depending on player's current level." })]
-    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#f0a31c>Rank:</color> <#{1}>{0}</color>", TranslationOptions.NoColorOptimization);
-    [TranslationData(SectionRequestSigns, FormattingDescriptions = new string[] { "Rank", "Color depending on player's current rank." })]
-    public static readonly Translation<RankData, Color> KitRequiredRank = new Translation<RankData, Color>("<#{1}>Rank: {0}</color>", TranslationOptions.NoColorOptimization);
-    [TranslationData(SectionRequestSigns, FormattingDescriptions = new string[] { "Quest", "Color depending on whether the player has completed the quest." })]
-    public static readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationOptions.NoColorOptimization);
-    [TranslationData(SectionRequestSigns, FormattingDescriptions = new string[] { "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" })]
-    public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#c$kit_level_dollars$>$ {0}</color>", arg0Fmt: "N2");
+    [TranslationData(SectionRequestSigns, Parameters = [ "Level", "Color depending on player's current level." ])]
+    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#f0a31c>Rank:</color> <#{1}>{0}</color>");
+    [TranslationData(SectionRequestSigns, Parameters = [ "Rank", "Color depending on player's current rank." ])]
+    public static readonly Translation<RankData, Color> KitRequiredRank = new Translation<RankData, Color>("<#{1}>Rank: {0}</color>");
+    [TranslationData(SectionRequestSigns, Parameters = [ "Quest", "Color depending on whether the player has completed the quest." ])]
+    public static readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>");
+    [TranslationData(SectionRequestSigns, Parameters = [ "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" ])]
+    public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>");
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>");
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitPremiumOwned = new Translation("<#c$kit_level_dollars_owned$>OWNED</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitPremiumOwned = new Translation("<#c$kit_level_dollars_owned$>OWNED</color>");
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitCommanderTakenByViewer = new Translation("<#c$kit_level_dollars_owned$>You are the <#cedcde>COMMANDER</color>.</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitCommanderTakenByViewer = new Translation("<#c$kit_level_dollars_owned$>You are the <#cedcde>COMMANDER</color>.</color>");
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation<IPlayer> KitCommanderTaken = new Translation<IPlayer>("<#f0a31c>Taken by <#fff>{0}</color></color>", TranslationOptions.NoColorOptimization, UCPlayer.FormatNickName);
+    public static readonly Translation<IPlayer> KitCommanderTaken = new Translation<IPlayer>("<#f0a31c>Taken by <#fff>{0}</color></color>", arg0Fmt: UCPlayer.FormatNickName);
     [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>");
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitUnlimited = new Translation("<#c$kit_unlimited_players$>unlimited</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitUnlimited = new Translation("<#c$kit_unlimited_players$>unlimited</color>");
     [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}");
     [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<string> LoadoutName = new Translation<string>("<#c$kit_level_dollars$>LOADOUT {0}</color>", TranslationOptions.NoColorOptimization, FormatUppercase);
+    public static readonly Translation<string> LoadoutName = new Translation<string>("<#c$kit_level_dollars$>LOADOUT {0}</color>", arg0Fmt: FormatUppercase);
     [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>");
     [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitLoadoutSetup = new Translation("<#3399ff>PENDING SETUP</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation KitLoadoutSetup = new Translation("<#3399ff>PENDING SETUP</color>");
     #endregion
 
     #region Vehicle Bay Signs
     private const string SectionVBS = "Vehicle Signs";
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSTickets = new Translation<int>("<#c$vbs_ticket_number$>{0}</color> <#c$vbs_ticket_label$>Tickets</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<int> VBSTickets = new Translation<int>("<#c$vbs_ticket_number$>{0}</color> <#c$vbs_ticket_label$>Tickets</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSStateReady = new Translation("<#c$vbs_ready$>Ready!</color> <#aaa><b>/request</b></color>", TranslationOptions.NoColorOptimization);
-    [TranslationData(SectionVBS, FormattingDescriptions = new string[] { "Minutes", "Seconds" }, IsPriorityTranslation = false)]
-    public static readonly Translation<int, int> VBSStateDead = new Translation<int, int>("<#c$vbs_dead$>{0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
-    [TranslationData(SectionVBS, FormattingDescriptions = new string[] { "Nearest location." }, IsPriorityTranslation = false)]
-    public static readonly Translation<string> VBSStateActive = new Translation<string>("<#c$vbs_active$>{0}</color>", TranslationOptions.NoColorOptimization);
-    [TranslationData(SectionVBS, FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
-    public static readonly Translation<int, int> VBSStateIdle = new Translation<int, int>("<#c$vbs_idle$>Idle: {0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation VBSStateReady = new Translation("<#c$vbs_ready$>Ready!</color> <#aaa><b>/request</b></color>");
+    [TranslationData(SectionVBS, Parameters = [ "Minutes", "Seconds" ], IsPriorityTranslation = false)]
+    public static readonly Translation<int, int> VBSStateDead = new Translation<int, int>("<#c$vbs_dead$>{0}:{1}</color>", arg1Fmt: "D2");
+    [TranslationData(SectionVBS, Parameters = [ "Nearest location." ], IsPriorityTranslation = false)]
+    public static readonly Translation<string> VBSStateActive = new Translation<string>("<#c$vbs_active$>{0}</color>");
+    [TranslationData(SectionVBS, Parameters = [ "Minutes", "Seconds" ])]
+    public static readonly Translation<int, int> VBSStateIdle = new Translation<int, int>("<#c$vbs_idle$>Idle: {0}:{1}</color>", arg1Fmt: "D2");
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSDelayStaging = new Translation("<#c$vbs_delay$>Locked Until Start</color>", TranslationOptions.NoColorOptimization);
-    [TranslationData(SectionVBS, FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
-    public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#c$vbs_delay$>Locked: {0}:{1}</color>", TranslationOptions.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation VBSDelayStaging = new Translation("<#c$vbs_delay$>Locked Until Start</color>");
+    [TranslationData(SectionVBS, Parameters = [ "Minutes", "Seconds" ])]
+    public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#c$vbs_delay$>Locked: {0}:{1}</color>", arg1Fmt: "D2");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayTeammates = new Translation<int>("<#c$vbs_delay$>Locked until {0}v{0}</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayTeammates = new Translation<int>("<#c$vbs_delay$>Locked until {0}v{0}</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#c$vbs_delay$>Capture {0}</color>", TranslationOptions.NoColorOptimization | TranslationOptions.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#c$vbs_delay$>Capture {0}</color>", TranslationOptions.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#c$vbs_delay$>Lose {0}</color>", TranslationOptions.NoColorOptimization | TranslationOptions.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#c$vbs_delay$>Lose {0}</color>", TranslationOptions.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more flags.</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more flags.</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#c$vbs_delay$>Capture {0} more flags.</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#c$vbs_delay$>Capture {0} more flags.</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#c$vbs_delay$>Destroy {0}</color>", TranslationOptions.NoColorOptimization, FOB.FormatLocationName);
+    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#c$vbs_delay$>Destroy {0}</color>", arg0Fmt: FOB.FormatLocationName);
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#c$vbs_delay$>Destroy Next Cache</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#c$vbs_delay$>Destroy Next Cache</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#c$vbs_delay$>Destroy {0} more caches.</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#c$vbs_delay$>Destroy {0} more caches.</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#c$vbs_delay$>Lose {0}</color>", TranslationOptions.NoColorOptimization, FOB.FormatLocationName);
+    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#c$vbs_delay$>Lose {0}</color>", arg0Fmt: FOB.FormatLocationName);
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#c$vbs_delay$>Lose Next Cache</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#c$vbs_delay$>Lose Next Cache</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more caches.</color>", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more caches.</color>");
     #endregion
 
     #region Revives
@@ -1865,17 +1734,17 @@ internal static class T
     #region Hardpoint
     private const string SectionHardpoint = "Gamemode Hardpoint";
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective, float> HardpointFirstObjective = new Translation<IObjective, float>("Hold {0} to win! A new objective will be chosen in <#cedcde>{1}</color>.", Flag.COLOR_NAME_FORMAT, FormatTimeLong);
+    public static readonly Translation<IObjective, float> HardpointFirstObjective = new Translation<IObjective, float>("Hold {0} to win! A new objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flag.COLOR_NAME_FORMAT, arg1Fmt: FormatTimeLong);
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective, float> HardpointObjectiveChanged = new Translation<IObjective, float>("New objective: {0}! The next objective will be chosen in <#cedcde>{1}</color>.", Flag.COLOR_NAME_FORMAT, FormatTimeLong);
+    public static readonly Translation<IObjective, float> HardpointObjectiveChanged = new Translation<IObjective, float>("New objective: {0}! The next objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flag.COLOR_NAME_FORMAT, arg1Fmt: FormatTimeLong);
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateCaptured = new Translation<IObjective, FactionInfo>("{0} is being held by {1}!", Flag.COLOR_NAME_FORMAT, FactionInfo.FormatColorShortName);
+    public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateCaptured = new Translation<IObjective, FactionInfo>("{0} is being held by {1}!", arg0Fmt: Flag.COLOR_NAME_FORMAT, arg1Fmt: FactionInfo.FormatColorShortName);
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateLost = new Translation<IObjective, FactionInfo>("{0} is no longer being held by {1}!", Flag.COLOR_NAME_FORMAT, FactionInfo.FormatColorShortName);
+    public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateLost = new Translation<IObjective, FactionInfo>("{0} is no longer being held by {1}!", arg0Fmt: Flag.COLOR_NAME_FORMAT, arg1Fmt: FactionInfo.FormatColorShortName);
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective> HardpointObjectiveStateLostContest = new Translation<IObjective>("{0} is no longer <#c$contested$>contested</color>!", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<IObjective> HardpointObjectiveStateLostContest = new Translation<IObjective>("{0} is no longer <#c$contested$>contested</color>!", arg0Fmt: Flag.COLOR_NAME_FORMAT);
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective> HardpointObjectiveStateContested = new Translation<IObjective>("{0} is <#c$contested$>contested</color>!", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<IObjective> HardpointObjectiveStateContested = new Translation<IObjective>("{0} is <#c$contested$>contested</color>!", arg0Fmt: Flag.COLOR_NAME_FORMAT);
     #endregion
 
     #region Report Command
@@ -1887,13 +1756,13 @@ internal static class T
     [TranslationData(SectionReport)]
     public static readonly Translation ReportUnknownError = new Translation("<#9cffb3>Unable to generate a report for an unknown reason, check your syntax again with <color=#ffffff>/report help</color>.");
     [TranslationData(SectionReport)]
-    public static readonly Translation<IPlayer, string, string> ReportSuccessMessage = new Translation<IPlayer, string, string>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report. If possible please post evidence in <#ffffff>#player-reports</color> in our <#7483c4>Discord</color> server.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer, string, string> ReportSuccessMessage = new Translation<IPlayer, string, string>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report. If possible please post evidence in <#ffffff>#player-reports</color> in our <#7483c4>Discord</color> server.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionReport)]
-    public static readonly Translation<IPlayer, string, string> ReportSuccessMessage1 = new Translation<IPlayer, string, string>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report.", UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer, string, string> ReportSuccessMessage1 = new Translation<IPlayer, string, string>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report.", arg0Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionReport)]
     public static readonly Translation ReportSuccessMessage2 = new Translation("<#c480d9>If possible please post evidence in <#ffffff>#player-reports</color> in our <#7483c4>Discord</color> server.");
     [TranslationData(SectionReport)]
-    public static readonly Translation<IPlayer, IPlayer, string, string> ReportNotifyAdmin = new Translation<IPlayer, IPlayer, string, string>("<#c480d9>{0} reported {1} for <#fff>{2}</color> as a <#00ffff>{3}</color> report. Check <#c480d9>#player-reports</color> for more information.", UCPlayer.FormatCharacterName, UCPlayer.FormatCharacterName);
+    public static readonly Translation<IPlayer, IPlayer, string, string> ReportNotifyAdmin = new Translation<IPlayer, IPlayer, string, string>("<#c480d9>{0} reported {1} for <#fff>{2}</color> as a <#00ffff>{3}</color> report. Check <#c480d9>#player-reports</color> for more information.", arg0Fmt: UCPlayer.FormatCharacterName, arg1Fmt: UCPlayer.FormatCharacterName);
     [TranslationData(SectionReport)]
     public static readonly Translation<string> ReportNotifyViolatorToast = new Translation<string>("<#c480d9>You've been reported for <#00ffff>{0}</color>.\nCheck <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.", TranslationOptions.TMProUI);
     [TranslationData(SectionReport)]
@@ -1905,7 +1774,7 @@ internal static class T
     [TranslationData(SectionReport)]
     public static readonly Translation ReportNotifyViolatorMessage2 = new Translation("<#c480d9>Check <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.");
     [TranslationData(SectionReport)]
-    public static readonly Translation<IPlayer> ReportCooldown = new Translation<IPlayer>("<#9cffb3>You've already reported {0} in the past hour.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> ReportCooldown = new Translation<IPlayer>("<#9cffb3>You've already reported {0} in the past hour.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionReport)]
     public static readonly Translation<ulong, IPlayer> ReportConfirm = new Translation<ulong, IPlayer>("<#c480d9>Did you mean to report {1} <i><#444>{0}</color></i>? Type <#ff8c69>/confirm</color> to continue.", arg1Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionReport)]
@@ -1917,7 +1786,7 @@ internal static class T
     #region DailyQuests
     private const string SectionDailyQuests = "Daily Quests";
     [TranslationData(SectionDailyQuests, "Sent when new daily quests are put into action.")]
-    public static readonly Translation<DateTime> DailyQuestsNewIndex = new Translation<DateTime>("<#66ccff>New daily quests have been generated! They will be active until <#cedcde>{0}</color> UTC.", "G");
+    public static readonly Translation<DateTime> DailyQuestsNewIndex = new Translation<DateTime>("<#66ccff>New daily quests have been generated! They will be active until <#cedcde>{0}</color> UTC.", arg0Fmt: "G");
     [TranslationData(SectionDailyQuests, "Sent 1 hour before new daily quests are put into action.")]
     public static readonly Translation DailyQuestsOneHourRemaining = new Translation("<#66ccff>You have one hour until new daily quests will be generated!");
     #endregion
@@ -1947,17 +1816,17 @@ internal static class T
     #region Teams
     private const string SectionTeams = "Teams";
     [TranslationData(SectionTeams, "Gets sent to the player when they walk or teleport into main base.")]
-    public static readonly Translation<FactionInfo> EnteredMain = new Translation<FactionInfo>("<#e6e3d5>You have entered the safety of the {0} headquarters!", FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<FactionInfo> EnteredMain = new Translation<FactionInfo>("<#e6e3d5>You have entered the safety of the {0} headquarters!", arg0Fmt: FactionInfo.FormatColorDisplayName);
     [TranslationData(SectionTeams, "Gets sent to the player when they walk or teleport out of main base.")]
-    public static readonly Translation<FactionInfo> LeftMain = new Translation<FactionInfo>("<#e6e3d5>You have left the safety of the {0} headquarters!", FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<FactionInfo> LeftMain = new Translation<FactionInfo>("<#e6e3d5>You have left the safety of the {0} headquarters!", arg0Fmt: FactionInfo.FormatColorDisplayName);
     [TranslationData(SectionTeams, "Gets sent to the player when they join a team.")]
-    public static readonly Translation<FactionInfo> TeamJoinDM = new Translation<FactionInfo>("<#a0ad8e>You've joined {0}.", FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<FactionInfo> TeamJoinDM = new Translation<FactionInfo>("<#a0ad8e>You've joined {0}.", arg0Fmt: FactionInfo.FormatColorDisplayName);
     [TranslationData(SectionTeams, "Gets broadcasted to everyone when someone joins a team.")]
-    public static readonly Translation<FactionInfo, IPlayer> TeamJoinAnnounce = new Translation<FactionInfo, IPlayer>("<#a0ad8e>{1} joined {0}!", FactionInfo.FormatColorDisplayName, UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<FactionInfo, IPlayer> TeamJoinAnnounce = new Translation<FactionInfo, IPlayer>("<#a0ad8e>{1} joined {0}!", arg0Fmt: FactionInfo.FormatColorDisplayName, arg1Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionTeams, "Gets broadcasted when the game is over.")]
-    public static readonly Translation<FactionInfo> TeamWin = new Translation<FactionInfo>("<#a0ad8e>{0} has won the battle!", FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<FactionInfo> TeamWin = new Translation<FactionInfo>("<#a0ad8e>{0} has won the battle!", arg0Fmt: FactionInfo.FormatColorDisplayName);
     [TranslationData(SectionTeams)]
-    public static readonly Translation<Cooldown> TeamsCooldown = new Translation<Cooldown>("<#ff8c69>You can't use /teams for another {0}.", Cooldown.FormatTimeLong);
+    public static readonly Translation<Cooldown> TeamsCooldown = new Translation<Cooldown>("<#ff8c69>You can't use /teams for another {0}.", arg0Fmt: Cooldown.FormatTimeLong);
     [TranslationData(SectionTeams)]
     public static readonly Translation TeamsUIHeader = new Translation("Choose a Team", TranslationOptions.TMProUI);
     [TranslationData(SectionTeams)]
@@ -1980,62 +1849,62 @@ internal static class T
     private const string SectionSpotting = "Spotting";
     [TranslationData(SectionSpotting)]
     public static readonly Translation SpottedToast = new Translation("<#b9ffaa>SPOTTED", TranslationOptions.TMProUI);
-    [TranslationData(SectionSpotting, FormattingDescriptions = new string[] { "Team color of the speaker.", "Target" })]
-    public static readonly Translation<Color, string> SpottedMessage = new Translation<Color, string>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Enemy {1} spotted!", TranslationOptions.NoColorOptimization);
+    [TranslationData(SectionSpotting, Parameters = [ "Team color of the speaker.", "Target" ])]
+    public static readonly Translation<Color, string> SpottedMessage = new Translation<Color, string>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Enemy {1} spotted!");
     [TranslationData(SectionSpotting)]
-    public static readonly Translation SpottedTargetPlayer = new Translation("contact", TranslationOptions.NoColorOptimization);
+    public static readonly Translation SpottedTargetPlayer = new Translation("contact");
     [TranslationData(SectionSpotting)]
-    public static readonly Translation SpottedTargetFOB = new Translation("FOB", TranslationOptions.NoColorOptimization);
+    public static readonly Translation SpottedTargetFOB = new Translation("FOB");
     [TranslationData(SectionSpotting)]
-    public static readonly Translation SpottedTargetCache = new Translation("Cache", TranslationOptions.NoColorOptimization);
+    public static readonly Translation SpottedTargetCache = new Translation("Cache");
     #endregion
 
     #region Actions
     private const string SectionActions = "Actions";
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> NeedMedicChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need a medic here!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> NeedMedicChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need a medic here!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> NeedMedicToast = new Translation<string>("<#a1998d>{0} needs healing.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> NeedAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need some ammo here!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> NeedAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need some ammo here!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> NeedAmmoToast = new Translation<string>("<#a1998d>{0} needs ammunition.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> NeedRideChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Hey, I need a ride!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> NeedRideChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Hey, I need a ride!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> NeedRideToast = new Translation<string>("<#a1998d>{0} needs a ride.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> NeedSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need help over here!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> NeedSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need help over here!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> NeedSupportToast = new Translation<string>("<#a1998d>{0} needs help.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> HeliPickupChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting helicopter transport!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> HeliPickupChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting helicopter transport!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> HeliPickupToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs transport.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> HeliDropoffChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting drop off at this position!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> HeliDropoffChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting drop off at this position!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> HeliDropoffToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> is requesting drop off.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> SuppliesBuildChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB building supplies!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> SuppliesBuildChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB building supplies!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> SuppliesBuildToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB supplies.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> SuppliesAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB ammunition supplies!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> SuppliesAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB ammunition supplies!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> SuppliesAmmoToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB ammunition.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> AirSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting close air support!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> AirSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting close air support!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> AirSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs air support.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> ArmorSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting armor support!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> ArmorSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting armor support!");
     [TranslationData(SectionActions)]
     public static readonly Translation<string> ArmorSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs armor support.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> ThankYouChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Thank you!", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> ThankYouChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Thank you!");
     [TranslationData(SectionActions)]
-    public static readonly Translation<Color> SorryChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Sorry.", TranslationOptions.NoColorOptimization);
+    public static readonly Translation<Color> SorryChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Sorry.");
     [TranslationData(SectionActions)]
     public static readonly Translation AttackToast = new Translation("<#a1998d>Attack the marked position.", TranslationOptions.TMProUI);
     [TranslationData(SectionActions)]
@@ -2058,13 +1927,13 @@ internal static class T
     #region Teleport
     private const string SectionTeleport = "Teleport Command";
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> TeleportTargetDead = new Translation<IPlayer>("<#8f9494>{0} is not alive.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> TeleportTargetDead = new Translation<IPlayer>("<#8f9494>{0} is not alive.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionTeleport)]
-    public static readonly Translation<IPlayer, InteractableVehicle> TeleportSelfSuccessVehicle = new Translation<IPlayer, InteractableVehicle>("<#bfb9ac>You were put in {0}'s {1}.", UCPlayer.FormatColoredCharacterName, FormatRarityColor);
+    public static readonly Translation<IPlayer, InteractableVehicle> TeleportSelfSuccessVehicle = new Translation<IPlayer, InteractableVehicle>("<#bfb9ac>You were put in {0}'s {1}.", arg0Fmt: UCPlayer.FormatColoredCharacterName, arg1Fmt: FormatRarityColor);
     [TranslationData(SectionTeleport)]
-    public static readonly Translation<IPlayer> TeleportSelfSuccessPlayer = new Translation<IPlayer>("<#bfb9ac>You were teleported to {0}.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> TeleportSelfSuccessPlayer = new Translation<IPlayer>("<#bfb9ac>You were teleported to {0}.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> TeleportSelfPlayerObstructed = new Translation<IPlayer>("<#8f9494>Failed to teleport you to {0}, their position is obstructed.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> TeleportSelfPlayerObstructed = new Translation<IPlayer>("<#8f9494>Failed to teleport you to {0}, their position is obstructed.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
     public static readonly Translation<string> TeleportLocationNotFound = new Translation<string>("<#8f9494>Failed to find a location similar to <#ddd>{0}</color>.");
     [TranslationData(SectionTeleport)]
@@ -2096,15 +1965,15 @@ internal static class T
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
     public static readonly Translation<IPlayer, GridLocation> TeleportOtherGridLocationObstructed = new Translation<IPlayer, GridLocation>("<#8f9494>Failed to teleport {0} to <#ddd>{1}</color>, it's position is obstructed.");
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer, InteractableVehicle> TeleportOtherSuccessVehicle = new Translation<IPlayer, IPlayer, InteractableVehicle>("<#bfb9ac>{0} was put in {1}'s {2}.", UCPlayer.FormatColoredCharacterName, UCPlayer.FormatColoredCharacterName, FormatRarityColor);
+    public static readonly Translation<IPlayer, IPlayer, InteractableVehicle> TeleportOtherSuccessVehicle = new Translation<IPlayer, IPlayer, InteractableVehicle>("<#bfb9ac>{0} was put in {1}'s {2}.", arg0Fmt: UCPlayer.FormatColoredCharacterName, arg1Fmt: UCPlayer.FormatColoredCharacterName, arg2Fmt: FormatRarityColor);
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer> TeleportOtherSuccessPlayer = new Translation<IPlayer, IPlayer>("<#bfb9ac>{0} was teleported to {1}.", UCPlayer.FormatColoredCharacterName, UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer, IPlayer> TeleportOtherSuccessPlayer = new Translation<IPlayer, IPlayer>("<#bfb9ac>{0} was teleported to {1}.", arg0Fmt: UCPlayer.FormatColoredCharacterName, arg1Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer> TeleportOtherObstructedPlayer = new Translation<IPlayer, IPlayer>("<#8f9494>Failed to teleport {0} to {1}, their position is obstructed.", UCPlayer.FormatColoredCharacterName, UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer, IPlayer> TeleportOtherObstructedPlayer = new Translation<IPlayer, IPlayer>("<#8f9494>Failed to teleport {0} to {1}, their position is obstructed.", arg0Fmt: UCPlayer.FormatColoredCharacterName, arg1Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, string> TeleportOtherSuccessLocation = new Translation<IPlayer, string>("<#bfb9ac>{0} was teleported to <#ddd>{1}</color>.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer, string> TeleportOtherSuccessLocation = new Translation<IPlayer, string>("<#bfb9ac>{0} was teleported to <#ddd>{1}</color>.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, string> TeleportOtherObstructedLocation = new Translation<IPlayer, string>("<#8f9494>Failed to teleport {0} to <#ddd>{1}</color>, it's position is obstructed.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer, string> TeleportOtherObstructedLocation = new Translation<IPlayer, string>("<#8f9494>Failed to teleport {0} to <#ddd>{1}</color>, it's position is obstructed.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
     public static readonly Translation<string> TeleportTargetNotFound = new Translation<string>("<#8f9494>Failed to find a player from <#ddd>{0}</color>.");
     [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
@@ -2114,7 +1983,7 @@ internal static class T
     #region Heal Command
     private const string SectionHeal = "Heal Command";
     [TranslationData(SectionHeal, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> HealPlayer = new Translation<IPlayer>("<#ff9966>You healed {0}.", UCPlayer.FormatColoredCharacterName);
+    public static readonly Translation<IPlayer> HealPlayer = new Translation<IPlayer>("<#ff9966>You healed {0}.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionHeal)]
     public static readonly Translation HealSelf = new Translation("<#ff9966>You were healed.");
     #endregion
@@ -2186,25 +2055,25 @@ internal static class T
     [TranslationData(SectionUAV, "Sent when the player tries to request a UAV while not a Squadleader.")]
     public static readonly Translation RequestUAVNotSquadleader = new Translation("<#e86868>You have to be a squad leader and have a <#cedcde>SQUAD LEADER</color> kit to request a <#cc99ff>UAV</color>.");
     [TranslationData(SectionUAV, "Sent when the player requests a UAV from someone other than themselves as feedback.", "The active commander.")]
-    public static readonly Translation<IPlayer> RequestUAVSent = new Translation<IPlayer>("<#33cccc>A request was sent to <#c$commander$>{0}</color> for a <#cc99ff>UAV</color>.", UCPlayer.FormatNickName);
+    public static readonly Translation<IPlayer> RequestUAVSent = new Translation<IPlayer>("<#33cccc>A request was sent to <#c$commander$>{0}</color> for a <#cc99ff>UAV</color>.", arg0Fmt: UCPlayer.FormatNickName);
     [TranslationData(SectionUAV, "Sent when the player requests a UAV from someone other than themselves to the commander.", "The requester of the UAV.", "The requester's squad.", "Location of request.")]
     public static readonly Translation<IPlayer, Squad, GridLocation> RequestUAVTell = new Translation<IPlayer, Squad, GridLocation>("<#33cccc>{0} from squad <#cedcde><uppercase>{1}</uppercase></color> wants to deploy a <#cc99ff>UAV</color> at <#fff>{2}</color>.\n<#cedcde>Type /confirm or /deny in the next 15 seconds.", UCPlayer.FormatColoredNickName, Squad.FormatName);
     [TranslationData(SectionUAV, "Sent when the player tries to request a UAV while no one on their team has a commander kit.")]
     public static readonly Translation RequestUAVNoActiveCommander = new Translation("<#e86868>There's currently no players with the <#c$commander$>commander</color> kit on your team. <#cc99ff>UAV</color>s must be requested from a <#c$commander$>commander</color>.");
     [TranslationData(SectionUAV, "Sent to the commander if the requester disconnected before the commander confirmed.", "The requester.")]
-    public static readonly Translation<IPlayer> RequestUAVRequesterLeft = new Translation<IPlayer>("<#e86868>The <#cc99ff>UAV</color> request was cancelled because {0} disconnected.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> RequestUAVRequesterLeft = new Translation<IPlayer>("<#e86868>The <#cc99ff>UAV</color> request was cancelled because {0} disconnected.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionUAV, "Sent to the requested if the commander disconnected before they confirmed.", "The commander.")]
-    public static readonly Translation<IPlayer> RequestUAVCommanderLeft = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was cancelled because <#c$commander$>{0}</color> disconnected.", UCPlayer.FormatNickName);
+    public static readonly Translation<IPlayer> RequestUAVCommanderLeft = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was cancelled because <#c$commander$>{0}</color> disconnected.", arg0Fmt: UCPlayer.FormatNickName);
     [TranslationData(SectionUAV, "Sent to the commander if the requester changes teams before the commander confirmed.", "The requester.")]
-    public static readonly Translation<IPlayer> RequestUAVRequesterChangedTeams = new Translation<IPlayer>("<#e86868>The <#cc99ff>UAV</color> request was cancelled because {0} changed teams.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> RequestUAVRequesterChangedTeams = new Translation<IPlayer>("<#e86868>The <#cc99ff>UAV</color> request was cancelled because {0} changed teams.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionUAV, "Sent to the requested if the commander changes team before they confirmed.", "The commander.")]
-    public static readonly Translation<IPlayer> RequestUAVCommanderChangedTeams = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was cancelled because <#c$commander$>{0}</color> changed teams.", UCPlayer.FormatNickName);
+    public static readonly Translation<IPlayer> RequestUAVCommanderChangedTeams = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was cancelled because <#c$commander$>{0}</color> changed teams.", arg0Fmt: UCPlayer.FormatNickName);
     [TranslationData(SectionUAV, "Sent to the commander if the requester changes classes to a non-SL class, leaves their squad, or promotes someone else before the commander confirmed.", "The requester.")]
-    public static readonly Translation<IPlayer> RequestUAVRequesterNotSquadLeader = new Translation<IPlayer>("<#e86868>The <#cc99ff>UAV</color> request was cancelled because {0} changed teams.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> RequestUAVRequesterNotSquadLeader = new Translation<IPlayer>("<#e86868>The <#cc99ff>UAV</color> request was cancelled because {0} changed teams.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionUAV, "Sent to the requested if the commander stops being commander before they confirmed.", "The commander.")]
-    public static readonly Translation<IPlayer> RequestUAVCommanderNoLongerCommander = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was cancelled because {0} is no longer the <#c$commander$>commander</color>.", UCPlayer.FormatColoredNickName);
+    public static readonly Translation<IPlayer> RequestUAVCommanderNoLongerCommander = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was cancelled because {0} is no longer the <#c$commander$>commander</color>.", arg0Fmt: UCPlayer.FormatColoredNickName);
     [TranslationData(SectionUAV, "Sent to the requested if the commander denies their UAV request.", "The commander.")]
-    public static readonly Translation<IPlayer> RequestUAVDenied = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was denied by <#c$commander$>{0}</color>.", UCPlayer.FormatNickName);
+    public static readonly Translation<IPlayer> RequestUAVDenied = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was denied by <#c$commander$>{0}</color>.", arg0Fmt: UCPlayer.FormatNickName);
     [TranslationData(SectionUAV, "Sent to the requested if someone else is already requesting a UAV.")]
     public static readonly Translation RequestAlreadyActive = new Translation("<#e86868>Someone else on your team is already requesting a <#cc99ff>UAV</color>.");
 
@@ -2483,77 +2352,4 @@ internal static class T
     public static readonly Translation[] Translations;
     public static readonly Dictionary<string, Translation> Signs;
     internal static readonly List<string> AllLanguages = new List<string>(4);
-
-    static T()
-    {
-        FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).Where(x => typeof(Translation).IsAssignableFrom(x.FieldType)).ToArray();
-        Translations = new Translation[fields.Length];
-        int i2 = -1;
-        int signCt = 0;
-        int publicTranslations = 0;
-        for (int i = 0; i < fields.Length; ++i)
-        {
-            FieldInfo field = fields[i];
-            if (typeof(Translation).IsAssignableFrom(field.FieldType))
-            {
-                if (field.GetValue(null) is not Translation tr)
-                    L.LogError("Failed to convert " + field.Name + " to a translation!");
-                else if (i2 + 1 < Translations.Length)
-                {
-                    tr.Key = field.Name;
-                    tr.Id = i2;
-                    tr.AttributeData = Attribute.GetCustomAttribute(field, typeof(TranslationDataAttribute)) as TranslationDataAttribute;
-                    if (tr.AttributeData is not { IsPriorityTranslation: false })
-                        ++publicTranslations;
-                    tr.Init();
-                    if (tr.AttributeData is not null)
-                    {
-                        if (!string.IsNullOrEmpty(tr.AttributeData.SignId))
-                            ++signCt;
-                    }
-                    else L.LogWarning($"Translation missing attribute: {field.Name}{(tr.DeclarationLineNumber.HasValue ? " at: L# " + tr.DeclarationLineNumber?.ToString(Data.AdminLocale) : ".")}");
-                    Translations[++i2] = tr;
-                }
-                else
-                    L.LogError("Ran out of space in translation array for " + field.Name + " at " + (i2 + 1), method: "TRANSLATIONS");
-            }
-        }
-
-        if (Translations.Length != i2 + 1)
-        {
-            L.LogWarning("Translations had to resize for some reason from " + Translations.Length + " to " + (i2 + 1) + ".",
-                method: "TRANSLATIONS");
-            Array.Resize(ref Translations, i2 + 1);
-        }
-        Signs = new Dictionary<string, Translation>(signCt);
-        for (int i = 0; i < Translations.Length; ++i)
-        {
-            Translation tr = Translations[i];
-            if (tr.AttributeData is not null && !string.IsNullOrEmpty(tr.AttributeData.SignId))
-            {
-                if (Signs.ContainsKey(tr.AttributeData.SignId!))
-                    L.LogWarning("Duplicate Sign ID: \"" + tr.AttributeData.SignId + "\" in translation \"" + tr.Key + "\".", method: "TRANSLATIONS");
-                else
-                    Signs.Add(tr.AttributeData.SignId!, tr);
-            }
-        }
-        Localization.ClearSection(TranslationSection.Primary);
-        Localization.IncrementSection(TranslationSection.Primary, publicTranslations);
-    }
-    public static string Translate(this TranslationList list, UCPlayer player) => TryTranslate(list, player.Locale.LanguageInfo, out string local) ? local : string.Empty;
-    public static string Translate(this TranslationList list, LanguageInfo language) => TryTranslate(list, language, out string local) ? local : string.Empty;
-    public static bool TryTranslate(this TranslationList list, UCPlayer player, out string local) => TryTranslate(list, player.Locale.LanguageInfo, out local);
-    public static bool TryTranslate(this TranslationList list, LanguageInfo language, out string local)
-    {
-        if (list is null)
-        {
-            local = null!;
-            return false;
-        }
-
-        language ??= Localization.GetDefaultLanguage();
-        if (list.TryGetValue(language.Code, out local) || (!language.IsDefault && list.TryGetValue(L.Default, out local)))
-            return true;
-        return (local = list.Values.FirstOrDefault()!) != null;
-    }
 }

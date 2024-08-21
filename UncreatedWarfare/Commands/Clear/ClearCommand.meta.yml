@@ -1,35 +1,35 @@
 ﻿# ClearCommand
 Description: "Clear inventories, items, vehicles, and buildables from the world."
 Parameters:
-  - Name: "inventory"
-    Alias: "inv"
+  - Name: inventory
+    Alias: inv
     Type: Verbatim
     Description: "Clear the <caller />'s inventory."
     Parameters:
-      - Name: Player
+      - Name: player
         Type: Uncreated.Warfare.Players.IPlayer
         Optional: true
-        Description: "Clear <param 'Player' />'s inventory."
+        Description: "Clear <param 'player' />'s inventory."
 
-  - Name: "items"
-    Aliases: [ "item", "i" ]
+  - Name: items
+    Aliases: [ item, i ]
     Type: Verbatim
     Description: "Clear all items on the map."
     Parameters:
-      - Name: Range
+      - Name: range
         Type: float
         Optional: true
-        Description: "Clear all items on the map within <param 'Range' /> meters of <caller />."
+        Description: "Clear all items on the map within <param 'range' /> meters of <caller />."
 
-  - Name: "vehicles"
-    Aliases: [ "veh", "vehicle", "v" ]
+  - Name: vehicles
+    Aliases: [ veh, vehicle, v ]
     Type: Verbatim
     Description: "Destroy and respawn all vehicles on the map."
     Flags:
       - Name: "e"
         Description: "Destroy and respawn all empty vehicles on the map."
 
-  - Name: "buildables"
-    Aliases: [ "structures", "struct", "s", "structure", "barricades", "barricade", "b" ]
+  - Name: buildables
+    Aliases: [ structures, struct, s, structure, barricades, barricade, b ]
     Type: Verbatim
     Description: "Clear all structures and barricades on the map."

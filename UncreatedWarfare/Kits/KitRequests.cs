@@ -253,9 +253,9 @@ public class KitRequests
                 player.PurchaseSync.Release();
         }
 
-        KitManager.InvokeOnKitChanged(player, kit, oldKit);
+        Manager.InvokeOnKitChanged(player, kit, oldKit);
         if (manual)
-            KitManager.InvokeOnManualKitChanged(player, kit, oldKit);
+            Manager.InvokeOnManualKitChanged(player, kit, oldKit);
     }
     private async Task<bool> GrantKitRequest(CommandContext ctx, Kit kit, CancellationToken token = default)
     {
@@ -328,7 +328,7 @@ public class KitRequests
 
             ItemAsset? asset = binding.GetAsset(kit, player.GetTeam());
             if (asset != null && KitEx.CanBindHotkeyTo(asset, page))
-                player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)page, x, y);
+                player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)page, x, y);
         }
     }
     internal async Task RemoveKit(WarfarePlayer player, bool manual, CancellationToken token = default, bool psLock = true)
@@ -350,9 +350,9 @@ public class KitRequests
                 player.PurchaseSync.Release();
         }
 
-        KitManager.InvokeOnKitChanged(player, null, oldKit);
+        Manager.InvokeOnKitChanged(player, null, oldKit);
         if (manual)
-            KitManager.InvokeOnManualKitChanged(player, null, oldKit);
+            Manager.InvokeOnManualKitChanged(player, null, oldKit);
     }
     /// <exception cref="BaseCommandContext"/>
     public async Task BuyKit(CommandContext ctx, Kit kit, Vector3? effectPos = null, CancellationToken token = default)

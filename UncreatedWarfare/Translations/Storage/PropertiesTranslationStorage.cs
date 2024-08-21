@@ -1,10 +1,15 @@
 ﻿using DanielWillett.JavaPropertiesParser;
+using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.Formatting;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Text;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Translations.Storage;
 public class PropertiesTranslationStorage : ITranslationStorage
@@ -97,17 +102,61 @@ public class PropertiesTranslationStorage : ITranslationStorage
         }
 
         // write argument descriptions
+        StringBuilder argBuilder = new StringBuilder();
         for (int i = 0; i < translation.ArgumentCount; ++i)
         {
             Type argumentType = type.GenericTypeArguments[i];
-            string comment = $" {{{i}}} - {argumentType.Name}";
+            argBuilder
+                .Append(" {")
+                .Append(i.ToString(CultureInfo.InvariantCulture))
+                .Append("} - ")
+                .Append(Accessor.Formatter.Format(argumentType, refMode: ByRefTypeMode.Ignore));
+
+            ArgumentFormat fmt = translation.GetArgumentFormat(i);
+            if (fmt.FormatDisplayName != null)
+            {
+                argBuilder.Append(" (Format: ").Append(fmt.FormatDisplayName).Append(')');
+            }
+            else if (fmt.Format != null)
+            {
+                argBuilder.Append(" (Format: \"").Append(fmt.Format).Append("\")");
+            }
 
             if (translation.Data.ParameterDescriptions is { } descs && descs.Length > i && !string.IsNullOrWhiteSpace(descs[i]))
             {
-                comment += " " + descs[i];
+                argBuilder.Append(" | ").Append(descs[i]);
             }
 
-            writer.WriteComment(comment);
+            if (fmt.FormatAddons is { Length: > 0 })
+            {
+                writer.WriteComment(argBuilder.ToString());
+                argBuilder.Clear();
+                if (fmt.FormatAddons.Length == 1)
+                {
+                    argBuilder
+                        .Append("  Addon: ")
+                        .Append(fmt.FormatAddons[0].DisplayName ?? Accessor.Formatter.Format(fmt.FormatAddons[0].GetType()));
+                    writer.WriteComment(argBuilder.ToString());
+                }
+                else
+                {
+                    argBuilder.Append("  Addons:");
+                    writer.WriteComment(argBuilder.ToString());
+                    argBuilder.Clear();
+                    for (int a = 0; a < fmt.FormatAddons.Length; ++a)
+                    {
+                        argBuilder
+                            .Append("   - ")
+                            .Append(fmt.FormatAddons[a].DisplayName ?? Accessor.Formatter.Format(fmt.FormatAddons[a].GetType()));
+                        writer.WriteComment(argBuilder.ToString());
+                        argBuilder.Clear();
+                    }
+                }
+            }
+            else
+            {
+                writer.WriteComment(argBuilder.ToString());
+            }
         }
 
         // write default value if it doesn't match current value.

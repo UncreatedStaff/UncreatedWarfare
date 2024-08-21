@@ -932,6 +932,135 @@ public static class MySqlSnippets
                 });
         }
     }
+
+    /// <summary>
+    /// Create a list of all enums in the given type.
+    /// </summary>
+    /// <param name="exclude">Don't include this value.</param>
+    /// <returns>A string like: "enum(A,B,C,D)"</returns>
+    public static string EnumList<TEnum>(TEnum exclude) where TEnum : unmanaged, Enum
+    {
+        TEnum[] values = (TEnum[])typeof(TEnum).GetEnumValues();
+        int c = 0;
+        for (int i = 0; i < values.Length; ++i)
+        {
+            TEnum val = values[i];
+            if (val.Equals(exclude))
+                continue;
+            ++c;
+        }
+
+        string[] names = new string[c];
+        int index = -1;
+        int ttlLen = 5;
+        for (int i = 0; i < values.Length; ++i)
+        {
+            TEnum val = values[i];
+            if (val.Equals(exclude))
+                continue;
+
+            string enumName = val.ToString();
+            names[++index] = enumName;
+            ttlLen += enumName.Length + 1;
+        }
+
+        return string.Create(ttlLen, names, WriteEnumListAction);
+    }
+
+    /// <summary>
+    /// Create a list of all enums in the given type.
+    /// </summary>
+    /// <param name="exclude">Don't include these values.</param>
+    /// <returns>A string like: "enum(A,B,C,D)"</returns>
+    public static string EnumList<TEnum>(params TEnum[] exclude) where TEnum : unmanaged, Enum
+    {
+        TEnum[] values = (TEnum[])typeof(TEnum).GetEnumValues();
+        int c = 0;
+        for (int i = 0; i < values.Length; ++i)
+        {
+            TEnum val = values[i];
+            bool exists = false;
+            for (int j = 0; j < exclude.Length; ++j)
+            {
+                if (!exclude[j].Equals(val))
+                    continue;
+
+                exists = true;
+                break;
+            }
+
+            if (exists)
+                continue;
+
+            ++c;
+        }
+
+        string[] names = new string[c];
+        int index = -1;
+        int ttlLen = 5;
+        for (int i = 0; i < values.Length; ++i)
+        {
+            TEnum val = values[i];
+            bool exists = false;
+            for (int j = 0; j < exclude.Length; ++j)
+            {
+                if (!exclude[j].Equals(val))
+                    continue;
+
+                exists = true;
+                break;
+            }
+
+            if (exists)
+                continue;
+
+            string enumName = val.ToString();
+            names[++index] = enumName;
+            ttlLen += enumName.Length + 1;
+        }
+
+        return string.Create(ttlLen, names, WriteEnumListAction);
+    }
+
+    /// <summary>
+    /// Create a list of all enums in the given type.
+    /// </summary>
+    /// <returns>A string like: "enum(A,B,C,D)"</returns>
+    public static string EnumList<TEnum>() where TEnum : unmanaged, Enum
+    {
+        TEnum[] values = (TEnum[])typeof(TEnum).GetEnumValues();
+        string[] names = new string[values.Length];
+        int ttlLen = 5;
+        for (int i = 0; i < values.Length; ++i)
+        {
+            string enumName = values[i].ToString();
+            names[i] = enumName;
+            ttlLen += enumName.Length + 1;
+        }
+
+        return string.Create(ttlLen, names, WriteEnumListAction);
+    }
+
+    private static void WriteEnumListAction(Span<char> span, string[] state)
+    {
+        "enum(".AsSpan().CopyTo(span);
+        int index = 5;
+        for (int i = 0; i < state.Length; ++i)
+        {
+            if (i != 0)
+            {
+                span[index] = ',';
+                ++index;
+            }
+
+            string name = state[i];
+            name.AsSpan().CopyTo(span[index..]);
+            index += name.Length;
+        }
+
+        span[index] = ')';
+    }
+
     private static int WriteMidSection(Span<char> span, int ind)
     {
         span[ind] = '`';

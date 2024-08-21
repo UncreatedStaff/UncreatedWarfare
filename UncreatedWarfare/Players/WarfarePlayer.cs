@@ -162,6 +162,8 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     }
 
     bool ICommandUser.IsSuperUser => false;
+    bool ICommandUser.IsTerminal => false;
+    bool ICommandUser.IMGUI => Save.IMGUI;
     void ICommandUser.SendMessage(string message)
     {
         ChatManager.serverSendMessage(message, Palette.AMBIENT, null, SteamPlayer, EChatMode.SAY, useRichTextFormatting: true);

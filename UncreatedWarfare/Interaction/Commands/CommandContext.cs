@@ -44,6 +44,9 @@ public class CommandContext : ControlException
         get => _argumentOffset;
         set
         {
+            if (value == _argumentOffset)
+                return;
+
             _argumentOffset = Math.Clamp(value, 0, _argumentCount - 1);
             if (_parameters.Length - _argumentOffset <= 0)
             {
@@ -62,6 +65,7 @@ public class CommandContext : ControlException
     /// <summary>
     /// Player that called the command. Will be <see langword="null"/> if the command was called from console or some other source, but not marked as nullable for ease of use.
     /// </summary>
+    /// <remarks>Always call <see cref="AssertRanByPlayer"/> before using this property.</remarks>
     public WarfarePlayer Player { get; }
 #nullable restore
 

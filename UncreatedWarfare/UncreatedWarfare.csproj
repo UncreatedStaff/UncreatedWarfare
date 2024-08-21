@@ -60,6 +60,10 @@
   <ItemGroup>
     <Compile Remove="Commands\_BlankCommand.cs" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <None Remove="Commands\Kit\KitCommand.meta.yml" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
@@ -143,6 +147,7 @@
 
     <!-- Commands -->
     <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
 
   </ItemGroup>
 

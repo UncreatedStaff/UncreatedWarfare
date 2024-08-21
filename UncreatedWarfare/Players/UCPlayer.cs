@@ -1088,6 +1088,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             PlayerName = Name.PlayerName
         };
     }
+    bool ICommandUser.IsTerminal => false;
+    bool ICommandUser.IMGUI => Save.IMGUI;
     public async UniTask<string?> GetProfilePictureURL(AvatarSize size, CancellationToken token = default)
     {
         if (!UCWarfare.IsLoaded)

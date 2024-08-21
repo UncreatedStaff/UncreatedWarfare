@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Uncreated.Warfare.Util;
-public static class CollectionExtensions
+public static class CollectionUtility
 {
     /// <summary>
     /// Check if a collection is <see langword="null"/> or if it has no elements.

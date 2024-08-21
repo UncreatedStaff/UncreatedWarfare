@@ -103,15 +103,7 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
     }
 
     /// <summary>Indexed from 1.</summary>
-    public async Task<int> GetFreeLoadoutId(ulong playerId)
-    {
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
-
-        return await GetFreeLoadoutId(dbContext, playerId).ConfigureAwait(false);
-    }
-
-    /// <summary>Indexed from 1.</summary>
-    public async Task<int> GetFrGetFreeLoadoutIdeeLoadoutId(ulong playerId, CancellationToken token = default)
+    public async Task<int> GetFreeLoadoutId(ulong playerId, CancellationToken token = default)
     {
         await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
 

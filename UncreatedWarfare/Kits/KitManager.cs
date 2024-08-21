@@ -27,6 +27,7 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
@@ -47,6 +48,7 @@ public partial class KitManager :
     private readonly ILogger<KitManager> _logger;
     private readonly PlayerService _playerService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly LanguageService _languageService;
 
     public const string DefaultKitId = "default";
 
@@ -80,6 +82,7 @@ public partial class KitManager :
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<KitManager>>();
         _playerService = serviceProvider.GetRequiredService<PlayerService>();
+        _languageService = serviceProvider.GetRequiredService<LanguageService>();
 
         MenuUI = serviceProvider.GetRequiredService<KitMenuUI>();
 
@@ -251,9 +254,9 @@ public partial class KitManager :
             return null;
 
         KeyValuePair<uint, Kit>[] list = Cache.KitDataByKey.ToArray();
-        int index = F.StringIndexOf(list, x => x.Value.InternalName, id, exactMatchOnly);
+        int index = CollectionUtility.StringIndexOf(list, x => x.Value.InternalName, id, exactMatchOnly);
         if (index == -1)
-            index = F.StringIndexOf(list, x => x.Value.GetDisplayName(null, true), id, exactMatchOnly);
+            index = CollectionUtility.StringIndexOf(list, x => x.Value.GetDisplayName(_languageService, null, true), id, exactMatchOnly);
 
         kit = index == -1 ? null : list[index].Value;
         if (kit == null)

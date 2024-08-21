@@ -1,6 +1,7 @@
 ﻿using SDG.NetTransport;
 using System;
 using System.Text;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
@@ -79,7 +80,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(player, out Color textColor);
+        string value = translation.Translate(player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -96,7 +97,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, player, out Color textColor);
+        string value = translation.Translate(arg0, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -113,7 +114,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, arg1, player, out Color textColor);
+        string value = translation.Translate(arg0, arg1, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -130,7 +131,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, arg1, arg2, player, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -147,7 +148,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, player, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -164,7 +165,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, player, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -181,7 +182,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, player, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -198,7 +199,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, player, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -215,7 +216,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -232,7 +233,7 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
     }
 
@@ -249,8 +250,251 @@ public class ChatService
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, out Color textColor, canUseIMGUI: true);
         SendTranslationMessage(value, textColor, translation, player);
+    }
+
+    /// <summary>
+    /// Send a 0-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="ArgumentException">The translation has arguments.</exception>
+    public void Send(ICommandUser user, Translation translation)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 1-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0>(ICommandUser user, Translation<T0> translation, T0 arg0)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 2-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0, T1>(ICommandUser user, Translation<T0, T1> translation, T0 arg0, T1 arg1)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0, arg1);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, arg1, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 3-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0, T1, T2>(ICommandUser user, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0, arg1, arg2);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, arg1, arg2, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 4-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0, T1, T2, T3>(ICommandUser user, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0, arg1, arg2, arg3);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 5-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0, T1, T2, T3, T4>(ICommandUser user, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 6-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0, T1, T2, T3, T4, T5>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 7-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0, T1, T2, T3, T4, T5, T6>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 8-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0, T1, T2, T3, T4, T5, T6, T7>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 9-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
+    }
+
+    /// <summary>
+    /// Send a 10-arg translation to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            return;
+        }
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, user, canUseIMGUI: user.IMGUI);
+        SendTranslationMessage(value, translation, user);
     }
 
     /// <summary>
@@ -267,7 +511,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(in set, out Color textColor);
+        string value = translation.Translate(in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -284,7 +528,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, in set, out Color textColor);
+        string value = translation.Translate(arg0, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -301,7 +545,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, arg1, in set, out Color textColor);
+        string value = translation.Translate(arg0, arg1, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -318,7 +562,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, arg1, arg2, in set, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -335,7 +579,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, in set, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -352,7 +596,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, in set, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -369,7 +613,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, in set, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -386,7 +630,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, in set, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -403,7 +647,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, in set, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -420,7 +664,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, in set, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -437,7 +681,7 @@ public class ChatService
         if (set.Count <= 0)
             return;
 
-        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, in set, out Color textColor);
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, in set, out Color textColor, canUseIMGUI: true);
         SendTranslationSet(value, textColor, translation, in set);
     }
 
@@ -1038,14 +1282,33 @@ public class ChatService
         {
             string vl2 = value;
             WarfarePlayer pl2 = player;
+            LanguageInfo lang2 = player.Locale.LanguageInfo;
             Color cl2 = textColor;
             Translation tr2 = translation;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
 
-                CheckTranslationLength(pl2.Locale.LanguageInfo, ref vl2, tr2, ref cl2, pl2.Save.IMGUI);
+                CheckTranslationLength(lang2, ref vl2, tr2, ref cl2, pl2.Save.IMGUI);
                 SendRawMessage(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, pl2.SteamPlayer);
+            });
+        }
+    }
+
+    private void SendTranslationMessage(string value, Translation translation, ICommandUser user)
+    {
+        if (GameThread.IsCurrent)
+        {
+            user.SendMessage(value);
+        }
+        else
+        {
+            string vl2 = value;
+            ICommandUser user2 = user;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                user2.SendMessage(vl2);
             });
         }
     }

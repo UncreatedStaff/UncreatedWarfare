@@ -8,9 +8,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Database.ValueConverters;
 using Uncreated.Warfare.Database.ValueGenerators;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
@@ -31,7 +31,7 @@ public static class WarfareDatabaseReflection
         valueConverters.Add(typeof(DateTimeOffset), typeof(DateTimeOffsetValueConverter));
     }
 
-    public static void ApplyValueConverterConfig(ModelBuilder modelBuilder, Action<Dictionary<Type, Type>>? modValueConverters = null)
+    public static void ApplyValueConverterConfig(ModelBuilder modelBuilder, ILogger logger, Action<Dictionary<Type, Type>>? modValueConverters = null)
     {
         Dictionary<Type, Type> valueConverters = new Dictionary<Type, Type>(16);
         AddValueConverters(valueConverters);
@@ -45,7 +45,7 @@ public static class WarfareDatabaseReflection
             if (valueConverters.ContainsKey(entityClrType) || entityClrType.IsDefinedSafe<ValueConverterAttribute>())
             {
                 if (EFCompat.RemoveEntityType(modelBuilder.Model, entityClrType) != null)
-                    Log($"Removed entity type {entityClrType.Name}.");
+                    logger.LogDebug("Removed entity type {0}.", Accessor.Formatter.Format(entityClrType));
 
                 continue;
             }
@@ -66,9 +66,9 @@ public static class WarfareDatabaseReflection
                     continue;
 
                 EFCompat.AddProperty(entity, property);
-                Log($"Added field {entityClrType.Name + "." + property.Name,-66} that was excluded.");
+                logger.LogDebug("Added field {0} that was excluded.", Accessor.Formatter.Format(property));
                 if (propertyAttribute?.Type == null && EFCompat.RemoveEntityType(modelBuilder.Model, clrType) != null)
-                    Log($"Removed entity type {entityClrType.Name}.");
+                    logger.LogDebug("Removed entity type {0}.", Accessor.Formatter.Format(entityClrType));
             }
 
             FieldInfo[] fields = entityClrType.GetFields(BindingFlags.Instance | BindingFlags.Public);
@@ -88,9 +88,9 @@ public static class WarfareDatabaseReflection
                     continue;
 
                 EFCompat.AddProperty(entity, field);
-                Log($"Added field {entityClrType.Name + "." + field.Name,-66} that was excluded.");
+                logger.LogDebug("Added field {0} that was excluded.", Accessor.Formatter.Format(field));
                 if (propertyAttribute?.Type == null && EFCompat.RemoveEntityType(modelBuilder.Model, clrType) != null)
-                    Log($"Removed entity type {entityClrType.Name}.");
+                    logger.LogDebug("Removed entity type {0}.", Accessor.Formatter.Format(entityClrType));
             }
         }
 #pragma warning disable EF1001
@@ -105,7 +105,7 @@ public static class WarfareDatabaseReflection
                 clrType = clrType.GenericTypeArguments[0];
             }
 
-            // Log($"Checking property {EFCompat.GetClrType(property.DeclaringEntityType).Name + "." + EFCompat.GetName(property),-60} of type {clrType.Name,-30}.");
+            // logger.LogDebug("Checking property {0}.{1} of type {2}.", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), EFCompat.GetName(property), Accessor.Formatter.Format(clrType));
 
             MemberInfo? member = (MemberInfo?)EFCompat.GetPropertyInfo(property) ?? property.FieldInfo;
 
@@ -119,14 +119,14 @@ public static class WarfareDatabaseReflection
                 if (property.DeclaringEntityType.GetProperties().Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
                 {
                     EFCompat.AddProperty(property.DeclaringEntityType, name, typeof(uint));
-                    Log($"Added packed IP column for {EFCompat.GetClrType(property.DeclaringEntityType).Name}.{member?.Name ?? "null"}: {name}.");
+                    logger.LogDebug("Added packed IP column for {0}.{1}: {2}.", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name);
                 }
             }
 
             if (member != null && member.IsDefinedSafe<IndexAttribute>())
             {
                 EFCompat.AddIndex(property.DeclaringEntityType, property);
-                Log($"Added generic index for {EFCompat.GetClrType(property.DeclaringEntityType).Name}.{member?.Name ?? "null"}.");
+                logger.LogDebug("Added generic index for {0}.{1}.", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null");
             }
 
             if (member != null && member.TryGetAttributeSafe(out AddNameAttribute addNameAttribute))
@@ -143,11 +143,11 @@ public static class WarfareDatabaseReflection
                     EFCompat.SetValueGeneratorFactory(assetNameProperty,
                         (_, entityType) => AssetNameValueGenerator.Get(entityType, originalName));
 
-                    Log($"Added asset name column for {EFCompat.GetClrType(property.DeclaringEntityType).Name}.{member?.Name ?? "null"}: {name} (max length: {MaxAssetNameLength})");
+                    logger.LogDebug("Added asset name column for {0}.{1}: {2} (max length: {3})", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name, MaxAssetNameLength);
                 }
                 else
                 {
-                    Log($"Asset name column already exists in {EFCompat.GetClrType(property.DeclaringEntityType).Name}.{member?.Name ?? "null"}: {name}");
+                    logger.LogDebug("Asset name column already exists in {0}.{1}: {2}", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name);
                 }
             }
 
@@ -166,9 +166,9 @@ public static class WarfareDatabaseReflection
                     object[] values = attributes.Select(x => ((ExcludedEnumAttribute)x).Value!).Where(x => x != null).ToArray();
                     if (values.Length == 0)
                     {
-                        MethodInfo sqlEnumMethod = typeof(SqlTypes)
+                        MethodInfo sqlEnumMethod = typeof(MySqlSnippets)
                             .GetMethods()
-                            .Single(x => x.Name.Equals(nameof(SqlTypes.Enum), StringComparison.Ordinal)
+                            .Single(x => x.Name.Equals(nameof(MySqlSnippets.EnumList), StringComparison.Ordinal)
                                          && x.GetParameters().Length == 0);
 
                         dataType = (string)sqlEnumMethod
@@ -177,9 +177,9 @@ public static class WarfareDatabaseReflection
                     }
                     else if (values.Length == 1)
                     {
-                        MethodInfo sqlEnumMethod = typeof(SqlTypes)
+                        MethodInfo sqlEnumMethod = typeof(MySqlSnippets)
                             .GetMethods()
-                            .Single(x => x.Name.Equals(nameof(SqlTypes.Enum), StringComparison.Ordinal)
+                            .Single(x => x.Name.Equals(nameof(MySqlSnippets.EnumList), StringComparison.Ordinal)
                                          && x.GetParameters().Length == 1 && !typeof(IEnumerable<>).MakeGenericType(x.GetGenericArguments()[0]).IsAssignableFrom(x.GetParameters()[0].ParameterType));
 
                         dataType = (string)sqlEnumMethod
@@ -188,9 +188,9 @@ public static class WarfareDatabaseReflection
                     }
                     else if (values.Length == 2)
                     {
-                        MethodInfo sqlEnumMethod = typeof(SqlTypes)
+                        MethodInfo sqlEnumMethod = typeof(MySqlSnippets)
                             .GetMethods()
-                            .Single(x => x.Name.Equals(nameof(SqlTypes.Enum), StringComparison.Ordinal)
+                            .Single(x => x.Name.Equals(nameof(MySqlSnippets.EnumList), StringComparison.Ordinal)
                                          && x.GetParameters().Length == 2);
 
                         dataType = (string)sqlEnumMethod
@@ -215,9 +215,9 @@ public static class WarfareDatabaseReflection
 
                         Array array = list.ToArray(clrType);
 
-                        MethodInfo sqlEnumMethod = typeof(SqlTypes)
+                        MethodInfo sqlEnumMethod = typeof(MySqlSnippets)
                             .GetMethods()
-                            .Single(x => x.Name.Equals(nameof(SqlTypes.Enum), StringComparison.Ordinal)
+                            .Single(x => x.Name.Equals(nameof(MySqlSnippets.EnumList), StringComparison.Ordinal)
                                          && x.GetParameters().Length == 1 && x.GetParameters()[0].ParameterType == x.GetGenericArguments()[0].MakeArrayType());
 
                         dataType = (string)sqlEnumMethod
@@ -227,23 +227,23 @@ public static class WarfareDatabaseReflection
                 }
                 else
                 {
-                    MethodInfo sqlEnumMethod = typeof(SqlTypes)
+                    MethodInfo sqlEnumMethod = typeof(MySqlSnippets)
                         .GetMethods()
-                        .Single(x => x.Name.Equals(nameof(SqlTypes.Enum), StringComparison.Ordinal) && x.GetParameters().Length == 0);
+                        .Single(x => x.Name.Equals(nameof(MySqlSnippets.EnumList), StringComparison.Ordinal) && x.GetParameters().Length == 0);
 
                     dataType = (string)sqlEnumMethod
                         .MakeGenericMethod(clrType)
                         .Invoke(null, Array.Empty<object>())!;
                 }
                 
-                ValueConverter converter = CreateValueConverter(ref converterType, clrType, nullable);
+                ValueConverter converter = CreateValueConverter(ref converterType, clrType, logger, nullable);
 
                 EFCompat.SetValueConverter(property, converter);
                 property.SetColumnType(dataType);
                 property.IsNullable = nullable;
 
-                Log($"Set converter for {EFCompat.GetName(property.DeclaringEntityType)}.{EFCompat.GetName(property)} to {converterType.Name}.");
-                Log($" - Type: {dataType}.");
+                logger.LogDebug("Set converter for {0}.{1} to {2}.", EFCompat.GetName(property.DeclaringEntityType), EFCompat.GetName(property), converterType.Name);
+                logger.LogDebug(" - Type: {0}.", dataType);
                 continue;
             }
 
@@ -303,10 +303,10 @@ public static class WarfareDatabaseReflection
 
 
             if (valConverterType.IsGenericTypeDefinition)
-                throw new InvalidOperationException($"Can not use generic type definition: {valConverterType.Name} as a converter.");
+                throw new InvalidOperationException($"Can not use generic type definition: {Accessor.ExceptionFormatter.Format(valConverterType)} as a converter.");
 
             if (!typeof(ValueConverter).IsAssignableFrom(valConverterType))
-                throw new InvalidOperationException($"Can not use type: {valConverterType.Name} as a converter as it doesn't inherit {nameof(ValueConverter)}.");
+                throw new InvalidOperationException($"Can not use type: {Accessor.ExceptionFormatter.Format(valConverterType)} as a converter as it doesn't inherit {Accessor.ExceptionFormatter.Format<ValueConverter>()}.");
 
             if (callback == null || string.IsNullOrEmpty(callback.MethodName))
             {
@@ -314,18 +314,18 @@ public static class WarfareDatabaseReflection
                 {
                     EFCompat.SetValueConverter(property, (ValueConverter)Activator.CreateInstance(valConverterType)!);
 
-                    Log($"Set converter for {EFCompat.GetName(property.DeclaringEntityType)}.{EFCompat.GetName(property)} to {valConverterType.Name}.");
+                    logger.LogDebug("Set converter for {0}.{1} to {2}.", EFCompat.GetName(property.DeclaringEntityType), EFCompat.GetName(property), Accessor.Formatter.Format(valConverterType));
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Failed to create value converter of type {valConverterType.Name}.", ex);
+                    throw new Exception($"Failed to create value converter of type {Accessor.ExceptionFormatter.Format(valConverterType)}.", ex);
                 }
             }
             else
             {
                 MethodInfo? method = valConverterType.GetMethod(callback.MethodName, BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, [ typeof(ModelBuilder), typeof(IMutableProperty), typeof(bool) ], null);
                 if (method == null)
-                    throw new MethodAccessException($"Failed to find value converter callback: {valConverterType.Name}.{callback.MethodName}.");
+                    throw new MethodAccessException($"Failed to find value converter callback: {Accessor.ExceptionFormatter.Format(valConverterType)}.{callback.MethodName}.");
 
                 try
                 {
@@ -333,15 +333,15 @@ public static class WarfareDatabaseReflection
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Exception invoking value converter callback for {valConverterType.Name}.", ex);
+                    throw new Exception($"Exception invoking value converter callback for {Accessor.ExceptionFormatter.Format(valConverterType)}.", ex);
                 }
 
                 ValueConverter? vc = EFCompat.GetValueConverter(property);
                 if (valConverterType.IsInstanceOfType(vc) ||
                     nullable && valConverterType.IsGenericType && (valConverterType.GetGenericTypeDefinition() == typeof(NullableReferenceTypeConverter<,>) || valConverterType.GetGenericTypeDefinition() == typeof(NullableValueTypeConverter<,>)))
                 {
-                    Log($"Set converter for {EFCompat.GetName(property.DeclaringEntityType)}.{EFCompat.GetName(property)} to {vc!.GetType().Name}.");
-                    Log($" - Type: {property.GetColumnType()}.");
+                    logger.LogDebug("Set converter for {0}.{1} to {2}.", EFCompat.GetName(property.DeclaringEntityType), EFCompat.GetName(property), Accessor.Formatter.Format(vc!.GetType()));
+                    logger.LogDebug($" - Type: {property.GetColumnType()}.");
                     if (clrType.IsValueType)
                         property.IsNullable = nullable;
 
@@ -350,35 +350,35 @@ public static class WarfareDatabaseReflection
 
                 try
                 {
-                    ValueConverter converter = CreateValueConverter(ref valConverterType, clrType, nullable);
+                    ValueConverter converter = CreateValueConverter(ref valConverterType, clrType, logger, nullable);
                     EFCompat.SetValueConverter(property, converter);
 
-                    Log($"Set converter for {EFCompat.GetName(property.DeclaringEntityType)}.{EFCompat.GetName(property)} to {valConverterType.Name}.");
-                    Log($" - Type: {property.GetColumnType()}.");
+                    logger.LogDebug("Set converter for {0}.{1} to {2}.", EFCompat.GetName(property.DeclaringEntityType), EFCompat.GetName(property), Accessor.Formatter.Format(valConverterType));
+                    logger.LogDebug($" - Type: {property.GetColumnType()}.");
                     if (clrType.IsValueType)
                         property.IsNullable = nullable;
 
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Failed to create value converter of type {valConverterType.Name}.", ex);
+                    throw new Exception($"Failed to create value converter of type {Accessor.ExceptionFormatter.Format(valConverterType)}.", ex);
                 }
             }
         }
 
-        static ValueConverter CreateValueConverter(ref Type valConverterType, Type clrType, bool nullable)
+        static ValueConverter CreateValueConverter(ref Type valConverterType, Type clrType, ILogger logger, bool nullable)
         {
             ValueConverter converter;
             try
             {
-                if (valConverterType.GetConstructor(Array.Empty<Type>()) == null && valConverterType.GetConstructor(new Type[] { typeof(ConverterMappingHints) }) != null)
-                    converter = (ValueConverter)Activator.CreateInstance(valConverterType, new object?[] { null })!;
+                if (valConverterType.GetConstructor(Array.Empty<Type>()) == null && valConverterType.GetConstructor([ typeof(ConverterMappingHints) ]) != null)
+                    converter = (ValueConverter)Activator.CreateInstance(valConverterType, [ null ])!;
                 else
                     converter = (ValueConverter)Activator.CreateInstance(valConverterType)!;
             }
             catch
             {
-                Log($"Failed to create value converter of type {valConverterType.Name}.");
+                logger.LogDebug("Failed to create value converter of type {0}.", Accessor.Formatter.Format(valConverterType));
                 throw;
             }
             if (nullable)
@@ -400,11 +400,11 @@ public static class WarfareDatabaseReflection
                         .MakeGenericType(clrType, secondaryType);
                     try
                     {
-                        converter = (ValueConverter)Activator.CreateInstance(valConverterType, new object?[] { converter })!;
+                        converter = (ValueConverter)Activator.CreateInstance(valConverterType, [ converter ])!;
                     }
                     catch
                     {
-                        Log($"Failed to create nullable value converter of type {valConverterType.Name}.");
+                        logger.LogDebug("Failed to create nullable value converter of type {0}.", Accessor.Formatter.Format(valConverterType));
                         throw;
                     }
                 }
@@ -413,14 +413,6 @@ public static class WarfareDatabaseReflection
             return converter;
         }
 
-        Log("Done");
-
-        static void Log(string message)
-        {
-            if (UCWarfare.IsLoaded)
-                L.LogDebug(message);
-            else
-                Console.WriteLine("UCWarfare: " + message);
-        }
+        logger.LogDebug("Done");
     }
 }

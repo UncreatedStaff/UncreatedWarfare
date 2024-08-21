@@ -172,19 +172,9 @@ public sealed class WarfareModule : IModuleNexus
     {
         Assembly thisAsm = Assembly.GetExecutingAssembly();
 
-        serviceCollection.AddTransient<IManualMySqlProvider, ManualMySqlProvider>(_ =>
-        {
-            string connectionString = UCWarfare.Config.SqlConnectionString ??
-                                      (UCWarfare.Config.RemoteSQL ?? UCWarfare.Config.SQL).GetConnectionString("Uncreated.Warfare", true, true);
-
-            return new ManualMySqlProvider(connectionString);
-        });
-
         // global zones (not used for layouts)
         serviceCollection.AddTransient<IZoneProvider, MapZoneProvider>();
         serviceCollection.AddSingleton(serviceProvider => new ZoneStore(serviceProvider.GetServices<IZoneProvider>(), serviceProvider.GetRequiredService<ILogger<ZoneStore>>(), true));
-
-        serviceCollection.AddDbContext<WarfareDbContext>(contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Singleton);
 
         serviceCollection.AddReflectionTools();
         serviceCollection.AddModularRpcs(isServer: false, searchedAssemblies: [Assembly.GetExecutingAssembly()]);
@@ -269,6 +259,26 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton<ITranslationValueFormatter, TranslationValueFormatter>();
         serviceCollection.AddSingleton<ITranslationService, TranslationService>();
         serviceCollection.AddTransient(typeof(TranslationInjection<>));
+
+        // Database
+        serviceCollection.AddDbContext<WarfareDbContext>(contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Singleton);
+        serviceCollection.AddTransient<IManualMySqlProvider, ManualMySqlProvider>(serviceProvider =>
+        {
+            IConfiguration sysConfig = serviceProvider.GetRequiredService<IConfiguration>();
+            IConfiguration databaseSection = sysConfig.GetSection("database");
+
+            string? connectionStringType = databaseSection["connection_string_name"];
+
+            if (string.IsNullOrWhiteSpace(connectionStringType))
+                connectionStringType = "warfare-db";
+
+            string? connectionString = sysConfig.GetConnectionString(connectionStringType);
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException($"Missing connection string: \"{connectionStringType}\".");
+
+            return new ManualMySqlProvider(connectionString);
+        });
     }
 
     public async UniTask ShutdownAsync(CancellationToken token = default)

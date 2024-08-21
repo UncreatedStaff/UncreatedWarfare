@@ -16,12 +16,12 @@ public class CommandInfo
     /// <summary>
     /// Type that contains the code for the command.
     /// </summary>
-    public Type Type { get; set; }
+    public Type Type { get; }
 
     /// <summary>
     /// If the command can be executed. Some parent commands may not be executable.
     /// </summary>
-    public bool IsExecutable { get; set; }
+    public bool IsExecutable { get; internal set; }
 
     /// <summary>
     /// If this command has a parent command.
@@ -32,70 +32,80 @@ public class CommandInfo
     /// Name of the command.
     /// </summary>
     /// <remarks>Example: 'home' for /home.</remarks>
-    public string CommandName { get; set; }
+    public string CommandName { get; }
 
     /// <summary>
     /// Higher numbers will be executed over lower numbers.
     /// </summary>
-    public int Priority { get; set; }
+    public int Priority { get; }
 
     /// <summary>
     /// Aliases for <see cref="CommandName"/>.
     /// </summary>
-    public string[] Aliases { get; set; }
+    public string[] Aliases { get; }
 
     /// <summary>
     /// Optional reference to the vanilla <see cref="Command"/>.
     /// </summary>
-    public Command? VanillaCommand { get; set; }
+    public Command? VanillaCommand { get; }
 
     /// <summary>
     /// Information about how to display the command in /help.
     /// </summary>
-    public CommandMetadata Metadata { get; set; }
+    public CommandMetadata Metadata { get; }
 
     /// <summary>
     /// If this command is hid from /help by a <see cref="HideFromHelpAttribute"/>.
     /// </summary>
-    public bool HideFromHelp { get; set; }
+    public bool HideFromHelp { get; }
 
     /// <summary>
     /// Typing '/command help' will not switch to /help if this is <see langword="true"/>, which can be set using the <see cref="DisableAutoHelpAttribute"/>.
     /// </summary>
     /// <remarks>This is not propagated to sub-commands.</remarks>
-    public bool AutoHelpDisabled { get; set; }
+    public bool AutoHelpDisabled { get; }
 
     /// <summary>
     /// Commands marked as synchronized with the <see cref="SynchronizedCommandAttribute"/> all use this semaphore to synchronize their execution.
     /// </summary>
     /// <remarks>Sub-commands share this with their parents but not with their siblings unless the parent defines it.</remarks>
-    public SemaphoreSlim? SynchronizedSemaphore { get; set; }
+    public SemaphoreSlim? SynchronizedSemaphore { get; }
 
     /// <summary>
     /// Default permission generated from the command name. Can be overridden with <see cref="CommandAttribute.PermissionOverride"/>.
     /// </summary>
     /// <remarks><c>command.[command name]</c></remarks>
-    public PermissionLeaf DefaultPermission { get; set; }
+    public PermissionLeaf DefaultPermission { get; }
 
     /// <summary>
     /// A list of other permissions the caller must have or could have instead (depending on <see cref="OtherPermissionsAreAnd"/>.
     /// </summary>
-    public PermissionLeaf[] OtherPermissions { get; set; }
+    public PermissionLeaf[] OtherPermissions { get; }
 
     /// <summary>
     /// If <see cref="OtherPermissions"/> represents a list of permissions the user must have including <see cref="DefaultPermission"/>, instead of a list of alternative permissions the user could have.
     /// </summary>
-    public bool OtherPermissionsAreAnd { get; set; }
+    public bool OtherPermissionsAreAnd { get; }
 
     /// <summary>
     /// List of all sub-commands for a command. These commands may also have sub-commands.
     /// </summary>
-    public CommandInfo[] SubCommands { get; set; }
+    public CommandInfo[] SubCommands { get; private set; }
 
     /// <summary>
     /// If this command is a sub-command, this is the info for the parent command.
     /// </summary>
-    public CommandInfo? ParentCommand { get; set; }
+    public CommandInfo? ParentCommand { get; }
+
+    /// <summary>
+    /// The command that will automatically take over if this command is called. It should usually be a child command.
+    /// </summary>
+    public CommandInfo? RedirectCommandInfo { get; set; }
+
+    /// <summary>
+    /// This command's position in it's family tree. 0 = parent command, 1 = child, 2 = child's child, etc.
+    /// </summary>
+    public int HierarchyLevel { get; }
 
     /// <summary>
     /// Create a new vanilla command.
@@ -126,6 +136,7 @@ public class CommandInfo
         }
 
         Type = classType;
+
         SubCommands = Array.Empty<CommandInfo>();
         string? permission;
         if (classType.TryGetAttributeSafe(out CommandAttribute metadata))
@@ -156,6 +167,11 @@ public class CommandInfo
         else
         {
             permission ??= "commands." + CommandName;
+        }
+
+        for (CommandInfo? p = ParentCommand; p != null; p = p.ParentCommand)
+        {
+            ++HierarchyLevel;
         }
 
         DefaultPermission = permission.IndexOf("::", StringComparison.Ordinal) != -1
@@ -282,12 +298,6 @@ public class CommandInfo
         {
             OtherPermissionsAreAnd = true;
             OtherPermissions = Array.Empty<PermissionLeaf>();
-        }
-
-        IsExecutable = typeof(IExecutableCommand).IsAssignableFrom(classType);
-        if (!IsExecutable && SubCommands.Length == 0)
-        {
-            logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", Accessor.Formatter.Format(classType));
         }
     }
 

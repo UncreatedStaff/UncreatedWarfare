@@ -8,22 +8,28 @@ using System.Reflection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Commands;
 public class CommandDispatcher : IDisposable
 {
     private readonly WarfareModule _module;
     private readonly UserPermissionStore _permissions;
+    private readonly ChatService _chatService;
+    private readonly PlayerService _playerService;
     private readonly ILogger<CommandDispatcher> _logger;
     private ICommandUser? _currentVanillaCommandExecutor;
     public CommandParser Parser { get; }
     public IReadOnlyList<CommandInfo> Commands { get; }
-    public CommandDispatcher(WarfareModule module, UserPermissionStore permissions, ILogger<CommandDispatcher> logger)
+    public CommandDispatcher(WarfareModule module, UserPermissionStore permissions, ILogger<CommandDispatcher> logger, ChatService chatService, PlayerService playerService)
     {
         _module = module;
         _permissions = permissions;
         _logger = logger;
+        _chatService = chatService;
+        _playerService = playerService;
 
         Parser = new CommandParser(this);
 
@@ -48,7 +54,10 @@ public class CommandDispatcher : IDisposable
             .Where(typeof(ICommand).IsAssignableFrom)
             .ToList();
 
+        List<CommandInfo> allCommands = new List<CommandInfo>(types.Count);
         List<CommandInfo> parentCommands = new List<CommandInfo>(types.Count + Commander.commands.Count);
+
+        List<Type> circularReferenceBuffer = new List<Type>();
 
         foreach (Type commandType in types)
         {
@@ -58,8 +67,10 @@ public class CommandDispatcher : IDisposable
             if (parentCommands.Any(x => x.Type == commandType))
                 continue;
 
-            CommandInfo info = new CommandInfo(commandType, logger, GetParentInfo(commandType, parentCommands, logger));
+            circularReferenceBuffer.Add(commandType);;
+            CommandInfo info = new CommandInfo(commandType, logger, GetParentInfo(commandType, allCommands, logger, circularReferenceBuffer));
 
+            allCommands.Add(info);
             if (!info.IsSubCommand)
                 parentCommands.Add(info);
         }
@@ -68,6 +79,27 @@ public class CommandDispatcher : IDisposable
 
         // add vanilla commands
         parentCommands.AddRange(Commander.commands.Select(vanillaCommand => new CommandInfo(vanillaCommand)));
+        
+        // register redirects
+        foreach (CommandInfo command in allCommands)
+        {
+            if (command.VanillaCommand != null || !command.Type.TryGetAttributeSafe(out RedirectCommandToAttribute redirAttribute) || redirAttribute.CommandType == null)
+            {
+                continue;
+            }
+
+            command.RedirectCommandInfo = allCommands.Find(x => x.Type == redirAttribute.CommandType);
+            if (command.RedirectCommandInfo == null)
+            {
+                logger.LogWarning("Redirect command {0} not registered.", Accessor.Formatter.Format(redirAttribute.CommandType));
+            }
+
+            command.IsExecutable = command.VanillaCommand != null || (command.RedirectCommandInfo == null && typeof(IExecutableCommand).IsAssignableFrom(command.Type));
+            if (command is { IsExecutable: false, SubCommands.Length: 0, RedirectCommandInfo: null })
+            {
+                logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", Accessor.Formatter.Format(command.Type));
+            }
+        }
 
         Commands = new ReadOnlyCollection<CommandInfo>(parentCommands);
 
@@ -76,7 +108,7 @@ public class CommandDispatcher : IDisposable
         return;
 
         // recursively create parent info's if they don't already exist for this command
-        static CommandInfo? GetParentInfo(Type commandType, List<CommandInfo> commands, ILogger logger)
+        static CommandInfo? GetParentInfo(Type commandType, List<CommandInfo> commands, ILogger logger, List<Type> circularReferenceBuffer)
         {
             if (!commandType.TryGetAttributeSafe(out SubCommandOfAttribute subCommand) || subCommand.ParentType == null || !typeof(ICommand).IsAssignableFrom(subCommand.ParentType))
                 return null;
@@ -84,7 +116,12 @@ public class CommandDispatcher : IDisposable
             CommandInfo? existingParentInfo = commands.FirstOrDefault(x => x.Type == subCommand.ParentType);
             if (existingParentInfo == null)
             {
-                existingParentInfo = new CommandInfo(subCommand.ParentType, logger, GetParentInfo(subCommand.ParentType, commands, logger));
+                if (circularReferenceBuffer.Contains(subCommand.ParentType))
+                {
+                    throw new InvalidOperationException($"Circular reference detected in parent commands. {Accessor.ExceptionFormatter.Format(subCommand.ParentType)} <-> {Accessor.ExceptionFormatter.Format(commandType)}.");
+                }
+
+                existingParentInfo = new CommandInfo(subCommand.ParentType, logger, GetParentInfo(subCommand.ParentType, commands, logger, circularReferenceBuffer));
                 if (!existingParentInfo.IsSubCommand)
                     commands.Add(existingParentInfo);
             }
@@ -99,22 +136,17 @@ public class CommandDispatcher : IDisposable
     /// </summary>
     public CommandInfo? FindCommand(string search)
     {
-        CommandInfo? cmd = F.StringFind(Commands, x => x.CommandName, x => x.Priority,
-            x => x.CommandName.Length, search, descending: true, equalsOnly: true);
+        CommandInfo? cmd = CollectionUtility.StringFind(Commands.OrderByDescending(x => x.Priority).ThenBy(x => x.CommandName.Length), x => x.CommandName, search, equalsOnly: true);
         if (cmd != null)
             return cmd;
 
         foreach (CommandInfo command in Commands)
         {
-            if (command.Aliases != null)
-            {
-                if (command.Aliases.Any(x => x.Equals(search, StringComparison.InvariantCultureIgnoreCase)))
-                    return command;
-            }
+            if (command.Aliases != null && command.Aliases.Any(x => x.Equals(search, StringComparison.InvariantCultureIgnoreCase)))
+                return command;
         }
-        cmd = F.StringFind(Commands, x => x.CommandName, x => x.Priority,
-            x => x.CommandName.Length, search, descending: true, equalsOnly: false);
 
+        cmd = CollectionUtility.StringFind(Commands.OrderByDescending(x => x.Priority).ThenBy(x => x.CommandName.Length), x => x.CommandName, search, equalsOnly: false);
         return cmd;
     }
 
@@ -215,6 +247,12 @@ public class CommandDispatcher : IDisposable
         {
             string arg = args[i];
             bool found = false;
+
+            if (command.RedirectCommandInfo != null)
+            {
+                command = command.RedirectCommandInfo;
+            }
+
             for (int j = 0; j < command.SubCommands.Length; ++j)
             {
                 CommandInfo parameter = command.SubCommands[j];
@@ -251,6 +289,11 @@ public class CommandDispatcher : IDisposable
             if (!found)
                 return;
         }
+
+        while (command.RedirectCommandInfo != null)
+        {
+            command = command.RedirectCommandInfo;
+        }
     }
 
     // todo
@@ -269,7 +312,7 @@ public class CommandDispatcher : IDisposable
         if (!await _permissions.HasPermissionAsync(user, new PermissionLeaf(vanillaCommand.command, unturned: true, warfare: false) /* unturned::command */, token))
         {
             await UniTask.SwitchToMainThread();
-            user.SendMessage(T.NoPermissions.Translate(user as WarfarePlayer));
+            _chatService.Send(user, T.NoPermissions);
             return;
         }
 
@@ -315,6 +358,10 @@ public class CommandDispatcher : IDisposable
 
             if (!command.IsExecutable)
             {
+                if (command.RedirectCommandInfo != null)
+                {
+
+                }
                 ctx.SendHelp();
             }
             else
@@ -406,17 +453,20 @@ public class CommandDispatcher : IDisposable
                     
                     // new args resemble '/help clear inventory'
                 }
-                else if (command.IsSubCommand)
+                else
                 {
+                    ctx.ArgumentOffset += switchInfo.HierarchyLevel - command.HierarchyLevel;
                     args = ctx.Parameters.ToArray();
                 }
 
+#if DEBUG
                 _logger.LogDebug("Switching to command type {0} with args [ /{1} {2} ] from command type {3}.",
                     Accessor.Formatter.Format(switchInfo.Type),
                     switchInfo.CommandName,
                     args.Length != 0 ? "\"" + string.Join("\" \"", args) + "\"" : 0,
                     Accessor.Formatter.Format(command.Type)
                 );
+#endif
             }
         }
         finally
@@ -468,28 +518,38 @@ public class CommandDispatcher : IDisposable
             }
         }
     }
+
     private void OnChatProcessing(SteamPlayer player, string text, ref bool shouldExecuteCommand, ref bool shouldList)
     {
-        UCPlayer? pl = UCPlayer.FromSteamPlayer(player);
+        WarfarePlayer? pl = _playerService.GetOnlinePlayer(player);
         if (pl is null || string.IsNullOrWhiteSpace(text)) return;
         shouldExecuteCommand = false;
-        // remove accidental \
-        if (text.EndsWith("\\", StringComparison.Ordinal))
-            text = text.Substring(0, text.Length - 1);
-        if (!Parser.TryRunCommand(pl, text, ref shouldList, true) && !shouldList)
+        ReadOnlySpan<char> textSpan = text;
+
+        // remove accidental \ when pressing enter
+        if (textSpan.Length > 0 && textSpan[^1] == '\\')
         {
-            player.SendChat(T.UnknownCommand);
+            textSpan = textSpan[..^1];
+        }
+
+        if (!Parser.TryRunCommand(pl, textSpan, ref shouldList, true) && !shouldList)
+        {
+            _chatService.Send(pl, T.UnknownCommand);
         }
     }
+    
     private void OnCommandInput(string text, ref bool shouldExecuteCommand)
     {
         if (shouldExecuteCommand && Parser.TryRunCommand(null! /* todo make console user */, text, ref shouldExecuteCommand, false))
+        {
             shouldExecuteCommand = false;
+        }
         else if (!shouldExecuteCommand)
         {
             _logger.LogError("Unknown command.");
         }
     }
+
     internal bool CheckCommandOnCooldown(CommandContext context)
     {
         if (context.Player == null
@@ -508,14 +568,18 @@ public class CommandDispatcher : IDisposable
                 cooldown.Duration = compounding.MaxCooldown;
         }
 
-        context.Player.SendChat(T.CommandCooldown, cooldown, context.CommandInfo.CommandName);
+        _chatService.Send(context.Player, T.CommandCooldown, cooldown, context.CommandInfo.CommandName);
         return false;
 
     }
+
     internal void CheckCommandShouldStartCooldown(CommandContext context)
     {
         if (context.CommandCooldownTime is > 0f && context.Player != null && !context.Player.OnDuty() && CooldownManager.IsLoaded && context.CommandInfo != null)
+        {
             CooldownManager.StartCooldown(context.Player, CooldownType.Command, context.CommandCooldownTime.Value, context.CommandInfo);
+        }
+
         if (!context.OnIsolatedCooldown)
         {
             if (context.IsolatedCommandCooldownTime is > 0f && context.Player != null && !context.Player.OnDuty() && CooldownManager.IsLoaded && context.CommandInfo != null)

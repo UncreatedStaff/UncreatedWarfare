@@ -1,9 +1,12 @@
 ﻿using System;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Translations;
 public interface ITranslationValueFormatter
 {
+    LanguageService LanguageService { get; }
+    ITranslationService TranslationService { get; }
     string Format<T>(T? value, in ValueFormatParameters parameters);
     string Format(object? value, in ValueFormatParameters parameters, Type? formatType = null);
 
