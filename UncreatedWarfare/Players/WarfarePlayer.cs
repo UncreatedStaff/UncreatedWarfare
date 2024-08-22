@@ -10,6 +10,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players;
 
@@ -151,6 +152,21 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         return Steam64.m_SteamID == other.Steam64.m_SteamID;
     }
 
+    public bool Equals(Player other)
+    {
+        return Steam64.m_SteamID == other.channel.owner.playerID.steamID.m_SteamID;
+    }
+    
+    public bool Equals(SteamPlayer other)
+    {
+        return Steam64.m_SteamID == other.playerID.steamID.m_SteamID;
+    }
+    
+    public bool Equals(SteamPlayerID other)
+    {
+        return Steam64.m_SteamID == other.steamID.m_SteamID;
+    }
+
     public override bool Equals(object? obj)
     {
         return obj is IPlayer player && Steam64.m_SteamID == player.Steam64.m_SteamID;
@@ -166,6 +182,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     bool ICommandUser.IMGUI => Save.IMGUI;
     void ICommandUser.SendMessage(string message)
     {
+        GameThread.AssertCurrent();
         ChatManager.serverSendMessage(message, Palette.AMBIENT, null, SteamPlayer, EChatMode.SAY, useRichTextFormatting: true);
     }
 }

@@ -32,6 +32,7 @@ public sealed class KitCommandOld : IExecutableCommand
     private readonly IServiceProvider _serviceProvider;
     private const string Syntax = "/kit <keybind|search|skills|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
     private const string Help = "Admin command to manage kits; creating, deleting, editing, and giving/removing access is done through this command.";
+    
 
     private static readonly PermissionLeaf PermissionKeybind    = new PermissionLeaf("commands.kit.keybind",      unturned: false, warfare: true);
     private static readonly PermissionLeaf PermissionLayout     = new PermissionLeaf("commands.kit.layout",       unturned: false, warfare: true);
@@ -419,128 +420,6 @@ public sealed class KitCommandOld : IExecutableCommand
         KitManager? manager = KitManager.GetSingletonQuick();
         if (manager == null)
             throw Context.SendGamemodeError();
-
-        Context.AssertArgs(1, "/kit <bind|rename|layout|favorite|unfavorite> - Customize your experience with kits.");
-        Context.AssertHelpCheck(0, "/kit <bind|rename|layout|favorite|unfavorite> - Customize your experience with kits.");
-
-        if (Context.MatchParameter(0, "layout", "loadout", "customize"))
-        {
-            Context.AssertRanByPlayer();
-
-            await Context.AssertPermissions(PermissionLayout, token);
-
-            Context.AssertHelpCheck(1, "/kit layout <save|reset> - Cutomize your kit's item layout.");
-            if (Context.MatchParameter(1, "save", "confirm", "keep"))
-            {
-                await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    Kit? kit = await Context.Player.GetActiveKit(token).ConfigureAwait(false);
-
-                    if (kit == null)
-                        throw Context.Reply(T.AmmoNoKit);
-                    
-                    await manager.SaveLayout(Context.Player, kit, false, token).ConfigureAwait(false);
-                    await UniTask.SwitchToMainThread(token);
-                    throw Context.Reply(T.KitLayoutSaved, kit);
-                }
-                finally
-                {
-                    Context.Player.PurchaseSync.Release();
-                }
-            }
-
-            if (Context.MatchParameter(1, "reset", "delete", "cancel"))
-            {
-                await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    Kit? kit = await Context.Player.GetActiveKit(token).ConfigureAwait(false);
-                    if (kit == null)
-                        throw Context.Reply(T.AmmoNoKit);
-                    
-                    if (kit.Items != null)
-                    {
-                        await UniTask.SwitchToMainThread(token);
-                        manager.Layouts.TryReverseLayoutTransformations(Context.Player, kit.Items, kit.PrimaryKey);
-                    }
-
-                    await manager.ResetLayout(Context.Player, kit.PrimaryKey, false, token);
-                    await UniTask.SwitchToMainThread(token);
-                    throw Context.Reply(T.KitLayoutReset, kit);
-                }
-                finally
-                {
-                    Context.Player.PurchaseSync.Release();
-                }
-            }
-            throw Context.SendCorrectUsage("/kit layout <save|reset>");
-        }
-        if (Context.MatchParameter(0, "rename", "name", "setname"))
-        {
-            Context.AssertRanByPlayer();
-
-            await Context.AssertPermissions(PermissionRename, token);
-            await UniTask.SwitchToMainThread(token);
-
-            Context.AssertHelpCheck(1, "/kit <rename> <new name ...> - Rename the loadout on the sign you are looking at.");
-            Kit? kit = null;
-            UCPlayer player = Context.Player;
-            UCPlayer.TryApplyViewLens(ref player);
-            if (Context.TryGetBarricadeTarget(out BarricadeDrop? drop))
-            {
-                string kitName = drop.interactable is InteractableSign sign ? sign.text : null!;
-                kit = Signs.GetKitFromSign(drop, out int loadoutId);
-                if (loadoutId > 0)
-                    kit = await manager.Loadouts.GetLoadout(player, loadoutId, token).ConfigureAwait(false);
-
-                if (kit == null)
-                    throw Context.Reply(T.KitNotFound, kitName.Replace(Signs.Prefix, string.Empty));
-            }
-            
-            if (kit == null || !Context.TryGetRange(0, out string? newName))
-            {
-                throw Context.SendCorrectUsage("/kit rename <new name ...> - Rename the loadout on the sign you are looking at.");
-            }
-
-            if (kit.Type != KitType.Loadout)
-                throw Context.Reply(T.KitRenameNotLoadout, kit);
-
-            if (Data.GetChatFilterViolation(newName) is { } chatFilterViolation)
-                throw Context.Reply(T.KitRenameFilterVoilation, chatFilterViolation);
-
-            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
-
-            LanguageInfo defaultLanguage = Localization.GetDefaultLanguage();
-
-            string oldName = kit.GetDisplayName(defaultLanguage, removeNewLine: false);
-
-            newName = KitEx.ReplaceNewLineSubstrings(newName);
-
-            kit.SetSignText(dbContext, 0ul, kit, newName, defaultLanguage);
-            if (kit.Translations.Count > 1)
-            {
-                for (int i = kit.Translations.Count - 1; i >= 0; i--)
-                {
-                    KitTranslation t = kit.Translations[i];
-                    if (t.LanguageId == defaultLanguage.Key)
-                        continue;
-
-                    dbContext.Remove(t);
-                    kit.Translations.RemoveAt(i);
-                }
-            }
-
-            oldName = oldName.Replace("\n", "<br>");
-            newName = newName.Replace("\n", "<br>");
-
-            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-            int ldId = KitEx.ParseStandardLoadoutId(kit.InternalName);
-            string ldIdStr = ldId == -1 ? "???" : KitEx.GetLoadoutLetter(ldId).ToUpperInvariant();
-            Context.LogAction(ActionLogType.SetKitProperty, kit.FactionId + ": SIGN TEXT >> \"" + newName + "\" (using /kit rename)");
-            manager.Signs.UpdateSigns(kit);
-            throw Context.Reply(T.KitRenamed, ldIdStr, oldName, newName);
-        }
 
         Context.AssertOnDuty();
 
@@ -1126,7 +1005,7 @@ public sealed class KitCommandOld : IExecutableCommand
                 if (!Context.TryGetRange(3, out string? signText) || string.IsNullOrWhiteSpace(signText))
                     signText = null;
                 await UniTask.SwitchToMainThread(token);
-                Kit loadout = new Kit(loadoutId, @class, signText)
+                Kit loadout = new Kit(loadoutId, @class, signText, _languageService.GetDefaultLanguage())
                 {
                     Creator = Context.CallerId.m_SteamID,
                     LastEditor = Context.CallerId.m_SteamID

@@ -1,6 +1,6 @@
 ﻿using SDG.NetTransport;
+using StackCleaner;
 using System;
-using System.Text;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
@@ -26,44 +26,262 @@ public class ChatService
     }
 
     /// <summary>
-    /// Send raw text to a player.
+    /// Send a raw message directly to a player, and replace TMPro rich text with Unity tags if needed.
     /// </summary>
-    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
-    public void Send(WarfarePlayer player, string message)
+    public void Send(WarfarePlayer player, string text, Color color, EChatMode mode, string? iconUrl, bool richText)
     {
-        Send(player, message, Color.white);
+        if (richText)
+        {
+            Color? c = TranslationFormattingUtility.ExtractColor(text, out int index, out int length);
+            color = c ?? color;
+            text = player.Save.IMGUI
+                ? TranslationFormattingUtility.CreateIMGUIString(text.AsSpan(index, length))
+                : text.Substring(index, length);
+        }
+
+        if (GameThread.IsCurrent)
+        {
+            SendRawMessage(text, color, mode, iconUrl, richText, player.SteamPlayer);
+        }
+        else
+        {
+            SteamPlayer steamPlayer = player.SteamPlayer;
+            string text2 = text;
+            Color c2 = color;
+            EChatMode mode2 = mode;
+            string? icon2 = iconUrl;
+            bool rt = richText;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+
+                if (steamPlayer.player != null)
+                    SendRawMessage(text2, c2, mode2, icon2, rt, steamPlayer);
+            });
+        }
     }
 
     /// <summary>
-    /// Send raw text to a player.
+    /// Send a raw unlocalized string to a player.
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
-    public void Send(WarfarePlayer player, string message, Color color)
+    /// <exception cref="ArgumentNullException"/>
+    public void Send(WarfarePlayer player, string text)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
 
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
-
-        color.a = 1f;
-
-        if (GameThread.IsCurrent)
+        Color32? textColor;
+        bool rt;
+        if (text == null)
         {
-            SendMessage(message, color, EChatMode.SAY, null, true, player);
+            text = string.Empty;
+            textColor = null;
+            rt = false;
         }
         else
         {
-            string m2 = message;
-            Color c2 = color;
-            WarfarePlayer pl = player;
+            textColor = TranslationFormattingUtility.ExtractColor(text, out int startIndex, out int length);
+            ReadOnlySpan<char> textSpan = text.AsSpan(startIndex, length);
+            ReadOnlySpan<char> truncated = FormattingUtility.TruncateUtf8Bytes(textSpan, MaxMessageSize, out _);
+            if (truncated.Length != textSpan.Length)
+            {
+                _logger.LogWarning("Raw text too long for chat message: \"{0}\".", text);
+                text = new string(truncated);
+            }
+
+            rt = true;
+        }
+
+        if (GameThread.IsCurrent)
+        {
+            SendRawMessage(text, textColor ?? Color.white, EChatMode.SAY, null, rt, player.SteamPlayer);
+        }
+        else
+        {
+            string vl2 = text;
+            SteamPlayer steamPlayer = player.SteamPlayer;
+            Color cl2 = textColor ?? Color.white;
+            bool rt2 = rt;
             UniTask.Create(async () =>
             {
-                await UniTask.SwitchToMainThread(pl.DisconnectToken);
-                if (pl.IsOnline)
-                    SendMessage(m2, c2, EChatMode.SAY, null, true, pl);
+                await UniTask.SwitchToMainThread();
+
+                if (steamPlayer.player != null)
+                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, steamPlayer);
             });
         }
+    }
+
+    /// <summary>
+    /// Send a raw unlocalized string to a user.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send(ICommandUser user, string text)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, text);
+            return;
+        }
+
+        text ??= string.Empty;
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        if (user.IsTerminal)
+        {
+            text = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(text, _translationService.TerminalColoring);
+        }
+
+        SendTranslationMessage(text, user);
+    }
+
+    /// <summary>
+    /// Send a raw unlocalized string to a player with a given background color.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send(WarfarePlayer player, string text, ConsoleColor textColor)
+    {
+        Send(player, text, TerminalColorHelper.FromConsoleColor(textColor));
+    }
+
+    /// <summary>
+    /// Send a raw unlocalized string to a player with a given background color.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send(WarfarePlayer player, string text, Color textColor)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        textColor.a = 1f;
+
+        bool rt;
+        if (text == null)
+        {
+            text = string.Empty;
+            rt = false;
+        }
+        else
+        {
+            ReadOnlySpan<char> truncated = FormattingUtility.TruncateUtf8Bytes(text, MaxMessageSize, out _);
+            if (truncated.Length != text.Length)
+            {
+                _logger.LogWarning("Raw text too long for chat message: \"{0}\".", text);
+                text = new string(truncated);
+            }
+
+            rt = true;
+        }
+
+        if (GameThread.IsCurrent)
+        {
+            SendRawMessage(text, textColor, EChatMode.SAY, null, rt, player.SteamPlayer);
+        }
+        else
+        {
+            string vl2 = text;
+            SteamPlayer steamPlayer = player.SteamPlayer;
+            Color cl2 = textColor;
+            bool rt2 = rt;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+
+                if (steamPlayer.player != null)
+                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, steamPlayer);
+            });
+        }
+    }
+
+    /// <summary>
+    /// Send a raw unlocalized string to a user with a given background color.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send(ICommandUser user, string text, Color textColor)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, text, textColor);
+            return;
+        }
+
+        Send(user, text, (Color32)textColor);
+    }
+
+    /// <summary>
+    /// Send a raw unlocalized string to a user with a given background color.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send(ICommandUser user, string text, ConsoleColor textColor)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, text, TerminalColorHelper.FromConsoleColor(textColor));
+            return;
+        }
+
+        text ??= string.Empty;
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        if (user.IsTerminal)
+        {
+            text = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(text, _translationService.TerminalColoring);
+            if (_translationService.TerminalColoring is StackColorFormatType.ANSIColor or StackColorFormatType.ExtendedANSIColor)
+            {
+                text = TerminalColorHelper.WrapMessageWithColor(textColor, text);
+            }
+        }
+        else
+        {
+            text = _translationService.ValueFormatter.Colorize(text, TerminalColorHelper.FromConsoleColor(textColor), TranslationOptions.TranslateWithUnityRichText);
+        }
+
+        SendTranslationMessage(text, user);
+    }
+
+    /// <summary>
+    /// Send a raw unlocalized string to a user with a given background color.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void Send(ICommandUser user, string text, Color32 textColor)
+    {
+        if (user is WarfarePlayer player)
+        {
+            Send(player, text, (Color)textColor);
+            return;
+        }
+
+        textColor.a = 255;
+
+        text ??= string.Empty;
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        if (user.IsTerminal)
+        {
+            text = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(text, _translationService.TerminalColoring);
+            text = _translationService.TerminalColoring switch
+            {
+                StackColorFormatType.ExtendedANSIColor => TerminalColorHelper.WrapMessageWithColor(TerminalColorHelper.ToArgb(textColor), text),
+                StackColorFormatType.ANSIColor => TerminalColorHelper.WrapMessageWithColor(TerminalColorHelper.ToConsoleColor(TerminalColorHelper.ToArgb(textColor)), text),
+                _ => text
+            };
+        }
+        else
+        {
+            text = _translationService.ValueFormatter.Colorize(text, textColor, TranslationOptions.TranslateWithUnityRichText);
+        }
+
+        SendTranslationMessage(text, user);
     }
 
     /// <summary>
@@ -274,7 +492,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -296,7 +514,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -318,7 +536,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, arg1, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -340,7 +558,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, arg1, arg2, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -362,7 +580,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -384,7 +602,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -406,7 +624,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -428,7 +646,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -450,7 +668,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -472,7 +690,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -494,7 +712,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(user));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, user, canUseIMGUI: user.IMGUI);
-        SendTranslationMessage(value, translation, user);
+        SendTranslationMessage(value, user);
     }
 
     /// <summary>
@@ -1254,23 +1472,6 @@ public class ChatService
         _sendChatIndividual.Invoke(ENetReliability.Reliable, transportConnections, CSteamID.Nil, iconURL, mode, color, richText, text);
     }
 
-    /// <summary>
-    /// Send a raw message directly to a player, and replace TMPro rich text with Unity tags if needed.
-    /// </summary>
-    private void SendMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, WarfarePlayer recipient)
-    {
-        if (richText)
-        {
-            Color? c = TranslationFormattingUtility.ExtractColor(text, out int index, out int length);
-            color = c ?? color;
-            text = recipient.Save.IMGUI
-                ? TranslationFormattingUtility.CreateIMGUIString(text.AsSpan(index, length))
-                : text.Substring(index, length);
-        }
-
-        SendRawMessage(text, color, mode, iconURL, richText, recipient.SteamPlayer);
-    }
-
     private void SendTranslationMessage(string value, Color textColor, Translation translation, WarfarePlayer player)
     {
         if (GameThread.IsCurrent)
@@ -1289,13 +1490,16 @@ public class ChatService
             {
                 await UniTask.SwitchToMainThread();
 
+                if (!pl2.IsOnline)
+                    return;
+
                 CheckTranslationLength(lang2, ref vl2, tr2, ref cl2, pl2.Save.IMGUI);
                 SendRawMessage(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, pl2.SteamPlayer);
             });
         }
     }
 
-    private void SendTranslationMessage(string value, Translation translation, ICommandUser user)
+    private static void SendTranslationMessage(string value, ICommandUser user)
     {
         if (GameThread.IsCurrent)
         {
@@ -1351,30 +1555,33 @@ public class ChatService
     /// </summary>
     private void CheckTranslationLength(LanguageInfo lang, ref string value, Translation translation, ref Color textColor, bool imgui)
     {
-        int byteCt = Encoding.UTF8.GetByteCount(value);
-        if (byteCt <= MaxMessageSize)
+        ReadOnlySpan<char> truncated = FormattingUtility.TruncateUtf8Bytes(value, MaxMessageSize, out _);
+        if (truncated.Length == value.Length)
         {
             return;
         }
 
-        _logger.LogWarning("Language {0} translation for {1}/{2} (IMGUI = {3}) is too large ({4} B) for a chat message.",
-            lang.Code, translation.Key, translation.Collection, imgui, byteCt
+        _logger.LogWarning("Language {0} translation for {1}/{2} (IMGUI = {3}) is too large for a chat message.",
+            lang.Code, translation.Key, translation.Collection, imgui
         );
         if (!lang.IsDefault)
         {
             value = translation.Translate(out textColor, imgui);
-            byteCt = Encoding.UTF8.GetByteCount(value);
-            if (byteCt <= MaxMessageSize)
-                return;
 
-            value = translation.Key;
-            _logger.LogWarning("Default language {0} translation for {1}/{2} (IMGUI = {3}) is too large ({4} B) for a chat message.",
-                _translationService.LanguageService.GetDefaultLanguage().Code, translation.Key, translation.Collection, imgui, byteCt
+            truncated = FormattingUtility.TruncateUtf8Bytes(value, MaxMessageSize, out _);
+            if (truncated.Length == value.Length)
+            {
+                return;
+            }
+
+            value = new string(truncated);
+            _logger.LogWarning("Default language {0} translation for {1}/{2} (IMGUI = {3}) is too large for a chat message.",
+                _translationService.LanguageService.GetDefaultLanguage().Code, translation.Key, translation.Collection, imgui
             );
         }
         else
         {
-            value = translation.Key;
+            value = new string(truncated);
         }
     }
 }

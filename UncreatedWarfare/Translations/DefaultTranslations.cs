@@ -118,7 +118,7 @@ internal static class T
     [TranslationData(SectionCommonErrors, "The caller of a command is not allowed to use the command.")]
     public static readonly Translation<PermissionLeaf> NoPermissionsSpecific = new Translation<PermissionLeaf>("<#ff8c69>You do not have the permission {0} to use this command.");
 
-    [TranslationData(SectionCommonErrors, "A command or feature is turned off in the configuration.")]
+    [TranslationData(SectionCommonErrors, "A command or feature is turned off in the configuration or for the current layout.")]
     public static readonly Translation NotEnabled = new Translation("<#ff8c69>This feature is not currently enabled.");
 
     [TranslationData(SectionCommonErrors, "The caller of a command has permission to use the command but isn't on duty.")]

@@ -1,18 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using DanielWillett.ModularRpcs.Reflection;
+using DanielWillett.ModularRpcs.Routing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DanielWillett.ModularRpcs.DependencyInjection;
-using DanielWillett.ModularRpcs.Reflection;
-using DanielWillett.ModularRpcs.Routing;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
@@ -88,14 +86,14 @@ public partial class KitManager :
 
         IRpcRouter rpcRouter = serviceProvider.GetRequiredService<IRpcRouter>();
 
-        Cache = new KitDataCache(this);
+        Cache = new KitDataCache(this, serviceProvider);
         Distribution = new KitDistribution(this, serviceProvider);
         Requests = new KitRequests(this, serviceProvider);
         Signs = new KitSigns(this, serviceProvider);
-        Layouts = new KitLayouts(this);
+        Layouts = new KitLayouts(this, serviceProvider);
         Boosting = new KitBoosting(this);
         Loadouts = ProxyGenerator.Instance.CreateProxy<KitLoadouts<WarfareDbContext>>(rpcRouter, [ this, serviceProvider ]);
-        Defaults = new KitDefaults<WarfareDbContext>(this);
+        Defaults = new KitDefaults<WarfareDbContext>(this, serviceProvider);
 
         _favoritesTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromMinutes(1d), TimeSpan.FromMinutes(1d), false, SaveFavoritesTick);
     }
@@ -553,7 +551,7 @@ public partial class KitManager :
 
     private void OnPreDeath(PlayerLife life)
     {
-        UCPlayer? player = UCPlayer.FromPlayer(life.player);
+        WarfarePlayer? player = _playerService.GetOnlinePlayer(life.player);
         
         if (player == null || !player.ActiveKit.HasValue)
             return;
@@ -573,7 +571,7 @@ public partial class KitManager :
                 
                 float percentage = (float)jar.item.amount / asset.amount;
 
-                bool notInKit = !active.ContainsItem(asset.GUID, player == null ? 0 : player.GetTeam()) && Whitelister.IsWhitelisted(asset.GUID, out _);
+                bool notInKit = !active.ContainsItem(asset.GUID, player?.Team ?? Team.NoTeam) && Whitelister.IsWhitelisted(asset.GUID, out _);
                 if (notInKit || (percentage < 0.3f && asset.type != EItemType.GUN))
                 {
                     if (notInKit)
@@ -607,11 +605,11 @@ public partial class KitManager :
         await Requests.GiveKit(player, kit, false, false, token).ConfigureAwait(false);
     }
 
-    public async Task<Kit?> TryGiveUnarmedKit(UCPlayer player, bool manual, CancellationToken token = default)
+    public async Task<Kit?> TryGiveUnarmedKit(WarfarePlayer player, bool manual, CancellationToken token = default)
     {
         if (!player.IsOnline)
             return null;
-        Kit? kit = await GetDefaultKit(player.GetTeam(), token, x => RequestableSet(x, false)).ConfigureAwait(false);
+        Kit? kit = await GetDefaultKit(player.Team, token, x => RequestableSet(x, false)).ConfigureAwait(false);
         if (kit == null || !player.IsOnline)
             return null;
 
@@ -637,8 +635,8 @@ public partial class KitManager :
                      !k.IsFactionAllowed(t) &&
                      !k.IsCurrentMapAllowed() &&
                      (k is { Type: KitType.Public, CreditCost: <= 0 } || HasAccessQuick(k, player)) &&
-                     !k.IsLimited(out _, out _, player.Team, false) &&
-                     !k.IsClassLimited(out _, out _, player.Team, false) &&
+                     !k.IsLimited(_playerService, out _, out _, player.Team, false) &&
+                     !k.IsClassLimited(_playerService, out _, out _, player.Team, false) &&
                      k.MeetsUnlockRequirementsFast(player)
                  ))
         {
@@ -1066,6 +1064,18 @@ public partial class KitManager :
     /// <remarks>Thread Safe</remarks>
     public Task<bool> HasAccess(uint kit, WarfarePlayer player, CancellationToken token = default)
         => HasAccess(kit, player.Steam64.m_SteamID, token);
+
+    /// <remarks>Thread Safe</remarks>
+    public Task<bool> HasAccess(IKitsDbContext dbContext, Kit kit, WarfarePlayer player, CancellationToken token = default)
+        => HasAccess(dbContext, kit.PrimaryKey, player.Steam64.m_SteamID, token);
+
+    /// <remarks>Thread Safe</remarks>
+    public Task<bool> HasAccess(IKitsDbContext dbContext, Kit kit, ulong player, CancellationToken token = default)
+        => HasAccess(dbContext, kit.PrimaryKey, player, token);
+
+    /// <remarks>Thread Safe</remarks>
+    public Task<bool> HasAccess(IKitsDbContext dbContext, uint kit, WarfarePlayer player, CancellationToken token = default)
+        => HasAccess(dbContext, kit, player.Steam64.m_SteamID, token);
 
     /// <remarks>Thread Safe</remarks>
     public ValueTask<bool> HasAccessQuick(uint kit, ulong player, CancellationToken token = default)

@@ -331,7 +331,7 @@ public class Kit : ITranslationArgument, ICloneable
         }
     }
     /// <summary>For loadout.</summary>
-    public Kit(string loadout, Class @class, string? displayName)
+    public Kit(string loadout, Class @class, string? displayName, LanguageInfo displayNameLanguage)
     {
         Faction = null;
         FactionId = null;
@@ -347,13 +347,12 @@ public class Kit : ITranslationArgument, ICloneable
         CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
         if (displayName != null)
         {
-            LanguageInfo defaultLanguage = Localization.GetDefaultLanguage();
             Translations.Add(new KitTranslation
             {
                 Kit = this,
                 KitId = PrimaryKey,
                 Value = displayName,
-                LanguageId = defaultLanguage.Key
+                LanguageId = displayNameLanguage.Key
             });
         }
     }
@@ -539,7 +538,7 @@ public class Kit : ITranslationArgument, ICloneable
             return;
         }
 
-        L.LogDebug($"Buidling item array for {GetDisplayName()}...");
+        L.LogDebug($"Buidling item array for {InternalName}...");
         bool pooled = UCWarfare.IsLoaded && GameThread.IsCurrent;
         List<IKitItem> tempList = pooled ? ListPool<IKitItem>.claim() : new List<IKitItem>(models.Length);
         try
@@ -662,20 +661,19 @@ public class Kit : ITranslationArgument, ICloneable
         }
     }
     /// <summary>Will not update signs.</summary>
-    public void SetSignText(IKitsDbContext dbContext, ulong setter, Kit kit, string? text, LanguageInfo? language = null)
+    public void SetSignText(IKitsDbContext dbContext, ulong setter, string? text, LanguageInfo language)
     {
-        if (kit is null) throw new ArgumentNullException(nameof(kit));
+        if (language is null)
+            throw new ArgumentNullException(nameof(language));
 
-        language ??= Warfare.Localization.GetDefaultLanguage();
-
-        int index = kit.Translations.FindIndex(x => x.LanguageId == language.Key);
+        int index = Translations.FindIndex(x => x.LanguageId == language.Key);
         if (index != -1)
         {
-            KitTranslation translation = kit.Translations[index];
+            KitTranslation translation = Translations[index];
             if (string.IsNullOrEmpty(text))
             {
                 dbContext.Remove(translation);
-                kit.Translations.RemoveAt(index);
+                Translations.RemoveAt(index);
             }
             else
             {
@@ -687,15 +685,15 @@ public class Kit : ITranslationArgument, ICloneable
         {
             KitTranslation translation = new KitTranslation
             {
-                KitId = kit.PrimaryKey,
+                KitId = PrimaryKey,
                 Value = text,
                 LanguageId = language.Key
             };
             dbContext.Add(translation);
-            kit.Translations.Add(translation);
+            Translations.Add(translation);
         }
-        if (setter != 0ul)
-            kit.UpdateLastEdited(setter);
-        dbContext.Update(kit);
+
+        this.UpdateLastEdited(setter);
+        dbContext.Update(this);
     }
 }

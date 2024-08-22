@@ -611,9 +611,9 @@ internal partial class ModerationUI : UnturnedUI
     {
         GameThread.AssertCurrent();
 
-        return UnturnedUIDataSource.GetData<ModerationData>(player.CSteamID, Headers[(int)Page.Moderation].Button);
+        return UnturnedUIDataSource.GetData<ModerationData>(player.Steam64, Headers[(int)Page.Moderation].Button);
     }
-    public ModerationData GetOrAddModerationData(WarfaerPlayer player) => GetOrAddModerationData(player.Steam64);
+    public ModerationData GetOrAddModerationData(WarfarePlayer player) => GetOrAddModerationData(player.Steam64.m_SteamID);
     public ModerationData GetOrAddModerationData(ulong steam64)
     {
         GameThread.AssertCurrent();
@@ -627,7 +627,7 @@ internal partial class ModerationUI : UnturnedUI
 
         return data;
     }
-    private void UpdateSelectedPlayer(UCPlayer player)
+    private void UpdateSelectedPlayer(WarfarePlayer player)
     {
         ModerationData data = GetOrAddModerationData(player);
         if (new CSteamID(data.SelectedPlayer).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
@@ -673,7 +673,7 @@ internal partial class ModerationUI : UnturnedUI
 
         });
     }
-    public void SetHistoryPage(UCPlayer player, ModerationData data, int page)
+    public void SetHistoryPage(WarfarePlayer player, ModerationData data, int page)
     {
         ModerationEntry[] entries = data.HistoryView ?? Array.Empty<ModerationEntry>();
         data.HistoryPage = page;
@@ -709,16 +709,16 @@ internal partial class ModerationUI : UnturnedUI
 
         data.HistoryCount = c;
     }
-    public void SendModerationPlayerList(UCPlayer player)
+    public void SendModerationPlayerList(WarfarePlayer player)
     {
         GameThread.AssertCurrent();
 
         ITransportConnection connection = player.Connection;
 
-        if (!ModerationPlayerSearchModeButton.TryGetSelection(player.Player, out PlayerSearchMode searchMode))
+        if (!ModerationPlayerSearchModeButton.TryGetSelection(player.UnturnedPlayer, out PlayerSearchMode searchMode))
             searchMode = PlayerSearchMode.Online;
         ModerationData data = GetOrAddModerationData(player);
-        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch);
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.Steam64, ModerationPlayerSearch);
         string searchText = textBoxData?.Text ?? string.Empty;
         data.PlayerList ??= new ulong[ModerationPlayerList.Length];
         if (searchText.Length < 1 || searchMode == PlayerSearchMode.Online)
@@ -841,7 +841,7 @@ internal partial class ModerationUI : UnturnedUI
             });
         }
     }
-    public void SelectEntry(UCPlayer player, ModerationEntry? entry)
+    public void SelectEntry(WarfarePlayer player, ModerationEntry? entry)
     {
         GameThread.AssertCurrent();
 
@@ -1113,7 +1113,7 @@ internal partial class ModerationUI : UnturnedUI
                 LogicModerationInfoUpdateScrollVisual.SetVisibility(c, true);
         });
     }
-    private void UpdateModerationEntry(UCPlayer player, int index, ModerationEntry entry)
+    private void UpdateModerationEntry(WarfarePlayer player, int index, ModerationEntry entry)
     {
         ITransportConnection connection = player.Connection;
 
@@ -1178,7 +1178,7 @@ internal partial class ModerationUI : UnturnedUI
             ui.Icon.SetText(connection, icon.HasValue ? ItemIconProvider.GetIcon(icon.Value, tmpro: true) : string.Empty);
         }
     }
-    private async UniTask RefreshModerationHistory(UCPlayer player, CancellationToken token = default)
+    private async UniTask RefreshModerationHistory(WarfarePlayer player, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
@@ -1187,10 +1187,10 @@ internal partial class ModerationUI : UnturnedUI
         ModerationHistoryPage.Disable(player.Connection);
 
         ModerationData data = GetOrAddModerationData(player);
-        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationHistorySearch);
-        ModerationHistoryTypeButton.TryGetSelection(player.Player, out ModerationEntryType filter);
-        ModerationHistorySearchTypeButton.TryGetSelection(player.Player, out ModerationHistorySearchMode searchMode);
-        ModerationHistorySortModeButton.TryGetSelection(player.Player, out ModerationHistorySortMode sortMode);
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.Steam64, ModerationHistorySearch);
+        ModerationHistoryTypeButton.TryGetSelection(player.UnturnedPlayer, out ModerationEntryType filter);
+        ModerationHistorySearchTypeButton.TryGetSelection(player.UnturnedPlayer, out ModerationHistorySearchMode searchMode);
+        ModerationHistorySortModeButton.TryGetSelection(player.UnturnedPlayer, out ModerationHistorySortMode sortMode);
         Type type = (filter == ModerationEntryType.None ? null : ModerationReflection.GetType(filter)) ?? typeof(ModerationEntry);
         DateTimeOffset? start = null, end = null;
         string? orderBy = null;
@@ -1293,7 +1293,7 @@ internal partial class ModerationUI : UnturnedUI
         bool showRecentActors = text is not { Length: > 0 } && !validPlayer;
         if (showRecentActors || validPlayer)
         {
-            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, showRecentActors ? player.Steam64 : data.SelectedPlayer,
+            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, showRecentActors ? player.Steam64.m_SteamID : data.SelectedPlayer,
                 showRecentActors ? ActorRelationType.IsActor : ActorRelationType.IsTarget, false, true, start, end, condition, orderBy, conditionArgs, token);
         }
         else
@@ -1329,7 +1329,6 @@ internal partial class ModerationUI : UnturnedUI
 
             await UniTask.SwitchToMainThread(player.DisconnectToken);
             SetHistoryPage(player, data, newPage);
-
         });
     }
     public enum Page

@@ -81,6 +81,9 @@ public class KitCommandTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to a player when they try to unbind a hotkey that isn't bound.")]
     public readonly Translation<byte, Kit> KitHotkeyNotFound = new Translation<byte, Kit>("<#ff8c69>Slot <#e8e2d1>{0}</color> for <#fff>{1}</color> was not bound.", arg1Fmt: Kit.FormatDisplayName);
 
+    [TranslationData("Sent to a player when they try to save a layout without a kit equipped.")]
+    public readonly Translation KitLayoutNoKit = new Translation("<#ff8c69>You can not save your kit's item layout unless you have a kit equipped.");
+
     [TranslationData("Sent to a player when they save a custom layout (where their items go) for their kit.")]
     public readonly Translation<Kit> KitLayoutSaved = new Translation<Kit>("<#a0ad8e>Custom layout for <#fff>{0}</color> saved.", arg0Fmt: Kit.FormatDisplayName);
 
@@ -104,6 +107,9 @@ public class KitCommandTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent to a player when they try to rename their loadout and the name is a violation of the chat filter.")]
     public readonly Translation<string> KitRenameFilterVoilation = new Translation<string>("<#ff8c69>Your name violates our chat filter near: <#fff>'{0}'</color>.");
+
+    [TranslationData("Sent to a player when they try to rename a kit that hasn't been upgraded or is still being upgraded.")]
+    public readonly Translation<Kit> KitRenameNoAccess = new Translation<Kit>("<#ff8c69><#fff>{0}</color> is still being set up or isn't upgraded yet.", arg0Fmt: Kit.FormatDisplayName);
 
     [TranslationData("Sent to a player after change their loadout's display name.")]
     public readonly Translation<string, string, string> KitRenamed = new Translation<string, string, string>("<#a0ad8e>Renamed loadout <#fff>{0}</color> from <#ddd>\"{1}\"</color> to <#ddd>\"{2}\"</color>.");

@@ -1,6 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 public class KitBoosting(KitManager manager) : ITCPConnectedListener

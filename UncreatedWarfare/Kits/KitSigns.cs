@@ -2,6 +2,7 @@
 using System;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Util;
 
@@ -9,6 +10,7 @@ namespace Uncreated.Warfare.Kits;
 public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
 {
     private readonly SignInstancer _signs = serviceProvider.GetRequiredService<SignInstancer>();
+    private readonly PlayerService _playerService = serviceProvider.GetRequiredService<PlayerService>();
     public KitManager Manager { get; } = manager;
 
     /// <summary>
@@ -131,7 +133,6 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
 
     private void UpdateSignsIntl(WarfarePlayer? player)
     {
-        // todo add loadouts
         if (player == null)
         {
             _signs.UpdateSigns<KitSignInstanceProvider>();
@@ -144,13 +145,46 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
 
     private void UpdateSignsIntl(Kit kit, WarfarePlayer? player)
     {
-        UpdateSignsIntl(kit.InternalName, player);
+        if (kit.Type == KitType.Loadout)
+        {
+            int loadoutId = KitEx.ParseStandardLoadoutId(kit.InternalName, out ulong s64);
+            if (loadoutId == -1)
+                return;
+
+            if (player == null)
+            {
+                player = _playerService.GetOnlinePlayerOrNull(s64);
+                if (player == null)
+                    return;
+            }
+            else if (player.Steam64.m_SteamID != s64)
+                return;
+
+            _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => provider.LoadoutNumber == loadoutId);
+        }
+        else
+        {
+            UpdateSignsIntl(kit.InternalName, player);
+        }
     }
 
     private void UpdateSignsIntl(string kitId, WarfarePlayer? player)
     {
-        // todo add loadouts
-        if (player == null)
+        int loadoutId = KitEx.ParseStandardLoadoutId(kitId, out ulong s64);
+        if (loadoutId != -1)
+        {
+            if (player == null)
+            {
+                player = _playerService.GetOnlinePlayerOrNull(s64);
+                if (player == null)
+                    return;
+            }
+            else if (player.Steam64.m_SteamID != s64)
+                return;
+
+            _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => provider.LoadoutNumber == loadoutId);
+        }
+        else if (player == null)
         {
             _signs.UpdateSigns<KitSignInstanceProvider>((_, provider) => provider.KitId.Equals(kitId, StringComparison.Ordinal));
         }

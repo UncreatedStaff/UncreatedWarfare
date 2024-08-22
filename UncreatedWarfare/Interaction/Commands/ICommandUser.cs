@@ -1,4 +1,6 @@
-﻿namespace Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Util;
+
+namespace Uncreated.Warfare.Interaction.Commands;
 public interface ICommandUser
 {
     /// <summary>
@@ -24,5 +26,6 @@ public interface ICommandUser
     /// <summary>
     /// Send a raw string as feedback to this actor.
     /// </summary>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     void SendMessage(string message);
 }

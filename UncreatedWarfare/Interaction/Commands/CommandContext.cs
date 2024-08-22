@@ -28,7 +28,7 @@ public class CommandContext : ControlException
 
     private readonly UserPermissionStore _permissionsStore;
     private readonly PlayerService _playerService;
-    private readonly CommandDispatcher _dispatcher;
+    private readonly ChatService _chatService;
     private readonly string[] _parameters;
     private readonly int _argumentCount;
     private int _argumentOffset;
@@ -78,11 +78,6 @@ public class CommandContext : ControlException
     /// A token that is cancelled when the command finishes.s
     /// </summary>
     public CancellationToken Token { get; }
-
-    /// <summary>
-    /// Whether or not the console was the caller of the command.
-    /// </summary>
-    public bool IsConsole { get; }
 
     /// <summary>
     /// Command arguments not including the name or flags.
@@ -176,10 +171,15 @@ public class CommandContext : ControlException
     public IExecutableCommand Command { get; internal set; }
 
     /// <summary>
+    /// The current scoped service provider.
+    /// </summary>
+    public IServiceProvider ServiceProvider { get; internal set; }
+
+    /// <summary>
     /// Type information about the command.
     /// </summary>
     public CommandInfo CommandInfo { get; }
-    public CommandContext(ICommandUser user, CancellationToken token, string[] args, string originalMessage, CommandInfo commandInfo, CommandDispatcher dispatcher, IServiceProvider serviceProvider)
+    public CommandContext(ICommandUser user, CancellationToken token, string[] args, string originalMessage, CommandInfo commandInfo, IServiceProvider serviceProvider)
     {
         Command = null!;
         Caller = user;
@@ -187,11 +187,11 @@ public class CommandContext : ControlException
         CommandInfo = commandInfo;
         Player = user as WarfarePlayer;
 
-        _dispatcher = dispatcher;
+        ServiceProvider = serviceProvider;
+
+        _chatService = serviceProvider.GetRequiredService<ChatService>();
         _permissionsStore = serviceProvider.GetRequiredService<UserPermissionStore>();
         _playerService = serviceProvider.GetRequiredService<PlayerService>();
-
-        IsConsole = user is null; // todo make console user
 
         OriginalMessage = originalMessage;
         args ??= Array.Empty<string>();
@@ -238,16 +238,7 @@ public class CommandContext : ControlException
         ArgumentCount = _argumentCount;
         Parameters = new ArraySegment<string>(nonFlagParameters);
 
-        if (user is null)
-        {
-            IsConsole = true;
-            CallerId = CSteamID.Nil;
-        }
-        else
-        {
-            IsConsole = false;
-            CallerId = user.Steam64;
-        }
+        CallerId = user.Steam64;
 
         if (Player == null)
         {
@@ -1039,7 +1030,7 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out ulong steam64, out WarfarePlayer? onlinePlayer, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
     {
         parameter += ArgumentOffset;
-        if (!IsConsole && MatchParameter(parameter, "me"))
+        if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Player;
             steam64 = CallerId.m_SteamID;
@@ -1061,7 +1052,7 @@ public class CommandContext : ControlException
                 onlinePlayer = _playerService.GetOnlinePlayer(steam64);
                 return true;
             }
-            onlinePlayer = _playerService.GetOnlinePlayerOrNull(s, searchType);
+            onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
             if (onlinePlayer is { IsOnline: true })
             {
                 steam64 = onlinePlayer.Steam64.m_SteamID;
@@ -1085,7 +1076,7 @@ public class CommandContext : ControlException
     public bool TryGet(int parameter, out ulong steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
     {
         parameter += ArgumentOffset;
-        if (!IsConsole && MatchParameter(parameter, "me"))
+        if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Player;
             steam64 = CallerId.m_SteamID;
@@ -1117,7 +1108,7 @@ public class CommandContext : ControlException
                 }
             }
         }
-        onlinePlayer = _playerService.GetOnlinePlayerOrNull(s, selection, searchType)!;
+        onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, searchType)!;
         if (onlinePlayer is { IsOnline: true })
         {
             steam64 = onlinePlayer.Steam64.m_SteamID;
@@ -1156,9 +1147,12 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public bool TryGetTargetTransform([MaybeNullWhen(false)] out Transform transform, int mask = 0, float distance = 4)
     {
-        if (IsConsole || Player is null || !Player.IsOnline)
+        GameThread.AssertCurrent();
+
+        if (Player is null || !Player.IsOnline)
         {
             transform = null;
             return false;
@@ -1175,9 +1169,12 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public bool TryGetTargetInfo([MaybeNullWhen(false)] out RaycastInfo info, int mask, float distance = 4)
     {
-        if (IsConsole || Player is null || !Player.IsOnline)
+        GameThread.AssertCurrent();
+
+        if (Player is null || !Player.IsOnline)
         {
             info = null;
             return false;
@@ -1193,9 +1190,12 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public bool TryGetInteractableTarget<T>([MaybeNullWhen(false)] out T interactable, int mask = 0, float distance = 4f) where T : Interactable
     {
-        if (IsConsole || Player is null || !Player.IsOnline)
+        GameThread.AssertCurrent();
+
+        if (Player is null || !Player.IsOnline)
         {
             interactable = null;
             return false;
@@ -1240,9 +1240,12 @@ public class CommandContext : ControlException
     /// Get the <see cref="BarricadeDrop"/> the user is looking at.
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public bool TryGetBarricadeTarget([MaybeNullWhen(false)] out BarricadeDrop drop, float distance = 4f)
     {
-        if (IsConsole || Player is null || !Player.IsOnline)
+        GameThread.AssertCurrent();
+
+        if (Player is null || !Player.IsOnline)
         {
             drop = null;
             return false;
@@ -1264,9 +1267,12 @@ public class CommandContext : ControlException
     /// Get the <see cref="StructureDrop"/> the user is looking at.
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public bool TryGetStructureTarget([MaybeNullWhen(false)] out StructureDrop drop, float distance = 4f)
     {
-        if (IsConsole || Player is null || !Player.IsOnline)
+        GameThread.AssertCurrent();
+
+        if (Player is null || !Player.IsOnline)
         {
             drop = null;
             return false;
@@ -1288,9 +1294,12 @@ public class CommandContext : ControlException
     /// Get the <see cref="InteractableVehicle"/> the user is looking at.
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public bool TryGetVehicleTarget([MaybeNullWhen(false)] out InteractableVehicle vehicle, float distance = 4f, bool tryCallersVehicleFirst = true, bool allowDead = false)
     {
-        if (IsConsole || Player is null || !Player.IsOnline)
+        GameThread.AssertCurrent();
+
+        if (Player is null || !Player.IsOnline)
         {
             vehicle = null;
             return false;
@@ -1314,18 +1323,62 @@ public class CommandContext : ControlException
         vehicle = info.vehicle;
         return vehicle != null && (allowDead || !vehicle.isDead);
     }
-    public bool TryGetPlayerTarget([MaybeNullWhen(false)] out UCPlayer player, float distance = 4f)
+
+    private static readonly RaycastHit[] PlayerHitBuffer = new RaycastHit[16];
+
+    /// <summary>
+    /// Get the <see cref="WarfarePlayer"/> the user is looking at.
+    /// </summary>
+    /// <param name="distance">Default distance is 4m.</param>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
+    public bool TryGetPlayerTarget([MaybeNullWhen(false)] out WarfarePlayer player, float distance = 4f)
     {
-        if (IsConsole || Player is null || !Player.IsOnline)
+        GameThread.AssertCurrent();
+
+        if (Player is null || !Player.IsOnline)
         {
             player = null;
             return false;
         }
 
         Transform aim = Player.UnturnedPlayer.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.PLAYER, Player.UnturnedPlayer);
-        player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
-        return player != null && player.IsOnline;
+
+        int hits = Physics.SphereCastNonAlloc(new Ray(aim.position, aim.forward), radius: 1.1f, PlayerHitBuffer, distance, RayMasks.ENEMY, QueryTriggerInteraction.Ignore);
+
+        Player? playerHit = null;
+        for (int i = 0; i < hits; ++i)
+        {
+            ref RaycastHit hit = ref PlayerHitBuffer[i];
+
+            Player pl = DamageTool.getPlayer(hit.transform);
+            if (pl is null || pl.life.isDead || Player.Equals(pl))
+                continue;
+
+            if (playerHit is not null)
+            {
+                Vector3 existingVector = Vector3.Normalize((playerHit.transform.position - Player.Position) with { z = 0 });
+                Vector3 newVector = Vector3.Normalize((pl.transform.position - Player.Position) with { z = 0 });
+
+                Vector3 forwardVector = Vector3.Normalize(aim.forward with { z = 0 });
+                if (Math.Abs(Vector3.Dot(forwardVector, existingVector)) > Math.Abs(Vector3.Dot(forwardVector, newVector)))
+                {
+                    // player is closer to looking at the currently selected player than the old one
+                    continue;
+                }
+            }
+            playerHit = pl;
+        }
+
+        Array.Clear(PlayerHitBuffer, 0, PlayerHitBuffer.Length);
+
+        if (playerHit is not null)
+        {
+            player = _playerService.GetOnlinePlayer(playerHit);
+            return player != null;
+        }
+
+        player = null;
+        return false;
     }
 
     /// <summary>
@@ -1341,6 +1394,9 @@ public class CommandContext : ControlException
     /// </summary>
     public ValueTask<bool> HasPermission(PermissionLeaf permission, CancellationToken token = default)
     {
+        if (Caller.IsSuperUser)
+            return new ValueTask<bool>(true);
+
         return _permissionsStore.HasPermissionAsync(Caller, permission, token);
     }
 
@@ -1350,6 +1406,9 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public ValueTask AssertPermissions(PermissionLeaf permission, CancellationToken token = default)
     {
+        if (Caller.IsSuperUser)
+            return default;
+
         ValueTask<bool> vt = HasPermission(permission, token);
         if (!vt.IsCompleted)
         {
@@ -1375,6 +1434,9 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public ValueTask AssertPermissionsOr(PermissionLeaf permission1, PermissionLeaf permission2, CancellationToken token = default)
     {
+        if (Caller.IsSuperUser)
+            return default;
+
         ValueTask<bool> vt = HasPermission(permission1, token);
         if (!vt.IsCompleted)
         {
@@ -1416,6 +1478,9 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public ValueTask AssertPermissionsOr(PermissionLeaf permission1, PermissionLeaf permission2, PermissionLeaf permission3, CancellationToken token = default)
     {
+        if (Caller.IsSuperUser)
+            return default;
+
         ValueTask<bool> vt = HasPermission(permission1, token);
         if (!vt.IsCompleted)
         {
@@ -1481,7 +1546,7 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public async ValueTask AssertPermissionsOr(CancellationToken token, params PermissionLeaf[] permissions)
     {
-        if (permissions.Length == 0)
+        if (Caller.IsSuperUser || permissions.Length == 0)
             return;
 
         for (int i = 0; i < permissions.Length; i++)
@@ -1499,6 +1564,9 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public ValueTask AssertPermissionsAnd(PermissionLeaf permission1, PermissionLeaf permission2, CancellationToken token = default)
     {
+        if (Caller.IsSuperUser)
+            return default;
+
         ValueTask<bool> vt = HasPermission(permission1, token);
         if (!vt.IsCompleted)
         {
@@ -1540,6 +1608,9 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public ValueTask AssertPermissionsAnd(PermissionLeaf permission1, PermissionLeaf permission2, PermissionLeaf permission3, CancellationToken token = default)
     {
+        if (Caller.IsSuperUser)
+            return default;
+
         ValueTask<bool> vt = HasPermission(permission1, token);
         if (!vt.IsCompleted)
         {
@@ -1603,6 +1674,9 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public async ValueTask AssertPermissionsAnd(CancellationToken token, params PermissionLeaf[] permissions)
     {
+        if (Caller.IsSuperUser)
+            return;
+
         for (int i = 0; i < permissions.Length; i++)
         {
             if (!await HasPermission(permissions[i], token))
@@ -1631,14 +1705,21 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public void AssertRanByPlayer()
     {
-        if (IsConsole || Player == null || !Player.IsOnline)
+        if (Player == null || !Player.IsOnline)
             throw SendPlayerOnlyError();
     }
 
     /// <exception cref="CommandContext"/>
-    public void AssertRanByConsole()
+    public void AssertRanByTerminal()
     {
-        if (!IsConsole)
+        if (!Caller.IsTerminal)
+            throw SendConsoleOnlyError();
+    }
+
+    /// <exception cref="CommandContext"/>
+    public void AssertRanBy<TUser>() where TUser : ICommandUser
+    {
+        if (Caller is not TUser)
             throw SendConsoleOnlyError();
     }
 
@@ -1659,7 +1740,7 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public void AssertOnDuty()
     {
-        if (!IsConsole && Player != null && !Player.OnDuty())
+        if (Player != null && !Player.OnDuty())
             throw Reply(T.NotOnDuty);
     }
 
@@ -1737,67 +1818,30 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message)
     {
-        if (message is null)
-            throw new ArgumentNullException(nameof(message));
-
-        if (IsConsole || Caller is null)
-        {
-            message = FormattingUtility.RemoveRichText(message);
-            L.Log(message, ConsoleColor.Gray);
-        }
-        else
-        {
-            Player.SendString(message);
-        }
-        Responded = true;
+        _chatService.Send(Caller, message);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, Color color)
     {
-        if (message is null)
-            throw new ArgumentNullException(nameof(message));
-
-        if (IsConsole || Player is null)
-        {
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendString(message, color);
-        }
-        Responded = true;
-
+        _chatService.Send(Caller, message, color);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, ConsoleColor color)
     {
-        if (message is null)
-            throw new ArgumentNullException(nameof(message));
-
-        if (IsConsole || Caller is null)
-        {
-            message = FormattingUtility.RemoveRichText(message);
-            L.Log(message, color);
-        }
-        else
-        {
-            Player.SendString(message, FormattingUtility.FromConsoleColor(color));
-        }
-        Responded = true;
+        _chatService.Send(Caller, message, color);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, string hex)
     {
-        HexStringHelper.TryParseColor(hex, CultureInfo.InvariantCulture, out Color color);
-        return ReplyString(message, color);
+        HexStringHelper.TryParseColor32(hex, Culture, out Color32 color);
+        _chatService.Send(Caller, message, color);
+        return this;
     }
 
     /// <remarks>Thread Safe</remarks>
@@ -1835,209 +1879,77 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply(Translation translation)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, Culture, out Color color, false);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
-    public Exception Reply<T0>(Translation<T0> translation, T0 arg)
+    public Exception Reply<T0>(Translation<T0> translation, T0 arg0)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg0, arg1, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg0, arg1);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0, arg1);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg0, arg1, arg2, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg0, arg1, arg2);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0, arg1, arg2);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg0, arg1, arg2, arg3, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg0, arg1, arg2, arg3);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg0, arg1, arg2, arg3, arg4);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         return this;
     }
 
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-        if (IsConsole || Caller is null)
-        {
-            string message = translation.Translate(Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color color);
-            message = FormattingUtility.RemoveRichText(message);
-            ConsoleColor clr = FormattingUtility.ToConsoleColor(FormattingUtility.ToArgb(color));
-            L.Log(message, clr);
-        }
-        else
-        {
-            Player.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-        }
-        Responded = true;
+        _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         return this;
     }
 

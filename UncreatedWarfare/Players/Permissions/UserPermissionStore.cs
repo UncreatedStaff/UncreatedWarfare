@@ -11,6 +11,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.Permissions;
 
@@ -23,6 +24,7 @@ public class UserPermissionStore : IAsyncDisposable
 
     private readonly string _permissionGroupFilePath;
     private readonly IDisposable? _permissionGroupFileWatcher;
+    private readonly ILogger<UserPermissionStore> _logger;
 
     private readonly WarfareDbContext _dbContext;
 
@@ -31,13 +33,14 @@ public class UserPermissionStore : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<PermissionGroup> PermissionGroups { get; private set; }
 
-    public UserPermissionStore(WarfareDbContext dbContext)
+    public UserPermissionStore(WarfareDbContext dbContext, ILogger<UserPermissionStore> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
         PermissionGroups = null!;
         _permissionGroupFilePath = Path.Join(".", "Permission Groups.json");
-        ReadPermissionGroups();
-        _permissionGroupFileWatcher = ConfigurationHelper.ListenForFileUpdate(_permissionGroupFilePath, ReadPermissionGroups);
+        ReadPermissionGroups(true);
+        _permissionGroupFileWatcher = ConfigurationHelper.ListenForFileUpdate(_permissionGroupFilePath, OnConfigUpdated);
     }
 
     /// <summary>
@@ -454,9 +457,23 @@ public class UserPermissionStore : IAsyncDisposable
         return (groups, branches);
     }
 
-    private void ReadPermissionGroups()
+    private void OnConfigUpdated()
     {
-        GameThread.AssertCurrent();
+        _logger.LogInformation("Reading permission groups after file update.");
+        try
+        {
+            ReadPermissionGroups(false);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogInformation(ex, "Failed to read permission groups after file update.");
+        }
+    }
+
+    private void ReadPermissionGroups(bool isCtor)
+    {
+        if (!isCtor)
+            GameThread.AssertCurrent();
 
         if (!File.Exists(_permissionGroupFilePath))
         {

@@ -20,6 +20,38 @@ public static class FormattingUtility
     public static string GetTimerString(CultureInfo culture, TimeSpan timer) => timer.Minutes.ToString(culture) + culture.DateTimeFormat.TimeSeparator + timer.Seconds.ToString("D2", culture);
 
     /// <summary>
+    /// Truncates <paramref name="text"/> so that it's UTF-8 byte count is less than or equal to <paramref name="maximumBytes"/>.
+    /// </summary>
+    /// <param name="byteLength">The length in UTF-8 bytes of the truncated text.</param>
+    public static ReadOnlySpan<char> TruncateUtf8Bytes(ReadOnlySpan<char> text, int maximumBytes, out int byteLength)
+    {
+        if (maximumBytes < 0)
+        {
+            byteLength = Encoding.UTF8.GetByteCount(text);
+            return text;
+        }
+
+        if (maximumBytes == 0)
+        {
+            byteLength = 0;
+            return default;
+        }
+
+        int byteCt = Encoding.UTF8.GetByteCount(text);
+        if (byteCt <= maximumBytes)
+        {
+            byteLength = byteCt;
+            return text;
+        }
+
+        Encoder encoder = Encoding.UTF8.GetEncoder();
+        byte[] buffer = new byte[maximumBytes];
+        encoder.Convert(text, buffer, false, out int charsUsed, out byteLength, out _);
+        return text.Slice(0, charsUsed);
+    }
+
+
+    /// <summary>
     /// Parses a timespan string in the form '3d 4hr 21min etc'. Can also be 'perm[anent]'.
     /// </summary>
     /// <returns>Total amount of time. <see cref="Timeout.InfiniteTimeSpan"/> is returned if <paramref name="input"/> is permanent.</returns>

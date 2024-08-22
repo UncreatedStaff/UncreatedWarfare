@@ -1090,7 +1090,7 @@ public class DebugCommand : IExecutableCommand
     }
     private void findassets()
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
         Context.AssertHelpCheck(0, "/test findassets <type>.<field/property> <value> - List assets by their value");
         Context.AssertArgs(2, "/test findassets <type>.<field/property> <value>");
 
@@ -1154,23 +1154,6 @@ public class DebugCommand : IExecutableCommand
         Context.Defer();
     }
 
-    private void startloadout()
-    {
-        Context.AssertRanByPlayer();
-
-        Context.AssertOnDuty();
-        
-        if (!Context.TryGet(0, out Class @class))
-            throw Context.SendCorrectUsage("/test startloadout <class>");
-
-        IKitItem[] items = KitDefaults<WarfareDbContext>.GetDefaultLoadoutItems(@class);
-        L.LogDebug($"Found {items.Length} item{(items.Length == 1 ? string.Empty : "s")}.");
-
-        ItemUtility.GiveItems(Context.Player, items, true);
-
-        Context.ReplyString($"Given {items.Length} default item{(items.Length == 1 ? string.Empty : "s")} for a {@class} loadout.");
-    }
-
     private void dumpfob()
     {
         Context.AssertRanByPlayer();
@@ -1206,7 +1189,7 @@ public class DebugCommand : IExecutableCommand
 
     private async UniTask exportlang(CancellationToken token)
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
         Context.AssertHelpCheck(0, "/text exportlang [lang]");
         string? input = Context.GetRange(0);
         LanguageInfo lang = (input == null ? null : Data.LanguageDataStore.GetInfoCached(input, true)) ?? Localization.GetDefaultLanguage();
@@ -1255,42 +1238,42 @@ public class DebugCommand : IExecutableCommand
 
     private async UniTask migratebans(CancellationToken token)
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
         await Migration.MigrateBans(Data.ModerationSql, token).ConfigureAwait(false);
         Context.ReplyString("Done.");
     }
 
     private async UniTask migratebe(CancellationToken token)
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
         await Migration.MigrateBattlEyeKicks(Data.ModerationSql, token).ConfigureAwait(false);
         Context.ReplyString("Done.");
     }
 
     private async UniTask migratekicks(CancellationToken token)
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
         await Migration.MigrateKicks(Data.ModerationSql, token).ConfigureAwait(false);
         Context.ReplyString("Done.");
     }
 
     private async UniTask migratemutes(CancellationToken token)
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
         await Migration.MigrateMutes(Data.ModerationSql, token).ConfigureAwait(false);
         Context.ReplyString("Done.");
     }
 
     private async UniTask migratetks(CancellationToken token)
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
         await Migration.MigrateTeamkills(Data.ModerationSql, token).ConfigureAwait(false);
         Context.ReplyString("Done.");
     }
 
     private async UniTask migratewarns(CancellationToken token)
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
         await Migration.MigrateWarnings(Data.ModerationSql, token).ConfigureAwait(false);
         Context.ReplyString("Done.");
     }
@@ -1310,7 +1293,7 @@ public class DebugCommand : IExecutableCommand
 
     private async UniTask migrateusers(CancellationToken token)
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
 
         await using WarfareDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
@@ -1371,7 +1354,7 @@ public class DebugCommand : IExecutableCommand
 
     private async Task dumpkit(CancellationToken token)
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
 
         KitManager? km = KitManager.GetSingletonQuick();
         if (km == null)
@@ -1397,7 +1380,7 @@ public class DebugCommand : IExecutableCommand
 
     private void dumpfactions()
     {
-        Context.AssertRanByConsole();
+        Context.AssertRanByTerminal();
 
         Context.ReplyString(Environment.NewLine + JsonSerializer.Serialize(TeamManager.Factions, ConfigurationSettings.JsonSerializerSettings));
     }

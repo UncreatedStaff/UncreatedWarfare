@@ -20,7 +20,6 @@ public class CommandDispatcher : IDisposable
     private readonly ChatService _chatService;
     private readonly PlayerService _playerService;
     private readonly ILogger<CommandDispatcher> _logger;
-    private ICommandUser? _currentVanillaCommandExecutor;
     public CommandParser Parser { get; }
     public IReadOnlyList<CommandInfo> Commands { get; }
     public CommandDispatcher(WarfareModule module, UserPermissionStore permissions, ILogger<CommandDispatcher> logger, ChatService chatService, PlayerService playerService)
@@ -67,7 +66,7 @@ public class CommandDispatcher : IDisposable
             if (parentCommands.Any(x => x.Type == commandType))
                 continue;
 
-            circularReferenceBuffer.Add(commandType);;
+            circularReferenceBuffer.Add(commandType);
             CommandInfo info = new CommandInfo(commandType, logger, GetParentInfo(commandType, allCommands, logger, circularReferenceBuffer));
 
             allCommands.Add(info);
@@ -118,9 +117,10 @@ public class CommandDispatcher : IDisposable
             {
                 if (circularReferenceBuffer.Contains(subCommand.ParentType))
                 {
-                    throw new InvalidOperationException($"Circular reference detected in parent commands. {Accessor.ExceptionFormatter.Format(subCommand.ParentType)} <-> {Accessor.ExceptionFormatter.Format(commandType)}.");
+                    throw new InvalidOperationException($"Circular reference detected in parent commands. {Accessor.ExceptionFormatter.Format(subCommand.ParentType)} <- ... -> {Accessor.ExceptionFormatter.Format(commandType)}.");
                 }
 
+                circularReferenceBuffer.Add(subCommand.ParentType);
                 existingParentInfo = new CommandInfo(subCommand.ParentType, logger, GetParentInfo(subCommand.ParentType, commands, logger, circularReferenceBuffer));
                 if (!existingParentInfo.IsSubCommand)
                     commands.Add(existingParentInfo);
@@ -174,7 +174,7 @@ public class CommandDispatcher : IDisposable
         GameThread.AssertCurrent();
 
         // take off common trailing slash when missing the enter key
-        if (args.Length > 0 && args[^1].EndsWith('\\'))
+        if (originalMessage.EndsWith('\\') /* not quoted */ && args.Length > 0 && args[^1].EndsWith('\\'))
         {
             args[^1] = args[^1][..^1];
         }
@@ -211,7 +211,7 @@ public class CommandDispatcher : IDisposable
 
         if (command.VanillaCommand != null)
         {
-            await ExecuteVanillaCommandAsync(user, command.VanillaCommand, args, token);
+            await ExecuteVanillaCommandAsync(user, command, args, originalMessage, token);
             return;
         }
 
@@ -247,11 +247,6 @@ public class CommandDispatcher : IDisposable
         {
             string arg = args[i];
             bool found = false;
-
-            if (command.RedirectCommandInfo != null)
-            {
-                command = command.RedirectCommandInfo;
-            }
 
             for (int j = 0; j < command.SubCommands.Length; ++j)
             {
@@ -296,19 +291,14 @@ public class CommandDispatcher : IDisposable
         }
     }
 
-    // todo
-    internal void OnLog(string message)
-    {
-        _currentVanillaCommandExecutor?.SendMessage("<#bfb9ac>" + message + "</color>");
-    }
-
     /// <summary>
     /// Execute a vanilla command.
     /// </summary>
-    public async UniTask ExecuteVanillaCommandAsync(ICommandUser user, Command vanillaCommand, string[] args, CancellationToken token = default)
+    public async UniTask ExecuteVanillaCommandAsync(ICommandUser user, CommandInfo commandInfo, string[] args, string originalMessage, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread();
 
+        Command vanillaCommand = commandInfo.VanillaCommand!;
         if (!await _permissions.HasPermissionAsync(user, new PermissionLeaf(vanillaCommand.command, unturned: true, warfare: false) /* unturned::command */, token))
         {
             await UniTask.SwitchToMainThread();
@@ -317,18 +307,27 @@ public class CommandDispatcher : IDisposable
         }
 
         await UniTask.SwitchToMainThread();
-        _currentVanillaCommandExecutor = user;
+
+        Type commandType = vanillaCommand.GetType();
+
+        CommandContext ctx = new CommandContext(user, token, args, originalMessage, commandInfo, _module.ScopedProvider);
+        VanillaCommandListener listener = new VanillaCommandListener(ctx);
+        Dedicator.commandWindow.addIOHandler(listener);
         try
         {
             vanillaCommand.check(user.Steam64, vanillaCommand.command, string.Join('/', args));
+            if (!ctx.Responded)
+            {
+                ctx.Reply(T.VanillaCommandDidNotRespond);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error executing vanilla command {0}.", Accessor.Formatter.Format(vanillaCommand.GetType()));
+            _logger.LogError(ex, "Error executing vanilla command {0}.", Accessor.Formatter.Format(commandType));
         }
         finally
         {
-            _currentVanillaCommandExecutor = null;
+            Dedicator.commandWindow.removeIOHandler(listener);
         }
     }
 
@@ -351,7 +350,7 @@ public class CommandDispatcher : IDisposable
         {
             await UniTask.SwitchToMainThread();
 
-            CommandContext ctx = new CommandContext(user, linkedSrc.Token, args, originalMessage, command, this, _module.ScopedProvider)
+            CommandContext ctx = new CommandContext(user, linkedSrc.Token, args, originalMessage, command, _module.ScopedProvider)
             {
                 ArgumentOffset = argumentOffset
             };
@@ -360,13 +359,30 @@ public class CommandDispatcher : IDisposable
             {
                 if (command.RedirectCommandInfo != null)
                 {
-
+                    ctx.SwitchToCommand(command.RedirectCommandInfo.Type);
                 }
-                ctx.SendHelp();
+                else
+                {
+                    ctx.SendHelp();
+                }
             }
             else
             {
-                IExecutableCommand cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(_module.ScopedProvider, command.Type, [ctx]);
+                IExecutableCommand cmdInstance;
+                try
+                {
+                    cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(_module.ScopedProvider, command.Type, [ ctx ]);
+                }
+                catch (InvalidOperationException)
+                {
+                    _logger.LogInformation(
+                        "Failed to run the \"{0}\" command because of a missing service. This could be expected if the command isn't enabled in the current layout.",
+                        command.CommandName
+                    );
+                    ctx.Reply(T.NotEnabled);
+                    return;
+                }
+
                 ctx.Command = cmdInstance;
 
                 if (!CheckCommandOnCooldown(ctx))

@@ -11,6 +11,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Singletons;
@@ -59,14 +60,14 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         Instance = null!;
     }
     public void ForceUpdate() => UpdateList();
-    public bool IsSelecting(UCPlayer player) => player.TeamSelectorData is not null && player.TeamSelectorData.IsSelecting;
-    public void ResetState(UCPlayer player)
+    public bool IsSelecting(WarfarePlayer player) => player.TeamSelectorData is not null && player.TeamSelectorData.IsSelecting;
+    public void ResetState(WarfarePlayer player)
     {
         Close(player);
 
         JoinSelectionMenu(player, JoinTeamBehavior.KeepTeam, rejoin: true);
     }
-    public void Close(UCPlayer player)
+    public void Close(WarfarePlayer player)
     {
         if (player.TeamSelectorData is not null)
         {
@@ -105,14 +106,14 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
 
         UpdateList();
     }
-    private static void OnOptionsBackClicked(UCPlayer player)
+    private static void OnOptionsBackClicked(WarfarePlayer player)
     {
         if (player.TeamSelectorData is { IsOptionsOnly: true })
         {
             CloseOptions(player);
         }
     }
-    private static void CloseOptions(UCPlayer player)
+    private static void CloseOptions(WarfarePlayer player)
     {
         ApplyOptions(player);
         JoinUI.ClearFromPlayer(player.Connection);
@@ -127,7 +128,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
         player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
     }
-    private static void OnTeamClicked(UCPlayer? player, ulong team)
+    private static void OnTeamClicked(WarfarePlayer? player, ulong team)
     {
         if (player?.TeamSelectorData is null || !player.IsOnline || !player.TeamSelectorData.IsSelecting || player.TeamSelectorData.SelectedTeam == team) return;
 
@@ -163,7 +164,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             JoinUI.LogicConfirmToggle.SetVisibility(c, true);
         }
     }
-    private void OnConfirmed(UCPlayer player)
+    private void OnConfirmed(WarfarePlayer player)
     {
         if (player.TeamSelectorData is { IsOptionsOnly: true })
         {
@@ -182,7 +183,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, false);
         player.TeamSelectorData.JoiningCoroutine = StartCoroutine(JoinCoroutine(player, player.TeamSelectorData.SelectedTeam).ToCoroutine());
     }
-    private async UniTask JoinCoroutine(UCPlayer player, ulong targetTeam)
+    private async UniTask JoinCoroutine(WarfarePlayer player, ulong targetTeam)
     {
         CancellationToken token = player.DisconnectToken;
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
@@ -220,7 +221,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         Shuffle,
         KeepTeam
     }
-    public void JoinSelectionMenu(UCPlayer player, JoinTeamBehavior joinBehavior = JoinTeamBehavior.NoTeam, bool rejoin = false)
+    public void JoinSelectionMenu(WarfarePlayer player, JoinTeamBehavior joinBehavior = JoinTeamBehavior.NoTeam, bool rejoin = false)
     {
         if (player.HasModerationUI)
             ModerationUI.Instance.Close(player);
@@ -280,12 +281,12 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         
         OnPlayerSelecting?.Invoke(player);
     }
-    private static void ClearAllUI(UCPlayer player)
+    private static void ClearAllUI(WarfarePlayer player)
     {
         player.HasUIHidden = true;
         Data.HideAllUI(player);
     }
-    private void JoinTeam(UCPlayer player, ulong team)
+    private void JoinTeam(WarfarePlayer player, ulong team)
     {
         if (team is not 1 and not 2) return;
 
@@ -316,7 +317,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             ResetState(player);
         }
     }
-    public static void OpenOptionsMenu(UCPlayer player)
+    public static void OpenOptionsMenu(WarfarePlayer player)
     {
         if (player.TeamSelectorData is not { IsSelecting: true })
         {
@@ -334,19 +335,19 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         SendOptionsMenuValues(player);
         JoinUI.LogicOpenOptionsMenu.SetVisibility(player.Connection, true);
     }
-    private static void ApplyOptions(UCPlayer player)
+    private static void ApplyOptions(WarfarePlayer player)
     {
         if (!player.Locale.PreferencesIsDirty)
             return;
 
         UCWarfare.RunTask(player.Locale.Apply, CancellationToken.None);
     }
-    void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
+    void IPlayerDisconnectListener.OnPlayerDisconnecting(WarfarePlayer player)
     {
         if (player.TeamSelectorData is { IsSelecting: true })
             ApplyOptions(player);
     }
-    private static void SendOptionsMenuValues(UCPlayer player)
+    private static void SendOptionsMenuValues(WarfarePlayer player)
     {
         ITransportConnection c = player.Connection;
         JoinUI.OptionsIMGUICheckToggle.Set(player.Player, player.Save.IMGUI);
@@ -375,7 +376,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         SetLanguage(0, player, player.Locale.LanguageInfo, true);
         SetCulture(0, player, player.Locale.CultureInfo, true);
     }
-    private static void SetLanguage(int index, UCPlayer player, LanguageInfo language, bool selected)
+    private static void SetLanguage(int index, WarfarePlayer player, LanguageInfo language, bool selected)
     {
         TeamSelectorUI.LanguageBox box = JoinUI.Languages[index];
         string name = language.DisplayName;
@@ -443,7 +444,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         box.Name.SetVisibility(connection, state);
         box.Root.SetVisibility(connection, true);
     }
-    private static void SetCulture(int index, UCPlayer player, CultureInfo culture, bool selected)
+    private static void SetCulture(int index, WarfarePlayer player, CultureInfo culture, bool selected)
     {
         TeamSelectorUI.CultureBox box = JoinUI.Cultures[index];
         ITransportConnection c = player.Connection;
@@ -476,7 +477,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         box.Name.SetVisibility(connection, state);
         box.Root.SetVisibility(connection, true);
     }
-    private void OnCultureApply(UCPlayer player, int index)
+    private void OnCultureApply(WarfarePlayer player, int index)
     {
         if (player.TeamSelectorData is not { Cultures: not null })
             return;
@@ -500,7 +501,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         }, player.DisconnectToken, ctx: $"Update culture of {player}.");
     }
 
-    private void OnLanguageApply(UCPlayer player, int index)
+    private void OnLanguageApply(WarfarePlayer player, int index)
     {
         if (player.TeamSelectorData is not { Languages: not null })
             return;
@@ -549,7 +550,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         }, player.DisconnectToken, ctx: $"Update language of {player}.");
     }
     
-    private void OnCultureSearch(UCPlayer player, string text)
+    private void OnCultureSearch(WarfarePlayer player, string text)
     {
         if (player.TeamSelectorData != null)
             player.TeamSelectorData.CultureText = text;
@@ -677,7 +678,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         });
     }
     
-    private void OnLanguageSearch(UCPlayer player, string text)
+    private void OnLanguageSearch(WarfarePlayer player, string text)
     {
         ITransportConnection connection = player.Connection;
         if (!string.IsNullOrWhiteSpace(text) && Data.LanguageDataStore.GetInfoCached(text, true) is { } specificLanguage)
@@ -795,13 +796,13 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
     }
     private static void OnUseCultureForCommandInputUpdated(UnturnedToggle toggle, Player player, bool value)
     {
-        if (UCPlayer.FromPlayer(player) is not { } ucPlayer)
+        if (WarfarePlayer.FromPlayer(player) is not { } ucPlayer)
             return;
 
         ucPlayer.Locale.Preferences.UseCultureForCommandInput = value;
         ucPlayer.Locale.PreferencesIsDirty = true;
     }
-    private static void UpdateLanguage(UCPlayer player)
+    private static void UpdateLanguage(WarfarePlayer player)
     {
         ITransportConnection c = player.Connection;
         JoinUI.TeamsTitle.SetText(c, T.TeamsUIHeader.Translate(player));
@@ -814,7 +815,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         JoinUI.ButtonConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
         JoinUI.ButtonOptionsBack.SetText(player.Connection, T.TeamsUIBack.Translate(player));
     }
-    private static void SendSelectionMenu(UCPlayer player, bool optionsAlreadyOpen, ulong team)
+    private static void SendSelectionMenu(WarfarePlayer player, bool optionsAlreadyOpen, ulong team)
     {
         ITransportConnection c = player.Connection;
         if (!optionsAlreadyOpen)
@@ -834,7 +835,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             JoinUI.Teams[1].Flag.SetImage(c, TeamManager.Team2Faction.FlagImageURL);
 
         int t1Ct = 0, t2Ct = 0;
-        foreach (UCPlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
+        foreach (WarfarePlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
         {
             bool sel = pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting;
             ulong team2 = sel ? pl.TeamSelectorData!.SelectedTeam : pl.GetTeam();
@@ -878,7 +879,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         SendOptionsMenuValues(player);
         JoinUI.LogicTeamSettings.SetVisibility(player.Connection, true);
     }
-    private static void SetButtonState(UCPlayer player, ulong team, bool hasSpace)
+    private static void SetButtonState(WarfarePlayer player, ulong team, bool hasSpace)
     {
         if (team is not 1ul and not 2ul) return;
         ITransportConnection c = player.Connection;
@@ -889,7 +890,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
     private static void UpdateList()
     {
         int t1Ct = 0, t2Ct = 0;
-        foreach (UCPlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
+        foreach (WarfarePlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
         {
             bool sel = pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting;
             ulong team = sel ? pl.TeamSelectorData!.SelectedTeam : pl.GetTeam();
@@ -919,7 +920,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
 
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
-                UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
+                WarfarePlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
                     lbl?.SetText(pl2.Connection, pl.Steam64 == pl2.Steam64 ? pl.CharacterName.Colorize(SelfHex) : text);
             }
@@ -930,7 +931,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
-                UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
+                WarfarePlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
                 {
                     if (t1Ct > 0 && t1Ct <= JoinUI.TeamPlayers[0].Length)
@@ -945,7 +946,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
-                UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
+                WarfarePlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
                 {
                     if (t1Ct < JoinUI.TeamPlayers[0].Length)
@@ -958,7 +959,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
-                UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
+                WarfarePlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
                 {
                     if (t2Ct < JoinUI.TeamPlayers[1].Length)
@@ -975,7 +976,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            WarfarePlayer pl = PlayerManager.OnlinePlayers[i];
             if (pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting)
             {
                 ITransportConnection c = pl.Connection;

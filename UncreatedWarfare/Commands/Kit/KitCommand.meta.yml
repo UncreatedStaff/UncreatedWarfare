@@ -2,7 +2,7 @@
 Description: "Manage kits."
 Aliases: [ "k", "whale" ]
 Parameters:
-    # /kit give
+    # /kit give [kit | loadout <class>] [player]
   - Name: give
     Alias: g
     Type: Verbatim
@@ -21,11 +21,13 @@ Parameters:
         Type: Uncreated.Warfare.Players.IPlayer
         Optional: true
         Description: "Grant the kit on <target /> sign to <param 'player' />."
+        LinkWithChain: ~/loadout/class/player
       - Name: "loadout"
         Alias: "l"
         Type: Verbatim
         Optional: true
         Description: "Grant <param 'Kit' /> to <caller />."
+        Chain: 1
         Parameters:
           - Name: class
             Type: Uncreated.Warfare.Kits.Class
@@ -35,9 +37,10 @@ Parameters:
                 Type: Uncreated.Warfare.Players.IPlayer
                 Optional: true
                 Description: "Grant the default inventory for a <param 'Class'/> loadout to <param 'Player' />."
-    # /kit hotkey
+    # /kit hotkey <slot>
   - Name: hotkey
     Aliases: [ keybind, bind ]
+    Type: Verbatim
     Description: "Manage automatically assigned hotkey's for your equipped kit."
     Parameters:
       - Name: add
@@ -60,21 +63,46 @@ Parameters:
         Type: byte
         Range: "#[3,4,5,6,7,8,9,0]"
         Description: "Add a hotkey bind to your currently held item that will be assigned when you request your current kit."
-  # /kit favorite
+  # /kit favorite [kit]
   - Name: favorite
     Aliases: [ favourite, favour, favor, fav, star ]
+    Type: Verbatim
     Description: "Star or favorite a kit so it's highlighted and shows up higher in the Kit menu."
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
         Optional: true
         Description: "Star or favorite <param 'kit' /> so it's highlighted and shows up higher in the Kit menu."
-  # /kit unfavorite
+  # /kit unfavorite [kit]
   - Name: unfavorite
     Aliases: [ unfavourite, unfavour, unfavor, unfav, unstar ]
+    Type: Verbatim
     Description: "Remove the star or favorite on a previously favorited kit."
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
         Optional: true
         Description: "Remove the star or favorite on <param 'kit' />."
+  # /kit layout <save|reset>
+  - Name: layout
+    Aliases: [ loadout, items, order, customize ]
+    Type: Verbatim
+    Description: "Customize the layout of non-equippable items in your kit."
+    Parameters:
+      - Name: save
+        Aliases: [ confirm, keep ]
+        Type: Verbatim
+        Description: "Save your current inventory as the new layout for your kit."
+      - Name: reset
+        Aliases: [ delete, cancel, remove ]
+        Type: Verbatim
+        Description: "Reset the layout for your current kit to defaults."
+  # /kit rename <name... >
+  - Name: rename
+    Aliases: [ rname, name ]
+    Type: Verbatim
+    Description: "Change the display name of your loadout at any time."
+    Parameters:
+      - Name: name
+        Type: string
+        IsRemainder: true

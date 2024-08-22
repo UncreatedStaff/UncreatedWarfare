@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
@@ -272,8 +272,15 @@ partial class KitManager
     {
         await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
 
+        return await HasAccess(dbContext, kit, player, token);
+    }
+
+    /// <remarks>Thread Safe</remarks>
+    public async Task<bool> HasAccess(IKitsDbContext dbContext, uint kit, ulong player, CancellationToken token = default)
+    {
         return kit != 0 && await dbContext.KitAccess.AnyAsync(x => x.KitId == kit && x.Steam64 == player, token);
     }
+
     internal async Task<bool> AddAccessRow(uint kit, ulong player, KitAccessType type, CancellationToken token = default)
     {
         await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
@@ -453,14 +460,14 @@ partial class KitManager
                 player.PurchaseSync.Release();
         }
     }
-    public async Task SaveLayout(UCPlayer player, Kit kit, bool lockPurchaseSync, CancellationToken token = default)
+    public async Task SaveLayout(WarfarePlayer player, Kit kit, bool lockPurchaseSync, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
         List<ItemLayoutTransformationData> active = Layouts.GetLayoutTransformations(player, kit.PrimaryKey);
         List<(Page Page, Item Item, byte X, byte Y, byte Rotation, byte SizeX, byte SizeY)> inventory = new List<(Page, Item, byte, byte, byte, byte, byte)>(24);
         for (int pageIndex = 0; pageIndex < PlayerInventory.STORAGE; ++pageIndex)
         {
-            SDG.Unturned.Items page = player.Player.inventory.items[pageIndex];
+            SDG.Unturned.Items page = player.UnturnedPlayer.inventory.items[pageIndex];
             int c = page.getItemCount();
             for (int index = 0; index < c; ++index)
             {

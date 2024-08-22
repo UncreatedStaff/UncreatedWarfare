@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
@@ -30,7 +31,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
     }
 
     /// <exception cref="SingletonUnloadedException"/>
-    public static void StartCooldown(UCPlayer player, CooldownType type, float seconds, params object[] data)
+    public static void StartCooldown(WarfarePlayer player, CooldownType type, float seconds, params object[] data)
     {
         if (seconds <= 0f) return;
         Singleton.AssertLoaded();
@@ -40,7 +41,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
             Singleton.Cooldowns.Add(new Cooldown(player, type, seconds, data));
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static bool HasCooldown(UCPlayer player, CooldownType type, out Cooldown cooldown, params object[] data)
+    public static bool HasCooldown(WarfarePlayer player, CooldownType type, out Cooldown cooldown, params object[] data)
     {
         Singleton.AssertLoaded();
         Singleton.Cooldowns.RemoveAll(c => c.Player == null || c.SecondsLeft <= 0f);
@@ -77,18 +78,18 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
     {
         Singleton.AssertLoaded();
         Singleton.Cooldowns.RemoveAll(c => c.Player == null || c.Timeleft.TotalSeconds <= 0);
-        cooldown = Singleton.Cooldowns.Find(c => c.CooldownType == type && c.Player.CSteamID == player.CSteamID);
+        cooldown = Singleton.Cooldowns.Find(c => c.CooldownType == type && c.Player.Steam64 == player.CSteamID);
         return cooldown != null;
     }
     public static void RemoveCooldown(UCPlayer player, CooldownType type)
     {
         if (!Singleton.IsLoaded()) return;
-        Singleton.Cooldowns.RemoveAll(c => c.Player == null || c.Player.CSteamID == player.CSteamID && c.CooldownType == type);
+        Singleton.Cooldowns.RemoveAll(c => c.Player == null || c.Player.Steam64 == player.CSteamID && c.CooldownType == type);
     }
     public static void RemoveCooldown(UCPlayer player)
     {
         if (!Singleton.IsLoaded()) return;
-        Singleton.Cooldowns.RemoveAll(c => c.Player.CSteamID == player.CSteamID);
+        Singleton.Cooldowns.RemoveAll(c => c.Player.Steam64 == player.CSteamID);
     }
     public static void RemoveCooldown(CooldownType type)
     {
@@ -155,9 +156,9 @@ public class CooldownConfig : JSONConfigData
         GlobalTraitCooldown = 0f;
     }
 }
-public class Cooldown(UCPlayer player, CooldownType cooldownType, float duration, params object[] parameters) : ITranslationArgument
+public class Cooldown(WarfarePlayer player, CooldownType cooldownType, float duration, params object[] parameters) : ITranslationArgument
 {
-    public UCPlayer Player { get; } = player;
+    public WarfarePlayer Player { get; } = player;
     public CooldownType CooldownType { get; } = cooldownType;
     public double TimeAdded { get; set; } = Time.realtimeSinceStartupAsDouble;
     public float Duration { get; set; } = duration;
