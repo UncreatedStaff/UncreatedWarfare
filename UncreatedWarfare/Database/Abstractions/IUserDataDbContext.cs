@@ -8,6 +8,7 @@ public interface IUserDataDbContext : IDbContext
     DbSet<WarfareUserData> UserData { get; }
     DbSet<PlayerIPAddress> IPAddresses { get; }
     DbSet<PlayerHWID> HWIDs { get; }
+    DbSet<Permission> Permissions { get; }
 
     public static void ConfigureModels(ModelBuilder modelBuilder)
     {

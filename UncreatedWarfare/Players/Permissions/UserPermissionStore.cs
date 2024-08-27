@@ -8,10 +8,11 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.DependencyInjection;
 
 namespace Uncreated.Warfare.Players.Permissions;
 
@@ -26,19 +27,21 @@ public class UserPermissionStore : IAsyncDisposable
     private readonly IDisposable? _permissionGroupFileWatcher;
     private readonly ILogger<UserPermissionStore> _logger;
 
-    private readonly WarfareDbContext _dbContext;
+    private readonly IUserDataDbContext _dbContext;
 
     /// <summary>
     /// List of all permission groups from config.
     /// </summary>
     public IReadOnlyList<PermissionGroup> PermissionGroups { get; private set; }
 
-    public UserPermissionStore(WarfareDbContext dbContext, ILogger<UserPermissionStore> logger)
+    public UserPermissionStore(DontDispose<IUserDataDbContext> dbContext, WarfareModule module, ILogger<UserPermissionStore> logger)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext.Value;
+        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+
         _logger = logger;
         PermissionGroups = null!;
-        _permissionGroupFilePath = Path.Join(".", "Permission Groups.json");
+        _permissionGroupFilePath = Path.Combine(module.HomeDirectory, "Permission Groups.json");
         ReadPermissionGroups(true);
         _permissionGroupFileWatcher = ConfigurationHelper.ListenForFileUpdate(_permissionGroupFilePath, OnConfigUpdated);
     }
@@ -322,7 +325,7 @@ public class UserPermissionStore : IAsyncDisposable
     /// </summary>
     public virtual ValueTask<IReadOnlyList<PermissionBranch>> GetPermissionsAsync(CSteamID player, bool forceRedownload = false, CancellationToken token = default)
     {
-        if (!forceRedownload && _individualPermissionCache.TryGetValue(player.m_SteamID, out ReadOnlyCollection<PermissionBranch> permissions))
+        if (!forceRedownload && _individualPermissionCache.TryGetValue(player.m_SteamID, out ReadOnlyCollection<PermissionBranch>? permissions))
         {
             return new ValueTask<IReadOnlyList<PermissionBranch>>(permissions);
         }
@@ -335,7 +338,7 @@ public class UserPermissionStore : IAsyncDisposable
     /// </summary>
     public virtual ValueTask<IReadOnlyList<PermissionGroup>> GetPermissionGroupsAsync(CSteamID player, bool forceRedownload = false, CancellationToken token = default)
     {
-        if (!forceRedownload && _permissionGroupCache.TryGetValue(player.m_SteamID, out ReadOnlyCollection<PermissionGroup> groups))
+        if (!forceRedownload && _permissionGroupCache.TryGetValue(player.m_SteamID, out ReadOnlyCollection<PermissionGroup>? groups))
         {
             return new ValueTask<IReadOnlyList<PermissionGroup>>(groups);
         }
@@ -483,7 +486,8 @@ public class UserPermissionStore : IAsyncDisposable
 
         using Utf8JsonPreProcessingStream stream = new Utf8JsonPreProcessingStream(_permissionGroupFilePath);
 
-        PermissionGroupConfig config = JsonSerializer.Deserialize<PermissionGroupConfig>(stream.ReadAllBytes(), ConfigurationSettings.JsonSerializerSettings);
+        PermissionGroupConfig? config = JsonSerializer.Deserialize<PermissionGroupConfig>(stream.ReadAllBytes(), ConfigurationSettings.JsonSerializerSettings);
+        config ??= new PermissionGroupConfig { Groups = new List<PermissionGroup>(0) };
         config.Groups.Sort((a, b) => b.Priority.CompareTo(a.Priority));
 
         if (PermissionGroups != null)
@@ -506,6 +510,7 @@ public class UserPermissionStore : IAsyncDisposable
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
+        _dbContext.Dispose();
         _permissionGroupFileWatcher?.Dispose();
 
         try

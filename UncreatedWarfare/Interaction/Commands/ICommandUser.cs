@@ -1,6 +1,8 @@
 ﻿using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Commands;
+
+[CannotApplyEqualityOperator]
 public interface ICommandUser
 {
     /// <summary>
@@ -22,6 +24,12 @@ public interface ICommandUser
     /// Steam ID of this actor where applicable, or zero.
     /// </summary>
     CSteamID Steam64 { get; }
+
+    /// <summary>
+    /// If this user is disconnected from the server.
+    /// </summary>
+    /// <remarks>Return <see langword="false"/> if not supported.</remarks>
+    bool IsDisconnected { get; }
 
     /// <summary>
     /// Send a raw string as feedback to this actor.

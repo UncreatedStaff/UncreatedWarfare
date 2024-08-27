@@ -239,6 +239,8 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
     /// <inheritdoc />
     public void Dispose()
     {
+        _fileProvider.Dispose();
+
         List<IDisposable> toDispose = Interlocked.Exchange(ref _disposableConfigurationRoots, [ ]);
 
         for (int i = 0; i < toDispose.Count; i++)

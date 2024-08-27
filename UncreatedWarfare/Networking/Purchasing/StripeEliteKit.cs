@@ -4,10 +4,15 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Networking.Purchasing;
 
@@ -25,9 +30,11 @@ public class StripeEliteKit
     public uint PrimaryKey { get; private set; }
     public string KitId { get; private set; }
     public Product Product { get; private set; }
-    internal static async Task BulkAddStripeEliteKits(IStripeService stripeService, IPurchaseRecordsInterface purchaseRecord, CancellationToken token = default)
+    internal static async Task BulkAddStripeEliteKits(IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        KitManager? manager = UCWarfare.IsLoaded ? KitManager.GetSingletonQuick() : null;
+        IStripeService stripeService = serviceProvider.GetRequiredService<IStripeService>();
+        IPurchaseRecordsInterface purchaseRecord = serviceProvider.GetRequiredService<IPurchaseRecordsInterface>();
+        KitManager? manager = serviceProvider.GetService<KitManager>();
 
         List<(string id, Kit kit)> needsStripeKits = new List<(string, Kit)>();
 
@@ -54,7 +61,7 @@ public class StripeEliteKit
                 {
                     if (i != index) query.Append(" OR ");
 
-                    query.Append("metadata[\"" + PurchaseRecordsInterface<WarfareDbContext>.BundleIdMetadataKey + "\"]:\"")
+                    query.Append("metadata[\"" + PurchaseRecordsInterface.BundleIdMetadataKey + "\"]:\"")
                         .Append(needsStripeKits[i].id)
                         .Append('\"');
                 }
@@ -73,27 +80,39 @@ public class StripeEliteKit
 
                 foreach (Product product in existing.Data)
                 {
-                    if (product.Metadata == null || !product.Metadata.TryGetValue(PurchaseRecordsInterface<WarfareDbContext>.BundleIdMetadataKey, out string kitId))
+                    if (product.Metadata == null || !product.Metadata.TryGetValue(PurchaseRecordsInterface.BundleIdMetadataKey, out string? kitId))
                     {
                         L.LogWarning($"Unknown product id key from searched product: {product.Name}.");
                         continue;
                     }
 
                     (_, Kit kit) = needsStripeKits.Find(x => x.id.Equals(kitId, StringComparison.Ordinal));
+
                     kit.EliteKitInfo = new StripeEliteKit
                     {
                         KitId = kit.InternalName,
                         PrimaryKey = kit.PrimaryKey,
                         Product = product
                     };
-                    if (product is { DefaultPrice.UnitAmountDecimal: { } price })
-                    {
-                        price = decimal.Round(decimal.Divide(price, 100m), 2);
-                        decimal oldPrice = kit.PremiumCost;
-                        kit.PremiumCost = price;
-                        if (manager is { IsLoading: true } && oldPrice != price)
-                            kit.IsLoadDirty = true;
-                    }
+
+                    if (product is not { DefaultPrice.UnitAmountDecimal: { } price })
+                        continue;
+
+                    price = decimal.Round(decimal.Divide(price, 100m), 2);
+                    decimal oldPrice = kit.PremiumCost;
+                    kit.PremiumCost = price;
+                    if (oldPrice == price)
+                        continue;
+
+                    await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
+
+                    Kit? dbKit = await manager.GetKit(dbContext, kit.PrimaryKey, token);
+                    if (dbKit == null)
+                        continue;
+
+                    dbKit.PremiumCost = price;
+                    dbContext.Update(dbKit);
+                    await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                 }
             } while (index < needsStripeKits.Count);
         }
@@ -102,7 +121,8 @@ public class StripeEliteKit
             stripeService.Semaphore.Release();
         }
     }
-    internal static async Task<StripeEliteKit?> GetOrAddProduct(IStripeService stripeService, Kit kit, bool create = false, CancellationToken token = default)
+
+    internal static async Task<StripeEliteKit?> GetOrAddProduct(IServiceProvider serviceProvider, Kit kit, bool create = false, CancellationToken token = default)
     {
         if (kit is null)
             throw new ArgumentNullException(nameof(kit));
@@ -110,7 +130,9 @@ public class StripeEliteKit
         if (kit.Type != KitType.Elite)
             throw new ArgumentException("Kit type must be KitType.Elite.", nameof(kit));
 
-        if (!UCWarfare.IsLoaded || stripeService?.StripeClient == null)
+        IStripeService stripeService = serviceProvider.GetRequiredService<IStripeService>();
+
+        if (WarfareModule.Singleton == null || stripeService?.StripeClient == null)
             throw new InvalidOperationException("Stripe service is not loaded in Data.StripeService.");
 
         string id = kit.InternalName;
@@ -126,7 +148,7 @@ public class StripeEliteKit
         {
             StripeSearchResult<Product> existing = await stripeService.ProductService.SearchAsync(new ProductSearchOptions
             {
-                Query = $"metadata[\"{PurchaseRecordsInterface<WarfareDbContext>.BundleIdMetadataKey}\"]:\"{id}\"",
+                Query = $"metadata[\"{PurchaseRecordsInterface.BundleIdMetadataKey}\"]:\"{id}\"",
                 Limit = 1
             }, cancellationToken: token).ConfigureAwait(false);
             
@@ -141,11 +163,15 @@ public class StripeEliteKit
                 eliteKit.Product = null!;
                 return null;
             }
+
+            ITranslationValueFormatter formatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
+            LanguageService languageService = serviceProvider.GetRequiredService<LanguageService>();
+            LanguageInfo defaultLanguage = languageService.GetDefaultLanguage();
             ProductCreateOptions product = new ProductCreateOptions
             {
-                Name = kit.GetDisplayName(),
+                Name = kit.GetDisplayName(languageService, defaultLanguage),
                 Id = id,
-                Description = Localization.TranslateEnum(kit.Class) + " kit in the " + Localization.TranslateEnum(kit.Branch) + " branch.",
+                Description = formatter.FormatEnum(kit.Class, defaultLanguage) + " kit in the " + formatter.FormatEnum(kit.Branch, defaultLanguage) + " branch.",
                 DefaultPriceData = new ProductDefaultPriceDataOptions
                 {
                     Currency = "USD",
@@ -159,7 +185,7 @@ public class StripeEliteKit
                 Features = Features,
                 Metadata = new Dictionary<string, string>
                 {
-                    { PurchaseRecordsInterface<WarfareDbContext>.BundleIdMetadataKey, id }
+                    { PurchaseRecordsInterface.BundleIdMetadataKey, id }
                 }
             };
 
@@ -169,7 +195,7 @@ public class StripeEliteKit
         {
             stripeService.Semaphore.Release();
         }
-        await UniTask.SwitchToMainThread(token);
+
         eliteKit.Product = newProduct;
         return eliteKit;
     }

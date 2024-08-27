@@ -8,6 +8,7 @@ using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -18,11 +19,15 @@ public class AbandonService
 {
     private readonly PlayerService _playerService;
     private readonly VehicleService _vehicleService;
+    private readonly ITranslationValueFormatter _formatter;
+    private readonly AbandonTranslations _translations;
 
-    public AbandonService(PlayerService playerService, VehicleService vehicleService)
+    public AbandonService(PlayerService playerService, VehicleService vehicleService, TranslationInjection<AbandonTranslations> translations, ITranslationValueFormatter formatter)
     {
         _playerService = playerService;
         _vehicleService = vehicleService;
+        _formatter = formatter;
+        _translations = translations.Value;
     }
     public async UniTask AbandonAllVehiclesAsync(bool respawn, CancellationToken token = default)
     {
@@ -91,7 +96,7 @@ public class AbandonService
                 int creditReward = creditCost.Credits - Mathf.Min(creditCost.Credits,
                     (int)Math.Floor(vehicleComponent.VehicleData.Abandon.ValueLossSpeed * (Time.realtimeSinceStartup - component.RequestTime)));
 
-                Points.AwardCredits(owner!, creditReward, T.AbandonCompensationToast.Translate(owner), false, false);
+                Points.AwardCredits(owner!, creditReward, _translations.AbandonCompensationToast.Translate(owner!), redmessage: false, isPurchase: false);
             }
             else
             {
@@ -100,7 +105,7 @@ public class AbandonService
         }
         else if (owner != null)
         {
-            ToastMessage.QueueMessage(owner, new ToastMessage(ToastMessageStyle.Mini, T.AbandonCompensationToastTransferred.Translate(owner).Colorize("adadad")));
+            ToastMessage.QueueMessage(owner, new ToastMessage(ToastMessageStyle.Mini, _formatter.Colorize(_translations.AbandonCompensationToastTransferred.Translate(owner), new Color32(173, 173, 173, 255), TranslationOptions.TMProUI)));
         }
 
         await _vehicleService.DeleteVehicleAsync(vehicle, token);
@@ -134,10 +139,10 @@ public class AbandonTranslations : PropertiesTranslationCollection
     public readonly Translation<InteractableVehicle> AbandonNeedsFuel = new Translation<InteractableVehicle>("<#ff8c69>Your <#cedcde>{0}</color> is not fully fueled.");
 
     [TranslationData(Description = "Sent when a player tries to abandon a vehicle and all the bays for that vehicle are already full, theoretically should never happen.")]
-    public readonly Translation<InteractableVehicle> AbandonNoSpace = new Translation<InteractableVehicle>("<#ff8c69>There's no space for <#cedcde>{0}</color> in the yard.", FormatPlural);
+    public readonly Translation<InteractableVehicle> AbandonNoSpace = new Translation<InteractableVehicle>("<#ff8c69>There's no space for <#cedcde>{0}</color> in the yard.", arg0Fmt: PluralAddon.Always());
 
     [TranslationData(Description = "Sent when a player tries to abandon a vehicle that isn't allowed to be abandoned.")]
-    public readonly Translation<InteractableVehicle> AbandonNotAllowed = new Translation<InteractableVehicle>("<#ff8c69><#cedcde>{0}</color> can not be abandoned.", FormatPlural);
+    public readonly Translation<InteractableVehicle> AbandonNotAllowed = new Translation<InteractableVehicle>("<#ff8c69><#cedcde>{0}</color> can not be abandoned.", arg0Fmt: PluralAddon.Always());
 
     [TranslationData(Description = "Sent when a player abandons a vehicle.")]
     public readonly Translation<InteractableVehicle> AbandonSuccess = new Translation<InteractableVehicle>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.");

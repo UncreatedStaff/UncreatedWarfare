@@ -4,6 +4,7 @@ using DanielWillett.ReflectionTools.IoC;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Modules;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,6 +14,7 @@ using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
@@ -23,6 +25,7 @@ using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Services;
@@ -31,6 +34,7 @@ using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.DependencyInjection;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events;
@@ -172,15 +176,20 @@ public sealed class WarfareModule : IModuleNexus
     {
         Assembly thisAsm = Assembly.GetExecutingAssembly();
 
+        serviceCollection.AddTransient(typeof(DontDispose<>));
+
         // global zones (not used for layouts)
         serviceCollection.AddTransient<IZoneProvider, MapZoneProvider>();
         serviceCollection.AddSingleton(serviceProvider => new ZoneStore(serviceProvider.GetServices<IZoneProvider>(), serviceProvider.GetRequiredService<ILogger<ZoneStore>>(), true));
 
         serviceCollection.AddReflectionTools();
-        serviceCollection.AddModularRpcs(isServer: false, searchedAssemblies: [Assembly.GetExecutingAssembly()]);
+        serviceCollection.AddModularRpcs(isServer: false, searchedAssemblies: [ Assembly.GetExecutingAssembly() ]);
 
         serviceCollection.AddSingleton(this);
         serviceCollection.AddSingleton(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)));
+
+
+        serviceCollection.AddSingleton<AssetConfiguration>();
 
         // UI
         serviceCollection.AddSingleton<ModerationUI>();
@@ -222,6 +231,22 @@ public sealed class WarfareModule : IModuleNexus
         KitManager.ConfigureServices(serviceCollection);
         serviceCollection.AddSingleton<WhitelistService>();
 
+        // Stripe
+        serviceCollection.AddTransient<IHttpClient, UnityWebRequestsHttpClient>();
+        serviceCollection.AddTransient<IStripeClient, StripeClient>(serviceProvider =>
+        {
+            IConfiguration systemConfig = serviceProvider.GetRequiredService<IConfiguration>();
+            string? apiKey = systemConfig["stripe:api_key"];
+            if (string.IsNullOrEmpty(apiKey))
+                throw new InvalidOperationException("Stripe API key missing at stripe:api_key.");
+
+            string clientId = $"Uncreated Warfare/{Assembly.GetExecutingAssembly().GetName().Version}";
+            return new StripeClient(apiKey, clientId, httpClient: serviceProvider.GetRequiredService<IHttpClient>());
+        });
+        serviceCollection.AddSingleton(serviceProvider => new ProductService(serviceProvider.GetRequiredService<IStripeClient>()));
+        serviceCollection.AddSingleton<IStripeService, StripeService>();
+        serviceCollection.AddSingleton<IPurchaseRecordsInterface, PurchaseRecordsInterface>();
+
         // Layouts
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout());
         serviceCollection.AddTransient<IEventListenerProvider>(serviceProvider => serviceProvider.GetRequiredService<Layout>());
@@ -262,6 +287,18 @@ public sealed class WarfareModule : IModuleNexus
 
         // Database
         serviceCollection.AddDbContext<WarfareDbContext>(contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Singleton);
+        
+        serviceCollection.AddTransient<IDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IBuildablesDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IFactionDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IGameDataDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IKitsDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<ILanguageDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<ISeasonsDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IStatsDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IUserDataDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IWhitelistDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+
         serviceCollection.AddTransient<IManualMySqlProvider, ManualMySqlProvider>(serviceProvider =>
         {
             IConfiguration sysConfig = serviceProvider.GetRequiredService<IConfiguration>();

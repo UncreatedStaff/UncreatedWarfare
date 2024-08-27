@@ -14,11 +14,12 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util.DependencyInjection;
 
 namespace Uncreated.Warfare.Kits;
 
 [RpcClass]
-public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider serviceProvider) where TDbContext : IKitsDbContext
+public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider)
 {
     private readonly PlayerService _playerService = serviceProvider.GetRequiredService<PlayerService>();
     public KitManager Manager { get; } = manager;
@@ -50,7 +51,7 @@ public class KitLoadouts<TDbContext>(KitManager manager, IServiceProvider servic
 
     private async Task<List<Kit>> GetLoadouts(ulong steam64, CancellationToken token = default)
     {
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<TDbContext>();
+        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<DontDispose<IKitsDbContext>>();
 
         return await GetLoadouts(dbContext, steam64, token).ConfigureAwait(false);
     }

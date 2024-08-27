@@ -81,6 +81,8 @@ public class ChatService
         }
         else
         {
+            if (player.Save.IMGUI)
+                text = TranslationFormattingUtility.CreateIMGUIString(text);
             textColor = TranslationFormattingUtility.ExtractColor(text, out int startIndex, out int length);
             ReadOnlySpan<char> textSpan = text.AsSpan(startIndex, length);
             ReadOnlySpan<char> truncated = FormattingUtility.TruncateUtf8Bytes(textSpan, MaxMessageSize, out _);
@@ -130,6 +132,8 @@ public class ChatService
         if (user == null)
             throw new ArgumentNullException(nameof(user));
 
+        if (user.IMGUI)
+            text = TranslationFormattingUtility.CreateIMGUIString(text);
         if (user.IsTerminal)
         {
             text = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(text, _translationService.TerminalColoring);
@@ -168,6 +172,8 @@ public class ChatService
         }
         else
         {
+            if (player.Save.IMGUI)
+                text = TranslationFormattingUtility.CreateIMGUIString(text);
             ReadOnlySpan<char> truncated = FormattingUtility.TruncateUtf8Bytes(text, MaxMessageSize, out _);
             if (truncated.Length != text.Length)
             {
@@ -231,6 +237,8 @@ public class ChatService
         if (user == null)
             throw new ArgumentNullException(nameof(user));
 
+        if (user.IMGUI)
+            text = TranslationFormattingUtility.CreateIMGUIString(text);
         if (user.IsTerminal)
         {
             text = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(text, _translationService.TerminalColoring);
@@ -266,6 +274,8 @@ public class ChatService
         if (user == null)
             throw new ArgumentNullException(nameof(user));
 
+        if (user.IMGUI)
+            text = TranslationFormattingUtility.CreateIMGUIString(text);
         if (user.IsTerminal)
         {
             text = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(text, _translationService.TerminalColoring);

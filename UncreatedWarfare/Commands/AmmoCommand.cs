@@ -185,7 +185,7 @@ public class AmmoCommand : IExecutableCommand
 
             FOBManager? fobManager = Data.Singletons.GetSingleton<FOBManager>();
 
-            int ammoCost = KitDefaults<WarfareDbContext>.GetAmmoCost(kit.Class);
+            int ammoCost = KitDefaults.GetAmmoCost(kit.Class);
 
             if (Data.Gamemode.CanRefillAmmoAt(barricade.asset))
             {

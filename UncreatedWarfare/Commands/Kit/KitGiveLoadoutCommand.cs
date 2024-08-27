@@ -1,5 +1,4 @@
-﻿using Uncreated.Warfare.Database;
-using Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Players;
@@ -34,7 +33,7 @@ internal class KitGiveLoadoutCommand : IExecutableCommand
         if (!Context.TryGet(1, out _, out WarfarePlayer? player, true) || player == null)
             player = Context.Player;
 
-        IKitItem[] items = KitDefaults<WarfareDbContext>.GetDefaultLoadoutItems(@class);
+        IKitItem[] items = KitDefaults.GetDefaultLoadoutItems(@class);
 
         ItemUtility.GiveItems(player, items, true);
 

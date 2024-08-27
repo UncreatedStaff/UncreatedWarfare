@@ -1,19 +1,20 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Kits;
-public class KitDefaults<TDbContext>(KitManager manager, IServiceProvider serviceProvider) where TDbContext : IKitsDbContext
+public class KitDefaults(KitManager manager, IServiceProvider serviceProvider)
 {
+    private readonly LanguageService _languageService = serviceProvider.GetRequiredService<LanguageService>();
     public KitManager Manager { get; } = manager;
 
     /// <returns>The number of ammo boxes required to refill the kit based on it's <see cref="Class"/>.</returns>
@@ -70,7 +71,7 @@ public class KitDefaults<TDbContext>(KitManager manager, IServiceProvider servic
     {
         List<IKitItem> items = new List<IKitItem>(DefaultKitItems.Length + 6);
         items.AddRange(DefaultKitItems);
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<TDbContext>();
+        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
         Kit? existing = await dbContext.Kits.FirstOrDefaultAsync(x => x.InternalName == name, token).ConfigureAwait(false);
         if (existing != null)
         {
@@ -108,7 +109,7 @@ public class KitDefaults<TDbContext>(KitManager manager, IServiceProvider servic
             existing.FactionFilter.Add(kitFilteredFaction);
             existing.FactionFilterIsWhitelist = true;
 
-            existing.SetSignText(dbContext, 0ul, existing, "Unarmed Kit");
+            existing.SetSignText(dbContext, 0ul, "Unarmed Kit", _languageService.GetDefaultLanguage());
 
             dbContext.Update(existing);
 
@@ -130,7 +131,7 @@ public class KitDefaults<TDbContext>(KitManager manager, IServiceProvider servic
             await dbContext.AddAsync(existing, token).ConfigureAwait(false);
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
-            existing.SetSignText(dbContext, 0ul, existing, "Default Kit");
+            existing.SetSignText(dbContext, 0ul, "Default Kit", _languageService.GetDefaultLanguage());
 
             existing.SetItemArray(items.ToArray(), dbContext);
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);

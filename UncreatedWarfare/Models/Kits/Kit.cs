@@ -438,25 +438,36 @@ public class Kit : ITranslationArgument, ICloneable
 
     public string GetDisplayName(LanguageService languageService, LanguageInfo? language = null, bool removeNewLine = true)
     {
-        if (Translations is not { Count: > 0 }) return InternalName;
+        if (Translations is not { Count: > 0 })
+            return InternalName;
+
         string rtn;
-        language ??= languageService.GetDefaultLanguage();
-        KitTranslation? translation = Translations.FirstOrDefault(x => x.LanguageId == language.Key);
-        if (translation != null)
-            rtn = translation.Value ?? InternalName;
-        else if (!language.IsDefault)
+        if (languageService == null && language is null)
         {
-            language = languageService.GetDefaultLanguage();
-            translation = Translations.FirstOrDefault(x => x.LanguageId == language.Key);
+            rtn = Translations.FirstOrDefault()?.Value ?? InternalName;
+        }
+        else
+        {
+            language ??= languageService!.GetDefaultLanguage();
+            KitTranslation? translation = Translations.FirstOrDefault(x => x.LanguageId == language.Key);
             if (translation != null)
                 rtn = translation.Value ?? InternalName;
+            else if (!language.IsDefault && languageService != null)
+            {
+                language = languageService.GetDefaultLanguage();
+                translation = Translations.FirstOrDefault(x => x.LanguageId == language.Key);
+                if (translation != null)
+                    rtn = translation.Value ?? InternalName;
+                else
+                    rtn = Translations.FirstOrDefault()?.Value ?? InternalName;
+            }
             else
                 rtn = Translations.FirstOrDefault()?.Value ?? InternalName;
         }
-        else
-            rtn = Translations.FirstOrDefault()?.Value ?? InternalName;
+
         if (removeNewLine)
             rtn = rtn.Replace('\n', ' ').Replace("\r", string.Empty);
+
         return rtn;
     }
 

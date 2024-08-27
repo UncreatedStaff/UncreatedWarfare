@@ -1,6 +1,6 @@
 ﻿# KitCommand
 Description: "Manage kits."
-Aliases: [ "k", "whale" ]
+Aliases: [ k, whale ]
 Parameters:
     # /kit give [kit | loadout <class>] [player]
   - Name: give
@@ -21,7 +21,7 @@ Parameters:
         Type: Uncreated.Warfare.Players.IPlayer
         Optional: true
         Description: "Grant the kit on <target /> sign to <param 'player' />."
-        LinkWithChain: ~/loadout/class/player
+        LinkWithChain: ~/loadout/class/player # todo automate this
       - Name: "loadout"
         Alias: "l"
         Type: Verbatim

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,8 @@ namespace Uncreated.Warfare.Interaction.Commands;
 public class CommandInfo
 {
     private static readonly ServiceContainer EmptyServiceProvider = new ServiceContainer();
+
+    internal List<CommandWaitTask> WaitTasks = new List<CommandWaitTask>(0);
 
     /// <summary>
     /// Type that contains the code for the command.

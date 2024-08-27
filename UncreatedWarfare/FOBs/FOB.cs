@@ -40,6 +40,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     private int _buildLoaded;
     private int _ammoLoaded;
 
+    private IServiceProvider _serviceProvider;
+    
     private readonly List<IFOBItem> _items = new List<IFOBItem>();
     private readonly List<UCPlayer> _friendlies = new List<UCPlayer>(16);
     private BunkerComponent? _bunker;
@@ -49,7 +51,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     private byte[] _originalState;
     private bool _destroyed;
     private bool _isBeingDestroyed;
-    private FobRecordTracker<WarfareDbContext>? _recordTracker;
+    private FobRecordTracker? _recordTracker;
     public IBuildableDestroyedEvent? DestroyInfo { get; set; }
     public IReadOnlyList<IFOBItem> Items { get; }
     public IReadOnlyList<UCPlayer> FriendliesNearby { get; }
@@ -60,7 +62,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public GridLocation GridLocation { get; private set; }
     public RadioComponent Radio { get; internal set; }
     public Vector3 Position => transform.position;
-    public FobRecordTracker<WarfareDbContext>? Record => _recordTracker;
+    public FobRecordTracker? Record => _recordTracker;
     public BunkerComponent? Bunker
     {
         get => _bunker;
@@ -140,6 +142,11 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         FriendliesNearby = _friendlies.AsReadOnly();
     }
 
+    internal void Init(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
+
     [UsedImplicitly]
     private void Awake()
     {
@@ -147,6 +154,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         GridLocation = new GridLocation(transform.position);
         Radius = FOBManager.Config.FOBBuildPickupRadiusNoBunker;
     }
+
     [UsedImplicitly]
     private void Start()
     {
@@ -189,7 +197,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             Position = player!.Position
         };
 
-        _recordTracker = new FobRecordTracker<WarfareDbContext>(fobRecord);
+        _recordTracker = new FobRecordTracker(fobRecord, _serviceProvider);
         Task.Run(async () =>
         {
             try
@@ -1271,7 +1279,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     void IDisposable.Dispose()
     {
-        Record?.Dispose();
+        // todo this will cause deadlock
+        Record?.DisposeAsync().AsTask().Wait()
     }
 }
 
@@ -1284,7 +1293,7 @@ public interface IFOB : IDeployable
     GridLocation GridLocation { get; }
     Vector3 Position { get; }
     IBuildableDestroyedEvent? DestroyInfo { get; set; }
-    FobRecordTracker<WarfareDbContext>? Record { get; }
+    FobRecordTracker? Record { get; }
     bool ContainsBuildable(IBuildable buildable);
     bool ContainsVehicle(InteractableVehicle vehicle);
     IFOBItem? FindFOBItem(IBuildable buildable);

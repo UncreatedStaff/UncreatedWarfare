@@ -1,5 +1,4 @@
-﻿#if NETSTANDARD || NETFRAMEWORK
-#define TELEMETRY
+﻿#define TELEMETRY
 using Stripe;
 using System;
 using System.Collections.Generic;
@@ -13,7 +12,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Newtonsoft.Json;
 using UnityEngine.Networking;
-using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Util;
 
 #if TELEMETRY
 using System.Net.Http;
@@ -25,6 +24,7 @@ namespace Uncreated.Warfare.Networking.Purchasing;
 //  https://github.com/stripe/stripe-dotnet/blob/master/src/Stripe.net/Infrastructure/Public/SystemNetHttpClient.cs
 internal class UnityWebRequestsHttpClient : IHttpClient
 {
+    private readonly ILogger _logger;
     private const int TimeoutSeconds = 80;
     private const int MaxRetryDelayMs = 5000;
     private const int MinRetryDelayMs = 500;
@@ -35,6 +35,12 @@ internal class UnityWebRequestsHttpClient : IHttpClient
 #endif
     private static string? _clientUserAgent;
     private static string? _userAgent;
+
+    public UnityWebRequestsHttpClient(ILogger<UnityWebRequestsHttpClient> logger)
+    {
+        _logger = logger;
+    }
+
     private async UniTask<StripeResponse> MakeRequestAsyncImpl(StripeRequest request, CancellationToken token)
     {
         IntlStripeResponse response = await SendHttpRequest(request, token);
@@ -44,6 +50,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
         response.Request.Dispose();
         return resp;
     }
+
     private async UniTask<StripeStreamedResponse> MakeStreamingRequestAsyncImpl(StripeRequest request, CancellationToken token)
     {
         IntlStripeResponse response = await SendHttpRequest(request, token);
@@ -54,11 +61,12 @@ internal class UnityWebRequestsHttpClient : IHttpClient
         response.Request.Dispose();
         return resp;
     }
+
     private static HttpResponseHeaders ConvertHeaders(in IntlStripeResponse response)
     {
         HttpResponseHeaders headerList = (HttpResponseHeaders)Activator.CreateInstance(typeof(HttpResponseHeaders),
             BindingFlags.CreateInstance | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
-            Array.Empty<object>(), CultureInfo.InvariantCulture, null);
+            Array.Empty<object>(), CultureInfo.InvariantCulture, null)!;
 
         Dictionary<string, string> headers = response.CachedHeaders;
         foreach (KeyValuePair<string, string> pair in headers)
@@ -68,6 +76,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
 
         return headerList;
     }
+
     private async UniTask<IntlStripeResponse> SendHttpRequest(StripeRequest request, CancellationToken token)
     {
         await UniTask.SwitchToMainThread(token);
@@ -109,11 +118,11 @@ internal class UnityWebRequestsHttpClient : IHttpClient
 
                 if (isActualError)
                 {
-                    L.LogError($"Stripe API call failed: {ex.Message}");
+                    _logger.LogError("Stripe API call failed: {0}", ex.Message);
                     string? text = req.downloadHandler?.text;
                     if (text != null)
                     {
-                        L.LogError($"Response: {Environment.NewLine}" + text);
+                        _logger.LogError("Response: \"{0}\".", text);
                     }
                 }
             }
@@ -134,7 +143,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
                     throw requestException;
                 }
 #if TELEMETRY
-                if (headers.TryGetValue("Request-Id", out string reqId))
+                if (headers.TryGetValue("Request-Id", out string? reqId))
                 {
                     HttpResponseMessage tempMessage = new HttpResponseMessage((HttpStatusCode)req.responseCode);
                     tempMessage.Headers.TryAddWithoutValidation("Request-Id", reqId);
@@ -142,7 +151,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
                     _requestTelemetry.MaybeEnqueueMetrics(tempMessage, elapsed);
                 }
 #endif
-                return new IntlStripeResponse(req, headers, numRetries);
+                return new IntlStripeResponse(req, headers);
             }
 
             req.Dispose();
@@ -159,6 +168,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
             await UniTask.Delay(msSleepTime, true, cancellationToken: token);
         }
     }
+
     private static bool ShouldRetry(int numRetries, bool error, UnityWebRequest req, IReadOnlyDictionary<string, string> headers)
     {
         if (numRetries >= MaxRetries)
@@ -169,7 +179,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
         if (error)
             return true;
 
-        if (headers != null && headers.TryGetValue("Stripe-Should-Retry", out string shouldRetry))
+        if (headers != null && headers.TryGetValue("Stripe-Should-Retry", out string? shouldRetry))
         {
             if ("true".Equals(shouldRetry, StringComparison.OrdinalIgnoreCase))
                 return true;
@@ -179,15 +189,17 @@ internal class UnityWebRequestsHttpClient : IHttpClient
         
         return req.responseCode is 409 or >= 500;
     }
+
     private static string BuildUserAgentString()
     {
-        string userAgent = $"Stripe/v1 .NetBindings/{StripeConfiguration.StripeNetVersion} Uncreated Warfare/{UCWarfare.Version}";
+        string userAgent = $"Stripe/v1 .NetBindings/{StripeConfiguration.StripeNetVersion}  Warfare/{Assembly.GetExecutingAssembly().GetName().Version}";
 
         if (UCWarfare.Config.WebsiteUri != null)
             userAgent += " (" + UCWarfare.Config.WebsiteUri.OriginalString + ")";
 
         return userAgent;
     }
+
     private static string BuildStripeClientUserAgentString()
     {
         StringBuilder sb = new StringBuilder("{");
@@ -234,6 +246,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
         sb.Append('}');
         return sb.ToString();
     }
+
     private static Exception TryParseError(UnityWebRequest req, UnityWebRequestException ex, out bool isActualError)
     {
         isActualError = false;
@@ -269,6 +282,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
         isActualError = false;
         return ex;
     }
+
     private static UnityWebRequest BuildRequest(StripeRequest request)
     {
         _userAgent ??= BuildUserAgentString();
@@ -281,7 +295,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
             task.Wait(); // this isn't a mortal sin because it's buffered before this function is called.
             byte[] bytes = task.Result;
             requestMessage = new UnityWebRequest(request.Uri, request.Method.ToString(), new DownloadHandlerBuffer(), new UploadHandlerRaw(bytes));
-            requestMessage.uploadHandler.contentType = request.Content.Headers.ContentType.MediaType;
+            requestMessage.uploadHandler.contentType = request.Content.Headers.ContentType!.MediaType;
             requestMessage.SetRequestHeader("Content-Type", request.Content.Headers.ContentType.MediaType);
         }
         else
@@ -311,14 +325,13 @@ internal class UnityWebRequestsHttpClient : IHttpClient
     {
         public readonly UnityWebRequest Request;
         public readonly Dictionary<string, string> CachedHeaders;
-        public readonly int Retries;
-        public IntlStripeResponse(UnityWebRequest request, Dictionary<string, string> cachedHeaders, int retries)
+        public IntlStripeResponse(UnityWebRequest request, Dictionary<string, string> cachedHeaders)
         {
             Request = request;
             CachedHeaders = cachedHeaders;
-            Retries = retries;
         }
     }
+
     private readonly struct StripeErrorResponse
     {
         [JsonProperty("error")]
@@ -331,4 +344,3 @@ internal class UnityWebRequestsHttpClient : IHttpClient
         }
     }
 }
-#endif

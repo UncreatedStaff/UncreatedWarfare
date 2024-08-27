@@ -108,17 +108,10 @@ public static class Data
     public static Dictionary<ulong, string> DefaultPlayerNames;
     public static Dictionary<ulong, PlayerNames> OriginalPlayerNames;
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents;
-    internal static WarfareSQL DatabaseManager;
-    internal static WarfareSQL? RemoteSQL;
-    internal static DatabaseInterface ModerationSql;
-    internal static WarfareMySqlLanguageDataStore LanguageDataStore;
-    internal static PurchaseRecordsInterface<WarfareDbContext> PurchasingDataStore;
     public static GamemodeOld Gamemode;
     public static bool UseFastKits;
     public static bool UseElectricalGrid;
     internal static MethodInfo ReplicateStance;
-    public static Reporter? Reporter;
-    public static DeathTracker DeathTracker;
     public static Points Points;
     public static SessionManager Sessions;
 #if NETSTANDARD || NETFRAMEWORK

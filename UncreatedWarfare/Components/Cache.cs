@@ -46,8 +46,8 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     public bool ContainsVehicle(InteractableVehicle vehicle) => false;
     public IFOBItem? FindFOBItem(IBuildable buildable) => null;
     public IFOBItem? FindFOBItem(InteractableVehicle vehicle) => null;
-    public FobRecordTracker<WarfareDbContext>? Record { get; }
-    public Cache(IBuildable drop, ulong team, CacheLocation location, string name, int number)
+    public FobRecordTracker? Record { get; }
+    public Cache(IBuildable drop, ulong team, CacheLocation location, string name, int number, IServiceProvider serviceProvider)
     {
         IsDiscovered = false;
         _component = drop.Model.gameObject.AddComponent<CacheComponent>().Initialize(drop, this);
@@ -82,8 +82,19 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
             Team = (byte)Team
         };
 
-        Record = new FobRecordTracker<WarfareDbContext>(fobRecord);
-        UCWarfare.RunTask(Record.Create, ctx: "Create FOB record.");
+        Record = new FobRecordTracker(fobRecord, serviceProvider);
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Record.Create();
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error creating FOB record.");
+                L.LogError(ex);
+            }
+        });
     }
 
     public string UIColor
@@ -228,7 +239,9 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
             Drop.Destroy();
             Drop = null!;
         }
-        Record?.Dispose();
+
+        // todo make this better, this could def cause a deadlock
+        Record?.DisposeAsync().AsTask().Wait()
     }
     public class CacheComponent : MonoBehaviour, IManualOnDestroy
     {

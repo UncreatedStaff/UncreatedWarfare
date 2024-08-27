@@ -7,28 +7,32 @@ using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Interaction.Commands;
-public class CommandDispatcher : IDisposable
+public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
 {
     private readonly WarfareModule _module;
     private readonly UserPermissionStore _permissions;
     private readonly ChatService _chatService;
     private readonly PlayerService _playerService;
+    private readonly ILoopTickerFactory _tickerFactory;
     private readonly ILogger<CommandDispatcher> _logger;
     public CommandParser Parser { get; }
     public IReadOnlyList<CommandInfo> Commands { get; }
-    public CommandDispatcher(WarfareModule module, UserPermissionStore permissions, ILogger<CommandDispatcher> logger, ChatService chatService, PlayerService playerService)
+    public CommandDispatcher(WarfareModule module, UserPermissionStore permissions, ILogger<CommandDispatcher> logger, ChatService chatService, PlayerService playerService, ILoopTickerFactory tickerFactory)
     {
         _module = module;
         _permissions = permissions;
         _logger = logger;
         _chatService = chatService;
         _playerService = playerService;
+        _tickerFactory = tickerFactory;
 
         Parser = new CommandParser(this);
 
@@ -130,6 +134,82 @@ public class CommandDispatcher : IDisposable
         }
     }
 
+    /// <summary>
+    /// Remove all wait tasks for a disconnected player.
+    /// </summary>
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        foreach (CommandInfo commandType in Commands)
+        {
+            lock (commandType.WaitTasks)
+            {
+                for (int i = commandType.WaitTasks.Count - 1; i >= 0; --i)
+                {
+                    if (!Equals(commandType.WaitTasks[i].User, e.Player))
+                        continue;
+
+                    commandType.WaitTasks[i].MarkDisconnected();
+                    commandType.WaitTasks.RemoveAt(i);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Wait for a <paramref name="commandType"/> command to be executed by <paramref name="user"/>.
+    /// </summary>
+    public CommandWaitTask WaitForCommand(Type commandType, ICommandUser user, TimeSpan timeout = default, CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
+    {
+        CommandInfo? command = FindCommand(commandType ?? throw new ArgumentNullException(nameof(commandType)));
+        return WaitForCommand(
+            command ?? throw new ArgumentException($"No registered command with type {Accessor.ExceptionFormatter.Format(commandType)}.", nameof(commandType)),
+            user, timeout, options, token
+        );
+    }
+
+    /// <summary>
+    /// Wait for a <paramref name="commandType"/> command to be executed by any user.
+    /// </summary>
+    public CommandWaitTask WaitForCommand(Type commandType, TimeSpan timeout = default, CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
+    {
+        CommandInfo? command = FindCommand(commandType ?? throw new ArgumentNullException(nameof(commandType)));
+        return WaitForCommand(
+            command ?? throw new ArgumentException($"No registered command with type {Accessor.ExceptionFormatter.Format(commandType)}.", nameof(commandType)),
+            timeout, options, token
+        );
+    }
+
+    /// <summary>
+    /// Wait for a <paramref name="commandType"/> command to be executed by <paramref name="user"/>.
+    /// </summary>
+    public CommandWaitTask WaitForCommand(CommandInfo commandType, ICommandUser user, TimeSpan timeout = default, CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
+    {
+        if (timeout == TimeSpan.Zero)
+            timeout = TimeSpan.FromSeconds(15d);
+        return new CommandWaitTask(commandType ?? throw new ArgumentNullException(nameof(commandType)), user, timeout, token, options, this, _tickerFactory);
+    }
+
+    /// <summary>
+    /// Wait for a <paramref name="commandType"/> command to be executed by any user.
+    /// </summary>
+    public CommandWaitTask WaitForCommand(CommandInfo commandType, TimeSpan timeout = default, CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
+    {
+        if (timeout == TimeSpan.Zero)
+            timeout = TimeSpan.FromSeconds(15d);
+        return new CommandWaitTask(commandType ?? throw new ArgumentNullException(nameof(commandType)), null, timeout, token, options, this, _tickerFactory);
+    }
+
+    internal void RegisterCommandWaitTask(CommandWaitTask commandWaitTask)
+    {
+        if (commandWaitTask.IsCompleted)
+            return;
+
+        lock (commandWaitTask.Command.WaitTasks)
+        {
+            commandWaitTask.Command.WaitTasks.Add(commandWaitTask);
+        }
+    }
+
 
     /// <summary>
     /// Find information about a command by name.
@@ -179,16 +259,63 @@ public class CommandDispatcher : IDisposable
             args[^1] = args[^1][..^1];
         }
 
+        List<CommandWaitTask>? foundTasks = null;
+        if (command.WaitTasks.Count > 0)
+        {
+            lock (command.WaitTasks)
+            {
+                for (int i = command.WaitTasks.Count - 1; i >= 0; --i)
+                {
+                    CommandWaitTask task = command.WaitTasks[i];
+
+                    if (task.User != null && !task.User.Equals(user))
+                        continue;
+
+                    (foundTasks ??= new List<CommandWaitTask>(1)).Add(task);
+                    command.WaitTasks.RemoveAt(i);
+                }
+            }
+        }
+
+        foreach (CommandInfo cmd in Commands)
+        {
+            lock (cmd.WaitTasks)
+            {
+                for (int i = cmd.WaitTasks.Count - 1; i >= 0; --i)
+                {
+                    CommandWaitTask task = command.WaitTasks[i];
+                    if ((task.Options & CommandWaitOptions.AbortOnOtherCommandExecuted) == 0 || task.User != null && !task.User.Equals(user) || foundTasks != null && foundTasks.Contains(task))
+                        continue;
+
+                    // task is removed by Abort, lock won't deadlock on same thread
+                    task.Abort();
+                }
+            }
+        }
+
+        if (foundTasks != null && foundTasks.Exists(task => (task.Options & CommandWaitOptions.BlockOriginalExecution) != 0))
+        {
+            Lazy<CommandContext> contextFactory = new Lazy<CommandContext>(
+                () => new CommandContext(user, CancellationToken.None, args, originalMessage, command, _module.ScopedProvider),
+                    LazyThreadSafetyMode.ExecutionAndPublication);
+
+            foreach (CommandWaitTask task in foundTasks)
+            {
+                task.MarkCompleted(contextFactory, user);
+            }
+            return;
+        }
+
         UniTask.Create(async () =>
         {
-            await ExecuteCommandAsync(command, user, args, originalMessage);
+            await ExecuteCommandAsync(command, user, args, originalMessage, foundTasks, user is WarfarePlayer player ? player.DisconnectToken : CancellationToken.None);
         });
     }
 
     /// <summary>
     /// Execute a parsed command.
     /// </summary>
-    public async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, string originalMessage, CancellationToken token = default)
+    public async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, string originalMessage, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
     {
         int offset;
         if (!command.IsSubCommand)
@@ -211,11 +338,11 @@ public class CommandDispatcher : IDisposable
 
         if (command.VanillaCommand != null)
         {
-            await ExecuteVanillaCommandAsync(user, command, args, originalMessage, token);
+            await ExecuteVanillaCommandAsync(user, command, args, originalMessage, waitTasks, token);
             return;
         }
 
-        await ExecuteCommandAsync(command, user, args, originalMessage, offset, token);
+        await ExecuteCommandAsync(command, user, args, originalMessage, offset, waitTasks, token);
     }
 
     private static void BacktrackSubCommand(CommandInfo command, ref string[] args, out int offset)
@@ -294,7 +421,7 @@ public class CommandDispatcher : IDisposable
     /// <summary>
     /// Execute a vanilla command.
     /// </summary>
-    public async UniTask ExecuteVanillaCommandAsync(ICommandUser user, CommandInfo commandInfo, string[] args, string originalMessage, CancellationToken token = default)
+    public async UniTask ExecuteVanillaCommandAsync(ICommandUser user, CommandInfo commandInfo, string[] args, string originalMessage, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread();
 
@@ -328,13 +455,22 @@ public class CommandDispatcher : IDisposable
         finally
         {
             Dedicator.commandWindow.removeIOHandler(listener);
+
+            if (waitTasks != null)
+            {
+                Lazy<CommandContext> contextFactory = new Lazy<CommandContext>(ctx);
+                foreach (CommandWaitTask waitTask in waitTasks)
+                {
+                    waitTask.MarkCompleted(contextFactory, user);
+                }
+            }
         }
     }
 
     /// <summary>
     /// Execute a custom command.
     /// </summary>
-    private async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, string originalMessage, int argumentOffset, CancellationToken token = default)
+    private async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, string originalMessage, int argumentOffset, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
     {
         SemaphoreSlim? lockTaken = command.SynchronizedSemaphore;
         if (lockTaken != null)
@@ -436,6 +572,15 @@ public class CommandDispatcher : IDisposable
                 }
             }
 
+            if (waitTasks != null)
+            {
+                Lazy<CommandContext> contextFactory = new Lazy<CommandContext>(ctx);
+                foreach (CommandWaitTask waitTask in waitTasks)
+                {
+                    waitTask.MarkCompleted(contextFactory, user);
+                }
+            }
+
             Type? switchCommand = ctx.SwitchCommand;
             if (switchCommand != null)
             {
@@ -496,7 +641,7 @@ public class CommandDispatcher : IDisposable
         if (switchInfo == null)
             return;
 
-        await ExecuteCommandAsync(switchInfo, user, args, originalMessage, token);
+        await ExecuteCommandAsync(switchInfo, user, args, originalMessage, null, token);
     }
 
     /// <summary>

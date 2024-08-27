@@ -92,8 +92,8 @@ public partial class KitManager :
         Signs = new KitSigns(this, serviceProvider);
         Layouts = new KitLayouts(this, serviceProvider);
         Boosting = new KitBoosting(this);
-        Loadouts = ProxyGenerator.Instance.CreateProxy<KitLoadouts<WarfareDbContext>>(rpcRouter, [ this, serviceProvider ]);
-        Defaults = new KitDefaults<WarfareDbContext>(this, serviceProvider);
+        Loadouts = ProxyGenerator.Instance.CreateProxy<KitLoadouts>(rpcRouter, [ this, serviceProvider ]);
+        Defaults = new KitDefaults(this, serviceProvider);
 
         _favoritesTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromMinutes(1d), TimeSpan.FromMinutes(1d), false, SaveFavoritesTick);
     }

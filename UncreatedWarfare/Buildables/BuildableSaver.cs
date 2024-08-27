@@ -11,6 +11,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.DependencyInjection;
 
 namespace Uncreated.Warfare.Buildables;
 
@@ -26,12 +27,12 @@ public class BuildableSaver : ISessionHostedService, IDisposable
     private readonly SignInstancer? _signs;
 
     private List<BuildableSave>? _saves;
-    public BuildableSaver(IBuildablesDbContext dbContext, ILogger<BuildableSaver> logger, PlayerService playerService, IServiceProvider serviceProvider)
+    public BuildableSaver(DontDispose<IBuildablesDbContext> dbContext, ILogger<BuildableSaver> logger, PlayerService playerService, IServiceProvider serviceProvider)
     {
-        dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        _dbContext = dbContext.Value;
+        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         _signs = serviceProvider.GetService<SignInstancer>();
-        _dbContext = dbContext;
         _logger = logger;
         _playerService = playerService;
     }
@@ -94,6 +95,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
 
     void IDisposable.Dispose()
     {
+        _dbContext.Dispose();
         _semaphore.Dispose();
     }
 

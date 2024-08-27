@@ -31,10 +31,10 @@ public class KitCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<Kit> KitOverwrote = new Translation<Kit>("<#a0ad8e>Overwritten items for kit: <#fff>{0}</color>.", arg0Fmt: Kit.FormatId);
 
     [TranslationData("Sent when the player tries overwriting the items in a kit with /kit create <name>. They must /confirm first.", "Overwritten Kit", "Overwritten Kit", IsPriorityTranslation = false)]
-    public readonly Translation<Kit, Kit> KitConfirmOverride = new Translation<Kit, Kit>("<#c480d9>Type <#aaa>/confirm</color> in the next 10 seconds if you want to override the items in <#fff>{0}</color> (<#aaa>{1}</color>).", arg0Fmt: Kit.FormatId, arg1Fmt: Kit.FormatDisplayName);
+    public readonly Translation<Kit, Kit> KitConfirmOverride = new Translation<Kit, Kit>("<#c480d9>Type <#aaa>/confirm</color> in the next 15 seconds if you want to override the items in <#fff>{0}</color> (<#aaa>{1}</color>).", arg0Fmt: Kit.FormatId, arg1Fmt: Kit.FormatDisplayName);
 
     [TranslationData("Sent when the player tries deleting kit with /kit delete <name>. They must /confirm first.", "Deleting Kit", "Deleting Kit", IsPriorityTranslation = false)]
-    public readonly Translation<Kit, Kit> KitConfirmDelete = new Translation<Kit, Kit>("<#c480d9>Type <#aaa>/confirm</color> in the next 10 seconds if you want to delete <#fff>{0}</color> (<#aaa>{1}</color>).", arg0Fmt: Kit.FormatId, arg1Fmt: Kit.FormatDisplayName);
+    public readonly Translation<Kit, Kit> KitConfirmDelete = new Translation<Kit, Kit>("<#c480d9>Type <#aaa>/confirm</color> in the next 15 seconds if you want to delete <#fff>{0}</color> (<#aaa>{1}</color>).", arg0Fmt: Kit.FormatId, arg1Fmt: Kit.FormatDisplayName);
 
     [TranslationData("Sent when the player doesn't /confirm in time for overwriting kit items.", IsPriorityTranslation = false)]
     public readonly Translation KitCancelOverride = new Translation("<#ff8c69>Item override cancelled.");

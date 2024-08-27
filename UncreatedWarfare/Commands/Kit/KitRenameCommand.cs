@@ -78,7 +78,7 @@ internal class KitRenameCommand : IExecutableCommand
         await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<IKitsDbContext>();
 
             kit = await _kitManager.GetKit(dbContext, kit.PrimaryKey, token);
             if (kit == null)

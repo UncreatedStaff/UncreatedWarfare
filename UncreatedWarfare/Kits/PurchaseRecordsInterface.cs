@@ -1,17 +1,18 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.Extensions.DependencyInjection;
 using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Networking.Purchasing;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Kits;
 public interface IPurchaseRecordsInterface
@@ -25,8 +26,10 @@ public interface IPurchaseRecordsInterface
     Task RefreshKits(CancellationToken token = default);
 }
 
-public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInterface, IDisposable where TDbContext : IKitsDbContext, new()
+public class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
 {
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<PurchaseRecordsInterface> _logger;
     public const string LoadoutId = "loadout";
 
     public const string BundleIdMetadataKey = "product_bundle_key";
@@ -65,12 +68,20 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
     public IReadOnlyList<EliteBundle> Bundles { get; private set; }
     public IReadOnlyList<Kit> Kits { get; set; }
     public Product LoadoutProduct { get; set; }
-    public abstract IStripeService StripeService { get; }
+    public IStripeService StripeService { get; }
     public bool FilterLoadouts { get; set; } = true;
     public SemaphoreSlim Semaphore { get; } = new SemaphoreSlim(1, 1);
-    public static async Task<T> Create<T>(bool createMissingProducts, CancellationToken token = default) where T : PurchaseRecordsInterface<TDbContext>, new()
+
+    protected PurchaseRecordsInterface(IServiceProvider serviceProvider)
     {
-        T pri = new T();
+        _serviceProvider = serviceProvider;
+        StripeService = serviceProvider.GetRequiredService<IStripeService>();
+        _logger = serviceProvider.GetRequiredService<ILogger<PurchaseRecordsInterface>>();
+    }
+
+    public static async Task<T> Create<T>(bool createMissingProducts, IServiceProvider serviceProvider, CancellationToken token = default) where T : PurchaseRecordsInterface
+    {
+        T pri = ActivatorUtilities.CreateInstance<T>(serviceProvider);
         await pri.RefreshAll(createMissingProducts, token).ConfigureAwait(false);
         return pri;
     }
@@ -171,7 +182,8 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using IKitsDbContext dbContext = new TDbContext();
+            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<IKitsDbContext>();
+
             _bundles = await OnInclude(dbContext.EliteBundles)
                 .ToArrayAsync(token).ConfigureAwait(false);
 
@@ -225,7 +237,8 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
             return;
 
         await BulkAddStripeEliteBundles(StripeService, token).ConfigureAwait(false);
-        if (!UCWarfare.IsLoaded)
+
+        if (WarfareModule.Singleton == null)
             return;
 
         for (int i = 0; i < _bundles.Length; ++i)
@@ -233,9 +246,9 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
             EliteBundle bundle = _bundles[i];
             if (bundle.Product == null)
             {
-                L.Log($"Creating stripe product for {bundle.DisplayName}.");
+                _logger.LogInformation("Creating stripe product for bundle \"{0}\".", bundle.Id);
                 await GetOrAddProduct(StripeService, bundle, create, token).ConfigureAwait(false);
-                L.Log("  ... Done");
+                _logger.LogInformation("  ... Done");
             }
         }
     }
@@ -244,9 +257,9 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
         if (StripeService?.StripeClient == null)
             return;
 
-        await StripeEliteKit.BulkAddStripeEliteKits(StripeService, this, token).ConfigureAwait(false);
+        await StripeEliteKit.BulkAddStripeEliteKits(_serviceProvider, token).ConfigureAwait(false);
 
-        if (!UCWarfare.IsLoaded)
+        if (WarfareModule.Singleton == null)
             return;
 
         for (int i = 0; i < _kits.Length; ++i)
@@ -255,9 +268,9 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
             if (kit is not { Type: KitType.Elite, EliteKitInfo: null })
                 continue;
 
-            L.Log($"Creating stripe product for {kit.GetDisplayName()}.");
-            await StripeEliteKit.GetOrAddProduct(StripeService, kit, create, token).ConfigureAwait(false);
-            L.Log("  ... Done");
+            _logger.LogInformation("Creating stripe product for kit \"{0}\".", kit.InternalName);
+            await StripeEliteKit.GetOrAddProduct(_serviceProvider, kit, create, token).ConfigureAwait(false);
+            _logger.LogInformation("  ... Done");
         }
     }
     public Task RefreshKits(CancellationToken token = default) => RefreshKits(false, false, false, token);
@@ -266,21 +279,7 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using IKitsDbContext dbContext = new TDbContext();
-            if (!forceNotUseKitManager && UCWarfare.IsLoaded && Data.Singletons != null && Data.Gamemode != null && KitManager.GetSingletonQuick() is { } kitManager)
-            {
-                //_kits = new Kit[kitManager.Items.Count];
-                //for (int i = 0; i < kitManager.Items.Count; ++i)
-                //{
-                //    Kit kit = kitManager.Items[i];
-                //    _kits[i] = kit; todo
-                //}
-            }
-            else
-            {
-                _kits = await OnInclude(dbContext.Kits).ToArrayAsync(token).ConfigureAwait(false);
-            }
-
+            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<IKitsDbContext>();
             CleanupReferences();
 
             Kits = new ReadOnlyCollection<Kit>(_kits);
@@ -323,6 +322,7 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
                 }
             }
         }
+
         for (int i = 0; i < _bundles.Length; ++i)
         {
             EliteBundle bundle = _bundles[i];
@@ -347,10 +347,9 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
             }
         }
     }
+
     public void Dispose()
     {
-        if (StripeService is IDisposable disp)
-            disp.Dispose();
         Semaphore.Dispose();
     }
 
@@ -401,9 +400,9 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
 
                 foreach (Product product in existing.Data)
                 {
-                    if (product.Metadata == null || !product.Metadata.TryGetValue(BundleIdMetadataKey, out string bundleId))
+                    if (product.Metadata == null || !product.Metadata.TryGetValue(BundleIdMetadataKey, out string? bundleId))
                     {
-                        L.LogWarning($"Unknown product bundle id key from searched product: {product.Name}.");
+                        _logger.LogWarning("Unknown product bundle id key from searched product: {0}.", product.Name);
                         continue;
                     }
 
@@ -457,10 +456,11 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
             if (bundle.Kits != null)
             {
                 StringBuilder sb = new StringBuilder("Included Kits:");
+                LanguageService? languageService = _serviceProvider.GetService<LanguageService>();
                 foreach (Kit includedKit in bundle.Kits.Select(x => x.Kit))
                 {
                     sb.Append(Environment.NewLine);
-                    sb.Append(includedKit.GetDisplayName());
+                    sb.Append(includedKit.GetDisplayName(languageService, languageService?.GetDefaultLanguage() ?? new LanguageInfo("en-us")));
                     if (includedKit.EliteKitInfo is { Product.DefaultPrice.UnitAmountDecimal: { } price })
                         sb.Append($" (Individual price: {price.ToString("C", stripeService.PriceFormatting)})");
                 }
@@ -501,9 +501,3 @@ public abstract class PurchaseRecordsInterface<TDbContext> : IPurchaseRecordsInt
         return newProduct;
     }
 }
-#if NETSTANDARD || NETFRAMEWORK
-internal class WarfarePurchaseRecordsInterface : PurchaseRecordsInterface<WarfareDbContext>
-{
-    public override IStripeService StripeService => Data.WarfareStripeService;
-}
-#endif

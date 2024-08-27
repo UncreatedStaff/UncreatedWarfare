@@ -6,7 +6,6 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Saves;
-using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
@@ -20,6 +19,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
     private readonly PlayerNames _playerNameHelper;
+    private readonly uint _acctId;
     public CSteamID Steam64 { get; }
     public Player UnturnedPlayer { get; }
     public SteamPlayer SteamPlayer { get; }
@@ -31,10 +31,15 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     public PlayerSummary CachedSteamProfile { get; internal set; }
 
     /// <summary>
-    /// If the player this object represents is currently online. Set to false *after* the leave event is fired.
+    /// If the player this object represents is currently online. Set to <see langword="false"/> *after* the leave event is fired.
     /// </summary>
     public bool IsOnline { get; private set; } = true;
-    
+
+    /// <summary>
+    /// If the player this object represents is currently offline. Set to <see langword="true"/> *after* the leave event is fired.
+    /// </summary>
+    public bool IsDisconnected => !IsOnline;
+
     /// <summary>
     /// If the player this object represents is currently in the process of disconnecting.
     /// </summary>
@@ -63,10 +68,6 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// A <see cref="CancellationToken"/> that cancels after the player leaves.
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
-
-
-    public ToastManager Toasts { get; }
-
     internal WarfarePlayer(Player player, ILogger logger, IReadOnlyList<IPlayerComponent> components)
     {
         _disconnectTokenSource = new CancellationTokenSource();
@@ -75,12 +76,12 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         UnturnedPlayer = player;
         SteamPlayer = player.channel.owner;
         Steam64 = player.channel.owner.playerID.steamID;
+        _acctId = Steam64.GetAccountID().m_AccountID;
         Transform = player.transform;
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
 
         Locale = new WarfarePlayerLocale(this, /* todo data.LanguagePreferences */ null);
-        Toasts = new ToastManager(this);
 
         Components = components;
 
@@ -174,7 +175,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
 
     public override int GetHashCode()
     {
-        return Steam64.m_SteamID.GetHashCode();
+        return unchecked ( (int)_acctId );
     }
 
     bool ICommandUser.IsSuperUser => false;

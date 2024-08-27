@@ -2,7 +2,7 @@
 
   <!-- Set this to false for migrations -->
   <PropertyGroup>
-    <CopyToModule>True</CopyToModule>
+    <CopyToModule>False</CopyToModule>
   </PropertyGroup>
 
   <PropertyGroup>
