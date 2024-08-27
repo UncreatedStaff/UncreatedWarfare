@@ -43,7 +43,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public IReadOnlyList<UCPlayer> FriendliesNearby { get; }
     public string Name { get; internal set; }
     public int Number { get; internal set; }
-    public string ClosestLocation { get; private set; }
+    public string ClosestLocation { get; private set; } 
     UCPlayer? IFOB.Instigator { get; set; }
     public GridLocation GridLocation { get; private set; }
     public RadioComponent Radio { get; internal set; }
