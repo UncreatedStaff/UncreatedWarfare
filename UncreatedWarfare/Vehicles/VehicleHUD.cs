@@ -2,7 +2,7 @@
 
 namespace Uncreated.Warfare.Vehicles;
 
-// todo add paths when my vehicle project isn't corrupted
+[UnturnedUI(BasePath = "Canvas")]
 public class VehicleHUD : UnturnedUI
 {
     public readonly UnturnedLabel MissileWarning = new UnturnedLabel("VH_MissileWarning");
