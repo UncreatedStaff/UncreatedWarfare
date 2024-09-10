@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Framework.UI;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.SQL;
@@ -904,6 +905,74 @@ public static class F
             return asset;
         return null;
     }
+    private class AssetContainer : IAssetContainer
+    {
+        private readonly EAssetType _assetType;
+        private Asset? _asset;
+        public Guid Guid { get; }
+        public ushort Id { get; }
+        public Asset? Asset
+        {
+            get
+            {
+                if (_asset != null)
+                    return _asset;
+
+                if (Guid != Guid.Empty)
+                {
+                    _asset = Assets.find(Guid);
+                    if (_asset != null)
+                        return _asset;
+                }
+
+                if (Id != 0)
+                {
+                    _asset = Assets.find(_assetType, Id);
+                }
+
+                return _asset;
+            }
+        }
+        public AssetContainer(Guid guid)
+        {
+            Guid = guid;
+        }
+        public AssetContainer(ushort id, EAssetType assetType)
+        {
+            Id = id;
+            _assetType = assetType;
+        }
+        public static AssetContainer Create<TAsset>(JsonAssetReference<TAsset> reference) where TAsset : Asset
+        {
+            if (reference.Guid != Guid.Empty)
+            {
+                return new AssetContainer(reference.Guid);
+            }
+
+            if (reference.Id != 0)
+            {
+                return new AssetContainer(reference.Id, AssetTypeHelper<TAsset>.Type);
+            }
+
+            return new AssetContainer(Guid.Empty);
+        }
+    }
+
+    public static IAssetContainer AsAssetContainer<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference) where TAsset : Asset
+    {
+        if (reference is null || !reference.HasValue)
+        {
+            return new AssetContainer(Guid.Empty);
+        }
+
+        return AssetContainer.Create(reference.Value);
+    }
+
+    public static IAssetContainer AsAssetContainer<TAsset>(this JsonAssetReference<TAsset>? reference) where TAsset : Asset
+    {
+        return reference is null ? new AssetContainer(Guid.Empty) : AssetContainer.Create(reference);
+    }
+
     public static bool ValidReference<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, out Guid guid) where TAsset : Asset
     {
         if (reference is not null && reference.HasValue && reference.Value.Exists)

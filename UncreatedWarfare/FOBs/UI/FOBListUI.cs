@@ -3,23 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
+using Uncreated.Framework.UI.Patterns;
 
 namespace Uncreated.Warfare.FOBs.UI;
 public class FOBListUI : UnturnedUI
 {
-    public readonly FOBListElement[] FOBs = UnturnedUIPatterns.CreateArray<FOBListElement>("{0}", 0, to: 9);
-    public FOBListUI() : base(Gamemodes.Gamemode.Config.UIFOBList) { }
-    public struct FOBListElement
-    {
-        [UIPattern("", Mode = FormatMode.Prefix)]
-        public UnturnedUIElement Root { get; set; }
-
-        [UIPattern("N", Mode = FormatMode.Prefix)]
-        public UnturnedLabel Name { get; set; }
-
-        [UIPattern("R", Mode = FormatMode.Prefix)]
-        public UnturnedLabel Resources { get; set; }
-    }
+    public readonly FOBListElement[] FOBs = ElementPatterns.CreateArray<FOBListElement>("Canvas/{0}", 0, to: 9);
+    public FOBListUI() : base(Gamemodes.Gamemode.Config.UIFOBList.AsAssetContainer()) { }
     public void Hide(UCPlayer player)
     {
         if (!player.HasFOBUI)
@@ -185,4 +175,16 @@ public class FOBListUI : UnturnedUI
     }
 
     private static string GetFOBUIText(in LanguageSet set, IFOB fob) => T.FOBUI.Translate(set.Language, fob, fob.GridLocation, fob.ClosestLocation, team: set.Team, target: set.Players.Count == 1 ? set.Players[0] : null);
+
+    public class FOBListElement
+    {
+        [Pattern(Root = true)]
+        public UnturnedUIElement Root { get; set; }
+
+        [Pattern("N{0}")]
+        public UnturnedLabel Name { get; set; }
+
+        [Pattern("R{0}")]
+        public UnturnedLabel Resources { get; set; }
+    }
 }

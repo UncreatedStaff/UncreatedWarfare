@@ -4,12 +4,15 @@ using System;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
+using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Players;
 
 public delegate void PopupButtonPressed(UCPlayer player, int button, ref bool consume, ref bool closeWindow);
 public delegate void ToastPopupButtonPressed(UCPlayer player, int button, in ToastMessage message, ref bool consume, ref bool closeWindow);
+
+[UnturnedUI(BasePath = "Container/MainBox")]
 public class PopupUI : UnturnedUI
 {
     public static PopupUI Instance { get; } = new PopupUI();
@@ -17,14 +20,14 @@ public class PopupUI : UnturnedUI
     public static event PopupButtonPressed? OnToastButtonPressed;
     public LabeledStateButton[] Buttons { get; } =
     {
-        new LabeledStateButton("Button1"),
-        new LabeledStateButton("Button2"),
-        new LabeledStateButton("Button3"),
-        new LabeledStateButton("Button4")
+        new LabeledStateButton("ButtonContainer/Button1", "./Button1Label", "./Button1State"),
+        new LabeledStateButton("ButtonContainer/Button2", "./Button2Label", "./Button2State"),
+        new LabeledStateButton("ButtonContainer/Button3", "./Button3Label", "./Button3State"),
+        new LabeledStateButton("ButtonContainer/Button4", "./Button4Label", "./Button4State")
     };
 
     public UnturnedImage Image { get; } = new UnturnedImage("Image");
-    public PopupUI() : base(Gamemode.Config.UIPopup)
+    public PopupUI() : base(Gamemode.Config.UIPopup.AsAssetContainer())
     {
         for (int i = 0; i < Buttons.Length; ++i)
         {

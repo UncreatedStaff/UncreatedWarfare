@@ -5,21 +5,20 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework.UI;
+using Uncreated.Framework.UI.Patterns;
+using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Database;
-using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
+
+[UnturnedUI(BasePath = "Background/BkgrMask")]
 public class KitMenuUI : UnturnedUI
 {
     private const bool RichIcons = true;
@@ -37,166 +36,158 @@ public class KitMenuUI : UnturnedUI
     public const int IncludedItemsCount = 17;
     /* LOGIC */
 
+    // this doesn't actually exist but is used to store UI data.
+    public readonly UnturnedUIElement Parent = new UnturnedUIElement("~/root");
+
     // enable these to clear all, will disable themselves
-    public readonly UnturnedUIElement LogicClearAll     = new UnturnedUIElement("anim_logic_clear_all");
-    public readonly UnturnedUIElement LogicClearList    = new UnturnedUIElement("anim_logic_clear_list");
-    public readonly UnturnedUIElement LogicClearKit     = new UnturnedUIElement("anim_logic_clear_kit");
-    public readonly UnturnedUIElement LogicClearFilter  = new UnturnedUIElement("anim_logic_clear_filter");
-    public readonly UnturnedUIElement LogicSetOpenState = new UnturnedUIElement("anim_logic_state_open");
+    public readonly UnturnedUIElement LogicClearAll = new UnturnedUIElement("~/anim_logic_clear_all");
+    public readonly UnturnedUIElement LogicClearList = new UnturnedUIElement("~/anim_logic_clear_list");
+    public readonly UnturnedUIElement LogicClearKit = new UnturnedUIElement("~/anim_logic_clear_kit");
+    public readonly UnturnedUIElement LogicClearFilter = new UnturnedUIElement("~/anim_logic_clear_filter");
+    public readonly UnturnedUIElement LogicSetOpenState = new UnturnedUIElement("~/anim_logic_state_open");
 
     // set these as active/inactive to enable or disable target
-    public readonly UnturnedUIElement LogicActionButton = new UnturnedUIElement("anim_logic_state_btn_action");
-    public readonly UnturnedUIElement LogicStaff1Button = new UnturnedUIElement("anim_logic_state_btn_staff_1");
-    public readonly UnturnedUIElement LogicStaff2Button = new UnturnedUIElement("anim_logic_state_btn_staff_2");
-    public readonly UnturnedUIElement LogicStaff3Button = new UnturnedUIElement("anim_logic_state_btn_staff_3");
+    public readonly UnturnedUIElement LogicActionButton = new UnturnedUIElement("~/anim_logic_state_btn_action");
+    public readonly UnturnedUIElement LogicStaff1Button = new UnturnedUIElement("~/anim_logic_state_btn_staff_1");
+    public readonly UnturnedUIElement LogicStaff2Button = new UnturnedUIElement("~/anim_logic_state_btn_staff_2");
+    public readonly UnturnedUIElement LogicStaff3Button = new UnturnedUIElement("~/anim_logic_state_btn_staff_3");
 
     /* TABS */
 
     // labels
-    public readonly UnturnedLabel  LblTabBaseKits    = new UnturnedLabel ("tab_base_kits");
-    public readonly UnturnedLabel  LblTabEliteKits   = new UnturnedLabel ("tab_elite_kits");
-    public readonly UnturnedLabel  LblTabLoadouts    = new UnturnedLabel ("tab_loadouts");
-    public readonly UnturnedLabel  LblTabSpecialKits = new UnturnedLabel ("tab_special_kits");
+    public readonly UnturnedLabel LblTabBaseKits = new UnturnedLabel("Tabs/Tab0/tab_base_kits");
+    public readonly UnturnedLabel LblTabEliteKits = new UnturnedLabel("Tabs/Tab1/tab_elite_kits");
+    public readonly UnturnedLabel LblTabLoadouts = new UnturnedLabel("Tabs/Tab2/tab_loadouts");
+    public readonly UnturnedLabel LblTabSpecialKits = new UnturnedLabel("Tabs/Tab3/tab_special_kits");
 
     // buttons
-    public readonly UnturnedButton BtnTabBaseKits    = new UnturnedButton("Tab0");
-    public readonly UnturnedButton BtnTabEliteKits   = new UnturnedButton("Tab1");
-    public readonly UnturnedButton BtnTabLoadouts    = new UnturnedButton("Tab2");
-    public readonly UnturnedButton BtnTabSpecialKits = new UnturnedButton("Tab3");
-    public readonly UnturnedButton BtnTabClose       = new UnturnedButton("Tab4");
+    public readonly UnturnedButton BtnTabBaseKits = new UnturnedButton("Tabs/Tab0");
+    public readonly UnturnedButton BtnTabEliteKits = new UnturnedButton("Tabs/Tab1");
+    public readonly UnturnedButton BtnTabLoadouts = new UnturnedButton("Tabs/Tab2");
+    public readonly UnturnedButton BtnTabSpecialKits = new UnturnedButton("Tabs/Tab3");
+    public readonly UnturnedButton BtnTabClose = new UnturnedButton("Tabs/Tab4");
 
     /* FILTER */
-    
+
     // labels
-    public readonly UnturnedLabel LblFilterTitle                = new UnturnedLabel("filter_title");
+    public readonly UnturnedLabel LblFilterTitle = new UnturnedLabel("KitList/filter_title");
 
     // name of the selected class in the filter
-    public readonly UnturnedLabel DropdownSelectedName          = new UnturnedLabel("dropdown_selected");
-    public readonly UnturnedLabel DropdownSelectedClass         = new UnturnedLabel("dropdown_selected_class");
+    public readonly UnturnedLabel DropdownSelectedName = new UnturnedLabel("KitList/dropdown_open_btn/dropdown_selected");
+    public readonly UnturnedLabel DropdownSelectedClass = new UnturnedLabel("KitList/dropdown_open_btn/dropdown_selected_class");
 
     // dropdown selection buttons
-    public readonly UnturnedButton BtnDropdownNone              = new UnturnedButton("dropdown_none");
-    public readonly UnturnedButton BtnDropdownAPRifleman        = new UnturnedButton("dropdown_aprifleman");
-    public readonly UnturnedButton BtnDropdownAutomaticRifleman = new UnturnedButton("dropdown_automaticrifleman");
-    public readonly UnturnedButton BtnDropdownBreacher          = new UnturnedButton("dropdown_breacher");
-    public readonly UnturnedButton BtnDropdownCombatEngineer    = new UnturnedButton("dropdown_combatengineer");
-    public readonly UnturnedButton BtnDropdownCrewman           = new UnturnedButton("dropdown_crewman");
-    public readonly UnturnedButton BtnDropdownGrenadier         = new UnturnedButton("dropdown_grenadier");
-    public readonly UnturnedButton BtnDropdownHAT               = new UnturnedButton("dropdown_hat");
-    public readonly UnturnedButton BtnDropdownLAT               = new UnturnedButton("dropdown_lat");
-    public readonly UnturnedButton BtnDropdownMachineGunner     = new UnturnedButton("dropdown_machinegunner");
-    public readonly UnturnedButton BtnDropdownMarksman          = new UnturnedButton("dropdown_marksman");
-    public readonly UnturnedButton BtnDropdownMedic             = new UnturnedButton("dropdown_medic");
-    public readonly UnturnedButton BtnDropdownPilot             = new UnturnedButton("dropdown_pilot");
-    public readonly UnturnedButton BtnDropdownRifleman          = new UnturnedButton("dropdown_rifleman");
-    public readonly UnturnedButton BtnDropdownSniper            = new UnturnedButton("dropdown_sniper");
-    public readonly UnturnedButton BtnDropdownSpecOps           = new UnturnedButton("dropdown_specops");
-    public readonly UnturnedButton BtnDropdownSquadleader       = new UnturnedButton("dropdown_squadleader");
+    public readonly UnturnedButton BtnDropdownNone = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_none");
+    public readonly UnturnedButton BtnDropdownAPRifleman = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_aprifleman");
+    public readonly UnturnedButton BtnDropdownAutomaticRifleman = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_automaticrifleman");
+    public readonly UnturnedButton BtnDropdownBreacher = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_breacher");
+    public readonly UnturnedButton BtnDropdownCombatEngineer = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_combatengineer");
+    public readonly UnturnedButton BtnDropdownCrewman = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_crewman");
+    public readonly UnturnedButton BtnDropdownGrenadier = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_grenadier");
+    public readonly UnturnedButton BtnDropdownHAT = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_hat");
+    public readonly UnturnedButton BtnDropdownLAT = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_lat");
+    public readonly UnturnedButton BtnDropdownMachineGunner = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_machinegunner");
+    public readonly UnturnedButton BtnDropdownMarksman = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_marksman");
+    public readonly UnturnedButton BtnDropdownMedic = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_medic");
+    public readonly UnturnedButton BtnDropdownPilot = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_pilot");
+    public readonly UnturnedButton BtnDropdownRifleman = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_rifleman");
+    public readonly UnturnedButton BtnDropdownSniper = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_sniper");
+    public readonly UnturnedButton BtnDropdownSpecOps = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_specops");
+    public readonly UnturnedButton BtnDropdownSquadleader = new UnturnedButton("KitList/dropdown_open_btn/filter_dropdown/dropdown_squadleader");
 
     /* KIT INFO */
 
     // labels
-    public readonly UnturnedLabel LblInfoTitle   = new UnturnedLabel("kit_info_title");
-    public readonly UnturnedLabel LblInfoFaction = new UnturnedLabel("kit_info_faction_lbl");
-    public readonly UnturnedLabel LblInfoClass   = new UnturnedLabel("kit_info_class_lbl");
+    public readonly UnturnedLabel LblInfoTitle = new UnturnedLabel("KitInfo/kit_info_title");
+    public readonly UnturnedLabel LblInfoFaction = new UnturnedLabel("KitInfo/kit_info_title/kit_info_layout/kit_info_faction/kit_info_faction_lbl");
+    public readonly UnturnedLabel LblInfoClass = new UnturnedLabel("KitInfo/kit_info_title/kit_info_layout/kit_info_class/kit_info_class_lbl");
 
     // values
-    public readonly UnturnedLabel ValInfoFaction = new UnturnedLabel("kit_info_faction_value");
-    public readonly UnturnedLabel ValInfoClass   = new UnturnedLabel("kit_info_class_value");
-    public readonly UnturnedLabel ValInfoType    = new UnturnedLabel("kit_info_type");
+    public readonly UnturnedLabel ValInfoFaction = new UnturnedLabel("KitInfo/kit_info_title/kit_info_layout/kit_info_faction/kit_info_faction_value");
+    public readonly UnturnedLabel ValInfoClass = new UnturnedLabel("KitInfo/kit_info_title/kit_info_layout/kit_info_class/kit_info_class_value");
+    public readonly UnturnedLabel ValInfoType = new UnturnedLabel("KitInfo/kit_info_title/kit_info_layout/kit_info_type");
 
     // icons
-    public readonly UnturnedLabel LblInfoFactionFlag = new UnturnedLabel("kit_info_faction_flag");
-    public readonly UnturnedLabel LblInfoClassIcon   = new UnturnedLabel("kit_info_class_icon");
+    public readonly UnturnedLabel LblInfoFactionFlag = new UnturnedLabel("KitInfo/kit_info_title/kit_info_layout/kit_info_faction/kit_info_faction_lbl/kit_info_faction_flag");
+    public readonly UnturnedLabel LblInfoClassIcon = new UnturnedLabel("KitInfo/kit_info_title/kit_info_layout/kit_info_class/kit_info_class_lbl/kit_info_class_icon");
 
     // Included Items
-    public readonly UnturnedLabel LblInfoIncludedItems = new UnturnedLabel("kit_info_included_lbl");
+    public readonly UnturnedLabel LblInfoIncludedItems = new UnturnedLabel("KitInfo/kit_info_title/kit_info_layout/kit_info_included_items/kit_info_included_lbl");
 
     /* STATS */
 
     // labels
-    public readonly UnturnedLabel LblStatsTitle                  = new UnturnedLabel("kit_stats_title");
-    public readonly UnturnedLabel LblStatsPlaytime               = new UnturnedLabel("kit_info_playtime_lbl");
-    public readonly UnturnedLabel LblStatsKills                  = new UnturnedLabel("kit_info_kills_lbl");
-    public readonly UnturnedLabel LblStatsDeaths                 = new UnturnedLabel("kit_info_deaths_lbl");
-    public readonly UnturnedLabel LblStatsPrimaryKills           = new UnturnedLabel("kit_info_primary_kills_lbl");
-    public readonly UnturnedLabel LblStatsPrimaryAverageDistance = new UnturnedLabel("kit_info_primary_avg_dist_lbl");
-    public readonly UnturnedLabel LblStatsSecondaryKills         = new UnturnedLabel("kit_info_secondary_kills_lbl");
-    public readonly UnturnedLabel LblStatsDBNO                   = new UnturnedLabel("kit_info_dbnos_lbl");
-    public readonly UnturnedLabel LblStatsDistanceTraveled       = new UnturnedLabel("kit_info_distance_traveled_lbl");
-    public readonly UnturnedLabel LblStatsTicketsLost            = new UnturnedLabel("kit_info_tickets_used_lbl");
-    public readonly UnturnedLabel LblStatsTicketsGained          = new UnturnedLabel("kit_info_tickets_gained_lbl");
-    public readonly UnturnedLabel LblStatsClass1                 = new UnturnedLabel("kit_info_class_1_lbl");
-    public readonly UnturnedLabel LblStatsClass2                 = new UnturnedLabel("kit_info_class_2_lbl");
-    public readonly UnturnedLabel LblStatsClass3                 = new UnturnedLabel("kit_info_class_3_lbl");
+    public readonly UnturnedLabel LblStatsTitle = new UnturnedLabel("Stats/kit_stats_title");
+    public readonly UnturnedLabel LblStatsPlaytime = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_playtime/kit_info_playtime_lbl");
+    public readonly UnturnedLabel LblStatsKills = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_kills/kit_info_kills_lbl");
+    public readonly UnturnedLabel LblStatsDeaths = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_deaths/kit_info_deaths_lbl");
+    public readonly UnturnedLabel LblStatsPrimaryKills = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_primary_kills/kit_info_primary_kills_lbl");
+    public readonly UnturnedLabel LblStatsPrimaryAverageDistance = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_primary_avg_dist/kit_info_primary_avg_dist_lbl");
+    public readonly UnturnedLabel LblStatsSecondaryKills = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_secondary_kills/kit_info_secondary_kills_lbl");
+    public readonly UnturnedLabel LblStatsDBNO = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_dbnos/kit_info_dbnos_lbl");
+    public readonly UnturnedLabel LblStatsDistanceTraveled = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_distance_traveled/kit_info_distance_traveled_lbl");
+    public readonly UnturnedLabel LblStatsTicketsLost = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_tickets_used/kit_info_tickets_used_lbl");
+    public readonly UnturnedLabel LblStatsTicketsGained = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_tickets_gained/kit_info_tickets_gained_lbl");
+    public readonly UnturnedLabel LblStatsClass1 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_class_1/kit_info_class_1_lbl");
+    public readonly UnturnedLabel LblStatsClass2 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_class_2/kit_info_class_2_lbl");
+    public readonly UnturnedLabel LblStatsClass3 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_class_3/kit_info_class_3_lbl");
 
     // values
-    public readonly UnturnedLabel ValStatsPlaytime               = new UnturnedLabel("kit_info_playtime_value");
-    public readonly UnturnedLabel ValStatsKills                  = new UnturnedLabel("kit_info_kills_value");
-    public readonly UnturnedLabel ValStatsDeaths                 = new UnturnedLabel("kit_info_deaths_value");
-    public readonly UnturnedLabel ValStatsPrimaryKills           = new UnturnedLabel("kit_info_primary_kills_value");
-    public readonly UnturnedLabel ValStatsPrimaryAverageDistance = new UnturnedLabel("kit_info_primary_avg_dist_value");
-    public readonly UnturnedLabel ValStatsSecondaryKills         = new UnturnedLabel("kit_info_secondary_kills_value");
-    public readonly UnturnedLabel ValStatsDBNO                   = new UnturnedLabel("kit_info_dbnos_value");
-    public readonly UnturnedLabel ValStatsDistanceTravelled      = new UnturnedLabel("kit_info_distance_traveled_value");
-    public readonly UnturnedLabel ValStatsTicketsLost            = new UnturnedLabel("kit_info_tickets_used_value");
-    public readonly UnturnedLabel ValStatsTicketsGained          = new UnturnedLabel("kit_info_tickets_gained_value");
-    public readonly UnturnedLabel ValStatsClass1                 = new UnturnedLabel("kit_info_class_1_value");
-    public readonly UnturnedLabel ValStatsClass2                 = new UnturnedLabel("kit_info_class_2_value");
-    public readonly UnturnedLabel ValStatsClass3                 = new UnturnedLabel("kit_info_class_3_value");
+    public readonly UnturnedLabel ValStatsPlaytime = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_playtime/kit_info_playtime_value");
+    public readonly UnturnedLabel ValStatsKills = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_kills/kit_info_kills_value");
+    public readonly UnturnedLabel ValStatsDeaths = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_deaths/kit_info_deaths_value");
+    public readonly UnturnedLabel ValStatsPrimaryKills = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_primary_kills/kit_info_primary_kills_value");
+    public readonly UnturnedLabel ValStatsPrimaryAverageDistance = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_primary_avg_dist/kit_info_primary_avg_dist_value");
+    public readonly UnturnedLabel ValStatsSecondaryKills = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_secondary_kills/kit_info_secondary_kills_value");
+    public readonly UnturnedLabel ValStatsDBNO = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_dbnos/kit_info_dbnos_value");
+    public readonly UnturnedLabel ValStatsDistanceTravelled = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_distance_traveled/kit_info_distance_traveled_value");
+    public readonly UnturnedLabel ValStatsTicketsLost = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_tickets_used/kit_info_tickets_used_value");
+    public readonly UnturnedLabel ValStatsTicketsGained = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_tickets_gained/kit_info_tickets_gained_value");
+    public readonly UnturnedLabel ValStatsClass1 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_class_1/kit_info_class_1_value");
+    public readonly UnturnedLabel ValStatsClass2 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_class_2/kit_info_class_2_value");
+    public readonly UnturnedLabel ValStatsClass3 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_class_3/kit_info_class_3_value");
 
     // parents
-    public readonly UnturnedUIElement ObjStatsClass1 = new UnturnedLabel("kit_stats_class_1");
-    public readonly UnturnedUIElement ObjStatsClass2 = new UnturnedLabel("kit_stats_class_2");
-    public readonly UnturnedUIElement ObjStatsClass3 = new UnturnedLabel("kit_stats_class_3");
+    public readonly UnturnedUIElement ObjStatsClass1 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_class_1");
+    public readonly UnturnedUIElement ObjStatsClass2 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_class_2");
+    public readonly UnturnedUIElement ObjStatsClass3 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_class_3");
 
     // separators
-    public readonly UnturnedUIElement SeparatorStatsClass1 = new UnturnedLabel("kit_stats_sep_10");
-    public readonly UnturnedUIElement SeparatorStatsClass2 = new UnturnedLabel("kit_stats_sep_11");
-    public readonly UnturnedUIElement SeparatorStatsClass3 = new UnturnedLabel("kit_stats_sep_12");
+    public readonly UnturnedUIElement SeparatorStatsClass1 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_sep_10");
+    public readonly UnturnedUIElement SeparatorStatsClass2 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_sep_11");
+    public readonly UnturnedUIElement SeparatorStatsClass3 = new UnturnedLabel("Stats/kit_stats_title/kit_stats_layout/kit_stats_sep_12");
 
     /* ACTIONS */
 
     // labels
-    public readonly UnturnedLabel LblActionsTitle = new UnturnedLabel("kit_actions_title");
-    public readonly UnturnedLabel LblActionsActionButton = new UnturnedLabel("kit_actions_action_lbl");
-    public readonly UnturnedLabel LblActionsStaff1Button = new UnturnedLabel("kit_actions_staff_1_text");
-    public readonly UnturnedLabel LblActionsStaff2Button = new UnturnedLabel("kit_actions_staff_2_text");
-    public readonly UnturnedLabel LblActionsStaff3Button = new UnturnedLabel("kit_actions_staff_3_text");
+    public readonly UnturnedLabel LblActionsTitle = new UnturnedLabel("Actions/kit_actions_title");
+    public readonly UnturnedLabel LblActionsActionButton = new UnturnedLabel("Actions/kit_actions_title/kit_actions_layout/kit_actions_action_btn/kit_actions_action_lbl");
+    public readonly UnturnedLabel LblActionsStaff1Button = new UnturnedLabel("Actions/kit_actions_title/kit_actions_layout/kit_actions_staff_1/kit_actions_staff_1_text");
+    public readonly UnturnedLabel LblActionsStaff2Button = new UnturnedLabel("Actions/kit_actions_title/kit_actions_layout/kit_actions_staff_2/kit_actions_staff_2_text");
+    public readonly UnturnedLabel LblActionsStaff3Button = new UnturnedLabel("Actions/kit_actions_title/kit_actions_layout/kit_actions_staff_3/kit_actions_staff_3_text");
 
     // buttons
-    public readonly UnturnedButton BtnActionsAction = new UnturnedButton("kit_actions_action_btn");
-    public readonly UnturnedButton BtnActionsStaff1 = new UnturnedButton("kit_actions_staff_1");
-    public readonly UnturnedButton BtnActionsStaff2 = new UnturnedButton("kit_actions_staff_2");
-    public readonly UnturnedButton BtnActionsStaff3 = new UnturnedButton("kit_actions_staff_3");
+    public readonly UnturnedButton BtnActionsAction = new UnturnedButton("Actions/kit_actions_title/kit_actions_layout/kit_actions_action_btn");
+    public readonly UnturnedButton BtnActionsStaff1 = new UnturnedButton("Actions/kit_actions_title/kit_actions_layout/kit_actions_staff_1");
+    public readonly UnturnedButton BtnActionsStaff2 = new UnturnedButton("Actions/kit_actions_title/kit_actions_layout/kit_actions_staff_2");
+    public readonly UnturnedButton BtnActionsStaff3 = new UnturnedButton("Actions/kit_actions_title/kit_actions_layout/kit_actions_staff_3");
 
     /* ARRAYS */
 
     // kit info
-    public readonly UnturnedUIElement[] IncludedItems = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("kit_included_{0}", 0, length: IncludedItemsCount);
-    public readonly UnturnedLabel[] IncludedItemsText = UnturnedUIPatterns.CreateArray<UnturnedLabel>("kit_included_text_{0}", 0, length: IncludedItemsCount);
-    public readonly UnturnedLabel[] IncludedItemsIcons = UnturnedUIPatterns.CreateArray<UnturnedLabel>("kit_included_icon_{0}", 0, length: IncludedItemsCount);
-    public readonly UnturnedLabel[] IncludedItemsAmounts = UnturnedUIPatterns.CreateArray<UnturnedLabel>("kit_included_amt_{0}", 0, length: IncludedItemsCount);
+    public readonly KitInfoIncludedItem[] IncludedItems = ElementPatterns.CreateArray<KitInfoIncludedItem>("KitInfo/kit_info_title/kit_info_layout/kit_info_included_items/kit_included_{0}", 0, length: IncludedItemsCount);
 
     // kit list
-    public readonly UnturnedButton[] Kits = UnturnedUIPatterns.CreateArray<UnturnedButton>("kit_{0}", 1, length: KitListCount);
-    public readonly UnturnedLabel[] FlagLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("flag_kit_{0}", 1, length: KitListCount);
-    public readonly UnturnedLabel[] NameLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("name_kit_{0}", 1, length: KitListCount);
-    public readonly UnturnedLabel[] WeaponLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("weapon_kit_{0}", 1, length: KitListCount);
-    public readonly UnturnedLabel[] IdLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("id_kit_{0}", 1, length: KitListCount);
-    public readonly UnturnedLabel[] FavoriteLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("txt_fav_kit_{0}", 1, length: KitListCount);
-    public readonly UnturnedLabel[] ClassLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("class_kit_{0}", 1, length: KitListCount);
-    public readonly UnturnedLabel[] StatusLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("status_kit_{0}", 1, length: KitListCount);
-    public readonly UnturnedButton[] FavoriteButtons = UnturnedUIPatterns.CreateArray<UnturnedButton>("btn_fav_kit_{0}", 1, length: KitListCount);
+    public readonly ListedKit[] Kits = ElementPatterns.CreateArray<ListedKit>("KitList/ScrollBox/Viewport/Content/kit_{0}", 1, length: KitListCount);
+    public readonly UnturnedUIElement[] LogicSetTabs = ElementPatterns.CreateArray<UnturnedUIElement>("~/anim_logic_set_tab_{0}", 1, length: TabCount);
 
-    public readonly UnturnedUIElement[] LogicSetTabs = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("anim_logic_set_tab_{0}", 1, length: TabCount);
 
     public readonly UnturnedButton[] DropdownButtons;
     public readonly string[] DefaultClassCache;
     public readonly string[] ClassIconCache;
 
     public string[]? DefaultLanguageCache;
-    public KitMenuUI() : base(Gamemode.Config.UIKitMenu)
+    public KitMenuUI() : base(Gamemode.Config.UIKitMenu.AsAssetContainer())
     {
         DropdownButtons = new UnturnedButton[(int)ClassConverter.MaxClass + 1];
         DefaultClassCache = new string[DropdownButtons.Length];
@@ -241,15 +232,9 @@ public class KitMenuUI : UnturnedUI
         BtnTabLoadouts.OnClicked += OnTabClickedLoadouts;
         BtnTabSpecialKits.OnClicked += OnTabClickedSpecialKits;
         BtnTabClose.OnClicked += OnClosed;
-        
-        for (int i = 0; i < FavoriteButtons.Length; ++i)
-        {
-            FavoriteButtons[i].OnClicked += FavoriteClickedIntl;
-        }
-        for (int i = 0; i < Kits.Length; ++i)
-        {
-            Kits[i].OnClicked += KitClickedIntl;
-        }
+
+        ElementPatterns.SubscribeAll(Kits, listedKit => listedKit.FavoriteButton, FavoriteClickedIntl);
+        ElementPatterns.SubscribeAll(Kits, listedKit => listedKit.Root, KitClickedIntl);
 
         Translation.OnReload += OnReload;
         CacheLanguages();
@@ -276,18 +261,12 @@ public class KitMenuUI : UnturnedUI
         UCPlayer? ucp = UCPlayer.FromPlayer(player);
         if (ucp != null)
         {
-            int index = Array.IndexOf(FavoriteButtons, button);
+            int index = Array.FindIndex(Kits, listedKit => listedKit.FavoriteButton == button);
             if (index != -1)
                 OnFavoriteToggled(index, ucp);
         }
     }
-    private string GetClassIcon(Class @class)
-    {
-        byte c = (byte)@class;
-        if (c < ClassIconCache.Length)
-            return ClassIconCache[c];
-        return new string(@class.GetIcon(), 1);
-    }
+
     private void OnClosed(UnturnedButton button, Player player)
     {
         if (UCPlayer.FromPlayer(player) is { } pl)
@@ -375,10 +354,6 @@ public class KitMenuUI : UnturnedUI
 
         LblStatsTitle.SetText(c, T.KitMenuUIStatsLabel.Translate(language, culture));
         LblActionsTitle.SetText(c, T.KitMenuUIActionsLabel.Translate(language, culture));
-
-        int len = Math.Min(DefaultClassCache.Length, ClassLabels.Length);
-        for (int i = 0; i < len; ++i)
-            ClassLabels[i].SetText(c, Localization.TranslateEnum((Class)i, language));
     }
     private void SetCachedValues(ITransportConnection c)
     {
@@ -407,10 +382,6 @@ public class KitMenuUI : UnturnedUI
 
         LblStatsTitle.SetText(c, DefaultLanguageCache[22]);
         LblActionsTitle.SetText(c, DefaultLanguageCache[23]);
-
-        int len = Math.Min(DefaultClassCache.Length, ClassLabels.Length);
-        for (int i = 0; i < len; ++i)
-            ClassLabels[i].SetText(c, DefaultClassCache[i]);
     }
     private void SwitchToTab(UCPlayer player, byte tab)
     {
@@ -517,17 +488,26 @@ public class KitMenuUI : UnturnedUI
                 amt = 1;
             }
             else continue;
-            IncludedItems[index].SetVisibility(c, true);
-            IncludedItemsIcons[index].SetText(c, icon);
-            IncludedItemsText[index].SetText(c, name);
-            IncludedItemsAmounts[index].SetVisibility(c, amt != 1);
+
+            KitInfoIncludedItem includedItem = IncludedItems[index];
+            includedItem.Root.SetVisibility(c, true);
+            includedItem.Icon.SetText(c, icon);
+            includedItem.Text.SetText(c, name);
             if (amt != 1)
-                IncludedItemsAmounts[index].SetText(c, "x" + amt.ToString(player.Locale.CultureInfo));
+            {
+                includedItem.Amount.SetText(c, "x" + amt.ToString(player.Locale.CultureInfo));
+                includedItem.Amount.SetVisibility(c, true);
+            }
+            else
+            {
+                includedItem.Amount.SetVisibility(c, false);
+            }
             ++index;
         }
-        for (; index < IncludedItemsText.Length; ++index)
+
+        for (; index < IncludedItems.Length; ++index)
         {
-            IncludedItems[index].SetVisibility(c, false);
+            IncludedItems[index].Root.SetVisibility(c, false);
         }
 
         // WarfareStats? stats = StatsManager.OnlinePlayers.FirstOrDefault(x => x.Steam64 == player.Steam64);
@@ -606,17 +586,18 @@ public class KitMenuUI : UnturnedUI
         ITransportConnection c = player.Connection;
         KitManager? manager = KitManager.GetSingletonQuick();
         bool hasAccess = manager != null && manager.HasAccessQuick(kit, player);
+        ListedKit kitUi = Kits[index];
         if (kit.Type != KitType.Loadout)
-            FavoriteLabels[index].SetText(c, favorited ? "<#fd0>¼" : "¼");
-        WeaponLabels[index].SetText(c, kit.WeaponText ?? string.Empty);
-        IdLabels[index].SetText(c, kit.InternalName);
-        NameLabels[index].SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
-        StatusLabels[index].SetText(c, hasAccess ? Gamemode.Config.UIIconPlayer.ToString() : string.Empty);
-        ClassLabels[index].SetText(c, kit.Class.GetIcon().ToString());
-        FlagLabels[index].SetText(c, kit.FactionInfo.GetFlagIcon());
-        FavoriteButtons[index].SetVisibility(c, kit.Type != KitType.Loadout);
-        
-        Kits[index].SetVisibility(c, true);
+            kitUi.FavoriteIcon.SetText(c, favorited ? "<#fd0>¼" : "¼");
+        kitUi.Weapon.SetText(c, kit.WeaponText ?? string.Empty);
+        kitUi.Id.SetText(c, kit.InternalName);
+        kitUi.Name.SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
+        kitUi.Status.SetText(c, hasAccess ? Gamemode.Config.UIIconPlayer.ToString() : string.Empty);
+        kitUi.Class.SetText(c, kit.Class.GetIcon().ToString());
+        kitUi.Flag.SetText(c, kit.FactionInfo.GetFlagIcon());
+        kitUi.FavoriteButton.SetVisibility(c, kit.Type != KitType.Loadout);
+
+        Kits[index].Root.SetVisibility(c, true);
     }
     private void CacheLanguages()
     {
@@ -698,7 +679,7 @@ public class KitMenuUI : UnturnedUI
         if (player.KitMenuData.Kits.Length > kitIndex && player.KitMenuData.Kits[kitIndex] is { } kit && kit.Type != KitType.Loadout)
         {
             bool fav = player.KitMenuData.Favorited[kitIndex] = !player.KitMenuData.Favorited[kitIndex];
-            FavoriteLabels[kitIndex].SetText(player.Connection, fav ? "<#fd0>¼" : "¼");
+            Kits[kitIndex].FavoriteIcon.SetText(player.Connection, fav ? "<#fd0>¼" : "¼");
             player.KitMenuData.FavoritesDirty = true;
             L.LogDebug((fav ? "Favorited " : "Unfavorited ") + kit.InternalName);
             if (fav)
@@ -767,6 +748,50 @@ public class KitMenuUI : UnturnedUI
     {
         if (UCPlayer.FromPlayer(player) is { } pl)
             SwitchToTab(pl, 3);
+    }
+    public class ListedKit
+    {
+        [Pattern(Root = true)]
+        public UnturnedButton Root { get; set; }
+
+        [Pattern("flag_", Mode = FormatMode.Prefix)]
+        public UnturnedLabel Flag { get; set; }
+
+        [Pattern("name_", Mode = FormatMode.Prefix)]
+        public UnturnedLabel Name { get; set; }
+
+        [Pattern("weapon_", Mode = FormatMode.Prefix)]
+        public UnturnedLabel Weapon { get; set; }
+
+        [Pattern("id_", Mode = FormatMode.Prefix)]
+        public UnturnedLabel Id { get; set; }
+
+        [Pattern("btn_fav_", Mode = FormatMode.Prefix)]
+        public UnturnedButton FavoriteButton { get; set; }
+
+        [Pattern("txt_fav_", AdditionalPath = "btn_fav_kit_{0}", Mode = FormatMode.Prefix)]
+        public UnturnedLabel FavoriteIcon { get; set; }
+
+        [Pattern("class_", Mode = FormatMode.Prefix)]
+        public UnturnedLabel Class { get; set; }
+
+        [Pattern("status_", Mode = FormatMode.Prefix)]
+        public UnturnedLabel Status { get; set; }
+    }
+
+    public class KitInfoIncludedItem
+    {
+        [Pattern(Root = true)]
+        public UnturnedUIElement Root { get; set; }
+
+        [Pattern("kit_included_text_{0}")]
+        public UnturnedLabel Text { get; set; }
+
+        [Pattern("kit_included_icon_{0}")]
+        public UnturnedLabel Icon { get; set; }
+
+        [Pattern("kit_included_amt_{0}")]
+        public UnturnedLabel Amount { get; set; }
     }
 }
 

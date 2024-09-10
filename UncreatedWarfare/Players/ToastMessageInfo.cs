@@ -56,7 +56,7 @@ public sealed class ToastMessageInfo
         Inturrupt = inturrupt;
         Key = UI.Key;
         CanResend = false;
-        UpdateAsset(ui.Asset);
+        UpdateAsset(new JsonAssetReference<EffectAsset>(ui.Asset!));
     }
     public ToastMessageInfo(ToastMessageStyle style, int channel, JsonAssetReference<EffectAsset> asset, bool requiresClearing = false, bool inturrupt = false, bool canResend = false, bool requiresResend = false)
         : this(style, channel, requiresClearing, inturrupt, canResend, requiresResend)
@@ -97,12 +97,12 @@ public sealed class ToastMessageInfo
                 _duration = Asset.Asset.lifetime;
             Guid = Asset.Guid;
             Id = Asset.Id;
-            UI?.LoadFromConfig(Asset);
+            UI?.LoadFromConfig(Asset.AsAssetContainer());
         }
         else
         {
             L.LogError($"Unknown asset for toast message: {Style}, {Asset?.ToString() ?? "Not Defined"}.");
-            UI?.LoadFromConfig(null);
+            UI?.LoadFromConfig(((JsonAssetReference<EffectAsset>?)null).AsAssetContainer());
         }
 
         Level.onLevelLoaded -= OnLevelLoaded;

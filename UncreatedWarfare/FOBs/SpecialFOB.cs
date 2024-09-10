@@ -25,7 +25,7 @@ public class SpecialFOB : IFOB, IGameTickListener, IDisposable
     public string UIColor;
     public bool IsActive;
     public bool DisappearAroundEnemies;
-    public IBuildableDestroyedEvent DestroyInfo { get; set; }
+    public IBuildableDestroyedEvent? DestroyInfo { get; set; }
     public FobRecordTracker<WarfareDbContext>? Record { get; }
     public string Name => _name;
     public Vector3 SpawnPosition => _pos;

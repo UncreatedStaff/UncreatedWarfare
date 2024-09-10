@@ -203,8 +203,8 @@ public class VehicleData : ITranslationArgument, IListItem
             for (int i = 0; i < vehicleRegion.drops.Count; i++)
             {
                 BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
-                barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health, bdata.point.x, bdata.point.y,
-                    bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
+                barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health,
+                    bdata.point, bdata.rotation, Convert.ToBase64String(bdata.barricade.state)));
             }
         }
 
@@ -275,29 +275,23 @@ public class VBarricade : IListSubItem
     public PrimaryKey LinkedKey { get; set; }
     public PrimaryKey PrimaryKey { get; set; }
     public VBarricade() { }
-    public VBarricade(Guid barricadeID, ushort health, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
+
+    public VBarricade(Guid barricadeID, ushort health, Vector3 position, Quaternion rotation, string state)
+        : this(barricadeID, health, position, rotation, Convert.FromBase64String(state)) { }
+    public VBarricade(Guid barricadeID, ushort health, Vector3 position, Quaternion rotation, byte[] state)
     {
         BarricadeID = barricadeID;
         Health = health;
-        PosX = posX;
-        PosY = posY;
-        PosZ = posZ;
-        AngleX = angleX;
-        AngleY = angleY;
-        AngleZ = angleZ;
-        State = state;
-    }
-    public VBarricade(Guid barricadeID, ushort health, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, byte[] state)
-    {
-        BarricadeID = barricadeID;
-        Health = health;
-        PosX = posX;
-        PosY = posY;
-        PosZ = posZ;
-        AngleX = angleX;
-        AngleY = angleY;
-        AngleZ = angleZ;
         Metadata = state;
+
+        PosX = position.x;
+        PosY = position.y;
+        PosZ = position.z;
+
+        Vector3 euler = rotation.eulerAngles;
+        AngleX = euler.x;
+        AngleY = euler.y;
+        AngleZ = euler.z;
     }
 
     // ReSharper disable InconsistentNaming

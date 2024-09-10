@@ -707,7 +707,7 @@ public static class EventFunctions
             ucplayer.Loading = true;
             bool shouldApplyLastKit = false, forceLastKitRemoval = false;
 
-            if (UCPlayer.LoadingUI.IsValid)
+            if (UCPlayer.LoadingUI.HasAssetOrId)
                 UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
 
             if (ucplayer.Player.life.isDead)
@@ -865,7 +865,7 @@ public static class EventFunctions
                 await UCWarfare.ToUpdate(tkn);
                 if (ucplayer.IsOnline)
                 {
-                    if (UCPlayer.LoadingUI.IsValid)
+                    if (UCPlayer.LoadingUI.HasAssetOrId)
                         UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
                 }
             }, token, ctx: $"Player connecting: {ucplayer.Steam64}.");
@@ -1317,7 +1317,7 @@ public static class EventFunctions
         if (parameters.cause == EDeathCause.GUN)
         {
             InteractableVehicle veh = parameters.player.movement.getVehicle();
-            if (veh != null && (!VehicleData.IsFlyingEngine(veh.asset.engine) || veh.speed >= 5))
+            if (veh != null && (!VehicleData.IsFlyingEngine(veh.asset.engine) || veh.ReplicatedSpeed >= 5))
             {
                 VehicleBay? bay = VehicleBay.GetSingletonQuick();
                 VehicleData? data = bay?.GetDataSync(veh.asset.GUID);

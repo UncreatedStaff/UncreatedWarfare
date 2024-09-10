@@ -12,6 +12,8 @@ namespace Uncreated.Warfare;
 
 public static class UCBarricadeManager
 {
+    public static readonly Quaternion BaseBarricadeRotation = Quaternion.Euler(-90f, 0f, 0f);
+    public static readonly Quaternion InverseBarricadeRotation = Quaternion.Euler(90f, 0f, 0f);
     public static PageEnumerator EnumerateInOrder(this Items items, bool reverse = true) => new PageEnumerator(items, reverse);
     public static bool BuildableEquals(this IBuildable? buildable, IBuildable? other)
     {

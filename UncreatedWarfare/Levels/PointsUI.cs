@@ -5,28 +5,30 @@ using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using Uncreated.Framework.UI;
+using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Levels;
 
+[UnturnedUI(BasePath = "Canvas/Image")]
 public class XPUI : UnturnedUI
 {
-    public readonly UnturnedUIElement Parent = new UnturnedUIElement("Image");
-    public readonly UnturnedLabel Rank = new UnturnedLabel("Rank");
-    public readonly UnturnedLabel XP = new UnturnedLabel("XP");
-    public readonly UnturnedLabel Next = new UnturnedLabel("Next");
-    public readonly UnturnedLabel Progress = new UnturnedLabel("Progress");
+    public readonly UnturnedUIElement Parent = new UnturnedUIElement("~/Canvas/Image");
+    public readonly UnturnedLabel Rank = new UnturnedLabel("Image/Rank");
+    public readonly UnturnedLabel XP = new UnturnedLabel("Image/XP");
+    public readonly UnturnedLabel Next = new UnturnedLabel("Image/Next");
+    public readonly UnturnedLabel Progress = new UnturnedLabel("Image/Progress");
 
 #if SHOW_LEVEL
-    public readonly UnturnedLabel Level = new UnturnedLabel("Level");
+    public readonly UnturnedLabel Level = new UnturnedLabel("Image/Level");
 #endif
 
 #if SHOW_DIVISION
-    public readonly UnturnedLabel Division = new UnturnedLabel("Division");
+    public readonly UnturnedLabel Division = new UnturnedLabel("DivisonBkgr/Division");
     public readonly UnturnedUIElement DivisionBackground = new UnturnedUIElement("DivisonBkgr");
 #endif
 
-    public XPUI() : base(Gamemode.Config.UIXPPanel, reliable: false) { }
+    public XPUI() : base(Gamemode.Config.UIXPPanel.AsAssetContainer(), reliable: false) { }
     public void SendTo(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
@@ -110,11 +112,11 @@ public class XPUI : UnturnedUI
 }
 public class CreditsUI : UnturnedUI
 {
-    public readonly UnturnedLabel Credits = new UnturnedLabel("Credits");
-    public readonly UnturnedUIElement Parent = new UnturnedUIElement("Image");
+    public readonly UnturnedLabel Credits = new UnturnedLabel("Canvas/Image/Credits");
+    public readonly UnturnedUIElement Parent = new UnturnedUIElement("Canvas/Image");
     private static string? _creditsColor;
     public string CreditsColor => _creditsColor ??= UCWarfare.GetColorHex("credits");
-    public CreditsUI() : base(Gamemode.Config.UICreditsPanel) { }
+    public CreditsUI() : base(Gamemode.Config.UICreditsPanel.AsAssetContainer()) { }
     public void SendTo(UCPlayer player)
     {
         L.LogDebug("Sending creds ui to " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");

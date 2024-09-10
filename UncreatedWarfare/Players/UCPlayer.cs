@@ -63,8 +63,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public const string FormatColoredSteam64 = "c64";
 
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
-    public static readonly UnturnedUI MutedUI = new UnturnedUI(Gamemode.Config.UIMuted, hasElements: false);
-    public static readonly UnturnedUI LoadingUI = new UnturnedUI(Gamemode.Config.UILoading, hasElements: false);
+    public static readonly UnturnedUI MutedUI = new UnturnedUI(Gamemode.Config.UIMuted.AsAssetContainer(), hasElements: false);
+    public static readonly UnturnedUI LoadingUI = new UnturnedUI(Gamemode.Config.UILoading.AsAssetContainer(), hasElements: false);
     /*
      * There can never be more than one semaphore per player (even if they've gone offline)
      * as this object will get reused until the finalizer runs, so don't save the semaphore outside of a sync local scope.
