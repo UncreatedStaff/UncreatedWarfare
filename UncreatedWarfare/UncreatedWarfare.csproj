@@ -148,55 +148,55 @@
     <!-- Unturned -->
     <Reference Include="Assembly-CSharp">
       <HintPath>$(UnturnedDllPath)/Assembly-CSharp.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="SDG.NetTransport">
       <HintPath>$(UnturnedDllPath)/SDG.NetTransport.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="SDG.NetPak.Runtime">
       <HintPath>$(UnturnedDllPath)/SDG.NetPak.Runtime.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnturnedDat">
       <HintPath>$(UnturnedDllPath)/UnturnedDat.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEx">
       <HintPath>$(UnturnedDllPath)/UnityEx.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
 
     <!-- Third Party -->
     <Reference Include="com.rlabrecque.steamworks.net">
       <HintPath>$(UnturnedDllPath)/com.rlabrecque.steamworks.net.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UniTask">
       <HintPath>../Libraries/UniTask.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
 
     <!-- Unity -->
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.CoreModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.PhysicsModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.ImageConversionModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.UnityWebRequestModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AssetBundleModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.AssetBundleModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
   </ItemGroup>
 
