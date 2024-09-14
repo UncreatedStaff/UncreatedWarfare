@@ -1,6 +1,7 @@
 ﻿using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -15,9 +16,92 @@ public static class FormattingUtility
     public static Regex TimeRegex { get; } = new Regex(@"([\d\.]+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     /// <summary>
-    /// Format a minute/second timer using the specified culture.
+    /// Truncates a string if it's over a certain <paramref name="length"/>.
     /// </summary>
-    public static string GetTimerString(CultureInfo culture, TimeSpan timer) => timer.Minutes.ToString(culture) + culture.DateTimeFormat.TimeSeparator + timer.Seconds.ToString("D2", culture);
+    [return: NotNullIfNotNull(nameof(str))]
+    public static string? Truncate(this string? str, int length)
+    {
+        if (str is null)
+            return null;
+
+        return str.Length <= length ? str : str[..length];
+    }
+
+    /// <summary>
+    /// Format a minute/second timer.
+    /// </summary>
+    /// <remarks><c>[HH:]MM:SS</c></remarks>
+    public static string ToCountdownString(TimeSpan span, bool withHours)
+    {
+        return ToCountdownString((int)Math.Round(span.TotalSeconds), withHours);
+    }
+
+    /// <summary>
+    /// Format a minute/second timer.
+    /// </summary>
+    /// <remarks><c>[HH:]MM:SS</c></remarks>
+    public static string ToCountdownString(int seconds, bool withHours)
+    {
+        // tested 09/13/2024
+        int minutes = seconds / 60;
+        seconds %= 60;
+        int hours = withHours ? minutes / 60 : 0;
+        if (withHours)
+            minutes %= 60;
+
+        int len = 3 + (withHours || minutes < 100 ? 2 : MathUtility.CountDigits(minutes));
+        if (withHours)
+            len += 1 + (hours < 100 ? 2 : MathUtility.CountDigits(hours));
+
+        CountdownState state = default;
+        state.Seconds = seconds;
+        state.Minutes = minutes;
+        state.Hours = withHours ? hours : -1;
+
+        return string.Create(len, state, (span, state) =>
+        {
+            bool withHours = state.Hours != -1;
+            int index = -1;
+            if (withHours)
+            {
+                if (state.Hours < 100)
+                {
+                    span[++index] = (char)((state.Hours / 10) + 48);
+                    span[++index] = (char)((state.Hours % 10) + 48);
+                }
+                else
+                {
+                    state.Hours.TryFormat(span[(index + 1)..], out int charsWritten, "D2", CultureInfo.InvariantCulture);
+                    index += charsWritten;
+                }
+
+                span[++index] = ':';
+            }
+
+            if (state.Minutes < 100)
+            {
+                span[++index] = (char)((state.Minutes / 10) + 48);
+                span[++index] = (char)((state.Minutes % 10) + 48);
+            }
+            else
+            {
+                state.Minutes.TryFormat(span[(index + 1)..], out int charsWritten, "D2", CultureInfo.InvariantCulture);
+                index += charsWritten;
+            }
+
+            span[++index] = ':';
+
+            span[++index] = (char)((state.Seconds / 10) + 48);
+            span[++index] = (char)((state.Seconds % 10) + 48);
+        });
+    }
+
+    private struct CountdownState
+    {
+        public int Seconds;
+        public int Minutes;
+        public int Hours;
+    }
 
     /// <summary>
     /// Truncates <paramref name="text"/> so that it's UTF-8 byte count is less than or equal to <paramref name="maximumBytes"/>.

@@ -9,6 +9,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam.Models;
+using Uncreated.Warfare.Util;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Steam;
@@ -179,7 +180,7 @@ public class SteamAPIService
             throw new InvalidOperationException("Missing Steam API key.");
         }
 
-        int vLen = F.CountDigits(version);
+        int vLen = MathUtility.CountDigits(version);
         int stringLen = BaseUrl.Length + @interface.Length + 1 + method.Length + 2 + vLen + 5 + UCWarfare.Config.SteamAPIKey.Length;
         if (query != null)
             stringLen += 1 + query.Length;

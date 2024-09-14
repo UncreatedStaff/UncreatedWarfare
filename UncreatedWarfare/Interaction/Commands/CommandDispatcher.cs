@@ -505,9 +505,10 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
             else
             {
                 IExecutableCommand cmdInstance;
+                using IServiceScope scope = _module.ScopedProvider.CreateScope();
                 try
                 {
-                    cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(_module.ScopedProvider, command.Type, [ ctx ]);
+                    cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(scope.ServiceProvider, command.Type, [ ctx ]);
                 }
                 catch (InvalidOperationException)
                 {

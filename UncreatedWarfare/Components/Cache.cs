@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
@@ -10,9 +8,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Insurgency;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
@@ -241,7 +237,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         }
 
         // todo make this better, this could def cause a deadlock
-        Record?.DisposeAsync().AsTask().Wait()
+        Record?.DisposeAsync().AsTask().Wait();
     }
     public class CacheComponent : MonoBehaviour, IManualOnDestroy
     {

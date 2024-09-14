@@ -2,6 +2,8 @@
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.UI;
@@ -26,7 +28,7 @@ public class StagingUI : UnturnedUI
         if (timeLeft < TimeSpan.Zero)
             timeLeft = default;
 
-        string msg = FormattingUtility.GetTimerString(player.Locale.CultureInfo, timeLeft);
+        string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
         string translatedName = name.Translate(player.Locale.LanguageInfo, string.Empty);
         SendToPlayer(player.Connection, translatedName, msg);
     }
@@ -48,31 +50,21 @@ public class StagingUI : UnturnedUI
         if (timeLeft < TimeSpan.Zero)
             timeLeft = default;
 
-        string msg = FormattingUtility.GetTimerString(player.Locale.CultureInfo, timeLeft);
+        string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
         Bottom.SetText(player.Connection, msg);
     }
 
     /// <summary>
-    /// Send the initial UI to all online players.
+    /// Send the initial UI to all players in <paramref name="playerSets"/>.
     /// </summary>
-    public void SendToAll(TranslationList name, TimeSpan timeLeft) => SendToAll(LanguageSet.All(), name, timeLeft);
-
-    /// <summary>
-    /// Send the initial UI to all online players without a timer.
-    /// </summary>
-    public void SendToAll(TranslationList name) => SendToAll(LanguageSet.All(), name);
-
-    /// <summary>
-    /// Send the initial UI to all players in <paramref name="languageSet"/>.
-    /// </summary>
-    public void SendToAll(LanguageSet.LanguageSetEnumerator languageSet, TranslationList name, TimeSpan timeLeft)
+    public void SendToAll(LanguageSetEnumerator playerSets, TranslationList name, TimeSpan timeLeft)
     {
         if (timeLeft < TimeSpan.Zero)
             timeLeft = default;
 
-        foreach (LanguageSet set in languageSet)
+        foreach (LanguageSet set in playerSets)
         {
-            string msg = FormattingUtility.GetTimerString(set.CultureInfo, timeLeft);
+            string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
             string translatedName = name.Translate(set.Language, string.Empty);
             while (set.MoveNext())
                 SendToPlayer(set.Next.Connection, translatedName, msg);
@@ -80,11 +72,11 @@ public class StagingUI : UnturnedUI
     }
 
     /// <summary>
-    /// Send the initial UI to all players in <paramref name="languageSet"/> without a timer.
+    /// Send the initial UI to all players in <paramref name="playerSets"/> without a timer.
     /// </summary>
-    public void SendToAll(LanguageSet.LanguageSetEnumerator languageSet, TranslationList name)
+    public void SendToAll(LanguageSetEnumerator playerSets, TranslationList name)
     {
-        foreach (LanguageSet set in languageSet)
+        foreach (LanguageSet set in playerSets)
         {
             string translatedName = name.Translate(set.Language, string.Empty);
             while (set.MoveNext())
@@ -93,20 +85,15 @@ public class StagingUI : UnturnedUI
     }
 
     /// <summary>
-    /// Update the timer for all online players.
+    /// Update the timer for all players in <paramref name="playerSets"/>.
     /// </summary>
-    public void UpdateForAll(TimeSpan timeLeft) => UpdateForAll(LanguageSet.All(), timeLeft);
-
-    /// <summary>
-    /// Update the timer for all players in <paramref name="languageSet"/>.
-    /// </summary>
-    public void UpdateForAll(LanguageSet.LanguageSetEnumerator languageSet, TimeSpan timeLeft)
+    public void UpdateForAll(LanguageSetEnumerator playerSets, TimeSpan timeLeft)
     {
         if (timeLeft < TimeSpan.Zero)
             timeLeft = default;
-        foreach (LanguageSet set in languageSet)
+        foreach (LanguageSet set in playerSets)
         {
-            string msg = FormattingUtility.GetTimerString(set.CultureInfo, timeLeft);
+            string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
             while (set.MoveNext())
                 Bottom.SetText(set.Next, msg);
         }

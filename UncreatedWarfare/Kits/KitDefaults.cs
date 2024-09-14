@@ -71,7 +71,8 @@ public class KitDefaults(KitManager manager, IServiceProvider serviceProvider)
     {
         List<IKitItem> items = new List<IKitItem>(DefaultKitItems.Length + 6);
         items.AddRange(DefaultKitItems);
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
         Kit? existing = await dbContext.Kits.FirstOrDefaultAsync(x => x.InternalName == name, token).ConfigureAwait(false);
         if (existing != null)
         {

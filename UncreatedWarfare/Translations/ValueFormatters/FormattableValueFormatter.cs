@@ -6,6 +6,6 @@ public class FormattableValueFormatter<TFormattable> : IValueFormatter<TFormatta
     string IValueFormatter.Format(object value, in ValueFormatParameters parameters) => Format((TFormattable)value, in parameters);
     public string Format(TFormattable value, in ValueFormatParameters parameters)
     {
-        return value.ToString(parameters.Format.Format, parameters.Culture);
+        return value.ToString(parameters.Format.UseForToString ? parameters.Format.Format : null, parameters.Culture);
     }
 }

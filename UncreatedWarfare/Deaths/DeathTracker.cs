@@ -81,7 +81,7 @@ public class DeathTracker : IHostedService
         {
             if (cause != EDeathCause.BLEEDING || comp?.BleedOutInfo == null)
             {
-                ReviveManager? reviveManager = _warfare.ScopedProvider.GetService<ReviveManager>();
+                ReviveManagerOld? reviveManager = _warfare.ScopedProvider.GetService<ReviveManagerOld>();
 
                 if (reviveManager != null && reviveManager.IsInjured(dead.Steam64.m_SteamID) && _injuredPlayers.TryGetValue(dead.Steam64, out PlayerDied deathInfo))
                 {
@@ -113,7 +113,6 @@ public class DeathTracker : IHostedService
         comp.LastRoadkillVehicle = null;
     }
 
-    // todo handle this better
     internal PlayerDied OnInjured(in DamagePlayerParameters parameters)
     {
         WarfarePlayer pl = _playerService.GetOnlinePlayer(parameters.player);

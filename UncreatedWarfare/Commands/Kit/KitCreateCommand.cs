@@ -3,14 +3,17 @@ using System;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("create", "c", "override"), SubCommandOf(typeof(KitCommand))]
-internal class KitCreateCommand : IExecutableCommand
+internal class KitCreateCommand : IExecutableCommand, iDis
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
@@ -18,6 +21,7 @@ internal class KitCreateCommand : IExecutableCommand
     private readonly IFactionDataStore _factionStorage;
     private readonly CommandDispatcher _commandDispatcher;
     private readonly IKitsDbContext _dbContext;
+    private readonly ILogger<KitCreateCommand> _logger;
     public CommandContext Context { get; set; }
 
     public KitCreateCommand(IServiceProvider serviceProvider)
@@ -28,6 +32,8 @@ internal class KitCreateCommand : IExecutableCommand
         _factionStorage = serviceProvider.GetRequiredService<IFactionDataStore>();
         _commandDispatcher = serviceProvider.GetRequiredService<CommandDispatcher>();
         _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
+
+        _logger = serviceProvider.GetRequiredService<ILogger<KitCreateCommand>>();
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
@@ -86,6 +92,30 @@ internal class KitCreateCommand : IExecutableCommand
 
                 throw Context.Reply(_translations.KitCancelOverride);
             }
+
+            IKitItem[] oldItems = existingKit.Items;
+            existingKit.SetItemArray(ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true), _dbContext);
+            existingKit.WeaponText = _kitManager.GetWeaponText(existingKit);
+            existingKit.UpdateLastEdited(Context.CallerId.m_SteamID);
+            Context.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + existingKit.InternalName + ".");
+            _dbContext.Update(existingKit);
+            await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _kitManager.OnItemsChangedLayoutHandler(oldItems, existingKit, token);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error invoking OnItemsChangedLayoutHandler.");
+                }
+            }, CancellationToken.None);
+            
+            _kitManager.Signs.UpdateSigns(existingKit);
+            Context.Reply(_translations.KitOverwrote, existingKit);
+            return;
         }
 
 

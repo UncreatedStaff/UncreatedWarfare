@@ -1,4 +1,10 @@
 ﻿#define USE_DEBUGGER
+using DanielWillett.ModularRpcs;
+using DanielWillett.ModularRpcs.Abstractions;
+using DanielWillett.ModularRpcs.DependencyInjection;
+using DanielWillett.ModularRpcs.Reflection;
+using DanielWillett.ModularRpcs.Routing;
+using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
 using Microsoft.EntityFrameworkCore;
@@ -7,26 +13,19 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using DanielWillett.ModularRpcs;
-using DanielWillett.ModularRpcs.Abstractions;
-using DanielWillett.ModularRpcs.DependencyInjection;
-using DanielWillett.ModularRpcs.Reflection;
-using DanielWillett.ModularRpcs.Routing;
-using DanielWillett.ModularRpcs.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Harmony;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 
@@ -175,7 +174,8 @@ public class UCWarfare : MonoBehaviour
 
         L.Log("Migrating database changes...", ConsoleColor.Magenta);
 
-        await using (IDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>())
+        using (IServiceScope scope = _serviceProvider.CreateScope())
+        await using (IDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>())
         {
             try
             {
@@ -184,7 +184,7 @@ public class UCWarfare : MonoBehaviour
             }
             catch (Exception ex)
             {
-                L.LogError(" + Failed to migrate databse.");
+                L.LogError(" + Failed to migrate database.");
                 L.LogError(ex);
                 Provider.shutdown(10);
                 return;

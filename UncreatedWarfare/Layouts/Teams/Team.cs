@@ -117,6 +117,11 @@ public class Team : IEquatable<Team>
         }
     }
 
+    public override string ToString()
+    {
+        return Faction.FactionId;
+    }
+
     public static bool operator ==(Team? team1, Team? team2) => team1 is null
         ? team2 is null
         : team2 is not null && team1.GroupId.m_SteamID == team2.GroupId.m_SteamID;

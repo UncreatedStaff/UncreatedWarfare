@@ -182,7 +182,8 @@ public class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<IKitsDbContext>();
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
 
             _bundles = await OnInclude(dbContext.EliteBundles)
                 .ToArrayAsync(token).ConfigureAwait(false);
@@ -279,7 +280,8 @@ public class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<IKitsDbContext>();
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
             CleanupReferences();
 
             Kits = new ReadOnlyCollection<Kit>(_kits);

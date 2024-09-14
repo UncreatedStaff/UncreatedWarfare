@@ -1,1311 +1,297 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SDG.Framework.Utilities;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Components;
+using System.Collections.ObjectModel;
 using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.GameData;
-using Uncreated.Warfare.Models.Stats.Records;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Translations.ValueFormatters;
-using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
-using XPReward = Uncreated.Warfare.Levels.XPReward;
+using Uncreated.Warfare.Util.Transform;
 
-namespace Uncreated.Warfare.FOBs;
-public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickListener, IPlayerDisconnectListener, IDisposable
+namespace Uncreated.Warfare.Fobs;
+
+/// <summary>
+/// Base class for standard FOBs, caches, and any other FOBs that support items.
+/// </summary>
+public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
 {
-    private const int ResourcesRewardLimit = 60;
-
-    private static readonly List<RegionCoordinate> RegionBuffer = new List<RegionCoordinate>(4);
-    private static readonly List<KeyValuePair<ItemData, float>> SupplyBuffer = new List<KeyValuePair<ItemData, float>>(32);
-
-    private int _buildSpent;
-    private int _ammoSpent;
-    private int _buildLoaded;
-    private int _ammoLoaded;
-
-    private IServiceProvider _serviceProvider;
-    
-    private readonly List<IFOBItem> _items = new List<IFOBItem>();
-    private readonly List<UCPlayer> _friendlies = new List<UCPlayer>(16);
-    private BunkerComponent? _bunker;
-    private ItemBarricadeAsset _originalRadio = null!;
-    private ushort _buildItemId;
-    private ushort _ammoItemId;
-    private byte[] _originalState;
-    private bool _destroyed;
-    private bool _isBeingDestroyed;
-    private FobRecordTracker? _recordTracker;
-    public IBuildableDestroyedEvent? DestroyInfo { get; set; }
-    public IReadOnlyList<IFOBItem> Items { get; }
-    public IReadOnlyList<UCPlayer> FriendliesNearby { get; }
-    public string Name { get; internal set; }
-    public int Number { get; internal set; }
-    public string ClosestLocation { get; private set; }
-    UCPlayer? IFOB.Instigator { get; set; }
-    public GridLocation GridLocation { get; private set; }
-    public RadioComponent Radio { get; internal set; }
-    public Vector3 Position => transform.position;
-    public FobRecordTracker? Record => _recordTracker;
-    public BunkerComponent? Bunker
-    {
-        get => _bunker;
-        internal set
-        {
-            if (ReferenceEquals(_bunker, value))
-                return;
-            BunkerComponent? old = _bunker;
-            _bunker = value;
-            Radius = value == null || value.State != ShovelableComponent.BuildableState.Full
-                ? FOBManager.Config.FOBBuildPickupRadiusNoBunker
-                : FOBManager.Config.FOBBuildPickupRadius;
-            if (((old == null || old.State != ShovelableComponent.BuildableState.Full) && value != null && value.State == ShovelableComponent.BuildableState.Full ||
-                 (value == null || value.State != ShovelableComponent.BuildableState.Full) && old != null && old.State == ShovelableComponent.BuildableState.Full) &&
-                Data.Singletons.TryGetSingleton(out FOBManager fobManager))
-            {
-                fobManager.UpdateFOBInList(Team, this);
-            }
-            L.LogDebug($"[FOBS] [{Name}] Radius Updated: {Radius}m.");
-        }
-    }
-
-    Vector3 IDeployable.SpawnPosition => Bunker == null ? Vector3.zero : Bunker.SpawnPosition;
-    float IDeployable.Yaw => Bunker == null ? 0f : Bunker.SpawnYaw;
-    public ulong Team { get; internal set; }
-    public float Radius { get; private set; }
-    public bool Bleeding => Radio != null && Radio.State == RadioComponent.RadioState.Bleeding;
-    public float ProxyScore { get; private set; }
-    public bool IsProxied => ProxyScore >= 1f;
-    public ulong Owner => Radio.Owner;
-    public int BuildSupply { get; private set; }
-    public int AmmoSupply { get; private set; }
-    public bool BeingDestroyed => _isBeingDestroyed;
-    public string UIResourceString => Bleeding ? string.Empty : BuildSupply.ToString(Data.LocalLocale).Colorize("d4c49d") + " " + AmmoSupply.ToString(Data.LocalLocale).Colorize("b56e6e");
+    private ILogger _logger;
+    private float _sqrRadius;
+    private float _radius;
+    private List<WarfarePlayer> _players;
+    private List<InteractableVehicle> _vehicles;
+    private List<IFobItem> _items;
 
     /// <summary>
-    /// Checks for limitations for non-floating objects. Don't use this for radios.
+    /// List of all players within the radius of the FOB.
     /// </summary>
-    public bool ValidatePlacement(BuildableData buildable, UCPlayer player, IFOBItem? ignoreFoundation)
-    {
-        if (buildable.Type == BuildableType.Bunker && Bunker != null)
-        {
-            if (ignoreFoundation is null || !Bunker.Equals(ignoreFoundation))
-            {
-                player.SendChat(T.BuildTickStructureExists, buildable);
-                return false;
-            }
-            
-            return true;
-        }
+    public IReadOnlyList<WarfarePlayer> Players { get; private set; }
 
-        int limit = buildable.Limit;
-        for (int i = 0; i < Items.Count; ++i)
-        {
-            IFOBItem item = Items[i];
-            if (ignoreFoundation is not null && item.Equals(ignoreFoundation))
-                continue;
-            BuildableData? b = item.Buildable;
-            if (b != null && b.Foundation.MatchAsset(buildable.Foundation) && (item is not ShovelableComponent sh || sh.ActiveVehicle == null || !sh.ActiveVehicle.isDead))
-            {
-                --limit;
-                if (limit <= 0)
-                {
-                    player.SendChat(T.RegionalBuildLimitReached, buildable.Limit, buildable);
-                    return false;
-                }
-            }
-        }
-        
-        return true;
+    /// <summary>
+    /// List of all vehicles within the radius of the FOB.
+    /// </summary>
+    public IReadOnlyList<InteractableVehicle> Vehicles { get; private set; }
+
+    /// <summary>
+    /// List of all items owned by this FOB.
+    /// </summary>
+    public IReadOnlyList<IFobItem> Items { get; private set; }
+
+    /// <inheritdoc />
+    public int AmmoCount { get; set; }
+
+    /// <inheritdoc />
+    public int BuildCount { get; set; }
+
+    /// <inheritdoc />
+    public string Name { get; private set; }
+
+    /// <inheritdoc />
+    public Color32 Color { get; private set; }
+
+    /// <inheritdoc />
+    public Team Team { get; private set; }
+
+    /// <inheritdoc />
+    public Vector3 Position
+    {
+        get => transform.position;
+        set => transform.position = value;
     }
 
-    [UsedImplicitly]
-    private FOB()
+    /// <inheritdoc />
+    public float EffectiveRadius
     {
-        Items = _items.AsReadOnly();
-        FriendliesNearby = _friendlies.AsReadOnly();
-    }
-
-    internal void Init(IServiceProvider serviceProvider)
-    {
-        _serviceProvider = serviceProvider;
-    }
-
-    [UsedImplicitly]
-    private void Awake()
-    {
-        ClosestLocation = F.GetClosestLocationName(transform.position, true, true);
-        GridLocation = new GridLocation(transform.position);
-        Radius = FOBManager.Config.FOBBuildPickupRadiusNoBunker;
-    }
-
-    [UsedImplicitly]
-    private void Start()
-    {
-        if (Radio == null)
+        get => _radius;
+        private set
         {
-            L.LogWarning($"[FOBS] [{Name}] FOB created without setting radio.");
-            Destroy(this);
-            return;
-        }
-
-        if (Radio.State != RadioComponent.RadioState.Alive)
-        {
-            L.LogWarning($"[FOBS] [{Name}] FOB created with damaged or destroyed radio.");
-            Destroy(this);
-            return;
-        }
-
-        UCPlayer? player = UCPlayer.FromID(Radio.Owner);
-
-        SessionRecord? session = player?.CurrentSession;
-
-        if (session == null)
-        {
-            L.LogError($"Unable to find session for player {Radio.Owner} when creating FOB.");
-            return;
-        }
-
-        FobRecord fobRecord = new FobRecord
-        {
-            Steam64 = Owner,
-            FobAngle = Radio.transform.eulerAngles,
-            FobPosition = Radio.transform.position,
-            FobName = Name,
-            FobType = FobType.RadioFob,
-            FobNumber = Number,
-            NearestLocation = ClosestLocation,
-            SessionId = session.SessionId,
-            Timestamp = DateTimeOffset.UtcNow,
-            Team = (byte)Team,
-            Position = player!.Position
-        };
-
-        _recordTracker = new FobRecordTracker(fobRecord, _serviceProvider);
-        Task.Run(async () =>
-        {
-            try
-            {
-                await _recordTracker.Create();
-            }
-            catch (Exception ex)
-            {
-                L.LogError($"[FOBS] [{Name}] Failed to create FOB record tracker.");
-                L.LogError(ex);
-            }
-        });
-
-        if (Bunker != null)
-            Radius = FOBManager.Config.FOBBuildPickupRadius;
-
-        _originalRadio = Radio.Barricade.asset;
-
-        Radio.FOB = this;
-        _originalState = Radio.Barricade.GetServersideData().barricade.state;
-
-        ItemAsset? build = TeamManager.GetRedirectInfo(RedirectType.BuildSupply, string.Empty, null, TeamManager.GetFactionSafe(Team), out _, out _);
-        ItemAsset? ammo = TeamManager.GetRedirectInfo(RedirectType.AmmoSupply, string.Empty, null, TeamManager.GetFactionSafe(Team), out _, out _);
-        if (build != null)
-            _buildItemId = build.id;
-        if (ammo != null)
-            _ammoItemId = ammo.id;
-
-        if (Bunker != null)
-            Bunker.FOB = this;
-
-
-        L.LogDebug($"[FOBS] [{Name}] Initialized FOB: {Radio.Barricade.asset.itemName} (Radio State: {Radio.State})");
-
-        OffloadNearbyLogisticsVehicle();
-    }
-    [UsedImplicitly]
-    private void OnDestroy()
-    {
-        if (!_destroyed)
-        {
-            _destroyed = false;
-            Destroy();
-        }
-    }
-    public void ModifyBuild(int delta)
-    {
-        if (delta == 0)
-            return;
-
-        BuildSupply += delta;
-        UpdateResourceUI(true, false);
-
-        if (_recordTracker == null)
-            return;
-
-        if (delta < 0)
-            _buildSpent += -delta;
-        else
-            _buildLoaded += delta;
-    }
-    public void ModifyAmmo(int delta)
-    {
-        if (delta == 0)
-            return;
-
-        AmmoSupply += delta;
-        UpdateResourceUI(false, true);
-
-        if (_recordTracker == null)
-            return;
-
-        if (delta < 0)
-            _ammoSpent += -delta;
-        else
-            _ammoLoaded += delta;
-    }
-    public void ModifyResources(int buildDelta, int ammoDelta)
-    {
-        if (buildDelta == 0 && ammoDelta == 0)
-            return;
-
-        BuildSupply += buildDelta;
-        AmmoSupply += ammoDelta;
-        UpdateResourceUI(buildDelta != 0, ammoDelta != 0);
-
-        if (_recordTracker == null)
-            return;
-
-        if (buildDelta < 0)
-            _buildSpent += -buildDelta;
-        else
-            _buildLoaded += buildDelta;
-
-        if (ammoDelta < 0)
-            _ammoSpent += -ammoDelta;
-        else
-            _ammoLoaded += ammoDelta;
-    }
-    public void Restock()
-    {
-        if (Team is not 1 and not 2)
-            return;
-        L.LogDebug($"[FOBS] [{Name}] Restocking.");
-        byte[] state = Team == 1 ? FOBManager.Config.T1RadioState : FOBManager.Config.T2RadioState;
-        Radio.Barricade.GetServersideData().barricade.state = state;
-        Radio.Barricade.ReceiveUpdateState(state);
-        Radio.NeedsRestock = false;
-        Radio.LastRestock = Time.realtimeSinceStartup;
-        Vector3 pos = transform.position;
-        if (GamemodeOld.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? asset))
-            F.TriggerEffectReliable(asset, 40, pos);
-
-        if (Radio.Barricade.interactable is not InteractableStorage storage)
-            return;
-
-        // refresh inventory
-        // gets removed in InteractableStorage.updateState
-        storage.items.onStateUpdated += Radio.InvalidateRestock;
-        for (int i = 0; i < _friendlies.Count; ++i)
-        {
-            if (_friendlies[i].Player.inventory.storage != storage)
-                continue;
-
-            _friendlies[i].Player.inventory.closeStorage();
-            _friendlies[i].Player.inventory.openStorage(storage);
-        }
-    }
-    public string GetUIColor()
-    {
-        string key;
-        if (Bleeding)
-            key = "bleeding_fob_color";
-        else if (Bunker == null || Bunker.State != ShovelableComponent.BuildableState.Full)
-            key = "no_bunker_fob_color";
-        else if (IsProxied)
-            key = "enemy_nearby_fob_color";
-        else
-            key = "default_fob_color";
-        return UCWarfare.GetColorHex(key);
-    }
-    public float GetProxyScore(UCPlayer enemy)
-    {
-        GameThread.AssertCurrent();
-
-        if (Bunker == null || enemy.Player.life.isDead || enemy.IsInVehicle)
-            return 0;
-
-        float distanceFromBunker = (enemy.Position - Bunker.SpawnPosition).magnitude;
-
-        if (distanceFromBunker > 80)
-            return 0;
-
-        return 12.5f / distanceFromBunker;
-    }
-    public void RegisterItem(IFOBItem item)
-    {
-        item.FOB = this;
-        if (item is MonoBehaviour mb && item.Icon.TryGetGuid(out Guid icon))
-            IconManager.AttachIcon(icon, mb.transform, item.Team, item.IconOffset);
-        if (item is RadioComponent c)
-        {
-            if (Radio != null && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
-                fobManager.UpdateFOBInList(Team, this);
-            Radio = c;
-            if (_recordTracker != null)
-            {
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _recordTracker.Update(r =>
-                        {
-                            r.Position = c.Position;
-                            r.FobAngle = c.transform.eulerAngles;
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogError($"[FOBS] [{Name}] Failed to update FOB record tracker after radio placed.");
-                        L.LogError(ex);
-                    }
-                });
-            }
-            L.LogDebug($"[FOBS] [{Name}] Registered radio: {item.Buildable}.");
-            return;
-        }
-
-        if (_recordTracker != null && item.Owner != 0 && item.Type != BuildableType.Radio)
-        {
-            UCPlayer? player = UCPlayer.FromID(item.Owner);
-            SessionRecord? session = player?.CurrentSession;
-
-            if (session == null)
-            {
-                L.LogError($"Unable to find session for player {item.Owner} when creating FOB.");
-                return;
-            }
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    UnturnedAssetReference itemRef;
-
-                    if (item.Buildable == null)
-                        itemRef = default;
-                    else if (item.Buildable.FullBuildable.TryGetGuid(out Guid guid))
-                        itemRef = new UnturnedAssetReference(guid);
-                    else if (item.Buildable.Emplacement != null && item.Buildable.Emplacement.EmplacementVehicle.TryGetGuid(out guid))
-                        itemRef = new UnturnedAssetReference(guid);
-                    else if (item.Buildable.Foundation.TryGetGuid(out guid))
-                        itemRef = new UnturnedAssetReference(guid);
-                    else itemRef = default;
-
-                    await _recordTracker.Create(item, new FobItemRecord
-                    {
-                        Steam64 = item.Owner,
-                        Team = (byte)Team,
-                        FobId = await _recordTracker.GetRecordId(),
-                        FobItemAngle = item.Rotation.eulerAngles,
-                        FobItemPosition = item.Position,
-                        Item = itemRef,
-                        NearestLocation = ClosestLocation,
-                        Position = player!.Position,
-                        Timestamp = DateTimeOffset.UtcNow,
-                        SessionId = session.SessionId,
-                        Type = item.Type
-                    });
-                }
-                catch (Exception ex)
-                {
-                    L.LogError($"[FOBS] [{Name}] Failed to create FOB record tracker for new buildable.");
-                    L.LogError(ex);
-                }
-            });
-
-            item.UpdateRecord += action =>
-            {
-                if (_recordTracker != null)
-                {
-                    Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await _recordTracker.Update(item, action);
-                        }
-                        catch (Exception ex)
-                        {
-                            L.LogError($"[FOBS] [{Name}] Failed to update FOB record item tracker.");
-                            L.LogError(ex);
-                        }
-                    });
-                }
-            };
-        }
-
-        if (item is BunkerComponent b)
-        {
-            BunkerComponent? oldBunker = Bunker;
-            if (oldBunker != null && b.TryGetComponent(out SpottedComponent spot))
-                Destroy(spot);
-
-            Bunker = b;
-            L.LogDebug($"[FOBS] [{Name}] Registered bunker: {item.Buildable}.");
-            if (b.State == ShovelableComponent.BuildableState.Full)
-            {
-                if (!b.TryGetComponent<SpottedComponent>(out _))
-                    b.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.Spotted.FOB, Team);
-                L.LogDebug($"[FOBS] [{Name}] Spotter is present.");
-            }
-            else if (b.TryGetComponent(out spot))
-                Destroy(spot);
-            return;
-        }
-        _items.Add(item);
-        L.LogDebug($"[FOBS] [{Name}] Registered item: {item.Buildable}.");
-    }
-    public void UpdateRadioState(RadioComponent.RadioState state)
-    {
-        GameThread.AssertCurrent();
-        if (Radio == null)
-        {
-            Destroy();
-            return;
-        }
-        switch (state)
-        {
-            case RadioComponent.RadioState.Destroyed:
-                Destroy();
-                break;
-            case RadioComponent.RadioState.Alive:
-                if (Radio.State == RadioComponent.RadioState.Alive)
-                    return;
-                Barricade b = new Barricade(_originalRadio, _originalRadio.health, _originalState ??= FOBManager.GetRadioState(Team));
-                Transform t;
-                FOBManager.IgnorePlacingBarricade = true;
-                try
-                {
-                    t = BarricadeManager.dropNonPlantedBarricade(b, transform.position,
-                        transform.rotation, Radio.Owner, TeamManager.GetGroupID(Radio.Team));
-                }
-                finally
-                {
-                    FOBManager.IgnorePlacingBarricade = false;
-                }
-                
-                if (t == null)
-                {
-                    L.LogWarning($"[FOBS] [{Name}] Failed to place barricade {_originalRadio.itemName}.");
-                    return;
-                }
-
-                // important, keeps the radio from breaking the rest of the fob when it's broken
-                Radio.FOB = null;
-                if (Radio != null)
-                    Destroy(Radio);
-                RegisterItem(t.gameObject.AddComponent<RadioComponent>());
-                break;
-            case RadioComponent.RadioState.Bleeding:
-                if (Radio.State == RadioComponent.RadioState.Bleeding)
-                    return;
-                if (!GamemodeOld.Config.BarricadeFOBRadioDamaged.TryGetAsset(out ItemBarricadeAsset? damagedFobRadio))
-                {
-                    L.LogWarning($"[FOBS] [{Name}] Can't replace with damaged fob, asset not found from config.");
-                    return;
-                }
-
-                ulong oldKiller = 0ul;
-                float oldKillerTime = 0f;
-                EDamageOrigin oldOrigin = EDamageOrigin.Unknown;
-                if (Radio.State == RadioComponent.RadioState.Alive)
-                {
-                    byte[] oldState = Radio.Barricade.GetServersideData().barricade.state;
-                    _originalState = new byte[oldState.Length];
-                    if (oldState.Length != 0)
-                    {
-                        Buffer.BlockCopy(oldState, 0, _originalState, 0, oldState.Length);
-                    }
-
-                    oldKiller = DestroyerComponent.GetDestroyer(Radio.Barricade.model.gameObject, out oldOrigin, out oldKillerTime);
-                }
-
-                b = new Barricade(damagedFobRadio);
-                FOBManager.IgnorePlacingBarricade = true;
-                try
-                {
-                    t = BarricadeManager.dropNonPlantedBarricade(b, transform.position,
-                        transform.rotation, Radio.Owner, TeamManager.GetGroupID(Radio.Team));
-                }
-                finally
-                {
-                    FOBManager.IgnorePlacingBarricade = false;
-                }
-
-                if (t == null)
-                {
-                    L.LogWarning($"[FOBS] [{Name}] Failed to place barricade {damagedFobRadio.itemName}.");
-                    return;
-                }
-                DestroyerComponent.AddOrUpdate(t.gameObject, oldKiller, oldOrigin, oldKillerTime);
-
-                if (Radio != null)
-                    Destroy(Radio);
-                RegisterItem(t.gameObject.AddComponent<RadioComponent>());
-                break;
-            default:
-                L.LogWarning($"[FOBS] [{Name}] Unknown radio state: {state}.");
-                return;
-        }
-        L.LogDebug($"[FOBS] [{Name}] Updated radio state: {state}.");
-    }
-    public void Destroy()
-    {
-        GameThread.AssertCurrent();
-        if (_isBeingDestroyed)
-            return;
-        _isBeingDestroyed = true;
-        if (_recordTracker != null)
-        {
-            bool destroyedByRoundEnd = Data.Gamemode == null || Data.Gamemode.State is not State.Active and not State.Staging;
-            bool teamkilled = !destroyedByRoundEnd && DestroyInfo != null && DestroyInfo.Instigator != null && DestroyInfo.Buildable.Group.GetTeam() == DestroyInfo.Instigator.GetTeam();
-
-            SessionRecord? session = DestroyInfo?.Instigator?.CurrentSession;
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    await _recordTracker.Update(record =>
-                    {
-                        record.DestroyedAt = DateTimeOffset.UtcNow;
-                        record.DestroyedByRoundEnd = destroyedByRoundEnd;
-                        record.Teamkilled = teamkilled;
-                        record.Instigator = DestroyInfo?.InstigatorId.m_SteamID;
-                        record.InstigatorSession = session;
-                        record.InstigatorPosition = DestroyInfo?.Instigator?.Position;
-                        record.BuildLoaded = _buildLoaded;
-                        record.BuildSpent = _buildSpent;
-                        record.AmmoLoaded = _ammoLoaded;
-                        record.AmmoSpent = _ammoSpent;
-                    });
-                }
-                catch (Exception ex)
-                {
-                    L.LogError($"[FOBS] [{Name}] Failed to update FOB record tracker after being destroyed.");
-                    L.LogError(ex);
-                }
-            });
-        }
-        for (int i = 0; i < _friendlies.Count; ++i)
-        {
-            FOBManager.ResourceUI.ClearFromPlayer(_friendlies[i].Connection);
-        }
-        try
-        {
-            for (int i = _items.Count - 1; i >= 0; --i)
-            {
-                try
-                {
-                    if (_items[i] is MonoBehaviour mb)
-                        Destroy(mb);
-                    if (_items[i] is IDisposable d)
-                        d.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    L.LogError($"[FOBS] [{Name}] Error destroying FOB item: {_items[i]}.");
-                    L.LogError(ex);
-                }
-                finally
-                {
-                    _items.RemoveAt(i);
-                }
-            }
-
-            if (Bunker != null)
-            {
-                try
-                {
-                    Destroy(Bunker);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError($"[FOBS] [{Name}] Error destroying FOB Bunker.");
-                    L.LogError(ex);
-                }
-                finally
-                {
-                    Bunker = null;
-                }
-            }
-
-            if (Radio != null)
-            {
-                try
-                {
-                    Destroy(Radio);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError($"[FOBS] [{Name}] Error destroying FOB Radio.");
-                    L.LogError(ex);
-                }
-                finally
-                {
-                    Radio = null!;
-                }
-            }
-
-            if (!_destroyed)
-                Destroy(gameObject);
-            _destroyed = true;
-            L.LogDebug($"[FOBS] [{Name}] Destroyed.");
-            FOBManager.EnsureDisposed(this);
-        }
-        catch (Exception ex)
-        {
-            L.LogError($"[FOBS] [{Name}] Error destroying.");
-            L.LogError(ex);
-        }
-        finally
-        {
-            _isBeingDestroyed = false;
-        }
-    }
-    public void OffloadNearbyLogisticsVehicle()
-    {
-        GameThread.AssertCurrent();
-
-        VehicleInfoStore infoStore = /* todo */ null!;
-
-        float sqrRad = FOBManager.Config.FOBBuildPickupRadiusNoBunker;
-        sqrRad *= sqrRad;
-
-        Vector3 fobPosition = transform.position;
-
-        // find closest logistics vehicle on the FOB's team.
-        InteractableVehicle? closestLogi = VehicleManager.vehicles
-            .Where(vehicle => vehicle.lockedGroup.m_SteamID == Team
-                && infoStore.Vehicles.FirstOrDefault(info => info.Vehicle.MatchAsset(vehicle.asset)) is { } info
-                && info.Type.IsLogistics()
-                && (vehicle.transform.position - fobPosition).sqrMagnitude <= sqrRad)
-            .Aggregate((closest, next) => (closest.transform.position - fobPosition).sqrMagnitude > (next.transform.position - fobPosition).sqrMagnitude ? next : closest);
-        
-        if (closestLogi == null)
-            return;
-
-        ulong delivererId = Owner;
-        if (closestLogi.transform.TryGetComponent(out VehicleComponent component))
-        {
-            component.Quota += 5;
-            delivererId = component.LastDriver;
-        }
-
-        if (closestLogi.isDriven)
-            return;
-            
-        int buildRemoved = 0;
-        int ammoRemoved = 0;
-        Vector3 pos = closestLogi.transform.position;
-        foreach (ItemJar item in ItemUtility.EnumerateAlongGrid(closestLogi.trunkItems, reverse: true))
-        {
-            bool shouldRemove = false;
-            if (item.item.id == _buildItemId && buildRemoved < 16)
-            {
-                shouldRemove = true;
-                buildRemoved++;
-            }
-            if (item.item.id == _ammoItemId && ammoRemoved < 12)
-            {
-                shouldRemove = true;
-                ammoRemoved++;
-            }
-            if (shouldRemove)
-            {
-                ItemPositionSyncTracker tracker = new ItemPositionSyncTracker(pos);
-
-                ItemManager.onServerSpawningItemDrop += tracker.OnItemSpawned;
-                // todo register item owner
-                ItemManager.dropItem(item.item, pos, false, true, false);
-
-                ItemManager.onServerSpawningItemDrop -= tracker.OnItemSpawned;
-                pos = tracker.Position;
-
-                closestLogi.trunkItems.removeItem(closestLogi.trunkItems.getIndex(item.x, item.y));
-            }
-        }
-
-        UCPlayer? deliverer = UCPlayer.FromID(delivererId) ?? (delivererId != Owner ? UCPlayer.FromID(Owner) : null);
-        if (deliverer != null)
-        {
-            int groupsUnloaded = (buildRemoved + ammoRemoved) / 6;
-            if (groupsUnloaded > 0 && Points.PointsConfig.XPData.TryGetValue(nameof(XPReward.UnloadSupplies), out PointsConfig.XPRewardData data) &&
-                data.Amount != 0)
-            {
-                int xp = data.Amount;
-                if (deliverer.KitClass == Class.Pilot)
-                    xp *= 2;
-                Points.AwardXP(deliverer, XPReward.UnloadSupplies, groupsUnloaded * xp);
-            }
-        }
-    }
-    private struct ItemPositionSyncTracker
-    {
-        public Vector3 Position { get; private set; }
-        public ItemPositionSyncTracker(Vector3 position)
-        {
-            Position = position;
-        }
-        public void OnItemSpawned(Item item, ref Vector3 location, ref bool allow)
-        {
-            Position = location;
+            _radius = value;
+            _sqrRadius = value * value;
         }
     }
 
-    private void TryConsumeResources()
+    /// <summary>
+    /// Invoked when a player enters the radius of the FOB.
+    /// </summary>
+    public event Action<WarfarePlayer>? OnPlayerEntered;
+
+    /// <summary>
+    /// Invoked when a player exits the radius of the FOB. Always invoked before the player enters the next FOB if they teleport to another.
+    /// </summary>
+    public event Action<WarfarePlayer>? OnPlayerExited;
+
+    public event Action<InteractableVehicle>? OnVehicleEntered;
+    public event Action<InteractableVehicle>? OnVehicleExited;
+
+    public event Action<IFobItem>? OnItemAdded;
+    public event Action<IFobItem>? OnItemRemoved;
+
+    protected virtual void Awake()
+    {
+        _players = new List<WarfarePlayer>(24);
+        Players = new ReadOnlyCollection<WarfarePlayer>(_players);
+
+        _vehicles = new List<InteractableVehicle>(4);
+        Vehicles = new ReadOnlyCollection<InteractableVehicle>(_vehicles);
+
+        _items = new List<IFobItem>(32);
+        Items = new ReadOnlyCollection<IFobItem>(_items);
+    }
+
+    internal virtual void Init(IServiceProvider serviceProvider, string name, BarricadeDrop radio)
+    {
+        Name = name;
+        _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType().Name + " | " + Name);
+    }
+
+    protected virtual void Start()
+    {
+
+    }
+
+    public UniTask DestroyAsync(CancellationToken token = default)
+    {
+        throw new NotImplementedException();
+    }
+
+    public UniTask AddItemAsync(IFobItem fobItem, CancellationToken token = default)
+    {
+        throw new NotImplementedException();
+    }
+
+    public UniTask BuildItemAsync(IFobItem fobItem, CancellationToken token = default)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Vector3 SpawnPosition => throw new NotImplementedException();
+    public float Yaw => throw new NotImplementedException();
+
+    public TimeSpan GetDelay(WarfarePlayer player)
+    {
+        return TimeSpan.Zero;
+    }
+    public bool CheckDeployableTo(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    {
+        return false;
+    }
+
+    public bool CheckDeployableFrom(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool CheckDeployableToTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int CompareTo(IFob other)
+    {
+        return -1; // todo
+    }
+
+    public bool TestPoint(Vector3 position)
+    {
+        return (transform.position - position).sqrMagnitude <= _sqrRadius;
+    }
+
+    public bool TestPoint(Vector2 position)
     {
         Vector3 pos = transform.position;
-        Regions.getRegionsInRadius(pos, Radius, RegionBuffer);
-        try
+        Vector2 pos2d = new Vector2(pos.x, pos.z);
+        return (pos2d - position).sqrMagnitude <= _sqrRadius;
+    }
+
+    public override string ToString()
+    {
+        return "{" + Name + " | " + Team + "}";
+    }
+
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        return formatter.Colorize(Name, Color, parameters.Options);
+    }
+
+    event Action<WarfarePlayer>? IEventBasedProximity<WarfarePlayer>.OnObjectEntered
+    {
+        add => OnPlayerEntered += value;
+        remove => OnPlayerEntered -= value;
+    }
+
+    event Action<WarfarePlayer>? IEventBasedProximity<WarfarePlayer>.OnObjectExited
+    {
+        add => OnPlayerExited += value;
+        remove => OnPlayerExited -= value;
+    }
+
+    event Action<IFobItem>? IEventBasedProximity<IFobItem>.OnObjectEntered
+    {
+        add => OnItemAdded += value;
+        remove => OnItemAdded -= value;
+    }
+
+    event Action<IFobItem>? IEventBasedProximity<IFobItem>.OnObjectExited
+    {
+        add => OnItemRemoved += value;
+        remove => OnItemRemoved -= value;
+    }
+
+    event Action<InteractableVehicle>? IEventBasedProximity<InteractableVehicle>.OnObjectEntered
+    {
+        add => OnVehicleEntered += value;
+        remove => OnVehicleEntered -= value;
+    }
+
+    event Action<InteractableVehicle>? IEventBasedProximity<InteractableVehicle>.OnObjectExited
+    {
+        add => OnVehicleExited += value;
+        remove => OnVehicleExited -= value;
+    }
+
+    public bool Contains(InteractableVehicle obj)
+    {
+        for (int i = 0; i < _vehicles.Count; ++i)
         {
-            float sqrRad = Radius;
-            sqrRad *= sqrRad;
-            for (int r = 0; r < RegionBuffer.Count; r++)
-            {
-                RegionCoordinate rc = RegionBuffer[r];
-                ItemRegion region = ItemManager.regions[rc.x, rc.y];
-                for (int j = 0; j < region.items.Count; j++)
-                {
-                    ItemData item = region.items[j];
-                    if (item.item.id != _ammoItemId && item.item.id != _buildItemId)
-                        continue;
-                    
-                    float d = (item.point - pos).sqrMagnitude;
-                    if (d > sqrRad)
-                        continue;
-                    bool found = false;
-                    for (int i = 0; i < SupplyBuffer.Count; ++i)
-                    {
-                        if (SupplyBuffer[i].Value >= sqrRad)
-                            continue;
-
-                        found = true;
-                        SupplyBuffer.Insert(i, new KeyValuePair<ItemData, float>(item, d));
-                        break;
-                    }
-
-                    if (!found)
-                    {
-                        SupplyBuffer.Add(new KeyValuePair<ItemData, float>(item, d));
-                    }
-                }
-            }
-
-
-            int counter = 0;
-            int buildCount = 0, ammoCount = 0;
-            for (int i = 0; i < SupplyBuffer.Count; ++i)
-            {
-                ItemData item = SupplyBuffer[i].Key;
-                EventFunctions.DroppedItemsOwners.TryGetValue(item.instanceID, out ulong playerID);
-                UCPlayer? player = UCPlayer.FromID(playerID);
-                if (player != null)
-                {
-                    ++player.SuppliesUnloaded;
-                    if (player.SuppliesUnloaded >= 6 &&
-                        Points.PointsConfig.XPData.TryGetValue(nameof(XPReward.UnloadSupplies), out PointsConfig.XPRewardData data) && data.Amount != 0)
-                    {
-                        int xp = data.Amount;
-
-                        if (player.KitClass == Class.Pilot)
-                            xp *= 2;
-
-                        QuestManager.OnSuppliesConsumed(this, playerID, player.SuppliesUnloaded);
-
-                        InteractableVehicle? vehicle = player.Player.movement.getVehicle();
-                        if (vehicle != null && vehicle.transform.TryGetComponent(out VehicleComponent component))
-                            component.Quota += 1f / 3f;
-
-                        if (BuildSupply + AmmoSupply <= ResourcesRewardLimit)
-                            Points.AwardXP(player, XPReward.UnloadSupplies, xp);
-
-                        player.SuppliesUnloaded = 0;
-                    }
-                }
-
-                if (item.item.id == _buildItemId)
-                    ++buildCount;
-                else
-                    ++ammoCount;
-                counter++;
-                if (counter >= 3)
-                    break;
-            }
-
-            bool update = false;
-            Vector3 pt = pos;
-            if (buildCount > 0)
-            {
-                BuildSupply += buildCount;
-                int index = 0;
-                while (buildCount > 0 && index < SupplyBuffer.Count)
-                {
-                    ItemData d = SupplyBuffer[index].Key;
-                    if (index == 0)
-                        pt = d.point;
-                    if (d.item.id == _buildItemId)
-                    {
-                        ItemUtility.DestroyDroppedItem(d);
-                        --buildCount;
-                    }
-                    ++index;
-                }
-                if (GamemodeOld.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? effect))
-                    F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
-                UpdateResourceUI(true, false, false);
-                update = true;
-            }
-            if (ammoCount > 0)
-            {
-                AmmoSupply += ammoCount;
-                int index = 0;
-                while (ammoCount > 0 && index < SupplyBuffer.Count)
-                {
-                    ItemData d = SupplyBuffer[index].Key;
-                    if (index == 0)
-                        pt = d.point;
-                    if (d.item.id == _ammoItemId)
-                    {
-                        ItemUtility.DestroyDroppedItem(d);
-                        --ammoCount;
-                    }
-                    ++index;
-                }
-                if (GamemodeOld.Config.EffectUnloadAmmo.TryGetAsset(out EffectAsset? effect))
-                    F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
-                UpdateResourceUI(false, true, false);
-                update = true;
-            }
-            if (update && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
-                fobManager.UpdateFOBInList(Team, this, true);
-        }
-        finally
-        {
-            RegionBuffer.Clear();
-            SupplyBuffer.Clear();
-        }
-    }
-    public void UpdateResourceUI(bool build, bool ammo, bool foblist = true)
-    {
-        GameThread.AssertCurrent();
-        if (!build && !ammo)
-            return;
-        if (foblist && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
-            fobManager.UpdateFOBInList(Team, this, true);
-        for (int i = 0; i < FriendliesNearby.Count; ++i)
-        {
-            UCPlayer player = FriendliesNearby[i];
-            if (build)
-                FOBManager.ResourceUI.BuildLabel.SetText(player.Connection, BuildSupply.ToString(player.Locale.CultureInfo));
-            if (ammo)
-                FOBManager.ResourceUI.AmmoLabel.SetText(player.Connection, AmmoSupply.ToString(player.Locale.CultureInfo));
-        }
-    }
-    public void ShowResourceUI(UCPlayer player)
-    {
-        FOBManager.ResourceUI.SendToPlayer(player.Connection);
-        FOBManager.ResourceUI.BuildLabel.SetText(player.Connection, BuildSupply.ToString(player.Locale.CultureInfo));
-        FOBManager.ResourceUI.AmmoLabel.SetText(player.Connection, AmmoSupply.ToString(player.Locale.CultureInfo));
-    }
-    public void HideResourceUI(UCPlayer player)
-    {
-        FOBManager.ResourceUI.ClearFromPlayer(player.Connection);
-    }
-    private void OnPlayerEnteredRadius(UCPlayer player)
-    {
-        L.LogDebug($"[FOBS] [{Name}] Player entered FOB: {player}.");
-        ShowResourceUI(player);
-
-        InteractableVehicle? vehicle = player.Player.movement.getVehicle();
-        if (vehicle == null)
-            return;
-        if (vehicle.TryGetComponent(out VehicleComponent comp) && comp.Data?.Item != null && VehicleData.IsLogistics(comp.Data.Item.Type))
-            Tips.TryGiveTip(player, 120, T.TipUnloadSupplies);
-    }
-    private void OnPlayerLeftRadius(UCPlayer player)
-    {
-        L.LogDebug($"[FOBS] [{Name}] Player left FOB: {player}.");
-        HideResourceUI(player);
-    }
-    internal void EnsureDisposed(IFOBItem item)
-    {
-        _items.RemoveAll(x => x.Equals(item));
-        if (item.Equals(Bunker))
-        {
-            if (Bunker != null && Bunker.TryGetComponent(out SpottedComponent spot))
-                Destroy(spot);
-
-            Bunker = null;
-        }
-        if (item.Equals(Radio))
-            Radio = null!;
-    }
-    public bool ContainsBuildable(IBuildable buildable) => FindFOBItem(buildable) != null;
-    public bool ContainsVehicle(InteractableVehicle vehicle) => FindFOBItem(vehicle) != null;
-    public IFOBItem? FindFOBItem(IBuildable buildable)
-    {
-        if (Radio != null && Radio.Barricade.instanceID == buildable.InstanceId && !buildable.IsStructure)
-        {
-            return Radio;
+            if (ReferenceEquals(_vehicles[i], obj))
+                return true;
         }
 
-        if (Bunker != null && (Bunker.ActiveStructure != null && Bunker.ActiveStructure.Equals(buildable) || Bunker.Base != null && Bunker.Base.Equals(buildable)))
-        {
-            return Bunker;
-        }
+        return false;
+    }
 
+    public bool Contains(IFobItem obj)
+    {
         for (int i = 0; i < _items.Count; ++i)
         {
-            if (_items[i] is ShovelableComponent sh && (sh.ActiveStructure != null && sh.ActiveStructure.Equals(buildable) || sh.Base != null && sh.Base.Equals(buildable)))
-                return sh;
+            if (ReferenceEquals(_items[i], obj))
+                return true;
         }
 
-        return null;
+        return false;
     }
-    public IFOBItem? FindFOBItem(InteractableVehicle vehicle)
+
+    public bool Contains(WarfarePlayer obj)
     {
-        if (Bunker != null && Bunker.ActiveVehicle != null && Bunker.ActiveVehicle.instanceID == vehicle.instanceID)
-            return Bunker;
-        for (int i = 0; i < _items.Count; ++i)
+        for (int i = 0; i < _players.Count; ++i)
         {
-            if (_items[i] is ShovelableComponent sh && sh.ActiveVehicle != null && sh.ActiveVehicle.instanceID == vehicle.instanceID)
-                return sh;
+            if (ReferenceEquals(_players[i], obj))
+                return true;
         }
 
-        return null;
+        return false;
     }
-    internal IFOBItem? UpgradeItem(IFOBItem item, Transform newObj)
+
+    object ICloneable.Clone()
     {
-        if (item is not MonoBehaviour itemMb)
-        {
-            for (int i = 0; i < _items.Count; ++i)
-            {
-                if (!_items[i].Equals(item))
-                    continue;
-
-                if (_items[i] is IDisposable d)
-                    d.Dispose();
-
-                _items[i] = (IFOBItem)Activator.CreateInstance(item.GetType());
-                _items[i].FOB = this;
-                return _items[i];
-            }
-
-            return null;
-        }
-
-        if (itemMb is BunkerComponent b && b == Bunker)
-        {
-            if (b.TryGetComponent(out SpottedComponent comp))
-                Destroy(comp);
-
-            Bunker = newObj.gameObject.AddComponent<BunkerComponent>();
-
-            if (!newObj.gameObject.TryGetComponent<SpottedComponent>(out _))
-                newObj.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.Spotted.FOB, Team);
-            
-            Bunker.FOB = this;
-            Destroy(b);
-            if (Bunker.Icon.TryGetGuid(out Guid icon))
-                IconManager.AttachIcon(icon, newObj, Bunker.Team, Bunker.IconOffset);
-            return Bunker;
-        }
-
-        for (int i = 0; i < _items.Count; ++i)
-        {
-            if (_items[i] is not MonoBehaviour mb || mb != itemMb)
-                continue;
-
-            IFOBItem comp = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
-            comp.FOB = this;
-            if (comp.Icon.TryGetGuid(out Guid icon))
-                IconManager.AttachIcon(icon, newObj, comp.Team, comp.IconOffset);
-            Destroy(itemMb);
-            _items[i] = comp;
-            return comp;
-        }
-
-        return null;
+        throw new NotSupportedException();
     }
-    TimeSpan IDeployable.GetDelay(WarfarePlayer player) => TimeSpan.FromSeconds(FOBManager.Config.DeployFOBDelay);
-    bool IDeployable.CheckDeployableTo(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+
+    IReadOnlyList<WarfarePlayer> ITrackingProximity<WarfarePlayer>.ActiveObjects => Players;
+
+    IReadOnlyList<IFobItem> ITrackingProximity<IFobItem>.ActiveObjects => Items;
+
+    IReadOnlyList<InteractableVehicle> ITrackingProximity<InteractableVehicle>.ActiveObjects => Vehicles;
+
+    Matrix4x4 ITransformObject.WorldToLocal => transform.worldToLocalMatrix;
+    Matrix4x4 ITransformObject.LocalToWorld => transform.localToWorldMatrix;
+    BoundingSphere ISphereProximity.Sphere
     {
-        if (!isActiveAndEnabled || Bleeding)
+        get
         {
-            if (!settings.DisableInitialChatUpdates)
-                player.SendChat(translations.DeployRadioDamaged, this);
-            return false;
+            BoundingSphere sphere = default;
+            sphere.position = transform.position;
+            sphere.radius = _radius;
+            return sphere;
         }
-
-        if (Bunker == null || Bunker.ActiveStructure?.Model == null || Bunker.State != ShovelableComponent.BuildableState.Full)
-        {
-            if (!settings.DisableInitialChatUpdates)
-                player.SendChat(translations.DeployNoBunker, this);
-            return false;
-        }
-
-        if (IsProxied)
-        {
-            if (!settings.DisableInitialChatUpdates)
-                player.SendChat(translations.DeployEnemiesNearby, this);
-            return false;
-        }
-
-        return true;
     }
-    bool IDeployable.CheckDeployableToTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    Bounds IShapeVolume.worldBounds
     {
-        if (!isActiveAndEnabled || Bleeding)
+        get
         {
-            if (!settings.DisableTickingChatUpdates)
-                player.SendChat(translations.DeployRadioDamaged, this);
-            return false;
+            Vector3 center = transform.position;
+            float r = _radius * 2;
+            Vector3 size = default;
+            size.x = r;
+            size.y = r;
+            size.z = r;
+            return new Bounds(center, size);
         }
-
-        if (Bunker == null || Bunker.ActiveStructure?.Model == null || Bunker.State != ShovelableComponent.BuildableState.Full)
-        {
-            if (!settings.DisableTickingChatUpdates)
-                player.SendChat(translations.DeployNoBunker, this);
-            return false;
-        }
-
-        if (IsProxied)
-        {
-            if (!settings.DisableTickingChatUpdates)
-                player.SendChat(translations.DeployEnemiesNearbyTick, this);
-            return false;
-        }
-
-        return true;
     }
-    void IDeployable.OnDeploy(UCPlayer player, bool chat)
+    Quaternion ITransformObject.Rotation
     {
-        ActionLog.Add(ActionLogType.DeployToLocation, "FOB BUNKER " + Name + " TEAM " + TeamManager.TranslateName(Team), player);
-        if (chat)
-            player.SendChat(T.DeploySuccess, this);
-
-        Points.TryAwardFOBCreatorXP(this, XPReward.BunkerDeployment);
-
-        if (Bunker != null)
-            QuestManager.OnPlayerSpawnedAtBunker(Bunker, player);
-        L.LogDebug($"[FOBS] [{Name}] {player} deployed to bunker.");
+        get => Quaternion.identity;
+        set => throw new NotSupportedException();
     }
-    void IGameTickListener.Tick()
+    Vector3 ITransformObject.Scale
     {
-        if (this.transform == null)
-            return;
-        Vector3 pos = transform.position;
-        float proxyScore = 0;
-        float sqrRad = Radius;
-        sqrRad *= sqrRad;
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-        {
-            UCPlayer player = PlayerManager.OnlinePlayers[i];
-            if (player.GetTeam() == Team)
-            {
-                if (!player.Player.life.isDead && (player.Position - pos).sqrMagnitude < sqrRad)
-                {
-                    if (!_friendlies.Contains(player))
-                    {
-                        _friendlies.Add(player);
-                        OnPlayerEnteredRadius(player);
-                    }
-                }
-                else if (_friendlies.RemoveFast(player))
-                    OnPlayerLeftRadius(player);
-            }
-            else
-            {
-                if (_friendlies.RemoveFast(player))
-                    OnPlayerLeftRadius(player);
-
-                proxyScore += GetProxyScore(player);
-            }
-        }
-
-        float oldProxyScore = ProxyScore;
-        ProxyScore = proxyScore;
-
-        if ((oldProxyScore < 1 && proxyScore >= 1 || oldProxyScore >= 1 && proxyScore < 1) && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
-            fobManager.UpdateFOBInList(Team, this);
-
-        if (Data.Gamemode.EverySecond)
-        {
-            if (!Bleeding)
-                TryConsumeResources();
-
-            if (Data.Gamemode.EveryXSeconds(2f) && Radio != null)
-            {
-                if (Bleeding)
-                {
-                    const ushort loss = 10;
-                    BarricadeManager.damage(Radio.Barricade.model, loss, 1, false, default, EDamageOrigin.Useable_Melee);
-                    if (Radio != null && Radio.Barricade != null && Radio.Barricade.GetServersideData().barricade.isDead && Data.Is(out ITickets? tickets))
-                    {
-                        if (Team == 1ul)
-                            tickets.TicketManager.Team1Tickets -= FOBManager.Config.TicketsFOBRadioLost;
-                        else if (Team == 2ul)
-                            tickets.TicketManager.Team2Tickets -= FOBManager.Config.TicketsFOBRadioLost;
-                    }
-                }
-                else if (Radio.NeedsRestock && Time.realtimeSinceStartup - Radio.LastRestock > 60f)
-                    Restock();
-            }
-        }
-
-        if (Radio != null && Radio is IGameTickListener ticker3)
-            ticker3.Tick();
-        if (Bunker != null && Bunker is IGameTickListener ticker2)
-            ticker2.Tick();
-        for (int i = 0; i < _items.Count; ++i)
-        {
-            if (_items[i] is IGameTickListener ticker)
-                ticker.Tick();
-        }
+        get => Vector3.one;
+        set => throw new NotSupportedException();
     }
-    void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
+    void ITransformObject.SetPositionAndRotation(Vector3 position, Quaternion rotation)
     {
-        if (_friendlies.Remove(player))
-            OnPlayerLeftRadius(player);
+        throw new NotSupportedException();
     }
-    public bool IsPlayerOn(UCPlayer player) => _friendlies.Contains(player);
-
-    [FormatDisplay(typeof(IDeployable), "Colored Name")]
-    public const string FormatNameColored = "cn";
-    [FormatDisplay(typeof(IDeployable), "Closest Location")]
-    public const string FormatLocationName = "l";
-    [FormatDisplay(typeof(IDeployable), "Grid Location")]
-    public const string FormatGridLocation = "g";
-    [FormatDisplay(typeof(IDeployable), "Name")]
-    public const string FormatName = "n";
-    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
-    {
-        string? format = parameters.Format.Format;
-        if (format is not null)
-        {
-            if (format.Equals(FormatNameColored, StringComparison.Ordinal))
-                return Localization.Colorize(GetUIColor(), Name, flags);
-            if (format.Equals(FormatLocationName, StringComparison.Ordinal))
-                return ClosestLocation;
-            if (format.Equals(FormatGridLocation, StringComparison.Ordinal))
-                return GridLocation.ToString();
-        }
-        return Name;
-    }
-
-    public void Dump(UCPlayer? target)
-    {
-        EffectAsset? marker = null;
-        L.Log($"[FOBS] [{Name}] === Fob Dump === ({_recordTracker?.Record?.Id}");
-        using IDisposable indent = L.IndentLog(1);
-        L.Log($"Team: {Team}, Owner: {new OfflinePlayer(Owner)}");
-        if (Radio == null)
-            L.LogWarning("Radio State: Null");
-        else
-        {
-            L.Log($"Radio State: {Radio.State}.");
-            TrySpawnMarker(Radio.Position);
-        }
-        if (Bunker == null)
-            L.Log("Bunker State: Null");
-        else
-        {
-            L.Log($"Bunker State: {Bunker.State}.");
-            TrySpawnMarker(Bunker.Position);
-        }
-        L.Log($"{_items.Count} Item(s):");
-        using (L.IndentLog(1))
-        {
-            for (int i = 0; i < _items.Count; ++i)
-            {
-                IFOBItem item = _items[i];
-                switch (item)
-                {
-                    case ShovelableComponent shovelable:
-                        L.Log($"{i}. Shovelable {shovelable.Buildable}: {shovelable.Progress} / {shovelable.Total}.");
-                        break;
-                    default:
-                        L.Log($"{i}. {item.GetType().Name}: {item}.");
-                        break;
-                }
-
-                TrySpawnMarker(item.Position);
-            }
-        }
-        L.Log($"{_friendlies.Count} Friendly Player(s):");
-        using (L.IndentLog(1))
-        {
-            for (int i = 0; i < _friendlies.Count; ++i)
-            {
-                L.Log($"{i}. {_friendlies[i]}");
-            }
-        }
-
-        L.Log($"Proxied: {IsProxied}, Score: {ProxyScore}.");
-        L.Log($"Grid Location: {GridLocation}, Closest Location: {ClosestLocation}.");
-        L.Log($"Supplies: Build = {BuildSupply}, Ammo = {AmmoSupply}.");
-
-        void TrySpawnMarker(Vector3 pos)
-        {
-            if (target != null)
-            {
-                marker ??= Assets.find<EffectAsset>(new Guid("2c17fbd0f0ce49aeb3bc4637b68809a2"));
-                if (marker != null)
-                    F.TriggerEffectReliable(marker, target.Connection, pos);
-            }
-        }
-    }
-    void IDisposable.Dispose()
-    {
-        // todo this will cause deadlock
-        Record?.DisposeAsync().AsTask().Wait()
-    }
-}
-
-public interface IFOB : IDeployable
-{
-    ulong Team { get; }
-    string Name { get; }
-    string ClosestLocation { get; }
-    UCPlayer? Instigator { get; set; }
-    GridLocation GridLocation { get; }
-    Vector3 Position { get; }
-    IBuildableDestroyedEvent? DestroyInfo { get; set; }
-    FobRecordTracker? Record { get; }
-    bool ContainsBuildable(IBuildable buildable);
-    bool ContainsVehicle(InteractableVehicle vehicle);
-    IFOBItem? FindFOBItem(IBuildable buildable);
-    IFOBItem? FindFOBItem(InteractableVehicle vehicle);
-    void Dump(UCPlayer? target);
-}
-public interface IResourceFOB : IFOB
-{
-    string UIResourceString { get; }
-}
-public interface IRadiusFOB : IFOB
-{
-    float Radius { get; }
-    bool IsPlayerOn(UCPlayer player);
 }

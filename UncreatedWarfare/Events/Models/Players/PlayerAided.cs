@@ -1,18 +1,25 @@
-﻿namespace Uncreated.Warfare.Events.Models.Players;
+﻿using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players;
+
+namespace Uncreated.Warfare.Events.Models.Players;
+
+/// <summary>
+/// Invoked when a player uses a consumable item on another player.
+/// </summary>
 public sealed class PlayerAided : CancellablePlayerEvent
 {
-    public UCPlayer Medic { get; }
-    public ulong MedicId { get; }
-    public ItemConsumeableAsset AidItem { get; }
-    public bool IsRevive { get; }
-    public PlayerAided(UCPlayer medic, UCPlayer player, ItemConsumeableAsset asset, bool isRevive, bool shouldAllow) : base(player)
-    {
-        Medic = medic;
-        MedicId = medic.Steam64;
-        AidItem = asset;
-        IsRevive = isRevive;
+    /// <summary>
+    /// The player who aided <see cref="PlayerEvent.Player"/>.
+    /// </summary>
+    public required WarfarePlayer Medic { get; init; }
 
-        if (!shouldAllow)
-            Break();
-    }
+    /// <summary>
+    /// The item used to aid.
+    /// </summary>
+    public required IAssetLink<ItemConsumeableAsset> Item { get; init; }
+
+    /// <summary>
+    /// If this aid revived <see cref="PlayerEvent.Player"/>.
+    /// </summary>
+    public required bool IsRevive { get; init; }
 }

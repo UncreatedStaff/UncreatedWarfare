@@ -273,7 +273,7 @@ public class AudioRecordManager
             int stInd = segments[i].StartIndex;
             int endInd = i == segments.Count - 1 ? (comp.StartIndex + comp.ByteCount) % comp.InternalBuffer.Length : segments[i + 1].StartIndex;
             int packetSize = endInd < stInd ? comp.InternalBuffer.Length - stInd + endInd : endInd - stInd;
-            size += packetSize + F.CountDigits(i) * 2 + F.CountDigits(packetSize);
+            size += packetSize + MathUtility.CountDigits(i) * 2 + MathUtility.CountDigits(packetSize);
             if (maxSize < packetSize)
                 maxSize = packetSize;
         }
@@ -282,7 +282,7 @@ public class AudioRecordManager
         Span<byte> result = resArr;
         int pos = 0;
         section = 0;
-        Span<byte> numUtf8 = stackalloc byte[Math.Max(F.CountDigits(segments.Count), F.CountDigits(maxSize))];
+        Span<byte> numUtf8 = stackalloc byte[Math.Max(MathUtility.CountDigits(segments.Count), MathUtility.CountDigits(maxSize))];
         for (int i = 0; i < segments.Count; ++i)
         {
             ReadOnlySpan<char> numStr = i.ToString(CultureInfo.InvariantCulture).AsSpan();

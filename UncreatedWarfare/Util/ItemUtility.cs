@@ -470,7 +470,7 @@ public static class ItemUtility
     /// <summary>
     /// Get an array of kit item abstractions from a player's inventory and clothing.
     /// </summary>
-    public static IKitItem[] ItemsFromInventory(UCPlayer player, bool addClothes = true, bool addItems = true, bool findAssetRedirects = false)
+    public static IKitItem[] ItemsFromInventory(WarfarePlayer player, bool addClothes = true, bool addItems = true, bool findAssetRedirects = false)
     {
         GameThread.AssertCurrent();
         if (!addItems && !addClothes)
@@ -479,7 +479,7 @@ public static class ItemUtility
         RedirectType type;
         if (addItems)
         {
-            Items[] ia = player.Player.inventory.items;
+            Items[] ia = player.UnturnedPlayer.inventory.items;
             for (byte page = 0; page < PlayerInventory.STORAGE; ++page)
             {
                 Items it = ia[page];
@@ -504,7 +504,7 @@ public static class ItemUtility
         if (addClothes)
         {
             FactionInfo? playerFaction = TeamManager.GetFactionSafe(player.GetTeam());
-            PlayerClothing playerClothes = player.Player.clothing;
+            PlayerClothing playerClothes = player.UnturnedPlayer.clothing;
             if (playerClothes.shirtAsset != null)
             {
                 if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.shirtAsset.GUID, out string? variant, playerFaction)) != RedirectType.None)

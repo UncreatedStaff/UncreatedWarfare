@@ -16,7 +16,7 @@ public class DeployCommand : IExecutableCommand
     private const string Syntax = "/deploy main -OR- /deploy <fob name>";
     private const string Help = "Deploy to a point of interest such as a main base, FOB, VCP, or cache.";
 
-    private readonly ReviveManager? _reviveManager;
+    private readonly ReviveManagerOld? _reviveManager;
     private readonly ZoneStore _globalZoneStore;
     private readonly DeploymentTranslations _translations;
     private readonly DeploymentService _deploymentService;
@@ -26,7 +26,7 @@ public class DeployCommand : IExecutableCommand
 
     public DeployCommand(IServiceProvider serviceProvider)
     {
-        _reviveManager = serviceProvider.GetService<ReviveManager>(); // optional
+        _reviveManager = serviceProvider.GetService<ReviveManagerOld>(); // optional
         _globalZoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>().Value;

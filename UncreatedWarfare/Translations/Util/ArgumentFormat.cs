@@ -9,36 +9,42 @@ public struct ArgumentFormat
     internal IArgumentAddon[]? FormatAddons;
     internal string? Format;
     internal string? FormatDisplayName;
+    internal bool UseForToString;
 
     public ArgumentFormat(string? fmt)
     {
         FormatAddons = Array.Empty<IArgumentAddon>();
+        UseForToString = true;
         Format = fmt;
     }
     
-    public ArgumentFormat(SpecialFormat fmt)
+    public ArgumentFormat(in SpecialFormat fmt)
     {
         FormatAddons = Array.Empty<IArgumentAddon>();
-        Format = fmt.Format;
         FormatDisplayName = fmt.DisplayName;
+        UseForToString = fmt.UseForToString;
+        Format = fmt.Format;
     }
 
     public ArgumentFormat(string fmt, params IArgumentAddon[] addons)
     {
         FormatAddons = addons;
+        UseForToString = true;
         Format = fmt;
     }
 
-    public ArgumentFormat(SpecialFormat fmt, params IArgumentAddon[] addons)
+    public ArgumentFormat(in SpecialFormat fmt, params IArgumentAddon[] addons)
     {
         FormatAddons = addons;
-        Format = fmt.Format;
         FormatDisplayName = fmt.DisplayName;
+        UseForToString = fmt.UseForToString;
+        Format = fmt.Format;
     }
 
     public ArgumentFormat(params IArgumentAddon[] addons)
     {
         FormatAddons = addons;
+        UseForToString = true;
         Format = null;
     }
 
@@ -66,11 +72,17 @@ public readonly struct SpecialFormat
     /// The actual case-sensitive string used to identify the format.
     /// </summary>
     public string Format { get; }
+
+    /// <summary>
+    /// If this format should be given to the <see cref="IFormattable.ToString(string,IFormatProvider)"/> function, otherwise it's just available to addons.
+    /// </summary>
+    public bool UseForToString { get; }
     
-    public SpecialFormat(string displayName, string format)
+    public SpecialFormat(string displayName, string format, bool useForToString = true)
     {
         DisplayName = displayName;
         Format = format;
+        UseForToString = useForToString;
     }
 
     /// <summary>

@@ -57,7 +57,8 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
             _sessions.Clear();
         }
 
-        await using IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         foreach (KeyValuePair<ulong, SessionRecord> session in sessions)
             EndSession(dbContext, session.Value, true);
@@ -75,7 +76,8 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
             try
             {
                 await UniTask.SwitchToMainThread(token);
-                await using IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+                using IServiceScope scope = _serviceProvider.CreateScope();
+                await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
                 SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
                 player.CurrentSession = record;
 
@@ -120,7 +122,8 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
                 List<Task> tasks = new List<Task>(onlinePlayers.Length);
                 bool anyPrev = false;
 
-                await using IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+                using IServiceScope scope = _serviceProvider.CreateScope();
+                await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
                 for (int i = 0; i < onlinePlayers.Length; ++i)
                 {
@@ -351,7 +354,8 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
 
         UCWarfare.RunTask(async token =>
         {
-            await using IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
             EndSession(dbContext, record, Data.Gamemode != null && Data.Gamemode.State is State.Finished or State.Discarded, false);
             await SaveSession(dbContext, record, token);
@@ -403,7 +407,8 @@ public class SessionManager : BaseAsyncSingleton, IPlayerDisconnectListener, IPl
             L.Log($"Server last online: {lastHeartbeat.Value} ({(DateTime.UtcNow - lastHeartbeat.Value.UtcDateTime):g} ago). Checking for sessions that were terminated unexpectedly.", ConsoleColor.Magenta);
 
             int ct;
-            await using (IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>())
+            using (IServiceScope scope = _serviceProvider.CreateScope())
+            await using (IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>())
             {
                 byte region = UCWarfare.Config.RegionKey;
                 List<SessionRecord> records = await dbContext.Sessions.Where(x => x.UnexpectedTermination && x.EndedTimestamp == null && x.Game.Region == region).ToListAsync(token);

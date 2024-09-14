@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Services;
@@ -25,6 +24,62 @@ public interface IFactionDataStore
     /// Reload <see cref="Factions"/> from wherever it's stored.
     /// </summary>
     Task ReloadCache(CancellationToken token = default);
+}
+
+public static class FactionDataStoreExtensions
+{
+    /// <summary>
+    /// Search a faction using text.
+    /// </summary>
+    public static FactionInfo? FindFaction(this IFactionDataStore dataStore, string search, bool exact = true, bool onlyOneMatch = true)
+    {
+        IReadOnlyList<FactionInfo> factions = dataStore.Factions;
+        foreach (FactionInfo faction in factions)
+        {
+            if (F.RoughlyEquals(search, faction.FactionId))
+                return faction;
+        }
+        foreach (FactionInfo faction in factions)
+        {
+            if (F.RoughlyEquals(search, faction.Name))
+                return faction;
+        }
+        foreach (FactionInfo faction in factions)
+        {
+            if (faction.ShortName != null && F.RoughlyEquals(search, faction.ShortName))
+                return faction;
+        }
+
+        FactionInfo? match = null;
+        foreach (FactionInfo faction in factions)
+        {
+            if (!faction.Name.Contains(search, StringComparison.InvariantCultureIgnoreCase))
+                continue;
+
+            if (!onlyOneMatch)
+                return faction;
+            if (match != null)
+                return null;
+            match = faction;
+        }
+
+        if (match != null)
+            return match;
+
+        foreach (FactionInfo faction in factions)
+        {
+            if (faction.ShortName == null || !faction.ShortName.Contains(search, StringComparison.InvariantCultureIgnoreCase))
+                continue;
+
+            if (!onlyOneMatch)
+                return faction;
+            if (match != null)
+                return null;
+            match = faction;
+        }
+
+        return match;
+    }
 }
 
 public class FactionDataStore : IFactionDataStore, IHostedService

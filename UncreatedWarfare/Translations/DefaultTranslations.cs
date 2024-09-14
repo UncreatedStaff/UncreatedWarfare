@@ -6,15 +6,14 @@ using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Zones;
 using Cache = Uncreated.Warfare.Components.Cache;
@@ -266,7 +265,7 @@ internal static class T
     public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.");
     
     [TranslationData(SectionPlayers, "Gets sent to a player if they're banned when they join.")]
-    public static readonly Translation<string, int> RejectBanned = new Translation<string, int>("You are banned for {1}: \"{0}\".", arg1Fmt: FormatTimeLongAbbreviated);
+    public static readonly Translation<string, int> RejectBanned = new Translation<string, int>("You are banned for {1}: \"{0}\".", arg1Fmt: TimeAddon.Create(TimeFormatType.Short));
 
     [TranslationData(SectionPlayers, "Gets sent to a player if they're permanently banned when they join.")]
     public static readonly Translation<string> RejectPermanentBanned = new Translation<string>("You are permanently banned: \"{0}\".");
@@ -358,7 +357,7 @@ internal static class T
     public static readonly Translation<string> NextGameShutdown       = new Translation<string>("<#94cbff>Shutting Down Because: \"{0}\"</color>", TranslationOptions.UnityUI);
 
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationOptions.UnityUI, "mm\\:ss");
+    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationOptions.UnityUI, TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
 
     [TranslationData(SectionLeaderboard)]
     public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationOptions.UnityUI, FactionInfo.FormatColorShortName, FactionInfo.FormatColorShortName);
@@ -924,7 +923,7 @@ internal static class T
     [TranslationData(SectionRallies, IsPriorityTranslation = false)]
     public static readonly Translation<string> RallyUI = new Translation<string>("<#c$rally$>RALLY</color> {0}", TranslationOptions.UnityUI);
     [TranslationData(SectionRallies, IsPriorityTranslation = false)]
-    public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationOptions.UnityUI, "mm\\:ss");
+    public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationOptions.UnityUI, TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
     #endregion
 
     #region Time
@@ -1451,7 +1450,7 @@ internal static class T
     [TranslationData(SectionTraitInteractions, "Sent when the player consumes their self-revive.", "Self-revive trait data.")]
     public static readonly Translation<TraitData> TraitUsedSelfRevive = new Translation<TraitData>("<#c$trait$>{0}</color> <#d97568>consumed</color>.", arg0Fmt: TraitData.FormatName);
     [TranslationData(SectionTraitInteractions, "Sent when the player tries to use their self-revive on cooldown.", "Self-revive trait data.", "Time string")]
-    public static readonly Translation<TraitData, string> TraitSelfReviveCooldown = new Translation<TraitData, string>("<#c$trait$>{0}</color> can not be used for another {1}.", arg0Fmt: TraitData.FormatName);
+    public static readonly Translation<TraitData, TimeSpan> TraitSelfReviveCooldown = new Translation<TraitData, TimeSpan>("<#c$trait$>{0}</color> can not be used for another {1}.", arg0Fmt: TraitData.FormatName, arg1Fmt: TimeAddon.Create(TimeFormatType.Long));
     [TranslationData(SectionTraitInteractions, "Sent when the player isn't in a vehicle with Ace Armor.", "Ace armor trait data.")]
     public static readonly Translation<TraitData> AceArmorDisabledNotInVehicle = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> is disabled until you are driving an <#cedcde>ARMORED</color> vehicle.", arg0Fmt: TraitData.FormatName);
     #endregion
@@ -1734,9 +1733,9 @@ internal static class T
     #region Hardpoint
     private const string SectionHardpoint = "Gamemode Hardpoint";
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective, float> HardpointFirstObjective = new Translation<IObjective, float>("Hold {0} to win! A new objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flag.COLOR_NAME_FORMAT, arg1Fmt: FormatTimeLong);
+    public static readonly Translation<IObjective, float> HardpointFirstObjective = new Translation<IObjective, float>("Hold {0} to win! A new objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flag.COLOR_NAME_FORMAT, arg1Fmt: TimeAddon.Create(TimeFormatType.Long));
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective, float> HardpointObjectiveChanged = new Translation<IObjective, float>("New objective: {0}! The next objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flag.COLOR_NAME_FORMAT, arg1Fmt: FormatTimeLong);
+    public static readonly Translation<IObjective, float> HardpointObjectiveChanged = new Translation<IObjective, float>("New objective: {0}! The next objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flag.COLOR_NAME_FORMAT, arg1Fmt: TimeAddon.Create(TimeFormatType.Long));
     [TranslationData(SectionHardpoint)]
     public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateCaptured = new Translation<IObjective, FactionInfo>("{0} is being held by {1}!", arg0Fmt: Flag.COLOR_NAME_FORMAT, arg1Fmt: FactionInfo.FormatColorShortName);
     [TranslationData(SectionHardpoint)]
@@ -2323,28 +2322,6 @@ internal static class T
     internal const string FormatLowercase = "lower";
     [FormatDisplay(typeof(object), "Proper Case")]
     internal const string FormatPropercase = "proper";
-    [FormatDisplay(typeof(float),    "Time (Long, seconds)")]
-    [FormatDisplay(typeof(uint),     "Time (Long, seconds)")]
-    [FormatDisplay(typeof(int),      "Time (Long, seconds)")]
-    [FormatDisplay(typeof(TimeSpan), "Time (Long)")]
-    internal const string FormatTimeLong = "tlong";
-    [FormatDisplay(typeof(float),    "Time (Long Abbreviated, seconds)")]
-    [FormatDisplay(typeof(uint),     "Time (Long Abbreviated, seconds)")]
-    [FormatDisplay(typeof(int),      "Time (Long Abbreviated, seconds)")]
-    [FormatDisplay(typeof(TimeSpan), "Time (Long Abbreviated)")]
-    internal const string FormatTimeLongAbbreviated = "tlonga";
-    [FormatDisplay(typeof(float),    "Time (Short mm:ss, seconds)")]
-    [FormatDisplay(typeof(uint),     "Time (Short mm:ss, seconds)")]
-    [FormatDisplay(typeof(int),      "Time (Short mm:ss, seconds)")]
-    [FormatDisplay(typeof(TimeSpan), "Time (Short mm:ss)")]
-    // ReSharper disable once InconsistentNaming
-    internal const string FormatTimeShort_MM_SS = "tshort1";
-    [FormatDisplay(typeof(float),    "Time (Short hh:mm:ss, seconds)")]
-    [FormatDisplay(typeof(uint),     "Time (Short hh:mm:ss, seconds)")]
-    [FormatDisplay(typeof(int),      "Time (Short hh:mm:ss, seconds)")]
-    [FormatDisplay(typeof(TimeSpan), "Time (Short hh:mm:ss)")]
-    // ReSharper disable once InconsistentNaming
-    internal const string FormatTimeShort_HH_MM_SS = "tshort2";
     [FormatDisplay(typeof(QuestAsset), "Asset Rarity")]
     [FormatDisplay(typeof(VehicleAsset), "Asset Rarity")]
     [FormatDisplay(typeof(ItemAsset), "Asset Rarity")]

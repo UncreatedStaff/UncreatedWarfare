@@ -9,16 +9,12 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -87,55 +83,6 @@ public static class LocalizationOld
                 ((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
                 ? (UnityRichTextColorBaseStart + hex + RichTextColorEnd + inner + RichTextColorClosingTag)
                 : (TMProRichTextColorBase + hex + RichTextColorEnd + inner + RichTextColorClosingTag));
-    }
-    public static string GetTimeFromMinutes(int seconds) => GetTimeFromSeconds(seconds * 60, GetDefaultLanguage(), Data.LocalLocale);
-    public static string GetTimeFromSeconds(int seconds) => GetTimeFromSeconds(seconds, GetDefaultLanguage(), Data.LocalLocale);
-    public static string GetTimeFromMinutes(int minutes, in LanguageSet set) => GetTimeFromSeconds(minutes * 60, in set);
-    public static string GetTimeFromSeconds(int seconds, in LanguageSet set) => GetTimeFromSeconds(seconds, set.Language, set.CultureInfo);
-    public static string GetTimeFromMinutes(int minutes, UCPlayer? player) => GetTimeFromSeconds(minutes * 60, player);
-    public static string GetTimeFromSeconds(int seconds, UCPlayer? player) => GetTimeFromSeconds(seconds, player?.Locale.LanguageInfo, player?.Locale.CultureInfo);
-    public static string GetTimeFromMinutes(int minutes, LanguageInfo? language, CultureInfo? culture) => GetTimeFromSeconds(minutes * 60, language, culture);
-    public static string GetTimeFromSeconds(int seconds, LanguageInfo? language, CultureInfo? culture)
-    {
-        language ??= GetDefaultLanguage();
-        culture ??= GetCultureInfo(language);
-        if (seconds < 0)
-            return T.TimePermanent.Translate(language, culture);
-        if (seconds == 0)
-            seconds = 1;
-        if (seconds < 60) // < 1 minute
-            return seconds.ToString(culture) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language, culture);
-        int val;
-        int overflow;
-        if (seconds < 3600) // < 1 hour
-        {
-            val = F.DivideRemainder(seconds, 60, out overflow);
-            return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language, culture)}" +
-                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language, culture)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language, culture)}")}";
-        }
-        if (seconds < 86400) // < 1 day 
-        {
-            val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
-            return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(language, culture)}" +
-                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language, culture)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language, culture)}")}";
-        }
-        if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
-        {
-            val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
-            return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(language, culture)}" +
-                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language, culture)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(language, culture)}")}";
-        }
-        if (seconds < 31536000) // < 1 year
-        {
-            val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
-            return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(language, culture)}" +
-                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language, culture)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(language, culture)}")}";
-        }
-        // > 1 year
-
-        val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
-        return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(language, culture)}" +
-               $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language, culture)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(language, culture)}")}";
     }
     public static string TranslateLoadoutSign(byte loadoutId, WarfarePlayer player)
     {

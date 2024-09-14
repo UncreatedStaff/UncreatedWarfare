@@ -340,20 +340,20 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                 int size = 4;
                 if (!range.InfinityMinimum)
                 {
-                    size += F.CountDigits(range.Minimum);
+                    size += MathUtility.CountDigits(range.Minimum);
                     if (range.Minimum < 0)
                         ++size;
                 }
                 if (!range.InfinityMaximum)
                 {
-                    size += F.CountDigits(range.Maximum);
+                    size += MathUtility.CountDigits(range.Maximum);
                     if (range.Maximum < 0)
                         ++size;
                 }
 
                 if (range is Int32RangeSet { Round: not 0 } round)
                 {
-                    size += 2 + F.CountDigits(round.Round);
+                    size += 2 + MathUtility.CountDigits(round.Round);
                 }
 
                 return string.Create(size, this, (span, state) =>
@@ -401,7 +401,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                 for (int i = 0; i < list.Values.Length; ++i)
                 {
                     int v = list.Values[i];
-                    size += F.CountDigits(v);
+                    size += MathUtility.CountDigits(v);
                     if (v < 0)
                         ++size;
                 }
@@ -737,20 +737,20 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                     int size = 4;
                     if (_minValue != int.MinValue)
                     {
-                        size += F.CountDigits(_minValue);
+                        size += MathUtility.CountDigits(_minValue);
                         if (_minValue < 0)
                             ++size;
                     }
                     if (_maxValue != int.MaxValue)
                     {
-                        size += F.CountDigits(_maxValue);
+                        size += MathUtility.CountDigits(_maxValue);
                         if (_maxValue < 0)
                             ++size;
                     }
 
                     if (_round != 0)
                     {
-                        size += 2 + F.CountDigits(_round);
+                        size += 2 + MathUtility.CountDigits(_round);
                     }
 
                     return string.Create(size, this, (span, state) =>
@@ -796,7 +796,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                     for (int i = 0; i < _values.Length; ++i)
                     {
                         int v = _values[i];
-                        size += F.CountDigits(v);
+                        size += MathUtility.CountDigits(v);
                         if (v < 0)
                             ++size;
                     }

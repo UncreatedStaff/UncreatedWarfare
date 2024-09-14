@@ -73,7 +73,8 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
     }
     public async Task ReloadCache(CancellationToken token)
     {
-        await using WarfareDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        await using WarfareDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
         ulong[] online = PlayerManager.GetOnlinePlayersArray();
 
         List<Kit> kits = await IncludeCachedKitData(dbContext.Kits)
@@ -91,7 +92,8 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
     }
     public async Task<Kit?> ReloadCache(uint pk, CancellationToken token)
     {
-        await using WarfareDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        await using WarfareDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         Kit? kit = await IncludeCachedKitData(dbContext.Kits)
             .FirstOrDefaultAsync(x => x.PrimaryKey == pk, token);
@@ -135,7 +137,8 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
 
         try
         {
-            await using WarfareDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();
+            using IServiceScope scope = serviceProvider.CreateScope();
+            await using WarfareDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
             ulong steam64 = e.Steam64.m_SteamID;
 
             CancellationToken tkn = e.Player.DisconnectToken;

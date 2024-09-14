@@ -4,8 +4,6 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration.JsonConverters;
-using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
@@ -17,6 +15,14 @@ namespace Uncreated.Warfare.Locations;
 [JsonConverter(typeof(GridLocationConverter))]
 [TypeConverter(typeof(GridLocationTypeConverter))]
 public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocation>, IComparable<GridLocation>
+#if NET6_0_OR_GREATER
+    , ISpanFormattable
+#else
+    , IFormattable
+#endif
+#if NET7_0_OR_GREATER
+    , ISpanParsable<GridLocation>
+#endif
 {
     private readonly uint _data;
 
@@ -90,15 +96,15 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// <summary>
     /// The center of the referenced grid or sub-grid.
     /// </summary>
-    /// <exception cref="SingletonUnloadedException">Not ran on an active server.</exception>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     [JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public Vector2 Center
     {
         get
         {
-            if (!UCWarfare.IsLoaded)
-                throw new SingletonUnloadedException(typeof(UCWarfare));
+            if (!Level.isInitialized)
+                throw new NotSupportedException("Not ran on an active server.");
 
             int index = Index is 0 or > SubgridAmount * SubgridAmount ? Mathf.CeilToInt(SubgridAmount * SubgridAmount / 2f) : Index;
             int subgridx = X * SubgridAmount;
@@ -172,11 +178,11 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// <summary>
     /// Create a <see cref="GridLocation"/> from any given point inside a grid and subgrid.
     /// </summary>
-    /// <exception cref="SingletonUnloadedException">Not ran on an active server.</exception>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public GridLocation(in Vector3 pos)
     {
-        if (!UCWarfare.IsLoaded)
-            throw new SingletonUnloadedException(typeof(UCWarfare));
+        if (!Level.isInitialized)
+            throw new NotSupportedException("Not ran on an active server.");
 
         byte xVal, yVal, indexVal;
         CartographyVolume? cartographyVolume = VolumeManager<CartographyVolume, CartographyVolumeManager>.Get()?.GetMainVolume();
@@ -250,7 +256,7 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// <summary>
     /// Check if two locations are in the same grid.
     /// </summary>
-    public bool GridEquals(GridLocation other) => (_data & 0xFFFFFF00u) == (other._data & 0xFFFFFF00u);
+    public bool GridEquals(GridLocation other) => (_data >> 8) == (other._data >> 8);
 
     /// <summary>
     /// Check if two locations are in the same grid and sub-grid.
@@ -266,7 +272,9 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// Check if two locations are in the same grid and sub-grid.
     /// </summary>
     public override bool Equals(object? obj) => obj is GridLocation location && Equals(location);
-    public override int GetHashCode() => unchecked((int)(_data & 0xFFFFFF | ~(_data & 0xFF000000)));
+
+    /// <inheritdoc />
+    public override int GetHashCode() => unchecked ( (int)_data );
 
     /// <summary>
     /// Check if two locations are in the same grid and sub-grid.
@@ -299,37 +307,104 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     public static bool operator >=(GridLocation left, GridLocation right) => left._data >= right._data;
 
     /// <summary>
+    /// Convert this grid location to a string representation, formatted like A1-1.
+    /// </summary>
+    public override string ToString()
+    {
+        int x = (int)((_data >> 16) & 0xFF);
+        int y = (int)((_data >> 8) & 0xFF) + 1;
+        int index = (int)(_data & 0xFF);
+
+        int len = y > 9 ? 5 : 4;
+        if (index == 0)
+            len -= 2;
+
+        int state = x << 16 | y << 8 | index;
+        return string.Create(len, state, (span, state) =>
+        {
+            int x = state >> 16;
+            int y = (state >> 8) & 0xFF;
+            int index = state & 0xFF;
+
+            WriteSpan(span, span.Length, x, y, index);
+        });
+    }
+
+    /// <inheritdoc />
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        return ToString();
+    }
+
+    /// <summary>
     /// Convert a grid location with the given <paramref name="x"/>, <paramref name="y"/>, and <paramref name="index"/> to a string representation, formatted like A1-1.
     /// </summary>
-    public static unsafe string ToString(byte x, byte y, byte index)
+    public static string ToString(byte x, byte y, byte index)
     {
         ++y;
         int len = y > 9 ? 5 : 4;
         if (index == 0)
             len -= 2;
-        char* ptr = stackalloc char[len];
 
-        ptr[0] = (char)(x + 65);
-        if (y > 9)
+        int state = x << 16 | y << 8 | index;
+        return string.Create(len, state, (span, state) =>
         {
-            ptr[1] = (char)(y / 10 + 48);
-            ptr[2] = (char)(y % 10 + 48);
-        }
-        else
-            ptr[1] = (char)(y + 48);
-        if (index != 0)
-        {
-            int a = len == 5 ? 3 : 2;
-            ptr[a] = '-';
-            ptr[a + 1] = (char)(index + 48);
-        }
-        return new string(ptr, 0, len);
+            int x = state >> 16;
+            int y = (state >> 8) & 0xFF;
+            int index = state & 0xFF;
+
+            WriteSpan(span, span.Length, x, y, index);
+        });
     }
 
-    /// <returns>String representation of the grid, formatted like A1-1.</returns>
-    public override string ToString() => ToString(X, Y, Index);
+    /// <inheritdoc />
+    public string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        return ToString();
+    }
 
-    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters) => ToString();
+    /// <summary>
+    /// Convert this grid location to a string representation, formatted like A1-1.
+    /// </summary>
+    public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+    {
+        int x = (int)((_data >> 16) & 0xFF);
+        int y = (int)((_data >> 8) & 0xFF) + 1;
+        int index = (int)(_data & 0xFF);
+
+        int len = y > 9 ? 5 : 4;
+        if (index == 0)
+            len -= 2;
+
+        if (destination.Length < len)
+        {
+            charsWritten = len;
+            return false;
+        }
+
+        charsWritten = len;
+        WriteSpan(destination, len, x, y, index);
+        return true;
+    }
+
+    private static void WriteSpan(Span<char> span, int len, int x, int y, int index)
+    {
+        span[0] = (char)(x + 65);
+        if (y > 9)
+        {
+            span[1] = (char)(y / 10 + 48);
+            span[2] = (char)(y % 10 + 48);
+        }
+        else
+            span[1] = (char)(y + 48);
+
+        if (index == 0)
+            return;
+
+        int a = len == 5 ? 3 : 2;
+        span[a] = '-';
+        span[a + 1] = (char)(index + 48);
+    }
 
     /// <summary>
     /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
@@ -410,6 +485,48 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
             throw new FormatException("Unable to parse GridLocation.");
         return location;
     }
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
+    /// <exception cref="FormatException"/>
+    [Obsolete]
+    public static GridLocation Parse(string s, IFormatProvider? provider)
+    {
+        return Parse(s);
+    }
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
+    /// <returns><see langword="True"/> if a valid <see cref="GridLocation"/> was parsed, otherwise <see langword="false"/>.</returns>
+    [Obsolete]
+    public static bool TryParse(string? s, IFormatProvider? provider, out GridLocation result)
+    {
+        return TryParse(s, out result);
+    }
+
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
+    /// <exception cref="FormatException"/>
+    [Obsolete]
+    public static GridLocation Parse(ReadOnlySpan<char> s, IFormatProvider? provider)
+    {
+        return Parse(s);
+    }
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
+    /// <returns><see langword="True"/> if a valid <see cref="GridLocation"/> was parsed, otherwise <see langword="false"/>.</returns>
+    [Obsolete]
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out GridLocation result)
+    {
+        return TryParse(s, out result);
+    }
+
     internal static int GetLegacyGridSize() => Level.info == null ? 1 : GetLegacyGridSize(Level.info.size);
 
     /// <summary>
@@ -555,36 +672,46 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
         return new GridLocation((byte)((data >> 16) & 0xFF), (byte)((data >> 8) & 0xFF), (byte)(data & 0xFF));
     }
 
+    /// <summary>
+    /// Size of the output map image.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public static Vector2Int ImageSize => (_lvl ??= new LevelData()).ImageSizeIntl;
+
+    /// <summary>
+    /// If legacy map measurements are used (no <see cref="CartographyVolume"/>).
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public static bool LegacyMapping => (_lvl ??= new LevelData()).LegacyMappingIntl;
+
+    /// <summary>
+    /// Real-world size of the map capture area.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public static Vector2 CaptureSize => (_lvl ??= new LevelData()).CaptureSizeIntl;
+
+    /// <summary>
+    /// Scales distance from map space to world space.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public static Vector2 DistanceScale => (_lvl ??= new LevelData()).DistanceScaleIntl;
+
+    /// <summary>
+    /// Converts world space to map space.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public static Matrix4x4 TransformMatrix => (_lvl ??= new LevelData()).TransformMatrixIntl;
+
+    /// <summary>
+    /// Converts map space to world space.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public static Matrix4x4 TransformMatrixInverse => (_lvl ??= new LevelData()).TransformMatrixInverseIntl;
-    public static float WorldDistanceToMapDistanceX(float x)
-    {
-        _lvl ??= new LevelData();
-        
-        return x / _lvl.DistanceScaleIntl.x;
-    }
-    public static float WorldDistanceToMapDistanceY(float y)
-    {
-        _lvl ??= new LevelData();
-        
-        return y / _lvl.DistanceScaleIntl.x;
-    }
-    public static float MapDistanceToWorldDistanceX(float x)
-    {
-        _lvl ??= new LevelData();
-        
-        return x * _lvl.DistanceScaleIntl.x;
-    }
-    public static float MapDistanceToWorldDistanceY(float y)
-    {
-        _lvl ??= new LevelData();
-        
-        return y * _lvl.DistanceScaleIntl.x;
-    }
+
+    /// <summary>
+    /// Converts world coordinates to coordinates on a map.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public static Vector2 WorldCoordsToMapCoords(Vector3 worldPos)
     {
         _lvl ??= new LevelData();
@@ -592,6 +719,11 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
         Vector3 n = new Vector3((worldPos.x / _lvl.CaptureSizeIntl.x + 0.5f) * _lvl.ImageSizeIntl.x, 0f, (worldPos.z / _lvl.CaptureSizeIntl.y + 0.5f) * _lvl.ImageSizeIntl.y);
         return _lvl.TransformMatrixInverseIntl.MultiplyPoint3x4(n);
     }
+
+    /// <summary>
+    /// Converts coordinates on a map to world coordinates.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public static Vector3 MapCoordsToWorldCoords(Vector2 mapPos)
     {
         _lvl ??= new LevelData();
@@ -609,6 +741,9 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
         public Vector2 DistanceScaleIntl; // * = map to world, / = world to map
         public LevelData()
         {
+            if (!Level.isInitialized)
+                throw new NotSupportedException("Not ran on an active server.");
+            
             if (Level.isLoaded)
                 Reset(Level.BUILD_INDEX_GAME);
             else
@@ -648,12 +783,12 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
 
 public class GridLocationTypeConverter : TypeConverter
 {
-    public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
     {
         return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
     }
 
-    public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
+    public override object ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value, Type destinationType)
     {
         return value == null ? "null" : ((GridLocation)value).ToString();
     }

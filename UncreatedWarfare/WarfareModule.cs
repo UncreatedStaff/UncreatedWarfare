@@ -18,6 +18,7 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
@@ -272,6 +273,7 @@ public sealed class WarfareModule : IModuleNexus
 
         // FOBs
         serviceCollection.AddScoped<DeploymentService>();
+        serviceCollection.AddScoped<FobManager>();
 
         // Active ITeamManager
         serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().TeamManager);

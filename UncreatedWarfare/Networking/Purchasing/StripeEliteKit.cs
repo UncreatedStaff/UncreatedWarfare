@@ -104,7 +104,8 @@ public class StripeEliteKit
                     if (oldPrice == price)
                         continue;
 
-                    await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
+                    using IServiceScope scope = serviceProvider.CreateScope();
+                    await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
 
                     Kit? dbKit = await manager.GetKit(dbContext, kit.PrimaryKey, token);
                     if (dbKit == null)

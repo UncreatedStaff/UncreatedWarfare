@@ -46,7 +46,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider
     {
         if (LoadoutNumber != -1)
         {
-            return Localization.TranslateLoadoutSign(LoadoutNumber, player!);
+            // todo move translation methods
+            return LocalizationOld.TranslateLoadoutSign(checked ( (byte)LoadoutNumber ), player!);
         }
 
         if (!_kitManager.Cache.KitDataById.TryGetValue(KitId, out Kit kit))
@@ -54,6 +55,6 @@ public class KitSignInstanceProvider : ISignInstanceProvider
             return KitId;
         }
 
-        return Localization.TranslateKitSign(kit, player!);
+        return LocalizationOld.TranslateKitSign(kit, player!);
     }
 }

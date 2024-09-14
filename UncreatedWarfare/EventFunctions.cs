@@ -15,7 +15,6 @@ using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Events.Models.Vehicles;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.UI;
@@ -1675,7 +1674,9 @@ public static class EventFunctions
 
         shouldallow = false;
     }
-    internal static void OnPlayerAided(PlayerAided e)
+    // todo
+    /*
+    internal static void OnPlayerAided(AidPlayerRequested e)
     {
         AidRecord record = new AidRecord
         {
@@ -1741,6 +1742,6 @@ public static class EventFunctions
             await e.Player.FlushDamages(dbContext).ConfigureAwait(false);
             await dbContext.SaveChangesAsync();
         }, ctx: $"Add death record for {e.Steam64} ({e.Cause}).");
-    }
+    }*/
 }
 #pragma warning restore IDE0060 // Remove unused parameter

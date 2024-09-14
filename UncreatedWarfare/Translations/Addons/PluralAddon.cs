@@ -46,7 +46,6 @@ public sealed class PluralAddon : IArgumentAddon
         DisplayName = argIndex < 0 ? "Always Plural" : $"Plural if {{{argIndex.ToString(CultureInfo.InvariantCulture)}}} ≠ 1.";
     }
 
-
     public string ApplyAddon(ITranslationValueFormatter formatter, string text, TypedReference value, in ValueFormatParameters args)
     {
         if (!args.Language.SupportsPluralization)

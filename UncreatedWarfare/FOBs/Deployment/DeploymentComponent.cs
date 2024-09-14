@@ -20,7 +20,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
     
     private float _deploymentTimeStarted;
     private Coroutine? _deploymentCoroutine;
-    private ReviveManager? _reviveManager;
+    private ReviveManagerOld? _reviveManager;
     private CooldownManager? _cooldownManager;
     private FOBManager? _fobManager;
     private ZoneStore _zoneStore;
@@ -35,7 +35,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         _translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>().Value;
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _playerService = serviceProvider.GetRequiredService<PlayerService>();
-        _reviveManager = serviceProvider.GetService<ReviveManager>();
+        _reviveManager = serviceProvider.GetService<ReviveManagerOld>();
         _cooldownManager = serviceProvider.GetService<CooldownManager>();
         _fobManager = serviceProvider.GetService<FOBManager>();
     }

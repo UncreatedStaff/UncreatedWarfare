@@ -62,7 +62,8 @@ public class FobRecordTracker : IAsyncDisposable
 
         try
         {
-            await using IStatsDbContext dbContext = _serviceProvider.GetRequiredService<IStatsDbContext>();
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            await using IStatsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IStatsDbContext>();
 
             dbContext.FobRecords.Add(Record);
             await dbContext.SaveChangesAsync(CancellationToken.None);
@@ -83,7 +84,8 @@ public class FobRecordTracker : IAsyncDisposable
             if (_primaryKey == 0)
                 throw new InvalidOperationException("Run create before running Update.");
 
-            await using IStatsDbContext dbContext = _serviceProvider.GetRequiredService<IStatsDbContext>();
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            await using IStatsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IStatsDbContext>();
 
             Record = await dbContext.FobRecords.FirstAsync(x => x.Id == _primaryKey, CancellationToken.None);
 
@@ -108,7 +110,8 @@ public class FobRecordTracker : IAsyncDisposable
             if (_itemPrimaryKeys.TryGetValue(item, out ulong pk) && pk != 0)
                 throw new InvalidOperationException("Only run create once per item.");
 
-            await using IStatsDbContext dbContext = _serviceProvider.GetRequiredService<IStatsDbContext>();
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            await using IStatsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IStatsDbContext>();
 
             dbContext.FobItemRecords.Add(itemRecord);
             await dbContext.SaveChangesAsync(CancellationToken.None);
@@ -123,7 +126,8 @@ public class FobRecordTracker : IAsyncDisposable
 
     public async Task Update(ulong primaryKey, Action<FobItemRecord> update)
     {
-        await using IStatsDbContext dbContext = _serviceProvider.GetRequiredService<IStatsDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IStatsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IStatsDbContext>();
 
         FobItemRecord item = await dbContext.FobItemRecords.FirstAsync(x => x.Id == primaryKey, CancellationToken.None);
 

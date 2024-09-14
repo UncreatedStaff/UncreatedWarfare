@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Uncreated.Warfare.Util;
 public static class MathUtility
@@ -107,4 +108,23 @@ public static class MathUtility
         float dy = pos1.y - pos2.y;
         return dx * dx + dy * dy + dz * dz;
     }
+
+    /// <summary>
+    /// Counts the number of digits in a number, not counting the negative sign.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int CountDigits(int value)
+    {
+        return value != 0 ? 1 + (int)Math.Log10(Math.Abs(value)) : 1;
+    }
+    
+    /// <summary>
+    /// Counts the number of digits in an unsigned number.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int CountDigits(uint value)
+    {
+        return value != 0 ? 1 + (int)Math.Log10(value) : 1;
+    }
+
 }

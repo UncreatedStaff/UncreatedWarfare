@@ -10,11 +10,12 @@ using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Transform;
 
 namespace Uncreated.Warfare.Players;
 
 [CannotApplyEqualityOperator]
-public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquatable<WarfarePlayer>
+public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquatable<WarfarePlayer>, ITransformObject
 {
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
@@ -29,6 +30,23 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     public WarfarePlayerLocale Locale { get; }
     public SemaphoreSlim PurchaseSync { get; }
     public PlayerSummary CachedSteamProfile { get; internal set; }
+
+    /// <inheritdoc />
+    public Vector3 Position
+    {
+        get => Transform.position;
+        set
+        {
+            GameThread.AssertCurrent();
+            UnturnedPlayer.teleportToLocationUnsafe(value, Transform.eulerAngles.y);
+        }
+    }
+
+    /// <inheritdoc />
+    public Matrix4x4 WorldToLocal => Transform.worldToLocalMatrix;
+
+    /// <inheritdoc />
+    public Matrix4x4 LocalToWorld => Transform.localToWorldMatrix;
 
     /// <summary>
     /// If the player this object represents is currently online. Set to <see langword="false"/> *after* the leave event is fired.
@@ -61,7 +79,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     public CSteamID GroupId => UnturnedPlayer.quests.groupID;
 
     public ITransportConnection Connection => SteamPlayer.transportConnection;
-    public Vector3 Position => Transform.position;
+
     public float Yaw => Transform.eulerAngles.y;
 
     /// <summary>
@@ -97,7 +115,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// <remarks>Always returns a value or throws.</remarks>
     /// <exception cref="PlayerComponentNotFoundException">Component not found.</exception>
     [Pure]
-    public TComponentType Component<TComponentType>()
+    public TComponentType Component<TComponentType>() where TComponentType : IPlayerComponent
     {
         foreach (IPlayerComponent component in Components)
         {
@@ -106,6 +124,21 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         }
 
         throw new PlayerComponentNotFoundException(typeof(TComponentType), this);
+    }
+
+    /// <summary>
+    /// Get the given component type from <see cref="Components"/>.
+    /// </summary>
+    [Pure]
+    public TComponentType? ComponentOrNull<TComponentType>() where TComponentType : IPlayerComponent
+    {
+        foreach (IPlayerComponent component in Components)
+        {
+            if (component is TComponentType comp)
+                return comp;
+        }
+
+        return default;
     }
 
     public void UpdateTeam(Team team)
@@ -179,11 +212,36 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     }
 
     bool ICommandUser.IsSuperUser => false;
+
     bool ICommandUser.IsTerminal => false;
+
     bool ICommandUser.IMGUI => Save.IMGUI;
+
     void ICommandUser.SendMessage(string message)
     {
         GameThread.AssertCurrent();
         ChatManager.serverSendMessage(message, Palette.AMBIENT, null, SteamPlayer, EChatMode.SAY, useRichTextFormatting: true);
+    }
+
+    Quaternion ITransformObject.Rotation
+    {
+        get => Transform.rotation;
+        set
+        {
+            GameThread.AssertCurrent();
+            UnturnedPlayer.teleportToLocationUnsafe(Transform.position, value.eulerAngles.y);
+        }
+    }
+    
+    Vector3 ITransformObject.Scale
+    {
+        get => Vector3.one;
+        set => throw new NotSupportedException();
+    }
+
+    void ITransformObject.SetPositionAndRotation(Vector3 position, Quaternion rotation)
+    {
+        GameThread.AssertCurrent();
+        UnturnedPlayer.teleportToLocationUnsafe(position, rotation.eulerAngles.y);
     }
 }

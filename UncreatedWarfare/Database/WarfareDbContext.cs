@@ -55,7 +55,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<BuildableSave> Saves => Set<BuildableSave>();
     public DbSet<ItemWhitelist> Whitelists => Set<ItemWhitelist>();
 
-    public WarfareDbContext(IConfiguration sysConfig, ILogger<WarfareDbContext> logger)
+    public WarfareDbContext(IConfiguration sysConfig, ILogger<WarfareDbContext> logger) : base(new DbContextOptions<WarfareDbContext>())
     {
         _logger = logger;
 

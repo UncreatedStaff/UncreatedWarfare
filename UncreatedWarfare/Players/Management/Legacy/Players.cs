@@ -158,8 +158,6 @@ public sealed class UCPlayerEvents : IDisposable
 }
 public sealed class UCPlayerKeys : IDisposable
 {
-    private static readonly int KeyCount = 10 + ControlsSettings.NUM_PLUGIN_KEYS;
-
     private static readonly KeyDown?[] DownEvents = new KeyDown?[KeyCount];
     private static readonly KeyUp?[] UpEvents = new KeyUp?[KeyCount];
     private static readonly bool[] EventMask = new bool[KeyCount];

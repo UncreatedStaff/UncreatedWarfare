@@ -163,17 +163,17 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation RequestVehicleAssetBannedGlobalPermanent = new Translation("<#b3a591>You are permanently banned from using all vehicles.");
 
     [TranslationData("Sent when a player tries to request a vehicle but is temporarily asset banned for all vehicles.", "Time left on asset ban")]
-    public readonly Translation<TimeSpan> RequestVehicleAssetBannedGlobal = new Translation<TimeSpan>("<#b3a591>You are banned from using all vehicles for another {0}.", arg0Fmt: FormatTimeLong);
+    public readonly Translation<TimeSpan> RequestVehicleAssetBannedGlobal = new Translation<TimeSpan>("<#b3a591>You are banned from using all vehicles for another {0}.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
 
     [TranslationData("Sent when a player tries to request a vehicle but is permanently asset banned for some vehicles.", "List of banned vehicles", "Time left on asset ban")]
     public readonly Translation<string> RequestVehicleAssetBannedPermanent = new Translation<string>("<#b3a591>You are permanently banned from using <#fff>{0}</color>.");
 
     [TranslationData("Sent when a player tries to request a vehicle but is temporarily asset banned for some vehicles.", "List of banned vehicles", "Time left on asset ban")]
-    public readonly Translation<TimeSpan, string> RequestVehicleAssetBanned = new Translation<TimeSpan, string>("<#b3a591>You are banned from using <#fff>{1}</color> for another {0}.", arg0Fmt: FormatTimeLong);
+    public readonly Translation<TimeSpan, string> RequestVehicleAssetBanned = new Translation<TimeSpan, string>("<#b3a591>You are banned from using <#fff>{1}</color> for another {0}.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
 
     #region Vehicle Request Delays
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by a time delay.", "Time left")]
-    public readonly Translation<TimeSpan> RequestVehicleTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This vehicle is delayed for another: <#c$vbs_delay$>{0}</color>.", arg0Fmt: FormatTimeLong);
+    public readonly Translation<TimeSpan> RequestVehicleTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This vehicle is delayed for another: <#c$vbs_delay$>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in Insurgency on attack.", "The cache that needs to be destroyed")]
     public readonly Translation<Cache> RequestVehicleCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this vehicle.", arg0Fmt: FOB.FormatName);
@@ -217,7 +217,7 @@ public class RequestTranslations : PropertiesTranslationCollection
 
     #region Trait Request Delays
     [TranslationData("Sent when a player tries to request a trait but it's delayed by a time delay.", "Time left")]
-    public readonly Translation<TimeSpan> RequestTraitTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This trait is delayed for another: <#c$vbs_delay$>{0}</color>.", arg0Fmt: FormatTimeLong);
+    public readonly Translation<TimeSpan> RequestTraitTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This trait is delayed for another: <#c$vbs_delay$>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in Insurgency on attack.", "The cache that needs to be destroyed")]
     public readonly Translation<Cache> RequestTraitCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this trait.", arg0Fmt: FOB.FormatName);

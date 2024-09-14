@@ -1,4 +1,6 @@
-﻿namespace Uncreated.Warfare.Players.UI;
+﻿using Uncreated.Warfare.Translations;
+
+namespace Uncreated.Warfare.Players.UI;
 public struct ToastMessage
 {
     public ToastMessageStyle Style { get; }
@@ -56,12 +58,12 @@ public struct ToastMessage
     {
         while (set.MoveNext())
         {
-            set.Next.Toasts.Queue(in message);
+            set.Next.Component<ToastManager>().Queue(in message);
         }
     }
     public static void QueueMessage(WarfarePlayer player, in ToastMessage message)
     {
-        player.Toasts.Queue(in message);
+        player.Component<ToastManager>().Queue(in message);
     }
     public static void QueueMessage(SteamPlayer player, in ToastMessage message)
     {

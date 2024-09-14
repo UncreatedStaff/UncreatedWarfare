@@ -194,7 +194,7 @@ public abstract class Punishment : ModerationEntry
         builder.Append($" INSERT INTO `{DatabaseInterface.TablePunishments}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnPunishmentsPresetType, DatabaseInterface.ColumnPunishmentsPresetLevel)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 2, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 2, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnPunishmentsPresetType}` = `t`.`{DatabaseInterface.ColumnPunishmentsPresetType}`," +
                        $"`{DatabaseInterface.ColumnPunishmentsPresetLevel}` = `t`.`{DatabaseInterface.ColumnPunishmentsPresetLevel}`;");
@@ -210,7 +210,7 @@ public abstract class Punishment : ModerationEntry
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnLinkedReportsReport)}) VALUES ");
             for (int i = 0; i < ReportKeys.Length; ++i)
             {
-                F.AppendPropertyList(builder, args.Count, 1, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 1, i, 1);
                 args.Add(ReportKeys[i]);
             }
             builder.Append(';');
@@ -223,7 +223,7 @@ public abstract class Punishment : ModerationEntry
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnLinkedAppealsAppeal)}) VALUES ");
             for (int i = 0; i < AppealKeys.Length; ++i)
             {
-                F.AppendPropertyList(builder, args.Count, 1, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 1, i, 1);
                 args.Add(AppealKeys[i]);
             }
             builder.Append(';');
@@ -470,7 +470,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
             }
             if (ForgiveMessage != null)
             {
-                workingList.Add("For: \"" + ForgiveMessage.MaxLength(64) + "\"");
+                workingList.Add("For: \"" + ForgiveMessage.Truncate(64) + "\"");
             }
         }
     }
@@ -495,7 +495,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
         args.Add(Forgiven);
         args.Add(ForgivenBy == null ? DBNull.Value : ForgivenBy.Id);
         args.Add(ForgiveTimestamp.HasValue ? ForgiveTimestamp.Value.UtcDateTime : DBNull.Value);
-        args.Add((object?)ForgiveMessage.MaxLength(1024) ?? DBNull.Value);
+        args.Add((object?)ForgiveMessage.Truncate(1024) ?? DBNull.Value);
 
         return hasEvidenceCalls;
     }

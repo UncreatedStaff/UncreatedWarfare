@@ -42,7 +42,8 @@ partial class KitManager
         List<KitHotkey>? bindingsToDelete = null;
         List<KitLayoutTransformation>? layoutsToDelete = null;
 
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
         await UniTask.SwitchToMainThread(token);
 
         if (lockPurchaseSync)
@@ -270,7 +271,8 @@ partial class KitManager
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> HasAccess(uint kit, ulong player, CancellationToken token = default)
     {
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         return await HasAccess(dbContext, kit, player, token);
     }
@@ -283,7 +285,8 @@ partial class KitManager
 
     internal async Task<bool> AddAccessRow(uint kit, ulong player, KitAccessType type, CancellationToken token = default)
     {
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         if (await dbContext.KitAccess.FirstOrDefaultAsync(kitAccess => kitAccess.Steam64 == player && kitAccess.KitId == kit, token) is { } access)
         {
@@ -316,7 +319,8 @@ partial class KitManager
     }
     internal async Task<bool> RemoveAccessRow(uint kit, ulong player, CancellationToken token = default)
     {
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         List<KitAccess> access = await dbContext.KitAccess
             .Where(x => x.KitId == kit && x.Steam64 == player)
@@ -344,7 +348,8 @@ partial class KitManager
         if (!KitEx.ValidSlot(slot))
             throw new ArgumentException("Invalid slot number.", nameof(slot));
 
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         List<KitHotkey> hotkeys = await dbContext.KitHotkeys.Where(x => x.KitId == kit && x.Steam64 == player && x.Slot == slot)
             .ToListAsync(token).ConfigureAwait(false);
@@ -363,7 +368,8 @@ partial class KitManager
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> RemoveHotkey(uint kit, ulong player, byte x, byte y, Page page, CancellationToken token = default)
     {
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         List<KitHotkey> hotkeys = await dbContext.KitHotkeys.Where(h => h.KitId == kit && h.Steam64 == player && h.X == x && h.Y == y && h.Page == page)
             .ToListAsync(token).ConfigureAwait(false);
@@ -387,7 +393,8 @@ partial class KitManager
         if (!KitEx.ValidSlot(slot))
             throw new ArgumentException("Invalid slot number.", nameof(slot));
 
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         byte x = item.X, y = item.Y;
         Page page = item.Page;
@@ -418,9 +425,10 @@ partial class KitManager
     {
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
 
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
-        ulong steam64 = player.Steam64;
+        ulong steam64 = player.Steam64.m_SteamID;
 
         List<KitFavorite> list = await dbContext.KitFavorites.Where(x => x.Steam64 == steam64).ToListAsync(token);
         dbContext.KitFavorites.RemoveRange(list);
@@ -436,7 +444,8 @@ partial class KitManager
     }
     public async Task ResetLayout(WarfarePlayer player, uint kit, bool lockPurchaseSync, CancellationToken token = default)
     {
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         if (lockPurchaseSync)
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
@@ -617,7 +626,8 @@ partial class KitManager
 
             uint kitId = kit.PrimaryKey;
 
-            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
             List<KitLayoutTransformation> existing = await dbContext.KitLayoutTransformations
                 .Where(x => x.Steam64 == steam64 && x.KitId == kitId).ToListAsync(token).ConfigureAwait(false);
@@ -662,7 +672,8 @@ partial class KitManager
         if (changed.Count == 0)
             return;
 
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         uint id = kit.PrimaryKey;
 

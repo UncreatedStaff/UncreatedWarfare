@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
 public class DeploymentTranslations : PropertiesTranslationCollection
@@ -42,7 +43,7 @@ public class DeploymentTranslations : PropertiesTranslationCollection
     public readonly Translation DeployCancelled = new Translation("<#fae69c>Active deployment cancelled.");
 
     [TranslationData("Sent to a player while they're waiting for deployment if they cancel it.")]
-    public readonly Translation<string> DeployableNotFound = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", arg0Fmt: FormatUppercase);
+    public readonly Translation<string> DeployableNotFound = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent to a player after they request deployment to a FOB if they're already on the FOB.", "The location name")]
     public readonly Translation<IDeployable> DeployableAlreadyOnFOB = new Translation<IDeployable>("<#ffa238>You are already on <#e3c27f>{0}</color>.", arg0Fmt: FOB.FormatNameColored);

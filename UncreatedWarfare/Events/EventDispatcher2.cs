@@ -69,6 +69,10 @@ public partial class EventDispatcher2 : IHostedService
         /* Items */
         ItemManager.onTakeItemRequested += OnTakeItemRequested;
 
+        /* Players */
+        DamageTool.damagePlayerRequested += OnPlayerDamageRequested;
+        UseableConsumeable.onPerformingAid += OnPlayerPerformingAid;
+
         return UniTask.CompletedTask;
     }
 
@@ -96,6 +100,10 @@ public partial class EventDispatcher2 : IHostedService
 
         /* Items */
         ItemManager.onTakeItemRequested -= OnTakeItemRequested;
+
+        /* Players */
+        DamageTool.damagePlayerRequested -= OnPlayerDamageRequested;
+        UseableConsumeable.onPerformingAid -= OnPlayerPerformingAid;
 
         return UniTask.CompletedTask;
     }
@@ -129,7 +137,7 @@ public partial class EventDispatcher2 : IHostedService
     /// Invoke an event with the given arguments.
     /// </summary>
     /// <returns>If the action should continue if <paramref name="eventArgs"/> is <see cref="ICancellable"/>, otherwise <see langword="true"/>.</returns>
-    public async UniTask<bool> DispatchEventAsync<TEventArgs>(TEventArgs eventArgs, CancellationToken token = default)
+    public async UniTask<bool> DispatchEventAsync<TEventArgs>(TEventArgs eventArgs, CancellationToken token = default, bool allowAsync = true)
     {
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(_unloadToken);
 
@@ -187,25 +195,28 @@ public partial class EventDispatcher2 : IHostedService
         List<SynchronizationBucket>? buckets = null;
         List<Task>? tasks = null;
 
-        if (modelInfo != null && modelInfo.SynchronizationContext != EventSynchronizationContext.None)
+        if (allowAsync)
         {
-            buckets = ListPool<SynchronizationBucket>.claim();
-            tasks = ListPool<Task>.claim();
-            EnterSynchronizationBuckets(eventArgs!, modelInfo, type, buckets, tasks, token);
-#if LOG_SYNCHRONIZATION_STEPS
-            _logger.LogDebug("Invoke {0} - Synchronizing with {1} bucket(s).", Accessor.Formatter.Format(type), buckets.Count);
-#endif
-            tasks.RemoveAll(x => x.IsCompleted);
-
-            if (tasks.Count > 0)
+            if (modelInfo != null && modelInfo.SynchronizationContext != EventSynchronizationContext.None)
             {
+                buckets = ListPool<SynchronizationBucket>.claim();
+                tasks = ListPool<Task>.claim();
+                EnterSynchronizationBuckets(eventArgs!, modelInfo, type, buckets, tasks, token);
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Awaiting {1} bucket(s).", Accessor.Formatter.Format(type), buckets.Count);
+                _logger.LogDebug("Invoke {0} - Synchronizing with {1} bucket(s).", Accessor.Formatter.Format(type), buckets.Count);
 #endif
-                await Task.WhenAll(tasks).ConfigureAwait(false);
+                tasks.RemoveAll(x => x.IsCompleted);
+
+                if (tasks.Count > 0)
+                {
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Done awaiting buckets.", Accessor.Formatter.Format(type));
+                    _logger.LogDebug("Invoke {0} - Awaiting {1} bucket(s).", Accessor.Formatter.Format(type), buckets.Count);
 #endif
+                    await Task.WhenAll(tasks).ConfigureAwait(false);
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Done awaiting buckets.", Accessor.Formatter.Format(type));
+#endif
+                }
             }
         }
 
@@ -225,6 +236,8 @@ public partial class EventDispatcher2 : IHostedService
 
                     if ((underlying[i].Flags & 1) != 0)
                     {
+                        if (allowAsync)
+                            throw new InvalidOperationException($"Async event listeners not supported for {Accessor.ExceptionFormatter.Format<TEventArgs>()}.");
                         await ((IAsyncEventListener<TEventArgs>)underlying[i].Listener).HandleEventAsync(eventArgs, _serviceProvider, token);
                     }
                     else

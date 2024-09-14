@@ -49,10 +49,10 @@ public static class EventDispatcher
 
     public static event EventDelegate<PlayerDied> PlayerDied;
     public static event EventDelegate<GroupChanged> GroupChanged;
-    public static event EventDelegate<PlayerInjured> PlayerInjuring;
+    public static event EventDelegate<InjurePlayerRequested> PlayerInjuring;
     public static event EventDelegate<PlayerEvent> PlayerInjured;
-    public static event EventDelegate<PlayerAided> PlayerAidRequested;
-    public static event EventDelegate<PlayerAided> PlayerAided;
+    public static event EventDelegate<AidPlayerRequested> PlayerAidRequested;
+    public static event EventDelegate<AidPlayerRequested> PlayerAided;
     public static event EventDelegate<PlayerEvent> UIRefreshRequested;
 
     internal static void SubscribeToAll()
@@ -548,10 +548,10 @@ public static class EventDispatcher
         if (!shouldAllow || PlayerAidRequested == null && PlayerAided == null)
             return;
 
-        PlayerAided args = new PlayerAided(medic, player, asset, isRevive, shouldAllow);
+        AidPlayerRequested args = new AidPlayerRequested(medic, player, asset, isRevive, shouldAllow);
         if (PlayerAidRequested != null)
         {
-            foreach (EventDelegate<PlayerAided> inv in PlayerAidRequested.GetInvocationList().Cast<EventDelegate<PlayerAided>>())
+            foreach (EventDelegate<AidPlayerRequested> inv in PlayerAidRequested.GetInvocationList().Cast<EventDelegate<AidPlayerRequested>>())
             {
                 if (!args.CanContinue) break;
                 TryInvoke(inv, args, nameof(PlayerAidRequested));
@@ -564,15 +564,15 @@ public static class EventDispatcher
             }
         }
 
-        foreach (EventDelegate<PlayerAided> inv in PlayerAided.GetInvocationList().Cast<EventDelegate<PlayerAided>>())
+        foreach (EventDelegate<AidPlayerRequested> inv in PlayerAided.GetInvocationList().Cast<EventDelegate<AidPlayerRequested>>())
         {
             TryInvoke(inv, args, nameof(PlayerAided));
         }
     }
-    internal static void InvokeOnPlayerInjured(PlayerInjured args)
+    internal static void InvokeOnPlayerInjured(InjurePlayerRequested args)
     {
         if (PlayerInjured == null) return;
-        foreach (EventDelegate<PlayerInjured> inv in PlayerInjured.GetInvocationList().Cast<EventDelegate<PlayerInjured>>())
+        foreach (EventDelegate<InjurePlayerRequested> inv in PlayerInjured.GetInvocationList().Cast<EventDelegate<InjurePlayerRequested>>())
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(PlayerInjured));

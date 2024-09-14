@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
+using SDG.Framework.Utilities;
+using MathUtility = Uncreated.Warfare.Util.MathUtility;
 
 namespace Uncreated.Warfare.Database.Manual;
 public static class MySqlSnippets
@@ -36,7 +38,7 @@ public static class MySqlSnippets
         if (length == 0)
             return string.Empty;
 
-        Span<char> newStr = stackalloc char[CountDigits((uint)(length + startIndex)) + (length * 2 - 1)];
+        Span<char> newStr = stackalloc char[MathUtility.CountDigits((uint)(length + startIndex)) + (length * 2 - 1)];
 
         int index = 0;
         for (int i = 0; i < length; ++i)
@@ -62,7 +64,7 @@ public static class MySqlSnippets
     /// <param name="length">Number of parameters.</param>
     public static void AppendParameterList(StringBuilder builder, int startIndex, int length)
     {
-        builder.EnsureCapacity(builder.Length + CountDigits((uint)(length + startIndex)) + (length * 2 - 1));
+        builder.EnsureCapacity(builder.Length + MathUtility.CountDigits((uint)(length + startIndex)) + (length * 2 - 1));
         for (int i = 0; i < length; ++i)
         {
             if (i != 0)
@@ -86,7 +88,7 @@ public static class MySqlSnippets
         int ttlSize = p.Length - skip - 1;
         for (int i = skip; i < p.Length; ++i)
         {
-            ttlSize += CountDigits((uint)(i - skip + startIndex)) + 4 + p[i].Length;
+            ttlSize += MathUtility.CountDigits((uint)(i - skip + startIndex)) + 4 + p[i].Length;
         }
 
         return string.Create(ttlSize, new ValueTuple<int, int, string[]>(startIndex, skip, p), (span, state) =>
@@ -1080,21 +1082,52 @@ public static class MySqlSnippets
         arg.AsSpan().CopyTo(span.Slice(index + 1));
         index += arg.Length + 1;
     }
-    private static int CountDigits(uint num)
+
+    internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length)
     {
-        int c = num switch
+        if (startIndex != 0)
+            builder.Append(',');
+        builder.Append('(');
+        for (int j = startIndex; j < startIndex + length; ++j)
         {
-            <= 9 => 1,
-            <= 99 => 2,
-            <= 999 => 3,
-            <= 9999 => 4,
-            <= 99999 => 5,
-            <= 999999 => 6,
-            <= 9999999 => 7,
-            <= 99999999 => 8,
-            <= 999999999 => 9,
-            _ => 10
-        };
-        return c;
+            if (j != startIndex)
+                builder.Append(',');
+            builder.Append('@').Append(j.ToString(CultureInfo.InvariantCulture));
+        }
+        builder.Append(')');
+    }
+
+    internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length, int i)
+    {
+        if (i != 0)
+            builder.Append(',');
+        builder.Append('(');
+        for (int j = startIndex; j < startIndex + length; ++j)
+        {
+            if (j != startIndex)
+                builder.Append(',');
+            builder.Append('@').Append(j.ToString(CultureInfo.InvariantCulture));
+        }
+        builder.Append(')');
+    }
+
+    internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length, int i, int clampLen)
+    {
+        if (i != 0)
+            builder.Append(',');
+        builder.Append('(');
+        for (int j = 0; j < clampLen; ++j)
+        {
+            if (j != 0)
+                builder.Append(',');
+            builder.Append('@').Append(j.ToString(CultureInfo.InvariantCulture));
+        }
+        for (int j = startIndex; j < startIndex + length; ++j)
+        {
+            if (clampLen != 0 || j != startIndex)
+                builder.Append(',');
+            builder.Append('@').Append(j.ToString(CultureInfo.InvariantCulture));
+        }
+        builder.Append(')');
     }
 }

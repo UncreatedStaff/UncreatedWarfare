@@ -13,7 +13,6 @@ using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Models.Kits;
@@ -1295,7 +1294,8 @@ public class DebugCommand : IExecutableCommand
     {
         Context.AssertRanByTerminal();
 
-        await using WarfareDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>();
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using WarfareDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
         HashSet<ulong> s64s = new HashSet<ulong>(8192);
 
@@ -1339,10 +1339,10 @@ public class DebugCommand : IExecutableCommand
                 FirstJoined = firstJoined,
                 LastJoined = lastJoined,
                 Steam64 = steam64,
-                CharacterName = username.CharacterName.MaxLength(30),
+                CharacterName = username.CharacterName.Truncate(30),
                 DisplayName = null,
-                NickName = username.NickName.MaxLength(30),
-                PlayerName = username.PlayerName.MaxLength(48),
+                NickName = username.NickName.Truncate(30),
+                PlayerName = username.PlayerName.Truncate(48),
                 DiscordId = await Data.AdminSql.GetDiscordID(steam64, token)
             };
 

@@ -73,7 +73,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             throw new LayoutConfigurationException(this, "Expected exactly 2 team infos in the 'Teams' section.");
 
         FactionInfo? factionInfo1, factionInfo2;
-        await using (IGameDataDbContext dbContext = _serviceProvider.GetRequiredService<WarfareDbContext>())
+        using (IServiceScope scope = _serviceProvider.CreateScope())
+        await using (IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>())
         {
             Faction f1 = await TeamUtility.ResolveTeamFactionHint(Teams[0].Faction, dbContext, this, token);
             Faction f2 = await TeamUtility.ResolveTeamFactionHint(Teams[1].Faction, dbContext, this, token);
