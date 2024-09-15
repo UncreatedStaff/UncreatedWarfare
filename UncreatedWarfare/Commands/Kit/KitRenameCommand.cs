@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
@@ -37,23 +36,30 @@ internal class KitRenameCommand : IExecutableCommand
         Context.AssertRanByPlayer();
 
         string? kitId = null;
+        Kit? kit = null;
+        bool signLoadout = false;
 
         // kit rename
         if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade)
                  && barricade.interactable is not InteractableSign
                  && _signs.GetSignProvider(barricade) is KitSignInstanceProvider signData)
         {
-            kitId = signData.LoadoutNumber > 0
-                ? KitEx.GetLoadoutName(Context.CallerId.m_SteamID, signData.LoadoutNumber)
-                : signData.KitId;
+            if (signData.LoadoutNumber > 0)
+            {
+                kitId = LoadoutIdHelper.GetLoadoutSignDisplayText(signData.LoadoutNumber);
+                kit = await _kitManager.Loadouts.GetLoadout(Context.CallerId, signData.LoadoutNumber, token);
+                signLoadout = true;
+            }
+            else
+                kitId = signData.KitId;
         }
 
-        if (kitId == null)
+        if (kitId == null || signLoadout && kit == null)
         {
             throw Context.Reply(_translations.KitOperationNoTarget);
         }
 
-        Kit? kit = await _kitManager.FindKit(kitId, token, exactMatchOnly: false);
+        kit ??= await _kitManager.FindKit(kitId, token, exactMatchOnly: false);
         if (kit == null)
         {
             throw Context.Reply(_translations.KitNotFound, kitId);
@@ -78,7 +84,9 @@ internal class KitRenameCommand : IExecutableCommand
         await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
+            // scoped
             await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<IKitsDbContext>();
+            dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
             kit = await _kitManager.GetKit(dbContext, kit.PrimaryKey, token);
             if (kit == null)

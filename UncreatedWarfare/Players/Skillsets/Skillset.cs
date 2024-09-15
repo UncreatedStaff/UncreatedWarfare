@@ -1,15 +1,11 @@
 ﻿using DanielWillett.SpeedBytes;
-using MySql.Data.MySqlClient;
 using System;
-using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
-using JsonException = Newtonsoft.Json.JsonException;
 
 namespace Uncreated.Warfare.Players.Skillsets;
 
@@ -233,6 +229,7 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
         speciality = (EPlayerSpeciality)(-1);
         return -1;
     }
+
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(in b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(in b, true);
 }

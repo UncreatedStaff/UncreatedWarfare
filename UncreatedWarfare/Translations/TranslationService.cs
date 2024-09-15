@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using StackCleaner;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using StackCleaner;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations.Languages;
 
@@ -22,7 +22,7 @@ public class TranslationService : ITranslationService
     public LanguageSets SetOf { get; }
     public TranslationService(IServiceProvider serviceProvider, IConfiguration systemConfig)
     {
-        PlayerService playerService = serviceProvider.GetRequiredService<PlayerService>();
+        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         _collections = new ConcurrentDictionary<Type, TranslationCollection>();
         _serviceProvider = serviceProvider;

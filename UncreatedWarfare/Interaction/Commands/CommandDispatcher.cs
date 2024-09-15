@@ -20,12 +20,12 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
     private readonly WarfareModule _module;
     private readonly UserPermissionStore _permissions;
     private readonly ChatService _chatService;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private readonly ILoopTickerFactory _tickerFactory;
     private readonly ILogger<CommandDispatcher> _logger;
     public CommandParser Parser { get; }
     public IReadOnlyList<CommandInfo> Commands { get; }
-    public CommandDispatcher(WarfareModule module, UserPermissionStore permissions, ILogger<CommandDispatcher> logger, ChatService chatService, PlayerService playerService, ILoopTickerFactory tickerFactory)
+    public CommandDispatcher(WarfareModule module, UserPermissionStore permissions, ILogger<CommandDispatcher> logger, ChatService chatService, IPlayerService playerService, ILoopTickerFactory tickerFactory)
     {
         _module = module;
         _permissions = permissions;

@@ -11,9 +11,9 @@ namespace Uncreated.Warfare.Events.ListenerProviders;
 /// </summary>
 public class PlayerComponentListenerProvider : IEventListenerProvider
 {
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
 
-    public PlayerComponentListenerProvider(PlayerService playerService)
+    public PlayerComponentListenerProvider(IPlayerService playerService)
     {
         _playerService = playerService;
     }

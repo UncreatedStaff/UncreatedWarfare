@@ -9,8 +9,8 @@ public class DeploymentService : ISessionHostedService
 {
     public const float DefaultNearbyEnemyRange = 35;
 
-    private readonly PlayerService _playerService;
-    public DeploymentService(PlayerService playerService)
+    private readonly IPlayerService _playerService;
+    public DeploymentService(IPlayerService playerService)
     {
         _playerService = playerService;
     }

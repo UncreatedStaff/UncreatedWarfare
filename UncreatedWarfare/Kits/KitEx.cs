@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
@@ -110,12 +109,12 @@ public static class KitEx
         return true;
     }
 
-    public static void UpdateLastEdited(this Kit kit, ulong player)
+    public static void UpdateLastEdited(this Kit kit, CSteamID player)
     {
-        if (new CSteamID(player).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+        if (player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             return;
         
-        kit.LastEditor = player;
+        kit.LastEditor = player.m_SteamID;
         kit.LastEditedTimestamp = DateTimeOffset.UtcNow;
     }
 
@@ -181,73 +180,6 @@ public static class KitEx
             }
         }
         return count;
-    }
-
-    /// <summary>Indexed from 1.</summary>
-    /// <returns>-1 if operation results in an overflow, the string is too short, or invalid characters are found, otherwise, the id of the loadout.</returns>
-    public static int ParseStandardLoadoutId(ReadOnlySpan<char> kitId)
-    {
-        if (kitId.Length > 18)
-        {
-            return GetLoadoutId(kitId[18..]);
-        }
-
-        return -1;
-    }
-
-    /// <summary>Indexed from 1.</summary>
-    /// <returns>-1 if operation results in an overflow, the string is too short, or invalid characters are found, otherwise, the id of the loadout.</returns>
-    public static int ParseStandardLoadoutId(ReadOnlySpan<char> kitId, out ulong player)
-    {
-        int ld = ParseStandardLoadoutId(kitId);
-        player = 0;
-        if (kitId.Length <= 17 || !ulong.TryParse(kitId[..17], NumberStyles.Number, Data.AdminLocale, out player))
-            return -1;
-
-        return ld;
-    }
-
-    /// <summary>Indexed from 1.</summary>
-    /// <returns>-1 if operation results in an overflow or invalid characters are found, otherwise, the id of the loadout.</returns>
-    public static int GetLoadoutId(ReadOnlySpan<char> chars)
-    {
-        int id = 0;
-        for (int i = chars.Length - 1; i >= 0; --i)
-        {
-            int c = chars[i];
-            if (c is > 96 and < 123)
-                id += (c - 96) * (int)Math.Pow(26, chars.Length - i - 1);
-            else if (c is > 64 and < 91)
-                id += (c - 64) * (int)Math.Pow(26, chars.Length - i - 1);
-            else return -1;
-        }
-
-        if (id < 0) // overflow
-            return -1;
-
-        return id;
-    }
-
-    public static string GetLoadoutName(ulong player, int id) => player.ToString("D17", Data.AdminLocale) + "_" + GetLoadoutLetter(id);
-
-    /// <summary>Indexed from 1.</summary>
-    public static unsafe string GetLoadoutLetter(int id)
-    {
-        if (id <= 0) id = 1;
-        int len = (int)Math.Ceiling(Math.Log(id == 1 ? 2 : id, 26));
-        char* ptr = stackalloc char[len];
-        ptr += len - 1;
-        while (true)
-        {
-            *ptr = (char)(((id - 1) % 26) + 97);
-            int rem = (id - 1) / 26;
-            if (rem <= 0)
-                break;
-
-            --ptr;
-            id = rem;
-        }
-        return new string(ptr, 0, len);
     }
 
     public static byte GetKitItemTypeId(IKitItem item)
@@ -329,9 +261,9 @@ public static class KitEx
         };
     }
 
-    public static float GetTeamLimit(this Kit kit) => kit.TeamLimit ?? KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(kit.Class);
+    public static float GetTeamLimit(this Kit kit) => kit.TeamLimit ?? KitDefaults.GetDefaultTeamLimit(kit.Class);
 
-    public static bool IsLimited(this Kit kit, PlayerService playerService, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
+    public static bool IsLimited(this Kit kit, IPlayerService playerService, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
     {
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;
@@ -362,7 +294,7 @@ public static class KitEx
         return currentPlayers + 1 > allowedPlayers;
     }
 
-    public static bool IsClassLimited(this Kit kit, PlayerService playerService, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
+    public static bool IsClassLimited(this Kit kit, IPlayerService playerService, out int currentPlayers, out int allowedPlayers, Team team, bool requireCounts = false)
     {
         currentPlayers = 0;
         allowedPlayers = Provider.maxPlayers;

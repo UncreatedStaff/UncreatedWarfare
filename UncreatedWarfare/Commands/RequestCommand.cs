@@ -1,15 +1,15 @@
 ﻿using System;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Moderation.Punishments;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Traits;

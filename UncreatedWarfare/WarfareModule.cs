@@ -225,7 +225,7 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddTransient<ILoopTickerFactory, UnityLoopTickerFactory>();
 
         // Players
-        serviceCollection.AddSingleton<PlayerService>();
+        serviceCollection.AddSingleton<IPlayerService, PlayerService>();
         serviceCollection.AddSingleton<IEventListenerProvider, PlayerComponentListenerProvider>();
 
         // Kits

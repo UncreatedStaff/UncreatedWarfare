@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Moderation.Reports;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 

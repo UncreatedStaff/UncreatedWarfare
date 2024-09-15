@@ -30,7 +30,7 @@ public class VehicleComponent : MonoBehaviour
 
     public static readonly VehicleHUD VehicleHUD = new VehicleHUD();
 
-    private PlayerService _playerService = null!;
+    private IPlayerService _playerService = null!;
 
     private Zone? _noDropZone;
     private Zone? _noPickZone;
@@ -133,7 +133,7 @@ public class VehicleComponent : MonoBehaviour
         Quota = 0;
         RequiredQuota = -1;
 
-        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         VehicleInfoStore? vehicleInfoStore = serviceProvider.GetService<VehicleInfoStore>();
         if (vehicleInfoStore != null)

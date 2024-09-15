@@ -106,3 +106,164 @@ Parameters:
       - Name: name
         Type: string
         IsRemainder: true
+  # /kit create <name> [class] [type] [faction]
+  - Name: create
+    Aliases: [ c, override ]
+    Type: Verbatim
+    Description: "Create a new kit or override the items in an existing kit."
+    Parameters:
+      - Name: name
+        Type: string
+        Parameters:
+          - Name: class
+            Type: Uncreated.Warfare.Kits.Class
+            Optional: true
+            Parameters:
+              - Name: type
+                Type: Uncreated.Warfare.Kits.KitType
+                Optional: true
+                Parameters:
+                  - Name: faction
+                    Type: Uncreated.Warfare.Teams.FactionInfo
+                    Optional: true
+  # /kit delete <kit... >
+  - Name: delete
+    Aliases: [ d, remove ]
+    Type: Verbatim
+    Description: "Delete an existing kit."
+    Parameters:
+      - Name: kit
+        Type: Uncreated.Warfare.Models.Kits.Kit
+        IsRemainder: true
+  # /kit upgrade <name> <class>
+  - Name: upgrade
+    Aliases: [ update, upg ]
+    Type: Verbatim
+    Description: "Upgrade a kit created in a previous season. Usually this will be a loadout."
+    Parameters:
+      - Name: Uncreated.Warfare.Models.Kits.Kit
+        Type: string
+        Parameters:
+          - Name: class
+            Type: Uncreated.Warfare.Kits.Class
+  # /kit unlock <kit... >
+  - Name: unlock
+    Aliases: [ unl, ul ]
+    Type: Verbatim
+    Description: "Unlocks a kit that's currently being worked on by staff and gives the owner access."
+    Parameters:
+      - Name: kit
+        Type: Uncreated.Warfare.Models.Kits.Kit
+        IsRemainder: true
+  # /kit lock <kit... >
+  - Name: lock
+    Type: Verbatim
+    Description: "Locks a kit that's about to be worked on by staff to prevent the owner from using it."
+    Parameters:
+      - Name: kit
+        Type: Uncreated.Warfare.Models.Kits.Kit
+        IsRemainder: true
+  # /kit set <property> <kit> <value... >
+  - Name: set
+    Aliases: [ s ]
+    Type: Verbatim
+    Description: "Sets values of a kit's properties."
+    Parameters:
+      - Name: sign
+        Type: Verbatim
+        Parameters:
+          - Name: kit
+            Type: Uncreated.Warfare.Models.Kits.Kit
+            Parameters:
+              - Name: language
+                Type: Uncreated.Warfare.Models.Localization.LanguageInfo
+                Parameters:
+                  - Name: text
+                    Type: string
+                    IsRemainder: true
+      - Name: property
+        Type: string
+        Parameters:
+          - Name: kit
+            Type: Uncreated.Warfare.Models.Kits.Kit
+            Parameters:
+              - Name: value
+                Type: object
+                IsRemainder: true
+  # /kit giveaccess <player> <kit> [access type]
+  - Name: giveaccess
+    Aliases: [ givea, ga ]
+    Type: Verbatim
+    Description: "Give a <param 'player' /> access to a <param 'kit' />."
+    Parameters:
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Parameters:
+          - Name: kit
+            Type: Uncreated.Warfare.Models.Kits.Kit
+            Parameters:
+              - Name: access type
+                Type: Uncreated.Warfare.Kits.KitAccessType
+                Optional: true
+  # /kit removeaccess <player> <kit>
+  - Name: giveaccess
+    Aliases: [ givea, ga ]
+    Type: Verbatim
+    Description: "Revoke access of <param 'kit' /> from a <param 'player' />."
+    Parameters:
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Parameters:
+          - Name: kit
+            Type: Uncreated.Warfare.Models.Kits.Kit
+  # /kit copyfrom <old kit> <new kit id>
+  - Name: copyfrom
+    Aliases: [ copy, cf ]
+    Type: Verbatim
+    Description: "Copy <param 'old kit' /> properties into a new kit with the given <param 'new kit id'/>."
+    Parameters:
+      - Name: old kit
+        Type: Uncreated.Warfare.Models.Kits.Kit
+        Parameters:
+          - Name: new kit id
+            Type: string
+  # /kit createloadout <player> <class> [sign text...]
+  - Name: createloadout
+    Aliases: [ cloadout, cl ]
+    Type: Verbatim
+    Description: "Create a new loadout with a <param 'class'/> and custom <param 'sign text'/> for <param 'player'/>."
+    Parameters:
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Parameters:
+          - Name: class
+            Type: Uncreated.Warfare.Kits.Class
+            Parameters:
+              - Name: sign text
+                Type: string
+                IsRemainder: true
+  # /kit skills <kit> <add|remove> <skill> [level]
+  - Name: skills
+    Aliases: [ skillset, skillsets ]
+    Type: Verbatim
+    Description: "Add or remove <param 'skill'/> as a default skill for a <param 'kit'/>."
+    Parameters:
+      - Name: kit
+        Type: Uncreated.Warfare.Models.Kits.Kit
+        Parameters:
+          - Name: add
+            Aliases: [ set ]
+            Type: Verbatim
+            Parameters:
+              - Name: skill
+                Type: Uncreated.Warfare.Players.Skillsets.Skillset
+                Parameters:
+                  - Name: level
+                    Type: byte
+          - Name: remove
+            Aliases: [ delete, clear ]
+            Type: Verbatim
+            Parameters:
+              - Name: skill
+                Type: Uncreated.Warfare.Players.Skillsets.Skillset
+  

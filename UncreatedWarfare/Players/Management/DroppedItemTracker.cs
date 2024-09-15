@@ -21,7 +21,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
 {
     private static bool _ignoreSpawningItemEvent;
 
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private readonly EventDispatcher2 _eventDispatcher;
     private readonly WarfareModule _module;
     private readonly Dictionary<uint, ulong> _itemDroppers = new Dictionary<uint, ulong>(128);
@@ -29,7 +29,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
     private readonly Dictionary<Item, ulong> _itemsPendingDrop = new Dictionary<Item, ulong>(4);
     private readonly StaticGetter<uint>? _getNextInstanceId = Accessor.GenerateStaticGetter<ItemManager, uint>("instanceCount");
 
-    public DroppedItemTracker(PlayerService playerService, EventDispatcher2 eventDispatcher, WarfareModule module)
+    public DroppedItemTracker(IPlayerService playerService, EventDispatcher2 eventDispatcher, WarfareModule module)
     {
         _playerService = playerService;
         _eventDispatcher = eventDispatcher;

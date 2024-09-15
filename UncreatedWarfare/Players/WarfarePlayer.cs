@@ -14,6 +14,14 @@ using Uncreated.Warfare.Util.Transform;
 
 namespace Uncreated.Warfare.Players;
 
+/// <summary>
+/// Abstraction for <see cref="WarfarePlayer"/> and offline players.
+/// </summary>
+public interface IPlayer : ITranslationArgument
+{
+    public CSteamID Steam64 { get; }
+}
+
 [CannotApplyEqualityOperator]
 public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquatable<WarfarePlayer>, ITransformObject
 {

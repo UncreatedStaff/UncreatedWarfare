@@ -431,14 +431,14 @@ public static class BarricadeUtility
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/> (due to reflection failure or out of bounds barricade).</returns>
     public static bool ReplicateBarricadeState(BarricadeDrop drop, IServiceProvider? serviceProvider, byte[]? stateToReplicate = null)
     {
-        return ReplicateBarricadeState(drop, serviceProvider.GetRequiredService<PlayerService>(), serviceProvider.GetService<SignInstancer>(), stateToReplicate);
+        return ReplicateBarricadeState(drop, serviceProvider.GetRequiredService<IPlayerService>(), serviceProvider.GetService<SignInstancer>(), stateToReplicate);
     }
 
     /// <summary>
     /// Sends the given <paramref name="stateToReplicate"/>, which defaults to the barricade's state if <see langword="null"/> to all relevant clients.
     /// </summary>
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/> (due to reflection failure or out of bounds barricade).</returns>
-    public static bool ReplicateBarricadeState(BarricadeDrop drop, PlayerService playerService, SignInstancer? signs, byte[]? stateToReplicate = null)
+    public static bool ReplicateBarricadeState(BarricadeDrop drop, IPlayerService playerService, SignInstancer? signs, byte[]? stateToReplicate = null)
     {
         if (Data.SendUpdateBarricadeState == null || !BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
             return false;
@@ -518,14 +518,14 @@ public static class BarricadeUtility
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
     public static bool SetOwnerOrGroup(BarricadeDrop drop, IServiceProvider serviceProvider, CSteamID? owner = null, CSteamID? group = null)
     {
-        return SetOwnerOrGroup(drop, serviceProvider.GetRequiredService<PlayerService>(), serviceProvider.GetService<SignInstancer>(), owner, group);
+        return SetOwnerOrGroup(drop, serviceProvider.GetRequiredService<IPlayerService>(), serviceProvider.GetService<SignInstancer>(), owner, group);
     }
 
     /// <summary>
     /// Set the owner and/or group of a barricade.
     /// </summary>
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
-    public static bool SetOwnerOrGroup(BarricadeDrop drop, PlayerService playerService, SignInstancer? signs, CSteamID? owner = null, CSteamID? group = null)
+    public static bool SetOwnerOrGroup(BarricadeDrop drop, IPlayerService playerService, SignInstancer? signs, CSteamID? owner = null, CSteamID? group = null)
     {
         GameThread.AssertCurrent();
         if (!owner.HasValue && !group.HasValue)

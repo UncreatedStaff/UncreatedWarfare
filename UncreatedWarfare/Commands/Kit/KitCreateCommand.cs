@@ -13,11 +13,10 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("create", "c", "override"), SubCommandOf(typeof(KitCommand))]
-internal class KitCreateCommand : IExecutableCommand, iDis
+internal class KitCreateCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IFactionDataStore _factionStorage;
     private readonly CommandDispatcher _commandDispatcher;
     private readonly IKitsDbContext _dbContext;
@@ -28,21 +27,65 @@ internal class KitCreateCommand : IExecutableCommand, iDis
     {
         _kitManager = serviceProvider.GetRequiredService<KitManager>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
-        _serviceProvider = serviceProvider;
         _factionStorage = serviceProvider.GetRequiredService<IFactionDataStore>();
         _commandDispatcher = serviceProvider.GetRequiredService<CommandDispatcher>();
         _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
 
         _logger = serviceProvider.GetRequiredService<ILogger<KitCreateCommand>>();
+
+        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
 
-        if (!Context.TryGet(0, out string kitId))
+        if (!Context.TryGet(0, out string? kitId))
         {
             throw Context.SendHelp();
+        }
+
+        Kit? existingKit = await _kitManager.FindKit(kitId, token, set: dbContext => KitManager.RequestableSet(dbContext, false));
+        if (existingKit != null)
+        {
+            // overwrite kit
+            await UniTask.SwitchToMainThread(token);
+            Context.Reply(_translations.KitConfirmOverride, existingKit, existingKit);
+
+            // wait for /confirm
+            CommandWaitResult confirmResult = await _commandDispatcher.WaitForCommand(typeof(ConfirmCommand), Context.Caller, token: token);
+            if (!confirmResult.IsSuccessfullyExecuted)
+            {
+                if (confirmResult.IsDisconnected)
+                    return;
+
+                throw Context.Reply(_translations.KitCancelOverride);
+            }
+
+            IKitItem[] oldItems = existingKit.Items;
+            IKitItem[] items = ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true);
+            existingKit.SetItemArray(items, _dbContext);
+            existingKit.WeaponText = _kitManager.GetWeaponText(existingKit);
+            existingKit.UpdateLastEdited(Context.CallerId);
+            Context.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + existingKit.InternalName + ".");
+            _dbContext.Update(existingKit);
+            await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _kitManager.OnItemsChangedLayoutHandler(oldItems, existingKit, token);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error invoking OnItemsChangedLayoutHandler.");
+                }
+            }, CancellationToken.None);
+            
+            _kitManager.Signs.UpdateSigns(existingKit);
+            Context.Reply(_translations.KitOverwrote, existingKit);
+            return;
         }
 
         if (!Context.TryGet(1, out Class @class))
@@ -76,48 +119,31 @@ internal class KitCreateCommand : IExecutableCommand, iDis
             }
         }
 
-        Kit? existingKit = await _kitManager.FindKit(kitId, token, set: dbContext => KitManager.RequestableSet(dbContext, false));
-        if (existingKit != null)
+        if (@class == Class.None)
         {
-            // overwrite kit
-            await UniTask.SwitchToMainThread(token);
-            Context.Reply(_translations.KitConfirmOverride, existingKit, existingKit);
-
-            // wait for /confirm
-            CommandWaitResult confirmResult = await _commandDispatcher.WaitForCommand(typeof(ConfirmCommand), Context.Caller, token: token);
-            if (!confirmResult.IsSuccessfullyExecuted)
-            {
-                if (confirmResult.IsDisconnected)
-                    return;
-
-                throw Context.Reply(_translations.KitCancelOverride);
-            }
-
-            IKitItem[] oldItems = existingKit.Items;
-            existingKit.SetItemArray(ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true), _dbContext);
-            existingKit.WeaponText = _kitManager.GetWeaponText(existingKit);
-            existingKit.UpdateLastEdited(Context.CallerId.m_SteamID);
-            Context.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + existingKit.InternalName + ".");
-            _dbContext.Update(existingKit);
-            await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await _kitManager.OnItemsChangedLayoutHandler(oldItems, existingKit, token);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error invoking OnItemsChangedLayoutHandler.");
-                }
-            }, CancellationToken.None);
-            
-            _kitManager.Signs.UpdateSigns(existingKit);
-            Context.Reply(_translations.KitOverwrote, existingKit);
-            return;
+            @class = Class.Unarmed;
         }
 
+        Branch branch = KitDefaults.GetDefaultBranch(@class);
 
+        Kit kit = new Kit(kitId, @class, branch, type, SquadLevel.Member, faction);
+
+        await _dbContext.AddAsync(kit, token).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+        await UniTask.SwitchToMainThread(token);
+
+        IKitItem[] newItems = ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true);
+        kit.SetItemArray(newItems, _dbContext);
+
+        kit.Creator = kit.LastEditor = Context.CallerId.m_SteamID;
+        kit.WeaponText = _kitManager.GetWeaponText(kit);
+        _dbContext.Update(kit);
+        await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+        Context.LogAction(ActionLogType.CreateKit, kitId);
+
+        await UniTask.SwitchToMainThread(token);
+        _kitManager.Signs.UpdateSigns(kit);
+        Context.Reply(_translations.KitCreated, kit);
     }
 }

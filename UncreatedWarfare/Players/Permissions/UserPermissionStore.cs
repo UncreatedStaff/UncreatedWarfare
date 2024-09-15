@@ -12,7 +12,6 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.DependencyInjection;
 
 namespace Uncreated.Warfare.Players.Permissions;
 
@@ -34,9 +33,9 @@ public class UserPermissionStore : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<PermissionGroup> PermissionGroups { get; private set; }
 
-    public UserPermissionStore(DontDispose<IUserDataDbContext> dbContext, WarfareModule module, ILogger<UserPermissionStore> logger)
+    public UserPermissionStore(IUserDataDbContext dbContext, WarfareModule module, ILogger<UserPermissionStore> logger)
     {
-        _dbContext = dbContext.Value;
+        _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         _logger = logger;
@@ -510,7 +509,6 @@ public class UserPermissionStore : IAsyncDisposable
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        _dbContext.Dispose();
         _permissionGroupFileWatcher?.Dispose();
 
         try

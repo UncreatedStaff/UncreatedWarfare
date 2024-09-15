@@ -25,7 +25,7 @@ namespace Uncreated.Warfare.Kits;
 public class KitMenuUI : UnturnedUI
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly KitManager _kitManager;
     private readonly ZoneStore _zoneStore;
@@ -198,7 +198,7 @@ public class KitMenuUI : UnturnedUI
     public KitMenuUI(IServiceProvider serviceProvider) : base(Gamemode.Config.UIKitMenu.GetId())
     {
         _serviceProvider = serviceProvider;
-        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _kitManager = serviceProvider.GetRequiredService<KitManager>();
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();

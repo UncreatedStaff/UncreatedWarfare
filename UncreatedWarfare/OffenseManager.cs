@@ -7,13 +7,12 @@ using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Records;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 
 namespace Uncreated.Warfare;

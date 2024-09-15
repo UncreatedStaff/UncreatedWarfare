@@ -35,6 +35,8 @@ internal class KitGiveLoadoutCommand : IExecutableCommand
 
         IKitItem[] items = KitDefaults.GetDefaultLoadoutItems(@class);
 
+        Context.Player.Component<KitPlayerComponent>().UpdateKit(null);
+
         ItemUtility.GiveItems(player, items, true);
 
         Context.Reply(_translations.RequestDefaultLoadoutGiven, @class);

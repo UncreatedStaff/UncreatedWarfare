@@ -23,6 +23,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Ranks;
@@ -31,7 +32,6 @@ using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
-using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
@@ -1105,93 +1105,5 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             AvatarSize.Medium => summary.AvatarUrlMedium,
             _ => summary.AvatarUrlSmall
         };
-    }
-}
-
-public interface IPlayer : ITranslationArgument
-{
-    public CSteamID Steam64 { get; }
-}
-public readonly struct OfflinePlayerName(CSteamID steam64, string name) : IPlayer
-{
-    public CSteamID Steam64 { get; } = steam64;
-    public string Name { get; } = name;
-    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
-    {
-        UCPlayer? pl = UCPlayer.FromCSteamID(Steam64);
-        string? format = parameters.Format.Format;
-        if (format is null) goto end;
-
-        if (format.Equals(UCPlayer.FormatCharacterName, StringComparison.Ordinal) ||
-            format.Equals(UCPlayer.FormatNickName, StringComparison.Ordinal) ||
-            format.Equals(UCPlayer.FormatPlayerName, StringComparison.Ordinal))
-            return Name;
-        if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
-            goto end;
-        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (GameThread.IsCurrent && PlayerSave.TryReadSaveFile(Steam64.m_SteamID, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
-        if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal) ||
-            format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal) ||
-            format.Equals(UCPlayer.FormatColoredPlayerName, StringComparison.Ordinal))
-            return Localization.Colorize(hex, Name, flags);
-        if (format.Equals(UCPlayer.FormatColoredSteam64, StringComparison.Ordinal))
-            return Localization.Colorize(hex, Steam64.m_SteamID.ToString(culture ?? Data.LocalLocale), flags);
-        end:
-        return Steam64.m_SteamID.ToString(culture ?? Data.LocalLocale);
-    }
-}
-
-public struct OfflinePlayer : IPlayer
-{
-    private readonly CSteamID _s64;
-    private PlayerNames? _names;
-    public readonly CSteamID Steam64 => _s64;
-    public OfflinePlayer(CSteamID steam64)
-    {
-        _s64 = steam64;
-        _names = null;
-    }
-    public OfflinePlayer(in PlayerNames names)
-    {
-        _s64 = new CSteamID(names.Steam64);
-        _names = names;
-    }
-    public async ValueTask CacheUsernames(CancellationToken token = default)
-    {
-        if (!TryCacheLocal())
-            _names = await F.GetPlayerOriginalNamesAsync(_s64.m_SteamID, token).ConfigureAwait(false);
-    }
-    public bool TryCacheLocal()
-    {
-        UCPlayer? pl = UCPlayer.FromCSteamID(Steam64);
-        if (pl != null)
-            _names = pl.Name;
-        return _names.HasValue;
-    }
-    public readonly string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
-    {
-        string? format = parameters.Format.Format;
-        UCPlayer? pl = UCPlayer.FromCSteamID(Steam64);
-        if (format is null || !_names.HasValue) goto end;
-        PlayerNames names = _names.Value;
-
-        if (format.Equals(UCPlayer.FormatCharacterName, StringComparison.Ordinal))
-            return names.CharacterName;
-        if (format.Equals(UCPlayer.FormatNickName, StringComparison.Ordinal))
-            return names.NickName;
-        if (format.Equals(UCPlayer.FormatPlayerName, StringComparison.Ordinal))
-            return names.PlayerName;
-        if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
-            goto end;
-        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (GameThread.IsCurrent && PlayerSave.TryReadSaveFile(_s64.m_SteamID, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
-        if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal))
-            return Localization.Colorize(hex, names.CharacterName, flags);
-        if (format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal))
-            return Localization.Colorize(hex, names.NickName, flags);
-        if (format.Equals(UCPlayer.FormatColoredPlayerName, StringComparison.Ordinal))
-            return Localization.Colorize(hex, names.PlayerName, flags);
-        if (format.Equals(UCPlayer.FormatColoredSteam64, StringComparison.Ordinal))
-            return Localization.Colorize(hex, _s64.m_SteamID.ToString(culture ?? Data.LocalLocale), flags);
-        end:
-        return _s64.m_SteamID.ToString(culture ?? Data.LocalLocale);
     }
 }

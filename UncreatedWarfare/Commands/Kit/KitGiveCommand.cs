@@ -28,8 +28,10 @@ internal class KitGiveCommand : IExecutableCommand
         string? kitId = null;
         WarfarePlayer? player = null;
         BarricadeDrop? barricade = null;
+        Kit? kit = null;
         bool kitIdCouldBePlayerName = false;
-         
+        bool signLoadout = false;
+
         // kit give [kit (or target sign)] [player]
         if (Context.HasArgs(2))
         {
@@ -69,7 +71,9 @@ internal class KitGiveCommand : IExecutableCommand
             if (signData.LoadoutNumber > 0)
             {
                 Context.AssertRanByPlayer();
-                kitId = KitEx.GetLoadoutName(Context.CallerId.m_SteamID, signData.LoadoutNumber);
+                kitId = LoadoutIdHelper.GetLoadoutSignDisplayText(signData.LoadoutNumber);
+                kit = await _kitManager.Loadouts.GetLoadout(Context.CallerId, signData.LoadoutNumber, token);
+                signLoadout = true;
             }
             else
             {
@@ -77,12 +81,12 @@ internal class KitGiveCommand : IExecutableCommand
             }
         }
 
-        if (kitId == null)
+        if (kitId == null || signLoadout && kit == null)
         {
             throw Context.Reply(_translations.KitOperationNoTarget);
         }
 
-        Kit? kit = await _kitManager.FindKit(kitId, token, exactMatchOnly: false);
+        kit ??= await _kitManager.FindKit(kitId, token, exactMatchOnly: false);
         if (kit == null)
         {
             if (kitIdCouldBePlayerName)

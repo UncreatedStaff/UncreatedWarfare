@@ -11,8 +11,8 @@ namespace Uncreated.Warfare.Translations;
 
 public class LanguageSets
 {
-    private readonly PlayerService _playerService;
-    public LanguageSets(PlayerService playerService)
+    private readonly IPlayerService _playerService;
+    public LanguageSets(IPlayerService playerService)
     {
         _playerService = playerService;
     }

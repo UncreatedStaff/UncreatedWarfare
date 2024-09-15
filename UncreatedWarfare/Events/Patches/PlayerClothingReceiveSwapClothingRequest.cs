@@ -82,19 +82,19 @@ internal class PlayerClothingReceiveSwapClothingRequest : IHarmonyPatch
     }
 
     private static bool OnReceiveSwapShirtRequest(PlayerClothing __instance, ref byte page, ref byte x, ref byte y) =>
-        InvokeSwapClothingRequest(ClothingType.Shirt,    WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
+        InvokeSwapClothingRequest(ClothingType.Shirt,    WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
     private static bool OnReceiveSwapPantsRequest(PlayerClothing __instance, ref byte page, ref byte x, ref byte y) =>
-        InvokeSwapClothingRequest(ClothingType.Pants,    WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
+        InvokeSwapClothingRequest(ClothingType.Pants,    WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
     private static bool OnReceiveSwapVestRequest(PlayerClothing __instance, ref byte page, ref byte x, ref byte y) =>
-        InvokeSwapClothingRequest(ClothingType.Vest,     WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
+        InvokeSwapClothingRequest(ClothingType.Vest,     WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
     private static bool OnReceiveSwapHatRequest(PlayerClothing __instance, ref byte page, ref byte x, ref byte y) =>
-        InvokeSwapClothingRequest(ClothingType.Hat,      WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
+        InvokeSwapClothingRequest(ClothingType.Hat,      WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
     private static bool OnReceiveSwapMaskRequest(PlayerClothing __instance, ref byte page, ref byte x, ref byte y) =>
-        InvokeSwapClothingRequest(ClothingType.Mask,     WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
+        InvokeSwapClothingRequest(ClothingType.Mask,     WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
     private static bool OnReceiveSwapBackpackRequest(PlayerClothing __instance, ref byte page, ref byte x, ref byte y) =>
-        InvokeSwapClothingRequest(ClothingType.Backpack, WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
+        InvokeSwapClothingRequest(ClothingType.Backpack, WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
     private static bool OnReceiveSwapGlassesRequest(PlayerClothing __instance, ref byte page, ref byte x, ref byte y) =>
-        InvokeSwapClothingRequest(ClothingType.Glasses,  WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
+        InvokeSwapClothingRequest(ClothingType.Glasses,  WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), ref page, ref x, ref y);
 
     private static bool InvokeSwapClothingRequest(ClothingType type, WarfarePlayer player, ref byte page, ref byte x, ref byte y)
     {

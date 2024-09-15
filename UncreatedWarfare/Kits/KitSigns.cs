@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Kits;
 public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
 {
     private readonly SignInstancer _signs = serviceProvider.GetRequiredService<SignInstancer>();
-    private readonly PlayerService _playerService = serviceProvider.GetRequiredService<PlayerService>();
+    private readonly IPlayerService _playerService = serviceProvider.GetRequiredService<IPlayerService>();
     public KitManager Manager { get; } = manager;
 
     /// <summary>

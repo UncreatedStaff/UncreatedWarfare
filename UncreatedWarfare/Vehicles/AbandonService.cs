@@ -17,12 +17,12 @@ namespace Uncreated.Warfare.Vehicles;
 /// </summary>
 public class AbandonService
 {
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private readonly VehicleService _vehicleService;
     private readonly ITranslationValueFormatter _formatter;
     private readonly AbandonTranslations _translations;
 
-    public AbandonService(PlayerService playerService, VehicleService vehicleService, TranslationInjection<AbandonTranslations> translations, ITranslationValueFormatter formatter)
+    public AbandonService(IPlayerService playerService, VehicleService vehicleService, TranslationInjection<AbandonTranslations> translations, ITranslationValueFormatter formatter)
     {
         _playerService = playerService;
         _vehicleService = vehicleService;

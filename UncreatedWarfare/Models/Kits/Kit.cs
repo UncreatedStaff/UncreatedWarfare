@@ -257,14 +257,14 @@ public class Kit : ITranslationArgument, ICloneable
         SquadLevel = copy.SquadLevel;
         if (clone)
         {
-            Skillsets = [.. CollectionUtility.CloneList(copy.Skillsets)];
-            ItemModels = [.. CollectionUtility.CloneList(copy.ItemModels)];
+            Skillsets = [.. CollectionUtility.CloneList(copy.Skillsets) ];
+            ItemModels = [.. CollectionUtility.CloneList(copy.ItemModels) ];
             if (copyCachedLists)
             {
-                UnlockRequirementsModels = [.. CollectionUtility.CloneList(copy.UnlockRequirementsModels)];
-                FactionFilter = [.. CollectionUtility.CloneList(copy.FactionFilter)];
-                MapFilter = [.. CollectionUtility.CloneList(copy.MapFilter)];
-                Translations = [.. CollectionUtility.CloneList(copy.Translations)];
+                UnlockRequirementsModels = [.. CollectionUtility.CloneList(copy.UnlockRequirementsModels) ];
+                FactionFilter = [.. CollectionUtility.CloneList(copy.FactionFilter) ];
+                MapFilter = [.. CollectionUtility.CloneList(copy.MapFilter) ];
+                Translations = [.. CollectionUtility.CloneList(copy.Translations) ];
             }
         }
         else
@@ -672,7 +672,7 @@ public class Kit : ITranslationArgument, ICloneable
         }
     }
     /// <summary>Will not update signs.</summary>
-    public void SetSignText(IKitsDbContext dbContext, ulong setter, string? text, LanguageInfo language)
+    public void SetSignText(IKitsDbContext dbContext, CSteamID setter, string? text, LanguageInfo language)
     {
         if (language is null)
             throw new ArgumentNullException(nameof(language));

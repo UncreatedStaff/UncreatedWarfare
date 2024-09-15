@@ -1,6 +1,7 @@
 ﻿using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Translations;
 

@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Events;
 public partial class EventDispatcher2 : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private readonly CancellationToken _unloadToken;
     private readonly ILogger<EventDispatcher2> _logger;
     private readonly Dictionary<EventListenerCacheKey, EventListenerInfo> _listeners = new Dictionary<EventListenerCacheKey, EventListenerInfo>();
@@ -41,7 +41,7 @@ public partial class EventDispatcher2 : IHostedService
         _logger = serviceProvider.GetRequiredService<ILogger<EventDispatcher2>>();
         _unloadToken = serviceProvider.GetRequiredService<WarfareModule>().UnloadToken;
 
-        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)

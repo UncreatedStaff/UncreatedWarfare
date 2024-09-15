@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 public class InjurePlayerRequested : CancellablePlayerEvent
 {
     private DamagePlayerParameters _parameters;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private WarfarePlayer? _instigator;
 
     /// <summary>
@@ -38,7 +38,7 @@ public class InjurePlayerRequested : CancellablePlayerEvent
             _instigator = value;
         }
     }
-    public InjurePlayerRequested(in DamagePlayerParameters parameters, PlayerService playerService)
+    public InjurePlayerRequested(in DamagePlayerParameters parameters, IPlayerService playerService)
     {
         _parameters = parameters;
         _playerService = playerService;

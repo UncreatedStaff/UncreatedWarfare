@@ -28,7 +28,7 @@ internal partial class ModerationUI : UnturnedUI
     private readonly ITranslationValueFormatter _valueFormatter;
 
     // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
 
     private readonly SteamAPIService _steamAPI;
 
@@ -186,7 +186,7 @@ internal partial class ModerationUI : UnturnedUI
         );
     }, 1, to: 4);
 
-    public ModerationUI(ITranslationValueFormatter valueFormatter, PlayerService playerService, SteamAPIService steamAPI) : base(GamemodeOld.Config.UIModerationMenu.GetId(), debugLogging: false)
+    public ModerationUI(ITranslationValueFormatter valueFormatter, IPlayerService playerService, SteamAPIService steamAPI) : base(GamemodeOld.Config.UIModerationMenu.GetId(), debugLogging: false)
     {
         _valueFormatter = valueFormatter;
         _playerService = playerService;

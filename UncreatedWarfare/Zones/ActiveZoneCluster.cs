@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Zones;
 public class ActiveZoneCluster : IDisposable
 {
     private readonly ZoneProximity[] _zones;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private readonly int _primaryIndex;
     private bool _disposed;
     private readonly TrackingList<WarfarePlayer> _players = new TrackingList<WarfarePlayer>(8);
@@ -57,7 +57,7 @@ public class ActiveZoneCluster : IDisposable
 
         Players = new ReadOnlyTrackingList<WarfarePlayer>(_players);
 
-        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         // move primary to the front of the array
         for (int i = 1; i < zones.Length; ++i)

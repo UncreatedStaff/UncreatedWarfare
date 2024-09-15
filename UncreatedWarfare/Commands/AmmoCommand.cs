@@ -1,6 +1,5 @@
 ﻿using System;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
@@ -18,13 +17,13 @@ namespace Uncreated.Warfare.Commands;
 public class AmmoCommand : IExecutableCommand
 {
     private readonly DroppedItemTracker _itemTracker;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private readonly AmmoCommandTranslations _translations;
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public AmmoCommand(DroppedItemTracker itemTracker, TranslationInjection<AmmoCommandTranslations> translations, PlayerService playerService)
+    public AmmoCommand(DroppedItemTracker itemTracker, TranslationInjection<AmmoCommandTranslations> translations, IPlayerService playerService)
     {
         _itemTracker = itemTracker;
         _playerService = playerService;

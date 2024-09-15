@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
@@ -18,7 +17,8 @@ namespace Uncreated.Warfare.Players.Management;
 /// <summary>
 /// Handles keeping track of online <see cref="WarfarePlayer"/>'s.
 /// </summary>
-public class PlayerService
+/// <remarks>Inject <see cref="IPlayerService"/>.</remarks>
+public class PlayerService : IPlayerService
 {
     /// <summary>
     /// All types will be added to a player on join and removed on leave.
@@ -43,24 +43,32 @@ public class PlayerService
     private WarfarePlayer[] _threadsafeList;
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;
     private readonly PlayerDictionary<WarfarePlayer> _onlinePlayersDictionary;
-    public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers { get; }
-    public TrackingWhereEnumerable<WarfarePlayer> OnlinePlayersOnTeam(Team team) => _onlinePlayers.Where(p => p.Team == team);
+
+    /// <inheritdoc />
+    public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers
+    {
+        get
+        {
+            GameThread.AssertCurrent();
+            return _readOnlyOnlinePlayers;
+        }
+    }
 
     private readonly ILoggerFactory _loggerFactory; 
-    private readonly IServiceProvider _serviceProvider; 
-    private readonly ILogger<PlayerService> _logger;
-    
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ReadOnlyTrackingList<WarfarePlayer> _readOnlyOnlinePlayers;
+
     public PlayerService(ILoggerFactory loggerFactory, IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _onlinePlayers = new TrackingList<WarfarePlayer>();
         _threadsafeList = Array.Empty<WarfarePlayer>();
         _onlinePlayersDictionary = new PlayerDictionary<WarfarePlayer>(Provider.maxPlayers);
-        OnlinePlayers = _onlinePlayers.AsReadOnly();
+        _readOnlyOnlinePlayers = _onlinePlayers.AsReadOnly();
         _loggerFactory = loggerFactory;
-        _logger = loggerFactory.CreateLogger<PlayerService>();
     }
 
+    /// <inheritdoc />
     public IReadOnlyList<WarfarePlayer> GetThreadsafePlayerList()
     {
         if (GameThread.IsCurrent)
@@ -181,14 +189,7 @@ public class PlayerService
         }
     }
 
-    public WarfarePlayer GetOnlinePlayer(Player player) => GetOnlinePlayer(player.channel.owner.playerID.steamID.m_SteamID);
-
-    public WarfarePlayer GetOnlinePlayer(PlayerCaller player) => GetOnlinePlayer(player.channel.owner.playerID.steamID.m_SteamID);
-
-    public WarfarePlayer GetOnlinePlayer(SteamPlayer steamPlayer) => GetOnlinePlayer(steamPlayer.playerID.steamID.m_SteamID);
-
-    public WarfarePlayer GetOnlinePlayer(CSteamID steamId) => GetOnlinePlayer(steamId.m_SteamID);
-
+    /// <inheritdoc />
     public WarfarePlayer GetOnlinePlayer(ulong steam64)
     {
         GameThread.AssertCurrent();
@@ -200,14 +201,7 @@ public class PlayerService
         return player;
     }
 
-    public WarfarePlayer? GetOnlinePlayerOrNull(Player? player) => player is null ? null : GetOnlinePlayerOrNull(player.channel.owner.playerID.steamID.m_SteamID);
-    
-    public WarfarePlayer? GetOnlinePlayerOrNull(PlayerCaller? player) => player is null ? null : GetOnlinePlayerOrNull(player.channel.owner.playerID.steamID.m_SteamID);
-
-    public WarfarePlayer? GetOnlinePlayerOrNull(SteamPlayer? steamPlayer) => steamPlayer == null ? null : GetOnlinePlayerOrNull(steamPlayer.playerID.steamID.m_SteamID);
-
-    public WarfarePlayer? GetOnlinePlayerOrNull(CSteamID steamId) => GetOnlinePlayerOrNull(steamId.m_SteamID);
-
+    /// <inheritdoc />
     public WarfarePlayer? GetOnlinePlayerOrNull(ulong steam64)
     {
         GameThread.AssertCurrent();
@@ -217,14 +211,7 @@ public class PlayerService
         return player;
     }
 
-    public WarfarePlayer GetOnlinePlayerThreadSafe(Player player) => GetOnlinePlayerThreadSafe(player.channel.owner.playerID.steamID.m_SteamID);
-    
-    public WarfarePlayer GetOnlinePlayerThreadSafe(PlayerCaller player) => GetOnlinePlayerThreadSafe(player.channel.owner.playerID.steamID.m_SteamID);
-
-    public WarfarePlayer GetOnlinePlayerThreadSafe(SteamPlayer steamPlayer) => GetOnlinePlayerThreadSafe(steamPlayer.playerID.steamID.m_SteamID);
-
-    public WarfarePlayer GetOnlinePlayerThreadSafe(CSteamID steamId) => GetOnlinePlayerThreadSafe(steamId.m_SteamID);
-
+    /// <inheritdoc />
     public WarfarePlayer GetOnlinePlayerThreadSafe(ulong steam64)
     {
         lock (_onlinePlayersDictionary)
@@ -236,14 +223,7 @@ public class PlayerService
         }
     }
 
-    public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(Player? player) => GetOnlinePlayerOrNullThreadSafe(player?.channel.owner);
-    
-    public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(PlayerCaller? player) => GetOnlinePlayerOrNullThreadSafe(player?.channel.owner);
-
-    public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(SteamPlayer? steamPlayer) => steamPlayer == null ? null : GetOnlinePlayerThreadSafe(steamPlayer);
-
-    public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(CSteamID steamId) => GetOnlinePlayerOrNullThreadSafe(steamId.m_SteamID);
-
+    /// <inheritdoc />
     public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(ulong steam64)
     {
         lock (_onlinePlayersDictionary)
@@ -255,7 +235,7 @@ public class PlayerService
 }
 
 /// <summary>
-/// Thrown when a player can't be found in <see cref="PlayerService"/>.
+/// Thrown when a player can't be found in <see cref="IPlayerService"/>.
 /// </summary>
 public class PlayerOfflineException : Exception
 {

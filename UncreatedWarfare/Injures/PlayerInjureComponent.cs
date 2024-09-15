@@ -97,7 +97,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     private Coroutine? _markerCoroutine;
     private DeathTracker _deathTracker;
     private ChatService _chatService;
-    private PlayerService _playerService;
+    private IPlayerService _playerService;
     private EventDispatcher2 _eventDispatcher;
     private AssetConfiguration _assetConfiguration;
     private bool _isInjured;
@@ -131,7 +131,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     {
         _deathTracker = serviceProvider.GetRequiredService<DeathTracker>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
-        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
 

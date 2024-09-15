@@ -18,9 +18,9 @@ public class SteamAPIService
     private const string BaseUrl = "https://api.steampowered.com/";
     private readonly IConfiguration _systemConfig;
     private readonly ILogger<SteamAPIService> _logger;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
 
-    public SteamAPIService(IConfiguration systemConfig, ILogger<SteamAPIService> logger, PlayerService playerService)
+    public SteamAPIService(IConfiguration systemConfig, ILogger<SteamAPIService> logger, IPlayerService playerService)
     {
         _systemConfig = systemConfig;
         _logger = logger;

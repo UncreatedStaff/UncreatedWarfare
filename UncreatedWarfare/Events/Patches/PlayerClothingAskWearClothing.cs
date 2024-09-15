@@ -82,19 +82,19 @@ internal class PlayerClothingAskWearClothing : IHarmonyPatch
     }
 
     private static void OnSwappedShirt(PlayerClothing __instance, ItemShirtAsset asset, byte quality, byte[] state, bool playEffect) =>
-        InvokeSwappedClothing(ClothingType.Shirt,    WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
+        InvokeSwappedClothing(ClothingType.Shirt,    WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
     private static void OnSwappedPants(PlayerClothing __instance, ItemPantsAsset asset, byte quality, byte[] state, bool playEffect) =>
-        InvokeSwappedClothing(ClothingType.Pants,    WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
+        InvokeSwappedClothing(ClothingType.Pants,    WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
     private static void OnSwappedVest(PlayerClothing __instance, ItemVestAsset asset, byte quality, byte[] state, bool playEffect) =>
-        InvokeSwappedClothing(ClothingType.Vest,     WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
+        InvokeSwappedClothing(ClothingType.Vest,     WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
     private static void OnSwappedHat(PlayerClothing __instance, ItemHatAsset asset, byte quality, byte[] state, bool playEffect) =>
-        InvokeSwappedClothing(ClothingType.Hat,      WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
+        InvokeSwappedClothing(ClothingType.Hat,      WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
     private static void OnSwappedMask(PlayerClothing __instance, ItemMaskAsset asset, byte quality, byte[] state, bool playEffect) =>
-        InvokeSwappedClothing(ClothingType.Mask,     WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
+        InvokeSwappedClothing(ClothingType.Mask,     WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
     private static void OnSwappedBackpack(PlayerClothing __instance, ItemBackpackAsset asset, byte quality, byte[] state, bool playEffect) =>
-        InvokeSwappedClothing(ClothingType.Backpack, WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
+        InvokeSwappedClothing(ClothingType.Backpack, WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
     private static void OnSwappedGlasses(PlayerClothing __instance, ItemGlassesAsset asset, byte quality, byte[] state, bool playEffect) =>
-        InvokeSwappedClothing(ClothingType.Glasses,  WarfareModule.Singleton.ServiceProvider.GetRequiredService<PlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
+        InvokeSwappedClothing(ClothingType.Glasses,  WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayer(__instance.player), asset, quality, state, playEffect);
 
     private static void InvokeSwappedClothing(ClothingType type, WarfarePlayer player, ItemClothingAsset asset, byte quality, byte[] state, bool playEffect)
     {

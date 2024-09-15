@@ -5,68 +5,59 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Sync;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Util.DependencyInjection;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Kits;
 
+/// <summary>
+/// Handles operations specific to loadouts.
+/// </summary>
 [RpcClass]
-public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider)
+public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) : IDisposable
 {
-    private readonly PlayerService _playerService = serviceProvider.GetRequiredService<PlayerService>();
+    private readonly IPlayerService _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+    private readonly ChatService _chatService = serviceProvider.GetRequiredService<ChatService>();
+    private readonly KitCommandTranslations _kitTranslations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
+    private readonly LanguageService _languageService = serviceProvider.GetRequiredService<LanguageService>();
+    
+    /// <summary>
+    /// Ensures <see cref="GetFreeLoadoutId"/> can be used without worrying about the ID being stolen.
+    /// </summary>
+    private readonly SemaphoreSlim _loadoutCreationSemaphore = new SemaphoreSlim(1, 1);
+
     public KitManager Manager { get; } = manager;
 
-    /// <summary>Indexed from 1.</summary>
-    public Task<Kit?> GetLoadout(UCPlayer player, int loadoutId, CancellationToken token = default)
+    void IDisposable.Dispose()
     {
-        return GetLoadout(player.Steam64, loadoutId, token);
+        _loadoutCreationSemaphore.Dispose();
     }
 
-    private async Task<List<Kit>> GetLoadouts(IKitsDbContext dbContext, ulong steam64, CancellationToken token = default)
-    {
-        List<Kit> kits = await dbContext.Kits
-            .Where(x => x.Type == KitType.Loadout && x.Access.Any(y => y.Steam64 == steam64))
-            .ToListAsync(token);
-
-        if (_playerService.GetOnlinePlayerOrNull(steam64) is { } player)
-        {
-            await UniTask.SwitchToMainThread(token);
-
-            return kits
-                .OrderByDescending(x => Manager.IsFavoritedQuick(x.PrimaryKey, player))
-                .ThenBy(x => x.InternalName ?? string.Empty)
-                .ToList();
-        }
-
-        return kits;
-    }
-
-    private async Task<List<Kit>> GetLoadouts(ulong steam64, CancellationToken token = default)
-    {
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<DontDispose<IKitsDbContext>>();
-
-        return await GetLoadouts(dbContext, steam64, token).ConfigureAwait(false);
-    }
-
-    /// <summary>Indexed from 1. Use with purchase sync.</summary>
-    public async Task<Kit?> GetLoadoutQuick(ulong steam64, int loadoutId, CancellationToken token = default)
+    /// <summary>
+    /// Indexed from 1. Use with purchase sync.
+    /// </summary>
+    [Pure]
+    public async Task<Kit?> GetLoadoutQuick(CSteamID steam64, int loadoutId, CancellationToken token = default)
     {
         if (loadoutId <= 0)
             throw new ArgumentOutOfRangeException(nameof(loadoutId));
 
         IEnumerable<Kit> kits = Manager.Cache.KitDataByKey.Values
-            .Where(x => x.Type == KitType.Loadout &&
-                        x.InternalName.Length >= 17 &&
-                        KitEx.ParseStandardLoadoutId(x.InternalName, out ulong player) != -1 &&
-                        player == steam64);
+            .Where(x => x.Type == KitType.Loadout
+                        && LoadoutIdHelper.Parse(x.InternalName, out CSteamID player) > 0
+                        && player.m_SteamID == steam64.m_SteamID
+                    );
 
         if (_playerService.GetOnlinePlayerOrNull(steam64) is { } player)
         {
@@ -86,63 +77,167 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider)
         return null;
     }
 
-    /// <summary>Indexed from 1.</summary>
-    public async Task<Kit?> GetLoadout(ulong steam64, int loadoutId, CancellationToken token = default)
+    /// <summary>
+    /// Get the loadout for a sign with the given index.
+    /// </summary>
+    /// <remarks>Indexed from 1.</remarks>
+    [Pure]
+    public async Task<Kit?> GetLoadout(CSteamID steam64, int loadoutIndex, CancellationToken token = default)
     {
-        if (loadoutId <= 0)
-            throw new ArgumentOutOfRangeException(nameof(loadoutId));
+        if (loadoutIndex <= 0)
+            throw new ArgumentOutOfRangeException(nameof(loadoutIndex));
 
-        List<Kit> loadouts = await GetLoadouts(steam64, token).ConfigureAwait(false);
+        List<Kit> loadouts = await GetLoadouts(steam64, token, true).ConfigureAwait(false);
 
-        return loadoutId > loadouts.Count ? null : loadouts[loadoutId - 1];
+        return loadoutIndex > loadouts.Count ? null : loadouts[loadoutIndex - 1];
     }
 
-    public async Task<string> GetFreeLoadoutName(ulong playerId)
+    /// <summary>
+    /// Get the loadout for a sign with the given index.
+    /// </summary>
+    /// <remarks>Indexed from 1.</remarks>
+    [Pure]
+    public async Task<Kit?> GetLoadout(IKitsDbContext dbContext, CSteamID steam64, int loadoutIndex, CancellationToken token = default)
     {
-        return KitEx.GetLoadoutName(playerId, await GetFreeLoadoutId(playerId));
+        if (loadoutIndex <= 0)
+            throw new ArgumentOutOfRangeException(nameof(loadoutIndex));
+
+        List<Kit> loadouts = await GetLoadouts(dbContext, steam64, token, true).ConfigureAwait(false);
+
+        return loadoutIndex > loadouts.Count ? null : loadouts[loadoutIndex - 1];
     }
 
-    /// <summary>Indexed from 1.</summary>
-    public async Task<int> GetFreeLoadoutId(ulong playerId, CancellationToken token = default)
+    /// <summary>
+    /// Get a list of all loadouts for a player in the order they would appear on signs.
+    /// </summary>
+    [Pure]
+    public async Task<List<Kit>> GetLoadouts(CSteamID steam64, CancellationToken token = default, bool doLock = true)
     {
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<TDbContext>();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+
+        return await GetLoadouts(dbContext, steam64, token, doLock).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Get a list of all loadouts for a player in the order they would appear on signs.
+    /// </summary>
+    [Pure]
+    public async Task<List<Kit>> GetLoadouts(IKitsDbContext dbContext, CSteamID steam64, CancellationToken token = default, bool doLock = true)
+    {
+        if (doLock)
+            await _loadoutCreationSemaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            ulong s64 = steam64.m_SteamID;
+            List<Kit> kits = await dbContext.Kits
+                .Where(x => x.Type == KitType.Loadout && x.Access.Any(y => y.Steam64 == s64))
+                .OrderByDescending(x => dbContext.KitFavorites.Any(y => y.KitId == x.PrimaryKey && y.Steam64 == s64))
+                .ThenBy(y => y.InternalName)
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+
+            return kits;
+        }
+        finally
+        {
+            if (doLock)
+                _loadoutCreationSemaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Gets the first free loadout ID for a player.
+    /// </summary>
+    /// <remarks>Indexed from 1.</remarks>
+    [Pure]
+    public async Task<string> GetFreeLoadoutName(CSteamID playerId, CancellationToken token = default, bool doLock = true)
+    {
+        return LoadoutIdHelper.GetLoadoutName(playerId, await GetFreeLoadoutId(playerId, token, doLock));
+    }
+
+    /// <summary>
+    /// Gets the first free loadout ID for a player.
+    /// </summary>
+    /// <remarks>Indexed from 1.</remarks>
+    [Pure]
+    public async Task<string> GetFreeLoadoutName(IKitsDbContext dbContext, CSteamID playerId, CancellationToken token = default, bool doLock = true)
+    {
+        return LoadoutIdHelper.GetLoadoutName(playerId, await GetFreeLoadoutId(dbContext, playerId, token, doLock));
+    }
+
+    /// <summary>
+    /// Gets the first free loadout number for a player.
+    /// </summary>
+    /// <remarks>Indexed from 1.</remarks>
+    [Pure]
+    public async Task<int> GetFreeLoadoutId(CSteamID playerId, CancellationToken token = default, bool doLock = true)
+    {
+        using IServiceScope scope = serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         return await GetFreeLoadoutId(dbContext, playerId, token).ConfigureAwait(false);
     }
 
-    /// <summary>Indexed from 1.</summary>
-    public async Task<int> GetFreeLoadoutId(IKitsDbContext dbContext, ulong playerId, CancellationToken token = default)
+    /// <summary>
+    /// Gets the first free loadout number for a player.
+    /// </summary>
+    /// <remarks>Indexed from 1.</remarks>
+    [Pure]
+    public async Task<int> GetFreeLoadoutId(IKitsDbContext dbContext, CSteamID playerId, CancellationToken token = default, bool doLock = true)
     {
-        List<Kit> loadouts = await GetLoadouts(dbContext, playerId, token).ConfigureAwait(false);
-        List<int> taken = new List<int>(loadouts.Count);
-        foreach (Kit kit in loadouts)
+        if (doLock)
+            await _loadoutCreationSemaphore.WaitAsync(token).ConfigureAwait(false);
+        try
         {
-            if (kit.InternalName.Length < 19)
-                continue;
-            int id = KitEx.ParseStandardLoadoutId(kit.InternalName);
-            if (id > 0)
-                taken.Add(id);
-        }
-        int maxId = 0;
-        int lowestGap = int.MaxValue;
-        int last = -1;
-        taken.Sort();
-        for (int i = 0; i < taken.Count; ++i)
-        {
-            int c = taken[i];
-            if (i != 0)
+            ulong s64 = playerId.m_SteamID;
+            string likeExpr = s64.ToString(CultureInfo.InvariantCulture) + "\\_%"; // s64_%
+
+            // not using GetLoadouts because we need to check by name, not by access, just in case something gets corrupted
+            // plus order doesn't matter so may as well not take the extra processing power
+
+            List<Kit> loadouts = await dbContext.Kits
+                    .Where(x => x.Type == KitType.Loadout && EF.Functions.Like(x.InternalName, likeExpr))
+                    .ToListAsync(token)
+                    .ConfigureAwait(false);
+
+            List<int> taken = new List<int>(loadouts.Count);
+            foreach (Kit kit in loadouts)
             {
-                if (last + 1 != c && lowestGap > last + 1)
-                    lowestGap = last + 1;
+                int id = LoadoutIdHelper.Parse(kit.InternalName);
+                if (id > 0)
+                    taken.Add(id);
             }
 
-            last = c;
+            // find first open number
+            int maxId = 0;
+            int lowestGap = int.MaxValue;
+            int last = -1;
+            taken.Sort();
+            for (int i = 0; i < taken.Count; ++i)
+            {
+                int c = taken[i];
+                if (i != 0)
+                {
+                    if (last + 1 != c && lowestGap > last + 1)
+                        lowestGap = last + 1;
+                }
 
-            if (maxId < c)
-                maxId = c;
+                last = c;
+
+                if (maxId < c)
+                    maxId = c;
+            }
+
+            return lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
         }
-
-        return lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
+        finally
+        {
+            if (doLock)
+                _loadoutCreationSemaphore.Release();
+        }
     }
 
     /// <summary>
@@ -159,165 +254,257 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider)
     /// <returns>The upgraded kit.</returns>
     /// <exception cref="KitNotFoundException"/>
     /// <exception cref="InvalidOperationException">Kit is already up to date.</exception>
-    [RpcReceive]
     public async Task<Kit> UpgradeLoadout(CSteamID adminInstigator, CSteamID player, Class @class, string loadoutInternalId, CancellationToken token = default)
     {
-        Kit? kit = await Manager.FindKit(loadoutInternalId, token, true, KitManager.FullSet).ConfigureAwait(false);
-        
-        if (kit == null)
+        Kit? kit;
+        Class oldClass;
+        Faction? oldFaction;
+
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        await using (IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>())
         {
-            throw new KitNotFoundException(loadoutInternalId);
+            kit = await Manager.FindKit(dbContext, loadoutInternalId, token, true, KitManager.FullSet).ConfigureAwait(false);
+
+            if (kit == null)
+            {
+                throw new KitNotFoundException(loadoutInternalId);
+            }
+
+            if (kit.Season >= UCWarfare.Season)
+            {
+                throw new InvalidOperationException($"Kit is already up to date for season {UCWarfare.Season}.");
+            }
+
+            oldClass = kit.Class;
+            oldFaction = kit.Faction;
+            kit.FactionFilterIsWhitelist = false;
+            kit.FactionFilter.Clear();
+            kit.Class = @class;
+            kit.Faction = null;
+            kit.FactionId = null;
+            kit.UpdateLastEdited(adminInstigator);
+            kit.SetItemArray(KitDefaults.GetDefaultLoadoutItems(@class), dbContext);
+            kit.SetUnlockRequirementArray(Array.Empty<UnlockRequirement>(), dbContext);
+            kit.RequiresNitro = false;
+            kit.WeaponText = string.Empty;
+            kit.Disabled = true;
+            kit.Season = UCWarfare.Season;
+            kit.MapFilterIsWhitelist = false;
+            kit.MapFilter.Clear();
+            kit.Branch = KitDefaults.GetDefaultBranch(@class);
+            kit.TeamLimit = KitDefaults.GetDefaultTeamLimit(@class);
+            kit.RequestCooldown = KitDefaults.GetDefaultRequestCooldown(@class);
+            kit.SquadLevel = SquadLevel.Member;
+            kit.CreditCost = 0;
+            kit.Type = KitType.Loadout;
+            kit.PremiumCost = 0m;
+
+            dbContext.Update(kit);
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
         }
 
-        if (kit.Season >= UCWarfare.Season)
+        ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutInternalId} (#{kit.PrimaryKey}). Class: {oldClass} -> {@class}. Old Faction: {oldFaction?.InternalName ?? "none"}", adminInstigator);
+
+        if (!await Manager.HasAccess(kit, player, CancellationToken.None))
         {
-            throw new InvalidOperationException($"Kit is already up to date for season {UCWarfare.Season}.");
-        }
-
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<TDbContext>();
-
-        Class oldClass = kit.Class;
-        FactionInfo? oldFaction = kit.FactionInfo;
-        kit.FactionFilterIsWhitelist = false;
-        kit.FactionFilter.Clear();
-        kit.Class = @class;
-        kit.Faction = null;
-        kit.FactionId = null;
-        kit.UpdateLastEdited(adminInstigator.m_SteamID);
-        kit.SetItemArray(KitDefaults<TDbContext>.GetDefaultLoadoutItems(@class), dbContext);
-        kit.SetUnlockRequirementArray(Array.Empty<UnlockRequirement>(), dbContext);
-        kit.RequiresNitro = false;
-        kit.WeaponText = string.Empty;
-        kit.Disabled = true;
-        kit.Season = UCWarfare.Season;
-        kit.MapFilterIsWhitelist = false;
-        kit.MapFilter.Clear();
-        kit.Branch = KitDefaults<TDbContext>.GetDefaultBranch(@class);
-        kit.TeamLimit = KitDefaults<TDbContext>.GetDefaultTeamLimit(@class);
-        kit.RequestCooldown = KitDefaults<TDbContext>.GetDefaultRequestCooldown(@class);
-        kit.SquadLevel = SquadLevel.Member;
-        kit.CreditCost = 0;
-        kit.Type = KitType.Loadout;
-        kit.PremiumCost = 0m;
-
-        dbContext.Update(kit);
-        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutInternalId} (#{kit.PrimaryKey}). Class: {oldClass} -> {@class}. Old Faction: {oldFaction?.FactionId ?? "none"}", adminInstigator);
-
-        if (!await Manager.HasAccess(kit, player.m_SteamID, token))
-        {
-            await Manager.GiveAccess(kit, player.m_SteamID, KitAccessType.Purchase, token).ConfigureAwait(false);
+            await Manager.GiveAccess(kit, player, KitAccessType.Purchase, CancellationToken.None).ConfigureAwait(false);
             KitSync.OnAccessChanged(player.m_SteamID);
             ActionLog.Add(ActionLogType.ChangeKitAccess, player.m_SteamID.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutInternalId + ", REASON: " + KitAccessType.Purchase, adminInstigator);
         }
 
-        await UniTask.SwitchToMainThread(token);
+        await UniTask.SwitchToMainThread(CancellationToken.None);
 
         WarfarePlayer? pl = _playerService.GetOnlinePlayerOrNull(player);
         if (pl != null)
             Manager.Signs.UpdateSigns(pl);
 
-        await Manager.Distribution.DequipKit(kit, true, token).ConfigureAwait(false);
+        await Manager.Distribution.DequipKit(kit, true, CancellationToken.None).ConfigureAwait(false);
 
         return kit;
     }
 
-    public async Task<Kit> UnlockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
+    /// <summary>
+    /// Enables a loadout, usually after upgrading a kit.
+    /// </summary>
+    /// <remarks>
+    /// The kit's <see cref="Kit.Disabled"/> property will be set to <see langword="false"/>.
+    /// The kit can be re-locked later using <see cref="LockLoadout"/>.
+    /// </remarks>
+    /// <param name="adminInstigator">The admin that handled the ticket.</param>
+    /// <param name="loadoutInternalId">The internal name of the kit, ex. '76500000000000000_a'.</param>
+    /// <returns>The unlocked kit.</returns>
+    /// <exception cref="KitNotFoundException"/>
+    /// <exception cref="InvalidOperationException">Kit is already unlocked.</exception>
+    public async Task<Kit> UnlockLoadout(CSteamID adminInstigator, string loadoutInternalId, CancellationToken token = default)
     {
-        Kit? existing = await Manager.FindKit(loadoutName, token, true, KitManager.FullSet).ConfigureAwait(false);
-        if (existing is null)
-            return (existing, StandardErrorCode.NotFound);
-        ulong player = 0;
+        Kit? existing;
+        CSteamID player;
 
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<TDbContext>();
-
-        ActionLog.Add(ActionLogType.UnlockLoadout, loadoutName, fromPlayer);
-
-        existing.UpdateLastEdited(fromPlayer);
-        existing.Disabled = false;
-        existing.MarkRemoteItemsDirty();
-        existing.MarkRemoteUnlockRequirementsDirty();
-        if (string.IsNullOrEmpty(existing.WeaponText))
-            existing.WeaponText = Manager.GetWeaponText(existing);
-
-        if (existing.InternalName.Length >= 17)
-            ulong.TryParse(existing.InternalName.AsSpan(0, 17), NumberStyles.Number, Data.AdminLocale, out player);
-
-        dbContext.Update(existing);
-        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-
-        await UniTask.SwitchToMainThread(token);
-        if (UCPlayer.FromID(player) is { } pl)
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        await using (IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>())
         {
-            Signs.UpdateLoadoutSigns(pl);
-            pl.SendChat(T.DMLoadoutUnlocked, existing);
+            existing = await Manager.FindKit(dbContext, loadoutInternalId, token, true, KitManager.FullSet).ConfigureAwait(false);
+
+            if (existing == null)
+            {
+                throw new KitNotFoundException(loadoutInternalId);
+            }
+
+            if (!existing.Disabled)
+            {
+                throw new InvalidOperationException("Kit is already unlocked.");
+            }
+
+            ActionLog.Add(ActionLogType.UnlockLoadout, loadoutInternalId, adminInstigator);
+
+            existing.UpdateLastEdited(adminInstigator);
+            existing.Disabled = false;
+            existing.MarkRemoteItemsDirty();
+            existing.MarkRemoteUnlockRequirementsDirty();
+            if (string.IsNullOrEmpty(existing.WeaponText))
+                existing.WeaponText = Manager.GetWeaponText(existing);
+
+            LoadoutIdHelper.Parse(existing.InternalName, out player);
+
+            dbContext.Update(existing);
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
         }
 
-        await Manager.Distribution.DequipKit(existing, true, token).ConfigureAwait(false);
+        await UniTask.SwitchToMainThread(CancellationToken.None);
 
-        return (existing, StandardErrorCode.Success);
-    }
-
-    public async Task<(Kit?, StandardErrorCode)> LockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
-    {
-        ulong player = 0;
-
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<TDbContext>();
-
-        Kit? kit = await Manager.FindKit(loadoutName, token, exactMatchOnly: true, KitManager.FullSet).ConfigureAwait(false);
-        if (kit == null)
-            return (kit, StandardErrorCode.NotFound);
-
-        ActionLog.Add(ActionLogType.UnlockLoadout, loadoutName, fromPlayer);
-
-        kit.UpdateLastEdited(fromPlayer);
-        kit.Disabled = true;
-        kit.MarkRemoteItemsDirty();
-        kit.MarkRemoteUnlockRequirementsDirty();
-        if (string.IsNullOrEmpty(kit.WeaponText))
-            kit.WeaponText = Manager.GetWeaponText(kit);
-
-        if (kit.InternalName.Length >= 17)
-            ulong.TryParse(kit.InternalName.AsSpan(0, 17), NumberStyles.Number, Data.AdminLocale, out player);
-
-        await UniTask.SwitchToMainThread(token);
-        if (UCPlayer.FromID(player) is { } pl)
-            Signs.UpdateLoadoutSigns(pl);
-
-        await Manager.Distribution.DequipKit(kit, true, token).ConfigureAwait(false);
-
-        return (kit, StandardErrorCode.Success);
-    }
-
-    public async Task<(Kit, StandardErrorCode)> CreateLoadout(ulong fromPlayer, ulong player, Class @class, string displayName, CancellationToken token = default)
-    {
-        string loadoutName = await GetFreeLoadoutName(player).ConfigureAwait(false);
-        Kit? kit = await Manager.FindKit(loadoutName, token, true, x => x.Kits).ConfigureAwait(false);
-        if (kit != null)
-            return (kit, StandardErrorCode.GenericError);
-
-        await using IKitsDbContext dbContext = serviceProvider.GetRequiredService<TDbContext>();
-
-        IKitItem[] items = KitDefaults<TDbContext>.GetDefaultLoadoutItems(@class);
-        kit = new Kit(loadoutName, @class, KitDefaults<TDbContext>.GetDefaultBranch(@class), KitType.Loadout, SquadLevel.Member, null)
+        WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNull(player);
+        if (onlinePlayer != null)
         {
-            Creator = fromPlayer,
-            WeaponText = string.Empty,
-            Disabled = true
-        };
+            Manager.Signs.UpdateSigns(onlinePlayer);
+            _chatService.Send(onlinePlayer, _kitTranslations.DMLoadoutUnlocked);
+        }
 
-        kit.SetItemArray(items, dbContext);
-        kit.SetSignText(dbContext, fromPlayer, kit, displayName);
-        dbContext.Add(kit);
-        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        ActionLog.Add(ActionLogType.CreateKit, loadoutName, fromPlayer);
+        await Manager.Distribution.DequipKit(existing, true, CancellationToken.None).ConfigureAwait(false);
+        return existing;
+    }
 
-        await Manager.GiveAccess(kit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
-        ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
-        KitSync.OnAccessChanged(player);
-        await UniTask.SwitchToMainThread(token);
-        if (UCPlayer.FromID(player) is { } pl)
-            Signs.UpdateLoadoutSigns(pl);
-        return (kit, StandardErrorCode.Success);
+    /// <summary>
+    /// Disables a loadout, usually after upgrading a kit.
+    /// </summary>
+    /// <remarks>
+    /// The kit's <see cref="Kit.Disabled"/> property will be set to <see langword="true"/>, and the sign will change to 'being set up by admin', etc.
+    /// The kit should be 'unlocked' when it's done using <see cref="UnlockLoadout"/>.
+    /// </remarks>
+    /// <param name="adminInstigator">The admin that handled the ticket.</param>
+    /// <param name="loadoutInternalId">The internal name of the kit, ex. '76500000000000000_a'.</param>
+    /// <returns>The unlocked kit.</returns>
+    /// <exception cref="KitNotFoundException"/>
+    /// <exception cref="InvalidOperationException">Kit is already locked.</exception>
+    public async Task<Kit> LockLoadout(CSteamID adminInstigator, string loadoutInternalId, CancellationToken token = default)
+    {
+        Kit? existing;
+        CSteamID player;
+
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        await using (IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>())
+        {
+            existing = await Manager.FindKit(dbContext, loadoutInternalId, token, true, KitManager.FullSet).ConfigureAwait(false);
+
+            if (existing == null)
+            {
+                throw new KitNotFoundException(loadoutInternalId);
+            }
+
+            if (existing.Disabled)
+            {
+                throw new InvalidOperationException("Kit is already locked.");
+            }
+
+            ActionLog.Add(ActionLogType.UnlockLoadout, loadoutInternalId, adminInstigator);
+
+            existing.UpdateLastEdited(adminInstigator);
+            existing.Disabled = true;
+
+            LoadoutIdHelper.Parse(existing.InternalName, out player);
+
+            dbContext.Update(existing);
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+        }
+
+        await UniTask.SwitchToMainThread(CancellationToken.None);
+
+        WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNull(player);
+        if (onlinePlayer != null)
+        {
+            Manager.Signs.UpdateSigns(onlinePlayer);
+            _chatService.Send(onlinePlayer, _kitTranslations.DMLoadoutUnlocked);
+        }
+
+        await Manager.Distribution.DequipKit(existing, true, CancellationToken.None).ConfigureAwait(false);
+        return existing;
+    }
+
+    /// <summary>
+    /// Creates a new loadout with a given class and name.
+    /// </summary>
+    /// <remarks>
+    /// The kit's <see cref="Kit.Disabled"/> property will be set to <see langword="true"/>, and the sign will show 'being set up by admin'.
+    /// The kit should be 'unlocked' when it's done using <see cref="UnlockLoadout"/>.
+    /// </remarks>
+    /// <param name="adminInstigator">The admin that handled the ticket.</param>
+    public async Task<Kit> CreateLoadout(CSteamID adminInstigator, CSteamID forPlayer, Class @class, string? displayName, CancellationToken token = default)
+    {
+        using IServiceScope scope = serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+
+        return await CreateLoadout(dbContext, adminInstigator, forPlayer, @class, displayName, token).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a new loadout with a given class and name.
+    /// </summary>
+    /// <remarks>
+    /// The kit's <see cref="Kit.Disabled"/> property will be set to <see langword="true"/>, and the sign will show 'being set up by admin'.
+    /// The kit should be 'unlocked' when it's done using <see cref="UnlockLoadout"/>.
+    /// </remarks>
+    /// <param name="adminInstigator">The admin that handled the ticket.</param>
+    public async Task<Kit> CreateLoadout(IKitsDbContext dbContext, CSteamID adminInstigator, CSteamID forPlayer, Class @class, string? displayName, CancellationToken token = default)
+    {
+        await _loadoutCreationSemaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            string loadoutName = await GetFreeLoadoutName(dbContext, forPlayer, token, doLock: false).ConfigureAwait(false);
+
+            IKitItem[] items = KitDefaults.GetDefaultLoadoutItems(@class);
+            Kit kit = new Kit(loadoutName, @class, KitDefaults.GetDefaultBranch(@class), KitType.Loadout, SquadLevel.Member, null)
+            {
+                Creator = adminInstigator.m_SteamID,
+                WeaponText = string.Empty,
+                Disabled = true
+            };
+
+            kit.SetItemArray(items, dbContext);
+            kit.SetSignText(dbContext, adminInstigator, displayName ?? ("Loadout " + LoadoutIdHelper.GetLoadoutLetter(LoadoutIdHelper.ParseNumber(loadoutName))), _languageService.GetDefaultLanguage());
+            dbContext.Add(kit);
+            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+            ActionLog.Add(ActionLogType.CreateKit, loadoutName, adminInstigator);
+
+            await Manager.GiveAccess(kit, forPlayer, KitAccessType.Purchase, CancellationToken.None).ConfigureAwait(false);
+
+            ActionLog.Add(ActionLogType.ChangeKitAccess, forPlayer.m_SteamID.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, adminInstigator);
+
+            KitSync.OnAccessChanged(forPlayer.m_SteamID);
+
+            await UniTask.SwitchToMainThread(CancellationToken.None);
+
+            WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNull(adminInstigator);
+            if (onlinePlayer != null)
+            {
+                Manager.Signs.UpdateSigns(onlinePlayer);
+            }
+
+            return kit;
+        }
+        finally
+        {
+            _loadoutCreationSemaphore.Release();
+        }
     }
 }

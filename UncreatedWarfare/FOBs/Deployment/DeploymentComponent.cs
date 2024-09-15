@@ -1,10 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -20,11 +18,10 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
     
     private float _deploymentTimeStarted;
     private Coroutine? _deploymentCoroutine;
-    private ReviveManagerOld? _reviveManager;
     private CooldownManager? _cooldownManager;
     private FOBManager? _fobManager;
     private ZoneStore _zoneStore;
-    private PlayerService _playerService;
+    private IPlayerService _playerService;
     public WarfarePlayer Player { get; private set; }
     public IDeployable? CurrentDeployment { get; private set; }
     public TimeSpan DeploymentTimeLeft => _deploymentTimeStarted == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(Time.realtimeSinceStartup - _deploymentTimeStarted);
@@ -34,8 +31,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
     {
         _translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>().Value;
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
-        _playerService = serviceProvider.GetRequiredService<PlayerService>();
-        _reviveManager = serviceProvider.GetService<ReviveManagerOld>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetService<CooldownManager>();
         _fobManager = serviceProvider.GetService<FOBManager>();
     }

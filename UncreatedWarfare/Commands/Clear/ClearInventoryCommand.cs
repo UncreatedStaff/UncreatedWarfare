@@ -22,16 +22,15 @@ public class ClearInventoryCommand : IExecutableCommand
         if (Context.TryGet(1, out _, out WarfarePlayer? pl) || Context.HasArgs(2))
         {
             // clear inv <player>
-            if (pl is not null)
-            {
-                ItemUtility.ClearInventoryAndSlots(pl);
+            if (pl == null)
+                throw Context.Reply(T.PlayerNotFound);
+            
+            ItemUtility.ClearInventoryAndSlots(pl);
 
-                Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.m_SteamID.ToString(Data.AdminLocale));
-                Context.Reply(_translations.ClearInventoryOther, pl);
-            }
-            else throw Context.Reply(T.PlayerNotFound);
+            Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.m_SteamID.ToString(Data.AdminLocale));
+            Context.Reply(_translations.ClearInventoryOther, pl);
         }
-        else if (!Context.IsConsole)
+        else if (!Context.Caller.IsTerminal)
         {
             // clear inv
             ItemUtility.ClearInventoryAndSlots(Context.Player);

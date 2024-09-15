@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
-using SDG.Framework.Utilities;
-using MathUtility = Uncreated.Warfare.Util.MathUtility;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Database.Manual;
 public static class MySqlSnippets

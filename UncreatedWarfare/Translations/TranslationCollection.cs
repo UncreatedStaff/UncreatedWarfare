@@ -126,6 +126,8 @@ public abstract class TranslationCollection
                 // storing this as readonly so it's obvious it shouldn't be modified outside the translation class
                 _valueTable,
                 this,
+                LanguageService,
+                TranslationService,
                 new TranslationData(
                     data?.Description,
                     data?.Parameters,

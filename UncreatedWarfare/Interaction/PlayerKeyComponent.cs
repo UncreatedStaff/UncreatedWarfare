@@ -26,7 +26,7 @@ public class PlayerKeyComponent : IPlayerComponent
             return;
 
         _initialized = true;
-        PlayerService playerService = serviceProvider.GetRequiredService<PlayerService>();
+        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
         PlayerInput.onPluginKeyTick += (player, _, key, _) =>
         {
             if (key != 0)

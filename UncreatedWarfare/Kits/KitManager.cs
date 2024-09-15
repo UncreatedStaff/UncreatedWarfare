@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -21,6 +22,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Skillsets;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
@@ -42,9 +44,11 @@ public partial class KitManager :
     IEventListener<SwapClothingRequested>,
     IDisposable
 {
+    private static bool _hasRegisteredKitSettables;
+
     private readonly ILoopTicker _favoritesTicker;
     private readonly ILogger<KitManager> _logger;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private readonly IServiceProvider _serviceProvider;
     private readonly LanguageService _languageService;
 
@@ -79,10 +83,16 @@ public partial class KitManager :
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<KitManager>>();
-        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _languageService = serviceProvider.GetRequiredService<LanguageService>();
 
         MenuUI = serviceProvider.GetRequiredService<KitMenuUI>();
+
+        if (!_hasRegisteredKitSettables)
+        {
+            _hasRegisteredKitSettables = true;
+            RegisterKitSettables();
+        }
 
         IRpcRouter rpcRouter = serviceProvider.GetRequiredService<IRpcRouter>();
 
@@ -96,6 +106,35 @@ public partial class KitManager :
         Defaults = new KitDefaults(this, serviceProvider);
 
         _favoritesTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromMinutes(1d), TimeSpan.FromMinutes(1d), false, SaveFavoritesTick);
+    }
+
+    private static void RegisterKitSettables()
+    {
+        // register custom kit properties
+
+        // kit set faction
+        SettableUtil<Kit>.AddCustomHandler<string>((kit, faction, serviceProvider) =>
+        {
+            IFactionDataStore factions = serviceProvider.GetRequiredService<IFactionDataStore>();
+
+            if (faction == null || faction.Equals("null", StringComparison.InvariantCultureIgnoreCase)
+                                || faction.Equals("none", StringComparison.InvariantCultureIgnoreCase)
+                                || faction.Equals("blank", StringComparison.InvariantCultureIgnoreCase)
+                                || faction.Equals("nil", StringComparison.InvariantCultureIgnoreCase))
+            {
+                kit.Faction = null;
+                kit.FactionId = null;
+                return SetPropertyResult.Success;
+            }
+
+            FactionInfo? factionFound = factions.FindFaction(faction, false);
+
+            if (factionFound == null)
+                return SetPropertyResult.ParseFailure;
+
+            kit.FactionId = factionFound.PrimaryKey;
+            return SetPropertyResult.Success;
+        }, "faction", "team", "group");
     }
 
     internal static void ConfigureServices(IServiceCollection serviceCollection)
@@ -170,7 +209,7 @@ public partial class KitManager :
         return UniTask.CompletedTask;
     }
 
-    public void InvokeOnKitAccessChanged(Kit kit, ulong player, bool newAccess, KitAccessType newType)
+    public void InvokeOnKitAccessChanged(Kit kit, CSteamID player, bool newAccess, KitAccessType newType)
     {
         if (OnKitAccessChanged == null)
             return;
@@ -178,7 +217,7 @@ public partial class KitManager :
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
-            OnKitAccessChanged?.Invoke(kit, player, newAccess, newType);
+            OnKitAccessChanged?.Invoke(kit, player.m_SteamID, newAccess, newType);
         });
     }
 
@@ -923,7 +962,7 @@ public partial class KitManager :
     }
 
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> GiveAccess(string kitId, ulong player, KitAccessType type, CancellationToken token = default)
+    public async Task<bool> GiveAccess(string kitId, CSteamID player, KitAccessType type, CancellationToken token = default)
     {
         Kit? kit = await FindKit(kitId, token, set: x => x.Kits).ConfigureAwait(false);
         if (kit == null)
@@ -937,7 +976,7 @@ public partial class KitManager :
         // todo make update type and timestamp
         if (!player.IsOnline)
         {
-            return await GiveAccess(kit, player.Steam64.m_SteamID, type, token).ConfigureAwait(false);
+            return await GiveAccess(kit, player.Steam64, type, token).ConfigureAwait(false);
         }
 
         await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
@@ -946,12 +985,12 @@ public partial class KitManager :
             KitPlayerComponent comp = player.Component<KitPlayerComponent>();
             if (comp.AccessibleKits != null && comp.AccessibleKits.Contains(kit.PrimaryKey))
                 return true;
-            bool alreadyApplied = await AddAccessRow(kit.PrimaryKey, player.Steam64.m_SteamID, type, token).ConfigureAwait(false);
+            bool alreadyApplied = await AddAccessRow(kit.PrimaryKey, player.Steam64, type, token).ConfigureAwait(false);
             if (!alreadyApplied)
                 return false;
 
             (comp.AccessibleKits ??= new List<uint>(4)).Add(kit.PrimaryKey);
-            InvokeOnKitAccessChanged(kit, player.Steam64.m_SteamID, true, type);
+            InvokeOnKitAccessChanged(kit, player.Steam64, true, type);
 
             return true;
         }
@@ -962,7 +1001,7 @@ public partial class KitManager :
     }
 
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> GiveAccess(Kit kit, ulong player, KitAccessType type, CancellationToken token = default)
+    public async Task<bool> GiveAccess(Kit kit, CSteamID player, KitAccessType type, CancellationToken token = default)
     {
         if (kit.PrimaryKey == 0)
             return false;
@@ -987,7 +1026,7 @@ public partial class KitManager :
     }
 
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> RemoveAccess(string kitId, ulong player, CancellationToken token = default)
+    public async Task<bool> RemoveAccess(string kitId, CSteamID player, CancellationToken token = default)
     {
         Kit? kit = await FindKit(kitId, token, set: x => x.Kits).ConfigureAwait(false);
         if (kit == null)
@@ -1000,19 +1039,19 @@ public partial class KitManager :
     {
         if (!player.IsOnline)
         {
-            return await RemoveAccess(kit, player.Steam64.m_SteamID, token).ConfigureAwait(false);
+            return await RemoveAccess(kit, player.Steam64, token).ConfigureAwait(false);
         }
 
         await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         bool access;
         try
         {
-            access = await RemoveAccessRow(kit.PrimaryKey, player.Steam64.m_SteamID, token).ConfigureAwait(false);
+            access = await RemoveAccessRow(kit.PrimaryKey, player.Steam64, token).ConfigureAwait(false);
             if (access)
             {
                 KitPlayerComponent comp = player.Component<KitPlayerComponent>();
                 comp.AccessibleKits?.Remove(kit.PrimaryKey);
-                InvokeOnKitAccessChanged(kit, player.Steam64.m_SteamID, false, KitAccessType.Unknown);
+                InvokeOnKitAccessChanged(kit, player.Steam64, false, KitAccessType.Unknown);
             }
         }
         finally
@@ -1025,7 +1064,7 @@ public partial class KitManager :
     }
 
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> RemoveAccess(Kit kit, ulong player, CancellationToken token = default)
+    public async Task<bool> RemoveAccess(Kit kit, CSteamID player, CancellationToken token = default)
     {
         if (kit.PrimaryKey == 0)
             return false;
@@ -1057,35 +1096,35 @@ public partial class KitManager :
     }
 
     /// <remarks>Thread Safe</remarks>
-    public ValueTask<bool> HasAccessQuick(Kit kit, ulong player, CancellationToken token = default)
+    public ValueTask<bool> HasAccessQuick(Kit kit, CSteamID player, CancellationToken token = default)
         => HasAccessQuick(kit.PrimaryKey, player, token);
 
     /// <remarks>Thread Safe</remarks>
     public Task<bool> HasAccess(Kit kit, WarfarePlayer player, CancellationToken token = default)
-        => HasAccess(kit.PrimaryKey, player.Steam64.m_SteamID, token);
+        => HasAccess(kit.PrimaryKey, player.Steam64, token);
 
     /// <remarks>Thread Safe</remarks>
-    public Task<bool> HasAccess(Kit kit, ulong player, CancellationToken token = default)
+    public Task<bool> HasAccess(Kit kit, CSteamID player, CancellationToken token = default)
         => HasAccess(kit.PrimaryKey, player, token);
 
     /// <remarks>Thread Safe</remarks>
     public Task<bool> HasAccess(uint kit, WarfarePlayer player, CancellationToken token = default)
-        => HasAccess(kit, player.Steam64.m_SteamID, token);
+        => HasAccess(kit, player.Steam64, token);
 
     /// <remarks>Thread Safe</remarks>
     public Task<bool> HasAccess(IKitsDbContext dbContext, Kit kit, WarfarePlayer player, CancellationToken token = default)
-        => HasAccess(dbContext, kit.PrimaryKey, player.Steam64.m_SteamID, token);
+        => HasAccess(dbContext, kit.PrimaryKey, player.Steam64, token);
 
     /// <remarks>Thread Safe</remarks>
-    public Task<bool> HasAccess(IKitsDbContext dbContext, Kit kit, ulong player, CancellationToken token = default)
+    public Task<bool> HasAccess(IKitsDbContext dbContext, Kit kit, CSteamID player, CancellationToken token = default)
         => HasAccess(dbContext, kit.PrimaryKey, player, token);
 
     /// <remarks>Thread Safe</remarks>
     public Task<bool> HasAccess(IKitsDbContext dbContext, uint kit, WarfarePlayer player, CancellationToken token = default)
-        => HasAccess(dbContext, kit, player.Steam64.m_SteamID, token);
+        => HasAccess(dbContext, kit, player.Steam64, token);
 
     /// <remarks>Thread Safe</remarks>
-    public ValueTask<bool> HasAccessQuick(uint kit, ulong player, CancellationToken token = default)
+    public ValueTask<bool> HasAccessQuick(uint kit, CSteamID player, CancellationToken token = default)
     {
         if (kit == 0)
             return new ValueTask<bool>(false);
@@ -1183,7 +1222,7 @@ public partial class KitManager :
         return string.Join(", ", guns.Select(x => x.Value.itemName.ToUpperInvariant()));
     }
 
-    internal void OnKitAccessChangedIntl(Kit kit, ulong player, bool newAccess, KitAccessType type)
+    internal void OnKitAccessChangedIntl(Kit kit, CSteamID player, bool newAccess, KitAccessType type)
     {
         if (newAccess)
             return;

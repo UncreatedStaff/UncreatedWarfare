@@ -149,7 +149,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
     {
         IServiceProvider serviceProvider = WarfareModule.Singleton.ServiceProvider;
 
-        PlayerService playerService = serviceProvider.GetRequiredService<PlayerService>();
+        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         WarfarePlayer player = playerService.GetOnlinePlayer(playerInv);
 

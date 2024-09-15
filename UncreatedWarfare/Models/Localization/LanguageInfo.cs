@@ -5,14 +5,17 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Models.Localization;
 
 [Table("lang_info")]
-public class LanguageInfo : ITranslationArgument
+public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
 {
-    private int _totalDefaultTranslations;
-    private Dictionary<TranslationSection, int>? _totalSectionedDefaultTranslations;
+    public static readonly SpecialFormat FormatDisplayName = new SpecialFormat("Display Name", "d");
+    public static readonly SpecialFormat FormatCode = new SpecialFormat("Code", "c");
 
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -49,26 +52,9 @@ public class LanguageInfo : ITranslationArgument
     public IList<LanguageContributor> Contributors { get; set; } = null!;
     public IList<LanguageCulture> SupportedCultures { get; set; } = null!;
 
+    // todo don't use constant here
     [JsonIgnore]
     public bool IsDefault => L.Default.Equals(Code, StringComparison.OrdinalIgnoreCase);
-
-    [JsonIgnore]
-    internal float Support => IsDefault ? 1f : ((float)TotalDefaultTranslations / Warfare.Localization.TotalDefaultTranslations);
-
-    [JsonIgnore]
-    internal int TotalDefaultTranslations
-    {
-        get
-        {
-            if (_totalDefaultTranslations == 0 && _totalSectionedDefaultTranslations != null)
-            {
-                foreach (int val in _totalSectionedDefaultTranslations.Values)
-                    _totalDefaultTranslations += val;
-            }
-            return _totalDefaultTranslations;
-        }
-        set => _totalDefaultTranslations = value;
-    }
 
     public LanguageInfo() { }
 
@@ -82,49 +68,15 @@ public class LanguageInfo : ITranslationArgument
         SupportedCultures = new List<LanguageCulture>(0);
     }
 
-
-    [FormatDisplay("Display Name")]
-    public const string FormatDisplayName = "d";
-
-    [FormatDisplay("Key Code")]
-    public const string FormatKey = "k";
-    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    /// <inheritdoc />
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        if (format is not null && format.Equals(FormatKey, StringComparison.Ordinal))
-            return Code;
-        return DisplayName;
+        return FormatCode.Match(in parameters) ? Code : DisplayName;
     }
 
-    public string? GetUnturnedLanguageName() => SteamLanguageName == null
-        ? null
-        : (SteamLanguageName.Length == 0
-            ? SteamLanguageName
-            : (char.ToUpperInvariant(SteamLanguageName[0]) + SteamLanguageName.Substring(1)));
-    public override string ToString() => $"{DisplayName} {{{Code}}}";
-    public bool Equals(LanguageInfo? other) => other is not null && (ReferenceEquals(this, other) || Code.Equals(other.Code, StringComparison.OrdinalIgnoreCase));
-    public override bool Equals(object? obj) => obj is LanguageInfo info && Equals(info);
-    // ReSharper disable once NonReadonlyMemberInGetHashCode
-    public override int GetHashCode() => unchecked((int)Key);
-    internal void IncrementSection(TranslationSection section, int amt)
-    {
-        if (IsDefault || amt <= 0)
-            return;
-        _totalSectionedDefaultTranslations ??= new Dictionary<TranslationSection, int>(6);
-        if (_totalSectionedDefaultTranslations.TryGetValue(section, out int value))
-            _totalSectionedDefaultTranslations[section] = value + amt;
-        else _totalSectionedDefaultTranslations.Add(section, amt);
-        if (_totalDefaultTranslations != 0)
-            _totalDefaultTranslations += amt;
-    }
-    internal void ClearSection(TranslationSection section)
-    {
-        if (IsDefault) return;
-        _totalSectionedDefaultTranslations?.Remove(section);
-        _totalDefaultTranslations = 0;
-    }
-    public static bool operator ==(LanguageInfo? left, LanguageInfo? right) => Equals(left, right);
-    public static bool operator !=(LanguageInfo? left, LanguageInfo? right) => !Equals(left, right);
-
+    /// <summary>
+    /// If this language goes with <paramref name="culture"/>.
+    /// </summary>
     public bool SupportsCulture(CultureInfo culture)
     {
         if (SupportedCultures == null) return false;
@@ -134,4 +86,42 @@ public class LanguageInfo : ITranslationArgument
 
         return false;
     }
+
+    /// <summary>
+    /// Gets the language in Unturned's naming scheme, or <see langword="null"/> if Unturned (Steam) doesn't support this language.
+    /// </summary>
+    public string? GetUnturnedLanguageName() => SteamLanguageName == null
+        ? null
+        : (SteamLanguageName.Length == 0
+            ? SteamLanguageName
+            : (char.ToUpperInvariant(SteamLanguageName[0]) + SteamLanguageName.Substring(1)));
+
+    /// <inheritdoc />
+    public override string ToString() => $"{DisplayName} {{{Code}}}";
+
+    /// <inheritdoc />
+    public bool Equals(LanguageInfo? other)
+    {
+        return other is not null && (ReferenceEquals(this, other) || Code.Equals(other.Code, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj)
+    {
+        return obj is LanguageInfo info && Equals(info);
+    }
+
+    // ReSharper disable once NonReadonlyMemberInGetHashCode
+    /// <inheritdoc />
+    public override int GetHashCode() => unchecked( (int)Key );
+
+    /// <summary>
+    /// Compare two <see cref="LanguageInfo"/> objects.
+    /// </summary>
+    public static bool operator ==(LanguageInfo? left, LanguageInfo? right) => Equals(left, right);
+    
+    /// <summary>
+    /// Compare two <see cref="LanguageInfo"/> objects.
+    /// </summary>
+    public static bool operator !=(LanguageInfo? left, LanguageInfo? right) => !Equals(left, right);
 }

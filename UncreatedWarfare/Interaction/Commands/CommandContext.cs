@@ -27,7 +27,7 @@ public class CommandContext : ControlException
     public const string Default = "-";
 
     private readonly UserPermissionStore _permissionsStore;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
     private readonly ChatService _chatService;
     private readonly string[] _parameters;
     private readonly int _argumentCount;
@@ -191,7 +191,7 @@ public class CommandContext : ControlException
 
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _permissionsStore = serviceProvider.GetRequiredService<UserPermissionStore>();
-        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         OriginalMessage = originalMessage;
         args ??= Array.Empty<string>();
@@ -536,12 +536,12 @@ public class CommandContext : ControlException
     /// Gets a <paramref name="parameter"/> at a given index, or returns <see langword="false"/> if out of range.
     /// </summary>
     /// <remarks>Zero based indexing.</remarks>
-    public bool TryGet(int parameter, out string value)
+    public bool TryGet(int parameter, [MaybeNullWhen(false)] out string value)
     {
         parameter += ArgumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
-            value = null!;
+            value = null;
             return false;
         }
         value = _parameters[parameter];
@@ -1027,18 +1027,18 @@ public class CommandContext : ControlException
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed (even when the user is offline).</returns>
-    public bool TryGet(int parameter, out ulong steam64, out WarfarePlayer? onlinePlayer, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
+    public bool TryGet(int parameter, out CSteamID steam64, out WarfarePlayer? onlinePlayer, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
     {
         parameter += ArgumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Player;
-            steam64 = CallerId.m_SteamID;
+            steam64 = CallerId;
             return true;
         }
         if (parameter < 0 || parameter >= _argumentCount)
         {
-            steam64 = 0;
+            steam64 = CSteamID.Nil;
             onlinePlayer = null;
             return false;
         }
@@ -1048,14 +1048,14 @@ public class CommandContext : ControlException
         {
             if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
             {
-                steam64 = steamId.m_SteamID;
+                steam64 = steamId;
                 onlinePlayer = _playerService.GetOnlinePlayer(steam64);
                 return true;
             }
             onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
             if (onlinePlayer is { IsOnline: true })
             {
-                steam64 = onlinePlayer.Steam64.m_SteamID;
+                steam64 = onlinePlayer.Steam64;
                 return true;
             }
         }
@@ -1073,18 +1073,18 @@ public class CommandContext : ControlException
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed and that player is in <paramref name="selection"/>.</returns>
-    public bool TryGet(int parameter, out ulong steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
+    public bool TryGet(int parameter, out CSteamID steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
     {
         parameter += ArgumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Player;
-            steam64 = CallerId.m_SteamID;
+            steam64 = CallerId;
             return selection.Contains(Caller);
         }
         if (parameter < 0 || parameter >= _argumentCount)
         {
-            steam64 = 0;
+            steam64 = CSteamID.Nil;
             onlinePlayer = null;
             return false;
         }
@@ -1098,10 +1098,10 @@ public class CommandContext : ControlException
         }
         if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            steam64 = steamId.m_SteamID;
+            steam64 = steamId;
             foreach (WarfarePlayer player in selection)
             {
-                if (player.Steam64.m_SteamID == steam64)
+                if (player.Steam64.m_SteamID == steam64.m_SteamID)
                 {
                     onlinePlayer = player;
                     return true;
@@ -1111,7 +1111,7 @@ public class CommandContext : ControlException
         onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, searchType)!;
         if (onlinePlayer is { IsOnline: true })
         {
-            steam64 = onlinePlayer.Steam64.m_SteamID;
+            steam64 = onlinePlayer.Steam64;
             return true;
         }
 
@@ -1130,7 +1130,7 @@ public class CommandContext : ControlException
     /// <param name="selector">Filter assets to pick from.</param>
     /// <remarks>Zero based indexing. Do not use <see cref="ushort"/>s to search for objects, this is a deprecated feature by Unturned.</remarks>
     /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>
-    public bool TryGet<TAsset>(int parameter, [NotNullWhen(true)] out TAsset? asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
+    public bool TryGet<TAsset>(int parameter, [MaybeNullWhen(false)] out TAsset asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
     {
         if (!TryGetRange(parameter, out string? p, remainder ? -1 : len) || p.Length == 0)
         {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace Uncreated.Warfare.Util;
@@ -298,5 +299,67 @@ public static class CollectionUtility
                 result[i] = source[i];
         }
         return result;
+    }
+
+    /// <summary>
+    /// Adds an element to a position in the array.
+    /// </summary>
+    public static T[] AddToArray<T>([NotNullIfNotNull(nameof(array))] T[]? array, T value, int index = -1)
+    {
+        AddToArray(ref array, value, index);
+        return array!;
+    }
+
+    /// <summary>
+    /// Adds an element to a position in the array.
+    /// </summary>
+    public static void AddToArray<T>([NotNullIfNotNull(nameof(array))] ref T[]? array, T value, int index = -1)
+    {
+        if (array == null || array.Length == 0)
+        {
+            array = [ value ];
+            return;
+        }
+        if (index < 0)
+            index = array.Length;
+        T[] old = array;
+        array = new T[old.Length + 1];
+        if (index != 0)
+            Array.Copy(old, array, index);
+        if (index != old.Length)
+            Array.Copy(old, index, array, index + 1, old.Length - index);
+        array[index] = value;
+    }
+
+    /// <summary>
+    /// Removes an element from an index in the array.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    public static T[] RemoveFromArray<T>(T[] array, int index)
+    {
+        RemoveFromArray(ref array, index);
+        return array;
+    }
+
+    /// <summary>
+    /// Removes an element from an index in the array.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    public static void RemoveFromArray<T>(ref T[] array, int index)
+    {
+        if (array == null)
+            throw new ArgumentNullException(nameof(array));
+        
+        if (index < 0 || index >= array.Length)
+            throw new ArgumentOutOfRangeException(nameof(index), "Index out of bounds of the array.");
+
+        T[] old = array;
+        array = new T[old.Length - 1];
+        if (index != 0)
+            Array.Copy(old, 0, array, 0, index);
+        if (index != array.Length)
+            Array.Copy(old, index + 1, array, index, array.Length - index);
     }
 }

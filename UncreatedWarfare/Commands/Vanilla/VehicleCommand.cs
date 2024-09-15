@@ -2,9 +2,9 @@
 using System;
 using System.Globalization;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
 

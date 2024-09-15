@@ -23,13 +23,13 @@ namespace Uncreated.Warfare.Actions;
 public class ActionManager : ISessionHostedService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
 
     private readonly ActionMenuUI _ui;
     public ActionManager(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
-        _playerService = serviceProvider.GetRequiredService<PlayerService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         _ui = serviceProvider.GetRequiredService<ActionMenuUI>();
 

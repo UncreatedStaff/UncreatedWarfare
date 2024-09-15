@@ -3,6 +3,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Teams;
@@ -35,15 +36,6 @@ public class RequestTranslations : PropertiesTranslationCollection
 
     [TranslationData("Generic error trying to upgrade a player's loadout.", "Generic error message")]
     public readonly Translation<string> RequestUpgradeError = new Translation<string>("<#a4baa9>Error opening ticket: <#fff>{0}</color>.", arg0Fmt: UppercaseAddon.Instance);
-
-    [TranslationData("Sent if a player tries to upgrade their loadout but they it's already up to date.", "The name of the kit they're trying to upgrade")]
-    public readonly Translation<Kit> DoesNotNeedUpgrade = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be upgraded. If you're trying to update the kit and it was created during this season, open a help ticket.", arg0Fmt: Kit.FormatDisplayName);
-
-    [TranslationData("Sent if an admin tries to unlock a kit that isn't locked.", "The name of the kit", IsPriorityTranslation = false)]
-    public readonly Translation<Kit> DoesNotNeedUnlock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be unlocked.", arg0Fmt: Kit.FormatDisplayName);
-
-    [TranslationData("Sent if an admin tries to lock a kit that is already locked.", "The name of the kit", IsPriorityTranslation = false)]
-    public readonly Translation<Kit> DoesNotNeedLock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be locked.", arg0Fmt: Kit.FormatDisplayName);
 
     [TranslationData("Sent when a player tries to upgrade a kit that isn't a loadout.", "The name of the kit they're trying to upgrade")]
     public readonly Translation<Kit> RequestUpgradeOnKit = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> can't be upgraded.", arg0Fmt: Kit.FormatDisplayName);

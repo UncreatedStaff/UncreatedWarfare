@@ -27,6 +27,8 @@ internal class KitUnfavoriteCommand : IExecutableCommand
         Context.AssertRanByPlayer();
 
         string? kitId = null;
+        Kit? kit = null;
+        bool signLoadout = false;
 
         // kit favorite [kit id or sign]
         if (Context.HasArgs(1))
@@ -37,17 +39,22 @@ internal class KitUnfavoriteCommand : IExecutableCommand
                  && barricade.interactable is not InteractableSign
                  && _signs.GetSignProvider(barricade) is KitSignInstanceProvider signData)
         {
-            kitId = signData.LoadoutNumber > 0
-                ? KitEx.GetLoadoutName(Context.CallerId.m_SteamID, signData.LoadoutNumber)
-                : signData.KitId;
+            if (signData.LoadoutNumber > 0)
+            {
+                kitId = LoadoutIdHelper.GetLoadoutSignDisplayText(signData.LoadoutNumber);
+                kit = await _kitManager.Loadouts.GetLoadout(Context.CallerId, signData.LoadoutNumber, token);
+                signLoadout = true;
+            }
+            else
+                kitId = signData.KitId;
         }
 
-        if (kitId == null)
+        if (kitId == null || signLoadout && kit == null)
         {
             throw Context.Reply(_translations.KitOperationNoTarget);
         }
 
-        Kit? kit = await _kitManager.FindKit(kitId, token, exactMatchOnly: false);
+        kit ??= await _kitManager.FindKit(kitId, token, exactMatchOnly: false);
         if (kit == null)
         {
             throw Context.Reply(_translations.KitNotFound, kitId);

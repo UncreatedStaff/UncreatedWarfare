@@ -109,6 +109,12 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
         return kit;
     }
 
+    internal void RemoveKit(uint pk, string kitId)
+    {
+        KitDataById.TryRemove(kitId, out _);
+        KitDataByKey.TryRemove(pk, out _);
+    }
+
     async UniTask IAsyncEventListener<PlayerJoined>.HandleEventAsync(PlayerJoined e, IServiceProvider serviceProvider, CancellationToken token)
     {
         foreach (Kit kit in KitDataById.Values)

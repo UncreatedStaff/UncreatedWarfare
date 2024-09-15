@@ -266,10 +266,10 @@ partial class KitManager
     }
 
     public Task DownloadPlayerKitData(UCPlayer player, bool lockPurchaseSync, CancellationToken token = default) =>
-        DownloadPlayersKitData(new UCPlayer[] { player }, lockPurchaseSync, token);
+        DownloadPlayersKitData([ player ], lockPurchaseSync, token);
 
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> HasAccess(uint kit, ulong player, CancellationToken token = default)
+    public async Task<bool> HasAccess(uint kit, CSteamID player, CancellationToken token = default)
     {
         using IServiceScope scope = _serviceProvider.CreateScope();
         await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
@@ -278,17 +278,19 @@ partial class KitManager
     }
 
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> HasAccess(IKitsDbContext dbContext, uint kit, ulong player, CancellationToken token = default)
+    public async Task<bool> HasAccess(IKitsDbContext dbContext, uint kit, CSteamID player, CancellationToken token = default)
     {
-        return kit != 0 && await dbContext.KitAccess.AnyAsync(x => x.KitId == kit && x.Steam64 == player, token);
+        ulong s64 = player.m_SteamID;
+        return kit != 0 && await dbContext.KitAccess.AnyAsync(x => x.KitId == kit && x.Steam64 == s64, token);
     }
 
-    internal async Task<bool> AddAccessRow(uint kit, ulong player, KitAccessType type, CancellationToken token = default)
+    internal async Task<bool> AddAccessRow(uint kit, CSteamID player, KitAccessType type, CancellationToken token = default)
     {
         using IServiceScope scope = _serviceProvider.CreateScope();
         await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
-        if (await dbContext.KitAccess.FirstOrDefaultAsync(kitAccess => kitAccess.Steam64 == player && kitAccess.KitId == kit, token) is { } access)
+        ulong s64 = player.m_SteamID;
+        if (await dbContext.KitAccess.FirstOrDefaultAsync(kitAccess => kitAccess.Steam64 == s64 && kitAccess.KitId == kit, token) is { } access)
         {
             if (access.AccessType == type)
                 return false;
@@ -301,7 +303,7 @@ partial class KitManager
             dbContext.Add(new KitAccess
             {
                 KitId = kit,
-                Steam64 = player,
+                Steam64 = s64,
                 AccessType = type,
                 Timestamp = DateTimeOffset.UtcNow
             });
@@ -317,13 +319,14 @@ partial class KitManager
             return false;
         }
     }
-    internal async Task<bool> RemoveAccessRow(uint kit, ulong player, CancellationToken token = default)
+    internal async Task<bool> RemoveAccessRow(uint kit, CSteamID player, CancellationToken token = default)
     {
         using IServiceScope scope = _serviceProvider.CreateScope();
         await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
+        ulong s64 = player.m_SteamID;
         List<KitAccess> access = await dbContext.KitAccess
-            .Where(x => x.KitId == kit && x.Steam64 == player)
+            .Where(x => x.KitId == kit && x.Steam64 == s64)
             .ToListAsync(token)
             .ConfigureAwait(false);
 
@@ -343,7 +346,7 @@ partial class KitManager
     }
 
     /// <remarks>Thread Safe</remarks>
-    public async Task<bool> RemoveHotkey(uint kit, ulong player, byte slot, CancellationToken token = default)
+    public async Task<bool> RemoveHotkey(uint kit, CSteamID player, byte slot, CancellationToken token = default)
     {
         if (!KitEx.ValidSlot(slot))
             throw new ArgumentException("Invalid slot number.", nameof(slot));
@@ -351,17 +354,36 @@ partial class KitManager
         using IServiceScope scope = _serviceProvider.CreateScope();
         await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
 
-        List<KitHotkey> hotkeys = await dbContext.KitHotkeys.Where(x => x.KitId == kit && x.Steam64 == player && x.Slot == slot)
-            .ToListAsync(token).ConfigureAwait(false);
+        ulong s64 = player.m_SteamID;
+        List<KitHotkey> hotkeys = await dbContext.KitHotkeys
+            .Where(x => x.KitId == kit && x.Steam64 == s64 && x.Slot == slot)
+            .ToListAsync(token)
+            .ConfigureAwait(false);
 
         if (hotkeys is not { Count: > 0 })
             return false;
 
         dbContext.KitHotkeys.RemoveRange(hotkeys);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        if (UCWarfare.IsLoaded && UCPlayer.FromID(player) is { IsOnline: true } ucPlayer)
+
+        WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(player);
+        if (onlinePlayer != null)
         {
-            ucPlayer.HotkeyBindings?.RemoveAll(x => x.Slot == slot && x.Kit == kit);
+            _ = Task.Run(async () =>
+            {
+                await onlinePlayer.PurchaseSync.WaitAsync(onlinePlayer.DisconnectToken);
+                try
+                {
+                    await UniTask.SwitchToMainThread(onlinePlayer.DisconnectToken);
+                    if (!onlinePlayer.IsOnline)
+                        return;
+                    onlinePlayer.Component<HotkeyPlayerComponent>().HotkeyBindings?.RemoveAll(x => x.Slot == slot && x.Kit == kit);
+                }
+                finally
+                {
+                    onlinePlayer.PurchaseSync.Release();
+                }
+            });
         }
         return true;
     }
@@ -451,7 +473,7 @@ partial class KitManager
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            ulong steam64 = player.Steam64;
+            ulong steam64 = player.Steam64.m_SteamID;
 
             player.LayoutTransformations?.RemoveAll(x => x.Kit == kit);
 
@@ -522,7 +544,7 @@ partial class KitManager
             }
 
             // check for missing items
-            ulong steam64 = player.Steam64;
+            ulong steam64 = player.Steam64.m_SteamID;
             foreach (IPageKitItem jar in kitItems.OfType<IPageKitItem>().Where(x => !items.Contains(x)))
             {
                 L.LogDebug("Missing item " + jar + ", trying to fit somewhere.");

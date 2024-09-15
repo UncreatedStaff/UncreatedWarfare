@@ -2,6 +2,7 @@
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
@@ -44,6 +45,9 @@ public class KitCommandTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent when the player copies a kit with /kit copyfrom <source> <name>", "Source Kit", "New Kit", IsPriorityTranslation = false)]
     public readonly Translation<Kit, Kit> KitCopied = new Translation<Kit, Kit>("<#a0ad8e>Copied data from <#c7b197>{0}</color> into a new kit: <#fff>{1}</color>.", arg0Fmt: Kit.FormatId, arg1Fmt: Kit.FormatId);
+    
+    [TranslationData("Sent when the player tried to copy a kit that isn't a loadout to a kit with a loadout-style name.", "Source Kit", "New Kit", IsPriorityTranslation = false)]
+    public readonly Translation<Kit, string> KitCopyNonLoadoutToLoadout = new Translation<Kit, string>("<#a0ad8e>Can't copy <#c7b197>{0}</color> to a kit called <#fff>{1}</color>. The source kit has to also be a loadout.", arg0Fmt: Kit.FormatId);
 
     [TranslationData("Sent when the player deletes a kit with /kit delete <name>", IsPriorityTranslation = false)]
     public readonly Translation<Kit> KitDeleted = new Translation<Kit>("<#a0ad8e>Deleted kit: <#fff>{0}</color>.", arg0Fmt: Kit.FormatId);
@@ -130,13 +134,13 @@ public class KitCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess = new Translation<IPlayer, Kit>("<#ff8c69>{0} doesn't have access to <#fff>{1}</color>.", arg0Fmt: UCPlayer.FormatColoredCharacterName, arg1Fmt: Kit.FormatId);
 
     [TranslationData("Sent to a player when they give another player access to a kit.", IsPriorityTranslation = false)]
-    public readonly Translation<IPlayer, ulong, Kit> KitAccessGiven = new Translation<IPlayer, ulong, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", arg0Fmt: UCPlayer.FormatColoredPlayerName, arg2Fmt: Kit.FormatId);
+    public readonly Translation<IPlayer, IPlayer, Kit> KitAccessGiven = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", arg0Fmt: UCPlayer.FormatColoredPlayerName, arg1Fmt: UCPlayer.FormatSteam64, arg2Fmt: Kit.FormatId);
     
     [TranslationData("Sent to a player when they remove another player's access to a kit.", IsPriorityTranslation = false)]
-    public readonly Translation<IPlayer, ulong, Kit> KitAccessRevoked = new Translation<IPlayer, ulong, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", arg0Fmt: UCPlayer.FormatColoredPlayerName, arg2Fmt: Kit.FormatId);
+    public readonly Translation<IPlayer, IPlayer, Kit> KitAccessRevoked = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", arg0Fmt: UCPlayer.FormatColoredPlayerName, arg1Fmt: UCPlayer.FormatSteam64, arg2Fmt: Kit.FormatId);
 
     [TranslationData("Sent to a player after they start creating a new loadout.", IsPriorityTranslation = false)]
-    public readonly Translation<Class, IPlayer, ulong, Kit> LoadoutCreated = new Translation<Class, IPlayer, ulong, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: UCPlayer.FormatColoredCharacterName, arg3Fmt: Kit.FormatId);
+    public readonly Translation<Class, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<Class, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: UCPlayer.FormatColoredCharacterName, arg2Fmt: UCPlayer.FormatSteam64, arg3Fmt: Kit.FormatId);
     
     [TranslationData("Sent to a player when they try to create a kit with a faction that isn't in our database.", IsPriorityTranslation = false)]
     public readonly Translation<string> FactionNotFound = new Translation<string>("<#ff8c69>Unable to find a faction called <#fff>{0}</color>.");
@@ -168,14 +172,23 @@ public class KitCommandTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to a player after they update the season of a normal kit.", IsPriorityTranslation = false)]
     public readonly Translation<Kit> KitUpgraded = new Translation<Kit>("<#a0ad8e>Upgraded <#e8e2d1>{0}</color>.", arg0Fmt: Kit.FormatDisplayName);
 
+    [TranslationData("Sent if a player tries to upgrade their loadout but they it's already up to date.", "The name of the kit they're trying to upgrade")]
+    public readonly Translation<Kit> DoesNotNeedUpgrade = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be upgraded. If you're trying to update the kit and it was created during this season, open a help ticket.", arg0Fmt: Kit.FormatDisplayName);
+
     [TranslationData("Sent to a player after they enable a normal kit or unlock a loadout.", IsPriorityTranslation = false)]
     public readonly Translation<Kit> KitUnlocked = new Translation<Kit>("<#a0ad8e>Unlocked <#e8e2d1>{0}</color>.", arg0Fmt: Kit.FormatDisplayName);
+
+    [TranslationData("Sent to a player after their loadout is finished being made by staff.")]
+    public readonly Translation<Kit> DMLoadoutUnlocked = new Translation<Kit>("<#a0ad8e>Your kit, <#e8e2d1>{0}</color>, is ready.", arg0Fmt: Kit.FormatDisplayName);
+
+    [TranslationData("Sent if an admin tries to unlock a kit that isn't locked.", "The name of the kit", IsPriorityTranslation = false)]
+    public readonly Translation<Kit> DoesNotNeedUnlock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be unlocked.", arg0Fmt: Kit.FormatDisplayName);
 
     [TranslationData("Sent to a player after they disable a normal kit or lock a loadout.", IsPriorityTranslation = false)]
     public readonly Translation<Kit> KitLocked = new Translation<Kit>("<#a0ad8e>Locked <#e8e2d1>{0}</color>.", arg0Fmt: Kit.FormatDisplayName);
 
-    [TranslationData("Sent to a player after their loadout is finished being made by staff.")]
-    public readonly Translation<Kit> DMLoadoutUnlocked = new Translation<Kit>("<#a0ad8e>Your kit, <#e8e2d1>{0}</color>, is ready.", arg0Fmt: Kit.FormatDisplayName);
+    [TranslationData("Sent if an admin tries to lock a kit that is already locked.", "The name of the kit", IsPriorityTranslation = false)]
+    public readonly Translation<Kit> DoesNotNeedLock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be locked.", arg0Fmt: Kit.FormatDisplayName);
 
     [TranslationData("Sent when the caller doesn't enter a valid integer for level.", "Skill name", "Max level", IsPriorityTranslation = false)]
     public readonly Translation<string, int> KitInvalidSkillsetLevel = new Translation<string, int>("<#ff8c69>Please give a level between <#fff>0</color> and <#fff>{1}</color> for <#ddd>{0}</color>");

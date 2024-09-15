@@ -2,6 +2,7 @@
 using System.IO;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Commands;
 

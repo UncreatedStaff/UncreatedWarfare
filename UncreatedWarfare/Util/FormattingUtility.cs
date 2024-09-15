@@ -260,7 +260,7 @@ public static class FormattingUtility
     /// <summary>
     /// Parse any common type.
     /// </summary>
-    public static bool TryParseAny(string input, CultureInfo culture, Type type, out object? value)
+    public static bool TryParseAny(string input, IFormatProvider provider, Type type, out object? value)
     {
         value = null!;
         if (input is null || type is null || string.IsNullOrEmpty(input)) return false;
@@ -282,7 +282,7 @@ public static class FormattingUtility
                     return value is not null;
                 }
 
-                if (ushort.TryParse(input, NumberStyles.Any, culture, out ushort id))
+                if (ushort.TryParse(input, NumberStyles.Any, provider, out ushort id))
                 {
                     value = Assets.find(UCAssetManager.GetAssetCategory(type), id);
                     if (!type.IsInstanceOfType(value))
@@ -316,57 +316,92 @@ public static class FormattingUtility
         {
             if (type == typeof(ulong))
             {
-                bool res = ulong.TryParse(input, NumberStyles.Any, culture, out ulong v2);
+                bool res = ulong.TryParse(input, NumberStyles.Any, provider, out ulong v2);
                 value = v2;
                 return res;
             }
 
             if (type == typeof(float))
             {
-                bool res = float.TryParse(input, NumberStyles.Any, culture, out float v2);
+                bool res = float.TryParse(input, NumberStyles.Any, provider, out float v2);
                 value = v2;
                 return res;
             }
 
             if (type == typeof(long))
             {
-                bool res = long.TryParse(input, NumberStyles.Any, culture, out long v2);
+                bool res = long.TryParse(input, NumberStyles.Any, provider, out long v2);
                 value = v2;
                 return res;
             }
 
             if (type == typeof(ushort))
             {
-                bool res = ushort.TryParse(input, NumberStyles.Any, culture, out ushort v2);
+                bool res = ushort.TryParse(input, NumberStyles.Any, provider, out ushort v2);
                 value = v2;
                 return res;
             }
 
             if (type == typeof(short))
             {
-                bool res = short.TryParse(input, NumberStyles.Any, culture, out short v2);
+                bool res = short.TryParse(input, NumberStyles.Any, provider, out short v2);
                 value = v2;
                 return res;
             }
 
             if (type == typeof(byte))
             {
-                bool res = byte.TryParse(input, NumberStyles.Any, culture, out byte v2);
+                bool res = byte.TryParse(input, NumberStyles.Any, provider, out byte v2);
                 value = v2;
                 return res;
             }
 
             if (type == typeof(int))
             {
-                bool res = int.TryParse(input, NumberStyles.Any, culture, out int v2);
+                bool res = int.TryParse(input, NumberStyles.Any, provider, out int v2);
                 value = v2;
                 return res;
             }
 
             if (type == typeof(uint))
             {
-                bool res = uint.TryParse(input, NumberStyles.Any, culture, out uint v2);
+                bool res = uint.TryParse(input, NumberStyles.Any, provider, out uint v2);
                 value = v2;
+                return res;
+            }
+
+            if (type == typeof(nint))
+            {
+                bool res;
+                if (IntPtr.Size == 4)
+                {
+                    res = int.TryParse(input, NumberStyles.Any, provider, out int v2);
+                    value = (nint)v2;
+                }
+                else
+                {
+                    res = long.TryParse(input, NumberStyles.Any, provider, out long v2);
+                    value = (nint)v2;
+                }
+
+                return res;
+            }
+
+            if (type == typeof(nuint))
+            {
+                bool res;
+
+                if (IntPtr.Size == 4)
+                {
+                    res = uint.TryParse(input, NumberStyles.Any, provider, out uint v2);
+                    value = (nuint)v2;
+                }
+                else
+                {
+                    res = ulong.TryParse(input, NumberStyles.Any, provider, out ulong v2);
+                    value = (nuint)v2;
+                }
+
                 return res;
             }
 
@@ -407,14 +442,14 @@ public static class FormattingUtility
 
             if (type == typeof(sbyte))
             {
-                bool res = sbyte.TryParse(input, NumberStyles.Any, culture, out sbyte v2);
+                bool res = sbyte.TryParse(input, NumberStyles.Any, provider, out sbyte v2);
                 value = v2;
                 return res;
             }
 
             if (type == typeof(double))
             {
-                bool res = double.TryParse(input, NumberStyles.Any, culture, out double v2);
+                bool res = double.TryParse(input, NumberStyles.Any, provider, out double v2);
                 value = v2;
                 return res;
             }
@@ -430,7 +465,7 @@ public static class FormattingUtility
             }
             
             Type @internal = type.GenericTypeArguments[0];
-            if (!@internal.IsGenericType && TryParseAny(input, culture, @internal, out object? val) && val is not null)
+            if (!@internal.IsGenericType && TryParseAny(input, provider, @internal, out object? val) && val is not null)
             {
                 value = Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(type), val);
                 return value is not null;
@@ -438,23 +473,24 @@ public static class FormattingUtility
 
             return false;
         }
+
         if (type == typeof(decimal))
         {
-            bool res = decimal.TryParse(input, NumberStyles.Any, culture, out decimal v2);
+            bool res = decimal.TryParse(input, NumberStyles.Any, provider, out decimal v2);
             value = v2;
             return res;
         }
         
         if (type == typeof(DateTime))
         {
-            bool res = DateTime.TryParse(input, culture, DateTimeStyles.AssumeLocal, out DateTime v2);
+            bool res = DateTime.TryParse(input, provider, DateTimeStyles.AssumeLocal, out DateTime v2);
             value = v2;
             return res;
         }
         
         if (type == typeof(TimeSpan))
         {
-            bool res = TimeSpan.TryParse(input, culture, out TimeSpan v2);
+            bool res = TimeSpan.TryParse(input, provider, out TimeSpan v2);
             value = v2;
             return res;
         }
@@ -468,7 +504,7 @@ public static class FormattingUtility
         
         if (type == typeof(Vector2))
         {
-            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, culture, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            float[] vals = input.Split(',').Select(x => float.TryParse(x, NumberStyles.Any, provider, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
             if (vals.Length == 2)
             {
                 value = new Vector2(vals[0], vals[1]);
@@ -479,7 +515,7 @@ public static class FormattingUtility
         
         if (type == typeof(Vector3))
         {
-            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, culture, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            float[] vals = input.Split(',').Select(x => float.TryParse(x, NumberStyles.Any, provider, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
             if (vals.Length == 3)
             {
                 value = new Vector3(vals[0], vals[1], vals[2]);
@@ -490,7 +526,7 @@ public static class FormattingUtility
         
         if (type == typeof(Vector4))
         {
-            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, culture, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            float[] vals = input.Split(',').Select(x => float.TryParse(x, NumberStyles.Any, provider, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
             if (vals.Length == 4)
             {
                 value = new Vector4(vals[0], vals[1], vals[2], vals[3]);
@@ -501,10 +537,15 @@ public static class FormattingUtility
         
         if (type == typeof(Quaternion))
         {
-            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, culture, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            float[] vals = input.Split(',').Select(x => float.TryParse(x, NumberStyles.Any, provider, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
             if (vals.Length == 4)
             {
                 value = new Quaternion(vals[0], vals[1], vals[2], vals[3]);
+                return true;
+            }
+            if (vals.Length == 3)
+            {
+                value = Quaternion.Euler(vals[0], vals[1], vals[2]);
                 return true;
             }
             return false;
@@ -512,7 +553,7 @@ public static class FormattingUtility
         
         if (type == typeof(Color))
         {
-            if (!HexStringHelper.TryParseColor(input, CultureInfo.InvariantCulture, out Color color))
+            if (!HexStringHelper.TryParseColor(input, provider, out Color color))
                 return false;
             
             value = color;
@@ -521,10 +562,19 @@ public static class FormattingUtility
         
         if (type == typeof(Color32))
         {
-            if (!HexStringHelper.TryParseColor32(input, CultureInfo.InvariantCulture, out Color32 color))
+            if (!HexStringHelper.TryParseColor32(input, provider, out Color32 color))
                 return false;
             
             value = color;
+            return true;
+        }
+        
+        if (type == typeof(CSteamID))
+        {
+            if (!TryParseSteamId(input, out CSteamID steam64))
+                return false;
+            
+            value = steam64;
             return true;
         }
 

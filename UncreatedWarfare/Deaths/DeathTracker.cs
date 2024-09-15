@@ -9,7 +9,6 @@ using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
@@ -20,7 +19,7 @@ public class DeathTracker : IHostedService
     private readonly ILogger<DeathTracker> _logger;
     private readonly DeathMessageResolver _deathMessageResolver;
     private readonly WarfareModule _warfare;
-    private readonly PlayerService _playerService;
+    private readonly IPlayerService _playerService;
 
     public const EDeathCause MainCampDeathCauseOffset = (EDeathCause)100;
     public const EDeathCause InEnemyMainDeathCause = (EDeathCause)37;
@@ -30,7 +29,7 @@ public class DeathTracker : IHostedService
     private static readonly InstanceSetter<PlayerLife, bool>? PVPDeathField = Accessor.GenerateInstancePropertySetter<PlayerLife, bool>("wasPvPDeath");
     private static readonly InstanceGetter<InteractableSentry, Player>? SentryTargetPlayerField = Accessor.GenerateInstanceGetter<InteractableSentry, Player>("targetPlayer");
 
-    public DeathTracker(ILogger<DeathTracker> logger, DeathMessageResolver deathMessageResolver, WarfareModule warfare, PlayerService playerService)
+    public DeathTracker(ILogger<DeathTracker> logger, DeathMessageResolver deathMessageResolver, WarfareModule warfare, IPlayerService playerService)
     {
         _logger = logger;
         _warfare = warfare;

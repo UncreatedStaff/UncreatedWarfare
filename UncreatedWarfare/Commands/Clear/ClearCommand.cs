@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;

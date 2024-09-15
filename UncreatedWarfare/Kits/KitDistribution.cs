@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.Kits;
 
 public class KitDistribution(KitManager manager, IServiceProvider serviceProvider)
 {
-    private readonly PlayerService _playerService = serviceProvider.GetRequiredService<PlayerService>();
+    private readonly IPlayerService _playerService = serviceProvider.GetRequiredService<IPlayerService>();
     public KitManager Manager { get; } = manager;
 
     /// <summary>

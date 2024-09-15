@@ -19,6 +19,7 @@ public class SkillsetPlayerComponent : IPlayerComponent
     /// <summary>
     /// Set the given skill back to it's default value.
     /// </summary>
+    /// <exception cref="GameThreadException"/>
     public void ResetSkillset(EPlayerSpeciality speciality, byte skill)
     {
         GameThread.AssertCurrent();
@@ -67,6 +68,7 @@ public class SkillsetPlayerComponent : IPlayerComponent
     /// <summary>
     /// Update the player's skill value for the given skillset.
     /// </summary>
+    /// <exception cref="GameThreadException"/>
     public void EnsureSkillset(Skillset skillset)
     {
         GameThread.AssertCurrent();
@@ -90,12 +92,14 @@ public class SkillsetPlayerComponent : IPlayerComponent
     /// <summary>
     /// Update the player's skill values to match <see cref="Skillset.DefaultSkillsets"/>.
     /// </summary>
+    /// <exception cref="GameThreadException"/>
     public void EnsureDefaultSkillsets() => EnsureSkillsets(Array.Empty<Skillset>());
 
     /// <summary>
     /// Update the player's skill values to match the given list of skillset overrides.
     /// </summary>
     /// <remarks>If a value isn't overridden, the values from <see cref="Skillset.DefaultSkillsets"/> will be used.</remarks>
+    /// <exception cref="GameThreadException"/>
     public void EnsureSkillsets(IEnumerable<Skillset> skillsets)
     {
         GameThread.AssertCurrent();
@@ -150,6 +154,26 @@ public class SkillsetPlayerComponent : IPlayerComponent
         }
     }
 
+    /// <summary>
+    /// Get the max level of a specific skill for a player.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    public int GetMaxSkillLevel(EPlayerSpeciality speciality, byte skill)
+    {
+        Skill[][] skills = Player.UnturnedPlayer.skills.skills;
+        if (speciality < 0 || (int)speciality >= PlayerSkills.SPECIALITIES)
+            throw new ArgumentOutOfRangeException(nameof(speciality));
+
+        Skill[] specialitySkills = skills[(int)speciality];
+        if (skill >= specialitySkills.Length)
+            throw new ArgumentOutOfRangeException(nameof(skill));
+
+        return specialitySkills[skill].GetClampedMaxUnlockableLevel();
+    }
+
+    /// <summary>
+    /// Gets the default skill value from a fresh spawn.
+    /// </summary>
     public byte GetDefaultSkillLevel(EPlayerSpeciality speciality, byte skill)
     {
         Skill[][] skills = Player.UnturnedPlayer.skills.skills;
