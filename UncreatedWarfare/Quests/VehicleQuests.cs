@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if false
+using System;
 using System.Text.Json;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Vehicles;
@@ -378,3 +379,4 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
         }
     }
 }
+#endif

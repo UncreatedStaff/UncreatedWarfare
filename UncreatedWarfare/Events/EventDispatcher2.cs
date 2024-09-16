@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -56,11 +57,13 @@ public partial class EventDispatcher2 : IHostedService
         BarricadeManager.onBarricadeSpawned += BarricadeManagerOnBarricadeSpawned;
         BarricadeDrop.OnSalvageRequested_Global += BarricadeDropOnSalvageRequested;
         BarricadeManager.onModifySignRequested += BarricadeManagerOnModifySignRequested;
+        BarricadeManager.onDamageBarricadeRequested += BarricadeManagerOnDamageBarricadeRequested;
 
         /* Structures */
         StructureManager.onDeployStructureRequested += StructureManagerOnDeployStructureRequested;
         StructureManager.onStructureSpawned += StructureManagerOnStructureSpawned;
         StructureDrop.OnSalvageRequested_Global += StructureDropOnSalvageRequested;
+        StructureManager.onDamageStructureRequested += StructureManagerOnDamageStructureRequested;
 
         /* Vehicles */
         VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnToggleVehicleLockRequested;
@@ -88,11 +91,13 @@ public partial class EventDispatcher2 : IHostedService
         BarricadeManager.onBarricadeSpawned -= BarricadeManagerOnBarricadeSpawned;
         BarricadeDrop.OnSalvageRequested_Global -= BarricadeDropOnSalvageRequested;
         BarricadeManager.onModifySignRequested -= BarricadeManagerOnModifySignRequested;
+        BarricadeManager.onDamageBarricadeRequested -= BarricadeManagerOnDamageBarricadeRequested;
 
         /* Structures */
         StructureManager.onDeployStructureRequested -= StructureManagerOnDeployStructureRequested;
         StructureManager.onStructureSpawned -= StructureManagerOnStructureSpawned;
         StructureDrop.OnSalvageRequested_Global -= StructureDropOnSalvageRequested;
+        StructureManager.onDamageStructureRequested -= StructureManagerOnDamageStructureRequested;
 
         /* Vehicles */
         VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnToggleVehicleLockRequested;

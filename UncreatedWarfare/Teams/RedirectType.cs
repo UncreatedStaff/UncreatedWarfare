@@ -1,4 +1,6 @@
 ﻿using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Teams;

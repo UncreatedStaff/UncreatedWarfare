@@ -1,10 +1,9 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
-namespace Uncreated.Warfare.Players.Management.Legacy;
+namespace Uncreated.Warfare.Players;
 
 public struct PlayerNames : IPlayer
 {
@@ -126,30 +125,4 @@ public struct PlayerNames : IPlayer
     public static string SelectPlayerName(PlayerNames names) => names.PlayerName;
     public static string SelectCharacterName(PlayerNames names) => names.CharacterName;
     public static string SelectNickName(PlayerNames names) => names.NickName;
-}
-public sealed class UCPlayerEvents : IDisposable
-{
-    public UCPlayer Player { get; private set; }
-    public UCPlayerEvents(UCPlayer player)
-    {
-        Player = player;
-        Player.Player.inventory.onDropItemRequested += OnDropItemRequested;
-        Player.Player.inventory.onInventoryRemoved += OnItemRemoved;
-    }
-    public void Dispose()
-    {
-        if (Player.Player != null)
-        {
-            Player.Player.inventory.onInventoryRemoved -= OnItemRemoved;
-            Player.Player.inventory.onDropItemRequested -= OnDropItemRequested;
-        }
-
-        Player = null!;
-    }
-    private void OnDropItemRequested(PlayerInventory inventory, Item item, ref bool shouldAllow) => EventDispatcher.InvokeOnDropItemRequested(Player ?? UCPlayer.FromPlayer(inventory.player)!, inventory, item, ref shouldAllow);
-    private void OnItemRemoved(byte page, byte index, ItemJar jar)
-    {
-        if (Player is { IsOnline: true })
-            EventDispatcher.InvokeOnItemRemoved(Player, page, index, jar);
-    }
 }

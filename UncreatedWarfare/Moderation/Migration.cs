@@ -349,7 +349,7 @@ internal static class Migration
                     Distance = reader.IsDBNull(6) ? null : reader.GetFloat(6)
                 };
                 ushort itemId = reader.IsDBNull(5) ? (ushort)0 : reader.GetUInt16(5);
-                if (itemId != 0 && UCWarfare.IsLoaded && Assets.hasLoadedUgc && (Assets.find(EAssetType.ITEM, itemId) ?? Assets.find(EAssetType.VEHICLE, itemId)) is { } asset)
+                if (itemId != 0 && Provider.isInitialized && Assets.hasLoadedUgc && (Assets.find(EAssetType.ITEM, itemId) ?? Assets.find(EAssetType.VEHICLE, itemId)) is { } asset)
                 {
                     teamkill.ItemName = asset.FriendlyName ?? asset.name ?? asset.id.ToString();
                     teamkill.Item = asset.GUID;

@@ -1,66 +1,60 @@
 ﻿using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Models.Assets;
+using Uncreated.Warfare.Configuration;
+
 
 namespace Uncreated.Warfare.Events.Models.Structures;
-public class DamageStructureRequested : CancellableEvent, IBuildableDestroyedEvent
+
+/// <summary>
+/// Event listener args which handles <see cref="StructureManager.onDamageStructureRequested"/>.
+/// </summary>
+[EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
+public sealed class DamageStructureRequested(StructureRegion region) : DamageRequested(region)
 {
-    private readonly UCPlayer? _instigator;
-    private readonly ulong _instigatorId;
-    private readonly StructureDrop _drop;
-    private readonly StructureData _data;
-    private readonly StructureRegion _region;
-    private readonly byte _x;
-    private readonly byte _y;
-    private readonly bool _isSaved;
-    private readonly SqlItem<SavedStructure>? _save;
-    private readonly EDamageOrigin _damageOrigin;
-    private IBuildable? _buildable;
-    public UCPlayer? Instigator => _instigator;
-    public ulong InstigatorId => _instigatorId;
-    public StructureDrop Structure => _drop;
-    public StructureData ServersideData => _data;
-    public StructureRegion Region => _region;
-    public Transform Transform => _drop.model;
-    public byte RegionPosX => _x;
-    public byte RegionPosY => _y;
-    public uint InstanceID => _drop.instanceID;
-    public bool IsSaved => _isSaved;
-    public EDamageOrigin DamageOrigin => _damageOrigin;
-    public UnturnedAssetReference PrimaryAsset { get; }
-    public UnturnedAssetReference SecondaryAsset { get; }
-    public SqlItem<SavedStructure>? Save => _save;
-    public IBuildable Buildable => _buildable ??= new BuildableStructure(Structure);
-    object IBuildableDestroyedEvent.Region => Region;
-    public ushort PendingDamage { get; set; }
-    internal DamageStructureRequested(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin, ushort pendingTotalDamage, UnturnedAssetReference primaryAsset, UnturnedAssetReference secondaryAsset)
-    {
-        _damageOrigin = damageOrigin;
-        _instigator = instigator;
-        _instigatorId = instigatorId;
-        _drop = structure;
-        _data = structureData;
-        _region = region;
-        _x = x;
-        _y = y;
-        PendingDamage = pendingTotalDamage;
-        _save = save;
-        PrimaryAsset = primaryAsset;
-        SecondaryAsset = secondaryAsset;
-        if (save?.Manager is not null)
-        {
-            save.Manager.WriteWait();
-            try
-            {
-                if (save.Item != null)
-                {
-                    _buildable = save.Item.Buildable;
-                    _isSaved = true;
-                }
-            }
-            finally
-            {
-                save.Manager.WriteRelease();
-            }
-        }
-    }
+    /// <inheritdoc />
+    public override bool IsCancelled => base.IsCancelled || ServersideData.structure.isDead;
+
+    /// <summary>
+    /// The structure's object and model data.
+    /// </summary>
+    public required StructureDrop Structure { get; init; }
+
+    /// <summary>
+    /// The structure's server-side data.
+    /// </summary>
+    public required StructureData ServersideData { get; init; }
+
+    /// <summary>
+    /// The origin of the damage to the structure.
+    /// </summary>
+    public required EDamageOrigin DamageOrigin { get; init; }
+
+    /// <summary>
+    /// The item or vehicle that cause the damage to the structure.
+    /// </summary>
+    public required IAssetLink<Asset>? PrimaryAsset { get; init; }
+    
+    /// <summary>
+    /// The item or vehicle that cause the damage to the structure. This may be an alternate item like the grenade thrown at a landmine, etc.
+    /// </summary>
+    public required IAssetLink<Asset>? SecondaryAsset { get; init; }
+    
+    /// <summary>
+    /// The direction the ragdoll is sent.
+    /// </summary>
+    public required Vector3 Direction { get; init; }
+
+    /// <summary>
+    /// The region the structure was placed in.
+    /// </summary>
+    public StructureRegion Region => (StructureRegion)RegionObj;
+
+    /// <summary>
+    /// Abstracted <see cref="IBuildable"/> of the structure.
+    /// </summary>
+    public override IBuildable Buildable => BuildableCache ??= new BuildableStructure(Structure);
+
+    /// <summary>
+    /// The Unity model of the structure.
+    /// </summary>
+    public override Transform Transform => Structure.model;
 }

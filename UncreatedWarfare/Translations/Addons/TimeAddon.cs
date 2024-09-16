@@ -78,7 +78,7 @@ public sealed class TimeAddon : IArgumentAddon
 
     public static implicit operator ArgumentFormat(TimeAddon addon) => ReferenceEquals(addon, Instance) ? new ArgumentFormat(InstanceArray) : new ArgumentFormat(addon);
 
-    private static string ToLongTimeString(int seconds, LanguageInfo language)
+    internal static string ToLongTimeString(int seconds, LanguageInfo language)
     {
         // tested 09/13/2024
         int high, low;

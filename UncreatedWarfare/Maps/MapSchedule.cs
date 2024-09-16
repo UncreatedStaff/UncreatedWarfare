@@ -113,12 +113,12 @@ internal class MapScheduler : MonoBehaviour
             if (d.RemoveChildren is not null)
                 config.Ignore_Children_File_IDs.AddRange(d.RemoveChildren);
 
-            DirectoryInfo info = new DirectoryInfo(Path.Combine(Application.dataPath, "..", "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(Data.AdminLocale)));
+            DirectoryInfo info = new DirectoryInfo(Path.Combine(Application.dataPath, "..", "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(CultureInfo.InvariantCulture)));
             if (info.Exists)
             {
                 foreach (DirectoryInfo modFolder in info.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
                 {
-                    if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, Data.AdminLocale, out ulong mod))
+                    if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, CultureInfo.InvariantCulture, out ulong mod))
                         continue;
                     for (int i = 0; i < config.File_IDs.Count; ++i)
                     {

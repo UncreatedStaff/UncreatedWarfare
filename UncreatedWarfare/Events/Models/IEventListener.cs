@@ -1,7 +1,7 @@
 ﻿using System;
 using Uncreated.Warfare.Services;
 
-namespace Uncreated.Warfare.Events;
+namespace Uncreated.Warfare.Events.Models;
 
 /// <summary>
 /// Listen for an event in a non-asynchronous context. Object must be in the <see cref="IServiceProvider"/> or a <see cref="IEventListenerProvider"/>.

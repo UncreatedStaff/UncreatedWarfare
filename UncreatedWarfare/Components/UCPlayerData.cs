@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Components;
 
@@ -44,7 +43,6 @@ public class UCPlayerData : MonoBehaviour
     internal Guid LastGunShot; // used for amc
     internal ulong LastAttacker;
     public Player Player { get; private set; }
-    public Gamemodes.Interfaces.IStats Stats { get; internal set; }
     public float JoinTime { get; private set; }
     
     public void StartTracking(Player player)

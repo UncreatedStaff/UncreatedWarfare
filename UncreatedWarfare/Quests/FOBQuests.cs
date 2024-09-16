@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if false
+using System;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
@@ -568,3 +569,4 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
         }
     }
 }
+#endif

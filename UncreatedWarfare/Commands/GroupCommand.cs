@@ -54,12 +54,8 @@ public class GroupCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
-
         if (Context.MatchParameter(0, "join"))
         {
-            Context.AssertHelpCheck(1, "/group join <team>");
-
             Context.AssertArgs(2, "/group join <team>");
 
             await Context.AssertPermissions(PermissionJoin, token);

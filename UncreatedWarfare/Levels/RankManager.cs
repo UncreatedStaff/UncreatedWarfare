@@ -6,11 +6,14 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Ranks;
 public static class RankManager
@@ -31,8 +34,8 @@ public static class RankManager
             L.LogError(ex);
         }
     }
-    private static string GetSavePath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players", steam64.ToString(Data.AdminLocale) + "_0",
-        "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale), "RankProgress.dat");
+    private static string GetSavePath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players", steam64.ToString(CultureInfo.InvariantCulture) + "_0",
+        "Uncreated_S" + WarfareModule.Season.ToString(CultureInfo.InvariantCulture), "RankProgress.dat");
     public static void WriteRankData(UCPlayer player, RankStatus[] status)
     {
         string path = GetSavePath(player.Steam64);
@@ -495,7 +498,7 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
     public readonly Guid QuestID;
     public readonly Guid[] UnlockRequirements;
     public readonly int Order;
-    public readonly string Color;
+    public readonly Color32 Color;
     public readonly Dictionary<string, string> NameTranslations;
     public readonly Dictionary<string, string> AbbreviationTranslations;
     private RankData(int order)
@@ -503,24 +506,30 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         Order = order;
         NameTranslations = null!;
         AbbreviationTranslations = null!;
-        Color = UCWarfare.GetColorHex("default");
+        Color = new Color32(255, 255, 255, 255);
         UnlockRequirements = null!;
         QuestID = default;
     }
     public RankData(int order, Dictionary<string, string> names, Dictionary<string, string> abbreviations, string color, Guid questID, params Guid[] unlockRequirements)
+        : this(order, names, abbreviations, HexStringHelper.TryParseColor32(F.FilterRarityToHex(color), CultureInfo.InvariantCulture, out Color32 c32) ? c32 : new Color32(255, 255, 255, 255), questID, unlockRequirements) { }
+    public RankData(int order, Dictionary<string, string> names, Dictionary<string, string> abbreviations, Color32 color, Guid questID, params Guid[] unlockRequirements)
     {
-        Color = F.FilterRarityToHex(color);
+        Color = color;
         Order = order;
         NameTranslations = names;
         AbbreviationTranslations = abbreviations;
         QuestID = questID;
         UnlockRequirements = unlockRequirements;
     }
-    public RankData(int order, string name, string abbreviation, string color, Guid questID, params Guid[] unlockRequirements) :
+    public RankData(int order, string name, string abbreviation, string color, Guid questID, params Guid[] unlockRequirements)
+        : this(order, name, abbreviation, HexStringHelper.TryParseColor32(F.FilterRarityToHex(color), CultureInfo.InvariantCulture, out Color32 c32) ? c32 : new Color32(255, 255, 255, 255), questID, unlockRequirements) { }
+    public RankData(int order, string name, string abbreviation, Color32 color, Guid questID, params Guid[] unlockRequirements) :
         this(order, new Dictionary<string, string>(1) { { L.Default, name } }, new Dictionary<string, string>(1) { { L.Default, abbreviation } },
             color, questID, unlockRequirements)
     { }
-    public RankData(int order, string name, string abbreviation, string color, string questID, params string[] unlockRequirements) :
+    public RankData(int order, string name, string abbreviation, string color, string questID, params string[] unlockRequirements)
+        : this(order, name, abbreviation, HexStringHelper.TryParseColor32(F.FilterRarityToHex(color), CultureInfo.InvariantCulture, out Color32 c32) ? c32 : new Color32(255, 255, 255, 255), questID, unlockRequirements) { }
+    public RankData(int order, string name, string abbreviation, Color32 color, string questID, params string[] unlockRequirements) :
         this(order, name, abbreviation, color, Guid.TryParse(questID, out Guid guid) ? guid : Guid.Empty, ToGuidArray(unlockRequirements))
     { }
     private static Guid[] ToGuidArray(string[] strings)
@@ -530,21 +539,17 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
             res[i] = Guid.TryParse(strings[i], out Guid guid) ? guid : Guid.Empty;
         return res;
     }
-    public string GetName(LanguageInfo? lang, CultureInfo? culture)
+    public string GetName(LanguageInfo lang, CultureInfo culture)
     {
-        lang ??= Localization.GetDefaultLanguage();
-        culture ??= Localization.GetCultureInfo(lang);
         if (NameTranslations == null) return "L" + Order.ToString(culture);
         if (NameTranslations.TryGetValue(lang.Code, out string rtn) || (!lang.IsDefault && NameTranslations.TryGetValue(L.Default, out rtn)))
             return rtn;
         return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(culture));
     }
-    public string ColorizedName(LanguageInfo? lang, CultureInfo? culture) => "<color=#" + Color + ">" + GetName(lang, culture) + "</color>";
-    public string ColorizedAbbreviation(LanguageInfo? lang, CultureInfo? culture) => "<color=#" + Color + ">" + GetAbbreviation(lang, culture) + ".</color>";
-    public string GetAbbreviation(LanguageInfo? lang, CultureInfo? culture)
+    public string ColorizedName(LanguageInfo lang, CultureInfo culture) => "<color=#" + Color + ">" + GetName(lang, culture) + "</color>";
+    public string ColorizedAbbreviation(LanguageInfo lang, CultureInfo culture) => "<color=#" + Color + ">" + GetAbbreviation(lang, culture) + ".</color>";
+    public string GetAbbreviation(LanguageInfo lang, CultureInfo culture)
     {
-        lang ??= Localization.GetDefaultLanguage();
-        culture ??= Localization.GetCultureInfo(lang);
         if (AbbreviationTranslations == null) return "L" + Order.ToString(culture);
         if (AbbreviationTranslations.TryGetValue(lang.Code, out string rtn) || (!lang.IsDefault && AbbreviationTranslations.TryGetValue(L.Default, out rtn)))
             return rtn;
@@ -634,7 +639,7 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         else
         {
             return new RankData(order, names ?? new Dictionary<string, string>(0), abbreviations ?? new Dictionary<string, string>(0),
-                color ?? UCWarfare.GetColorHex("default"), questid, unlockrequirements == null ? Array.Empty<Guid>() : unlockrequirements.ToArray());
+                color != null && HexStringHelper.TryParseColor32(color, CultureInfo.InvariantCulture, out Color32 c32) ? c32 : new Color32(255, 255, 255, 255), questid, unlockrequirements == null ? Array.Empty<Guid>() : unlockrequirements.ToArray());
         }
     }
     public void Write(Utf8JsonWriter writer)
@@ -651,7 +656,7 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
             writer.WriteEndArray();
         }
         writer.WriteNumber("Order", Order);
-        writer.WriteString("Color", Color);
+        writer.WriteString("Color", HexStringHelper.FormatHexColor(Color));
         writer.WritePropertyName("NameTranslations");
         if (NameTranslations == null) writer.WriteNullValue();
         else
@@ -678,42 +683,39 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         }
     }
 
-    [FormatDisplay("Rank Name")]
-    public const string FormatName = "n";
-    [FormatDisplay("Colored Rank Name")]
-    public const string FormatColorName = "cn";
-    [FormatDisplay("Rank Abbreviation")]
-    public const string FormatAbbreviation = "a";
-    [FormatDisplay("Colored Rank Abbreviation")]
-    public const string FormatColorAbbreviation = "ca";
-    [FormatDisplay("Order")]
-    public const string FormatOrder = "o";
-    [FormatDisplay("Colored Order")]
-    public const string FormatColorOrder = "co";
-    [FormatDisplay("Order with L-Prefix")]
-    public const string FormatOrderLevel = "lo";
-    [FormatDisplay("Colored Order with L-Prefix")]
-    public const string FormatColorOrderLevel = "lco";
-    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    
+    public static readonly SpecialFormat FormatName = new SpecialFormat("Rank Name", "n");
+    
+    public static readonly SpecialFormat FormatColorName = new SpecialFormat("Colored Rank Name", "cn");
+    
+    public static readonly SpecialFormat FormatAbbreviation = new SpecialFormat("Rank Abbreviation", "a");
+    
+    public static readonly SpecialFormat FormatColorAbbreviation = new SpecialFormat("Colored Rank Abbreviation", "ca");
+    
+    public static readonly SpecialFormat FormatOrder = new SpecialFormat("Order", "o");
+    
+    public static readonly SpecialFormat FormatColorOrder = new SpecialFormat("Colored Order", "co");
+    
+    public static readonly SpecialFormat FormatOrderLevel = new SpecialFormat("Order with L-Prefix", "lo");
+    
+    public static readonly SpecialFormat FormatColorOrderLevel = new SpecialFormat("Colored Order with L-Prefix", "lco");
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        if (format is not null && !format.Equals(FormatName, StringComparison.Ordinal))
-        {
-            if (format.Equals(FormatColorName, StringComparison.Ordinal))
-                return Localization.Colorize(Color, GetName(language, culture), flags);
-            if (format.Equals(FormatAbbreviation, StringComparison.Ordinal))
-                return GetAbbreviation(language, culture);
-            if (format.Equals(FormatColorAbbreviation, StringComparison.Ordinal))
-                return Localization.Colorize(Color, GetAbbreviation(language, culture), flags);
-            if (format.Equals(FormatOrder, StringComparison.Ordinal))
-                return Order.ToString(culture ?? Localization.GetCultureInfo(language));
-            if (format.Equals(FormatOrder, StringComparison.Ordinal))
-                return Localization.Colorize(Color, Order.ToString(culture ?? Localization.GetCultureInfo(language)), flags);
-            if (format.Equals(FormatOrderLevel, StringComparison.Ordinal))
-                return "L " + Order.ToString(culture ?? Localization.GetCultureInfo(language));
-            if (format.Equals(FormatColorOrderLevel, StringComparison.Ordinal))
-                return "L " + Localization.Colorize(Color, Order.ToString(culture ?? Localization.GetCultureInfo(language)), flags);
-        }
+        if (FormatColorName.Match(in parameters))
+            return formatter.Colorize(GetName(parameters.Language, parameters.Culture), Color, parameters.Options);
+        if (FormatAbbreviation.Match(in parameters))
+            return GetAbbreviation(parameters.Language, parameters.Culture);
+        if (FormatColorAbbreviation.Match(in parameters))
+            return formatter.Colorize(GetAbbreviation(parameters.Language, parameters.Culture), Color, parameters.Options);
+        if (FormatOrder.Match(in parameters))
+            return Order.ToString(parameters.Culture);
+        if (FormatOrder.Match(in parameters))
+            return formatter.Colorize(Order.ToString(parameters.Culture), Color, parameters.Options);
+        if (FormatOrderLevel.Match(in parameters))
+            return "L " + Order.ToString(parameters.Culture);
+        if (FormatColorOrderLevel.Match(in parameters))
+            return "L " + formatter.Colorize(Order.ToString(parameters.Culture), Color, parameters.Options);
 
-        return GetName(language, culture);
+        return GetName(parameters.Language, parameters.Culture);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if false
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -155,3 +156,4 @@ public class PlaceholderQuest : BaseQuestData<PlaceholderQuest.Tracker, Placehol
         protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, Player!);
     }
 }
+#endif

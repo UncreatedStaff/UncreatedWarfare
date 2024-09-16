@@ -6,6 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles <see cref="BarricadeManager.onDeployBarricadeRequested"/>.
 /// </summary>
+[EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
 public class PlaceBarricadeRequested : CancellableEvent
 {
     private Vector3 _position;

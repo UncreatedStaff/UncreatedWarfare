@@ -14,13 +14,13 @@ public class LevelUnlockRequirement : UnlockRequirement
     public int UnlockLevel = -1;
 
     /// <inheritdoc />
-    public override bool CanAccessFast(UCPlayer player)
+    public override bool CanAccessFast(WarfarePlayer player)
     {
         return player.Level.Level >= UnlockLevel;
     }
 
     /// <inheritdoc />
-    public override string GetSignText(UCPlayer player)
+    public override string GetSignText(WarfarePlayer player)
     {
         if (UnlockLevel == 0)
             return string.Empty;
@@ -75,7 +75,7 @@ public class LevelUnlockRequirement : UnlockRequirement
     }
 
     /// <inheritdoc />
-    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, VehicleData data)
+    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
     {
         LevelData data2 = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestVehicleMissingLevels, data2);

@@ -143,7 +143,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(_translations.DutyOffFeedback);
             Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), _translations.DutyOffBroadcast, Context.Player);
 
-            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(Data.AdminLocale)}) went off duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
+            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went off duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", Context.CallerId.m_SteamID);
 
             PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, false);
@@ -153,7 +153,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(_translations.DutyOnFeedback);
             Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), _translations.DutyOnBroadcast, Context.Player);
 
-            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(Data.AdminLocale)}) went on duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
+            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went on duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", Context.CallerId.m_SteamID);
 
             PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, true);

@@ -27,7 +27,7 @@ public static class UCAssetManager
         {
             Assets.find(list);
             list.RemoveAll(k => !(k is { name: { }, itemName: { } } && (
-                itemName.Equals(k.id.ToString(Data.AdminLocale), StringComparison.OrdinalIgnoreCase) ||
+                itemName.Equals(k.id.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase) ||
                 insplits.All(l => k.itemName.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))));
 
             list.Sort((a, b) => a.itemName.Length.CompareTo(b.itemName.Length));
@@ -51,7 +51,7 @@ public static class UCAssetManager
                 Assets.find(list);
                     
                 list.RemoveAll(k => !(k is { name: { }, itemName: { } } && (
-                    itemName.Equals(k.id.ToString(Data.AdminLocale), StringComparison.OrdinalIgnoreCase) ||
+                    itemName.Equals(k.id.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase) ||
                     insplits.All(l => k.itemName.RemoveMany(false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))));
 
                 list.Sort((a, b) => a.itemName.Length.CompareTo(b.itemName.Length));

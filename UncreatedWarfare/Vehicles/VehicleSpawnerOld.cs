@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿#if false
+using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -106,7 +107,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
         if ((data == null || !VehicleBay.CanSoloVehicle(data)) && IsOnlyPassenger(player, out byte seat))
         {
             ActionLog.Add(ActionLogType.SoloRTB, (seat == 0 ? "Driver of " : "Passenger of ") + ActionLog.AsAsset(vehicle.asset) +
-                                                      "." + (seat == 0 ? string.Empty : " Seat: " + seat.ToString(Data.AdminLocale) + "."), player);
+                                                      "." + (seat == 0 ? string.Empty : " Seat: " + seat.ToString(CultureInfo.InvariantCulture) + "."), player);
         }
     }
     private static void OnPlayerLeftMain(UCPlayer player, ulong team)
@@ -122,7 +123,7 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
         if ((data == null || !VehicleBay.CanSoloVehicle(data)) && IsOnlyPassenger(player, out byte seat))
         {
             ActionLog.Add(ActionLogType.PossibleSolo, (seat == 0 ? "Driver of " : "Passenger of ") + ActionLog.AsAsset(vehicle.asset) +
-                                                           "." + (seat == 0 ? string.Empty : " Seat: " + seat.ToString(Data.AdminLocale) + "."), player);
+                                                           "." + (seat == 0 ? string.Empty : " Seat: " + seat.ToString(CultureInfo.InvariantCulture) + "."), player);
         }
     }
     private void OnVehicleDestroyed(VehicleDestroyed e)
@@ -265,18 +266,18 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
         {
             Guid guid = spawn.Item is { Vehicle.Item: { } vehicle } ? vehicle.VehicleID : Guid.Empty;
             UCWarfare.RunTask(RemoveSpawn, spawn, Data.Gamemode.UnloadToken, "Spawn destroyed, removing from database.");
-            L.LogDebug("Vehicle spawn {" + guid.ToString("N") + "} #" + spawn.LastPrimaryKey.ToString(Data.AdminLocale) + " deregistered because the barricade was salvaged or destroyed.");
+            L.LogDebug("Vehicle spawn {" + guid.ToString("N") + "} #" + spawn.LastPrimaryKey.ToString(CultureInfo.InvariantCulture) + " deregistered because the barricade was salvaged or destroyed.");
             if (Assets.find(guid) is VehicleAsset asset)
             {
                 ActionLog.Add(ActionLogType.DeregisteredSpawn,
                     $"{ActionLog.AsAsset(asset)} - " +
-                    $"DEREGISTERED SPAWN {spawn.LastPrimaryKey.ToString(Data.AdminLocale)} (BARRICADE ID: {e.InstanceID
-                        .ToString(Data.AdminLocale)}).", e.Instigator);
+                    $"DEREGISTERED SPAWN {spawn.LastPrimaryKey.ToString(CultureInfo.InvariantCulture)} (BARRICADE ID: {e.InstanceID
+                        .ToString(CultureInfo.InvariantCulture)}).", e.Instigator);
             }
             else
             {
                 ActionLog.Add(ActionLogType.DeregisteredSpawn, $"{guid:N} - DEREGISTERED SPAWN {spawn.LastPrimaryKey
-                    .ToString(Data.AdminLocale)} (BARRICADE ID: {e.InstanceID.ToString(Data.AdminLocale)}).", e.Instigator);
+                    .ToString(CultureInfo.InvariantCulture)} (BARRICADE ID: {e.InstanceID.ToString(CultureInfo.InvariantCulture)}).", e.Instigator);
             }
         }
     }
@@ -287,18 +288,18 @@ public class VehicleSpawnerOld : ListSqlSingleton<VehicleSpawn>, ILevelStartList
         {
             Guid guid = spawn.Item is { Vehicle.Item: { } vehicle } ? vehicle.VehicleID : Guid.Empty;
             UCWarfare.RunTask(RemoveSpawn, spawn, Data.Gamemode.UnloadToken, "Spawn destroyed, removing from database.");
-            L.LogDebug("Vehicle spawn {" + guid.ToString("N") + "} #" + spawn.LastPrimaryKey.ToString(Data.AdminLocale) + " deregistered because the structure was salvaged or destroyed.");
+            L.LogDebug("Vehicle spawn {" + guid.ToString("N") + "} #" + spawn.LastPrimaryKey.ToString(CultureInfo.InvariantCulture) + " deregistered because the structure was salvaged or destroyed.");
             if (Assets.find(guid) is VehicleAsset asset)
             {
                 ActionLog.Add(ActionLogType.DeregisteredSpawn,
                     $"{ActionLog.AsAsset(asset)} - " +
-                    $"DEREGISTERED SPAWN {spawn.LastPrimaryKey.ToString(Data.AdminLocale)} (STRUCTURE ID: {e.InstanceID
-                        .ToString(Data.AdminLocale)}).", e.Instigator);
+                    $"DEREGISTERED SPAWN {spawn.LastPrimaryKey.ToString(CultureInfo.InvariantCulture)} (STRUCTURE ID: {e.InstanceID
+                        .ToString(CultureInfo.InvariantCulture)}).", e.Instigator);
             }
             else
             {
                 ActionLog.Add(ActionLogType.DeregisteredSpawn, $"{guid:N} - DEREGISTERED SPAWN {spawn.LastPrimaryKey
-                    .ToString(Data.AdminLocale)} (STRUCTURE ID: {e.InstanceID.ToString(Data.AdminLocale)}).", e.Instigator);
+                    .ToString(CultureInfo.InvariantCulture)} (STRUCTURE ID: {e.InstanceID.ToString(CultureInfo.InvariantCulture)}).", e.Instigator);
             }
         }
     }
@@ -1421,3 +1422,4 @@ public sealed class VehicleBayComponent : MonoBehaviour
         _lastDelayCheck = 0f;
     }
 }
+#endif

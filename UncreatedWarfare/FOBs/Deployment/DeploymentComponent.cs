@@ -1,7 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Translations;
@@ -19,9 +22,10 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
     private float _deploymentTimeStarted;
     private Coroutine? _deploymentCoroutine;
     private CooldownManager? _cooldownManager;
-    private FOBManager? _fobManager;
+    private FobManager? _fobManager;
     private ZoneStore _zoneStore;
     private IPlayerService _playerService;
+    private ChatService _chatService;
     public WarfarePlayer Player { get; private set; }
     public IDeployable? CurrentDeployment { get; private set; }
     public TimeSpan DeploymentTimeLeft => _deploymentTimeStarted == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(Time.realtimeSinceStartup - _deploymentTimeStarted);
@@ -33,7 +37,8 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetService<CooldownManager>();
-        _fobManager = serviceProvider.GetService<FOBManager>();
+        _fobManager = serviceProvider.GetService<FobManager>();
+        _chatService = serviceProvider.GetService<ChatService>();
     }
 
     public void CancelDeployment(bool chat)
@@ -53,7 +58,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         _deploymentTimeStarted = 0f;
         if (chat)
         {
-            Player.SendChat(_translations.DeployCancelled);
+            _chatService.Send(Player, _translations.DeployCancelled);
         }
     }
 
@@ -65,10 +70,10 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
             CancelDeployment(true);
         }
 
-        if (!settings.AllowInjured && _reviveManager != null && _reviveManager.IsInjured(Player))
+        if (!settings.AllowInjured && Player.IsInjured())
         {
             if (!settings.DisableInitialChatUpdates)
-                Player.SendChat(_translations.DeployInjured);
+                _chatService.Send(Player, _translations.DeployInjured);
 
             return false;
         }
@@ -76,7 +81,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         if (!settings.DisableCheckingForCooldown && _cooldownManager != null && _cooldownManager.HasCooldown(Player, settings.CooldownType ?? CooldownType.Deploy, out Cooldown cooldown))
         {
             if (!settings.DisableInitialChatUpdates)
-                Player.SendChat(_translations.DeployCooldown, cooldown);
+                _chatService.Send(Player, _translations.DeployCooldown, cooldown);
 
             return false;
         }
@@ -84,7 +89,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         if (!settings.AllowCombat && _cooldownManager != null && _cooldownManager.HasCooldown(Player, CooldownType.Combat, out cooldown))
         {
             if (!settings.DisableInitialChatUpdates)
-                Player.SendChat(_translations.DeployInCombat, cooldown);
+                _chatService.Send(Player, _translations.DeployInCombat, cooldown);
 
             return false;
         }
@@ -92,7 +97,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         if (!settings.AllowNearbyEnemies && AreEnemiesNearby(settings.NearbyEnemyRange ?? DeploymentService.DefaultNearbyEnemyRange))
         {
             if (!settings.DisableInitialChatUpdates)
-                Player.SendChat(_translations.DeployEnemiesNearby, location);
+                _chatService.Send(Player, _translations.DeployEnemiesNearby, location);
 
             return false;
         }
@@ -104,14 +109,14 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
 
         bool isInMain = _zoneStore.IsInMainBase(Player);
 
-        IFOB? deployFrom = null;
+        IFob? deployFrom = null;
 
         if (!isInMain)
         {
-            if (_fobManager == null || !_fobManager.IsOnFOB(Player, out deployFrom))
+            if (_fobManager == null || !_fobManager.IsOnFob(Player, out deployFrom))
             {
                 if (!settings.DisableInitialChatUpdates)
-                    Player.SendChat(_translations.DeployNotNearFOB); // todo add Insurgency special message
+                    _chatService.Send(Player, _translations.DeployNotNearFOB); // todo add Insurgency special message
 
                 return false;
             }
@@ -125,7 +130,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         if (location.Equals(deployFrom))
         {
             if (!settings.DisableInitialChatUpdates)
-                Player.SendChat(_translations.DeployableAlreadyOnFOB);
+                _chatService.Send(Player, _translations.DeployableAlreadyOnFOB);
 
             return false;
         }
@@ -156,7 +161,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         deployable.OnDeployTo(Player, in settings);
         if (!settings.DisableStartingCooldown && _cooldownManager != null)
         {
-            _cooldownManager.StartCooldown(Player, settings.CooldownType ?? CooldownType.Deploy, RapidDeployment.GetDeployTime(Player));
+            CooldownManager.StartCooldown(Player, settings.CooldownType ?? CooldownType.Deploy, RapidDeployment.GetDeployTime(Player));
         }
 
         CurrentDeployment = null;
@@ -204,7 +209,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         if (!settings.AllowDamage && startState.Health > currentHealth)
         {
             if (!settings.DisableTickingChatUpdates)
-                Player.SendChat(_translations.DeployDamaged);
+                _chatService.Send(Player, _translations.DeployDamaged);
 
             return false;
         }
@@ -215,31 +220,31 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         if (!settings.AllowMovement && !startState.Position.AlmostEquals(Player.Position, 1f))
         {
             if (!settings.DisableTickingChatUpdates)
-                Player.SendChat(_translations.DeployMoved);
+                _chatService.Send(Player, _translations.DeployMoved);
 
             return false;
         }
 
-        if (!settings.AllowInjured && _reviveManager != null && _reviveManager.IsInjured(Player))
+        if (!settings.AllowInjured && Player.IsInjured())
         {
             if (!settings.DisableTickingChatUpdates)
-                Player.SendChat(_translations.DeployInjured);
+                _chatService.Send(Player, _translations.DeployInjured);
 
             return false;
         }
 
-        if (!settings.DisableCheckingForCooldown && _cooldownManager != null && _cooldownManager.HasCooldown(Player, settings.CooldownType ?? CooldownType.Deploy, out Cooldown cooldown))
+        if (!settings.DisableCheckingForCooldown && _cooldownManager != null && CooldownManager.HasCooldown(Player, settings.CooldownType ?? CooldownType.Deploy, out Cooldown cooldown))
         {
             if (!settings.DisableTickingChatUpdates)
-                Player.SendChat(_translations.DeployCooldown, cooldown);
+                _chatService.Send(Player, _translations.DeployCooldown, cooldown);
 
             return false;
         }
 
-        if (!settings.AllowCombat && _cooldownManager != null && _cooldownManager.HasCooldown(Player, CooldownType.Combat, out cooldown))
+        if (!settings.AllowCombat && _cooldownManager != null && CooldownManager.HasCooldown(Player, CooldownType.Combat, out cooldown))
         {
             if (!settings.DisableTickingChatUpdates)
-                Player.SendChat(_translations.DeployInCombat, cooldown);
+                _chatService.Send(Player, _translations.DeployInCombat, cooldown);
 
             return false;
         }
@@ -247,7 +252,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         if (!settings.AllowNearbyEnemies && AreEnemiesNearby(settings.NearbyEnemyRange ?? DeploymentService.DefaultNearbyEnemyRange))
         {
             if (!settings.DisableTickingChatUpdates)
-                Player.SendChat(_translations.DeployEnemiesNearbyTick, deployable);
+                _chatService.Send(Player, _translations.DeployEnemiesNearbyTick, deployable);
 
             return false;
         }

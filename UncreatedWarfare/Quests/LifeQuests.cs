@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if false
+using System;
 using System.Text.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
@@ -75,3 +76,4 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
         }
     }
 }
+#endif

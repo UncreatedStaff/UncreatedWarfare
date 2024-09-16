@@ -127,9 +127,9 @@ public class StrengthInNumbers : Buff
             string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(DataSplitChars, StringSplitOptions.RemoveEmptyEntries);
             if (datas.Length > 0)
             {
-                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.AdminLocale, out _distance);
+                float.TryParse(datas[0], NumberStyles.Number, Warfare.CultureInfo.InvariantCulture, out _distance);
                 if (datas.Length > 1)
-                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.AdminLocale, out _armorMultiplier);
+                    float.TryParse(datas[1], NumberStyles.Number, Warfare.CultureInfo.InvariantCulture, out _armorMultiplier);
             }
 
             if (_distance == -1f)

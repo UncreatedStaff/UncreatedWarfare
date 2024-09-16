@@ -147,13 +147,13 @@ public class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
                         DefaultPriceData = new ProductDefaultPriceDataOptions
                         {
                             Currency = "USD",
-                            UnitAmount = (long)decimal.Round((UCWarfare.IsLoaded ? UCWarfare.Config.LoadoutCost : 10m) * 100),
+                            UnitAmount = (long)decimal.Round((Provider.isInitialized ? UCWarfare.Config.LoadoutCost : 10m) * 100),
                             TaxBehavior = "inclusive"
                         },
                         Shippable = false,
                         StatementDescriptor = "LOADOUT",
                         TaxCode = Networking.Purchasing.StripeService.TaxCode,
-                        Url = UCWarfare.IsLoaded && UCWarfare.Config.WebsiteUri != null ? new Uri(UCWarfare.Config.WebsiteUri, "kits/loadout").AbsoluteUri : "https://uncreated.network/kits/loadout",
+                        Url = Provider.isInitialized && UCWarfare.Config.WebsiteUri != null ? new Uri(UCWarfare.Config.WebsiteUri, "kits/loadout").AbsoluteUri : "https://uncreated.network/kits/loadout",
                         Features = LoadoutFeatures,
                         Metadata = new Dictionary<string, string>
                         {
@@ -427,7 +427,7 @@ public class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
         if (bundle is null)
             throw new ArgumentNullException(nameof(bundle));
 
-        if (!UCWarfare.IsLoaded || stripeService?.StripeClient == null)
+        if (!Provider.isInitialized || stripeService?.StripeClient == null)
             throw new InvalidOperationException("Stripe service is not loaded in Data.StripeService.");
 
         string id = bundle.Id;

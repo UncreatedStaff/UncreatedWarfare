@@ -10,8 +10,8 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Traits;
 public abstract class Trait : MonoBehaviour, ITranslationArgument
@@ -92,7 +92,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
 
     private void OnPlayerDied(PlayerDied e)
     {
-        if (e.Player.Steam64 != TargetPlayer.Steam64)
+        if (e.Player.Steam64.m_SteamID != TargetPlayer.Steam64)
             return;
 
         EventDispatcher.PlayerDied -= OnPlayerDied;
@@ -322,51 +322,40 @@ public class TraitData : ITranslationArgument
         return GamemodeListIsBlacklist;
     }
 
-    [FormatDisplay(typeof(Trait), "Name")]
-    [FormatDisplay("Name")]
-    public const string FormatName = "n";
+    public static readonly SpecialFormat FormatName = new SpecialFormat("Name", "n");
 
-    [FormatDisplay(typeof(Trait), "Type Name")]
-    [FormatDisplay("Type Name")]
-    public const string FormatTypeName = "t";
+    public static readonly SpecialFormat FormatTypeName = new SpecialFormat("Type Name", "t");
 
-    [FormatDisplay(typeof(Trait), "Colored Type Name")]
-    [FormatDisplay("Colored Type Name")]
-    public const string FormatColorTypeName = "ct";
+    public static readonly SpecialFormat FormatColorTypeName = new SpecialFormat("Colored Type Name", "ct");
 
-    [FormatDisplay(typeof(Trait), "Description")]
-    [FormatDisplay("Description")]
-    public const string FormatDescription = "d";
+    public static readonly SpecialFormat FormatDescription = new SpecialFormat("Description", "d");
 
-    [FormatDisplay(typeof(Trait), "Colored Name")]
-    [FormatDisplay("Colored Name")]
-    public const string FormatColorName = "cn";
+    public static readonly SpecialFormat FormatColorName = new SpecialFormat("Colored Name", "cn");
 
-    [FormatDisplay(typeof(Trait), "Colored Description")]
-    [FormatDisplay("Colored Description")]
-    public const string FormatColorDescription = "cd";
+    public static readonly SpecialFormat FormatColorDescription = new SpecialFormat("Colored Description", "cd");
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        string? format = parameters.Format.Format;
-        if (format is not null && !format.Equals(FormatName, StringComparison.Ordinal))
-        {
-            if (format.Equals(FormatTypeName, StringComparison.Ordinal))
-                return TypeName;
-            if (format.Equals(FormatDescription, StringComparison.Ordinal))
-                return DescriptionTranslations != null
-                    ? DescriptionTranslations.Translate(parameters.Language, string.Empty).Replace('\n', ' ')
-                    : formatter.Format<object>(null, new ValueFormatParameters(in parameters, parameters.Options & TranslationOptions.NoRichText));
-            if (format.Equals(FormatColorTypeName, StringComparison.Ordinal))
-                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), TypeName, parameters.Options);
-            if (format.Equals(FormatColorName, StringComparison.Ordinal))
-                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null
-                    ? NameTranslations.Translate(parameters.Language, TypeName).Replace('\n', ' ')
-                    : TypeName, parameters.Options);
-            if (format.Equals(FormatColorDescription, StringComparison.Ordinal))
-                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), DescriptionTranslations != null
-                    ? DescriptionTranslations.Translate(language, string.Empty).Replace('\n', ' ')
-                    : Translation.Null(parameters.Options & TranslationFlags.NoRichText), parameters.Options);
-        }
+        if (FormatTypeName.Match(in parameters))
+            return TypeName;
+
+        if (FormatDescription.Match(in parameters))
+            return DescriptionTranslations != null
+                ? DescriptionTranslations.Translate(parameters.Language, string.Empty).Replace('\n', ' ')
+                : formatter.Format<object>(null, new ValueFormatParameters(in parameters, parameters.Options & TranslationOptions.NoRichText));
+
+        if (FormatColorTypeName.Match(in parameters))
+            return formatter.Colorize(TypeName, Team.Color, parameters.Options);
+
+        if (FormatColorName.Match(in parameters))
+            return Localization.Colorize(NameTranslations != null
+                ? NameTranslations.Translate(parameters.Language, TypeName).Replace('\n', ' ')
+                : TypeName, Team.Color, parameters.Options);
+
+        if (FormatColorDescription.Match(in parameters))
+            return Localization.Colorize(DescriptionTranslations != null
+                ? DescriptionTranslations.Translate(language, string.Empty).Replace('\n', ' ')
+                : formatter.Format(null, in parameters), Team.Color, parameters.Options);
+
         return NameTranslations != null
             ? NameTranslations.Translate(parameters.Language, TypeName).Replace('\n', ' ')
             : TypeName;

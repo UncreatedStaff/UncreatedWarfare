@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Structures;
 
@@ -13,7 +14,7 @@ public class StructureDestroyed : IBuildableDestroyedEvent
     /// <summary>
     /// Player that destroyed the structure, if any.
     /// </summary>
-    public required UCPlayer? Instigator { get; init; }
+    public required WarfarePlayer? Instigator { get; init; }
 
     /// <summary>
     /// Steam ID of the player that destroyed the structure, or <see cref="CSteamID.Nil"/>.

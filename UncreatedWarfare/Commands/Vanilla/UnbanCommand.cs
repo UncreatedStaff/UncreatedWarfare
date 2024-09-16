@@ -54,7 +54,7 @@ public class UnbanCommand : IExecutableCommand
 
         OffenseManager.LogUnbanPlayer(targetId, Context.CallerID, DateTime.Now);
 
-        string tid = targetId.ToString(Data.AdminLocale);
+        string tid = targetId.ToString(CultureInfo.InvariantCulture);
         ActionLog.Add(ActionLogType.UnbanPlayer, $"UNBANNED {tid}", Context.CallerID);
         if (Context.IsConsole)
         {
@@ -63,7 +63,7 @@ public class UnbanCommand : IExecutableCommand
         }
         else
         {
-            L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {Context.Caller.Name.PlayerName} ({Context.CallerID.ToString(Data.AdminLocale)}).", ConsoleColor.Cyan);
+            L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {Context.Caller.Name.PlayerName} ({Context.CallerID.ToString(CultureInfo.InvariantCulture)}).", ConsoleColor.Cyan);
             Context.Reply(T.UnbanSuccessFeedback, targetNames);
             Chat.Broadcast(LanguageSet.AllBut(Context.CallerID), T.UnbanSuccessBroadcast, targetNames, Context.Caller);
         }

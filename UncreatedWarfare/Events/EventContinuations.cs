@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;

@@ -8,7 +8,6 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;

@@ -1,7 +1,7 @@
 ﻿using System;
 using Uncreated.Warfare.Locations;
 
-namespace Uncreated.Warfare.Util.Transform;
+namespace Uncreated.Warfare.Util;
 
 /// <summary>
 /// Represents an object existing in the world.

@@ -3,7 +3,6 @@ using DanielWillett.ReflectionTools.Formatting;
 using System;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Vehicles;
-using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
 using static Uncreated.Warfare.Harmony.Patches;
 
@@ -28,7 +27,7 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, postfix: PatchUtil.GetMethodInfo(Postfix));
+            Patcher.Patch(_target, postfix: Accessor.GetMethod(Postfix));
             logger.LogDebug("Patched {0} for vehicle spawned event.", Accessor.Formatter.Format(_target));
             return;
         }
@@ -69,7 +68,7 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, PatchUtil.GetMethodInfo(Postfix));
+        Patcher.Unpatch(_target, Accessor.GetMethod(Postfix));
         logger.LogDebug("Unpatched {0} for destroy structure event.", Accessor.Formatter.Format(_target));
         _target = null;
     }

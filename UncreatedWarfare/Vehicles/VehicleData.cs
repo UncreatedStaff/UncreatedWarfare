@@ -1,22 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles;
-
+#if false
 public class VehicleData : ITranslationArgument, IListItem
 {
     public const int VEHICLE_TYPE_MAX_CHAR_LIMIT = 20;
@@ -28,7 +27,7 @@ public class VehicleData : ITranslationArgument, IListItem
     public Guid VehicleID { get; set; }
 
     [CommandSettable]
-    public PrimaryKey Faction { get; set; }
+    public uint Faction { get; set; }
 
     [CommandSettable]
     public float RespawnTime { get; set; }
@@ -223,33 +222,31 @@ public class VehicleData : ITranslationArgument, IListItem
         if (barricades is not null || trunk is not null)
             Metadata = new MetaSave(barricades, trunk);
     }
-    public string GetCostLine(UCPlayer ucplayer)
+    public string GetCostLine(WarfarePlayer ucplayer)
     {
-        UCPlayer.TryApplyViewLens(ref ucplayer);
         if (UnlockRequirements == null || UnlockRequirements.Length == 0)
             return string.Empty;
-        else
+        
+        for (int i = 0; i < UnlockRequirements.Length; i++)
         {
-            for (int i = 0; i < UnlockRequirements.Length; i++)
-            {
-                UnlockRequirement req = UnlockRequirements[i];
-                if (req.CanAccess(ucplayer))
-                    continue;
-                return req.GetSignText(ucplayer);
-            }
+            UnlockRequirement req = UnlockRequirements[i];
+            if (req.CanAccessFast(ucplayer))
+                continue;
+            return req.GetSignText(ucplayer);
         }
+
         return string.Empty;
     }
-    [FormatDisplay("Colored Vehicle Name")]
-    public const string COLORED_NAME = "cn";
-    [FormatDisplay("Vehicle Name")]
-    public const string NAME = "n";
+    
+    public static readonly SpecialFormat FormatColoredName = new SpecialFormat("Colored Vehicle Name", "cn");
+    
+    public static readonly SpecialFormat FormatName = new SpecialFormat("Vehicle Name", "n");
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         string? format = parameters.Format.Format;
         string name = Assets.find(VehicleID) is VehicleAsset va ? va.vehicleName : VehicleID.ToString("N");
-        if (format is not null && format.Equals(COLORED_NAME, StringComparison.Ordinal))
-            return Localization.Colorize(TeamManager.GetTeamHexColor(Team), name, parameters.Options);
+        if (format is not null && FormatColoredName.Match(in parameters))
+            return formatter.Colorize(name, Team.Color, parameters.Options);
         return name;
     }
 }
@@ -311,125 +308,6 @@ public class VBarricade : IListSubItem
         AngleZ = angleZ;
         Metadata = state;
     }
-
-    // ReSharper disable InconsistentNaming
-
-    public const string COLUMN_PK = "pk";
-    public const string COLUMN_GUID = "Item";
-    public const string COLUMN_HEALTH = "Health";
-    public const string COLUMN_POS_X = "Pos_X";
-    public const string COLUMN_POS_Y = "Pos_Y";
-    public const string COLUMN_POS_Z = "Pos_Z";
-    public const string COLUMN_ROT_X = "Rot_X";
-    public const string COLUMN_ROT_Y = "Rot_Y";
-    public const string COLUMN_ROT_Z = "Rot_Z";
-    public const string COLUMN_METADATA = "Metadata";
-    public const string COLUMN_ITEM_PK = "pk";
-    public const string COLUMN_ITEM_BARRICADE_PK = "Barricade";
-    public const string COLUMN_ITEM_GUID = "Guid";
-    public const string COLUMN_ITEM_POS_X = "Pos_X";
-    public const string COLUMN_ITEM_POS_Y = "Pos_Y";
-    public const string COLUMN_ITEM_ROT = "Rotation";
-    public const string COLUMN_ITEM_AMOUNT = "Amount";
-    public const string COLUMN_ITEM_QUALITY = "Quality";
-    public const string COLUMN_ITEM_METADATA = "Metadata";
-    public const string COLUMN_DISPLAY_SKIN = "Skin";
-    public const string COLUMN_DISPLAY_MYTHIC = "Mythic";
-    public const string COLUMN_DISPLAY_TAGS = "Tags";
-    public const string COLUMN_DISPLAY_DYNAMIC_PROPS = "DynamicProps";
-    public const string COLUMN_DISPLAY_ROT = "Rotation";
-
-    // ReSharper restore InconsistentNaming
-    public static Schema[] GetDefaultSchemas(string tableName, string tableItemsName, string tableDisplayDataName, string fkColumn, string mainTable, string mainPkColumn, bool includeHealth = true, bool oneToOne = false)
-    {
-        if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
-        int ct = 9;
-        if (!oneToOne)
-            ++ct;
-        if (includeHealth)
-            ++ct;
-        Schema.Column[] columns = new Schema.Column[ct];
-        int index = 0;
-        if (!oneToOne)
-        {
-            columns[0] = new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            };
-        }
-        else index = -1;
-        columns[++index] = new Schema.Column(fkColumn, SqlTypes.INCREMENT_KEY)
-        {
-            PrimaryKey = oneToOne,
-            AutoIncrement = oneToOne,
-            ForeignKey = true,
-            ForeignKeyColumn = mainPkColumn,
-            ForeignKeyTable = mainTable
-        };
-        columns[++index] = new Schema.Column(COLUMN_GUID, SqlTypes.GUID_STRING);
-        if (includeHealth)
-        {
-            columns[++index] = new Schema.Column(COLUMN_HEALTH, SqlTypes.USHORT)
-            {
-                Default = "'" + ushort.MaxValue.ToString(Data.AdminLocale) + "'"
-            };
-        }
-        columns[++index] = new Schema.Column(COLUMN_POS_X, SqlTypes.FLOAT);
-        columns[++index] = new Schema.Column(COLUMN_POS_Y, SqlTypes.FLOAT);
-        columns[++index] = new Schema.Column(COLUMN_POS_Z, SqlTypes.FLOAT);
-        columns[++index] = new Schema.Column(COLUMN_ROT_X, SqlTypes.FLOAT);
-        columns[++index] = new Schema.Column(COLUMN_ROT_Y, SqlTypes.FLOAT);
-        columns[++index] = new Schema.Column(COLUMN_ROT_Z, SqlTypes.FLOAT);
-        columns[++index] = new Schema.Column(COLUMN_METADATA, SqlTypes.BYTES_255);
-        Schema[] schemas = new Schema[3];
-        schemas[0] = new Schema(tableName, columns, false, typeof(VBarricade));
-        schemas[1] = new Schema(tableDisplayDataName, new Schema.Column[]
-        {
-            new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
-            {
-                AutoIncrement = true,
-                PrimaryKey = true,
-                ForeignKey = true,
-                ForeignKeyColumn = oneToOne ? fkColumn : COLUMN_PK,
-                ForeignKeyTable = tableName
-            },
-            new Schema.Column(COLUMN_DISPLAY_SKIN, SqlTypes.USHORT),
-            new Schema.Column(COLUMN_DISPLAY_MYTHIC, SqlTypes.USHORT),
-            new Schema.Column(COLUMN_DISPLAY_ROT, SqlTypes.BYTE),
-            new Schema.Column(COLUMN_DISPLAY_TAGS, SqlTypes.STRING_255)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_DISPLAY_DYNAMIC_PROPS, SqlTypes.STRING_255)
-            {
-                Nullable = true
-            }
-        }, false, typeof(Structures.ItemDisplayData));
-        schemas[2] = new Schema(tableItemsName, new Schema.Column[]
-        {
-            new Schema.Column(COLUMN_ITEM_PK, SqlTypes.INCREMENT_KEY)
-            {
-                AutoIncrement = true,
-                PrimaryKey = true,
-            },
-            new Schema.Column(COLUMN_ITEM_BARRICADE_PK, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = oneToOne ? fkColumn : COLUMN_PK,
-                ForeignKeyTable = tableName
-            },
-            new Schema.Column(COLUMN_ITEM_GUID, SqlTypes.GUID_STRING),
-            new Schema.Column(COLUMN_ITEM_AMOUNT, SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_QUALITY, SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_POS_X, SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_POS_Y, SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_ROT, SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_METADATA, SqlTypes.BYTES_255),
-        }, false, typeof(Structures.ItemJarData));
-        return schemas;
-    }
 }
 
 
@@ -446,7 +324,7 @@ public enum DelayType
     Teammates = 5
 }
 [JsonConverter(typeof(DelayConverter))]
-public struct Delay : IJsonReadWrite
+public struct Delay
 {
     public const int DELAY_TYPE_MAX_CHAR_LIMIT = 16;
     public static readonly Delay Nil = new Delay(DelayType.None, float.NaN, null);
@@ -760,48 +638,6 @@ public struct Delay : IJsonReadWrite
         }
         return -1;
     }
-
-    public const string COLUMN_PK = "pk";
-    public const string COLUMN_TYPE = "Type";
-    public const string COLUMN_GAMEMODE = "Gamemode";
-    public const string COLUMN_VALUE = "Value";
-    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
-    {
-        if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
-        int ct = 4;
-        if (!oneToOne && hasPk)
-            ++ct;
-        Schema.Column[] columns = new Schema.Column[ct];
-        int index = 0;
-        if (!oneToOne && hasPk)
-        {
-            columns[0] = new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            };
-        }
-        else index = -1;
-        columns[++index] = new Schema.Column(fkColumn, SqlTypes.INCREMENT_KEY)
-        {
-            PrimaryKey = oneToOne,
-            AutoIncrement = oneToOne,
-            ForeignKey = true,
-            ForeignKeyColumn = mainPkColumn,
-            ForeignKeyTable = mainTable
-        };
-        columns[++index] = new Schema.Column(COLUMN_TYPE, SqlTypes.Enum(DelayType.None));
-        columns[++index] = new Schema.Column(COLUMN_VALUE, SqlTypes.FLOAT)
-        {
-            Nullable = true
-        };
-        columns[++index] = new Schema.Column(COLUMN_GAMEMODE, "varchar(32)")
-        {
-            Nullable = true
-        };
-        return new Schema(tableName, columns, false, typeof(Delay));
-    }
 }
 internal sealed class ByteArrayConverter : JsonConverter<byte[]>
 {
@@ -823,12 +659,12 @@ internal sealed class ByteArrayConverter : JsonConverter<byte[]>
                 }
             case JsonTokenType.Number:
                 if (reader.TryGetByte(out byte b))
-                    return new byte[] { b };
+                    return [ b ];
                 throw new JsonException("Unexpected token: Number > 255 or < 0.");
             case JsonTokenType.False:
                 return new byte[1];
             case JsonTokenType.True:
-                return new byte[] { 1 };
+                return [ 1 ];
             case JsonTokenType.StartArray:
                 List<byte> bytes = new List<byte>(8);
                 while (reader.Read() && reader.TokenType == JsonTokenType.Number)
@@ -874,3 +710,4 @@ public sealed class DelayConverter : JsonConverter<Delay>
         writer.WriteEndObject();
     }
 }
+#endif

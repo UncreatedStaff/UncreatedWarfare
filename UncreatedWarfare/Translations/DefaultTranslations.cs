@@ -213,34 +213,6 @@ internal static class T
     public static readonly Translation CachesHeader = new Translation("Caches", TranslationOptions.UnityUI);
     #endregion
 
-    #region Zones
-    private const string SectionZones = "Zones";
-
-    [TranslationData(SectionZones, Parameters = [ "X (m)", "Y (m)", "Z (m)", "Yaw (°)"])]
-    public static readonly Translation<float, float, float, float> ZoneUtilLocation = new Translation<float, float, float, float>("<#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.", arg0Fmt: "0.##", arg1Fmt: "0.##", arg2Fmt: "0.##", arg3Fmt: "0.##");
-
-    [TranslationData(SectionZones)]
-    public static readonly Translation ZoneNoResultsLocation = new Translation("<#ff8c69>You aren't in any existing zone.");
-
-    [TranslationData(SectionZones)]
-    public static readonly Translation ZoneNoResultsName = new Translation("<#ff8c69>Couldn't find a zone by that name.");
-
-    [TranslationData(SectionZones)]
-    public static readonly Translation ZoneNoResults = new Translation("<#ff8c69>You must be in a zone or specify a valid zone name to use this command.");
-
-    [TranslationData(SectionZones)]
-    public static readonly Translation<int, Zone> ZoneVisualizeSuccess = new Translation<int, Zone>("<#e6e3d5>Spawned {0} particles around <color=#cedcde>{1}</color>.", arg1Fmt: Flag.NAME_FORMAT);
-
-    [TranslationData(SectionZones, IsPriorityTranslation = false)]
-    public static readonly Translation<Zone> ZoneGoSuccess = new Translation<Zone>("<#e6e3d5>Teleported to <#5a6e5c>{0}</color>.", arg0Fmt: Flag.NAME_FORMAT);
-
-    [TranslationData(SectionZones, IsPriorityTranslation = false)]
-    public static readonly Translation<string> ZoneGoSuccessRaw = new Translation<string>("<#e6e3d5>Teleported to <#cedcde>{0}</color>.");
-
-    [TranslationData(SectionZones, IsPriorityTranslation = false)]
-    public static readonly Translation<GridLocation> ZoneGoSuccessGridLocation = new Translation<GridLocation>("<#e6e3d5>Teleported to <#ff8c69>{0}</color>.", arg0Fmt: Flag.NAME_FORMAT);
-    #endregion
-
     #region Players
     private const string SectionPlayers = "Players";
 
@@ -995,31 +967,6 @@ internal static class T
     public static readonly Translation<int> LoadCompleteBuild = new Translation<int>("<#d1bda7>Loading complete. <#c$build$>{0} BUILD</color> loaded.");
     [TranslationData(SectionLoad)]
     public static readonly Translation<int> LoadCompleteAmmo = new Translation<int>("<#d1bda7>Loading complete. <#c$ammo$>{0} AMMO</color> loaded.");
-    #endregion
-
-    #region Announcements
-    [TranslationData(Description = "Announcement telling people to join the discord by typing /discord.")]
-    public static readonly Translation AnnouncementDiscord = new Translation("<#b3b3b3>Have you joined our <#7483c4>Discord</color> server yet? Type <#7483c4>/discord</color> to join.");
-    [TranslationData(Description = "Announcement telling people how to return to base from FOBs.")]
-    public static readonly Translation AnnouncementDeployMain = new Translation("<#c2b7a5>You can deploy back to main by doing <#ffffff>/deploy main</color> while near a friendly FOB.");
-    [TranslationData(Description = "Announcement telling people the best ways to earn XP.")]
-    public static readonly Translation AnnouncementRankUp = new Translation("<#92a692>Capture <#ffffff>flags</color> and build <#ffffff>FOBs</color> to rank up and earn respect amongst your team.");
-    [TranslationData(Description = "Announcement telling people not to waste assets.")]
-    public static readonly Translation AnnouncementDontWasteAssets = new Translation("<#c79675>Do not waste vehicles, ammo, build, or other assets! You may risk punishment if you're reported or caught.");
-    [TranslationData(Description = "Announcement telling people to communicate and listen to higher-ups.")]
-    public static readonly Translation AnnouncementListenToSuperiors = new Translation("<#a2a7ba>Winning requires coordination and teamwork. Listen to your superior officers, and communicate!");
-    [TranslationData(Description = "Announcement telling people to build FOBs to help their team.")]
-    public static readonly Translation AnnouncementBuildFOBs = new Translation("<#9da6a6>Building <color=#54e3ff>FOBs</color> is vital for advancing operations. Grab a logistics truck and go build one!");
-    [TranslationData(Description = "Announcement telling people to join or create a squad.")]
-    public static readonly Translation AnnouncementSquads = new Translation("<#c2b7a5>Join a squad with <#ffffff>/squad join</color> or create one with <#ffffff>/squad create</color> to earn extra XP among other benefits.");
-    [TranslationData(Description = "Announcement telling people about the different way our chat works.")]
-    public static readonly Translation AnnouncementChatChanges = new Translation("<#a2a7ba>Use area chat while in a squad to communicate with only them or group chat to communicate with your entire <#54e3ff>team</color>.");
-    [TranslationData(Description = "Announcement telling people about the abandon command.")]
-    public static readonly Translation AnnouncementAbandon = new Translation("<#b3b3b3>Done with your vehicle? Type <#ffffff>/abandon</color> while in main base to get some credits back and free up the vehicle for your team.");
-    [TranslationData(Description = "Announcement telling people about soloing.")]
-    public static readonly Translation AnnouncementSoloing = new Translation("<#c79675>Soloing armor vehicles, attack helis, and jets is against the rules. Make sure you have a passenger for these vehicles.");
-    [TranslationData(Description = "Announcement telling people about reporting with /report.")]
-    public static readonly Translation AnnouncementReport = new Translation("<#c2b7a5>See someone breaking rules? Use the <#ffffff>/report</color> command to help admins see context about the report.</color>");
     #endregion
 
     #region Kick Command

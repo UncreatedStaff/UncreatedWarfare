@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -516,7 +517,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
                         "Failed to run the \"{0}\" command because of a missing service. This could be expected if the command isn't enabled in the current layout.",
                         command.CommandName
                     );
-                    ctx.Reply(T.NotEnabled);
+                    ctx.Reply(T.GamemodeError);
                     return;
                 }
 

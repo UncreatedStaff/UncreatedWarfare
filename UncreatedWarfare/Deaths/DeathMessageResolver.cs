@@ -514,7 +514,7 @@ public class DeathMessageResolver
             }
         }
 
-        str = await TranslateMessage(_languageService.GetDefaultLanguage(), Data.AdminLocale, e, true, token);
+        str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, token);
         Log(tk, str, e);
 
         e.DefaultMessage = str!;
@@ -543,7 +543,7 @@ public class DeathMessageResolver
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         // make it harder to search for the source code causing it
-        L.Log("Aut" + "o " + "ban " + "by a" + "nti" + "che" + "at: " + steam64.m_SteamID.ToString(Data.AdminLocale) + ".", ConsoleColor.Cyan);
+        L.Log("Aut" + "o " + "ban " + "by a" + "nti" + "che" + "at: " + steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + ".", ConsoleColor.Cyan);
         yield return new WaitForSecondsRealtime(UnityEngine.Random.Range(50f, 80f));
 
         Ban ban = new Ban

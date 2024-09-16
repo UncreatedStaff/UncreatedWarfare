@@ -5,6 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles <see cref="BarricadeDrop.OnSalvageRequested_Global"/>.
 /// </summary>
+[EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
 public sealed class SalvageBarricadeRequested(BarricadeRegion region) : SalvageRequested(region)
 {
     /// <inheritdoc />

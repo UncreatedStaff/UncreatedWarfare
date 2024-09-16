@@ -13,7 +13,6 @@ using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
@@ -32,6 +31,7 @@ using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
@@ -40,22 +40,22 @@ namespace Uncreated.Warfare;
 
 public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlayer>, IModerationActor, ICommandUser
 {
-    [FormatDisplay(typeof(IPlayer), "Character Name")]
-    public const string FormatCharacterName = "cn";
-    [FormatDisplay(typeof(IPlayer), "Nick Name")]
-    public const string FormatNickName = "nn";
-    [FormatDisplay(typeof(IPlayer), "Player Name")]
-    public const string FormatPlayerName = "pn";
-    [FormatDisplay(typeof(IPlayer), "Steam64 ID")]
-    public const string FormatSteam64 = "64";
-    [FormatDisplay(typeof(IPlayer), "Colored Character Name")]
-    public const string FormatColoredCharacterName = "ccn";
-    [FormatDisplay(typeof(IPlayer), "Colored Nick Name")]
-    public const string FormatColoredNickName = "cnn";
-    [FormatDisplay(typeof(IPlayer), "Colored Player Name")]
-    public const string FormatColoredPlayerName = "cpn";
-    [FormatDisplay(typeof(IPlayer), "Colored Steam64 ID")]
-    public const string FormatColoredSteam64 = "c64";
+    
+    public static readonly SpecialFormat FormatCharacterName = new SpecialFormat("Character Name", "cn");
+    
+    public static readonly SpecialFormat FormatNickName = new SpecialFormat("Nick Name", "nn");
+    
+    public static readonly SpecialFormat FormatPlayerName = new SpecialFormat("Player Name", "pn");
+    
+    public static readonly SpecialFormat FormatSteam64 = new SpecialFormat("Steam64 ID", "64");
+    
+    public static readonly SpecialFormat FormatColoredCharacterName = new SpecialFormat("Colored Character Name", "ccn");
+    
+    public static readonly SpecialFormat FormatColoredNickName = new SpecialFormat("Colored Nick Name", "cnn");
+    
+    public static readonly SpecialFormat FormatColoredPlayerName = new SpecialFormat("Colored Player Name", "cpn");
+    
+    public static readonly SpecialFormat FormatColoredSteam64 = new SpecialFormat("Colored Steam64 ID", "c64");
 
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
     public static readonly UnturnedUI MutedUI = new UnturnedUI(Gamemode.Config.UIMuted.GetId(), hasElements: false);
@@ -67,7 +67,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
      */
     public readonly SemaphoreSlim PurchaseSync;
     public readonly IReadOnlyCollection<object> Components;
-    public readonly UCPlayerKeys Keys;
+
     public readonly UCPlayerEvents Events;
     public KitMenuUIData KitMenuData;
     public readonly ulong Steam64;
@@ -976,7 +976,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             Interlocked.Add(ref _pendingReputation, amount);
         }
     }
-    public override string ToString() => Name.PlayerName + " [" + Steam64.ToString("G17", Data.AdminLocale) + "]";
+    public override string ToString() => Name.PlayerName + " [" + Steam64.ToString("G17", CultureInfo.InvariantCulture) + "]";
     internal void ResetPermissionLevel() => _pLvl = null;
     internal void Update()
     {
@@ -1072,7 +1072,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         GameThread.AssertCurrent();
 #endif
 
-        if (playerSummary != null && UCWarfare.IsLoaded)
+        if (playerSummary != null && Provider.isInitialized)
         {
             if (!string.IsNullOrEmpty(playerSummary.AvatarUrlSmall))
                 Data.ModerationSql.UpdateAvatar(Steam64, AvatarSize.Small, playerSummary.AvatarUrlSmall);
@@ -1092,7 +1092,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     bool ICommandUser.IMGUI => Save.IMGUI;
     public async UniTask<string?> GetProfilePictureURL(AvatarSize size, CancellationToken token = default)
     {
-        if (!UCWarfare.IsLoaded)
+        if (!Provider.isInitialized)
             throw new SingletonUnloadedException(typeof(UCWarfare));
         if (Data.ModerationSql.TryGetAvatar(Steam64, size, out string url))
             return url;

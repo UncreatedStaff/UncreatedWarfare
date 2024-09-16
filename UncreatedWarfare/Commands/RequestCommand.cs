@@ -1,22 +1,6 @@
-﻿using System;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
+﻿using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Moderation.Punishments;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Players.Unlocks;
-using Uncreated.Warfare.Traits;
-using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
-using DelayType = Uncreated.Warfare.Vehicles.DelayType;
-using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -61,6 +45,7 @@ public class RequestCommand : ICompoundingCooldownCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+#if false
         Context.AssertHelpCheck(0, Syntax + " - " + Help);
         BarricadeDrop? drop;
         string? kitId = null;
@@ -498,8 +483,9 @@ public class RequestCommand : ICompoundingCooldownCommand
         // Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
 
         CooldownManager.StartCooldown(Context.Player, CooldownType.RequestVehicle, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
+#endif
     }
-
+#if false
     internal static void GiveVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data)
     {
         VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
@@ -510,7 +496,7 @@ public class RequestCommand : ICompoundingCooldownCommand
             if (spawn.Item?.Structure?.Item?.Buildable?.Model?.GetComponent<VehicleBayComponent>() is { } comp)
             {
                 comp.OnRequest();
-                ActionLog.Add(ActionLogType.RequestVehicle, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2", Data.AdminLocale)}", ucplayer);
+                ActionLog.Add(ActionLogType.RequestVehicle, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2", CultureInfo.InvariantCulture)}", ucplayer);
             }
             else
                 ActionLog.Add(ActionLogType.RequestVehicle, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
@@ -538,4 +524,5 @@ public class RequestCommand : ICompoundingCooldownCommand
                 ItemManager.dropItem(new Item(a.id, true), ucplayer.Position, true, true, true);
         }
     }
+#endif
 }

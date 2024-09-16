@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
@@ -51,7 +50,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: PatchUtil.GetMethodInfo(Transpiler));
+            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
             logger.LogDebug("Patched {0} for drop item event.", Accessor.Formatter.Format(_target));
             return;
         }
@@ -72,7 +71,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, PatchUtil.GetMethodInfo(Transpiler));
+        Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
         logger.LogDebug("Unpatched {0} for drop item event.", Accessor.Formatter.Format(_target));
         _target = null;
     }
@@ -139,7 +138,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
                     yield return new CodeInstruction(OpCodes.Ldnull);               // load null as backup
                 }
 
-                yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(DroppedItemInvoker));
+                yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(DroppedItemInvoker));
                 L.LogDebug("Patched ReceiveDropItem.");
             }
         }

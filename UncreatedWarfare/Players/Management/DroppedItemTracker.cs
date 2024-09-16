@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Patches;
@@ -87,7 +88,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
                 continue;
 
             RegionCoord region = item.Coord;
-            ItemUtility.RemoveDroppedItemUnsafe(region.x, region.y, item.Index, despawned, CSteamID.Nil, false);
+            ItemUtility.RemoveDroppedItemUnsafe(region.x, region.y, item.Index, despawned, CSteamID.Nil, false, 0, 0, 0, 0);
             ++foundItems;
         }
 
@@ -141,7 +142,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
         return _droppedItems.TryGetValue(player, out List<uint>? items) ? items : Enumerable.Empty<uint>();
     }
 
-    private void OnItemDestroyed(in ItemInfo itemInfo, bool despawned, bool pickedUp, CSteamID pickUpPlayer)
+    private void OnItemDestroyed(in ItemInfo itemInfo, bool despawned, bool pickedUp, CSteamID pickUpPlayer, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot)
     {
         _itemsPendingDrop.Remove(itemInfo.Item.item);
         if (!_itemDroppers.Remove(itemInfo.Item.instanceID, out ulong dropper64))
@@ -159,7 +160,11 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
             DropPlayer = _playerService.GetOnlinePlayerOrNull(dropper64),
             DropPlayerId = Unsafe.As<ulong, CSteamID>(ref dropper64),
             PickUpPlayer = pickedUp ? _playerService.GetOnlinePlayerOrNull(pickUpPlayer) : null,
-            PickUpPlayerId = pickedUp ? pickUpPlayer : CSteamID.Nil
+            PickUpPlayerId = pickedUp ? pickUpPlayer : CSteamID.Nil,
+            PickUpPage = pickedUp ? pickupPage : 0,
+            PickUpX = pickedUp ? pickupX : (byte)0,
+            PickUpY = pickedUp ? pickupY : (byte)0,
+            PickUpRotation = pickedUp ? pickupRot : (byte)0
         };
 
         _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);

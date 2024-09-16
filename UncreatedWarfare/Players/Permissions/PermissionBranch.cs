@@ -1,9 +1,9 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -143,23 +143,23 @@ public readonly struct PermissionBranch : IEquatable<PermissionBranch>, IEquatab
 
         return str;
     }
-    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        if ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
+        if ((parameters.Options & TranslationOptions.NoRichText) != 0)
             return ToString();
 
         if (IsSuperuser)
             return "<color=#fa3219>*</color>";
 
         string prefix = GetPrefix();
-        string prefixColor = Unturned ? "637b63" : Warfare ? "9cb6a4" : "dddddd";
+        Color32 prefixColor = Unturned ? new Color32(99, 123, 99, 255) : Warfare ? new Color32(156, 182, 164, 255) : new Color32(221, 221, 221, 255);
 
         bool hasStar = Path.EndsWith('*');
         string pathEnd = hasStar ? Path[..^1] : Path;
         string pathStar = hasStar ? "<color=#737373>*</color>" : string.Empty;
         string subPrefix = Mode == PermissionMode.Subtractive ? "<color=#ff704d>-</color>" : string.Empty;
 
-        return subPrefix + prefix.Colorize(prefixColor) + "<color=#737373>::</color>" + pathEnd.Colorize("d3ded6") + pathStar;
+        return subPrefix + formatter.Colorize(prefix, prefixColor, parameters.Options) + "<color=#737373>::</color>" + formatter.Colorize(pathEnd, new Color32(211, 222, 214, 255), parameters.Options) + pathStar;
     }
     public bool Equals(PermissionLeaf leaf)
     {

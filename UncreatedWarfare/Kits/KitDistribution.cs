@@ -20,6 +20,7 @@ namespace Uncreated.Warfare.Kits;
 public class KitDistribution(KitManager manager, IServiceProvider serviceProvider)
 {
     private readonly IPlayerService _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+    private readonly TipService _tipService = serviceProvider.GetRequiredService<TipService>();
     public KitManager Manager { get; } = manager;
 
     /// <summary>
@@ -432,9 +433,9 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
         if (kit.Class != Class.Unarmed && sendActionTip)
         {
             if (player.IsSquadLeader())
-                Tips.TryGiveTip(player, 1200, T.TipActionMenuSl);
+                _tipService.TryGiveTip(player, 1200, T.TipActionMenuSl);
             else
-                Tips.TryGiveTip(player, 3600, T.TipActionMenu);
+                _tipService.TryGiveTip(player, 3600, T.TipActionMenu);
         }
 
         // equip primary or secondary

@@ -1,4 +1,6 @@
-﻿using System;
+﻿
+#if false
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -19,7 +21,6 @@ using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles;
-
 [SingletonDependency(typeof(Whitelister))]
 public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsync, IDeclareWinListenerAsync, IPlayerPostInitListenerAsync, IQuestCompletedHandler
 {
@@ -1053,7 +1054,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                          if (f)
                                              sb.Append(',');
                                          else f = true;
-                                         sb.Append('@').Append(objs2.Count.ToString(Data.AdminLocale));
+                                         sb.Append('@').Append(objs2.Count.ToString(CultureInfo.InvariantCulture));
                                          objs2.Add(bpk);
                                          break;
                                      }
@@ -1329,7 +1330,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                  if (f)
                                      sb.Append(',');
                                  else f = true;
-                                 sb.Append('@').Append(objs2.Count.ToString(Data.AdminLocale));
+                                 sb.Append('@').Append(objs2.Count.ToString(CultureInfo.InvariantCulture));
                                  objs2.Add(bpk);
                              }, token).ConfigureAwait(false);
         if (f)
@@ -1475,3 +1476,4 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     #endregion
 }
+#endif

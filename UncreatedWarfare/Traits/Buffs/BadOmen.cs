@@ -31,7 +31,7 @@ public class BadOmen : Buff
     {
         if (onStart)
         {
-            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out _maxNotice))
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.CultureInfo.InvariantCulture, out _maxNotice))
                 _maxNotice = 15f;
 
             _squadMaxNotice = Data.EffectDistributedToSquad

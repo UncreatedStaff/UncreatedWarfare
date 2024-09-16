@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Components;
@@ -99,7 +100,7 @@ internal class DebugComponent : MonoBehaviour
 #if DEBUG && DEBUG_LOGGING
         _lastDt = Time.deltaTime;
         if (_lastDt > _maxUpdateSpeed && Level.isLoaded && UCWarfare.I is not null && UCWarfare.I.FullyLoaded)
-            L.LogWarning("Update took " + _lastDt.ToString("F6", Data.AdminLocale) + " seconds, higher than the max: " + _maxUpdateSpeed.ToString("F3", Data.AdminLocale) + "!!", ConsoleColor.Yellow);
+            L.LogWarning("Update took " + _lastDt.ToString("F6", CultureInfo.InvariantCulture) + " seconds, higher than the max: " + _maxUpdateSpeed.ToString("F3", CultureInfo.InvariantCulture) + "!!", ConsoleColor.Yellow);
 #endif
     }
     [UsedImplicitly]
@@ -108,7 +109,7 @@ internal class DebugComponent : MonoBehaviour
         float t = Time.realtimeSinceStartup;
 #if DEBUG && DEBUG_LOGGING
         if (t - _lastFixed > _maxFixedUpdateSpeed && Level.isLoaded && UCWarfare.I is not null && UCWarfare.I.FullyLoaded)
-            L.LogWarning("FixedUpdate took " + (t - _lastFixed).ToString("F6", Data.AdminLocale) + " seconds, higher than the max: " + _maxFixedUpdateSpeed.ToString("F3", Data.AdminLocale) + "!!", ConsoleColor.Yellow);
+            L.LogWarning("FixedUpdate took " + (t - _lastFixed).ToString("F6", CultureInfo.InvariantCulture) + " seconds, higher than the max: " + _maxFixedUpdateSpeed.ToString("F3", CultureInfo.InvariantCulture) + "!!", ConsoleColor.Yellow);
         _lastFixed = t;
 #endif
     }
@@ -205,16 +206,16 @@ internal class DebugComponent : MonoBehaviour
     {
         float t = Time.realtimeSinceStartup;
         float ttlSeconds = t - _startRt;
-        L.Log("Debug output for the last " + ttlSeconds.ToString("F3", Data.AdminLocale) + " seconds.");
+        L.Log("Debug output for the last " + ttlSeconds.ToString("F3", CultureInfo.InvariantCulture) + " seconds.");
         using IDisposable indent = L.IndentLog(2);
-        L.Log("Updates: " + Updates.ToString(Data.AdminLocale));
-        L.Log("Average framerate: " + (1f / _avgFrameRate).ToString(Data.AdminLocale) + " FPS (target: " + Application.targetFrameRate + " FPS)");
+        L.Log("Updates: " + Updates.ToString(CultureInfo.InvariantCulture));
+        L.Log("Average framerate: " + (1f / _avgFrameRate).ToString(CultureInfo.InvariantCulture) + " FPS (target: " + Application.targetFrameRate + " FPS)");
         if (_ttlBytesPlayers > 0)
-            L.Log($"Network usage verified players:     {_ttlBytesPlayers.ToString(Data.AdminLocale)} bytes ({(_ttlBytesPlayers / ttlSeconds).ToString("F2", Data.AdminLocale)} B/s)");
+            L.Log($"Network usage verified players:     {_ttlBytesPlayers.ToString(CultureInfo.InvariantCulture)} bytes ({(_ttlBytesPlayers / ttlSeconds).ToString("F2", CultureInfo.InvariantCulture)} B/s)");
         if (_ttlBytesPending > 0)
-            L.Log($"Network usage pending players:      {_ttlBytesPending.ToString(Data.AdminLocale)} bytes ({(_ttlBytesPending / ttlSeconds).ToString("F2", Data.AdminLocale)} B/s)");
+            L.Log($"Network usage pending players:      {_ttlBytesPending.ToString(CultureInfo.InvariantCulture)} bytes ({(_ttlBytesPending / ttlSeconds).ToString("F2", CultureInfo.InvariantCulture)} B/s)");
         if (_ttlBytesOther > 0)
-            L.Log($"Network usage non-players:          {_ttlBytesOther.ToString(Data.AdminLocale)} bytes ({(_ttlBytesOther / ttlSeconds).ToString("F2", Data.AdminLocale)} B/s)");
+            L.Log($"Network usage non-players:          {_ttlBytesOther.ToString(CultureInfo.InvariantCulture)} bytes ({(_ttlBytesOther / ttlSeconds).ToString("F2", CultureInfo.InvariantCulture)} B/s)");
         if (_lagged.Count > 0)
             L.Log(_lagged.Count + " Players lagged, currently " + _lagging.Count + " lagging.");
     }

@@ -147,7 +147,7 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     }
 
     /// <inheritdoc />
-    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, VehicleData data)
+    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
     {
         if (Assets.find(QuestId) is not QuestAsset asset)
         {

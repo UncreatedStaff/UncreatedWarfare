@@ -1,6 +1,5 @@
 ﻿using System;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
@@ -12,8 +11,7 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("ammo")]
-[MetadataFile(nameof(GetHelpMetadata))]
+[Command("ammo", "am"), MetadataFile]
 public class AmmoCommand : IExecutableCommand
 {
     private readonly DroppedItemTracker _itemTracker;
@@ -30,22 +28,11 @@ public class AmmoCommand : IExecutableCommand
         _translations = translations.Value;
     }
 
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Refill your kit while looking at an ammo crate or ammo bag or your vehicle's trunk while in main."
-        };
-    }
-
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
-
+#if false
         VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
         if (bay == null || !bay.IsLoaded)
             throw Context.SendGamemodeError();
@@ -273,6 +260,7 @@ public class AmmoCommand : IExecutableCommand
             else throw Context.Reply(_translations.AmmoNoTarget);
         }
         else throw Context.Reply(_translations.AmmoNoTarget);
+#endif
     }
 }
 
@@ -296,21 +284,23 @@ public class AmmoCommandTranslations : PropertiesTranslationCollection
     
     public readonly Translation AmmoWrongTeam = new Translation("<#b3a6a2>You cannot rearm with enemy ammunition.");
     
-    public readonly Translation<Cooldown> AmmoCooldown = new Translation<Cooldown>("<#b7bab1>More <#cedcde>AMMO</color> arriving in: <color=#de95a8>{0}</color>", Cooldown.FormatTimeShort);
+    public readonly Translation<Cooldown> AmmoCooldown = new Translation<Cooldown>("<#b7bab1>More <#cedcde>AMMO</color> arriving in: <color=#de95a8>{0}</color>", arg0Fmt: Cooldown.FormatTimeShort);
     
     public readonly Translation AmmoNotRifleman = new Translation("<#b7bab1>You must be a <#cedcde>RIFLEMAN</color> in order to place this <#cedcde>AMMO BAG</color>.");
     
     public readonly Translation AmmoNotNearRepairStation = new Translation("<#b3a6a2>Your vehicle must be next to a <#cedcde>REPAIR STATION</color> in order to rearm.");
+#if false
+
+    public readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#c$ammo$>{1} AMMO</color> <#948f8a>({2} left)</color>.", arg0Fmt: VehicleData.FormatColoredName);
     
-    public readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#c$ammo$>{1} AMMO</color> <#948f8a>({2} left)</color>.", VehicleData.COLORED_NAME);
-    
-    public readonly Translation<VehicleData, int> AmmoResuppliedVehicleMain = new Translation<VehicleData, int>("<#d1bda7>Resupplied {0}. Consumed: <#c$ammo$>{1} AMMO</color>.", VehicleData.COLORED_NAME);
+    public readonly Translation<VehicleData, int> AmmoResuppliedVehicleMain = new Translation<VehicleData, int>("<#d1bda7>Resupplied {0}. Consumed: <#c$ammo$>{1} AMMO</color>.", arg0Fmt: VehicleData.FormatColoredName);
     
     public readonly Translation AmmoVehicleCantRearm = new Translation("<#d1bda7>You cannot ressuply this vehicle.");
     
     public readonly Translation AmmoInVehicle = new Translation("<#d1bda7>You cannot ressuply this vehicle while flying, try exiting the vehicle.");
     
-    public readonly Translation<VehicleData> AmmoVehicleFullAlready = new Translation<VehicleData>("<#b3a6a2>Your {0} does not need to be resupplied.", VehicleData.COLORED_NAME);
+    public readonly Translation<VehicleData> AmmoVehicleFullAlready = new Translation<VehicleData>("<#b3a6a2>Your {0} does not need to be resupplied.", arg0Fmt: VehicleData.FormatColoredName);
     
-    public readonly Translation<VehicleData> AmmoVehicleNotNearRepairStation = new Translation<VehicleData>("<#b3a6a2>Your {0} must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.", VehicleData.COLORED_NAME);
+    public readonly Translation<VehicleData> AmmoVehicleNotNearRepairStation = new Translation<VehicleData>("<#b3a6a2>Your {0} must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.", arg0Fmt: VehicleData.FormatColoredName);
+#endif
 }

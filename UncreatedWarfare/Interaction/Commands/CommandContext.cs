@@ -243,7 +243,7 @@ public class CommandContext : ControlException
         if (Player == null)
         {
             Language = serviceProvider.GetRequiredService<LanguageService>().GetDefaultLanguage();
-            Culture = Warfare.Data.AdminLocale;
+            Culture = Warfare.CultureInfo.InvariantCulture;
             ParseFormat = Culture.NumberFormat;
         }
         else
@@ -1130,7 +1130,7 @@ public class CommandContext : ControlException
     /// <param name="selector">Filter assets to pick from.</param>
     /// <remarks>Zero based indexing. Do not use <see cref="ushort"/>s to search for objects, this is a deprecated feature by Unturned.</remarks>
     /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>
-    public bool TryGet<TAsset>(int parameter, [MaybeNullWhen(false)] out TAsset asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
+    public bool TryGet<TAsset>(int parameter, [NotNullWhen(true)] out TAsset? asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
     {
         if (!TryGetRange(parameter, out string? p, remainder ? -1 : len) || p.Length == 0)
         {
@@ -1735,6 +1735,20 @@ public class CommandContext : ControlException
     {
         if (!HasArgsExact(count))
             throw SendCorrectUsage(usage);
+    }
+
+    /// <exception cref="CommandContext"/>
+    public void AssertArgs(int count)
+    {
+        if (!HasArgs(count))
+            throw SendHelp();
+    }
+
+    /// <exception cref="CommandContext"/>
+    public void AssertArgsExact(int count)
+    {
+        if (!HasArgsExact(count))
+            throw SendHelp();
     }
 
     /// <exception cref="CommandContext"/>

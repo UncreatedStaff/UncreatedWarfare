@@ -11,11 +11,12 @@ using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Teams;
-public class FactionInfo : ITranslationArgument, ICloneable
+public class FactionInfo : ICloneable, ITranslationArgument
 {
     public const string UnknownTeamImgURL = "https://i.imgur.com/z0HE5P3.png";
     public const int FactionIDMaxCharLimit = 16;
@@ -121,7 +122,7 @@ public class FactionInfo : ITranslationArgument, ICloneable
     public uint PrimaryKey { get; set; }
 
     [JsonIgnore]
-    public string Sprite => "<sprite index=" + (TMProSpriteIndex.HasValue ? TMProSpriteIndex.Value.ToString(Data.AdminLocale) : "0") + ">";
+    public string Sprite => "<sprite index=" + (TMProSpriteIndex.HasValue ? TMProSpriteIndex.Value.ToString(CultureInfo.InvariantCulture) : "0") + ">";
 
     [JsonPropertyName("factionId")]
     public string FactionId
@@ -556,61 +557,35 @@ public class FactionInfo : ITranslationArgument, ICloneable
         return factionInfo.Assets?.FirstOrDefault(x => x.Redirect == redirect);
     }
 
-    [FormatDisplay("ID")]
-    public const string FormatId = "i";
-    [FormatDisplay("Colored ID")]
-    public const string FormatColorId = "ic";
-    [FormatDisplay("Short Name")]
-    public const string FormatShortName = "s";
-    [FormatDisplay("Display Name")]
-    public const string FormatDisplayName = "d";
-    [FormatDisplay("Abbreviation")]
-    public const string FormatAbbreviation = "a";
-    [FormatDisplay("Colored Short Name")]
-    public const string FormatColorShortName = "sc";
-    [FormatDisplay("Colored Display Name")]
-    public const string FormatColorDisplayName = "dc";
-    [FormatDisplay("Colored Abbreviation")]
-    public const string FormatColorAbbreviation = "ac";
+    
+    public static readonly SpecialFormat FormatShortName = new SpecialFormat("Short Name", "s");
+    
+    public static readonly SpecialFormat FormatDisplayName = new SpecialFormat("Display Name", "d");
+    
+    public static readonly SpecialFormat FormatAbbreviation = new SpecialFormat("Abbreviation", "a");
+    
+    public static readonly SpecialFormat FormatColorShortName = new SpecialFormat("Colored Short Name", "sc");
+    
+    public static readonly SpecialFormat FormatColorDisplayName = new SpecialFormat("Colored Display Name", "dc");
+    
+    public static readonly SpecialFormat FormatColorAbbreviation = new SpecialFormat("Colored Abbreviation", "ac");
 
-    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        string? format = parameters.Format.Format;
-        if (format is not null)
-        {
-            if (format.Equals(FormatColorDisplayName, StringComparison.Ordinal))
-                return Localization.Colorize(Color, GetName(parameters.Language), parameters.IMGUI);
-            
-            if (format.Equals(FormatShortName, StringComparison.Ordinal))
-                return GetShortName(parameters.Language);
-            
-            if (format.Equals(FormatColorShortName, StringComparison.Ordinal))
-                return Localization.Colorize(Color, GetShortName(parameters.Language), parameters.IMGUI);
-            
-            if (format.Equals(FormatAbbreviation, StringComparison.Ordinal))
-                return GetAbbreviation(parameters.Language);
-            
-            if (format.Equals(FormatColorAbbreviation, StringComparison.Ordinal))
-                return Localization.Colorize(Color, GetAbbreviation(parameters.Language), parameters.IMGUI);
-
-            if (format.Equals(FormatId, StringComparison.Ordinal) ||
-                format.Equals(FormatColorId, StringComparison.Ordinal))
-            {
-                ulong team = 0;
-
-                if (TeamManager.Team1Faction == this)
-                    team = 1;
-                else if (TeamManager.Team2Faction == this)
-                    team = 2;
-                else if (TeamManager.AdminFaction == this)
-                    team = 3;
-
-                if (format.Equals(FormatId, StringComparison.Ordinal))
-                    return team.ToString(parameters.Culture);
-
-                return Localization.Colorize(Color, team.ToString(parameters.Culture), parameters.IMGUI);
-            }
-        }
+        if (FormatColorDisplayName.Match(in parameters))
+            return formatter.Colorize(GetName(parameters.Language), Color, parameters.Options);
+        
+        if (FormatShortName.Match(in parameters))
+            return GetShortName(parameters.Language);
+        
+        if (FormatColorShortName.Match(in parameters))
+            return formatter.Colorize(GetShortName(parameters.Language), Color, parameters.Options);
+        
+        if (FormatAbbreviation.Match(in parameters))
+            return GetAbbreviation(parameters.Language);
+        
+        if (FormatColorAbbreviation.Match(in parameters))
+            return formatter.Colorize(GetAbbreviation(parameters.Language), Color, parameters.Options);
 
         return GetName(parameters.Language);
     }
@@ -667,7 +642,7 @@ public class FactionInfo : ITranslationArgument, ICloneable
 
     public static async Task DownloadFactions(IFactionDbContext db, List<FactionInfo> list, bool uploadDefaultIfMissing, CancellationToken token = default)
     {
-        if (UCWarfare.IsLoaded)
+        if (Provider.isInitialized)
             Localization.ClearSection(TranslationSection.Factions);
 
         List<Faction> factions = await db.Factions
@@ -709,7 +684,7 @@ public class FactionInfo : ITranslationArgument, ICloneable
             else
                 list.Add(newFaction);
 
-            if (UCWarfare.IsLoaded && faction.Translations != null)
+            if (Provider.isInitialized && faction.Translations != null)
             {
                 foreach (FactionLocalization local in faction.Translations)
                 {
@@ -724,7 +699,7 @@ public class FactionInfo : ITranslationArgument, ICloneable
 
         list.Sort((a, b) => a.PrimaryKey.CompareTo(b.PrimaryKey));
 
-        if (UCWarfare.IsLoaded)
+        if (Provider.isInitialized)
         {
             Localization.IncrementSection(TranslationSection.Factions, list.Count * 3);
         }

@@ -1,8 +1,10 @@
-﻿using System;
+﻿#if false
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
@@ -35,7 +37,7 @@ public class SpecialFOB : IFOB, IGameTickListener, IDisposable
     float IDeployable.Yaw => 0f;
     public string ClosestLocation => _cl;
     public GridLocation GridLocation => _gc;
-    UCPlayer? IFOB.Instigator { get; set; }
+    UCPlayer? IFob.Instigator { get; set; }
     public ulong Team { get; set; }
     public bool ContainsBuildable(IBuildable buildable) => false;
     public bool ContainsVehicle(InteractableVehicle vehicle) => false;
@@ -198,3 +200,4 @@ public class SpecialFOB : IFOB, IGameTickListener, IDisposable
         Record?.Dispose();
     }
 }
+#endif

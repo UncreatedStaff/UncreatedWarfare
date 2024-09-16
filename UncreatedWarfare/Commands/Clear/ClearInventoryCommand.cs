@@ -27,7 +27,7 @@ public class ClearInventoryCommand : IExecutableCommand
             
             ItemUtility.ClearInventoryAndSlots(pl);
 
-            Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.m_SteamID.ToString(Data.AdminLocale));
+            Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
             Context.Reply(_translations.ClearInventoryOther, pl);
         }
         else if (!Context.Caller.IsTerminal)

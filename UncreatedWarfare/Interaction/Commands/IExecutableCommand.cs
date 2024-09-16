@@ -1,4 +1,6 @@
-﻿namespace Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Translations;
+
+namespace Uncreated.Warfare.Interaction.Commands;
 
 /// <summary>
 /// A command that can be executed.

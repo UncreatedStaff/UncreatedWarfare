@@ -35,7 +35,7 @@ public class GuidedByGod : Buff
     {
         if (onStart)
         {
-            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out _multiplier))
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.CultureInfo.InvariantCulture, out _multiplier))
                 _multiplier = 0.15f;
 
             _squadMultiplier = Data.EffectDistributedToSquad

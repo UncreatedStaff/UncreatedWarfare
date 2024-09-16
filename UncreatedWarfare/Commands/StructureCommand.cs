@@ -206,7 +206,7 @@ public class StructureCommand : IExecutableCommand
                 await DestroyStructure(structure, Context.Player, token);
                 Context.LogAction(ActionLogType.PopStructure,
                     $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
-                    $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2", Data.AdminLocale)} ({structure.instanceID})");
+                    $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2", CultureInfo.InvariantCulture)} ({structure.instanceID})");
             }
             else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
             {
@@ -222,7 +222,7 @@ public class StructureCommand : IExecutableCommand
                 await DestroyBarricade(barricade, Context.Player, token);
                 Context.LogAction(ActionLogType.PopStructure,
                     $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
-                    $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2", Data.AdminLocale)} ({barricade.instanceID})");
+                    $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2", CultureInfo.InvariantCulture)} ({barricade.instanceID})");
                 Context.Defer();
             }
         }
@@ -285,7 +285,7 @@ public class StructureCommand : IExecutableCommand
                         "/structure <set|s> <group|owner> <value> - Value must be 'me', '0' or a valid Steam64 ID");
             }
 
-            string str64 = s64.ToString(Data.AdminLocale);
+            string str64 = s64.ToString(CultureInfo.InvariantCulture);
 
             ulong? group = grp ? s64 : null;
             ulong? owner = grp ? null : s64;

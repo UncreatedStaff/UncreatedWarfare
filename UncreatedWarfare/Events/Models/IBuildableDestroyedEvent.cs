@@ -1,7 +1,8 @@
 ﻿using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players;
 
-namespace Uncreated.Warfare.Events;
+namespace Uncreated.Warfare.Events.Models;
 
 /// <summary>
 /// Represents all event args in which a barricade or structure was destroyed.
@@ -11,7 +12,7 @@ public interface IBuildableDestroyedEvent
     /// <summary>
     /// Player that destroyed the buildable.
     /// </summary>
-    UCPlayer? Instigator { get; }
+    WarfarePlayer? Instigator { get; }
 
     /// <summary>
     /// Steam64 ID of the player that destroyed the buildable.

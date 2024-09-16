@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Sync;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 
-namespace Uncreated.Warfare.Quests;
+namespace Uncreated.Warfare.NewQuests;
 
 public interface IQuestReward
 {
@@ -13,7 +15,7 @@ public interface IQuestReward
     /// Dispatch the reward to the player.
     /// </summary>
     /// <param name="serviceProvider">The scoped service provider for the current layout.</param>
-    UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default);
+    UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default);
 }
 
 public class XPReward : IQuestReward
@@ -34,11 +36,11 @@ public class XPReward : IQuestReward
     }
 
     /// <inheritdoc />
-    public async UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
+    public async UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        XPParameters parameters = new XPParameters(player, player.GetTeam(), XP,
-            // todo translation
-            Localization.TranslateEnum(tracker.QuestData.QuestType, Localization.GetDefaultLanguage()).ToUpper() + " REWARD", false);
+        ITranslationValueFormatter formatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
+
+        XPParameters parameters = new XPParameters(player, player.Team, XP, tracker.Quest.Name.ToUpper() + " REWARD", false);
 
         await Points.AwardXPAsync(parameters, token).ConfigureAwait(false);
     }
@@ -58,19 +60,19 @@ public class CreditsReward : IQuestReward
     {
         Credits = credits;
     }
-    
+
     public CreditsReward(IConfiguration configuration)
     {
         Credits = configuration.GetValue<int>("Credits");
     }
 
     /// <inheritdoc />
-    public async UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
+    public async UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        CreditsParameters parameters = new CreditsParameters(player, player.GetTeam(), Credits,
-            // todo translation
-            Localization.TranslateEnum(tracker.QuestData.QuestType, player.Locale.LanguageInfo).ToUpper() + " REWARD");
-        
+        ITranslationValueFormatter formatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
+
+        CreditsParameters parameters = new CreditsParameters(player, player.Team, Credits, tracker.Quest.Name.ToUpper() + " REWARD");
+
         await Points.AwardCreditsAsync(parameters, token).ConfigureAwait(false);
     }
 
@@ -96,7 +98,7 @@ public class RankReward : IQuestReward
     }
 
     /// <inheritdoc />
-    public UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
+    public UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         Ranks.RankManager.SkipToRank(player, RankOrder);
         return UniTask.CompletedTask;
@@ -106,7 +108,7 @@ public class RankReward : IQuestReward
     public override string ToString()
     {
         ref Ranks.RankData d = ref Ranks.RankManager.GetRank(RankOrder, out bool success);
-        return "Reward: Unlock " + (success ? d.GetName(Localization.GetDefaultLanguage(), Data.LocalLocale) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
+        return "Reward: Unlock " + (success ? d.GetName(null, Data.LocalLocale) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
     }
 }
 
@@ -128,13 +130,10 @@ public class KitAccessReward : IQuestReward
     }
 
     /// <inheritdoc />
-    public async UniTask GrantRewardAsync(UCPlayer player, BaseQuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
+    public async UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (KitManager.GetSingletonQuick() is not { } kitManager)
-        {
-            L.LogWarning($"Failed to give kit reward to {player}.");
-            return;
-        }
+        KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
+
 
         if (string.IsNullOrEmpty(KitId))
             return;
@@ -145,7 +144,7 @@ public class KitAccessReward : IQuestReward
             return;
         }
 
-        KitSync.OnAccessChanged(player.Steam64);
+        // KitSync.OnAccessChanged(player.Steam64.m_SteamID);
     }
 
     /// <inheritdoc />

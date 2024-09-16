@@ -93,7 +93,7 @@ public class RewardExpression
 
         if (returnType == typeof(string))
         {
-            DynamicMethod strMethod = new DynamicMethod($"EvaluateReward_{QuestType.Name}_{RewardType.Name}", typeof(IQuestReward), [ typeof(IQuestState) ], typeof(QuestRewards), true);
+            DynamicMethod strMethod = new DynamicMethod($"EvaluateReward_{QuestType.Name}_{RewardType.Name}", typeof(IQuestReward), [ typeof(IQuestState) ], RewardType, true);
             strMethod.DefineParameter(0, ParameterAttributes.None, "state");
 
             IOpCodeEmitter strIl = strMethod.AsEmitter(debuggable: DebugLogging);
@@ -235,7 +235,7 @@ public class RewardExpression
 
         Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars = new Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>>(tokens.Count);
         FieldInfo[] fields = stateType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-        DynamicMethod method = new DynamicMethod($"EvaluateReward_{QuestType.Name}_{RewardType.Name}", typeof(IQuestReward), [ typeof(IQuestState) ], typeof(QuestRewards), true);
+        DynamicMethod method = new DynamicMethod($"EvaluateReward_{QuestType.Name}_{RewardType.Name}", typeof(IQuestReward), [ typeof(IQuestState) ], RewardType, true);
         method.DefineParameter(0, ParameterAttributes.None, "state");
 
         IOpCodeEmitter il = method.AsEmitter(debuggable: DebugLogging);

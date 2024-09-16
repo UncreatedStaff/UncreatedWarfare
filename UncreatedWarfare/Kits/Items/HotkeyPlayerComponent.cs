@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
@@ -55,10 +55,10 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
         }, CancellationToken.None);
     }
 
-    internal void HandleItemPickedUpAfterTransformed(ItemPickedUp e, byte origX, byte origY, Page origPage)
+    internal void HandleItemPickedUpAfterTransformed(ItemDestroyed e, byte origX, byte origY, Page origPage)
     {
         // resend hotkeys from picked up item
-        if (!UCWarfare.IsLoaded || HotkeyBindings == null || origX >= byte.MaxValue)
+        if (!Provider.isInitialized || HotkeyBindings == null || origX >= byte.MaxValue)
             return;
 
         CancellationToken tkn = _module.UnloadToken;
@@ -84,15 +84,18 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
         }, CancellationToken.None);
     }
 
-    private async Task ApplyHotkeyAfterPickingUpItemAsync(ItemPickedUp e, byte origX, byte origY, Page origPage, CancellationToken token = default)
+    private async Task ApplyHotkeyAfterPickingUpItemAsync(ItemDestroyed e, byte origX, byte origY, Page origPage, CancellationToken token = default)
     {
-        await e.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+        if (e.PickUpPlayer == null)
+            return;
+
+        await e.PickUpPlayer.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
             if (HotkeyBindings == null)
                 return;
 
-            Kit? activeKit = await e.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token).ConfigureAwait(false);
+            Kit? activeKit = await e.PickUpPlayer.Component<KitPlayerComponent>().GetActiveKitAsync(token).ConfigureAwait(false);
             if (activeKit == null)
                 return;
 
@@ -103,31 +106,31 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
                 if (binding.Kit != activeKit.PrimaryKey || binding.Item.X != origX || binding.Item.Y != origY || binding.Item.Page != origPage)
                     continue;
 
-                ItemAsset? asset = binding.GetAsset(activeKit, e.Player.GetTeam());
+                ItemAsset? asset = binding.GetAsset(activeKit, e.PickUpPlayer.Team);
                 if (asset == null)
                     continue;
 
                 byte index = KitEx.GetHotkeyIndex(binding.Slot);
-                if (index == byte.MaxValue || !KitEx.CanBindHotkeyTo(asset, e.Page))
+                if (index == byte.MaxValue || !KitEx.CanBindHotkeyTo(asset, e.PickUpPage))
                     continue;
 
-                e.Player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.Page, e.X, e.Y);
+                e.PickUpPlayer.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.PickUpPage, e.PickUpX, e.PickUpY);
 #if DEBUG
-                _logger.LogTrace("Updating old hotkey (picked up): {0} at {1}, ({2}, {3}).", asset.itemName, e.Page, e.X, e.Y);
+                _logger.LogTrace("Updating old hotkey (picked up): {0} at {1}, ({2}, {3}).", asset.itemName, e.PickUpPage, e.PickUpX, e.PickUpY);
 #endif
                 break;
             }
         }
         finally
         {
-            e.Player.PurchaseSync.Release();
+            e.PickUpPlayer.PurchaseSync.Release();
         }
     }
 
     internal void HandleItemMovedAfterTransformed(ItemMoved e, byte origX, byte origY, Page origPage, byte swapOrigX, byte swapOrigY, Page swapOrigPage)
     {
         // resend hotkeys from moved item(s)
-        if (!UCWarfare.IsLoaded || HotkeyBindings == null || (origX >= byte.MaxValue && swapOrigX >= byte.MaxValue))
+        if (!Provider.isInitialized || HotkeyBindings == null || (origX >= byte.MaxValue && swapOrigX >= byte.MaxValue))
             return;
 
         CancellationToken tkn = _module.UnloadToken;

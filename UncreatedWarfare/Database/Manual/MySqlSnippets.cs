@@ -26,7 +26,30 @@ public static class MySqlSnippets
     /// <param name="colTimeFallback">Column with a fallback UTC timestamp if <paramref name="colTime"/> is <see cref="DBNull"/>.</param>
     public static string BuildCheckDurationClause(string tableDurations, string tableTime, string colDuration, string colTime, string colTimeFallback) => $"(`{tableDurations}`.`{colDuration}` < 0 OR " +
         $"TIME_TO_SEC(TIMEDIFF(IF(`{tableTime}`.`{colTime}` IS NULL, `{tableTime}`.`{colTimeFallback}`, `{tableTime}`.`{colTime}`), UTC_TIMESTAMP())) * -1 < `{tableDurations}`.`{colDuration}`)";
-    
+
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>[,`<paramref name="columnPk"/>`]) VALUES (parameters[,LAST_INSERT_ID(@pk)]) ON DUPLICATE KEY UPDATE (<paramref name="columns"/>,`<paramref name="columnPk"/>`=LAST_INSERT_ID(`<paramref name="columnPk"/>`);<br/>SET @pk := (SELECT LAST_INSERT_ID() as `pk`);<br/>SELECT @pk</summary>
+    public static string BuildInitialInsertQuery(string table, string columnPk, bool hasPk, string? extPk, string[]? deleteTables, params string[] columns)
+    {
+        return "INSERT INTO `" + table + "` (" + MySqlSnippets.ColumnList(columns) +
+               (hasPk ? $",`{columnPk}`" : string.Empty) +
+               ") VALUES (" + MySqlSnippets.ParameterList(0, columns.Length) +
+               (hasPk ? ",LAST_INSERT_ID(@" + columns.Length.ToString(CultureInfo.InvariantCulture) + ")" : string.Empty) +
+               ") ON DUPLICATE KEY UPDATE " +
+               MySqlSnippets.ColumnUpdateList(0, columns) +
+               $",`{columnPk}`=LAST_INSERT_ID(`{columnPk}`);" +
+               "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" + (hasPk && extPk != null && deleteTables != null ? GetDeleteText(deleteTables, extPk, columns.Length) : string.Empty) +
+               " SELECT @pk;";
+    }
+
+    private static string GetDeleteText(string[] deleteTables, string columnPk, int pk)
+    {
+        StringBuilder sb = new StringBuilder(deleteTables.Length * 15);
+        for (int i = 0; i < deleteTables.Length; ++i)
+            sb.Append("DELETE FROM `").Append(deleteTables[i]).Append("` WHERE `").Append(columnPk).Append("`=@").Append(pk.ToString(CultureInfo.InvariantCulture)).Append(';');
+        return sb.ToString();
+    }
+
+
     /// <summary>
     /// Returns a list of parameters formatted: <c>@0,@1,@2,...</c>.
     /// </summary>

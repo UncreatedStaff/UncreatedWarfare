@@ -1,6 +1,5 @@
 ﻿using System;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits.Items;
@@ -42,7 +41,7 @@ public class AssetRedirectClothingKitItem : IClothingKitItem, IAssetRedirectKitI
     }
     public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
-        if (!UCWarfare.IsLoaded) throw new SingletonUnloadedException(typeof(UCWarfare));
+        if (!Provider.isInitialized) throw new InvalidOperationException("Not loaded.");
         return TeamManager.GetRedirectInfo(RedirectType, RedirectVariant ?? string.Empty, kit?.FactionInfo, targetTeam, out state, out amount);
     }
 

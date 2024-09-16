@@ -26,7 +26,7 @@ public class SelfRevive : Buff
     public float Cooldown;
     protected override void StartEffect(bool onStart)
     {
-        if (onStart && (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out Cooldown)))
+        if (onStart && (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.CultureInfo.InvariantCulture, out Cooldown)))
             Cooldown = 5f;
         base.StartEffect(onStart);
     }

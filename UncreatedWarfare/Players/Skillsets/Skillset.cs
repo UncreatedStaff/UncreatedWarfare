@@ -1,9 +1,10 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
-using System.Linq;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 
@@ -177,8 +178,8 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
             EPlayerSpeciality.OFFENSE => "Offense: " + Offense,
             EPlayerSpeciality.DEFENSE => "Defense: " + Defense,
             EPlayerSpeciality.SUPPORT => "Support: " + Support,
-            _ => "Invalid speciality #" + SkillIndex.ToString(Data.AdminLocale)
-        } + " at level " + Level.ToString(Data.AdminLocale) + ".";
+            _ => "Invalid speciality #" + SkillIndex.ToString(CultureInfo.InvariantCulture)
+        } + " at level " + Level.ToString(CultureInfo.InvariantCulture) + ".";
     }
     public override int GetHashCode()
     {
@@ -189,19 +190,18 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
         return hashCode;
     }
 
-    [FormatDisplay("No Level")]
-    public const string FormatNoLevel = "nl";
+    public static readonly SpecialFormat FormatNoLevel = new SpecialFormat("No Level", "nl");
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         string? format = parameters.Format.Format;
         string b = Speciality switch
         {
-            EPlayerSpeciality.DEFENSE => Localization.TranslateEnum(Defense, language),
-            EPlayerSpeciality.OFFENSE => Localization.TranslateEnum(Offense, language),
-            EPlayerSpeciality.SUPPORT => Localization.TranslateEnum(Support, language),
+            EPlayerSpeciality.DEFENSE => formatter.FormatEnum(Defense, parameters.Language),
+            EPlayerSpeciality.OFFENSE => formatter.FormatEnum(Offense, parameters.Language),
+            EPlayerSpeciality.SUPPORT => formatter.FormatEnum(Support, parameters.Language),
             _ => SpecialityIndex.ToString(parameters.Culture) + "." + SkillIndex.ToString(parameters.Culture)
         };
-        if (format != null && format.Equals(FormatNoLevel, StringComparison.Ordinal))
+        if (format != null && FormatNoLevel.Match(in parameters))
             return b;
         return b + " Level " + Level.ToString(parameters.Culture);
     }

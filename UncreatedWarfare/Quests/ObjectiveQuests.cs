@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if false
+using System;
 using System.Text.Json;
 using Uncreated.Warfare.Squads;
 
@@ -473,3 +474,4 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
         }
     }
 }
+#endif

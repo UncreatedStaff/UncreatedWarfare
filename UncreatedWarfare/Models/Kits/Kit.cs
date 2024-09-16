@@ -550,7 +550,7 @@ public class Kit : ITranslationArgument, ICloneable
         }
 
         L.LogDebug($"Buidling item array for {InternalName}...");
-        bool pooled = UCWarfare.IsLoaded && GameThread.IsCurrent;
+        bool pooled = Provider.isInitialized && GameThread.IsCurrent;
         List<IKitItem> tempList = pooled ? ListPool<IKitItem>.claim() : new List<IKitItem>(models.Length);
         try
         {
@@ -644,7 +644,7 @@ public class Kit : ITranslationArgument, ICloneable
             return;
         }
 
-        bool pooled = UCWarfare.IsLoaded && GameThread.IsCurrent;
+        bool pooled = Provider.isInitialized && GameThread.IsCurrent;
         List<UnlockRequirement> tempList = pooled ? ListPool<UnlockRequirement>.claim() : new List<UnlockRequirement>(models.Length);
         try
         {

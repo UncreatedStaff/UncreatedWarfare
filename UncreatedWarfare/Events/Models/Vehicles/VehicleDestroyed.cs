@@ -1,14 +1,12 @@
 ﻿using System.Collections.Generic;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
-public class VehicleDestroyed : EventState
+public class VehicleDestroyed
 {
     private readonly InteractableVehicle _vehicle;
     private readonly VehicleComponent? _component;
     private readonly SpottedComponent? _spotter;
-    private readonly VehicleData? _vehicleData;
     private readonly UCPlayer? _lockedOwner;
     private readonly UCPlayer? _instigator;
     private readonly UCPlayer? _lastDriver;
@@ -19,7 +17,6 @@ public class VehicleDestroyed : EventState
     public InteractableVehicle Vehicle => _vehicle;
     public VehicleComponent? Component => _component;
     public SpottedComponent? Spotter => _spotter;
-    public VehicleData? VehicleData => _vehicleData;
     public UCPlayer? Owner => _lockedOwner;
     public UCPlayer? Instigator => _instigator;
     public UCPlayer? LastDriver => _lastDriver;
@@ -34,11 +31,10 @@ public class VehicleDestroyed : EventState
     {
         _spotter = spotted;
         _vehicle = vehicle;
-        _lockedTeam = vehicle.lockedGroup.m_SteamID.GetTeam();
+        _lockedTeam = vehicle.lockedGroup.m_SteamID;
         _ownerId = vehicle.lockedOwner.m_SteamID;
         _lockedOwner = UCPlayer.FromID(_ownerId);
         _component = vehicle.GetComponent<VehicleComponent>();
-        _vehicleData = VehicleBay.GetSingletonQuick()?.GetDataSync(vehicle.asset.GUID);
         if (_component != null)
         {
             if (_component.LastInstigator != 0)

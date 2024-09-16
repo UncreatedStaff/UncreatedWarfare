@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
@@ -20,6 +21,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Whitelists;
@@ -29,13 +31,13 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.DependencyInjection;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events;
@@ -45,6 +47,11 @@ using Module = SDG.Framework.Modules.Module;
 namespace Uncreated.Warfare;
 public sealed class WarfareModule : IModuleNexus
 {
+    /// <summary>
+    /// The current season.
+    /// </summary>
+    public static readonly int Season = typeof(WarfareModule).Assembly.GetName().Version.Major;
+
     private static EventDispatcher2? _dispatcher;
 
 #nullable disable
@@ -112,11 +119,30 @@ public sealed class WarfareModule : IModuleNexus
         // will setup the main thread in GameThread before asserting
         GameThread.AssertCurrent();
 
+        ModuleHook.PreVanillaAssemblyResolvePostRedirects += ResolveAssemblyCompiler;
+        ModuleHook.PostVanillaAssemblyResolve += ErrorAssemblyNotResolved;
+
         Singleton = this;
         _gameObjectHost = new GameObject("Uncreated.Warfare");
         _cancellationTokenSource = new CancellationTokenSource();
 
         ConfigurationSettings.SetupTypeConverters();
+
+        // adds the plugin to the server lobby screen and sets the plugin framework type to 'Unknown'.
+        IPluginAdvertising pluginAdvService = PluginAdvertising.Get();
+        pluginAdvService.AddPlugin("Uncreated Warfare");
+        pluginAdvService
+            .GetType()
+            .GetProperty("PluginFrameworkTag", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy)
+            ?.GetSetMethod(true)
+            ?.Invoke(pluginAdvService, [ "uw" ]);
+
+        Provider.modeConfigData.Players.Lose_Items_PvP = 0;
+        Provider.modeConfigData.Players.Lose_Items_PvE = 0;
+        Provider.modeConfigData.Players.Lose_Clothes_PvP = false;
+        Provider.modeConfigData.Players.Lose_Clothes_PvE = false;
+        Provider.modeConfigData.Barricades.Decay_Time = 0;
+        Provider.modeConfigData.Structures.Decay_Time = 0;
 
         // Set the environment directory to the folder now at U3DS/Servers/ServerId/Warfare/
         HomeDirectory = Path.Combine(UnturnedPaths.RootDirectory.Name, "Servers", Provider.serverID, "Warfare");
@@ -145,6 +171,9 @@ public sealed class WarfareModule : IModuleNexus
 
     void IModuleNexus.shutdown()
     {
+        ModuleHook.PreVanillaAssemblyResolvePostRedirects -= ResolveAssemblyCompiler;
+        ModuleHook.PostVanillaAssemblyResolve -= ErrorAssemblyNotResolved;
+
         if (Singleton == this)
             Singleton = null;
 
@@ -169,7 +198,7 @@ public sealed class WarfareModule : IModuleNexus
         {
             Unhost();
         }
-        
+
         ServiceProvider.Dispose();
     }
 
@@ -177,11 +206,10 @@ public sealed class WarfareModule : IModuleNexus
     {
         Assembly thisAsm = Assembly.GetExecutingAssembly();
 
-        serviceCollection.AddTransient(typeof(DontDispose<>));
-
         // global zones (not used for layouts)
         serviceCollection.AddTransient<IZoneProvider, MapZoneProvider>();
         serviceCollection.AddSingleton(serviceProvider => new ZoneStore(serviceProvider.GetServices<IZoneProvider>(), serviceProvider.GetRequiredService<ILogger<ZoneStore>>(), true));
+        serviceCollection.AddScoped<ElectricalGridService>();
 
         serviceCollection.AddReflectionTools();
         serviceCollection.AddModularRpcs(isServer: false, searchedAssemblies: [ Assembly.GetExecutingAssembly() ]);
@@ -201,6 +229,8 @@ public sealed class WarfareModule : IModuleNexus
 
         serviceCollection.AddSingleton<SquadMenuUI>();
         serviceCollection.AddSingleton<SquadListUI>();
+
+        serviceCollection.AddScoped<TipService>();
 
         // event handlers
         serviceCollection.AddTransient<VehicleSpawnedHandler>();
@@ -286,6 +316,7 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton<ITranslationValueFormatter, TranslationValueFormatter>();
         serviceCollection.AddSingleton<ITranslationService, TranslationService>();
         serviceCollection.AddTransient(typeof(TranslationInjection<>));
+        serviceCollection.AddSingleton<AnnouncementService>();
 
         // Database
         serviceCollection.AddDbContext<WarfareDbContext>(contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Singleton);
@@ -566,5 +597,33 @@ public sealed class WarfareModule : IModuleNexus
     private void UnloadModule()
     {
         ServiceProvider.GetRequiredService<Module>().isEnabled = false;
+    }
+
+    // handles rerouting assemblies that aren't cooperating
+    private static Assembly? ErrorAssemblyNotResolved(object sender, ResolveEventArgs args)
+    {
+        // this can be raised when looking for other language translations for an assembly
+        if (!args.Name.Contains(".resources, ", StringComparison.Ordinal))
+        {
+            CommandWindow.LogError($"Unknown assembly: {args.Name}.");
+        }
+        else
+        {
+            CommandWindow.Log($"Unknown resx assembly: {args.Name}.");
+        }
+        return null;
+    }
+
+    private static Assembly? ResolveAssemblyCompiler(object sender, ResolveEventArgs args)
+    {
+        const string runtime = "System.Runtime.CompilerServices.Unsafe";
+
+        if (args.Name.StartsWith(runtime, StringComparison.Ordinal))
+        {
+            CommandWindow.LogWarning($"Redirected {args.Name} -> {runtime}.dll");
+            return typeof(Unsafe).Assembly;
+        }
+
+        return null;
     }
 }

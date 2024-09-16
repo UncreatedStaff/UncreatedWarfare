@@ -105,7 +105,7 @@ public class VehicleTeamkill : ModerationEntry
         if (Vehicle.HasValue)
         {
             string name;
-            if (UCWarfare.IsLoaded && Assets.find(Vehicle.Value) is VehicleAsset veh)
+            if (Provider.isInitialized && Assets.find(Vehicle.Value) is VehicleAsset veh)
             {
                 name = veh.FriendlyName ?? veh.name;
                 if (veh.id > 0)

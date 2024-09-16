@@ -142,7 +142,7 @@ public class TraitCommand : IExecutableCommand
             if (ct == 0)
                 throw Context.Reply(T.NoTraitsToClear);
             Context.Player.ActiveTraits.Clear();
-            Context.LogAction(ActionLogType.ClearTraits, ct.ToString(Data.AdminLocale) + " trait(s) cleared.");
+            Context.LogAction(ActionLogType.ClearTraits, ct.ToString(CultureInfo.InvariantCulture) + " trait(s) cleared.");
             Context.Reply(T.TraitsCleared, ct);
             return default;
         }

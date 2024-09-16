@@ -30,7 +30,7 @@ public class RapidDeployment : Buff
     private float _multiplier;
     protected override void StartEffect(bool onStart)
     {
-        if (onStart && (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out _multiplier)))
+        if (onStart && (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.CultureInfo.InvariantCulture, out _multiplier)))
             _multiplier = 0.75f;
         base.StartEffect(onStart);
     }

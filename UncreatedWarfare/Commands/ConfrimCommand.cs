@@ -3,24 +3,12 @@ using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("confirm", "c")]
-[MetadataFile(nameof(GetHelpMetadata))]
+[Command("confirm", "c"), HideFromHelp]
 [Priority(-1)]
 public class ConfirmCommand : IExecutableCommand
 {
     /// <inheritdoc />
     public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Confirm a pending action."
-        };
-    }
 
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
@@ -30,24 +18,12 @@ public class ConfirmCommand : IExecutableCommand
     }
 }
 
-[Command("deny")]
-[MetadataFile(nameof(GetHelpMetadata))]
+[Command("deny"), HideFromHelp]
 [Priority(-1)]
 public class DenyCommand : IExecutableCommand
 {
     /// <inheritdoc />
     public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Cancel a pending action."
-        };
-    }
 
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)

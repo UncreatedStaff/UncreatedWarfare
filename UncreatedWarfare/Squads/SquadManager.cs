@@ -1,33 +1,20 @@
 ﻿using SDG.NetTransport;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Extensions.Configuration;
-using Uncreated.Framework.UI;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Squads.Commander;
-using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
-using static Uncreated.Warfare.Squads.UI.SquadListUI;
-using static Uncreated.Warfare.Squads.UI.SquadMenuUI;
 
 namespace Uncreated.Warfare.Squads;
 
-public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener, IJoinedTeamListener, IUIListener, IGameTickListener
+public class SquadManager
 {
+    public const int SQUAD_MAX_MEMBERS = 6;
+#if false
     private readonly SquadMenuUI _menuUI;
     private readonly SquadListUI _listUI;
 
-    public const int SQUAD_MAX_MEMBERS = 6;
 
     public SquadManager(SquadMenuUI menuUI, SquadListUI listUI)
     {
@@ -516,7 +503,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         UpdateMemberList(squad);
         UpdateUIMemberCount(squad.Team);
 
-        ActionLog.Add(ActionLogType.JoinedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team) + " owned by " + squad.Leader.Steam64.ToString(Data.AdminLocale), player);
+        ActionLog.Add(ActionLogType.JoinedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team) + " owned by " + squad.Leader.Steam64.ToString(CultureInfo.InvariantCulture), player);
 
         if (squad.HasRally)
             squad.RallyPoint!.ShowUIForSquad();
@@ -577,7 +564,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             return;
         }
 
-        ActionLog.Add(ActionLogType.JoinedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.AdminLocale)), player);
+        ActionLog.Add(ActionLogType.JoinedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(CultureInfo.InvariantCulture)), player);
 
         if (willNeedNewLeader)
         {
@@ -754,13 +741,13 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         return squadsCount >= maxSquads;
     }
-    void IUIListener.HideUI(UCPlayer player)
+    public void HideUI(UCPlayer player)
     {
         ClearList(player.Player);
         ClearMenu(player.Player);
     }
-    void IUIListener.ShowUI(UCPlayer player) => ((IUIListener)this).UpdateUI(player);
-    void IUIListener.UpdateUI(UCPlayer player)
+    public void ShowUI(UCPlayer player) => this.UpdateUI(player);
+    public void UpdateUI(UCPlayer player)
     {
         if (player.Squad == null)
             SendSquadList(player);
@@ -814,6 +801,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             _timeSinceSquadCheck = Time.time;
         }
     }
+#endif
 }
 
 public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
@@ -837,12 +825,14 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     {
         get
         {
+#if false
             if (Leader is not null && Leader.IsOnline && SquadManager.Loaded)
             {
                 UCPlayer? cmd = SquadManager.Singleton.Commanders.GetCommander(Team);
                 if (cmd is not null && cmd.Steam64 == Leader.Steam64)
                     return true;
             }
+#endif
             return false;
         }
     }
@@ -867,7 +857,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     {
         for (int i = 0; i < Members.Count; ++i)
         {
-            if (Members[i].Steam64 == player.Steam64)
+            if (Members[i].Steam64 == player.Steam64.m_SteamID)
                 return true;
         }
 
@@ -892,15 +882,17 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
             yield return players.Current!.Player.channel.owner.transportConnection;
         players.Dispose();
     }
-    [FormatDisplay("Colored Squad Name")]
-    public const string FormatColorName = "c";
-    [FormatDisplay("Squad Name")]
-    public const string FormatName = "n";
+    
+    public static readonly SpecialFormat FormatColorName = new SpecialFormat("Colored Squad Name", "c");
+    
+    public static readonly SpecialFormat FormatName = new SpecialFormat("Squad Name", "n");
 
-    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters) =>
-        FormatColorName.Equals(parameters.Format.Format, StringComparison.Ordinal)
-            ? Localization.Colorize(Teams.TeamManager.GetTeamHexColor(Team), Name, parameters.Options)
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        return FormatColorName.Match(in parameters)
+            ? formatter.Colorize(Name, Team.Color, parameters.Options)
             : Name;
+    }
 }
 
 public delegate void SquadUpdated(UCPlayer player, Squad? oldSquad, Squad? newSquad, bool oldIsLeader, bool newIsLeader);

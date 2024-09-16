@@ -1,35 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
-using Uncreated.Framework.UI;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Util.List;
-using Uncreated.Warfare.Vehicles;
-
-namespace Uncreated.Warfare.Actions;
+﻿namespace Uncreated.Warfare.Actions;
 
 /// <summary>
 /// Handles the action menu.
 /// </summary>
-public class ActionManager : ISessionHostedService
+public class ActionManager
+    //: ISessionHostedService
 {
+#if false
     private readonly IServiceProvider _serviceProvider;
     private readonly IPlayerService _playerService;
+    private readonly ITranslationService _translationService;
 
     private readonly ActionMenuUI _ui;
     public ActionManager(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _translationService = serviceProvider.GetRequiredService<ITranslationService>();
 
         _ui = serviceProvider.GetRequiredService<ActionMenuUI>();
 
@@ -68,19 +55,19 @@ public class ActionManager : ISessionHostedService
     {
         await UniTask.SwitchToMainThread();
 
-        UCPlayerKeys.SubscribeKeyDown(OpenUI, Data.Keys.ActionMenu);
+        PlayerKeys.PressedPluginKey2 += OpenUI;
     }
 
     public async UniTask StopAsync(CancellationToken token)
     {
         await UniTask.SwitchToMainThread();
 
-        UCPlayerKeys.UnsubscribeKeyDown(OpenUI, Data.Keys.ActionMenu);
+        PlayerKeys.PressedPluginKey2 -= OpenUI;
         
         Provider.clients.ForEach(_ui.ClearFromPlayer);
     }
 
-    private void OpenUI(UCPlayer player, ref bool handled)
+    private void OpenUI(WarfarePlayer player, ref bool handled)
     {
         if (!_ui.HasAssetOrId)
             return;
@@ -105,24 +92,20 @@ public class ActionManager : ISessionHostedService
 
         player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
     }
-    private void CloseUI(UCPlayer player)
+    private void CloseUI(WarfarePlayer player)
     {
-        player.IsActionMenuOpen = false;
         _ui.ClearFromPlayer(player.Connection);
-        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+        player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
     }
     private void Cancel(UnturnedButton button, Player player)
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-
-        if (caller != null)
-            CloseUI(caller);
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+        CloseUI(caller);
     }
     private void NeedMedic(UnturnedButton button, Player player)
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         TrackingWhereEnumerable<WarfarePlayer> viewers = _playerService.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             p.KitClass == Class.Medic &&
@@ -135,9 +118,8 @@ public class ActionManager : ISessionHostedService
     }
     private void NeedAmmo(UnturnedButton button, Player player)
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             p.KitClass == Class.Rifleman &&
@@ -150,9 +132,8 @@ public class ActionManager : ISessionHostedService
     }
     private void NeedRide(UnturnedButton button, Player player)
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             p.IsDriver && 
@@ -170,9 +151,8 @@ public class ActionManager : ISessionHostedService
     }
     private void NeedSupport(UnturnedButton button, Player player)
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
@@ -184,29 +164,24 @@ public class ActionManager : ISessionHostedService
     }
     private void ThankYou(UnturnedButton button, Player player)
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
 
-        Action.SayTeam(caller, T.ThankYouChat);
+        SayTeam(caller, T.ThankYouChat);
 
         CloseUI(caller);
     }
     private void Sorry(UnturnedButton button, Player player)
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
 
-        Action.SayTeam(caller, T.SorryChat);
+        SayTeam(caller, T.SorryChat);
 
         CloseUI(caller);
     }
     private void HeliPickup(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             p.KitClass == Class.Pilot) ||
@@ -223,12 +198,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (F.IsInMain(caller))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInMain);
                     return false;
                 }
                 if (caller.IsInVehicle)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
                     return false;
                 }
                 return true;
@@ -239,9 +214,8 @@ public class ActionManager : ISessionHostedService
     }
     private void HeliDropoff(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             p.KitClass == Class.Pilot) ||
@@ -258,12 +232,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (!(caller.IsInVehicle && caller.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.TransportAir)))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorNotInHeli);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorNotInHeli);
                     return false;
                 }
                 if (!caller.Player.quests.isMarkerPlaced)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
                     return false;
                 }
                 return true;
@@ -280,9 +254,8 @@ public class ActionManager : ISessionHostedService
     }
     private void SuppliesBuild(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround)))) ||
@@ -298,12 +271,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (F.IsInMain(caller))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInMain);
                     return false;
                 }
                 if (caller.IsInVehicle)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
                     return false;
                 }
                 return true;
@@ -323,9 +296,8 @@ public class ActionManager : ISessionHostedService
     }
     private void SuppliesAmmo(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround)))) ||
@@ -341,12 +313,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (F.IsInMain(caller))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInMain);
                     return false;
                 }
                 if (caller.IsInVehicle)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
                     return false;
                 }
                 return true;
@@ -366,9 +338,8 @@ public class ActionManager : ISessionHostedService
     }
     private void AirSupport(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
              p.IsInVehicle && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsAssaultAircraft) ||
@@ -384,12 +355,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (F.IsInMain(caller))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInMain);
                     return false;
                 }
                 if (caller.IsInVehicle)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
                     return false;
                 }
                 return true;
@@ -400,9 +371,8 @@ public class ActionManager : ISessionHostedService
     }
     private void ArmorSupport(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             p.CurrentVehicle != null &&
@@ -420,12 +390,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (F.IsInMain(caller))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInMain);
                     return false;
                 }
                 if (caller.IsInVehicle)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
                     return false;
                 }
                 return true;
@@ -436,30 +406,26 @@ public class ActionManager : ISessionHostedService
     }
     private void UnloadBuild(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         TryUnloadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build);
     }
     private void UnloadAmmo(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         TryUnloadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Ammo);
     }
     private void LoadBuild(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build, true);
     }
     private void LoadAmmo(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer? caller = UCPlayer.FromPlayer(player);
-        if (caller == null)
-            return;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
+
         TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Ammo, false);
     }
     
@@ -547,7 +513,7 @@ public class ActionManager : ISessionHostedService
     }
     private void Attack(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
 
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
@@ -562,7 +528,7 @@ public class ActionManager : ISessionHostedService
     }
     private void Defend(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
 
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
@@ -592,7 +558,7 @@ public class ActionManager : ISessionHostedService
     }
     private void Build(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
 
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
@@ -607,7 +573,7 @@ public class ActionManager : ISessionHostedService
     }
     private void AttackMarker(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
 
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
@@ -618,12 +584,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (!caller.Player.quests.isMarkerPlaced)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
                     return false;
                 }
                 if (F.IsInMain(caller.Player.quests.markerPosition))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInMain);
                     return false;
                 }
                 return true;
@@ -635,7 +601,7 @@ public class ActionManager : ISessionHostedService
     }
     private void DefendMarker(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
 
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
@@ -646,12 +612,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (!caller.Player.quests.isMarkerPlaced)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
                     return false;
                 }
                 if (F.IsInMain(caller.Player.quests.markerPosition))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInMain);
                     return false;
                 }
                 return true;
@@ -663,7 +629,7 @@ public class ActionManager : ISessionHostedService
     }
     private void MoveMarker(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
 
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
@@ -674,12 +640,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (!caller.Player.quests.isMarkerPlaced)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
                     return false;
                 }
                 if (F.IsInMain(caller.Player.quests.markerPosition))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInMain);
                     return false;
                 }
                 return true;
@@ -689,9 +655,27 @@ public class ActionManager : ISessionHostedService
         action.Start();
         CloseUI(caller);
     }
+
+    public void SayTeam(WarfarePlayer caller, Translation<Color>? chatMessage)
+    {
+        if (chatMessage is null)
+            return;
+
+        Color teamColor = caller.Team.Faction.Color;
+
+        foreach (LanguageSet set in _translationService.SetOf.PlayersOnTeam(caller.Team))
+        {
+            string translation = chatMessage.Translate(teamColor, set.Language, null, true);
+            while (set.MoveNext())
+            {
+                ChatManager.serverSendMessage(translation, Palette.AMBIENT, caller.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
+            }
+        }
+    }
+
     private void BuildMarker(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        WarfarePlayer caller = _playerService.GetOnlinePlayer(player);
 
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
         //IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
@@ -702,12 +686,12 @@ public class ActionManager : ISessionHostedService
             {
                 if (!caller.Player.quests.isMarkerPlaced)
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
                     return false;
                 }
                 if (F.IsInMain(caller.Player.quests.markerPosition))
                 {
-                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    TipService.TryGiveTip(caller, 0, T.ActionErrorInMain);
                     return false;
                 }
                 return true;
@@ -717,4 +701,5 @@ public class ActionManager : ISessionHostedService
         action.Start();
         CloseUI(caller);
     }
+#endif
 }

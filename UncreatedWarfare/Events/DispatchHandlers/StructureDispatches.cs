@@ -1,7 +1,10 @@
-﻿using Uncreated.Warfare.Components;
+﻿using System;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Structures;
+using Uncreated.Warfare.Events.Patches;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
@@ -204,5 +207,67 @@ partial class EventDispatcher2
                 _workingSalvageInfos.Clear();
             }
         }
+    }
+
+    private static bool _ignoreStructureManagerOnDamageStructureRequested;
+    private void StructureManagerOnDamageStructureRequested(CSteamID instigatorSteamId, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
+    {
+        if (_ignoreStructureManagerOnDamageStructureRequested)
+            return;
+
+        StructureDrop? drop = StructureManager.FindStructureByRootTransform(structureTransform);
+        if (drop == null)
+        {
+            shouldAllow = false;
+            return;
+        }
+
+        StructureManager.tryGetRegion(structureTransform, out byte x, out byte y, out StructureRegion region);
+        int index = region.drops.IndexOf(drop);
+
+        if (index is < 0 or > ushort.MaxValue)
+        {
+            shouldAllow = false;
+            _logger.LogWarning("Failed to find structure {0} # {1} in StructureManagerOnDamageStructureRequested.", drop.asset.FriendlyName, drop.instanceID);
+            return;
+        }
+
+        DamageStructureRequested args = new DamageStructureRequested(region)
+        {
+            InstigatorId = instigatorSteamId,
+            Instigator = _playerService.GetOnlinePlayerOrNull(instigatorSteamId),
+            InstanceId = drop.instanceID,
+            Structure = drop,
+            DamageOrigin = damageOrigin,
+
+            // todo
+            PrimaryAsset = null,
+            SecondaryAsset = null,
+
+            RegionPosition = new RegionCoord(x, y),
+            ServersideData = drop.GetServersideData(),
+            RegionIndex = (ushort)index,
+            Damage = pendingTotalDamage,
+            Direction = StructureManagerSaveDirecction.LastDirection
+        };
+
+        EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
+        {
+            if (args.Structure == null || args.Structure.GetServersideData().structure.isDead)
+                return;
+
+            _ignoreStructureManagerOnDamageStructureRequested = true;
+            try
+            {
+                StructureManager.damage(args.Transform, args.Direction, (ushort)Math.Clamp(args.Damage, 0f, ushort.MaxValue), 1, false, args.InstigatorId, args.DamageOrigin);
+            }
+            finally
+            {
+                _ignoreStructureManagerOnDamageStructureRequested = false;
+            }
+        });
+
+        if (shouldAllow)
+            pendingTotalDamage = (ushort)Math.Clamp(args.Damage, 0f, ushort.MaxValue);
     }
 }

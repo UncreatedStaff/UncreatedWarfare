@@ -4,7 +4,7 @@ using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Util;

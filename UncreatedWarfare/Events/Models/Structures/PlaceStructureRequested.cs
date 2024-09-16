@@ -6,6 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Structures;
 /// <summary>
 /// Event listener args which handles <see cref="StructureManager.onDamageStructureRequested"/>.
 /// </summary>
+[EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
 public class PlaceStructureRequested : CancellableEvent
 {
     private Vector3 _position;

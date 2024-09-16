@@ -47,7 +47,7 @@ public class SessionRecord
 
     [Required]
     public MapData Map { get; set; }
-    public byte Team { get; set; }
+    public int Team { get; set; }
 
     [Column("StartedTimestampUTC")]
     public DateTimeOffset StartedTimestamp { get; set; }

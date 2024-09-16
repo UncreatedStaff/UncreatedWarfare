@@ -14,19 +14,13 @@ using System.Text.RegularExpressions;
 using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Database;
-using Uncreated.Warfare.Deaths;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Sessions;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations.Languages;
 
 #if NETSTANDARD || NETFRAMEWORK
@@ -94,7 +88,7 @@ public static class Data
         public const PlayerKey DropSupplyOverride = PlayerKey.PluginKey1;
     }
 
-    internal static IUncreatedSingleton[] GamemodeListeners;
+
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
     public static readonly Regex ChatFilter = new Regex(@"(?:[nńǹňñṅņṇṋṉn̈ɲƞᵰᶇɳȵɴｎŋǌvṼṽṿʋᶌᶌⱱⱴᴠʌｖ\|\\\/]\W{0,}[il1ÍíìĭîǐïḯĩįīỉȉȋịḭɨᵻᶖiıɪɩｉﬁIĳ\|\!]\W{0,}[gqb96ǴǵğĝǧġģḡǥɠᶃɢȝｇŋɢɢɋƣʠｑȹḂḃḅḇƀɓƃᵬᶀʙｂȸ](?!h|(?:an)|(?:[e|a|o]t)|(?:un)|(?:rab)|(?:rain)|(?:low)|(?:ue)|(?:uy))(?!n\shadi)\W{0,}[gqb96ǴǵğĝǧġģḡǥɠᶃɢȝｇŋɢɢɋƣʠｑȹḂḃḅḇƀɓƃᵬᶀʙｂȸ]{0,}\W{0,}[gqb96ǴǵğĝǧġģḡǥɠᶃɢȝｇŋɢɢɋƣʠｑȹḂḃḅḇƀɓƃᵬᶀʙｂȸ]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:[fḟƒᵮᶂꜰｆﬀﬃﬄﬁﬂ]\W{0,}[aáàâǎăãảȧạäåḁāąᶏⱥȁấầẫẩậắằẵẳặǻǡǟȃɑᴀɐɒａæᴁᴭᵆǽǣᴂ]\W{0,}[gqb96ǴǵğĝǧġģḡǥɠᶃɢȝｇŋɢɢɋƣʠｑȹḂḃḅḇƀɓƃᵬᶀʙｂȸ]{1,}\W{0,}o{0,}\W{0,}t{0,1}(?!ain))", RegexOptions.IgnoreCase);
@@ -108,14 +102,13 @@ public static class Data
     public static Dictionary<ulong, string> DefaultPlayerNames;
     public static Dictionary<ulong, PlayerNames> OriginalPlayerNames;
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents;
-    public static GamemodeOld Gamemode;
     public static bool UseFastKits;
     public static bool UseElectricalGrid;
     internal static MethodInfo ReplicateStance;
     public static Points Points;
     public static SessionManager Sessions;
 #if NETSTANDARD || NETFRAMEWORK
-    public static WarfareStripeService WarfareStripeService;
+    public static IStripeService WarfareStripeService;
 #endif
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
@@ -133,7 +126,7 @@ public static class Data
     internal static ClientStaticMethod<uint, byte, CSteamID>? SendEnterVehicle;
     internal static ClientInstanceMethod? SendInventory;
     // internal static ClientInstanceMethod? SendScreenshotDestination;
-    internal static SingletonManager Singletons;
+
     internal static InstanceSetter<PlayerStance, EPlayerStance>? SetPrivateStance;
     internal static InstanceSetter<InteractableStorage, Items>? SetStorageInventory;
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
@@ -152,67 +145,17 @@ public static class Data
     public static IRpcRouter RpcRouter { get; internal set; }
     public static IModularRpcRemoteConnection RpcConnection { get; internal set; }
     public static bool IsInitialSyncRegistering { get; private set; } = true;
-    public static WarfareSQL AdminSql => RemoteSQL ?? DatabaseManager;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Is<TGamemode>([NotNullWhen(true)] out TGamemode? gamemode) where TGamemode : class, IGamemode => (gamemode = Gamemode as TGamemode) is not null;
+    public static bool Is<TGamemode>([NotNullWhen(true)] out TGamemode? gamemode)
+    {
+        gamemode = default;
+        return false;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Is<TGamemode>() where TGamemode : class, IGamemode => Gamemode is TGamemode;
-    public static ServerConfig GetServerConfig()
-    {
-        string? ip;
-        try
-        {
-            ip = SteamGameServer.GetPublicIP().ToIPAddress().ToString();
-            L.LogDebug("IP: " + ip);
-        }
-        catch (InvalidOperationException)
-        {
-            L.LogDebug("IP not available.");
-            ip = null;
-        }
-        
-        return new WarfareServerConfig
-        {
-            Address = ip,
-            FactionTeam1 = TeamManager.Team1Faction.PrimaryKey.Key,
-            FactionTeam2 = TeamManager.Team2Faction.PrimaryKey.Key,
-            Identity = UCWarfare.Config.Identity,
-            MapId = MapScheduler.Current,
-            Port = Provider.port,
-            MaxPlayers = Provider.maxPlayers,
-            Region = UCWarfare.Config.Region,
-            RegionId = UCWarfare.Config.RegionKey,
-            ServerId = Provider.server.m_SteamID,
-            ServerName = Provider.serverName,
-            MapName = Level.info?.name ?? Provider.map
-        };
-    }
-    public static void SendUpdateServerConfig()
-    {
-        L.LogDebug("Updating config to net client: " + (UCWarfare.I.NetClient?.Identity) + ".");
-        UCWarfare.I.NetClient?.UpdateConfig();
-    }
-    internal static async Task LoadSQL(CancellationToken token)
-    {
-        DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
-        bool status = await DatabaseManager.OpenAsync(token);
-        L.Log("Local MySql database status: " + status + ".", ConsoleColor.Magenta);
-        if (UCWarfare.Config.RemoteSQL != null)
-        {
-            RemoteSQL = new WarfareSQL(UCWarfare.Config.RemoteSQL);
-            status = await RemoteSQL.OpenAsync(token);
-            L.Log("Remote MySql database status: " + status + ".", ConsoleColor.Magenta);
-        }
-        else
-            L.Log("Using local as remote MySql database.", ConsoleColor.Magenta);
-
-        L.Log("Verifying global tables...", ConsoleColor.Magenta);
-        await AdminSql.RefreshInformationSchemaAsync(token).ConfigureAwait(false);
-        await AdminSql.VerifyTables(WarfareSQL.WarfareSchemas, token).ConfigureAwait(false);
-        L.Log(" -- Done.", ConsoleColor.DarkMagenta);
-    }
+    public static bool Is<TGamemode>() => false;
+    
     internal static async Task LoadVariables(CancellationToken token)
     {
         OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
@@ -220,15 +163,6 @@ public static class Data
 
         /* CREATE DIRECTORIES */
         L.Log("Validating directories...", ConsoleColor.Magenta);
-        F.CheckDir(Paths.BaseDirectory, out _, true);
-        F.CheckDir(Paths.MapStorage, out _, true);
-        F.CheckDir(Paths.LangStorage, out _, true);
-        F.CheckDir(Paths.KitsStorage, out _, true);
-        F.CheckDir(Paths.PointsStorage, out _, true);
-        F.CheckDir(Paths.FOBStorage, out _, true);
-
-        ZoneList l = await Singletons.LoadSingletonAsync<ZoneList>(token: token);
-        L.Log("Read " + l.Items.Count + " zones.", ConsoleColor.Magenta);
 
         /* CONSTRUCT FRAMEWORK */
         L.Log("Instantiating Framework...", ConsoleColor.Magenta);
@@ -236,15 +170,6 @@ public static class Data
         //L.Log("Connection string: " + UCWarfare.Config.SQL.GetConnectionString(), ConsoleColor.DarkGray);
 #endif
 
-        await UniTask.SwitchToMainThread(token);
-        Gamemode.ReadGamemodes();
-        
-        DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(true, token: token);
-        GamemodeListeners = new IUncreatedSingleton[2];
-        GamemodeListeners[0] = Points = await Singletons.LoadSingletonAsync<Points>(true, token: token);
-        GamemodeListeners[1] = Sessions = await Singletons.LoadSingletonAsync<SessionManager>(true, token: token);
-        await Singletons.LoadSingletonAsync<PlayerList>(true, token: token);
-        await UniTask.SwitchToMainThread(token);
 
         /* REFLECT PRIVATE VARIABLES */
         L.Log("Getting RPCs...", ConsoleColor.Magenta);
@@ -344,12 +269,8 @@ public static class Data
 
         indent.Dispose();
 
-        await SessionManager.CheckForTerminatedSessions(token).ConfigureAwait(false);
-        await UniTask.SwitchToMainThread(token);
 
         L.Log("Loading first gamemode...", ConsoleColor.Magenta);
-        if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF), true, token).ConfigureAwait(false))
-            throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Failed to load gamemode"));
 
         SteamPlayerID id = new SteamPlayerID(CSteamID.Nil, 0, "Nil", "Nil", "Nil", CSteamID.Nil);
         GameObject obj = Provider.gameMode.getPlayerGameObject(id);
@@ -366,7 +287,7 @@ public static class Data
                 break;
         }
 
-        UnityEngine.Object.Destroy(obj);
+        Object.Destroy(obj);
     }
     public static PooledTransportConnectionList GetPooledTransportConnectionList(int capacity = -1)
     {
@@ -475,21 +396,7 @@ public static class Data
 
         return matchValue;
     }
-    public static async Task ReloadLanguageDataStore(bool init, CancellationToken token = default)
-    {
-        if (init)
-            await LanguageDataStore.Initialize(token).ConfigureAwait(false);
-        await LanguageDataStore.ReloadCache(token).ConfigureAwait(false);
 
-        if (LanguageDataStore.GetInfoCached(L.Default) is { } defaultLang)
-            FallbackLanguageInfo = defaultLang;
-    }
-    internal static void RegisterInitialConfig()
-    {
-        Gamemode.ConfigObj = new GamemodeConfig();
-        Gamemode.WinToastUI = new WinToastUI();
-        IsInitialSyncRegistering = false;
-    }
     internal static readonly List<KeyValuePair<Type, string?>> TranslatableEnumTypes = new List<KeyValuePair<Type, string?>>()
     {
         new KeyValuePair<Type, string?>(typeof(EDamageOrigin), "Damage Origin"),
@@ -497,75 +404,45 @@ public static class Data
         new KeyValuePair<Type, string?>(typeof(ELimb), "Limb")
     };
 
-    private static CancellationTokenSource? _netClientSource;
-    internal static void OnClientConnected(IConnection connection)
-    {
-        L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
-        CancellationTokenSource src = new CancellationTokenSource();
-        CancellationTokenSource? old = Interlocked.Exchange(ref _netClientSource, src);
-        old?.Cancel();
-        CancellationToken tkn = src.Token;
-        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
-        tkn.ThrowIfCancellationRequested();
-        UCWarfare.RunTask(async tokens =>
-        {
-            try
-            {
-                await UCWarfare.ToUpdate(tokens.Token);
-                tokens.Token.ThrowIfCancellationRequested();
-                PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
-                if (!UCWarfare.Config.DisableDailyQuests)
-                    Quests.DailyQuests.OnConnectedToServer();
-                if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)
-                    ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
-                tokens.Token.ThrowIfCancellationRequested();
-                IUncreatedSingleton[] singletons = Singletons.GetSingletons();
-                for (int i = 0; i < singletons.Length; ++i)
-                {
-                    if (singletons[i] is ITCPConnectedListener l)
-                    {
-                        await l.OnConnected(tokens.Token).ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(tokens.Token);
-                    }
-                }
-                tokens.Token.ThrowIfCancellationRequested();
-                if (ActionLog.Instance != null)
-                    await ActionLog.Instance.OnConnected(tokens.Token).ConfigureAwait(false);
-            }
-            finally
-            {
-                tokens.Dispose();
-            }
-        }, tokens, ctx: "Execute on client connected events.", timeout: 120000);
-    }
-    public static void HideAllUI(UCPlayer player)
-    {
-        GameThread.AssertCurrent();
-        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
-        for (int i = 0; i < singletons.Length; ++i)
-        {
-            if (singletons[i] is IUIListener ui)
-                ui.HideUI(player);
-        }
-    }
-    public static void ShowAllUI(UCPlayer player)
-    {
-        GameThread.AssertCurrent();
-        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
-        for (int i = 0; i < singletons.Length; ++i)
-        {
-            if (singletons[i] is IUIListener ui)
-                ui.ShowUI(player);
-        }
-    }
-    public static void UpdateAllUI(UCPlayer player)
-    {
-        GameThread.AssertCurrent();
-        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
-        for (int i = 0; i < singletons.Length; ++i)
-        {
-            if (singletons[i] is IUIListener ui)
-                ui.UpdateUI(player);
-        }
-    }
+    //internal static void OnClientConnected(IConnection connection)
+    //{
+    //    L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
+    //    CancellationTokenSource src = new CancellationTokenSource();
+    //    CancellationTokenSource? old = Interlocked.Exchange(ref _netClientSource, src);
+    //    old?.Cancel();
+    //    CancellationToken tkn = src.Token;
+    //    CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
+    //    tkn.ThrowIfCancellationRequested();
+    //    UCWarfare.RunTask(async tokens =>
+    //    {
+    //        try
+    //        {
+    //            await UCWarfare.ToUpdate(tokens.Token);
+    //            tokens.Token.ThrowIfCancellationRequested();
+    //            PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
+    //            if (!UCWarfare.Config.DisableDailyQuests)
+    //                Quests.DailyQuests.OnConnectedToServer();
+    //            if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)
+    //                ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
+    //            tokens.Token.ThrowIfCancellationRequested();
+    //            IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+    //            for (int i = 0; i < singletons.Length; ++i)
+    //            {
+    //                if (singletons[i] is ITCPConnectedListener l)
+    //                {
+    //                    await l.OnConnected(tokens.Token).ConfigureAwait(false);
+    //                    await UCWarfare.ToUpdate(tokens.Token);
+    //                }
+    //            }
+    //            tokens.Token.ThrowIfCancellationRequested();
+    //            if (ActionLog.Instance != null)
+    //                await ActionLog.Instance.OnConnected(tokens.Token).ConfigureAwait(false);
+    //        }
+    //        finally
+    //        {
+    //            tokens.Dispose();
+    //        }
+    //    }, tokens, ctx: "Execute on client connected events.", timeout: 120000);
+    //}
+    
 }

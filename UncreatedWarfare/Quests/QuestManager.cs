@@ -1,4 +1,5 @@
-﻿using DanielWillett.ReflectionTools;
+﻿#if false
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -232,7 +233,7 @@ public static class QuestManager
     public static void OnGameTick()
     {
         // no clue why this is running after unload...
-        if (!UCWarfare.IsLoaded)
+        if (!Provider.isInitialized)
             return;
 
         if (!UCWarfare.Config.DisableDailyQuests)
@@ -542,8 +543,8 @@ public static class QuestManager
             }
         }
     }
-    private static string GetSavePath(ulong steam64, Guid key, ulong team) => Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", steam64.ToString(Data.AdminLocale) +
-                                                                              "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale), "Quests", team + "_" + key.ToString("N") + ".json");
+    private static string GetSavePath(ulong steam64, Guid key, ulong team) => Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", steam64.ToString(CultureInfo.InvariantCulture) +
+                                                                              "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(CultureInfo.InvariantCulture), "Quests", team + "_" + key.ToString("N") + ".json");
     public static void SaveProgress(BaseQuestTracker t, ulong team)
     {
         if (t.PresetKey == default) return;
@@ -618,8 +619,8 @@ public static class QuestManager
     }
     private static void GetCompletedQuests(WarfarePlayer player)
     {
-        string folder = Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", player.Steam64.ToString(Data.AdminLocale) +
-                        "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale), "Quests") + Path.DirectorySeparatorChar;
+        string folder = Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", player.Steam64.ToString(CultureInfo.InvariantCulture) +
+                        "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(CultureInfo.InvariantCulture), "Quests") + Path.DirectorySeparatorChar;
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);
@@ -730,3 +731,4 @@ public static class QuestManager
     }
     #endregion
 }
+#endif

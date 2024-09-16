@@ -73,7 +73,7 @@ public abstract class UnlockRequirement : ICloneable
         L.LogWarning("Unhandled kit requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
-    public virtual Exception RequestVehicleFailureToMeet(CommandContext ctx, VehicleData data)
+    public virtual Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
     {
         L.LogWarning("Unhandled vehicle requirement type: " + GetType().Name);
         return ctx.SendUnknownError();

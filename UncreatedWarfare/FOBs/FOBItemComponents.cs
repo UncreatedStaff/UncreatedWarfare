@@ -1,18 +1,20 @@
 ﻿using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.FOBs;
@@ -985,7 +987,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
                 float contribution = responsibility.Ticks / Builders.GetTicksNoLock();
 
-                ActionLog.Add(ActionLogType.HelpBuildBuildable, $"{Buildable} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", responsibility.Steam64);
+                ActionLog.Add(ActionLogType.HelpBuildBuildable, $"{Buildable} - {Mathf.RoundToInt(contribution * 100f).ToString(CultureInfo.InvariantCulture)}%", responsibility.Steam64);
 
                 if (contribution < 0.1f || player == null)
                     continue;

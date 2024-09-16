@@ -1,0 +1,3 @@
+﻿# AmmoCommand
+Description: "Get ammo for the vehicle you're looking at, or request ammo from a crate or bag."
+Aliases: [ am ]

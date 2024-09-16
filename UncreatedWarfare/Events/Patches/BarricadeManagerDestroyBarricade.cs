@@ -8,7 +8,6 @@ using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using static Uncreated.Warfare.Harmony.Patches;
@@ -26,7 +25,7 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: PatchUtil.GetMethodInfo(Transpiler));
+            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
             logger.LogDebug("Patched {0} for destroy barricade event.", Accessor.Formatter.Format(_target));
             return;
         }
@@ -48,7 +47,7 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, PatchUtil.GetMethodInfo(Transpiler));
+        Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
         logger.LogDebug("Unpatched {0} for destroy barricade event.", Accessor.Formatter.Format(_target));
         _target = null;
     }
@@ -76,7 +75,7 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
                 yield return new CodeInstruction(OpCodes.Ldarg_1);
                 yield return new CodeInstruction(OpCodes.Ldarg_2);
                 yield return new CodeInstruction(OpCodes.Ldarg_3);
-                yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(DestroyBarricadeInvoker));
+                yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(DestroyBarricadeInvoker));
                 L.LogDebug("Inserted DestroyBarricadeInvoker call to BarricadeManager.destroyBarricade.");
                 CodeInstruction old = new CodeInstruction(instruction);
                 old.labels.Clear();

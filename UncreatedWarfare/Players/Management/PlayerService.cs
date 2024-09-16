@@ -5,12 +5,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Players.Management;
 
@@ -36,7 +38,8 @@ public class PlayerService : IPlayerService
         typeof(PlayerEventDispatcher),
         typeof(ItemTrackingPlayerComponent),
         typeof(KitPlayerComponent),
-        typeof(ToastManager)
+        typeof(ToastManager),
+        typeof(ZoneVisualizerComponent)
     ];
 
     // keep up with a separate array that's replaced every time so the value can be used in multi-threaded operations

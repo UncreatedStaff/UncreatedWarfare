@@ -5,78 +5,76 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Components;
 
-public static class IconManager
+public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
 {
     private const float FullTickLoopTime = 0.25f;
-    private static readonly List<IconRenderer> Icons = new List<IconRenderer>();
-    private static int _tickIndex;
-    private static float _tickIndexProgress;
-    static IconManager()
+    private readonly List<IconRenderer> _icons = new List<IconRenderer>();
+    private int _tickIndex;
+    private float _tickIndexProgress;
+    public IconManager()
     {
         EventDispatcher.GroupChanged += OnGroupChanged;
-        EventDispatcher.PlayerLeft += OnPlayerLeft;
         TimeUtility.updated += OnUpdate;
     }
-    private static void OnPlayerLeft(PlayerEvent e)
+
+    UniTask ISessionHostedService.StartAsync(CancellationToken token)
     {
-        for (int i = Icons.Count - 1; i >= 0; i--)
+        return UniTask.CompletedTask;
+    }
+
+    UniTask ISessionHostedService.StopAsync(CancellationToken token)
+    {
+        DeleteAllIcons();
+        CheckExistingBuildables();
+        return UniTask.CompletedTask;
+    }
+
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        for (int i = _icons.Count - 1; i >= 0; i--)
         {
-            IconRenderer iconRenderer = Icons[i];
+            IconRenderer iconRenderer = _icons[i];
             if (iconRenderer.Player != e.Steam64.m_SteamID)
                 continue;
 
-            Icons.RemoveAt(i);
+            _icons.RemoveAt(i);
             iconRenderer.Destroy();
         }
     }
 
-    public static void OnGamemodeReloaded(bool onLoad)
+    public  void DeleteAllIcons()
     {
-        if (!onLoad)
-            return;
-
-        DeleteAllIcons();
-        CheckExistingBuildables();
-    }
-    public static void DeleteAllIcons()
-    {
-        for (int i = Icons.Count - 1; i >= 0; i--)
+        for (int i = _icons.Count - 1; i >= 0; i--)
         {
-            IconRenderer iconRenderer = Icons[i];
+            IconRenderer iconRenderer = _icons[i];
             DeleteIcon(iconRenderer);
         }
     }
-    public static void CheckExistingBuildables()
+    public  void CheckExistingBuildables()
     {
         foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
         {
-            ulong team = barricade.Drop.GetServersideData().group.GetTeam();
-            if (team is not 1ul and not 2ul)
-                continue;
-
-            CheckBuildable(barricade.Drop.asset, barricade.Drop.model, team);
+            CheckBuildable(barricade.Drop.asset, barricade.Drop.model, /* todo team */ null);
         }
 
         foreach (StructureInfo structure in StructureUtility.EnumerateStructures())
         {
-            ulong team = structure.Drop.GetServersideData().group.GetTeam();
-            if (team is not 1ul and not 2ul)
-                continue;
-
-            CheckBuildable(structure.Drop.asset, structure.Drop.model, team);
+            CheckBuildable(structure.Drop.asset, structure.Drop.model, /* todo team */ null);
         }
 
-        void CheckBuildable(Asset asset, Transform transform, ulong team)
+        void CheckBuildable(Asset asset, Transform transform, Team? team)
         {
-            BuildableData? buildableData = FOBManager.FindBuildable(asset);
+            BuildableData? buildableData = FobManager.FindBuildable(asset);
             if (buildableData == null || !buildableData.FullBuildable.MatchGuid(asset.GUID))
                 return;
 
@@ -94,16 +92,18 @@ public static class IconManager
             }
         }
     }
-    private static void OnGroupChanged(GroupChanged e)
+    
+    private void OnGroupChanged(GroupChanged e)
     {
         DrawNewMarkers(e.Player, true);
     }
-    public static void DrawNewMarkers(UCPlayer player, bool clearOld)
+
+    public  void DrawNewMarkers(UCPlayer player, bool clearOld)
     {
-        List<Guid> seenTypes = clearOld ? new List<Guid>(Icons.Count) : null!;
+        List<Guid> seenTypes = clearOld ? new List<Guid>(_icons.Count) : null!;
 
         ulong team = player.GetTeam();
-        foreach (IconRenderer icon in Icons)
+        foreach (IconRenderer icon in _icons)
         {
             if (clearOld)
             {
@@ -120,9 +120,9 @@ public static class IconManager
             }
         }
     }
-    public static void AttachIcon(Guid effectGUID, Transform transform, ulong team = 0, float yOffset = 0, ulong player = 0)
+    public  void AttachIcon(Guid effectGUID, Transform transform, Team? team, float yOffset = 0, ulong player = 0)
         => AttachIcon(effectGUID, transform, new Vector3(0f, yOffset, 0f), team, player);
-    public static void AttachIcon(Guid effectGUID, Transform transform, Vector3 offset, ulong team = 0, ulong player = 0)
+    public  void AttachIcon(Guid effectGUID, Transform transform, Vector3 offset, Team? team, ulong player = 0)
     {
         if (transform.gameObject.TryGetComponent(out IconRenderer icon))
             DeleteIcon(icon);
@@ -132,68 +132,68 @@ public static class IconManager
 
         SpawnIcons(icon);
 
-        Icons.Add(icon);
+        _icons.Add(icon);
         L.LogDebug($"[ICONS] [{icon.Effect?.name}] Icon attached.");
     }
-    public static void DeleteIcon(IconRenderer icon, bool destroy = true)
+    public  void DeleteIcon(IconRenderer icon, bool destroy = true)
     {
-        if (!Icons.Contains(icon))
+        if (!_icons.Contains(icon))
             return;
         EffectManager.ClearEffectByGuid_AllPlayers(icon.EffectGUID);
-        Icons.Remove(icon);
+        _icons.Remove(icon);
         if (destroy)
             icon.Destroy();
 
         SpawnNewIconsOfType(icon.EffectGUID);
         L.LogDebug($"[ICONS] [{icon.Effect?.name}] Icon deleted.");
     }
-    public static void DrawNewIconsOfType(Guid effectGUID)
+    public  void DrawNewIconsOfType(Guid effectGUID)
     {
         EffectManager.ClearEffectByGuid_AllPlayers(effectGUID);
         SpawnNewIconsOfType(effectGUID);
     }
-    public static void SpawnNewIconsOfType(Guid effectGUID)
+    public  void SpawnNewIconsOfType(Guid effectGUID)
     {
-        foreach (IconRenderer icon in Icons)
+        foreach (IconRenderer icon in _icons)
         {
             if (icon.EffectGUID == effectGUID)
                 SpawnIcons(icon);
         }
     }
-    public static void SpawnIcons(IconRenderer icon)
+    public  void SpawnIcons(IconRenderer icon)
     {
         icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Player == 0 ? (icon.Team == 0
                 ? PlayerManager.OnlinePlayers
                 : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team)) : (UCPlayer.FromID(icon.Player) is not { } player ? Array.Empty<UCPlayer>() : new UCPlayer[] { player }))
             .Select(x => x.Connection)));
     }
-    private static void OnUpdate()
+    private  void OnUpdate()
     {
-        if (Icons.Count == 0) return;
-        float tickAmount = Time.deltaTime * Icons.Count / FullTickLoopTime;
+        if (_icons.Count == 0) return;
+        float tickAmount = Time.deltaTime * _icons.Count / FullTickLoopTime;
         _tickIndexProgress += tickAmount;
         int newTickIndex = Mathf.FloorToInt(_tickIndexProgress);
-        if (newTickIndex < Icons.Count)
+        if (newTickIndex < _icons.Count)
         {
             if (newTickIndex == _tickIndex)
                 return;
             for (int i = _tickIndex; i < newTickIndex; ++i)
             {
-                IconRenderer renderer = Icons[i];
+                IconRenderer renderer = _icons[i];
                 renderer.Tick();
             }
         }
         else
         {
-            newTickIndex %= Icons.Count;
-            for (int i = _tickIndex; i < Icons.Count; ++i)
+            newTickIndex %= _icons.Count;
+            for (int i = _tickIndex; i < _icons.Count; ++i)
             {
-                IconRenderer renderer = Icons[i];
+                IconRenderer renderer = _icons[i];
                 renderer.Tick();
             }
             for (int i = 0; i < newTickIndex; ++i)
             {
-                IconRenderer renderer = Icons[i];
+                IconRenderer renderer = _icons[i];
                 renderer.Tick();
             }
         }
@@ -206,18 +206,21 @@ public static class IconManager
 
 public class IconRenderer : MonoBehaviour, IManualOnDestroy
 {
+    private IconManager _iconManager;
     private float _lastBroadcast;
     private Vector3 _lastPosition;
     public Guid EffectGUID { get; private set; }
     public EffectAsset Effect { get; private set; }
-    public ulong Team { get; private set; }
+    public Team? Team { get; private set; }
     public ulong Player { get; private set; }
     public Vector3 Point => _lastPosition;
     public Vector3 Offset { get; private set; }
     public float Lifetime { get; private set; }
     public bool LifetimeCheck { get; private set; }
-    public void Initialize(Guid effectGUID, Vector3 offset, ulong team = 0, ulong player = 0)
+    public void Initialize(Guid effectGUID, Vector3 offset, Team? team, IconManager iconManager, ulong player = 0)
     {
+        _iconManager = iconManager;
+
         EffectGUID = effectGUID;
 
         Offset = offset;
@@ -242,7 +245,7 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
     [UsedImplicitly]
     void OnDestroy()
     {
-        IconManager.DeleteIcon(this, false);
+        _iconManager.DeleteIcon(this, false);
         L.LogDebug($"[ICONS] [{Effect?.name}] Icon destroyed: {Effect?.FriendlyName ?? EffectGUID.ToString("N")}");
     }
     public void Tick()
@@ -253,16 +256,16 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
             float time = Time.realtimeSinceStartup;
             if (_lastBroadcast + Lifetime * 0.95f < time)
             {
-                IconManager.DrawNewIconsOfType(EffectGUID);
+                _iconManager.DrawNewIconsOfType(EffectGUID);
                 drew = true;
             }
         }
         if (!drew && isActiveAndEnabled)
         {
             Vector3 position = transform.position;
-            if (!_lastPosition.AlmostEquals(position))
+            if (!_lastPosition.IsNearlyEqual(position))
             {
-                IconManager.DrawNewIconsOfType(EffectGUID);
+                _iconManager.DrawNewIconsOfType(EffectGUID);
                 _lastPosition = position;
             }
         }

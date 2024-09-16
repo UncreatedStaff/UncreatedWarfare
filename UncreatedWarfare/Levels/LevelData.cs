@@ -1,6 +1,6 @@
-﻿using System;
-using System.Globalization;
-using Uncreated.Warfare.Models.Localization;
+﻿using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Levels;
 
@@ -26,7 +26,7 @@ public readonly struct LevelData : ITranslationArgument
         Abbreviation = GetRankAbbreviation(Level);
         NextName = GetRankName(Level + 1);
         NextAbbreviation = GetRankAbbreviation(Level + 1);
-        ProgressBar = UCWarfare.IsLoaded ? Points.GetProgressBar(CurrentXP, RequiredXP) : string.Empty;
+        ProgressBar = Points.GetProgressBar(CurrentXP, RequiredXP);
     }
     public static string GetRankName(int level)
     {
@@ -61,22 +61,19 @@ public readonly struct LevelData : ITranslationArgument
         };
     }
 
-    [FormatDisplay("Numeric")]
-    public const string FormatNumeric = "x";
-    [FormatDisplay("Abbreviation")]
-    public const string FormatAbbreviation = "a";
-    [FormatDisplay("Name")]
-    public const string FormatName = "n";
-    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+
+    public static readonly SpecialFormat FormatNumeric = new SpecialFormat("Numeric", "x");
+
+    public static readonly SpecialFormat FormatAbbreviation = new SpecialFormat("Abbreviation", "a");
+
+    public static readonly SpecialFormat FormatName = new SpecialFormat("Name", "n");
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        if (format is not null)
-        {
-            if (format.Equals(FormatNumeric, StringComparison.Ordinal))
-                return Level.ToString(Data.LocalLocale);
-            if (format.Equals(FormatAbbreviation, StringComparison.Ordinal))
-                return Abbreviation;
-        }
+        if (FormatNumeric.Match(in parameters))
+            return Level.ToString(Data.LocalLocale);
+
+        if (FormatAbbreviation.Match(in parameters))
+            return Abbreviation;
 
         return Name;
     }

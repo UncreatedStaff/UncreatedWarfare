@@ -1,8 +1,8 @@
 ﻿using System;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits.Items;
 public class SpecificClothingKitItem : IClothingKitItem, ISpecificKitItem
@@ -49,7 +49,7 @@ public class SpecificClothingKitItem : IClothingKitItem, ISpecificKitItem
     }
     public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
-        if (!UCWarfare.IsLoaded) throw new SingletonUnloadedException(typeof(UCWarfare));
+        if (!Provider.isInitialized) throw new InvalidOperationException("Not loaded.");
 
         amount = 1;
 

@@ -8,10 +8,9 @@ using System.Text.Json.Serialization;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
@@ -20,17 +19,14 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
-using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Levels;
 
-public sealed class Points : BaseSingletonComponent, IUIListener
+public sealed class Points
 {
     private static readonly string UpdateAllPointsQuery = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` in (";
 
@@ -44,7 +40,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     public static PointsConfig PointsConfig => PointsConfigObj.Data;
     static Points()
     {
-        if (UCWarfare.IsLoaded) // allows external access to this class without initializing everything
+        if (Provider.isInitialized) // allows external access to this class without initializing everything
         {
             PointsConfigObj = new Config<PointsConfig>(Data.Paths.BaseDirectory, "points.json");
             Transactions = new List<Task>(16);
@@ -466,17 +462,17 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     }
 
                     // action logs
-                    ActionLog.Add(ActionLogType.XPChanged, (currentAmount - amtXp).ToString(Data.AdminLocale) + " >> " +
-                                                                currentAmount.ToString(Data.AdminLocale) +
+                    ActionLog.Add(ActionLogType.XPChanged, (currentAmount - amtXp).ToString(CultureInfo.InvariantCulture) + " >> " +
+                                                                currentAmount.ToString(CultureInfo.InvariantCulture) +
                                                                 " (" + (amtXp > 0 ? "+" : "-")
-                                                                + Math.Abs(amtXp).ToString(Data.AdminLocale) +
+                                                                + Math.Abs(amtXp).ToString(CultureInfo.InvariantCulture) +
                                                                 ") (" + parameters.Reward + ")", parameters.Steam64);
                     if (credits != 0)
                     {
-                        ActionLog.Add(ActionLogType.CreditsChanged, (credsAmt - credits).ToString(Data.AdminLocale) + " >> " +
-                                                                    credsAmt.ToString(Data.AdminLocale) +
+                        ActionLog.Add(ActionLogType.CreditsChanged, (credsAmt - credits).ToString(CultureInfo.InvariantCulture) + " >> " +
+                                                                    credsAmt.ToString(CultureInfo.InvariantCulture) +
                                                                     " (" + (credits > 0 ? "+" : "-")
-                                                                    + Math.Abs(credits).ToString(Data.AdminLocale) +
+                                                                    + Math.Abs(credits).ToString(CultureInfo.InvariantCulture) +
                                                                     ") (With XP: " + parameters.Reward + ")", parameters.Steam64);
                     }
                     await UniTask.SwitchToMainThread(token);
@@ -1067,7 +1063,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     Chat.Broadcast(T.VehicleDestroyed, e.Instigator, e.Vehicle.asset, reason, distance, teamHexColor);
 
                 ActionLog.Add(ActionLogType.OwnedVehicleDied, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
-                                                                 $" - Destroyed by {e.Instigator.Steam64.ToString(Data.AdminLocale)}", e.OwnerId);
+                                                                 $" - Destroyed by {e.Instigator.Steam64.ToString(CultureInfo.InvariantCulture)}", e.OwnerId);
 
                 if (e.Instigator != null)
                     QuestManager.OnVehicleDestroyed(e, e.Instigator);

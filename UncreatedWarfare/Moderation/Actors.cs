@@ -37,8 +37,8 @@ public static class Actors
         if (new CSteamID(id).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             return new DiscordActor(id);
 
-        if (UCWarfare.IsLoaded && UCPlayer.FromID(id) is { IsOnline: true } pl)
-            return pl;
+        // todo check player if (Provider.isInitialized && UCPlayer.FromID(id) is { IsOnline: true } pl)
+        //     return pl;
             
         return new PlayerActor(id);
 
@@ -68,26 +68,25 @@ public class PlayerActor : IModerationActor
     {
         if (database.TryGetAvatar(Id, size, out string url))
             return url;
-        if (UCWarfare.IsLoaded)
+
+        if (!Provider.isInitialized)
+            return null;
+
+        // todo if (UCPlayer.FromID(Id.m_SteamID) is { } pl)
+        //    return await (pl as IModerationActor).GetProfilePictureURL(database, size, token).ConfigureAwait(false);
+
+        PlayerSummary? summary = await database.SteamAPI.GetPlayerSummary(Id, token);
+        if (summary == null)
+            return null;
+        url = size switch
         {
-            if (UCPlayer.FromID(Id) is { } pl)
-                return await (pl as IModerationActor).GetProfilePictureURL(database, size, token).ConfigureAwait(false);
-
-            PlayerSummary? summary = await database.SteamAPI.GetPlayerSummary(Id, token);
-            if (summary == null)
-                return null;
-            url = size switch
-            {
-                AvatarSize.Full => summary.AvatarUrlFull,
-                AvatarSize.Medium => summary.AvatarUrlMedium,
-                _ => summary.AvatarUrlSmall
-            };
-            if (url != null)
-                database.UpdateAvatar(Id, size, url);
-            return url;
-        }
-
-        return null;
+            AvatarSize.Full => summary.AvatarUrlFull,
+            AvatarSize.Medium => summary.AvatarUrlMedium,
+            _ => summary.AvatarUrlSmall
+        };
+        if (url != null)
+            database.UpdateAvatar(Id, size, url);
+        return url;
     }
 }
 
@@ -120,7 +119,7 @@ public class DiscordActor : IModerationActor
         if (steam64 == 0) return null;
         if (database.TryGetAvatar(steam64, size, out string url))
             return url;
-        if (UCWarfare.IsLoaded)
+        if (Provider.isInitialized)
         {
             if (UCPlayer.FromID(steam64) is { } pl)
                 return await (pl as IModerationActor).GetProfilePictureURL(database, size, token).ConfigureAwait(false);
@@ -153,7 +152,7 @@ public class ConsoleActor : IModerationActor
     public override string ToString() => "Console";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("Console");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
-        => new ValueTask<string?>(UCWarfare.IsLoaded ? "https://i.imgur.com/f2axLoQ.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
+        => new ValueTask<string?>(Provider.isInitialized ? "https://i.imgur.com/f2axLoQ.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
 }
 
 [JsonConverter(typeof(ActorConverter))]

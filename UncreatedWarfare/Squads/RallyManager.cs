@@ -223,7 +223,7 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
                 player.SendChat(T.RallyWaitSL, SecondsLeft);
             else
                 player.SendChat(T.RallyWait, SecondsLeft);
-            Tips.TryGiveTip(player, 5, T.RallyToast, SecondsLeft);
+            TipService.TryGiveTip(player, 5, T.RallyToast, SecondsLeft);
         }
 
         while (SecondsLeft > 0)

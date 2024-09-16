@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Util;
@@ -14,29 +13,29 @@ internal static class ItemIconProvider
     {
         // Block: IPA Extensions
 
-        new ItemIconData(RedirectType.LaserDesignator, '阚', WhiteColor),
-        new ItemIconData(RedirectType.EntrenchingTool, 'ɐ', WhiteColor),
-        new ItemIconData(RedirectType.Bunker, 'ɑ', WhiteColor),
-        new ItemIconData(RedirectType.BunkerBuilt, 'ɑ', WhiteColor),
-        new ItemIconData(RedirectType.RepairStation, 'ɒ', WhiteColor),
-        new ItemIconData(RedirectType.RepairStationBuilt, 'ɒ', WhiteColor),
-        new ItemIconData(RedirectType.AmmoBag, 'ɓ', WhiteColor),
-        new ItemIconData(RedirectType.Radio, 'ɔ', WhiteColor),
-        new ItemIconData(RedirectType.RadioDamaged, 'ɔ', WhiteColor),
-        new ItemIconData(RedirectType.RallyPoint, 'ɕ', WhiteColor),
-        new ItemIconData(RedirectType.BuildSupply, 'ɗ', WhiteColor),
-        new ItemIconData(RedirectType.AmmoSupply, 'ɘ', WhiteColor),
-        new ItemIconData(RedirectType.Glasses, 'ə', WhiteColor),
-        new ItemIconData(RedirectType.Backpack, 'ɚ', WhiteColor),
-        new ItemIconData(RedirectType.Mask, 'ɛ', WhiteColor),
-        new ItemIconData(RedirectType.Hat, 'ɝ', WhiteColor),
-        new ItemIconData(RedirectType.Vest, 'ɞ', WhiteColor),
-        new ItemIconData(RedirectType.Pants, 'ɟ', WhiteColor),
-        new ItemIconData(RedirectType.Shirt, 'ɠ', WhiteColor),
-        new ItemIconData(RedirectType.StandardAmmoIcon, 'ɡ', WhiteColor),
-        new ItemIconData(RedirectType.StandardMeleeIcon, '¤', WhiteColor),
-        new ItemIconData(RedirectType.StandardGrenadeIcon, '¬', WhiteColor),
-        new ItemIconData(RedirectType.StandardSmokeGrenadeIcon, 'ɢ', WhiteColor),
+        New(RedirectType.LaserDesignator, '阚', WhiteColor),
+        New(RedirectType.EntrenchingTool, 'ɐ', WhiteColor),
+        New(RedirectType.Bunker, 'ɑ', WhiteColor),
+        New(RedirectType.BunkerBuilt, 'ɑ', WhiteColor),
+        New(RedirectType.RepairStation, 'ɒ', WhiteColor),
+        New(RedirectType.RepairStationBuilt, 'ɒ', WhiteColor),
+        New(RedirectType.AmmoBag, 'ɓ', WhiteColor),
+        New(RedirectType.Radio, 'ɔ', WhiteColor),
+        New(RedirectType.RadioDamaged, 'ɔ', WhiteColor),
+        New(RedirectType.RallyPoint, 'ɕ', WhiteColor),
+        New(RedirectType.BuildSupply, 'ɗ', WhiteColor),
+        New(RedirectType.AmmoSupply, 'ɘ', WhiteColor),
+        New(RedirectType.Glasses, 'ə', WhiteColor),
+        New(RedirectType.Backpack, 'ɚ', WhiteColor),
+        New(RedirectType.Mask, 'ɛ', WhiteColor),
+        New(RedirectType.Hat, 'ɝ', WhiteColor),
+        New(RedirectType.Vest, 'ɞ', WhiteColor),
+        New(RedirectType.Pants, 'ɟ', WhiteColor),
+        New(RedirectType.Shirt, 'ɠ', WhiteColor),
+        New(RedirectType.StandardAmmoIcon, 'ɡ', WhiteColor),
+        New(RedirectType.StandardMeleeIcon, '¤', WhiteColor),
+        New(RedirectType.StandardGrenadeIcon, '¬', WhiteColor),
+        New(RedirectType.StandardSmokeGrenadeIcon, 'ɢ', WhiteColor),
 
         // Block: Spacing Modifier Letters
         
@@ -219,15 +218,15 @@ internal static class ItemIconProvider
         
         New("d9b900ec96fe46aeaee7fdb317f41200", "21d9abe142ee4793887a0a9af3bb2faf"), // SCAR-L STD (Black)
     };
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ItemIconData New(string id, char character, int color = WhiteColor) =>
-        new ItemIconData(new Guid(id), character, color);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ItemIconData New(string id, char character, string color) =>
-        new ItemIconData(new Guid(id), character, Util.PackHex(color));
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ItemIconData New(string id, string parentGuid) =>
-        new ItemIconData(new Guid(id), new Guid(parentGuid));
+
+    private static ItemIconData New(string id, char character, int color = WhiteColor) => new ItemIconData(new Guid(id), character, Unsafe.As<int, Color32>(ref color));
+
+    private static ItemIconData New(string id, char character, string color) => new ItemIconData(new Guid(id), character, HexStringHelper.TryParseColor32(color, CultureInfo.InvariantCulture, out Color32 c) ? c : new Color32(255, 255, 255, 255));
+
+    private static ItemIconData New(string id, string parentGuid) => new ItemIconData(new Guid(id), new Guid(parentGuid));
+
+    private static ItemIconData New(RedirectType type, char character, int color = WhiteColor) => new ItemIconData(type, character, Unsafe.As<int, Color32>(ref color));
+
     private static readonly Dictionary<Guid, ItemIconData> ItemData = new Dictionary<Guid, ItemIconData>(Defaults.Length);
     private static readonly Dictionary<RedirectType, ItemIconData> RedirectData = new Dictionary<RedirectType, ItemIconData>(Defaults.Length);
     static ItemIconProvider()
@@ -236,48 +235,46 @@ internal static class ItemIconProvider
         {
             ref ItemIconData data = ref Defaults[i];
             Guid p = data.Parent;
-            if (p != default && p != data.Item)
+            if (p == Guid.Empty || p == data.Item)
+                continue;
+
+            for (int j = 0; j < Defaults.Length; ++j)
             {
-                for (int j = 0; j < Defaults.Length; ++j)
+                ref ItemIconData parent = ref Defaults[j];
+                if (parent.Item == p)
                 {
-                    ref ItemIconData parent = ref Defaults[j];
-                    if (parent.Item == p)
-                    {
-                        data = new ItemIconData(data.Item, p, parent.Character, parent.PackedColor, true, true);
-                    }
+                    data = new ItemIconData(data.Item, p, parent.Character, parent.Color, true, true);
                 }
             }
+        }
+
+        for (int i = 0; i < Defaults.Length; ++i)
+        {
+            ref ItemIconData data = ref Defaults[i];
+            Guid p = data.Parent;
+            if (p != Guid.Empty)
+                ItemData[p] = data;
+            else
+                RedirectData[data.RedirectType] = data;
         }
     }
     public static char? GetCharacter(ItemAsset asset) => GetCharacter(asset.GUID);
     public static char? GetCharacter(Guid guid)
     {
-        lock (ItemData)
-        {
-            return ItemData.TryGetValue(guid, out ItemIconData data) ? data.Character : null;
-        }
+        return ItemData.TryGetValue(guid, out ItemIconData data) ? data.Character : null;
     }
     public static char? GetCharacter(RedirectType type)
     {
-        lock (RedirectData)
-        {
-            return RedirectData.TryGetValue(type, out ItemIconData data) ? data.Character : null;
-        }
+        return RedirectData.TryGetValue(type, out ItemIconData data) ? data.Character : null;
     }
 
     public static string GetIcon(RedirectType type, bool rich = true, bool tmpro = false)
     {
-        lock (RedirectData)
+        if (RedirectData.TryGetValue(type, out ItemIconData data))
         {
-            if (RedirectData.TryGetValue(type, out ItemIconData data))
+            if (data.Character.HasValue)
             {
-                if (data.Character.HasValue)
-                {
-                    string str = new string(data.Character.Value, 1);
-                    if (rich && data.PackedColor != WhiteColor)
-                        str = tmpro ? str.ColorizeTMPro(data.HexColor, true) : str.Colorize(data.HexColor);
-                    return str;
-                }
+                return GetString(in data, rich, tmpro);
             }
         }
 
@@ -285,325 +282,143 @@ internal static class ItemIconProvider
     }
     public static bool TryGetIcon(RedirectType type, out string str, bool rich = true, bool tmpro = false)
     {
-        lock (RedirectData)
+        if (RedirectData.TryGetValue(type, out ItemIconData data))
         {
-            if (RedirectData.TryGetValue(type, out ItemIconData data))
+            if (data.Character.HasValue)
             {
-                if (data.Character.HasValue)
-                {
-                    str = new string(data.Character.Value, 1);
-                    if (rich && data.PackedColor != WhiteColor)
-                        str = tmpro ? str.ColorizeTMPro(data.HexColor, true) : str.Colorize(data.HexColor);
-                    return true;
-                }
+                str = GetString(in data, rich, tmpro);
+                return true;
             }
         }
 
-        str = Class.None.GetIcon().ToString();
+        str = new string(Class.None.GetIcon(), 1);
         return false;
     }
     public static bool TryGetIcon(ItemAsset asset, out string str, bool rich = true, bool tmpro = false) => TryGetIcon(asset.GUID, out str, rich, tmpro);
     public static string GetIcon(ItemAsset asset, bool rich = true, bool tmpro = false) => GetIcon(asset.GUID, rich, tmpro);
     public static bool TryGetIcon(Guid guid, out string str, bool rich = true, bool tmpro = false)
     {
-        lock (ItemData)
+        if (ItemData.TryGetValue(guid, out ItemIconData data))
         {
-            if (ItemData.TryGetValue(guid, out ItemIconData data))
+            if (data.Character.HasValue)
             {
-                if (data.Character.HasValue)
-                {
-                    str = new string(data.Character.Value, 1);
-                    if (rich && data.PackedColor != WhiteColor)
-                        str = tmpro ? str.ColorizeTMPro(data.HexColor, true) : str.Colorize(data.HexColor);
-                    return true;
-                }
+                str = GetString(in data, rich, tmpro);
+                return true;
             }
         }
-        str = Class.None.GetIcon().ToString();
+
+        str = new string(Class.None.GetIcon(), 1);
         return false;
     }
+
     public static string GetIcon(Guid guid, bool rich = true, bool tmpro = false)
     {
-        lock (ItemData)
+        if (ItemData.TryGetValue(guid, out ItemIconData data))
         {
-            if (ItemData.TryGetValue(guid, out ItemIconData data))
+            if (data.Character.HasValue)
             {
-                if (data.Character.HasValue)
-                {
-                    string str = new string(data.Character.Value, 1);
-                    if (rich && data.PackedColor != WhiteColor)
-                        str = tmpro ? str.ColorizeTMPro(data.HexColor, true) : str.Colorize(data.HexColor);
-                    return str;
-                }
+                return GetString(in data, rich, tmpro);
             }
         }
 
         return Class.None.GetIcon().ToString();
     }
+
     public static string GetIconOrName(ItemAsset asset, bool rich = true, bool tmpro = false)
     {
-        lock (ItemData)
+        if (ItemData.TryGetValue(asset.GUID, out ItemIconData data))
         {
-            if (ItemData.TryGetValue(asset.GUID, out ItemIconData data))
-            {
-                string str = data.Character.HasValue ? new string(data.Character.Value, 1) : asset.itemName;
-                if (rich && data.PackedColor != WhiteColor)
-                    str = tmpro ? str.ColorizeTMPro(data.HexColor, true) : str.Colorize(data.HexColor);
-
-                return str;
-            }
+            return GetString(in data, rich, tmpro, asset);
         }
 
         return asset.itemName;
     }
 
-    private static async Task AddDefaults(CancellationToken token = default)
+    private static string GetString(in ItemIconData data, bool rich, bool tmpro, ItemAsset? asset = null)
     {
-        if (Defaults.Length == 0) return;
-        StringBuilder builder = new StringBuilder(
-            $"DELETE FROM `{TABLE_MAIN}`; INSERT INTO `{TABLE_MAIN}` (`{COLUMN_ITEM}`,`{COLUMN_REDIRECT_TYPE}`,`{COLUMN_ICON}`,`{COLUMN_COLOR}`,`{COLUMN_PARENT}`) VALUES ", 64 + Defaults.Length * 10);
-        object[] objs = new object[Defaults.Length * 5];
-        lock (ItemData)
+        if (!rich || Unsafe.As<Color32, int>(ref Unsafe.AsRef(in data.Color)) == WhiteColor)
         {
-            ItemData.Clear();
-            for (int i = 0; i < Defaults.Length; ++i)
-            {
-                ItemIconData data = Defaults[i];
-                int index = i * 5;
-                F.AppendPropertyList(builder, index, 5);
-                objs[index] = data.Item == default ? DBNull.Value : data.Item.ToString("N");
-                objs[index + 1] = data.RedirectType == RedirectType.None ? DBNull.Value : data.RedirectType.ToString();
-                objs[index + 2] = data.Character.HasValue && (data.ParentCopyFlag & 2) == 0 ? data.Character.Value : DBNull.Value;
-                if ((data.ParentCopyFlag & 1) == 0)
-                {
-                    string clr = data.HexColor.ToLower();
-                    if (clr.Length == 6)
-                        clr = "ff" + clr;
-                    objs[index + 3] = clr;
-                }
-                else objs[index + 3] = DBNull.Value;
-                objs[index + 4] = data.Parent == default ? DBNull.Value : data.Parent.ToString("N");
-                if (data.Item != default)
-                {
-                    if (ItemData.ContainsKey(data.Item))
-                    {
-                        L.LogWarning("Duplicate item icon data key: " + data.Item.ToString("N") + ".");
-                        continue;
-                    }
-                    ItemData.Add(data.Item, data);
-                }
-                else if (data.RedirectType != RedirectType.None)
-                {
-                    if (RedirectData.ContainsKey(data.RedirectType))
-                    {
-                        L.LogWarning("Duplicate redirect icon data key: " + data.RedirectType + ".");
-                        continue;
-                    }
-                    RedirectData.Add(data.RedirectType, data);
-                }
-            }
+            return new string(data.Character!.Value, 1);
         }
 
-        builder.Append(';');
+        ItemNameFormatState state;
+        if (tmpro)
+        {
+            if (data.Character.HasValue)
+            {
+                return string.Create(18, data, (span, state) =>
+                {
+                    span[0] = '<';
+                    span[1] = '#';
+                    HexStringHelper.FormatHexColor(state.Color, span.Slice(2, 6));
+                    span[8] = '>';
+                    span[9] = state.Character!.Value;
+                    ReadOnlySpan<char> color = ['<', '/', 'c', 'o', 'l', 'o', 'r', '>'];
+                    color.CopyTo(span[10..]);
+                });
+            }
 
-        // disable debug logging because it's a lot
-        bool debug = Data.AdminSql.DebugLogging;
-        Data.AdminSql.DebugLogging = false;
+            state = default;
+            state.ItemName = asset!.itemName;
+            state.Color = data.Color;
+            return string.Create(17 + state.ItemName.Length, state, (span, state) =>
+            {
+                span[0] = '<';
+                span[1] = '#';
+                HexStringHelper.FormatHexColor(state.Color, span.Slice(2, 6));
+                span[8] = '>';
+                state.ItemName.AsSpan().CopyTo(span[9..]);
+                int index = 9 + state.ItemName.Length;
+                ReadOnlySpan<char> color = ['<', '/', 'c', 'o', 'l', 'o', 'r', '>'];
+                color.CopyTo(span[index..]);
+            });
+        }
 
-        await Data.AdminSql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
+        if (data.Character.HasValue)
+        {
+            return string.Create(24, data, (span, state) =>
+            {
+                ReadOnlySpan<char> startColor = ['<', 'c', 'o', 'l', 'o', 'r', '=', '#'];
+                startColor.CopyTo(span);
+                HexStringHelper.FormatHexColor(state.Color, span.Slice(8, 6));
+                span[14] = '>';
+                span[15] = state.Character!.Value;
+                ReadOnlySpan<char> endColor = ['<', '/', 'c', 'o', 'l', 'o', 'r', '>'];
+                endColor.CopyTo(span[16..]);
+            });
+        }
 
-        Data.AdminSql.DebugLogging = debug;
+        state = default;
+        state.ItemName = asset!.itemName;
+        state.Color = data.Color;
+        return string.Create(23 + state.ItemName.Length, state, (span, state) =>
+        {
+            ReadOnlySpan<char> startColor = [ '<', 'c', 'o', 'l', 'o', 'r', '=', '#' ];
+            startColor.CopyTo(span);
+            HexStringHelper.FormatHexColor(state.Color, span.Slice(8, 6));
+            span[14] = '>';
+            state.ItemName.AsSpan().CopyTo(span[15..]);
+            int index = 15 + state.ItemName.Length;
+            ReadOnlySpan<char> endColor = [ '<', '/', 'c', 'o', 'l', 'o', 'r', '>' ];
+            endColor.CopyTo(span[index..]);
+        });
     }
 
-    public static void UseDefaults() => AddDefaultsToData();
-    public static async Task DownloadConfig(CancellationToken token = default)
+    private struct ItemNameFormatState
     {
-        int val = await Data.AdminSql.VerifyTable(Schema, token).ConfigureAwait(false);
-        if (val == 1)
-        {
-            L.LogWarning("Unable to set up item icon config, using defaults.");
-            AddDefaultsToData();
-            return;
-        }
-#if !DEBUG
-        if (val == 3)
-        {
-            L.Log("Loading defaults into newly created item icon config.", ConsoleColor.Magenta);
-#endif
-        await AddDefaults(token).ConfigureAwait(false);
-#if !DEBUG
-            return;
-        }
-#else
-        return;
-#endif
-
-        List<ItemIconData> data2 = new List<ItemIconData>(Defaults.Length);
-        await Data.AdminSql.QueryAsync(
-            $"SELECT `{COLUMN_ITEM}`,`{COLUMN_REDIRECT_TYPE}`,`{COLUMN_ICON}`,`{COLUMN_COLOR}`,`{COLUMN_PARENT}` FROM `{TABLE_MAIN}`;", null,
-            reader =>
-            {
-                Guid? item = reader.IsDBNull(0) ? null : reader.ReadGuidString(0);
-                RedirectType? type = null;
-                if (!item.HasValue)
-                {
-                    type = reader.IsDBNull(1) ? null : reader.ReadStringEnum<RedirectType>(1);
-                    if (!type.HasValue)
-                    {
-                        L.LogWarning("Invalid item or redirect value for " +
-                                     (reader.IsDBNull(0)
-                                         ? reader.IsDBNull(1)
-                                             ? "(column 0 and 1 are empty, no id)"
-                                             : reader.GetString(1)
-                                         : reader.GetString(0)) + ".");
-                        return;
-                    }
-                }
-                char? icon = reader.IsDBNull(2) ? null : reader.GetChar(2);
-                string? hexColor = null;
-                if (!reader.IsDBNull(3))
-                {
-                    char[] chars = new char[8];
-                    reader.GetChars(3, 0L, chars, 0, 8);
-                    hexColor = new string(chars);
-                }
-                Guid? parent = reader.IsDBNull(4) ? null : reader.ReadGuidString(4);
-                if (!icon.HasValue && !parent.HasValue)
-                {
-                    if (item.HasValue)
-                        L.LogWarning("Item does not have character or parent: " + item.Value.ToString("N") + ".");
-                    else
-                        L.LogWarning("Redirect does not have character or parent: " + type!.Value + ".");
-                    return;
-                }
-
-                if (parent.HasValue && item.HasValue)
-                {
-                    data2.Add(new ItemIconData(item.Value, parent.Value, icon, hexColor is null
-                        ? WhiteColor
-                        : Util.PackHex(hexColor)
-                        , false, false));
-                }
-                else if (item.HasValue)
-                    data2.Add(new ItemIconData(item.Value, icon, hexColor is null ? WhiteColor : Util.PackHex(hexColor)));
-                else
-                    data2.Add(new ItemIconData(type!.Value, icon, hexColor is null ? WhiteColor : Util.PackHex(hexColor)));
-            }, token).ConfigureAwait(false);
-        lock (RedirectData)
-        {
-            lock (ItemData)
-            {
-                ItemData.Clear();
-                RedirectData.Clear();
-                for (int i = 0; i < data2.Count; ++i)
-                {
-                    ItemIconData data = data2[i];
-                    if (data.Item != default)
-                    {
-                        if (ItemData.ContainsKey(data.Item))
-                        {
-                            L.LogWarning("Duplicate item icon data key: " + data.Item.ToString("N") + ".");
-                            continue;
-                        }
-
-                        if (data.Parent != default)
-                        {
-                            Guid parent = data.Parent;
-                            for (int j = 0; j < data2.Count; ++j)
-                            {
-                                if (data2[j].Item == parent)
-                                {
-                                    data = new ItemIconData(data.Item, parent,
-                                        data.Character.HasValue
-                                            ? data.Character
-                                            : data2[j].Character,
-                                        data.PackedColor is WhiteColor or 0
-                                            ? data2[j].PackedColor
-                                            : data.PackedColor,
-                                        data.PackedColor is WhiteColor or 0, !data.Character.HasValue);
-                                    break;
-                                }
-                            }
-                        }
-                        ItemData.Add(data.Item, data);
-                    }
-                    else if (data.RedirectType != RedirectType.None)
-                    {
-                        if (RedirectData.ContainsKey(data.RedirectType))
-                        {
-                            L.LogWarning("Duplicate redirect icon data key: " + data.RedirectType + ".");
-                            continue;
-                        }
-                        RedirectData.Add(data.RedirectType, data);
-                    }
-                }
-            }
-        }
-    }
-    private static void AddDefaultsToData()
-    {
-        lock (RedirectData)
-        {
-            lock (ItemData)
-            {
-                ItemData.Clear();
-                RedirectData.Clear();
-                for (int i = 0; i < Defaults.Length; ++i)
-                {
-                    ref ItemIconData data = ref Defaults[i];
-                    if (data.Item != default)
-                    {
-                        if (ItemData.ContainsKey(data.Item))
-                        {
-                            L.LogWarning("Duplicate item icon data key: " + data.Item.ToString("N") + ".");
-                            continue;
-                        }
-                        ItemData.Add(data.Item, data);
-                    }
-                    else if (data.RedirectType != RedirectType.None)
-                    {
-                        if (RedirectData.ContainsKey(data.RedirectType))
-                        {
-                            L.LogWarning("Duplicate redirect icon data key: " + data.RedirectType + ".");
-                            continue;
-                        }
-                        RedirectData.Add(data.RedirectType, data);
-                    }
-                }
-            }
-        }
+        public Color32 Color;
+        public string ItemName;
     }
 
-    private const string TABLE_MAIN = "item_icon_config";
-    private const string COLUMN_ITEM = "Item";
-    private const string COLUMN_REDIRECT_TYPE = "Redirect";
-    private const string COLUMN_ICON = "Icon";
-    private const string COLUMN_COLOR = "Color";
-    private const string COLUMN_PARENT = "Parent";
-    private static readonly Schema Schema = new Schema(TABLE_MAIN, new Schema.Column[]
-    {
-        new Schema.Column(COLUMN_ITEM, SqlTypes.GUID_STRING)
-        {
-            Nullable = true
-        },
-        new Schema.Column(COLUMN_REDIRECT_TYPE, SqlTypes.Enum(RedirectType.None))
-        {
-            Nullable = true
-        },
-        new Schema.Column(COLUMN_ICON, "char(1)") { Nullable = true },
-        new Schema.Column(COLUMN_COLOR, "char(8)") { Nullable = true, Default = "'ffffffff'" },
-        new Schema.Column(COLUMN_PARENT, SqlTypes.GUID_STRING) { Nullable = true }
-    }, true, typeof(ItemIconData));
     internal readonly struct ItemIconData
     {
         public readonly Guid Item;
         public readonly RedirectType RedirectType;
         public readonly char? Character;
         public readonly Guid Parent;
-        public readonly int PackedColor;
+        public readonly Color32 Color;
         public readonly byte ParentCopyFlag;
-        public string HexColor => Util.UnpackHexStr(PackedColor);
-        public ItemIconData(Guid item, Guid parent, char? character, int color, bool copiedColor, bool copiedCharacter) : this(item, character, color)
+        public ItemIconData(Guid item, Guid parent, char? character, Color32 color, bool copiedColor, bool copiedCharacter) : this(item, character, color)
         {
             Parent = parent;
             ParentCopyFlag = (byte)((copiedColor ? 1 : 0) | (copiedCharacter ? 2 : 0));
@@ -613,20 +428,20 @@ internal static class ItemIconProvider
             Parent = parent;
             ParentCopyFlag = 0b11;
         }
-        public ItemIconData(RedirectType item, char? character, int color)
+        public ItemIconData(RedirectType item, char? character, Color32 color)
         {
             RedirectType = item;
             Character = character;
-            PackedColor = color;
+            Color = color;
             Parent = default;
             ParentCopyFlag = 0;
             Item = default;
         }
-        public ItemIconData(Guid item, char? character, int color)
+        public ItemIconData(Guid item, char? character, Color32 color)
         {
             Item = item;
             Character = character;
-            PackedColor = color;
+            Color = color;
             Parent = default;
             ParentCopyFlag = 0;
             RedirectType = RedirectType.None;

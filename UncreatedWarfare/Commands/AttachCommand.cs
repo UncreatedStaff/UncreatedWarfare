@@ -5,12 +5,9 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("attach")]
-[MetadataFile(nameof(GetHelpMetadata))]
+[Command("attach"), MetadataFile]
 public class AttachCommand : IExecutableCommand
 {
-    private const string Syntax = "/attach <item...> | (<remove> <sight|tact|grip|barrel|ammo>) | (<setammo> <amt>) | (<firemode> <safety|semi|auto|burst>)";
-
     private readonly AttachTranslations _translations;
 
     private static readonly Guid FiremodeEffectGuid = new Guid("bc41e0feaebe4e788a3612811b8722d3");
@@ -24,62 +21,12 @@ public class AttachCommand : IExecutableCommand
         _translations = translations.Value;
     }
 
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Modify guns past what vanilla Unturned allows.",
-            Parameters =
-            [
-                new CommandParameter("Item", typeof(ItemCaliberAsset))
-                {
-                    Description = "Attach an item to your gun."
-                },
-                new CommandParameter("Remove")
-                {
-                    Aliases = [ "delete", "clear" ],
-                    Description = "Remove an item from your gun.",
-                    ChainDisplayCount = 2,
-                    Parameters =
-                    [
-                        new CommandParameter("Slot", "Sight", "Tactical", "Grip", "Barrel", "Ammo")
-                    ]
-                },
-                new CommandParameter("Ammo")
-                {
-                    Aliases = [ "ammoct", "setammo" ],
-                    Description = "Set the amount of ammo in your gun (up to 255).",
-                    ChainDisplayCount = 2,
-                    Parameters =
-                    [
-                        new CommandParameter("Amount", typeof(int))
-                    ]
-                },
-                new CommandParameter("Firemode")
-                {
-                    Aliases = [ "firerate", "mode" ],
-                    Description = "Change the firemode of your gun.",
-                    ChainDisplayCount = 2,
-                    Parameters =
-                    [
-                        new CommandParameter("Mode", "Safety", "Semi", "Auto", "Burst")
-                    ]
-                }
-            ]
-        };
-    }
-
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
 
-        Context.AssertHelpCheck(0, Syntax);
-
-        Context.AssertArgs(1, Syntax);
+        Context.AssertArgs(1);
 
         if (Context.Player.UnturnedPlayer.equipment.asset is not ItemGunAsset gunAsset)
             throw Context.Reply(_translations.AttachNoGunHeld);
@@ -94,11 +41,11 @@ public class AttachCommand : IExecutableCommand
 
         if (Context.MatchParameter(0, "remove", "delete", "clear"))
         {
-            Context.AssertArgs(2, Syntax);
+            Context.AssertArgs(2);
 
             if (Context.MatchParameter(1, "sight", "scope", "reticle"))
                 type = AttachmentType.Sight;
-            else if (Context.MatchParameter(1, "tact", "tactical", "laser"))
+            else if (Context.MatchParameter(1, "tact", "tactical", "laser", "light"))
                 type = AttachmentType.Tactical;
             else if (Context.MatchParameter(1, "grip", "stand"))
                 type = AttachmentType.Grip;
@@ -145,7 +92,7 @@ public class AttachCommand : IExecutableCommand
             throw Context.Reply(_translations.AttachSetAmmoSuccess, gunAsset, amt);
         }
 
-        if (Context.MatchParameter(0, "firerate", "firemode", "mode") && Context.TryGet(1, out string firemodeStr) && TryGetFiremode(firemodeStr, out EFiremode mode))
+        if (Context.MatchParameter(0, "firerate", "firemode", "mode") && Context.TryGet(1, out string? firemodeStr) && TryGetFiremode(firemodeStr, out EFiremode mode))
         {
             EFiremode prevMode = (EFiremode)state[11];
             state[11] = (byte)mode;

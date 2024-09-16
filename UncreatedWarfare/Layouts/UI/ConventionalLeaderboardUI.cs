@@ -2,6 +2,7 @@
 using System.Globalization;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Layouts.UI;
 
@@ -115,8 +116,9 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
     public void UpdateTime(LanguageSet set, int secondsLeft)
     {
-        int time = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
-        string l1 = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss", set.CultureInfo);
+        const int time = 30;
+
+        string l1 = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss", set.Culture);
         string l2 = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(Mathf.RoundToInt(time - secondsLeft), time)], 1);
         while (set.MoveNext())
         {

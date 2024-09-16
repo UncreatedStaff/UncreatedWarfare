@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿#if false
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -10,6 +11,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.NewQuests;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -326,7 +328,7 @@ public static class DailyQuests
         if (Assets.find(save.Guid) is QuestAsset quest)
         {
             QuestManager.TryAddQuest(player, quest);
-            L.LogDebug("Sent quest " + quest.name + " / " + quest.id.ToString(Data.AdminLocale) + " to " + player.CharacterName);
+            L.LogDebug("Sent quest " + quest.name + " / " + quest.id.ToString(CultureInfo.InvariantCulture) + " to " + player.CharacterName);
         }
         else
         {
@@ -548,7 +550,7 @@ public static class DailyQuests
                                                         {
                                                             string? v = reader.GetString();
                                                             if (v != null)
-                                                                DateTime.TryParseExact(v, "s", Data.AdminLocale, DateTimeStyles.AssumeUniversal, out save.StartDate);
+                                                                DateTime.TryParseExact(v, "s", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out save.StartDate);
                                                         }
                                                         break;
                                                     case "asset_guid":
@@ -647,8 +649,8 @@ public static class DailyQuests
             }
         }
     }
-    private static string GetDailySavePath(ulong steam64) => Path.Combine(Environment.CurrentDirectory, "Servers", Provider.serverID, "Players", steam64.ToString(Data.AdminLocale) +
-                                                             "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale));
+    private static string GetDailySavePath(ulong steam64) => Path.Combine(Environment.CurrentDirectory, "Servers", Provider.serverID, "Players", steam64.ToString(CultureInfo.InvariantCulture) +
+                                                             "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(CultureInfo.InvariantCulture));
     public static void SaveProgress(DailyQuestTracker tracker)
     {
         L.LogDebug("Saving trackers for " + tracker.Player.CharacterName);
@@ -827,3 +829,4 @@ public struct DailyQuestSave
         public IQuestPreset PresetObj;
     }
 }
+#endif

@@ -4,11 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.NewQuests;
 
@@ -41,7 +41,7 @@ public abstract class QuestTemplate<TSelf, TTracker, TState> : QuestTemplate
     protected virtual async UniTask<TState?> ReadState(IConfiguration configuration, CancellationToken token)
     {
         TState state = new TState();
-        await state.CreateFromConfigurationAsync(configuration, token);
+        await state.CreateFromConfigurationAsync(configuration, ServiceProvider, token);
         return state;
     }
 
@@ -230,7 +230,7 @@ public abstract class QuestTemplate : ITranslationArgument
         }
     }
 
-    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         // todo
         return ToString();

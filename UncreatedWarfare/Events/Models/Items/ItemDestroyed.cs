@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Players;
+﻿using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 public class ItemDestroyed
@@ -42,4 +43,24 @@ public class ItemDestroyed
     /// The Steam64 ID of the player that originally dropped the item, if any.
     /// </summary>
     public required CSteamID DropPlayerId { get; init; }
+
+    /// <summary>
+    /// If this was a pick-up, the page the item went to.
+    /// </summary>
+    public required Page PickUpPage { get; init; }
+
+    /// <summary>
+    /// If this was a pick-up, the X-coord the item went to.
+    /// </summary>
+    public required byte PickUpX { get; init; }
+
+    /// <summary>
+    /// If this was a pick-up, the Y-coord the item went to.
+    /// </summary>
+    public required byte PickUpY { get; init; }
+
+    /// <summary>
+    /// If this was a pick-up, the rotation the item went to.
+    /// </summary>
+    public required byte PickUpRotation { get; init; }
 }

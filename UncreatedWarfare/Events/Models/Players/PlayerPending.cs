@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.Saves;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
@@ -24,7 +25,7 @@ public sealed class PlayerPending : CancellableEvent
     /// <summary>
     /// Previous save data for the player.
     /// </summary>
-    public required PlayerSave? SaveData { get; init; }
+    public required BinaryPlayerSave? SaveData { get; init; }
 
     /// <summary>
     /// The pending player.

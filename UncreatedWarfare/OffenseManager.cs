@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
@@ -421,8 +422,8 @@ public static class OffenseManager
             callerName = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
         else
             callerName = PlayerNames.Console;
-        ActionLog.Add(ActionLogType.BanPlayer, $"BANNED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\" DURATION: " +
-            (duration == -1 ? "PERMANENT" : (duration.ToString(Data.AdminLocale) + " SECONDS")), callerId);
+        ActionLog.Add(ActionLogType.BanPlayer, $"BANNED {targetId.ToString(CultureInfo.InvariantCulture)} FOR \"{reason}\" DURATION: " +
+            (duration == -1 ? "PERMANENT" : (duration.ToString(CultureInfo.InvariantCulture) + " SECONDS")), callerId);
 
         // LogBanPlayer(targetId, callerId, reason, duration, timestamp);
 
@@ -488,7 +489,7 @@ public static class OffenseManager
 
         LogKickPlayer(targetId, callerId, reason, timestamp);
 
-        ActionLog.Add(ActionLogType.KickPlayer, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"", callerId);
+        ActionLog.Add(ActionLogType.KickPlayer, $"KICKED {targetId.ToString(CultureInfo.InvariantCulture)} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
             L.Log($"{names.PlayerName} ({targetId}) was kicked by an operator because {reason}.", ConsoleColor.Cyan);
@@ -519,7 +520,7 @@ public static class OffenseManager
 
         LogUnbanPlayer(targetId, callerId, DateTime.Now);
 
-        string tid = targetId.ToString(Data.AdminLocale);
+        string tid = targetId.ToString(CultureInfo.InvariantCulture);
         ActionLog.Add(ActionLogType.UnbanPlayer, $"UNBANNED {tid}", callerId);
         if (callerId == 0)
         {
@@ -549,7 +550,7 @@ public static class OffenseManager
 
         LogWarnPlayer(targetId, callerId, reason, DateTime.Now);
 
-        string tid = targetId.ToString(Data.AdminLocale);
+        string tid = targetId.ToString(CultureInfo.InvariantCulture);
         ActionLog.Add(ActionLogType.WarnPlayer, $"WARNED {tid} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
@@ -752,120 +753,120 @@ public static class OffenseManager
     // ReSharper restore AutoPropertyCanBeMadeGetOnly.Local
     public static class NetCalls
     {
-#if false
-        public static readonly NetCall<ulong, ulong, string, int, DateTimeOffset> SendBanRequest = new NetCall<ulong, ulong, string, int, DateTimeOffset>(ReceiveBanRequest);
-        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendUnbanRequest = new NetCall<ulong, ulong, DateTimeOffset>(ReceiveUnbanRequest);
-        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendKickRequest = new NetCall<ulong, ulong, string, DateTimeOffset>(ReceieveKickRequest);
-        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendWarnRequest = new NetCall<ulong, ulong, string, DateTimeOffset>(ReceiveWarnRequest);
-        public static readonly NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset> SendMuteRequest = new NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset>(ReceieveMuteRequest);
-        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendUnmuteRequest = new NetCall<ulong, ulong, DateTimeOffset>(ReceieveUnmuteRequest);
-        public static readonly NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool> SendIPWhitelistRequest = new NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool>(ReceieveIPWhitelistRequest);
-#endif
-        public static readonly NetCall<ulong> GrantAdminRequest = new NetCall<ulong>(ReceiveGrantAdmin);
-        public static readonly NetCall<ulong> RevokeAdminRequest = new NetCall<ulong>(ReceiveRevokeAdmin);
-        public static readonly NetCall<ulong> GrantInternRequest = new NetCall<ulong>(ReceiveGrantIntern);
-        public static readonly NetCall<ulong> RevokeInternRequest = new NetCall<ulong>(ReceiveRevokeIntern);
-        public static readonly NetCall<ulong> GrantHelperRequest = new NetCall<ulong>(ReceiveGrantHelper);
-        public static readonly NetCall<ulong> RevokeHelperRequest = new NetCall<ulong>(ReceiveRevokeHelper);
+//#if false
+//        public static readonly NetCall<ulong, ulong, string, int, DateTimeOffset> SendBanRequest = new NetCall<ulong, ulong, string, int, DateTimeOffset>(ReceiveBanRequest);
+//        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendUnbanRequest = new NetCall<ulong, ulong, DateTimeOffset>(ReceiveUnbanRequest);
+//        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendKickRequest = new NetCall<ulong, ulong, string, DateTimeOffset>(ReceieveKickRequest);
+//        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendWarnRequest = new NetCall<ulong, ulong, string, DateTimeOffset>(ReceiveWarnRequest);
+//        public static readonly NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset> SendMuteRequest = new NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset>(ReceieveMuteRequest);
+//        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendUnmuteRequest = new NetCall<ulong, ulong, DateTimeOffset>(ReceieveUnmuteRequest);
+//        public static readonly NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool> SendIPWhitelistRequest = new NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool>(ReceieveIPWhitelistRequest);
+//#endif
+//        public static readonly NetCall<ulong> GrantAdminRequest = new NetCall<ulong>(ReceiveGrantAdmin);
+//        public static readonly NetCall<ulong> RevokeAdminRequest = new NetCall<ulong>(ReceiveRevokeAdmin);
+//        public static readonly NetCall<ulong> GrantInternRequest = new NetCall<ulong>(ReceiveGrantIntern);
+//        public static readonly NetCall<ulong> RevokeInternRequest = new NetCall<ulong>(ReceiveRevokeIntern);
+//        public static readonly NetCall<ulong> GrantHelperRequest = new NetCall<ulong>(ReceiveGrantHelper);
+//        public static readonly NetCall<ulong> RevokeHelperRequest = new NetCall<ulong>(ReceiveRevokeHelper);
 
-        public static readonly NetCall<ulong, ulong, string, int, DateTimeOffset> SendPlayerBanned = new NetCall<ulong, ulong, string, int, DateTimeOffset>(KnownNetMessage.SendPlayerBanned);
-        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendPlayerUnbanned = new NetCall<ulong, ulong, DateTimeOffset>(KnownNetMessage.SendPlayerUnbanned);
-        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendPlayerKicked = new NetCall<ulong, ulong, string, DateTimeOffset>(KnownNetMessage.SendPlayerKicked);
-        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendPlayerWarned = new NetCall<ulong, ulong, string, DateTimeOffset>(KnownNetMessage.SendPlayerWarned);
-        public static readonly NetCall<ulong, string, DateTimeOffset> SendPlayerBattleyeKicked = new NetCall<ulong, string, DateTimeOffset>(KnownNetMessage.SendPlayerBattleyeKicked);
-        public static readonly NetCall<ulong, ulong, string, string, DateTimeOffset> SendTeamkill = new NetCall<ulong, ulong, string, string, DateTimeOffset>(KnownNetMessage.SendTeamkill);
-        public static readonly NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset> SendPlayerMuted = new NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset>(KnownNetMessage.SendPlayerMuted);
-        public static readonly NetCall<ulong, ushort, string, DateTimeOffset> SendVehicleTeamkilled = new NetCall<ulong, ushort, string, DateTimeOffset>(KnownNetMessage.SendVehicleTeamkilled);
-        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendPlayerUnmuted = new NetCall<ulong, ulong, DateTimeOffset>(KnownNetMessage.SendPlayerUnmuted);
-        public static readonly NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool> SendPlayerIPWhitelisted = new NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool>(KnownNetMessage.SendPlayerIPWhitelisted);
-#if false
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendBanRequest)]
-        internal static async Task ReceiveBanRequest(MessageContext context, ulong target, ulong admin, string reason, int duration, DateTimeOffset timestamp)
-        {
-            await UCWarfare.ToUpdate();
-            context.Acknowledge(await BanPlayerAsync(target, admin, reason, duration, timestamp));
-        }
+//        public static readonly NetCall<ulong, ulong, string, int, DateTimeOffset> SendPlayerBanned = new NetCall<ulong, ulong, string, int, DateTimeOffset>(KnownNetMessage.SendPlayerBanned);
+//        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendPlayerUnbanned = new NetCall<ulong, ulong, DateTimeOffset>(KnownNetMessage.SendPlayerUnbanned);
+//        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendPlayerKicked = new NetCall<ulong, ulong, string, DateTimeOffset>(KnownNetMessage.SendPlayerKicked);
+//        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendPlayerWarned = new NetCall<ulong, ulong, string, DateTimeOffset>(KnownNetMessage.SendPlayerWarned);
+//        public static readonly NetCall<ulong, string, DateTimeOffset> SendPlayerBattleyeKicked = new NetCall<ulong, string, DateTimeOffset>(KnownNetMessage.SendPlayerBattleyeKicked);
+//        public static readonly NetCall<ulong, ulong, string, string, DateTimeOffset> SendTeamkill = new NetCall<ulong, ulong, string, string, DateTimeOffset>(KnownNetMessage.SendTeamkill);
+//        public static readonly NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset> SendPlayerMuted = new NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset>(KnownNetMessage.SendPlayerMuted);
+//        public static readonly NetCall<ulong, ushort, string, DateTimeOffset> SendVehicleTeamkilled = new NetCall<ulong, ushort, string, DateTimeOffset>(KnownNetMessage.SendVehicleTeamkilled);
+//        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendPlayerUnmuted = new NetCall<ulong, ulong, DateTimeOffset>(KnownNetMessage.SendPlayerUnmuted);
+//        public static readonly NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool> SendPlayerIPWhitelisted = new NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool>(KnownNetMessage.SendPlayerIPWhitelisted);
+//#if false
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendBanRequest)]
+//        internal static async Task ReceiveBanRequest(MessageContext context, ulong target, ulong admin, string reason, int duration, DateTimeOffset timestamp)
+//        {
+//            await UCWarfare.ToUpdate();
+//            context.Acknowledge(await BanPlayerAsync(target, admin, reason, duration, timestamp));
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendUnbanRequest)]
-        internal static async Task ReceiveUnbanRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp)
-        {
-            await UCWarfare.ToUpdate();
-            context.Acknowledge(await UnbanPlayer(target, admin, timestamp));
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendUnbanRequest)]
+//        internal static async Task ReceiveUnbanRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp)
+//        {
+//            await UCWarfare.ToUpdate();
+//            context.Acknowledge(await UnbanPlayer(target, admin, timestamp));
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendKickRequest)]
-        internal static async Task ReceieveKickRequest(MessageContext context, ulong target, ulong admin, string reason, DateTimeOffset timestamp)
-        {
-            await UCWarfare.ToUpdate();
-            context.Acknowledge(await KickPlayer(target, admin, reason, timestamp));
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendKickRequest)]
+//        internal static async Task ReceieveKickRequest(MessageContext context, ulong target, ulong admin, string reason, DateTimeOffset timestamp)
+//        {
+//            await UCWarfare.ToUpdate();
+//            context.Acknowledge(await KickPlayer(target, admin, reason, timestamp));
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendMuteRequest)]
-        internal static async Task ReceieveMuteRequest(MessageContext context, ulong target, ulong admin, MuteType type, int duration, string reason, DateTimeOffset timestamp)
-        {
-            await UCWarfare.ToUpdate();
-            context.Acknowledge(await MutePlayerAsync(target, admin, type, duration, reason, timestamp));
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendMuteRequest)]
+//        internal static async Task ReceieveMuteRequest(MessageContext context, ulong target, ulong admin, MuteType type, int duration, string reason, DateTimeOffset timestamp)
+//        {
+//            await UCWarfare.ToUpdate();
+//            context.Acknowledge(await MutePlayerAsync(target, admin, type, duration, reason, timestamp));
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendUnmuteRequest)]
-        internal static async Task ReceieveUnmuteRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp)
-        {
-            await UCWarfare.ToUpdate();
-            context.Acknowledge(await UnmutePlayerAsync(target, admin, timestamp));
-        }
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendIPWhitelistRequest)]
-        internal static async Task ReceieveIPWhitelistRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp, uint ip, byte mask, bool add)
-        {
-            await UCWarfare.ToUpdate();
-            context.Acknowledge(await WhitelistIP(target, admin, new IPv4Range(ip, mask), add, timestamp));
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendUnmuteRequest)]
+//        internal static async Task ReceieveUnmuteRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp)
+//        {
+//            await UCWarfare.ToUpdate();
+//            context.Acknowledge(await UnmutePlayerAsync(target, admin, timestamp));
+//        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendIPWhitelistRequest)]
+//        internal static async Task ReceieveIPWhitelistRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp, uint ip, byte mask, bool add)
+//        {
+//            await UCWarfare.ToUpdate();
+//            context.Acknowledge(await WhitelistIP(target, admin, new IPv4Range(ip, mask), add, timestamp));
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendWarnRequest)]
-        internal static async Task ReceiveWarnRequest(MessageContext context, ulong target, ulong admin, string reason, DateTimeOffset timestamp)
-        {
-            await UCWarfare.ToUpdate();
-            context.Acknowledge(await WarnPlayer(target, admin, reason, timestamp));
-        }
-#endif
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.SendWarnRequest)]
+//        internal static async Task ReceiveWarnRequest(MessageContext context, ulong target, ulong admin, string reason, DateTimeOffset timestamp)
+//        {
+//            await UCWarfare.ToUpdate();
+//            context.Acknowledge(await WarnPlayer(target, admin, reason, timestamp));
+//        }
+//#endif
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.GrantAdminRequest)]
-        internal static void ReceiveGrantAdmin(MessageContext context, ulong player)
-        {
-            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.ADMIN);
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.GrantAdminRequest)]
+//        internal static void ReceiveGrantAdmin(MessageContext context, ulong player)
+//        {
+//            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.ADMIN);
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RevokeAdminRequest)]
-        internal static void ReceiveRevokeAdmin(MessageContext context, ulong player)
-        {
-            RevokeAll(player);
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RevokeAdminRequest)]
+//        internal static void ReceiveRevokeAdmin(MessageContext context, ulong player)
+//        {
+//            RevokeAll(player);
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.GrantInternRequest)]
-        internal static void ReceiveGrantIntern(MessageContext context, ulong player)
-        {
-            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.TRIAL_ADMIN);
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.GrantInternRequest)]
+//        internal static void ReceiveGrantIntern(MessageContext context, ulong player)
+//        {
+//            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.TRIAL_ADMIN);
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RevokeInternRequest)]
-        internal static void ReceiveRevokeIntern(MessageContext context, ulong player)
-        {
-            RevokeAll(player);
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RevokeInternRequest)]
+//        internal static void ReceiveRevokeIntern(MessageContext context, ulong player)
+//        {
+//            RevokeAll(player);
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.GrantHelperRequest)]
-        internal static void ReceiveGrantHelper(MessageContext context, ulong player)
-        {
-            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.HELPER);
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.GrantHelperRequest)]
+//        internal static void ReceiveGrantHelper(MessageContext context, ulong player)
+//        {
+//            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.HELPER);
+//        }
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RevokeHelperRequest)]
-        internal static void ReceiveRevokeHelper(MessageContext context, ulong player)
-        {
-            RevokeAll(player);
-        }
-        private static void RevokeAll(ulong player)
-        {
-            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.MEMBER);
-        }
+//        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RevokeHelperRequest)]
+//        internal static void ReceiveRevokeHelper(MessageContext context, ulong player)
+//        {
+//            RevokeAll(player);
+//        }
+//        private static void RevokeAll(ulong player)
+//        {
+//            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.MEMBER);
+//        }
     }
 }

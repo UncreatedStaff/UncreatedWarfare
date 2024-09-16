@@ -184,7 +184,7 @@ public abstract class Punishment : ModerationEntry
         await base.AddExtraInfo(db, workingList, formatter, token);
         if (PresetType != PresetType.None)
         {
-            workingList.Add($"Preset: {(UCWarfare.IsLoaded ? Localization.TranslateEnum(PresetType) : PresetType.ToString())} | Level {PresetLevel.ToString(formatter)}");
+            workingList.Add($"Preset: {(Provider.isInitialized ? Localization.TranslateEnum(PresetType) : PresetType.ToString())} | Level {PresetLevel.ToString(formatter)}");
         }
     }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)

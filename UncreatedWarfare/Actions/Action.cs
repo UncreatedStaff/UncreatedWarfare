@@ -14,6 +14,7 @@ public class Action
 {
     private readonly ActionManager _actionManager;
     private readonly ITranslationService _translationService;
+    private readonly TipService _tipService;
 
     private readonly ActionComponent _component;
     private readonly EffectAsset? _viewerEffect;
@@ -37,6 +38,7 @@ public class Action
     {
         _actionManager = actionManager;
         _translationService = serviceProvider.GetRequiredService<ITranslationService>();
+        _tipService = serviceProvider.GetRequiredService<TipService>();
         Caller = caller;
 
         if (!viewerEffect.TryGetAsset(out _viewerEffect))
@@ -125,7 +127,7 @@ public class Action
     }
     private void Announce()
     {
-        SayTeam(Caller, _chatMessage);
+        _actionManager.SayTeam(Caller, _chatMessage);
 
         if (_toast is null)
             return;
@@ -133,28 +135,12 @@ public class Action
         foreach (WarfarePlayer? player in _toastReceivers)
         {
             if (_toast is Translation<string> t) // TODO: better way to do account for different types of translations / clean up
-                Tips.TryGiveTip(player, 5, t, SquadWide && Caller.Squad != null ? Caller.Squad.Name : Caller.NickName);
+                _tipService.TryGiveTip(player, 5, t, SquadWide && Caller.Squad != null ? Caller.Squad.Name : Caller.NickName);
             else
-                Tips.TryGiveTip(player, 5, _toast);
+                _tipService.TryGiveTip(player, 5, _toast);
         }
     }
 
-    public static void SayTeam(WarfarePlayer caller, Translation<Color>? chatMessage)
-    {
-        if (chatMessage is null)
-            return;
-
-        Color teamColor = caller.Team.Faction.Color;
-
-        foreach (LanguageSet set in LanguageSet.OnTeam(caller.Team))
-        {
-            string translation = chatMessage.Translate(set.Language, teamColor);
-            while (set.MoveNext())
-            {
-                ChatManager.serverSendMessage(translation, Palette.AMBIENT, caller.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
-            }
-        }
-    }
 
     public delegate bool CheckValidHandler();
     public delegate bool CheckCompleteHandler();

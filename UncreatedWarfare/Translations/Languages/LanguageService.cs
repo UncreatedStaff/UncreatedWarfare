@@ -3,10 +3,10 @@ using System;
 using System.Globalization;
 using System.Linq;
 using DanielWillett.ReflectionTools;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Events.Models;
 
 namespace Uncreated.Warfare.Translations.Languages;
 

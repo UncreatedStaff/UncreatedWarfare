@@ -1,9 +1,9 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -117,14 +117,14 @@ public readonly struct PermissionLeaf : IEquatable<PermissionLeaf>, IEquatable<P
 
     public override string ToString() => GetPrefix() + "::" + Path;
 
-    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        if ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
+        if ((parameters.Options & TranslationOptions.NoRichText) != 0)
             return ToString();
 
         string prefix = GetPrefix();
-        string prefixColor = Unturned ? "637b63" : Warfare ? "9cb6a4" : "dddddd";
-        return prefix.Colorize(prefixColor) + "<color=#737373>::</color>" + Path.Colorize("d3ded6");
+        Color32 prefixColor = Unturned ? new Color32(99, 123, 99, 255) : Warfare ? new Color32(156, 182, 164, 255) : new Color32(221, 221, 221, 255);
+        return formatter.Colorize(prefix, prefixColor, parameters.Options) + "<color=#737373>::</color>" + formatter.Colorize(Path, new Color32(211, 222, 214, 255), parameters.Options);
     }
 
     public bool Equals(PermissionBranch branch) => branch.Equals((PermissionBranch)this);

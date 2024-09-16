@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Translations.Languages;
+﻿using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Kits;
 

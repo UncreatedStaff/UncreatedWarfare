@@ -62,7 +62,13 @@
   </ItemGroup>
   
   <ItemGroup>
+    <None Remove="Commands\AbandonCommand.meta.yml" />
+    <None Remove="Commands\AmmoCommand.meta.yml" />
+    <None Remove="Commands\AttachCommand.meta.yml" />
+    <None Remove="Commands\BuyCommand.meta.yml" />
+    <None Remove="Commands\DeployCommand.meta.yml" />
     <None Remove="Commands\Kit\KitCommand.meta.yml" />
+    <None Remove="Commands\Zone\ZoneCommand.meta.yml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -145,9 +151,19 @@
 
     <EmbeddedResource Include="$(SolutionDir)Translation README.md" />
 
+    <EmbeddedResource Include="Commands\DeployCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\BuyCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\AttachCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\AmmoCommand.meta.yml" />
+
     <!-- Commands -->
     <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\AbandonCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Zone\ZoneCommand.meta.yml" />
 
   </ItemGroup>
 
@@ -256,6 +272,10 @@
       <HintPath>$(UnturnedDllPath)/UnityEngine.AssetBundleModule.dll</HintPath>
       <Private>true</Private>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Commands\VehicleBay\" />
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(U3DSPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">

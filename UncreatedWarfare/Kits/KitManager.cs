@@ -10,10 +10,12 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
@@ -22,10 +24,8 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Skillsets;
-using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
@@ -51,6 +51,8 @@ public partial class KitManager :
     private readonly IPlayerService _playerService;
     private readonly IServiceProvider _serviceProvider;
     private readonly LanguageService _languageService;
+    private readonly WhitelistService _whitelistService;
+    private readonly WarfareModule _module;
 
     public const string DefaultKitId = "default";
 
@@ -85,6 +87,8 @@ public partial class KitManager :
         _logger = serviceProvider.GetRequiredService<ILogger<KitManager>>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _languageService = serviceProvider.GetRequiredService<LanguageService>();
+        _whitelistService = serviceProvider.GetRequiredService<WhitelistService>();
+        _module = serviceProvider.GetRequiredService<WarfareModule>();
 
         MenuUI = serviceProvider.GetRequiredService<KitMenuUI>();
 
@@ -101,7 +105,7 @@ public partial class KitManager :
         Requests = new KitRequests(this, serviceProvider);
         Signs = new KitSigns(this, serviceProvider);
         Layouts = new KitLayouts(this, serviceProvider);
-        Boosting = new KitBoosting(this);
+        Boosting = ProxyGenerator.Instance.CreateProxy<KitBoosting>(rpcRouter, [ this, serviceProvider ]);
         Loadouts = ProxyGenerator.Instance.CreateProxy<KitLoadouts>(rpcRouter, [ this, serviceProvider ]);
         Defaults = new KitDefaults(this, serviceProvider);
 
@@ -596,11 +600,13 @@ public partial class KitManager :
     private void OnPreDeath(PlayerLife life)
     {
         WarfarePlayer? player = _playerService.GetOnlinePlayer(life.player);
+
+        KitPlayerComponent comp = player.Component<KitPlayerComponent>();
         
-        if (player == null || !player.ActiveKit.HasValue)
+        if (player == null || !comp.ActiveKitKey.HasValue)
             return;
 
-        Kit? active = Cache.GetKit(player.ActiveKit.Value);
+        Kit? active = Cache.GetKit(comp.ActiveKitKey.Value);
         if (active == null)
             return;
         
@@ -615,7 +621,7 @@ public partial class KitManager :
                 
                 float percentage = (float)jar.item.amount / asset.amount;
 
-                bool notInKit = !active.ContainsItem(asset.GUID, player?.Team ?? Team.NoTeam) && Whitelister.IsWhitelisted(asset.GUID, out _);
+                bool notInKit = !active.ContainsItem(asset.GUID, player?.Team ?? Team.NoTeam);
                 if (notInKit || (percentage < 0.3f && asset.type != EItemType.GUN))
                 {
                     if (notInKit)
@@ -1022,7 +1028,7 @@ public partial class KitManager :
         Kit? kit = await FindKit(kitId, token, set: x => x.Kits).ConfigureAwait(false);
         if (kit == null)
             return false;
-        return await RemoveAccess(kit, player.Steam64.m_SteamID, token).ConfigureAwait(false);
+        return await RemoveAccess(kit, player.Steam64, token).ConfigureAwait(false);
     }
 
     /// <remarks>Thread Safe</remarks>
@@ -1156,7 +1162,7 @@ public partial class KitManager :
 
     public async Task RefreshFavorites(WarfarePlayer player, bool psLock, CancellationToken token = default)
     {
-        CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken, UCWarfare.UnloadCancel);
+        CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken, _module.UnloadToken);
         if (psLock)
             await player.PurchaseSync.WaitAsync(token);
         try

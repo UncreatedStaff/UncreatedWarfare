@@ -18,6 +18,7 @@ using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Moderation;
@@ -49,21 +50,23 @@ public class DatabaseInterface
         ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason
     };
 
-    public IIPAddressFilter[] NonRemotePlayFilters => _nonRemotePlayAddressFilters ??= new IIPAddressFilter[]
-    {
-        new MySqlAddressFilter(() => Sql)
-    };
-    public IIPAddressFilter[] IPAddressFilters => _ipAddressFilters ??= new IIPAddressFilter[]
-    {
+    public IIPAddressFilter[] IPAddressFilters => _ipAddressFilters ??=
+    [
         IPv4AddressRangeFilter.GeforceNow,
         IPv4AddressRangeFilter.VKPlay,
         NonRemotePlayFilters[0]
-    };
-    public IPv4AddressRangeFilter[] RemotePlayAddressFilters => _remotePlayAddressFilters ??= new IPv4AddressRangeFilter[]
-    {
+    ];
+
+    public IIPAddressFilter[] NonRemotePlayFilters => _nonRemotePlayAddressFilters ??=
+    [
+        new MySqlAddressFilter(() => Sql)
+    ];
+
+    public IPv4AddressRangeFilter[] RemotePlayAddressFilters => _remotePlayAddressFilters ??=
+    [
         IPv4AddressRangeFilter.GeforceNow,
         IPv4AddressRangeFilter.VKPlay
-    };
+    ];
 
     public event Action<ModerationEntry>? OnNewModerationEntryAdded;
     public event Action<ModerationEntry>? OnModerationEntryUpdated;
@@ -107,29 +110,31 @@ public class DatabaseInterface
     }
     public bool TryGetUsernames(IModerationActor actor, out PlayerNames names)
     {
-        if (new CSteamID(actor.Id).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+        CSteamID steam64 = new CSteamID(actor.Id);
+        if (steam64.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
         {
             names = default;
             return false;
         }
-        return TryGetUsernames(actor.Id, out names);
+
+        return TryGetUsernames(steam64, out names);
     }
-    public bool TryGetUsernames(ulong steam64, out PlayerNames names)
+    public bool TryGetUsernames(CSteamID steam64, out PlayerNames names)
     {
-        return _usernameCache.TryGetValue(steam64, out names);
+        return _usernameCache.TryGetValue(steam64.m_SteamID, out names);
     }
-    public void UpdateUsernames(ulong steam64, PlayerNames names)
+    public void UpdateUsernames(CSteamID steam64, PlayerNames names)
     {
-        _usernameCache[steam64] = names;
+        _usernameCache[steam64.m_SteamID] = names;
     }
     // todo public Task VerifyTables(CancellationToken token = default) => Sql.VerifyTables(Schema, token);
-    public async Task<PlayerNames> GetUsernames(ulong id, bool useCache, CancellationToken token = default)
+    public async Task<PlayerNames> GetUsernames(CSteamID id, bool useCache, CancellationToken token = default)
     {
         if (useCache && TryGetUsernames(id, out PlayerNames names))
             return names;
 
-        if (UCWarfare.IsLoaded)
-            return await F.GetPlayerOriginalNamesAsync(id, token).ConfigureAwait(false);
+        if (Provider.isInitialized)
+            return await F.GetPlayerOriginalNamesAsync(id.m_SteamID, token).ConfigureAwait(false);
 
         names = await Sql.GetUsernamesAsync(id, token).ConfigureAwait(false);
         UpdateUsernames(id, names);
@@ -228,9 +233,9 @@ public class DatabaseInterface
         // ReSharper disable once CoVariantArrayConversion
         await Fill(result, detail, baseOnly, mask, token).ConfigureAwait(false);
     }
-    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : IModerationEntry
+    public async Task<T[]> ReadAll<T>(CSteamID actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : IModerationEntry
         => (T[])await ReadAll(typeof(T), actor, relation, detail, baseOnly, start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
-    public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
+    public async Task<Array> ReadAll(Type type, CSteamID actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         ModerationEntryType[]? types = null;
         if (type != typeof(ModerationEntry) && type != typeof(IModerationEntry))
@@ -240,7 +245,7 @@ public class DatabaseInterface
         int flag = AppendReadColumns(sb, type, baseOnly);
         AppendTables(sb, flag);
         sb.Append(" WHERE");
-        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 3) { actor };
+        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 3) { actor.m_SteamID };
         if (conditionArgs != null && !string.IsNullOrEmpty(condition))
         {
             args.AddRange(conditionArgs);
@@ -427,9 +432,9 @@ public class DatabaseInterface
         
         return rtn;
     }
-    public async Task<T[]> GetEntriesOfLevel<T>(ulong player, int level, PresetType type, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : Punishment
+    public async Task<T[]> GetEntriesOfLevel<T>(CSteamID player, int level, PresetType type, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : Punishment
         => (T[])await GetEntriesOfLevel(typeof(T), player, level, type, detail, baseOnly, token).ConfigureAwait(false);
-    public async Task<Array> GetEntriesOfLevel(Type type, ulong player, int level, PresetType presetType, bool detail = true, bool baseOnly = false, CancellationToken token = default)
+    public async Task<Array> GetEntriesOfLevel(Type type, CSteamID player, int level, PresetType presetType, bool detail = true, bool baseOnly = false, CancellationToken token = default)
     {
         if (!typeof(Punishment).IsAssignableFrom(type))
             return Array.Empty<Punishment>();
@@ -442,7 +447,7 @@ public class DatabaseInterface
 
         args[0] = presetType.ToString();
         args[1] = level;
-        args[2] = player;
+        args[2] = player.m_SteamID;
 
         sb.Append($" WHERE `main`.`{ColumnEntriesRemoved}`=0 AND `pnsh`.`{ColumnPunishmentsPresetType}`=@0 AND `pnsh`.`{ColumnPunishmentsPresetLevel}`=@1 AND `main`.`{ColumnEntriesSteam64}`=@2");
 
@@ -852,9 +857,9 @@ public class DatabaseInterface
             await Task.WhenAll(tasks.AsArrayFast()).ConfigureAwait(false);
         }
     }
-    public async Task<T[]> GetActiveEntries<T>(ulong steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
+    public async Task<T[]> GetActiveEntries<T>(CSteamID steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
         => (T[])await GetActiveEntries(typeof(T), steam64, detail, baseOnly, condition, orderBy, conditionArgs, start, end, token);
-    public Task<Array> GetActiveEntries(Type type, ulong steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
+    public Task<Array> GetActiveEntries(Type type, CSteamID steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
     {
         bool dur = typeof(IDurationModerationEntry).IsAssignableFrom(type);
         string cond = (dur
@@ -873,9 +878,9 @@ public class DatabaseInterface
 
         return ReadAll(type, steam64, ActorRelationType.IsTarget, detail, baseOnly, start, end, cond, orderBy, conditionArgs, token: token);
     }
-    public async Task<T[]> GetActiveEntries<T>(ulong baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
+    public async Task<T[]> GetActiveEntries<T>(CSteamID baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
         => (T[])await GetActiveEntries(typeof(T), baseSteam64, addresses, hwids, detail, baseOnly, condition, orderBy, conditionArgs, start, end, token);
-    public async Task<Array> GetActiveEntries(Type type, ulong baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
+    public async Task<Array> GetActiveEntries(Type type, CSteamID baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
     {
         bool dur = typeof(IDurationModerationEntry).IsAssignableFrom(type);
         string cond = (dur
@@ -895,7 +900,7 @@ public class DatabaseInterface
         int flag = AppendReadColumns(sb, type, baseOnly);
         AppendTables(sb, flag);
         sb.Append(" WHERE");
-        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 2 + hwids.Count * 2) { baseSteam64 };
+        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 2 + hwids.Count * 2) { baseSteam64.m_SteamID };
         if (conditionArgs != null && !string.IsNullOrEmpty(condition))
         {
             args.AddRange(conditionArgs);
@@ -954,9 +959,9 @@ public class DatabaseInterface
 
         if (addresses.Count > 0)
         {
-            sb.Append($"(EXISTS (SELECT * FROM `{WarfareSQL.TableIPAddresses}` AS `ip` WHERE `ip`.`{WarfareSQL.ColumnIPAddressesSteam64}`=`main`.`{ColumnEntriesSteam64}`");
+            sb.Append($"(EXISTS (SELECT * FROM `{TableIPAddresses}` AS `ip` WHERE `ip`.`{ColumnIPAddressesSteam64}`=`main`.`{ColumnEntriesSteam64}`");
 
-            sb.Append($"AND `ip`.`{WarfareSQL.ColumnIPAddressesPackedIP}` IN (");
+            sb.Append($"AND `ip`.`{ColumnIPAddressesPackedIP}` IN (");
 
             for (int i = 0; i < addresses.Count; ++i)
             {
@@ -972,9 +977,9 @@ public class DatabaseInterface
         {
             if (addresses.Count > 0)
                 sb.Append(" OR ");
-            sb.Append($"(EXISTS (SELECT * FROM `{WarfareSQL.TableHWIDs}` AS `hwid` WHERE `hwid`.`{WarfareSQL.ColumnHWIDsSteam64}`=`main`.`{ColumnEntriesSteam64}`");
+            sb.Append($"(EXISTS (SELECT * FROM `{TableHWIDs}` AS `hwid` WHERE `hwid`.`{ColumnHWIDsSteam64}`=`main`.`{ColumnEntriesSteam64}`");
 
-            sb.Append($"AND `hwid`.`{WarfareSQL.ColumnHWIDsHWID}` IN (");
+            sb.Append($"AND `hwid`.`{ColumnHWIDsHWID}` IN (");
 
             for (int i = 0; i < hwids.Count; ++i)
             {
@@ -1012,7 +1017,7 @@ public class DatabaseInterface
 
         return rtn;
     }
-    public async Task<AssetBan?> GetActiveAssetBan(ulong steam64, VehicleType type, bool detail = true, CancellationToken token = default)
+    public async Task<AssetBan?> GetActiveAssetBan(CSteamID steam64, VehicleType type, bool detail = true, CancellationToken token = default)
     {
         AssetBan? result = null;
         
@@ -1029,7 +1034,7 @@ public class DatabaseInterface
             $"AND (NOT EXISTS (SELECT NULL FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`) " +
             $"OR (@1 IN (SELECT `a`.`{ColumnAssetBanFiltersType}` FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`))) " +
             $"ORDER BY (IF(`d`.`{ColumnDurationsDurationSeconds}` < 0, 2147483647, `d`.`{ColumnDurationsDurationSeconds}`)) DESC;",
-            new object[] { steam64, type.ToString() },
+            [ steam64.m_SteamID, type.ToString() ],
             token,
             reader =>
             {
@@ -1300,7 +1305,7 @@ public class DatabaseInterface
         object[] objs = new object[!isNew ? 16 : 15];
         objs[0] = (ModerationReflection.GetType(entry.GetType()) ?? ModerationEntryType.None).ToString();
         objs[1] = entry.Player;
-        objs[2] = (object?)entry.Message.MaxLength(1024) ?? DBNull.Value;
+        objs[2] = (object?)entry.Message.Truncate(1024) ?? DBNull.Value;
         objs[3] = entry.IsLegacy;
         objs[4] = entry.StartedTimestamp.UtcDateTime;
         objs[5] = entry.ResolvedTimestamp.HasValue ? entry.ResolvedTimestamp.Value.UtcDateTime : DBNull.Value;
@@ -1390,7 +1395,7 @@ public class DatabaseInterface
         await Sql.QueryAsync($"SELECT MAX(`pnsh`.`{ColumnPunishmentsPresetLevel}`) " +
                              $"FROM `{TableEntries}` as `main` " +
                              $"LEFT JOIN `{TablePunishments}` AS `pnsh` ON `main`.`{ColumnEntriesPrimaryKey}` = `pnsh`.`{ColumnExternalPrimaryKey}` " +
-                             $"WHERE `main`.`{ColumnEntriesSteam64}` = @1 AND `pnsh`.`{ColumnPunishmentsPresetType}` = @0 AND `main`.`{ColumnEntriesRemoved}` = 0;", new object[] { type.ToString(), player },
+                             $"WHERE `main`.`{ColumnEntriesSteam64}` = @1 AND `pnsh`.`{ColumnPunishmentsPresetType}` = @0 AND `main`.`{ColumnEntriesRemoved}` = 0;", [ type.ToString(), player ],
             token,
             reader =>
             {
@@ -1438,7 +1443,7 @@ public class DatabaseInterface
         }
 
         await Sql.QueryAsync(
-            $"SELECT `{WarfareSQL.ColumnDiscordIdsSteam64}`,`{WarfareSQL.ColumnDiscordIdsDiscordId}` FROM `{WarfareSQL.TableDiscordIds}` WHERE `{WarfareSQL.ColumnDiscordIdsDiscordId}` {sb});",
+            $"SELECT `{ColumnDiscordIdsSteam64}`,`{ColumnDiscordIdsDiscordId}` FROM `{TableDiscordIds}` WHERE `{ColumnDiscordIdsDiscordId}` {sb});",
             null, token, reader =>
             {
                 ulong d = reader.GetUInt64(1);
@@ -1462,7 +1467,7 @@ public class DatabaseInterface
     }
     public async Task CacheUsernames(ulong[] players, CancellationToken token = default)
     {
-        if (UCWarfare.IsLoaded)
+        if (Provider.isInitialized)
         {
             _ = await Sql.GetUsernamesAsync(players, token);
         }
@@ -1476,14 +1481,14 @@ public class DatabaseInterface
             }
         }
     }
-    public async Task<PlayerIPAddress[]> GetIPAddresses(ulong player, bool removeFiltered, CancellationToken token = default)
+    public async Task<PlayerIPAddress[]> GetIPAddresses(CSteamID player, bool removeFiltered, CancellationToken token = default)
     {
         List<PlayerIPAddress> addresses = new List<PlayerIPAddress>(4);
 
-        await Sql.QueryAsync($"SELECT {MySqlSnippets.ColumnList(WarfareSQL.ColumnIPAddressesPrimaryKey,
-            WarfareSQL.ColumnIPAddressesSteam64, WarfareSQL.ColumnIPAddressesPackedIP, WarfareSQL.ColumnIPAddressesLoginCount,
-            WarfareSQL.ColumnIPAddressesLastLogin, WarfareSQL.ColumnIPAddressesFirstLogin)} FROM `{WarfareSQL.TableIPAddresses}` WHERE `{WarfareSQL.ColumnIPAddressesSteam64}`=@0;",
-            new object[] { player }, token, reader =>
+        await Sql.QueryAsync($"SELECT {MySqlSnippets.ColumnList(ColumnIPAddressesPrimaryKey,
+            ColumnIPAddressesSteam64, ColumnIPAddressesPackedIP, ColumnIPAddressesLoginCount,
+            ColumnIPAddressesLastLogin, ColumnIPAddressesFirstLogin)} FROM `{TableIPAddresses}` WHERE `{ColumnIPAddressesSteam64}`=@0;",
+            [ player.m_SteamID ], token, reader =>
             {
                 addresses.Add(new PlayerIPAddress(reader.GetUInt32(0), reader.GetUInt64(1), reader.GetUInt32(2), reader.GetInt32(3),
                     reader.IsDBNull(5) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)),
@@ -1522,14 +1527,14 @@ public class DatabaseInterface
 
         return addressArray;
     }
-    public async Task<PlayerHWID[]> GetHWIDs(ulong player, CancellationToken token = default)
+    public async Task<PlayerHWID[]> GetHWIDs(CSteamID player, CancellationToken token = default)
     {
         List<PlayerHWID> hwids = new List<PlayerHWID>(9);
 
-        await Sql.QueryAsync($"SELECT {MySqlSnippets.ColumnList(WarfareSQL.ColumnHWIDsPrimaryKey, WarfareSQL.ColumnHWIDsIndex,
-            WarfareSQL.ColumnHWIDsSteam64, WarfareSQL.ColumnHWIDsHWID, WarfareSQL.ColumnHWIDsLoginCount,
-            WarfareSQL.ColumnHWIDsLastLogin, WarfareSQL.ColumnHWIDsFirstLogin)} FROM `{WarfareSQL.TableHWIDs}` WHERE `{WarfareSQL.ColumnHWIDsSteam64}`=@0",
-            new object[] { player }, token, reader =>
+        await Sql.QueryAsync($"SELECT {MySqlSnippets.ColumnList(ColumnHWIDsPrimaryKey, ColumnHWIDsIndex,
+            ColumnHWIDsSteam64, ColumnHWIDsHWID, ColumnHWIDsLoginCount,
+            ColumnHWIDsLastLogin, ColumnHWIDsFirstLogin)} FROM `{TableHWIDs}` WHERE `{ColumnHWIDsSteam64}`=@0",
+            [ player.m_SteamID ], token, reader =>
             {
                 hwids.Add(new PlayerHWID(reader.GetUInt32(0), reader.GetInt32(1),
                     reader.GetUInt64(2), HWID.ReadFromDataReader(3, reader), reader.GetInt32(4),
@@ -1568,7 +1573,7 @@ public class DatabaseInterface
 
         return false;
     }
-    public async Task<bool> IsIPFiltered(IPAddress address, ulong steam64, CancellationToken token = default)
+    public async Task<bool> IsIPFiltered(IPAddress address, CSteamID steam64, CancellationToken token = default)
     {
         IIPAddressFilter[] filters = IPAddressFilters;
 
@@ -1580,34 +1585,34 @@ public class DatabaseInterface
 
         return false;
     }
-    public Task<bool> WhitelistIP(ulong targetId, ulong callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
+    public Task<bool> WhitelistIP(CSteamID targetId, CSteamID callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
         => WhitelistIP(targetId, callerId, range, true, timestamp, token);
-    public Task<bool> UnwhitelistIP(ulong targetId, ulong callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
+    public Task<bool> UnwhitelistIP(CSteamID targetId, CSteamID callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
         => WhitelistIP(targetId, callerId, range, false, timestamp, token);
-    public async Task<bool> WhitelistIP(ulong targetId, ulong callerId, IPv4Range range, bool add, DateTimeOffset timestamp, CancellationToken token)
+    public async Task<bool> WhitelistIP(CSteamID targetId, CSteamID callerId, IPv4Range range, bool add, DateTimeOffset timestamp, CancellationToken token)
     {
         if (add)
         {
             await Sql.NonQueryAsync(
-                $"DELETE FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0 AND " +
-                $"`{WarfareSQL.ColumnIPWhitelistsIPRange}` = @2; INSERT INTO `{WarfareSQL.TableIPWhitelists}` " +
-                $"(`{WarfareSQL.ColumnIPWhitelistsSteam64}`, `{WarfareSQL.ColumnIPWhitelistsAdmin}`, `{WarfareSQL.ColumnIPWhitelistsIPRange}`) VALUES (@0, @1, @2);",
-                [ targetId, callerId, range.ToString() ], token).ConfigureAwait(false);
+                $"DELETE FROM `{TableIPWhitelists}` WHERE `{ColumnIPWhitelistsSteam64}` = @0 AND " +
+                $"`{ColumnIPWhitelistsIPRange}` = @2; INSERT INTO `{TableIPWhitelists}` " +
+                $"(`{ColumnIPWhitelistsSteam64}`, `{ColumnIPWhitelistsAdmin}`, `{ColumnIPWhitelistsIPRange}`) VALUES (@0, @1, @2);",
+                [ targetId.m_SteamID, callerId.m_SteamID, range.ToString() ], token).ConfigureAwait(false);
         }
         else
         {
 
             bool success = await Sql.NonQueryAsync(
-                $"DELETE FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0 AND `{WarfareSQL.ColumnIPWhitelistsIPRange}` = @1;",
-                [ targetId, range.ToString() ], token).ConfigureAwait(false) > 0;
+                $"DELETE FROM `{TableIPWhitelists}` WHERE `{ColumnIPWhitelistsSteam64}` = @0 AND `{ColumnIPWhitelistsIPRange}` = @1;",
+                [ targetId.m_SteamID, range.ToString() ], token).ConfigureAwait(false) > 0;
 
             if (!success)
                 return false;
         }
 
-        if (UCWarfare.IsLoaded)
+        if (Provider.isInitialized)
         {
-            ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.ToString(CultureInfo.InvariantCulture)} FOR {range}.", callerId);
+            ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.m_SteamID.ToString(CultureInfo.InvariantCulture)} FOR {range}.", callerId);
 
             L.Log($"{targetId} was ip {(add ? "whitelisted" : "blacklisted")} by {callerId} on {range}.", ConsoleColor.Cyan);
         }
@@ -1640,6 +1645,34 @@ public class DatabaseInterface
     public const string TableReportTeamkillRecords = "moderation_report_tk_records";
     public const string TableReportVehicleTeamkillRecords = "moderation_report_veh_tk_records";
     public const string TableReportShotRecords = "moderation_report_shot_record";
+    public const string TableIPAddresses = "ip_addresses";
+    public const string TableHWIDs = "hwids";
+    public const string TableDiscordIds = "discordnames";
+    public const string TableIPWhitelists = "ip_whitelists";
+
+    public const string ColumnDiscordIdsSteam64 = "Steam64";
+    public const string ColumnDiscordIdsDiscordId = "DiscordID";
+
+    public const string ColumnIPWhitelistsSteam64 = "Steam64";
+    public const string ColumnIPWhitelistsIPRange = "IPRange";
+    public const string ColumnIPWhitelistsAdmin = "Admin";
+
+    public const string ColumnHWIDsPrimaryKey = "Id";
+    public const string ColumnHWIDsIndex = "Index";
+    public const string ColumnHWIDsSteam64 = "Steam64";
+    public const string ColumnHWIDsHWID = "HWID";
+    public const string ColumnHWIDsLoginCount = "LoginCount";
+    public const string ColumnHWIDsLastLogin = "LastLogin";
+    public const string ColumnHWIDsFirstLogin = "FirstLogin";
+
+    public const string ColumnIPAddressesPrimaryKey = "Id";
+    public const string ColumnIPAddressesSteam64 = "Steam64";
+    public const string ColumnIPAddressesPackedIP = "Packed";
+    public const string ColumnIPAddressesUnpackedIP = "Unpacked";
+    public const string ColumnIPAddressesLoginCount = "LoginCount";
+    public const string ColumnIPAddressesLastLogin = "LastLogin";
+    public const string ColumnIPAddressesFirstLogin = "FirstLogin";
+
 
     public const string ColumnExternalPrimaryKey = "Entry";
     

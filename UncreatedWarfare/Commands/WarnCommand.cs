@@ -59,7 +59,7 @@ public class WarnCommand : IExecutableCommand
 
         OffenseManager.LogWarnPlayer(targetId, Context.CallerID, reason!, DateTime.Now);
 
-        string tid = targetId.ToString(Data.AdminLocale);
+        string tid = targetId.ToString(CultureInfo.InvariantCulture);
         ActionLog.Add(ActionLogType.WarnPlayer, $"WARNED {tid} FOR \"{reason}\"", Context.CallerID);
         if (Context.IsConsole)
         {

@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events;
+﻿namespace Uncreated.Warfare.Events.Models;
 
 /// <summary>
 /// Represents event arguments which can cancel the execution of their events.

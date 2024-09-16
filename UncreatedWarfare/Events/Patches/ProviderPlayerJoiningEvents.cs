@@ -3,8 +3,7 @@ using DanielWillett.ReflectionTools.Formatting;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Harmony;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management.Legacy;
@@ -24,7 +23,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: PatchUtil.GetMethodInfo(Prefix));
+            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for player joining event.", Accessor.Formatter.Format(_target));
             return;
         }
@@ -43,7 +42,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, PatchUtil.GetMethodInfo(Prefix));
+        Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
         logger.LogDebug("Unpatched {0} for player joining event.", Accessor.Formatter.Format(_target));
         _target = null;
     }

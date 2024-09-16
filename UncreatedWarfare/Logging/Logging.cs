@@ -351,7 +351,7 @@ public static class L
     {
         if (color == ConsoleColor.DarkGray && _notWindows)
             color = ConsoleColor.Gray;
-        if (!UCWarfare.IsLoaded)
+        if (!Provider.isInitialized)
             LogAsLibrary("[DEBUG] " + info, color);
         else if (UCWarfare.Config.Debug)
         {
@@ -386,7 +386,7 @@ public static class L
     internal static void NetLogException(Exception ex) => LogError(ex, method: "UncreatedNetworking");
     public static void Log(string info, ConsoleColor color = ConsoleColor.White)
     {
-        if (!UCWarfare.IsLoaded)
+        if (!Provider.isInitialized)
             LogAsLibrary("[INFO]  " + info, color);
         else
         {
@@ -435,7 +435,7 @@ public static class L
             lock (BadLogBuffer)
                 BadLogBuffer.Add(new LogMessage(false, color, msg));
         }
-        if (!UCWarfare.IsLoaded)
+        if (!Provider.isInitialized)
             LogAsLibrary(msg, color);
         else
         {
@@ -472,7 +472,7 @@ public static class L
             lock (BadLogBuffer)
                 BadLogBuffer.Add(new LogMessage(true, color, msg));
         }
-        if (!UCWarfare.IsLoaded)
+        if (!Provider.isInitialized)
             LogAsLibrary(msg, color);
         else
         {
@@ -503,7 +503,7 @@ public static class L
     }
     public static void LogError(Exception ex, bool cleanStack = true, [CallerMemberName] string method = "")
     {
-        if (!UCWarfare.IsLoaded)
+        if (!Provider.isInitialized)
         {
             if (IsBufferingLogs)
             {
@@ -688,17 +688,17 @@ public static class L
 
     public static class NetCalls
     {
-        public static readonly NetCall<string> RequestRunCommand = new NetCall<string>(ReceiveCommand);
-        public static readonly NetCall<string> SendFatalException = new NetCall<string>(KnownNetMessage.SendFatalException);
+        //public static readonly NetCall<string> RequestRunCommand = new NetCall<string>(ReceiveCommand);
+        //public static readonly NetCall<string> SendFatalException = new NetCall<string>(KnownNetMessage.SendFatalException);
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestRunCommand)]
-        internal static void ReceiveCommand(MessageContext context, string command)
-        {
-            if (GameThread.IsCurrent)
-                RunCommand(command);
-            else
-                UCWarfare.RunOnMainThread(() => RunCommand(command));
-        }
+        //[NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestRunCommand)]
+        //internal static void ReceiveCommand(MessageContext context, string command)
+        //{
+        //    if (GameThread.IsCurrent)
+        //        RunCommand(command);
+        //    else
+        //        UCWarfare.RunOnMainThread(() => RunCommand(command));
+        //}
     }
 
     public sealed class UCLogger : ILogger

@@ -119,7 +119,7 @@ public class ShutdownCommand : IExecutableCommand
                 throw Context.SendCorrectUsage("/shutdown after <reason>");
             
             Context.LogAction(ActionLogType.ShutdownServer,
-                "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameId.ToString(Data.AdminLocale)) +
+                "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameId.ToString(CultureInfo.InvariantCulture)) +
                 ": " + reason);
             Data.Gamemode?.ShutdownAfterGame(reason, Context.CallerId.m_SteamID);
             Chat.Broadcast(T.ShutdownBroadcastAfterGame, reason);
@@ -174,7 +174,7 @@ public class ShutdownCommand : IExecutableCommand
     public static void ShutdownAfterGameDaily() => ShutdownAfterGame("Daily Restart", true);
     public static void ShutdownAfterGame(string reason, bool isDaily)
     {
-        ActionLog.Add(ActionLogType.ShutdownServer, "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameId.ToString(Data.AdminLocale)) + ": " + reason);
+        ActionLog.Add(ActionLogType.ShutdownServer, "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameId.ToString(CultureInfo.InvariantCulture)) + ": " + reason);
         Chat.Broadcast(isDaily ? T.ShutdownBroadcastDaily : T.ShutdownBroadcastAfterGame, reason);
         L.Log($"A shutdown has been scheduled after this game because: {reason}.", ConsoleColor.Cyan);
         Data.Gamemode?.ShutdownAfterGame(reason, 0);

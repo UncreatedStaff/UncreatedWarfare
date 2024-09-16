@@ -38,7 +38,7 @@ public class BinaryPlayerSave : ISaveableState
                Path.Combine(
                    Directory,
                    steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + "_0",
-                   "Uncreated_S" + UCWarfare.Season.ToString(CultureInfo.InvariantCulture),
+                   "Uncreated_S" + WarfareModule.Season.ToString(CultureInfo.InvariantCulture),
                    "PlayerSave.dat"
                );
     }

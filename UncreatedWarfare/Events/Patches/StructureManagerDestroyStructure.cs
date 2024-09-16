@@ -7,8 +7,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Structures;
-using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using static Uncreated.Warfare.Harmony.Patches;
@@ -26,7 +24,7 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: PatchUtil.GetMethodInfo(Transpiler));
+            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
             logger.LogDebug("Patched {0} for destroy structure event.", Accessor.Formatter.Format(_target));
             return;
         }
@@ -49,7 +47,7 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, PatchUtil.GetMethodInfo(Transpiler));
+        Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
         logger.LogDebug("Unpatched {0} for destroy structure event.", Accessor.Formatter.Format(_target));
         _target = null;
     }
@@ -78,7 +76,7 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
                 yield return new CodeInstruction(OpCodes.Ldarg_2);
                 yield return new CodeInstruction(OpCodes.Ldarg_3);
                 yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4);
-                yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(DestroyStructureInvoker));
+                yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(DestroyStructureInvoker));
                 L.LogDebug("Inserted DestroyStructureInvoker call to StructureManager.destroyStructure.");
                 CodeInstruction old = new CodeInstruction(instruction);
                 old.labels.Clear();

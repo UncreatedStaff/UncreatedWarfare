@@ -401,7 +401,7 @@ partial class KitManager
 
         dbContext.KitHotkeys.RemoveRange(hotkeys);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        if (UCWarfare.IsLoaded && UCPlayer.FromID(player) is { IsOnline: true } ucPlayer)
+        if (Provider.isInitialized && UCPlayer.FromID(player) is { IsOnline: true } ucPlayer)
         {
             ucPlayer.HotkeyBindings?.RemoveAll(x => x.Kit == kit && hotkeys.Any(y => y.Slot == x.Slot));
         }

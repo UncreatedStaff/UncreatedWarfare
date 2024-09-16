@@ -9,14 +9,12 @@ using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 
@@ -215,14 +213,14 @@ public static class KitEx
     {
         if (faction is not { SpriteIndex: not null })
             return "<sprite index=0/>";
-        return "<sprite index=" + faction.SpriteIndex.Value.ToString(Data.AdminLocale) + "/>";
+        return "<sprite index=" + faction.SpriteIndex.Value.ToString(CultureInfo.InvariantCulture) + "/>";
     }
 
     public static string GetFlagIcon(this FactionInfo? faction)
     {
         if (faction is not { TMProSpriteIndex: not null })
             return "<sprite index=0/>";
-        return "<sprite index=" + faction.TMProSpriteIndex.Value.ToString(Data.AdminLocale) + "/>";
+        return "<sprite index=" + faction.TMProSpriteIndex.Value.ToString(CultureInfo.InvariantCulture) + "/>";
     }
 
     public static char GetIcon(this Class @class)
@@ -358,14 +356,24 @@ public static class KitEx
         token.ThrowIfCancellationRequested();
         if (UCWarfare.CanUseNetCall)
         {
-            RequestResponse response = await PlayerManager.NetCalls.RequestOpenTicket.RequestAck(UCWarfare.I.NetClient!, player, discordId, TicketType.ModifyLoadout, id.ToString(Data.AdminLocale) + "_" + @class + "_" + displayName, 10000);
+            RequestResponse response = await PlayerManager.NetCalls.RequestOpenTicket.RequestAck(UCWarfare.I.NetClient!, player, discordId, TicketType.ModifyLoadout, id.ToString(CultureInfo.InvariantCulture) + "_" + @class + "_" + displayName, 10000);
             return response.Responded && response.ErrorCode.HasValue && (StandardErrorCode)response.ErrorCode.Value == StandardErrorCode.Success;
         }
 
         return false;
     }
+    public static bool ValidSlot(byte slot) => slot == 0 || slot > PlayerInventory.SLOTS && slot <= 10;
+    public static byte GetHotkeyIndex(byte slot)
+    {
+        if (!ValidSlot(slot)) return byte.MaxValue;
+        // 0 should be counted as slot 10, nelson removes the first two from hotkeys because slots.
+        return slot == 0 ? (byte)(9 - PlayerInventory.SLOTS) : (byte)(slot - PlayerInventory.SLOTS - 1);
+    }
+
+    public static bool CanBindHotkeyTo(ItemAsset asset, Page page) => (byte)page >= PlayerInventory.SLOTS && asset.canPlayerEquip && asset.slot.canEquipInPage((byte)page);
     public static class NetCalls
     {
+#if false
         public const int PlayerHasAccessCode = -4;
         public const int PlayerHasNoAccessCode = -3;
 
@@ -403,7 +411,7 @@ public static class KitEx
             if (alreadySet)
                 return StandardErrorCode.InvalidData;
 
-            ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
+            ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) +
                                                          (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
                                                              (" DENIED ACCESS TO " + kitId + ".")), admin);
 
@@ -443,7 +451,7 @@ public static class KitEx
                         successes[i] = (int)StandardErrorCode.InvalidData;
                         continue;
                     }
-                    ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
+                    ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) +
                         (state ? (" GIVEN ACCESS TO " + kitId + ", REASON: " + type) :
                             (" DENIED ACCESS TO " + kitId + ".")), admin);
                     KitSync.OnAccessChanged(player);
@@ -582,15 +590,6 @@ public static class KitEx
             }
             context.Acknowledge(StandardErrorCode.ModuleNotLoaded);
         }
+#endif
     }
-
-    public static bool ValidSlot(byte slot) => slot == 0 || slot > PlayerInventory.SLOTS && slot <= 10;
-    public static byte GetHotkeyIndex(byte slot)
-    {
-        if (!ValidSlot(slot)) return byte.MaxValue;
-        // 0 should be counted as slot 10, nelson removes the first two from hotkeys because slots.
-        return slot == 0 ? (byte)(9 - PlayerInventory.SLOTS) : (byte)(slot - PlayerInventory.SLOTS - 1);
-    }
-
-    public static bool CanBindHotkeyTo(ItemAsset asset, Page page) => (byte)page >= PlayerInventory.SLOTS && asset.canPlayerEquip && asset.slot.canEquipInPage((byte)page);
 }

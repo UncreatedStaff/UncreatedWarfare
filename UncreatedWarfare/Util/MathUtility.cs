@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace Uncreated.Warfare.Util;
 public static class MathUtility
@@ -33,7 +32,7 @@ public static class MathUtility
     }
 
     /// <summary>
-    /// Rounds a number to the nearest <paramref name="round"/>. Negative numbers  
+    /// Rounds a number to the nearest <paramref name="round"/>.
     /// </summary>
     /// <param name="value">Value to actually round.</param>
     /// <param name="round">Nearest number to round to.</param>

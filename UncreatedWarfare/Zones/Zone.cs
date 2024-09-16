@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
@@ -145,6 +143,36 @@ public class Zone : IDeployable
     bool IDeployable.CheckDeployableToTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
     {
         return true;
+    }
+
+    /// <summary>
+    /// Gets the lower height bound, if it exists, otherwise <see langword="NaN"/>.
+    /// </summary>
+    public float GetMinHeight()
+    {
+        return Shape switch
+        {
+            ZoneShape.AABB     when AABBInfo != null    => AABBInfo.Size.y >= Level.HEIGHT - 0.5f ? float.NaN : Center.y - AABBInfo.Size.y / 2f,
+            ZoneShape.Cylinder when CircleInfo != null  => CircleInfo.MinimumHeight.GetValueOrDefault(float.NaN),
+            ZoneShape.Sphere   when CircleInfo != null  => Center.y - CircleInfo.Radius,
+            ZoneShape.Polygon  when PolygonInfo != null => PolygonInfo.MinimumHeight.GetValueOrDefault(float.NaN),
+            _ => float.NaN
+        };
+    }
+
+    /// <summary>
+    /// Gets the upper height bound, if it exists, otherwise <see langword="NaN"/>.
+    /// </summary>
+    public float GetMaxHeight()
+    {
+        return Shape switch
+        {
+            ZoneShape.AABB     when AABBInfo != null    => AABBInfo.Size.y >= Level.HEIGHT - 0.5f ? float.NaN : Center.y + AABBInfo.Size.y / 2f,
+            ZoneShape.Cylinder when CircleInfo != null  => CircleInfo.MaximumHeight.GetValueOrDefault(float.NaN),
+            ZoneShape.Sphere   when CircleInfo != null  => Center.y + CircleInfo.Radius,
+            ZoneShape.Polygon  when PolygonInfo != null => PolygonInfo.MaximumHeight.GetValueOrDefault(float.NaN),
+            _ => float.NaN
+        };
     }
 }
 

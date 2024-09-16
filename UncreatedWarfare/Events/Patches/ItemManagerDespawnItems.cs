@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Models.Items;
-using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Util;
 using static Uncreated.Warfare.Harmony.Patches;
@@ -23,7 +22,7 @@ internal class ItemManagerDespawnItems : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: PatchUtil.GetMethodInfo(Transpiler));
+            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
             logger.LogDebug("Patched {0} for item despawned event.", Accessor.Formatter.Format(_target));
             return;
         }
@@ -42,7 +41,7 @@ internal class ItemManagerDespawnItems : IHarmonyPatch
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, PatchUtil.GetMethodInfo(Transpiler));
+        Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
         logger.LogDebug("Unpatched {0} for item despawned event.", Accessor.Formatter.Format(_target));
         _target = null;
     }

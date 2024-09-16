@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
+﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Vehicles;
-using DelayType = Uncreated.Warfare.Vehicles.DelayType;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -231,8 +224,7 @@ public class VehicleBayCommand : IExecutableCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertGamemode(out IVehicles vehicleGm);
-        Context.AssertGamemode(out IStructureSaving structureGm);
+#if false
         Context.AssertRanByPlayer();
 
         VehicleBay bay = vehicleGm.VehicleBay;
@@ -378,7 +370,7 @@ public class VehicleBayCommand : IExecutableCommand
                     
                     if (adding)
                     {
-                        Context.LogAction(ActionLogType.SetVehicleDataProperty, "ADDED DELAY " + type + " VALUE: " + val.ToString(Data.AdminLocale)
+                        Context.LogAction(ActionLogType.SetVehicleDataProperty, "ADDED DELAY " + type + " VALUE: " + val.ToString(CultureInfo.InvariantCulture)
                             + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                         Delay[] itemDelays = data.Item.Delays;
                         Delay.AddDelay(ref itemDelays, type, val, gamemode);
@@ -410,7 +402,7 @@ public class VehicleBayCommand : IExecutableCommand
                             }
                             await data.SaveItem(token).ConfigureAwait(false);
                             await UniTask.SwitchToMainThread(token);
-                            Context.LogAction(ActionLogType.SetVehicleDataProperty, "REMOVED " + rem.ToString(Data.AdminLocale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
+                            Context.LogAction(ActionLogType.SetVehicleDataProperty, "REMOVED " + rem.ToString(CultureInfo.InvariantCulture) + " DELAY(S) " + type + " VALUE: " + val.ToString(CultureInfo.InvariantCulture)
                                 + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                         }
                         Context.Reply(T.VehicleBayRemovedDelay, rem);
@@ -542,7 +534,7 @@ public class VehicleBayCommand : IExecutableCommand
 
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
                         Context.LogAction(ActionLogType.SetVehicleDataProperty,
-                            $"{asset?.vehicleName ?? "null"} / {(asset == null ? "0" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - SET ITEMS");
+                            $"{asset?.vehicleName ?? "null"} / {(asset == null ? "0" : asset.id.ToString(CultureInfo.InvariantCulture))} / {data.Item.VehicleID:N} - SET ITEMS");
                         data.Item.Items = items.ToArray();
                         await data.SaveItem(token).ConfigureAwait(false);
                         await UniTask.SwitchToMainThread(token);
@@ -612,7 +604,7 @@ public class VehicleBayCommand : IExecutableCommand
                         if (!data.Item.CrewSeats.Contains(seat))
                         {
                             Context.LogAction(ActionLogType.SetVehicleDataProperty, $"{asset?.vehicleName ?? "null"} /" +
-                                $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - ADDED CREW SEAT {seat}.");
+                                $" {(asset == null ? "null" : asset.id.ToString(CultureInfo.InvariantCulture))} / {data.Item.VehicleID:N} - ADDED CREW SEAT {seat}.");
                             await bay.AddCrewSeat(data, seat, token).ConfigureAwait(false);
                             await UniTask.SwitchToMainThread(token);
                             Context.Reply(T.VehicleBaySeatAdded, seat, asset!);
@@ -637,7 +629,7 @@ public class VehicleBayCommand : IExecutableCommand
                         if (data.Item.CrewSeats.Contains(seat))
                         {
                             Context.LogAction(ActionLogType.SetVehicleDataProperty, $"{asset?.vehicleName ?? "null"} /" +
-                                $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - REMOVED CREW SEAT {seat}.");
+                                $" {(asset == null ? "null" : asset.id.ToString(CultureInfo.InvariantCulture))} / {data.Item.VehicleID:N} - REMOVED CREW SEAT {seat}.");
                             await bay.RemoveCrewSeat(data, seat, token).ConfigureAwait(false);
                             await UniTask.SwitchToMainThread(token);
                             Context.Reply(T.VehicleBaySeatRemoved, seat, asset!);
@@ -869,8 +861,9 @@ public class VehicleBayCommand : IExecutableCommand
                 Context.Reply(T.VehicleBaySpawnNotRegistered);
         }
         else Context.SendCorrectUsage("/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...]");
+#endif
     }
-
+#if false
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
     public static async Task<SqlItem<VehicleData>?> GetVehicleTarget(CommandContext ctx, VehicleBay bay, VehicleSpawner spawner, CancellationToken token = default)
     {
@@ -924,4 +917,5 @@ public class VehicleBayCommand : IExecutableCommand
         spawn = null!;
         return null;
     }
+#endif
 }

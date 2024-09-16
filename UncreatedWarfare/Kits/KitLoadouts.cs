@@ -15,7 +15,6 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
-using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
@@ -309,7 +308,7 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
         {
             await Manager.GiveAccess(kit, player, KitAccessType.Purchase, CancellationToken.None).ConfigureAwait(false);
             KitSync.OnAccessChanged(player.m_SteamID);
-            ActionLog.Add(ActionLogType.ChangeKitAccess, player.m_SteamID.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutInternalId + ", REASON: " + KitAccessType.Purchase, adminInstigator);
+            ActionLog.Add(ActionLogType.ChangeKitAccess, player.m_SteamID.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + loadoutInternalId + ", REASON: " + KitAccessType.Purchase, adminInstigator);
         }
 
         await UniTask.SwitchToMainThread(CancellationToken.None);
@@ -488,7 +487,7 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
 
             await Manager.GiveAccess(kit, forPlayer, KitAccessType.Purchase, CancellationToken.None).ConfigureAwait(false);
 
-            ActionLog.Add(ActionLogType.ChangeKitAccess, forPlayer.m_SteamID.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, adminInstigator);
+            ActionLog.Add(ActionLogType.ChangeKitAccess, forPlayer.m_SteamID.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, adminInstigator);
 
             KitSync.OnAccessChanged(forPlayer.m_SteamID);
 

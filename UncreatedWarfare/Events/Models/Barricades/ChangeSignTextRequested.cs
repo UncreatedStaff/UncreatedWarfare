@@ -5,6 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles a patch on <see cref="InteractableSign.updateText"/>.
 /// </summary>
+[EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_world" ])]
 public class ChangeSignTextRequested : CancellablePlayerEvent
 {
     private IBuildable? _cachedBuildable;

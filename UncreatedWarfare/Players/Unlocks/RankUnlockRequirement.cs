@@ -14,14 +14,14 @@ public class RankUnlockRequirement : UnlockRequirement
     public int UnlockRank { get; set; } = -1;
 
     /// <inheritdoc />
-    public override bool CanAccessFast(UCPlayer player)
+    public override bool CanAccessFast(WarfarePlayer player)
     {
         ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
         return success && data.Order >= UnlockRank;
     }
 
     /// <inheritdoc />
-    public override string GetSignText(UCPlayer player)
+    public override string GetSignText(WarfarePlayer player)
     {
         ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
         ref Ranks.RankData reqData = ref Ranks.RankManager.GetRank(UnlockRank, out _);
@@ -76,7 +76,7 @@ public class RankUnlockRequirement : UnlockRequirement
     }
 
     /// <inheritdoc />
-    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, VehicleData data)
+    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
     {
         ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
         if (!success)

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Kits.Items;
 /// <summary>
 /// Helps keep up with where items have been moved to track held item's back to their original kit item.
 /// </summary>
-internal class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>, IEventListener<ItemMoved>, IEventListener<ItemPickedUp>
+internal class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>, IEventListener<ItemMoved>, IEventListener<ItemDestroyed>
 {
     internal List<ItemTransformation> ItemTransformations = new List<ItemTransformation>(16);
     internal List<ItemDropTransformation> ItemDropTransformations = new List<ItemDropTransformation>(16);
@@ -205,9 +205,9 @@ internal class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<It
         Player.Component<HotkeyPlayerComponent>().HandleItemMovedAfterTransformed(e, origX, origY, origPage, swapOrigX, swapOrigY, swapOrigPage);
     }
 
-    void IEventListener<ItemPickedUp>.HandleEvent(ItemPickedUp e, IServiceProvider serviceProvider)
+    void IEventListener<ItemDestroyed>.HandleEvent(ItemDestroyed e, IServiceProvider serviceProvider)
     {
-        if (e.Jar == null)
+        if (e.Item == null || !e.PickedUp || e.PickUpPage == (Page)byte.MaxValue)
             return;
 
         byte origX = byte.MaxValue, origY = byte.MaxValue;
@@ -215,7 +215,7 @@ internal class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<It
         for (int i = 0; i < ItemDropTransformations.Count; ++i)
         {
             ItemDropTransformation d = ItemDropTransformations[i];
-            if (d.Item != e.Jar.item)
+            if (d.Item != e.Item)
                 continue;
 
             bool found = false;
@@ -223,10 +223,10 @@ internal class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<It
             for (int j = 0; j < ItemTransformations.Count; ++j)
             {
                 ItemTransformation t = ItemTransformations[j];
-                if (t.Item != e.Jar.item)
+                if (t.Item != e.Item)
                     continue;
 
-                ItemTransformations[j] = new ItemTransformation(t.OldPage, e.Page, t.OldX, t.OldY, e.X, e.Y, t.Item);
+                ItemTransformations[j] = new ItemTransformation(t.OldPage, e.PickUpPage, t.OldX, t.OldY, e.PickUpX, e.PickUpY, t.Item);
                 origX = t.OldX;
                 origY = t.OldY;
                 origPage = t.OldPage;
@@ -239,7 +239,7 @@ internal class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<It
                 origX = d.OldX;
                 origY = d.OldY;
                 origPage = d.OldPage;
-                ItemTransformations.Add(new ItemTransformation(d.OldPage, e.Page, d.OldX, d.OldY, e.X, e.Y, e.Jar.item));
+                ItemTransformations.Add(new ItemTransformation(d.OldPage, e.PickUpPage, d.OldX, d.OldY, e.PickUpX, e.PickUpY, e.Item));
             }
 
             ItemDropTransformations.RemoveAtFast(i);

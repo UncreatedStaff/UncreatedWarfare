@@ -7,7 +7,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
 using static Uncreated.Warfare.Harmony.Patches;
 
@@ -24,7 +23,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, prefix: PatchUtil.GetMethodInfo(Prefix));
+            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for trap trigger events.", Accessor.Formatter.Format(_target));
             return;
         }
@@ -43,7 +42,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
         if (_target == null)
             return;
         
-        Patcher.Unpatch(_target, PatchUtil.GetMethodInfo(Prefix));
+        Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
         logger.LogDebug("Unpatched {0} for trap trigger events.", Accessor.Formatter.Format(_target));
         _target = null;
     }

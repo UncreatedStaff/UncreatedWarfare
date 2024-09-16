@@ -4,6 +4,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
@@ -191,9 +192,7 @@ partial class EventDispatcher2
         {
             WorkingDestroyInfo.Clear();
         }
-
-        UniTask<bool> task;
-
+        
         // handle ISalvageInfo components
         barricade.model.GetComponents(_workingSalvageInfos);
         try
@@ -343,5 +342,67 @@ partial class EventDispatcher2
         }
 
         text = args.Text;
+    }
+
+    private static bool _ignoreBarricadeManagerOnDamageBarricadeRequested;
+    private void BarricadeManagerOnDamageBarricadeRequested(CSteamID instigatorSteamId, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
+    {
+        if (_ignoreBarricadeManagerOnDamageBarricadeRequested)
+            return;
+
+        BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
+        if (drop == null)
+        {
+            shouldAllow = false;
+            return;
+        }
+
+        BarricadeManager.tryGetRegion(barricadeTransform, out byte x, out byte y, out ushort plant, out BarricadeRegion region);
+        int index = region.drops.IndexOf(drop);
+
+        if (index is < 0 or > ushort.MaxValue)
+        {
+            shouldAllow = false;
+            _logger.LogWarning("Failed to find barricade {0} # {1} in BarricadeManagerOnDamageBarricadeRequested.", drop.asset.FriendlyName, drop.instanceID);
+            return;
+        }
+
+        DamageBarricadeRequested args = new DamageBarricadeRequested(region)
+        {
+            InstigatorId = instigatorSteamId,
+            Instigator = _playerService.GetOnlinePlayerOrNull(instigatorSteamId),
+            InstanceId = drop.instanceID,
+            Barricade = drop,
+            DamageOrigin = damageOrigin,
+
+            // todo
+            PrimaryAsset = null,
+            SecondaryAsset = null,
+
+            RegionPosition = new RegionCoord(x, y),
+            ServersideData = drop.GetServersideData(),
+            VehicleRegionIndex = plant,
+            RegionIndex = (ushort)index,
+            Damage = pendingTotalDamage
+        };
+
+        EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
+        {
+            if (args.Barricade == null || args.Barricade.GetServersideData().barricade.isDead)
+                return;
+
+            _ignoreBarricadeManagerOnDamageBarricadeRequested = true;
+            try
+            {
+                BarricadeManager.damage(args.Transform, (ushort)Math.Clamp(args.Damage, 0f, ushort.MaxValue), 1, false, args.InstigatorId, args.DamageOrigin);
+            }
+            finally
+            {
+                _ignoreBarricadeManagerOnDamageBarricadeRequested = false;
+            }
+        });
+
+        if (shouldAllow)
+            pendingTotalDamage = (ushort)Math.Clamp(args.Damage, 0f, ushort.MaxValue);
     }
 }

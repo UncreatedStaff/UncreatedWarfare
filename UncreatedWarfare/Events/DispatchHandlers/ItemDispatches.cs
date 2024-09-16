@@ -1,6 +1,7 @@
 ﻿using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;
@@ -57,7 +58,8 @@ partial class EventDispatcher2
                 if (region.items.Count > args.DroppedItemIndex && region.items[args.DroppedItemIndex] == args.DroppedItem)
                 {
                     RegionCoord coord = args.DroppedItemCoord;
-                    ItemUtility.DestroyDroppedItem(coord.x, coord.y, args.DroppedItemIndex, despawned: false, args.Player, playTakeItemSound: true);
+                    ItemUtility.DestroyDroppedItem(coord.x, coord.y, args.DroppedItemIndex, false, args.Player, true,
+                        args.DestinationPage, args.DestinationX, args.DestinationY, args.DestinationRotation);
                     success = true;
                 }
                 else

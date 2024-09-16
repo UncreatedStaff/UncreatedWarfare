@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
 
 namespace Uncreated.Warfare.Layouts.Teams;
 
@@ -16,4 +17,10 @@ public class NullTeamManager : ITeamManager<Team>
     
     /// <inheritdoc />
     public UniTask InitializeAsync(CancellationToken token = default) => UniTask.CompletedTask;
+
+    /// <inheritdoc />
+    public CSteamID AdminGroupId => CSteamID.Nil;
+
+    /// <inheritdoc />
+    public IConfigurationSection Configuration { get; set; }
 }

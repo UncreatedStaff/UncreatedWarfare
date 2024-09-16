@@ -5,6 +5,7 @@ using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Translations;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models;
@@ -16,6 +17,7 @@ using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
@@ -24,12 +26,14 @@ public class KitRequests
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly RequestTranslations _translations;
     private readonly ITranslationValueFormatter _valueFormatter;
+    private readonly LanguageService _languageService;
     public KitManager Manager { get; }
     public KitRequests(KitManager manager, IServiceProvider serviceProvider)
     {
         _droppedItemTracker = serviceProvider.GetRequiredService<DroppedItemTracker>();
         _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<RequestTranslations>>().Value;
+        _languageService = serviceProvider.GetRequiredService<LanguageService>();
         Manager = manager;
     }
 
@@ -360,12 +364,13 @@ public class KitRequests
         if (!ctx.Player.HasDownloadedKitData)
             await Manager.DownloadPlayerKitData(ctx.Player, false, token).ConfigureAwait(false);
 
-        ulong team = ctx.Player.GetTeam();
+        Team team = ctx.Player.Team;
         if (!kit.IsPublicKit)
         {
             if (UCWarfare.Config.WebsiteUri != null && kit.EliteKitInfo != null)
             {
-                ctx.Player.Player.sendBrowserRequest("Purchase " + kit.GetDisplayName(ctx.Language) + " on our website.",
+                await UniTask.SwitchToMainThread(token);
+                ctx.Player.UnturnedPlayer.sendBrowserRequest("Purchase " + kit.GetDisplayName(_languageService, ctx.Language) + " on our website.",
                     new Uri(UCWarfare.Config.WebsiteUri, "checkout/addtocart?productkeys=" + Uri.EscapeDataString(kit.InternalName)).OriginalString);
 
                 throw ctx.Defer();
@@ -388,7 +393,7 @@ public class KitRequests
                 throw ctx.Reply(_translations.RequestKitCantAfford, ctx.Player.CachedCredits, kit.CreditCost);
             }
 
-            CreditsParameters parameters = new CreditsParameters(ctx.Player, team, -kit.CreditCost)
+            CreditsParameters parameters = new CreditsParameters(ctx.Player.Steam64, team, -kit.CreditCost)
             {
                 IsPurchase = true,
                 IsPunishment = false
@@ -400,21 +405,21 @@ public class KitRequests
             ctx.Player.PurchaseSync.Release();
         }
 
-        if (!await Manager.AddAccessRow(kit.PrimaryKey, ctx.CallerId.m_SteamID, KitAccessType.Credits, token).ConfigureAwait(false))
+        if (!await Manager.AddAccessRow(kit.PrimaryKey, ctx.CallerId, KitAccessType.Credits, token).ConfigureAwait(false))
             L.LogWarning($"Already had access to bought kit: {ctx.CallerId.m_SteamID}, {kit.PrimaryKey}, {kit.InternalName}.");
         
         await UniTask.SwitchToMainThread(token);
 
-        (ctx.Player.AccessibleKits ??= new List<uint>(4)).Add(kit.PrimaryKey);
-        KitManager.InvokeOnKitAccessChanged(kit, ctx.CallerId.m_SteamID, true, KitAccessType.Credits);
+        (ctx.Player.Component<KitPlayerComponent>().AccessibleKits ??= new List<uint>(4)).Add(kit.PrimaryKey);
+        Manager.InvokeOnKitAccessChanged(kit, ctx.CallerId, true, KitAccessType.Credits);
 
         ctx.LogAction(ActionLogType.BuyKit, "BOUGHT KIT " + kit.InternalName + " FOR " + kit.CreditCost + " CREDITS");
-        L.Log(ctx.Player.Name.PlayerName + " (" + ctx.Player.Steam64 + ") bought " + kit.InternalName);
+        L.Log(ctx.Player.Names.PlayerName + " (" + ctx.Player.Steam64 + ") bought " + kit.InternalName);
 
         Manager.Signs.UpdateSigns(kit, ctx.Player);
         if (Gamemode.Config.EffectPurchase.TryGetAsset(out EffectAsset? effect))
         {
-            F.TriggerEffectReliable(effect, EffectManager.SMALL, effectPos ?? (ctx.Player.Player.look.aim.position + ctx.Player.Player.look.aim.forward * 0.25f));
+            F.TriggerEffectReliable(effect, EffectManager.SMALL, effectPos ?? (ctx.Player.UnturnedPlayer.look.aim.position + ctx.Player.UnturnedPlayer.look.aim.forward * 0.25f));
         }
 
         ctx.Reply(_translations.RequestKitBought, kit.CreditCost);

@@ -3,11 +3,12 @@ using System;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.NewQuests.Parameters;
-using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Quests;
@@ -201,64 +202,6 @@ public interface IQuestPreset
     public ushort Flag { get; }
 }
 
-#region Notification Interfaces
-public interface INotifyOnKill : INotifyTracker
-{
-    public void OnKill(PlayerDied e);
-}
-public interface INotifyOnDeath : INotifyTracker
-{
-    public void OnDeath(PlayerDied e);
-}
-public interface INotifyOnObjectiveCaptured : INotifyTracker
-{
-    public void OnObjectiveCaptured(ulong[] participants);
-}
-public interface INotifyOnFlagNeutralized : INotifyTracker
-{
-    public void OnFlagNeutralized(ulong[] participants, ulong neutralizer);
-}
-public interface INotifyGameOver : INotifyTracker
-{
-    public void OnGameOver(ulong winner);
-}
-public interface INotifyRallyActive : INotifyTracker
-{
-    public void OnRallyActivated(RallyPoint rally);
-}
-public interface INotifyBunkerSpawn : INotifyTracker
-{
-    public void OnPlayerSpawnedAtBunker(BunkerComponent component, UCPlayer spawner);
-}
-public interface INotifyGainedXP : INotifyTracker
-{
-    public void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal);
-}
-public interface INotifyFOBBuilt : INotifyTracker
-{
-    public void OnFOBBuilt(UCPlayer constructor, FOB fob);
-}
-public interface INotifySuppliesConsumed : INotifyTracker
-{
-    public void OnSuppliesConsumed(FOB fob, ulong player, int amount);
-}
-public interface INotifyOnRevive : INotifyTracker
-{
-    public void OnPlayerRevived(UCPlayer reviver, UCPlayer revived);
-}
-public interface INotifyBuildableBuilt : INotifyTracker
-{
-    public void OnBuildableBuilt(UCPlayer player, BuildableData buildable);
-}
-public interface INotifyVehicleDestroyed : INotifyTracker
-{
-    public void OnVehicleDestroyed(VehicleDestroyed e, UCPlayer instigator);
-}
-public interface INotifyVehicleDistanceUpdates : INotifyTracker
-{
-    public void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, VehicleComponent vehicle);
-}
-#endregion
 /// <summary>Stores information about the values of variations of <see cref="BaseQuestData"/>.</summary>
 public interface IQuestState
 {

@@ -2,16 +2,14 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Vehicles;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Zones;
@@ -327,7 +325,7 @@ public class VehicleComponent : MonoBehaviour
             Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(e.Player.Position, e.Player.GetTeam()) == null
             )
         {
-            Tips.TryGiveTip(e.Player, 300, T.TipPlaceRadio);
+            TipService.TryGiveTip(e.Player, 300, T.TipPlaceRadio);
         }
 
         if (e.Vehicle.passengers.Length > 0 && e.Vehicle.passengers[0] == null || e.Vehicle.passengers[0].player == null ||
@@ -576,7 +574,7 @@ public class VehicleComponent : MonoBehaviour
 
         if (shouldMessagePlayer && driver is { IsOnline: true } && F.IsInMain(driver.Position) && VehicleData != null)
         {
-            Tips.TryGiveTip(driver, 120, T.TipLogisticsVehicleResupplied, VehicleData.Type);
+            TipService.TryGiveTip(driver, 120, T.TipLogisticsVehicleResupplied, VehicleData.Type);
         }
     }
     private IEnumerator<WaitForSeconds> QuotaLoop()

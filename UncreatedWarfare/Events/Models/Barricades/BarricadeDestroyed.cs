@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
@@ -13,7 +14,7 @@ public class BarricadeDestroyed : IBuildableDestroyedEvent
     /// <summary>
     /// Player that destroyed the barricade, if any.
     /// </summary>
-    public required UCPlayer? Instigator { get; init; }
+    public required WarfarePlayer? Instigator { get; init; }
 
     /// <summary>
     /// Steam ID of the player that destroyed the barricade, or <see cref="CSteamID.Nil"/>.

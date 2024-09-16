@@ -1,5 +1,5 @@
-﻿namespace Uncreated.Warfare.Events;
-public class CancellableEvent : ICancellable
+﻿namespace Uncreated.Warfare.Events.Models;
+public class CancellablePlayerEvent : PlayerEvent, ICancellable
 {
     /// <inheritdoc />
     public virtual bool IsCancelled { get; private set; }
@@ -7,13 +7,12 @@ public class CancellableEvent : ICancellable
     /// <inheritdoc />
     public virtual bool IsActionCancelled { get; private set; }
 
-    public CancellableEvent() { }
-
-    public CancellableEvent(bool shouldAllow)
+    public CancellablePlayerEvent() { }
+    public CancellablePlayerEvent(bool shouldAllow)
     {
         if (shouldAllow)
             return;
-    
+
         IsCancelled = true;
         IsActionCancelled = true;
     }

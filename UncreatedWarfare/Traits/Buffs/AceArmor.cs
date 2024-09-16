@@ -40,10 +40,10 @@ public class AceArmor : Buff
             string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(DataSplitChars, StringSplitOptions.RemoveEmptyEntries);
             if (datas.Length > 0)
             {
-                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.AdminLocale, out _multiplier);
+                float.TryParse(datas[0], NumberStyles.Number, Warfare.CultureInfo.InvariantCulture, out _multiplier);
                 if (datas.Length > 1)
                 {
-                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.AdminLocale, out _refundMultiplier);
+                    float.TryParse(datas[1], NumberStyles.Number, Warfare.CultureInfo.InvariantCulture, out _refundMultiplier);
                     if (datas.Length > 2)
                         _icon = datas[2];
                 }

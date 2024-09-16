@@ -1,7 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits.Items;
@@ -61,7 +60,7 @@ public class SpecificPageKitItem : ISpecificPageKitItem
     }
     public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
-        if (!UCWarfare.IsLoaded) throw new SingletonUnloadedException(typeof(UCWarfare));
+        if (!Provider.isInitialized) throw new InvalidOperationException("Not loaded.");
         if (Item.TryGetAsset(out ItemAsset item))
         {
             amount = Amount < 1 ? item.amount : Amount;

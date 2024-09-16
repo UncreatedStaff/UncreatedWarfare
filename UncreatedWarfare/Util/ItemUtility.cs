@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Migrations;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
@@ -18,7 +19,7 @@ namespace Uncreated.Warfare.Util;
 public static class ItemUtility
 {
     internal static event ItemDestroyed? OnItemDestroyed;
-    internal delegate void ItemDestroyed(in ItemInfo item, bool despawned, bool pickedUp, CSteamID pickUpPlayer);
+    internal delegate void ItemDestroyed(in ItemInfo item, bool despawned, bool pickedUp, CSteamID pickUpPlayer, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot);
 
     /// <summary>
     /// Enumerate items along the grid instead of the order they were added.
@@ -236,7 +237,7 @@ public static class ItemUtility
         foreach (ItemInfo item in EnumerateDroppedItems())
         {
             ++ct;
-            OnItemDestroyed?.Invoke(in item, despawned, false, CSteamID.Nil);
+            OnItemDestroyed?.Invoke(in item, despawned, false, CSteamID.Nil, 0, 0, 0, 0);
         }
 
         ItemManager.askClearAllItems();
@@ -250,7 +251,7 @@ public static class ItemUtility
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     /// <returns>Number of items destroyed.</returns>
-    public static int DestroyDroppedItemsInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default)
+    public static int DestroyDroppedItemsInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0)
     {
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
@@ -275,7 +276,7 @@ public static class ItemUtility
                     continue;
 
                 ++totalItemsFound;
-                RemoveDroppedItemUnsafe(coord.x, coord.y, i, false, pickUpPlayer, playTakeItemSound);
+                RemoveDroppedItemUnsafe(coord.x, coord.y, i, false, pickUpPlayer, playTakeItemSound, pickupPage, pickupX, pickupY, pickupRot);
                 if (max >= 0 && totalItemsFound >= max)
                 {
                     return totalItemsFound;
@@ -293,7 +294,7 @@ public static class ItemUtility
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     /// <returns>Number of items destroyed.</returns>
-    public static int DestroyDroppedItemsInRange(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default)
+    public static int DestroyDroppedItemsInRange(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0)
     {
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
@@ -318,7 +319,7 @@ public static class ItemUtility
                     continue;
 
                 ++totalItemsFound;
-                RemoveDroppedItemUnsafe(coord.x, coord.y, i, false, pickUpPlayer, playTakeItemSound);
+                RemoveDroppedItemUnsafe(coord.x, coord.y, i, false, pickUpPlayer, playTakeItemSound, pickupPage, pickupX, pickupY, pickupRot);
                 if (max >= 0 && totalItemsFound >= max)
                 {
                     return totalItemsFound;
@@ -336,7 +337,7 @@ public static class ItemUtility
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     /// <returns>Number of items destroyed.</returns>
-    public static int DestroyDroppedItemsInRange(Vector3 position, float radius, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default)
+    public static int DestroyDroppedItemsInRange(Vector3 position, float radius, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0)
     {
         GameThread.AssertCurrent();
 
@@ -358,7 +359,7 @@ public static class ItemUtility
                     continue;
 
                 ++totalItemsFound;
-                RemoveDroppedItemUnsafe(coord.x, coord.y, i, false, pickUpPlayer, playTakeItemSound);
+                RemoveDroppedItemUnsafe(coord.x, coord.y, i, false, pickUpPlayer, playTakeItemSound, pickupPage, pickupX, pickupY, pickupRot);
                 if (max >= 0 && totalItemsFound >= max)
                 {
                     return totalItemsFound;
@@ -387,7 +388,7 @@ public static class ItemUtility
             return false;
 
         RegionCoord region = itemInfo.Coord;
-        RemoveDroppedItemUnsafe(region.x, region.y, itemInfo.Index, despawned, CSteamID.Nil, playTakeItemSound);
+        RemoveDroppedItemUnsafe(region.x, region.y, itemInfo.Index, despawned, CSteamID.Nil, playTakeItemSound, 0, 0, 0, 0);
         return true;
     }
 
@@ -396,7 +397,7 @@ public static class ItemUtility
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public static bool DestroyDroppedItem(ItemData item, bool despawned, WarfarePlayer pickUpPlayer, bool playTakeItemSound = false)
+    public static bool DestroyDroppedItem(ItemData item, bool despawned, WarfarePlayer pickUpPlayer, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0, bool playTakeItemSound = false)
     {
         if (item == null)
             throw new ArgumentNullException(nameof(item));
@@ -409,7 +410,7 @@ public static class ItemUtility
             return false;
 
         RegionCoord region = itemInfo.Coord;
-        RemoveDroppedItemUnsafe(region.x, region.y, itemInfo.Index, despawned, despawned ? CSteamID.Nil : pickUpPlayer.Steam64, playTakeItemSound);
+        RemoveDroppedItemUnsafe(region.x, region.y, itemInfo.Index, despawned, despawned ? CSteamID.Nil : pickUpPlayer.Steam64, playTakeItemSound, pickupPage, pickupX, pickupY, pickupRot);
         return true;
     }
 
@@ -428,7 +429,7 @@ public static class ItemUtility
         if (index >= ItemManager.regions[x, y].items.Count)
             throw new ArgumentOutOfRangeException(nameof(index), "No item with the given index.");
 
-        RemoveDroppedItemUnsafe(x, y, index, despawned, CSteamID.Nil, playTakeItemSound);
+        RemoveDroppedItemUnsafe(x, y, index, despawned, CSteamID.Nil, playTakeItemSound, 0, 0, 0, 0);
     }
 
     /// <summary>
@@ -436,7 +437,7 @@ public static class ItemUtility
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, WarfarePlayer pickUpPlayer, bool playTakeItemSound)
+    public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, WarfarePlayer pickUpPlayer, bool playTakeItemSound, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot)
     {
         GameThread.AssertCurrent();
 
@@ -446,10 +447,11 @@ public static class ItemUtility
         if (index >= ItemManager.regions[x, y].items.Count)
             throw new ArgumentOutOfRangeException(nameof(index), "No item with the given index.");
 
-        RemoveDroppedItemUnsafe(x, y, index, despawned, despawned ? CSteamID.Nil : pickUpPlayer.Steam64, playTakeItemSound);
+
+        RemoveDroppedItemUnsafe(x, y, index, despawned, despawned ? CSteamID.Nil : pickUpPlayer.Steam64, playTakeItemSound, pickupPage, pickupX, pickupY, pickupRot);
     }
 
-    internal static void RemoveDroppedItemUnsafe(byte x, byte y, int index, bool despawned, CSteamID pickUpPlayer, bool playTakeItemSound)
+    internal static void RemoveDroppedItemUnsafe(byte x, byte y, int index, bool despawned, CSteamID pickUpPlayer, bool playTakeItemSound, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot)
     {
         ItemRegion region = ItemManager.regions[x, y];
         ItemData item = region.items[index];
@@ -459,12 +461,12 @@ public static class ItemUtility
         region.items.RemoveAt(index);
 
         ItemInfo itemInfo = new ItemInfo(item, index, new RegionCoord(x, y));
-        OnItemDestroyed?.Invoke(itemInfo, despawned, !despawned && pickUpPlayer.GetEAccountType() == EAccountType.k_EAccountTypeIndividual, despawned ? CSteamID.Nil : pickUpPlayer);
+        OnItemDestroyed?.Invoke(itemInfo, despawned, !despawned && pickUpPlayer.GetEAccountType() == EAccountType.k_EAccountTypeIndividual, despawned ? CSteamID.Nil : pickUpPlayer, pickupPage, pickupX, pickupY, pickupRot);
     }
 
-    internal static void InvokeOnItemDestroyed(in ItemInfo item, bool despawned, bool pickedUp, CSteamID pickUpPlayer)
+    internal static void InvokeOnItemDestroyed(in ItemInfo item, bool despawned, bool pickedUp, CSteamID pickUpPlayer, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot)
     {
-        OnItemDestroyed?.Invoke(item, despawned, pickedUp, pickUpPlayer);
+        OnItemDestroyed?.Invoke(item, despawned, pickedUp, pickUpPlayer, pickupPage, pickupX, pickupY, pickupRot);
     }
 
     /// <summary>

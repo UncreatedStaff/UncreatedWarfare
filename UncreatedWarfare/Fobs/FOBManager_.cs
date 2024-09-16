@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿#if false
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,9 +15,9 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.UI;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Insurgency;
 using Uncreated.Warfare.Layouts.Teams;
@@ -25,11 +26,8 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Translations.Languages;
-using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using Cache = Uncreated.Warfare.Components.Cache;
@@ -1337,3 +1335,4 @@ public class FOBConfigData : JSONConfigData
         ShouldKillMaincampers = true;
     }
 }
+#endif

@@ -6,7 +6,6 @@ using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Util.DependencyInjection;
 
 namespace Uncreated.Warfare.Teams;
 

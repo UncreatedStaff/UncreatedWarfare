@@ -1,0 +1,63 @@
+﻿# AttachCommand
+Description: "Modify guns past what vanilla Unturned allows."
+Aliases: [ am ]
+Parameters:
+    # /attach <item>
+  - Name: item
+    Type: SDG.Unturned.ItemCaliberAsset
+    Description: "Add <param 'item'/> to the <caller />'s gun at the correct attachment."
+    # /attach remove <sight|tact|grip|barrel|ammo>
+  - Name: remove
+    Type: Verbatim
+    Description: "Remove an attachment from the <caller />'s gun."
+    Parameters:
+      - Name: sight
+        Aliases: [ scope, reticle ]
+        Type: Verbatim
+        Description: "Remove the sight from the <caller />'s gun."
+      - Name: tactical
+        Aliases: [ tact, laser, light ]
+        Type: Verbatim
+        Description: "Remove the tactical from the <caller />'s gun."
+      - Name: grip
+        Aliases: [ stand ]
+        Type: Verbatim
+        Description: "Remove the grip from the <caller />'s gun."
+      - Name: barrel
+        Aliases: [ silencer, suppressor ]
+        Type: Verbatim
+        Description: "Remove the barrel from the <caller />'s gun."
+      - Name: ammo
+        Aliases: [ mag, magazine ]
+        Type: Verbatim
+        Description: "Remove the magazine from the <caller />'s gun."
+    # /attach ammo <amt>
+  - Name: ammo
+    Aliases: [ setammo, ammoct ]
+    Type: Verbatim
+    Description: "Set the amount of ammo in the <caller />'s gun with the current magazine."
+    Parameters:
+      - Name: amount
+        Type: byte
+    # /attach firemode <safety|semi|auto|burst>
+  - Name: firemode
+    Aliases: [ firerate, mode ]
+    Type: Verbatim
+    Description: "Change the fire mode of the <caller />'s gun."
+    Parameters:
+      - Name: semi
+        Aliases: [ semi-auto, semiauto, semi-automatic, semiautomatic ]
+        Type: Verbatim
+        Description: "Change the fire mode of the <caller />'s gun to Semi-Automatic."
+      - Name: auto
+        Aliases: [ automatic ]
+        Type: Verbatim
+        Description: "Change the fire mode of the <caller />'s gun to Automatic."
+      - Name: burst
+        Type: Verbatim
+        Description: "Change the fire mode of the <caller />'s gun to Burst."
+      - Name: safety
+        Aliases: [ safe ]
+        Type: Verbatim
+        Description: "Change the fire mode of the <caller />'s gun to Safety."
+        

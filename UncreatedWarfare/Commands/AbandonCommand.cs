@@ -6,17 +6,13 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("abandon", "av")]
-[MetadataFile(nameof(GetHelpMetadata))]
+[Command("abandon", "av"), MetadataFile]
 public class AbandonCommand : IExecutableCommand
 {
     private readonly ZoneStore _zoneStore;
     private readonly VehicleInfoStore _vehicleInfo;
     private readonly AbandonService _abandonService;
     private readonly AbandonTranslations _translations;
-
-    private const string Syntax = "/abandon | /av";
-    private const string Help = "If you no longer want to use your vehicle, you can return it to the vehicle pool.";
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
@@ -29,23 +25,10 @@ public class AbandonCommand : IExecutableCommand
         _translations = translations.Value;
     }
 
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "If you no longer want to use your vehicle, you can return it to the vehicle pool."
-        };
-    }
-
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
-
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
         if (!_zoneStore.IsInMainBase(Context.Player))
             throw Context.Reply(_translations.AbandonNotInMain);

@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Framework.UI;
 
 namespace Uncreated.Warfare.Configuration;
 

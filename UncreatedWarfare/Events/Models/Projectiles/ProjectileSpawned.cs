@@ -1,5 +1,5 @@
 ﻿namespace Uncreated.Warfare.Events.Models.Projectiles;
-public class ProjectileSpawned : EventState
+public class ProjectileSpawned
 {
     private readonly UCPlayer? _player;
     private readonly GameObject _projectile;

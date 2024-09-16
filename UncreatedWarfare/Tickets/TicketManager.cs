@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿#if false
+using SDG.NetTransport;
 using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
@@ -162,3 +163,4 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         }
     }
 }
+#endif

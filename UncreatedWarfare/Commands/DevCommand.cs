@@ -163,7 +163,7 @@ public class DevCommand : IExecutableCommand
             {
                 insurgency.AddIntelligencePoints(points, Context.Player);
 
-                Context.LogAction(ActionLogType.AddIntel, "ADDED " + points.ToString(Data.AdminLocale) + " OF INTEL");
+                Context.LogAction(ActionLogType.AddIntel, "ADDED " + points.ToString(CultureInfo.InvariantCulture) + " OF INTEL");
                 Context.ReplyString($"Added {points} intelligence points.", "ebd491");
             }
             else throw Context.ReplyString("You must supply a valid number of intelligence points (negative or positive).", "c7a29f");

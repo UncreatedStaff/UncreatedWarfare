@@ -1,10 +1,12 @@
-﻿using System;
+﻿#if false
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.NewQuests;
 
 namespace Uncreated.Warfare.Quests;
 /// <summary>Stores information about a <see cref="Quests.QuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
@@ -451,3 +453,4 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
 
     public override string ToString() => GetDisplayString(false);
 }
+#endif

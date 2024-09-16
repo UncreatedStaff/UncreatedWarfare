@@ -8,7 +8,6 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util.Transform;
 
 namespace Uncreated.Warfare.Fobs;
 

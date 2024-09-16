@@ -3,7 +3,6 @@ using DanielWillett.ReflectionTools.Formatting;
 using System.Reflection;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Patches;
 using static Uncreated.Warfare.Harmony.Patches;
 
@@ -20,7 +19,7 @@ internal class InteractableSignUpdateText : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, postfix: PatchUtil.GetMethodInfo(Postfix));
+            Patcher.Patch(_target, postfix: Accessor.GetMethod(Postfix));
             logger.LogDebug("Patched {0} for sign text updated event.", Accessor.Formatter.Format(_target));
             return;
         }
@@ -39,7 +38,7 @@ internal class InteractableSignUpdateText : IHarmonyPatch
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, PatchUtil.GetMethodInfo(Postfix));
+        Patcher.Unpatch(_target, Accessor.GetMethod(Postfix));
         logger.LogDebug("Unpatched {0} for sign text updated event.", Accessor.Formatter.Format(_target));
         _target = null;
     }

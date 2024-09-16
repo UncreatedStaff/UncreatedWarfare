@@ -81,8 +81,8 @@ public class BanCommand : IExecutableCommand
                 reason!, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration), hwids.ToArray());
         }
         PlayerNames callerName = Context.Caller is not null ? Context.Caller.Name : PlayerNames.Console;
-        ActionLog.Add(ActionLogType.BanPlayer, $"BANNED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\" DURATION: " +
-            (duration == -1 ? "PERMANENT" : duration.ToString(Data.AdminLocale) + " SECONDS"), Context.CallerID);
+        ActionLog.Add(ActionLogType.BanPlayer, $"BANNED {targetId.ToString(CultureInfo.InvariantCulture)} FOR \"{reason}\" DURATION: " +
+            (duration == -1 ? "PERMANENT" : duration.ToString(CultureInfo.InvariantCulture) + " SECONDS"), Context.CallerID);
 
         OffenseManager.LogBanPlayer(targetId, Context.CallerID, reason!, duration, DateTime.Now);
 
@@ -95,7 +95,7 @@ public class BanCommand : IExecutableCommand
             }
             else
             {
-                L.Log($"{name.PlayerName} ({targetId.ToString(Data.AdminLocale)}) was banned by {callerName.PlayerName} ({Context.CallerID}) because: {reason!}.", ConsoleColor.Cyan);
+                L.Log($"{name.PlayerName} ({targetId.ToString(CultureInfo.InvariantCulture)}) was banned by {callerName.PlayerName} ({Context.CallerID}) because: {reason!}.", ConsoleColor.Cyan);
                 Chat.Broadcast(LanguageSet.AllBut(Context.CallerID), T.BanPermanentSuccessBroadcast, name, callerName);
                 Context.Reply(T.BanPermanentSuccessFeedback, name);
             }
@@ -105,7 +105,7 @@ public class BanCommand : IExecutableCommand
             string time = Localization.GetTimeFromSeconds(duration);
             if (Context.IsConsole)
             {
-                L.Log($"{name.PlayerName} ({targetId.ToString(Data.AdminLocale)}) was banned by an operator for {time} because: {reason}.", ConsoleColor.Cyan);
+                L.Log($"{name.PlayerName} ({targetId.ToString(CultureInfo.InvariantCulture)}) was banned by an operator for {time} because: {reason}.", ConsoleColor.Cyan);
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.All())
                 {
@@ -119,7 +119,7 @@ public class BanCommand : IExecutableCommand
             }
             else
             {
-                L.Log($"{name.PlayerName} ({targetId}) was banned by {callerName.PlayerName} ({Context.CallerID.ToString(Data.AdminLocale)}) for {time} because: {reason}.", ConsoleColor.Cyan);
+                L.Log($"{name.PlayerName} ({targetId}) was banned by {callerName.PlayerName} ({Context.CallerID.ToString(CultureInfo.InvariantCulture)}) for {time} because: {reason}.", ConsoleColor.Cyan);
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.AllBut(Context.CallerID))
                 {

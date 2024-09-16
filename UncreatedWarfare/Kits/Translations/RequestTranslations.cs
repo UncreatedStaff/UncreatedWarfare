@@ -1,10 +1,8 @@
 ﻿using System;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
@@ -51,6 +49,9 @@ public class RequestTranslations : PropertiesTranslationCollection
     
     [TranslationData("Sent when a player buys a kit using /buy.", "Number of credits spent")]
     public readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#c$credits$>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
+
+    [TranslationData("Sent when a player tries to buy a loadout from an empty loadout sign.")]
+    public readonly Translation RequestBuyLoadout = new Translation("<#a8918a>Join our discord (/discord) to purchase a custom loadout..");
 
     [TranslationData("Sent when a player tries to request a kit but the sign isn't linked to an existing kit.")]
     public readonly Translation RequestKitNotRegistered = new Translation("<#a8918a>This kit has not been created yet.");
@@ -108,7 +109,7 @@ public class RequestTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent when a player tries to request a loadout from an empty loadout sign.")]
     public readonly Translation RequestLoadoutNotOwned = new Translation("<#a8918a>You do not own this loadout.");
-
+    
     [TranslationData("Sent when a player tries to request a vehicle but they don't have enough credits.", "Number of credits missing", "Total credits required")]
     public readonly Translation<int, int> RequestVehicleCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to request this vehicle.");
     
@@ -143,13 +144,13 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<IPlayer> RequestVehicleAlreadyRequested = new Translation<IPlayer>("<#a8918a>This vehicle was already requested by {0}.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
 
     [TranslationData("Sent when a player tries to request a vehicle when they already have one nearby.", "The name of the existing vehicle")]
-    public readonly Translation<InteractableVehicle> RequestVehicleAlreadyOwned = new Translation<InteractableVehicle>("<#a8918a>You already have a nearby {0}.", arg0Fmt: VehicleData.COLORED_NAME);
+    public readonly Translation<InteractableVehicle> RequestVehicleAlreadyOwned = new Translation<InteractableVehicle>("<#a8918a>You already have a nearby {0}.", arg0Fmt: WarfareVehicleInfo.FormatColoredName);
 
     [TranslationData("Sent when a player tries to request a vehicle.", "The name of the vehicle")]
-    public readonly Translation<VehicleData> RequestVehicleSuccess = new Translation<VehicleData>("<#b3a591>This {0} is now yours to take into battle.", arg0Fmt: VehicleData.COLORED_NAME);
+    public readonly Translation<WarfareVehicleInfo> RequestVehicleSuccess = new Translation<WarfareVehicleInfo>("<#b3a591>This {0} is now yours to take into battle.", arg0Fmt: WarfareVehicleInfo.FormatColoredName);
 
     [TranslationData("Sent when a player tries to request a vehicle that isn't in stock.", "The name of the vehicle")]
-    public readonly Translation<VehicleData> RequestVehicleDead = new Translation<VehicleData>("<#b3a591>The {0} was destroyed and will be restocked soon.", arg0Fmt: VehicleData.COLORED_NAME);
+    public readonly Translation<WarfareVehicleInfo> RequestVehicleDead = new Translation<WarfareVehicleInfo>("<#b3a591>The {0} was destroyed and will be restocked soon.", arg0Fmt: WarfareVehicleInfo.FormatColoredName);
 
     [TranslationData("Sent when a player tries to request a vehicle but is permanently asset banned for all vehicles.")]
     public readonly Translation RequestVehicleAssetBannedGlobalPermanent = new Translation("<#b3a591>You are permanently banned from using all vehicles.");

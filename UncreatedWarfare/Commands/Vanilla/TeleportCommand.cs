@@ -348,7 +348,7 @@ public class TeleportCommand : IExecutableCommand
     private static float GetOffset(string arg)
     {
         if (arg.Length < 2) return 0f;
-        if (float.TryParse(arg.Substring(1), NumberStyles.Number, Data.AdminLocale, out float offset) || float.TryParse(arg.Substring(1), NumberStyles.Number, Data.LocalLocale, out offset))
+        if (float.TryParse(arg.Substring(1), NumberStyles.Number, CultureInfo.InvariantCulture, out float offset) || float.TryParse(arg.Substring(1), NumberStyles.Number, Data.LocalLocale, out offset))
             return offset;
         return 0;
     }

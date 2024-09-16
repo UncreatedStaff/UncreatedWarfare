@@ -10,6 +10,7 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
@@ -42,27 +43,105 @@ namespace Uncreated.Warfare;
 
 public static class EventFunctions
 {
+    /*private void SubscribeToEvents()
+       {
+           Data.Gamemode?.Subscribe();
+           Data.LanguageDataStore?.Subscribe();
+           GameUpdateMonitor.OnGameUpdateDetected += EventFunctions.OnGameUpdateDetected;
+           EventDispatcher.PlayerJoined += EventFunctions.OnPostPlayerConnected;
+           EventDispatcher.PlayerLeaving += EventFunctions.OnPlayerDisconnected;
+           EventDispatcher.PlayerPendingAsync += EventFunctions.OnPrePlayerConnect;
+           Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
+           UCPlayerLocale.OnLocaleUpdated += EventFunctions.OnLocaleUpdated;
+           ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
+           BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
+           StructureManager.onDeployStructureRequested += EventFunctions.OnStructureTryPlaced;
+           ItemManager.onTakeItemRequested += EventFunctions.OnPickedUpItemRequested;
+           PlayerEquipment.OnPunch_Global += EventFunctions.OnPunch;
+           UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
+           UseableGun.onChangeBarrelRequested += EventFunctions.ChangeBarrelRequested;
+           UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
+           PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
+           Provider.onLoginSpawning += EventFunctions.OnCalculateSpawnDuringJoin;
+           BarricadeManager.onBarricadeSpawned += EventFunctions.OnBarricadePlaced;
+           StructureManager.onStructureSpawned += EventFunctions.OnStructurePlaced;
+           Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
+           Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
+           Patches.OnPlayerTriedStoreItem_Global += EventFunctions.OnTryStoreItem;
+           Patches.OnPlayerGesture_Global += EventFunctions.OnPlayerGestureRequested;
+           Patches.OnPlayerMarker_Global += EventFunctions.OnPlayerMarkedPosOnMap;
+           DamageTool.damagePlayerRequested += EventFunctions.OnPlayerDamageRequested;
+           BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
+           BarricadeManager.onDamageBarricadeRequested += EventFunctions.OnBarricadeDamaged;
+           StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
+           StructureManager.onDamageStructureRequested += EventFunctions.OnStructureDamaged;
+           BarricadeManager.onOpenStorageRequested += EventFunctions.OnEnterStorage;
+           EventDispatcher.EnterVehicle += EventFunctions.OnEnterVehicle;
+           EventDispatcher.VehicleSwapSeat += EventFunctions.OnVehicleSwapSeat;
+           EventDispatcher.ExitVehicle += EventFunctions.OnPlayerLeavesVehicle;
+           EventDispatcher.LandmineExploding += EventFunctions.OnLandmineExploding;
+           EventDispatcher.ItemDropRequested += EventFunctions.OnItemDropRequested;
+           EventDispatcher.CraftRequested += EventFunctions.OnCraftRequested;
+           VehicleManager.onDamageVehicleRequested += EventFunctions.OnPreVehicleDamage;
+           ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
+           UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
+           UseableConsumeable.onConsumePerformed += EventFunctions.OnConsume;
+           EventDispatcher.BarricadeDestroyed += EventFunctions.OnBarricadeDestroyed;
+           EventDispatcher.StructureDestroyed += EventFunctions.OnStructureDestroyed;
+           EventDispatcher.PlayerAided += EventFunctions.OnPlayerAided;
+           EventDispatcher.PlayerDied += EventFunctions.OnPlayerDied;
+           PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice2;
+       }
+       private void UnsubscribeFromEvents()
+       {
+           Data.Gamemode?.Unsubscribe();
+           EventDispatcher.UnsubscribeFromAll();
+           Data.LanguageDataStore?.Unsubscribe();
+           GameUpdateMonitor.OnGameUpdateDetected -= EventFunctions.OnGameUpdateDetected;
+           ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
+           EventDispatcher.PlayerJoined -= EventFunctions.OnPostPlayerConnected;
+           EventDispatcher.PlayerLeaving -= EventFunctions.OnPlayerDisconnected;
+           EventDispatcher.PlayerPendingAsync -= EventFunctions.OnPrePlayerConnect;
+           Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
+           UCPlayerLocale.OnLocaleUpdated -= EventFunctions.OnLocaleUpdated;
+           BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
+           StructureManager.onDeployStructureRequested -= EventFunctions.OnStructureTryPlaced;
+           ItemManager.onTakeItemRequested -= EventFunctions.OnPickedUpItemRequested;
+           PlayerEquipment.OnPunch_Global -= EventFunctions.OnPunch;
+           UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
+           UseableGun.onChangeBarrelRequested -= EventFunctions.ChangeBarrelRequested;
+           UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
+           PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
+           Provider.onLoginSpawning -= EventFunctions.OnCalculateSpawnDuringJoin;
+           BarricadeManager.onBarricadeSpawned -= EventFunctions.OnBarricadePlaced;
+           StructureManager.onStructureSpawned -= EventFunctions.OnStructurePlaced;
+           Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
+           Patches.OnBatterySteal_Global -= EventFunctions.BatteryStolen;
+           Patches.OnPlayerTriedStoreItem_Global -= EventFunctions.OnTryStoreItem;
+           Patches.OnPlayerGesture_Global -= EventFunctions.OnPlayerGestureRequested;
+           Patches.OnPlayerMarker_Global -= EventFunctions.OnPlayerMarkedPosOnMap;
+           DamageTool.damagePlayerRequested -= EventFunctions.OnPlayerDamageRequested;
+           BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
+           BarricadeManager.onDamageBarricadeRequested -= EventFunctions.OnBarricadeDamaged;
+           StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
+           BarricadeManager.onOpenStorageRequested -= EventFunctions.OnEnterStorage;
+           StructureManager.onDamageStructureRequested -= EventFunctions.OnStructureDamaged;
+           EventDispatcher.ItemDropRequested -= EventFunctions.OnItemDropRequested;
+           EventDispatcher.LandmineExploding -= EventFunctions.OnLandmineExploding;
+           EventDispatcher.EnterVehicle -= EventFunctions.OnEnterVehicle;
+           EventDispatcher.VehicleSwapSeat -= EventFunctions.OnVehicleSwapSeat;
+           EventDispatcher.ExitVehicle -= EventFunctions.OnPlayerLeavesVehicle;
+           VehicleManager.onDamageVehicleRequested -= EventFunctions.OnPreVehicleDamage;
+           ItemManager.onServerSpawningItemDrop -= EventFunctions.OnDropItemFinal;
+           UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
+           UseableConsumeable.onConsumePerformed -= EventFunctions.OnConsume;
+           EventDispatcher.BarricadeDestroyed -= EventFunctions.OnBarricadeDestroyed;
+           EventDispatcher.StructureDestroyed -= EventFunctions.OnStructureDestroyed;
+           EventDispatcher.PlayerAided -= EventFunctions.OnPlayerAided;
+           PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
+       }*/
     public const float EnemyNearbyRespawnDistance = 100;
-    internal static Dictionary<Item, PlayerInventory> ItemsTempBuffer = new Dictionary<Item, PlayerInventory>(256);
-    internal static Dictionary<ulong, List<uint>> DroppedItems = new Dictionary<ulong, List<uint>>(96);
-    internal static Dictionary<uint, ulong> DroppedItemsOwners = new Dictionary<uint, ulong>(256);
-    internal static void SimulateRegisterLastDroppedItem(Vector3 point, ulong steam64)
-    {
-        if (steam64 == 0 || ItemManager.regions == null) return;
-        if (Regions.tryGetCoordinate(point, out byte x, out byte y))
-        {
-            ItemRegion itemRegion = ItemManager.regions[x, y];
-            if (itemRegion.items.Count == 0)
-                return;
-            ItemData newItem = itemRegion.items.GetTail();
-            if (DroppedItems.TryGetValue(steam64, out List<uint> items))
-                items.Add(newItem.instanceID);
-            else
-                DroppedItems.Add(steam64, [ newItem.instanceID ]);
 
-            DroppedItemsOwners[newItem.instanceID] = steam64;
-        }
-    }
     internal static void OnPunch(PlayerEquipment equipment, EPlayerPunch hand)
     {
         if (hand != EPlayerPunch.RIGHT)
@@ -1016,7 +1095,7 @@ public static class EventFunctions
         }
         ActionLog.Add(ActionLogType.EnterVehicleSeat, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.asset.id} / {e.Vehicle.asset.GUID:N}, Owner: {e.Vehicle.lockedOwner.m_SteamID}, " +
                                                             $"ID: ({e.Vehicle.instanceID}) Seat move: >> " +
-                                                            $"{e.PassengerIndex.ToString(Data.AdminLocale)}", e.Player.Steam64);
+                                                            $"{e.PassengerIndex.ToString(CultureInfo.InvariantCulture)}", e.Player.Steam64);
         component.OnPlayerEnteredVehicle(e);
 
         if (Data.Is<IFlagRotation>(out _) && e.Player.Player.IsOnFlag(out Flag flag))
@@ -1346,8 +1425,8 @@ public static class EventFunctions
             component.OnPlayerSwapSeatRequested(e);
         }
         ActionLog.Add(ActionLogType.EnterVehicleSeat, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
-                                                            $"ID: ({vehicle.instanceID}) Seat move: {e.OldSeat.ToString(Data.AdminLocale)} >> " +
-                                                            $"{e.NewSeat.ToString(Data.AdminLocale)}", e.Player.Steam64);
+                                                            $"ID: ({vehicle.instanceID}) Seat move: {e.OldSeat.ToString(CultureInfo.InvariantCulture)} >> " +
+                                                            $"{e.NewSeat.ToString(CultureInfo.InvariantCulture)}", e.Player.Steam64);
     }
     internal static void BatteryStolen(SteamPlayer theif, ref bool allow)
     {
@@ -1398,7 +1477,7 @@ public static class EventFunctions
         ulong s64 = e.Steam64;
         DroppedItems.Remove(s64);
         TeamManager.PlayerBaseStatus?.Remove(s64);
-        Tips.OnPlayerDisconnected(s64);
+        TipService.OnPlayerDisconnected(s64);
         UCPlayer ucplayer = e.Player;
         try
         {
@@ -1453,8 +1532,7 @@ public static class EventFunctions
             L.LogError(ex);
         }
     }
-    internal static void OnLocaleUpdated(UCPlayer player)
-        => UCWarfare.I.UpdateLangs(player, false);
+
     internal static async Task OnPrePlayerConnect(PlayerPending e, CancellationToken token)
     {
         try

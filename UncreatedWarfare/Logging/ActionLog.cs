@@ -8,6 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Logging;
 public class ActionLog : MonoBehaviour
@@ -65,7 +67,7 @@ public class ActionLog : MonoBehaviour
         if (_instance != null)
             Destroy(_instance);
         _instance = this;
-        F.CheckDir(Data.Paths.ActionLog, out _, true);
+        //F.CheckDir(Data.Paths.ActionLog, out _, true);
     }
     [UsedImplicitly]
     void OnDestroy() => OnApplicationQuit();
@@ -98,7 +100,7 @@ public class ActionLog : MonoBehaviour
     {
         GameThread.AssertCurrent();
         _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
-        _instance.Update();
+        // todo _instance.Update();
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string GetMetaPath(ActionLogMeta meta) => Path.Combine(Data.Paths.ActionLog, meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".meta");
@@ -126,6 +128,7 @@ public class ActionLog : MonoBehaviour
         if (File.Exists(path))
             File.Delete(path);
     }
+#if false
     private Task<bool> SendCurrentLogAsync(MessageContext context, CancellationToken token = default) =>
         _current == null
         ? Task.FromResult(false)
@@ -238,6 +241,7 @@ public class ActionLog : MonoBehaviour
             SaveMeta(_current);
         }
     }
+#endif
     public static void WriteItemToStream(in ActionLogItem item, Stream stream, byte[] buffer)
     {
         char[] cs = item.ToCharArr(true);
@@ -269,6 +273,7 @@ public class ActionLog : MonoBehaviour
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ValidDateTimeOffset(in DateTimeOffset o) => o <= DateTimeOffset.UtcNow && o >= MinDatetime;
+#if false
     internal async Task OnConnected(CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
@@ -410,6 +415,7 @@ public class ActionLog : MonoBehaviour
             }
         }
     }
+#endif
     // ReSharper disable once StructCanBeMadeReadOnly
     public record struct ActionLogItem(ulong Player, ActionLogType Type, string? Data, DateTimeOffset Timestamp)
     {
@@ -470,7 +476,7 @@ public class ActionLog : MonoBehaviour
             return chars;
         }
     }
-    public class ActionLogMeta : IVersionableReadWrite
+    public class ActionLogMeta
     {
         public const int Capacity = 2048;
         private const byte DataVersion = 1;
@@ -637,21 +643,21 @@ public class ActionLog : MonoBehaviour
     }
     public static class NetCalls
     {
-        public static readonly NetCallRaw<ActionLogMeta, byte[]> SendLog = new NetCallRaw<ActionLogMeta, byte[]>(KnownNetMessage.SendLog, ActionLogMeta.ReadMeta,
-            reader => reader.ReadLongBytes(), ActionLogMeta.WriteMeta, (writer, b) => writer.WriteLong(b));
-        public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
+        //public static readonly NetCallRaw<ActionLogMeta, byte[]> SendLog = new NetCallRaw<ActionLogMeta, byte[]>(KnownNetMessage.SendLog, ActionLogMeta.ReadMeta,
+        //    reader => reader.ReadLongBytes(), ActionLogMeta.WriteMeta, (writer, b) => writer.WriteLong(b));
+        //public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
 
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestCurrentLog)]
-        internal static Task ReceiveCurrentLogRequest(MessageContext context)
-        {
-            if (UCWarfare.Config.SendActionLogs && _instance != null)
-            {
-                return _instance.SendCurrentLogAsync(context);
-            }
+        //[NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestCurrentLog)]
+        //internal static Task ReceiveCurrentLogRequest(MessageContext context)
+        //{
+        //    if (UCWarfare.Config.SendActionLogs && _instance != null)
+        //    {
+        //        return _instance.SendCurrentLogAsync(context);
+        //    }
 
-            SendLog.Invoke(context.Connection, new ActionLogMeta(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null!, null!, null!), Array.Empty<byte>());
-            return Task.CompletedTask;
-        }
+        //    SendLog.Invoke(context.Connection, new ActionLogMeta(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null!, null!, null!), Array.Empty<byte>());
+        //    return Task.CompletedTask;
+        //}
     }
 }
 

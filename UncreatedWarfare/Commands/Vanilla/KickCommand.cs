@@ -61,7 +61,7 @@ public class KickCommand : IExecutableCommand
 
         OffenseManager.LogKickPlayer(targetId, ctx.CallerID, reason!, DateTime.Now);
 
-        ctx.LogAction(ActionLogType.KickPlayer, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"");
+        ctx.LogAction(ActionLogType.KickPlayer, $"KICKED {targetId.ToString(CultureInfo.InvariantCulture)} FOR \"{reason}\"");
         if (ctx.IsConsole)
         {
             ctx.ReplyString($"{names.PlayerName} ({targetId.ToString(Data.LocalLocale)}) was kicked by an operator because: {reason}.", ConsoleColor.Cyan);
@@ -70,7 +70,7 @@ public class KickCommand : IExecutableCommand
         else
         {
             PlayerNames callerNames = ctx.Caller is null ? PlayerNames.Console : ctx.Caller.Name;
-            L.Log($"{names.PlayerName} ({targetId.ToString(Data.AdminLocale)}) was kicked by {callerNames.PlayerName} ({ctx.CallerID.ToString(Data.AdminLocale)}) because: {reason}.", ConsoleColor.Cyan);
+            L.Log($"{names.PlayerName} ({targetId.ToString(CultureInfo.InvariantCulture)}) was kicked by {callerNames.PlayerName} ({ctx.CallerID.ToString(CultureInfo.InvariantCulture)}) because: {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(ctx.CallerID), T.KickSuccessBroadcast, names, callerNames);
             ctx.Reply(T.KickSuccessFeedback, names);
         }

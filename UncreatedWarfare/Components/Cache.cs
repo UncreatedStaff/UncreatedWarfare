@@ -1,11 +1,14 @@
-﻿using System;
+﻿#if false
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Insurgency;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Stats.Records;
@@ -15,7 +18,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Components;
 
-public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposable
+public class Cache : IRadiusFob, IObjective, IPlayerDisconnectListener, IDisposable
 {
     private bool _disposed;
     private CacheComponent? _component;
@@ -26,10 +29,10 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     public IBuildableDestroyedEvent? DestroyInfo { get; set; }
     public GridLocation GridLocation => _gc;
     public string ClosestLocation => _cl;
-    public ulong Team { get; }
+    public Team Team { get; }
     public List<UCPlayer> NearbyDefenders { get; private set; }
     public List<UCPlayer> NearbyAttackers { get; private set; }
-    UCPlayer? IFOB.Instigator { get; set; }
+    UCPlayer? IFob.Instigator { get; set; }
     public Vector3 Position { get; }
     public Vector3 SpawnPosition { get; }
     public bool IsDestroyed { get; private set; }
@@ -341,3 +344,4 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         }
     }
 }
+#endif
