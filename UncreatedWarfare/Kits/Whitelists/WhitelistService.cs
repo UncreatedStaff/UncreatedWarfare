@@ -20,6 +20,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
@@ -34,6 +35,11 @@ public class WhitelistService :
     IAsyncEventListener<ItemPickupRequested>,
     IDisposable
 {
+    public static readonly PermissionLeaf PermissionChangeSignText = new PermissionLeaf("actions.barricades.edit_sign");
+    public static readonly PermissionLeaf PermissionPickUpAnyItem = new PermissionLeaf("actions.items.pickup_any");
+    public static readonly PermissionLeaf PermissionDestroyBuildable = new PermissionLeaf("actions.buildables.destroy_any");
+    public static readonly PermissionLeaf PermissionPlaceBuildable = new PermissionLeaf("actions.buildables.place_any");
+
     private readonly IWhitelistDbContext _dbContext;
     private readonly ZoneStore _zoneStore;
     private readonly ChatService _chatService;
@@ -247,9 +253,14 @@ public class WhitelistService :
     [EventListener(RequiresMainThread = true)]
     async UniTask IAsyncEventListener<ChangeSignTextRequested>.HandleEventAsync(ChangeSignTextRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        if (e.Player.OnDuty())
+        UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
+        if (!await permissions.HasPermissionAsync(e.Player, PermissionChangeSignText, token))
+        {
+            _chatService.Send(e.Player, T.NoPermissionsSpecific, PermissionChangeSignText);
             return;
+        }
 
+        await UniTask.SwitchToMainThread(token);
         Kit? kit = e.Player.Component<KitPlayerComponent>().CachedKit;
 
         ItemAsset asset = e.Buildable.Asset;
@@ -267,21 +278,30 @@ public class WhitelistService :
     [EventListener(RequiresMainThread = true)]
     UniTask IAsyncEventListener<SalvageBarricadeRequested>.HandleEventAsync(SalvageBarricadeRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        return HandleSalvageRequest(e, token).AsUniTask();
+        return HandleSalvageRequest(e, serviceProvider, token).AsUniTask();
     }
 
     [EventListener(RequiresMainThread = true)]
     UniTask IAsyncEventListener<SalvageStructureRequested>.HandleEventAsync(SalvageStructureRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        return HandleSalvageRequest(e, token).AsUniTask();
+        return HandleSalvageRequest(e, serviceProvider, token).AsUniTask();
     }
 
     [EventListener(RequiresMainThread = true)]
     async UniTask IAsyncEventListener<PlaceBarricadeRequested>.HandleEventAsync(PlaceBarricadeRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        if (e.OriginalPlacer == null || e.OriginalPlacer.OnDuty())
+        if (e.OriginalPlacer == null)
             return;
-        
+
+        UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
+        if (!await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
+        {
+            _chatService.Send(e.OriginalPlacer, T.NoPermissionsSpecific, PermissionPlaceBuildable);
+            return;
+        }
+
+        await UniTask.SwitchToMainThread(token);
+
         if (_zoneStore.IsInMainBase(e.OriginalPlacer))
         {
             _chatService.Send(e.OriginalPlacer, _translations.WhitelistProhibitedPlace, e.Asset);
@@ -356,8 +376,17 @@ public class WhitelistService :
     [EventListener(RequiresMainThread = true)]
     async UniTask IAsyncEventListener<PlaceStructureRequested>.HandleEventAsync(PlaceStructureRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        if (e.OriginalPlacer == null || e.OriginalPlacer.OnDuty())
+        if (e.OriginalPlacer == null)
             return;
+
+        UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
+        if (!await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
+        {
+            _chatService.Send(e.OriginalPlacer, T.NoPermissionsSpecific, PermissionPlaceBuildable);
+            return;
+        }
+
+        await UniTask.SwitchToMainThread(token);
 
         if (_zoneStore.IsInMainBase(e.OriginalPlacer))
         {
@@ -433,8 +462,14 @@ public class WhitelistService :
     [EventListener(RequiresMainThread = true)]
     async UniTask IAsyncEventListener<ItemPickupRequested>.HandleEventAsync(ItemPickupRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        if (e.Player == null || e.Player.OnDuty())
+        UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
+        if (!await permissions.HasPermissionAsync(e.Player, PermissionPickUpAnyItem, token))
+        {
+            _chatService.Send(e.Player, T.NoPermissionsSpecific, PermissionPickUpAnyItem);
             return;
+        }
+
+        await UniTask.SwitchToMainThread(token);
 
         IAssetLink<ItemAsset> assetContainer = AssetLink.Create(e.Asset);
 
@@ -479,10 +514,16 @@ public class WhitelistService :
         }
     }
 
-    private async Task HandleSalvageRequest(SalvageRequested e, CancellationToken token)
+    private async Task HandleSalvageRequest(SalvageRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        if (e.Player.OnDuty())
+        UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
+        if (!await permissions.HasPermissionAsync(e.Player, PermissionDestroyBuildable, token))
+        {
+            _chatService.Send(e.Player, T.NoPermissionsSpecific, PermissionDestroyBuildable);
             return;
+        }
+
+        await UniTask.SwitchToMainThread(token);
 
         Kit? kit = e.Player.Component<KitPlayerComponent>().CachedKit;
 

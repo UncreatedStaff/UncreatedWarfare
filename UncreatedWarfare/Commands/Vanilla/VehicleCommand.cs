@@ -1,12 +1,8 @@
 ﻿using DanielWillett.ReflectionTools;
 using System;
-using System.Globalization;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
 
@@ -101,10 +97,8 @@ public class VehicleCommand : IExecutableCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertHelpCheck(0, await Context.HasPermission(PermissionSpawn, token) ? (AdminSyntax + " - " + AdminHelp) : (Syntax + " - " + Help));
-
         Context.AssertRanByPlayer();
-
+#if false
         bool kick = Context.MatchParameter(0, "kick", "remove", "k");
         bool enter = !kick && Context.MatchParameter(0, "enter", "swap", "e");
         if (kick || enter || Context.MatchParameter(0, "give", "transfer", "g"))
@@ -199,7 +193,7 @@ public class VehicleCommand : IExecutableCommand
                 VehicleManager.ServerSetVehicleLock(vehicleTarget, onlinePlayer.CSteamID, new CSteamID(TeamManager.GetGroupID(team)), true);
                 VehicleComponent.TryAddOwnerToHistory(vehicleTarget, onlinePlayer.Steam64);
                 if (Gamemode.Config.EffectUnlockVehicle.TryGetAsset(out EffectAsset? effect))
-                    F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicleTarget.transform.position);
+                    EffectUtility.TriggerEffect(effect, EffectManager.SMALL, vehicleTarget.transform.position, true);
                 onlinePlayer.SendChat(T.VehicleGivenDm, vehicleTarget.asset, Context.Player);
                 throw Context.Reply(T.VehicleGiven, vehicleTarget.asset, onlinePlayer);
             }
@@ -299,10 +293,10 @@ public class VehicleCommand : IExecutableCommand
         {
             throw Context.SendNotImplemented();
         }
-
+#endif
         await Context.AssertPermissions(PermissionSpawn, token);
 
-        enter = Context.MatchFlag("e", "enter");
+        bool enter = Context.MatchFlag("e", "enter");
 
         Context.AssertArgs(1, AdminSyntax);
 
@@ -366,14 +360,4 @@ public class VehicleCommand : IExecutableCommand
 
         Context.ReplyString($"Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).", "bfb9ac");
     }
-}
-
-
-public struct VehicleSwapRequest(float sendTime, InteractableVehicle vehicle, UCPlayer sender, CancellationTokenSource token)
-{
-    public readonly float SendTime = sendTime;
-    public readonly InteractableVehicle Vehicle = vehicle;
-    public readonly UCPlayer Sender = sender;
-    public readonly CancellationTokenSource RespondToken = token;
-    public bool? IsDenied = null;
 }

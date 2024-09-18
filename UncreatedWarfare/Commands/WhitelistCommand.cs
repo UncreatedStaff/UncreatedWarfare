@@ -1,5 +1,9 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Models;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -7,6 +11,9 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class WhitelistCommand : IExecutableCommand
 {
+    private readonly WhitelistService _whitelistService;
+    private readonly WhitelistTranslations _translations;
+
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
@@ -73,63 +80,65 @@ public class WhitelistCommand : IExecutableCommand
         };
     }
 
-    /// <inheritdoc />
-    public UniTask ExecuteAsync(CancellationToken token)
+    public WhitelistCommand(WhitelistService whitelistService, TranslationInjection<WhitelistTranslations> translations)
     {
-        if (!Data.Gamemode.UseWhitelist || !Whitelister.Loaded)
-            throw Context.SendGamemodeError();
+        _whitelistService = whitelistService;
+        _translations = translations.Value;
+    }
 
-        Context.AssertHelpCheck(0, "/whitelist <add|remove|set amount> - Add or remove items from the global whitelist.");
-
-        Context.AssertArgs(2, "/whitelist <add|remove|set amount>");
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
+    {
+        Context.AssertArgs(2);
 
         if (Context.MatchParameter(0, "add", "whitelist", "create"))
         {
-            Context.AssertHelpCheck(1, "/whitelist add <item> [amount]");
             if (!Context.TryGet(Context.ArgumentCount - 1, out byte amount))
                 amount = 255;
-            if (Context.TryGet(1, out ItemAsset? asset, out bool multiple, amount == 255, Context.ArgumentCount - (amount == 255 ? 1 : 2), false))
+            if (!Context.TryGet(1, out ItemAsset? asset, out bool multiple, amount == 255, Context.ArgumentCount - (amount == 255 ? 1 : 2), false))
             {
-                if (!Whitelister.IsWhitelisted(asset.GUID, out _))
-                {
-                    Whitelister.AddItem(asset.GUID, amount);
-                    Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
-                    if (amount != 255)
-                        Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
-                    Context.Reply(T.WhitelistAdded, asset);
-                }
-                else
-                    throw Context.Reply(T.WhitelistAlreadyAdded, asset);
-            }
-            else if (multiple)
-                throw Context.Reply(T.WhitelistMultipleResults, Context.Get(1)!);
-            else
-                throw Context.Reply(T.WhitelistItemNotID, Context.Get(1)!);
+                if (multiple)
+                    throw Context.Reply(_translations.WhitelistMultipleResults, Context.Get(1)!);
 
-            return default;
+                throw Context.Reply(_translations.WhitelistItemNotID, Context.Get(1)!);
+            }
+
+            bool whitelisted = await _whitelistService.WhitelistItem(AssetLink.Create(asset), amount, token);
+            await UniTask.SwitchToMainThread();
+            if (!whitelisted)
+                throw Context.Reply(_translations.WhitelistAlreadyAdded, asset);
+                
+            Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+            if (amount != 255)
+            {
+                Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+            }
+
+            throw Context.Reply(_translations.WhitelistAdded, asset);
         }
         
         if (Context.MatchParameter(0, "remove", "delete", "rem"))
         {
-            Context.AssertHelpCheck(1, "/whitelist remove <item>");
-            if (Context.TryGet(1, out ItemAsset? asset, out bool multiple, true, selector: x => Whitelister.IsWhitelistedFast(x.GUID)))
+            if (!Context.TryGet(1, out ItemAsset? asset, out bool multiple, true))
             {
-                Whitelister.RemoveItem(asset.GUID);
-                Context.LogAction(ActionLogType.RemoveWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
-                Context.Reply(T.WhitelistRemoved, asset);
-            }
-            else if (multiple)
-                throw Context.Reply(T.WhitelistMultipleResults, Context.Get(1)!);
-            else
-                throw Context.Reply(T.WhitelistItemNotID, Context.Get(1)!);
+                if (multiple)
+                    throw Context.Reply(_translations.WhitelistMultipleResults, Context.Get(1)!);
 
-            return default;
+                throw Context.Reply(_translations.WhitelistItemNotID, Context.Get(1)!);
+            }
+
+            bool didRemove = await _whitelistService.RemoveWhitelistedItem(AssetLink.Create(asset), token);
+            await UniTask.SwitchToMainThread();
+            if (!didRemove)
+                throw Context.Reply(_translations.WhitelistItemNotID, Context.Get(1)!);
+
+            Context.LogAction(ActionLogType.RemoveWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+            throw Context.Reply(_translations.WhitelistRemoved, asset);
         }
         
         if (Context.MatchParameter(0, "set"))
         {
-            Context.AssertArgs(4, "/whitelist set amount <item> <amount>");
-            Context.AssertHelpCheck(1, "/whitelist set amount <item> <amount>");
+            Context.AssertArgs(4);
 
             if (!Context.TryGet(Context.ArgumentCount - 1, out byte amount))
                 throw Context.SendCorrectUsage("/whitelist set amount <item> <amount>");
@@ -137,33 +146,40 @@ public class WhitelistCommand : IExecutableCommand
             if (!Context.MatchParameter(1, "maxamount", "amount", "amt"))
                 throw Context.SendCorrectUsage("/whitelist <add|remove|set amount>");
 
-            Context.AssertHelpCheck(2, "/whitelist set amount <item> <amount>");
-
-            if (Context.TryGet(2, out ItemAsset? asset, out bool multiple, false, Context.ArgumentCount - 2, false))
+            if (!Context.TryGet(2, out ItemAsset? asset, out bool multiple, false, Context.ArgumentCount - 2, false))
             {
-                if (!Whitelister.IsWhitelisted(asset.GUID, out _))
-                {
-                    Whitelister.AddItem(asset.GUID, amount);
-                    Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
-                    if (amount != 255)
-                        Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
-                    Context.Reply(T.WhitelistAdded, asset);
-                    Context.Reply(T.WhitelistSetAmount, asset, amount);
-                }
-                else
-                {
-                    if (amount != 255)
-                        Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
-                    Whitelister.SetAmount(asset.GUID, amount);
-                    Context.Reply(T.WhitelistSetAmount, asset, amount);
-                }
+                if (multiple)
+                    throw Context.Reply(_translations.WhitelistMultipleResults, Context.Get(1)!);
+                
+                throw Context.Reply(_translations.WhitelistItemNotID, Context.Get(1)!);
             }
-            else if (multiple)
-                throw Context.Reply(T.WhitelistMultipleResults, Context.Get(1)!);
-            else
-                throw Context.Reply(T.WhitelistItemNotID, Context.Get(1)!);
 
-            return default;
+            IAssetLink<ItemAsset> assetLink = AssetLink.Create(asset);
+            ItemWhitelist? existing = await _whitelistService.GetWhitelistAsync(assetLink, token);
+            if (existing != null && existing.Amount == amount)
+            {
+                throw Context.Reply(_translations.WhitelistAlreadyAdded, asset);
+            }
+
+            bool whitelistedOrUpdated = await _whitelistService.WhitelistItem(assetLink, amount, token);
+            await UniTask.SwitchToMainThread(token);
+
+            if (!whitelistedOrUpdated)
+            {
+                throw Context.Reply(_translations.WhitelistAlreadyAdded, asset);
+            }
+
+            if (whitelistedOrUpdated && existing == null)
+            {
+                Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                if (amount > 0)
+                    Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                Context.Reply(_translations.WhitelistAdded, asset);
+                throw Context.Reply(_translations.WhitelistSetAmount, asset, amount);
+            }
+
+            Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {(amount <= 0 ? -1 : amount)}");
+            throw Context.Reply(_translations.WhitelistSetAmount, asset, amount);
         }
         
         throw Context.SendCorrectUsage("/whitelist <add|remove|set amount>");

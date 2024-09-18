@@ -124,7 +124,7 @@ public class AmmoCommand : IExecutableCommand
                 if (vehicleData.Items.Length == 0)
                     throw Context.Reply(_translations.AmmoVehicleFullAlready);
                 if (Gamemode.Config.EffectAmmo.TryGetAsset(out EffectAsset? effect))
-                    F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
+                    EffectUtility.TriggerEffect(effect, EffectManager.SMALL, vehicle.transform.position, true);
 
                 foreach (Guid item in vehicleData.Items)
                     if (Assets.find(item) is ItemAsset a)
@@ -210,7 +210,7 @@ public class AmmoCommand : IExecutableCommand
                 await UniTask.SwitchToMainThread(token);
 
                 if (Gamemode.Config.EffectAmmo.TryGetAsset(out EffectAsset? effect))
-                    F.TriggerEffectReliable(effect, EffectManager.SMALL, Context.Player.Position);
+                    EffectUtility.TriggerEffect(effect, EffectManager.SMALL, Context.Player.Position, true);
 
                 if (isInMain)
                 {
@@ -247,7 +247,7 @@ public class AmmoCommand : IExecutableCommand
                     await UniTask.SwitchToMainThread(token);
 
                     if (Gamemode.Config.EffectAmmo.TryGetAsset(out EffectAsset? effect))
-                        F.TriggerEffectReliable(effect, EffectManager.SMALL, Context.Player.Position);
+                        EffectUtility.TriggerEffect(effect, EffectManager.SMALL, Context.Player.Position, true);
 
                     Context.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BAG");
 

@@ -8,6 +8,7 @@ using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Transform;
@@ -94,7 +95,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// A <see cref="CancellationToken"/> that cancels after the player leaves.
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
-    internal WarfarePlayer(Player player, ILogger logger, IReadOnlyList<IPlayerComponent> components)
+    internal WarfarePlayer(Player player, ILogger logger, IReadOnlyList<IPlayerComponent> components, IServiceProvider serviceProvider)
     {
         _disconnectTokenSource = new CancellationTokenSource();
         _logger = logger;
@@ -107,7 +108,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
 
-        Locale = new WarfarePlayerLocale(this, /* todo data.LanguagePreferences */ null);
+        Locale = new WarfarePlayerLocale(this, /* todo data.LanguagePreferences */ null, serviceProvider);
 
         Components = components;
 
@@ -178,6 +179,22 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         return _playerNameHelper.ToString();
     }
 
+    
+    public static readonly SpecialFormat FormatCharacterName = new SpecialFormat("Character Name", "cn");
+    
+    public static readonly SpecialFormat FormatNickName = new SpecialFormat("Nick Name", "nn");
+    
+    public static readonly SpecialFormat FormatPlayerName = new SpecialFormat("Player Name", "pn");
+    
+    public static readonly SpecialFormat FormatSteam64 = new SpecialFormat("Steam64 ID", "64");
+    
+    public static readonly SpecialFormat FormatColoredCharacterName = new SpecialFormat("Colored Character Name", "ccn");
+    
+    public static readonly SpecialFormat FormatColoredNickName = new SpecialFormat("Colored Nick Name", "cnn");
+    
+    public static readonly SpecialFormat FormatColoredPlayerName = new SpecialFormat("Colored Player Name", "cpn");
+    
+    public static readonly SpecialFormat FormatColoredSteam64 = new SpecialFormat("Colored Steam64 ID", "c64");
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         // todo make this a proper implementation later.

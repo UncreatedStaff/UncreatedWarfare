@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -8,8 +9,8 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class LangCommand : IExecutableCommand
 {
-    private const string Syntax = "/lang [current|reset|*language*]";
-    private const string Help = "Switch your language to some of our supported languages.";
+    private readonly ICachableLanguageDataStore _languageDataStore;
+    private readonly LanguageService _languageService;
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
@@ -43,21 +44,25 @@ public class LangCommand : IExecutableCommand
         };
     }
 
+    public LangCommand(ICachableLanguageDataStore languageDataStore, LanguageService languageService)
+    {
+        _languageDataStore = languageDataStore;
+        _languageService = languageService;
+    }
+
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
-        
         if (Context.HasArgsExact(0))
         {
             int i = -1;
 
-            await Data.LanguageDataStore.WriteWaitAsync(token);
+            await _languageDataStore.WriteWaitAsync(token);
 
             StringBuilder sb = new StringBuilder();
             try
             {
-                foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                foreach (LanguageInfo info in _languageDataStore.Languages)
                 {
                     if (!info.HasTranslationSupport)
                         continue;
@@ -69,23 +74,20 @@ public class LangCommand : IExecutableCommand
             }
             finally
             {
-                Data.LanguageDataStore.WriteRelease();
+                _languageDataStore.WriteRelease();
             }
 
             Context.Reply(T.LanguageList, sb.ToString());
         }
         else if (Context.MatchParameter(0, "refersh", "reload", "update"))
         {
-            UCWarfare.I.UpdateLangs(Context.Player, false);
-
+            Context.Player.Locale.Preferences = await _languageDataStore.GetLanguagePreferences(Context.CallerId.m_SteamID, token);
             Context.Reply(T.LanguageRefreshed);
         }
         else if (Context.MatchParameter(0, "current"))
         {
             Context.AssertRanByPlayer();
-
-            LanguageInfo info = await Localization.GetLanguage(Context.CallerId.m_SteamID, token).ConfigureAwait(false);
-            Context.Reply(T.LanguageCurrent, info);
+            Context.Reply(T.LanguageCurrent, Context.Player.Locale.LanguageInfo);
         }
         else if (Context.MatchParameter(0, "reset"))
         {
@@ -94,7 +96,7 @@ public class LangCommand : IExecutableCommand
             if (Context.Player.Locale.IsDefaultLanguage)
                 throw Context.Reply(T.LangAlreadySet, Context.Player.Locale.LanguageInfo);
 
-            LanguageInfo defaultInfo = Localization.GetDefaultLanguage();
+            LanguageInfo defaultInfo = _languageService.GetDefaultLanguage();
 
             await Context.Player.Locale.Update(defaultInfo.Code, Data.LocalLocale, token: token).ConfigureAwait(false);
             Context.Reply(T.ResetLanguage, defaultInfo);
@@ -104,12 +106,12 @@ public class LangCommand : IExecutableCommand
         {
             Context.AssertRanByPlayer();
 
-            LanguageInfo? newSet = Data.LanguageDataStore.GetInfoCached(input, false);
+            LanguageInfo? newSet = _languageDataStore.GetInfoCached(input, false);
 
             if (newSet == null)
                 throw Context.Reply(T.LanguageNotFound, input);
 
-            LanguageInfo oldSet = await Localization.GetLanguage(Context.CallerId.m_SteamID, token).ConfigureAwait(false);
+            LanguageInfo oldSet = Context.Player.Locale.LanguageInfo;
             if (newSet == oldSet)
                 throw Context.Reply(T.LangAlreadySet, oldSet);
 

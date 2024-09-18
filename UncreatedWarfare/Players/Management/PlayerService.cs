@@ -98,7 +98,7 @@ public class PlayerService : IPlayerService
 
             List<IPlayerComponent> components = AddComponents(player);
 
-            WarfarePlayer joined = new WarfarePlayer(player, logger, components.AsReadOnly());
+            WarfarePlayer joined = new WarfarePlayer(player, logger, components.AsReadOnly(), _serviceProvider);
             _onlinePlayers.Add(joined);
             _onlinePlayersDictionary.Add(joined, joined);
 

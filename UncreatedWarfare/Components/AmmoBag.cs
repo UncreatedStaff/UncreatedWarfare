@@ -1,45 +1,52 @@
-﻿using System;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Components;
 
 public class AmmoBagComponent : MonoBehaviour
 {
+    private IServiceProvider _serviceProvider;
+
     public BarricadeDrop Drop;
     //public Dictionary<ulong, int> ResuppliedPlayers;
     public int Ammo;
-    public void Initialize(BarricadeDrop drop)
+
+    public void Initialize(BarricadeDrop drop, IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider;
+
         Drop = drop;
-        Ammo = FOBManager.Config.AmmoBagMaxUses;
-        
-        if (Gamemode.Config.EffectMarkerAmmo.TryGetGuid(out Guid guid))
+        Ammo = 3;//todo FobManager.Config.AmmoBagMaxUses;
+
+        ITeamManager<Team> teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
+
+        AssetConfiguration assetConfig = serviceProvider.GetRequiredService<AssetConfiguration>();
+        if (assetConfig.GetAssetLink<EffectAsset>("Effects:Ammo").TryGetAsset(out EffectAsset? asset))
         {
-            IconManager.AttachIcon(guid, drop.model, drop.GetServersideData().group.GetTeam(), 1f);
+            Team team = teamManager.GetTeam(new CSteamID(drop.GetServersideData().group));
+            serviceProvider.GetRequiredService<IconManager>().AttachIcon(asset.GUID, drop.model, team, 1f);
         }
 
         //ResuppliedPlayers = new Dictionary<ulong, int>();
     }
-    public async Task ResupplyPlayer(UCPlayer player, Kit kit, int ammoCost, CancellationToken token = default)
+    public async Task ResupplyPlayer(WarfarePlayer player, Kit kit, int ammoCost, CancellationToken token = default)
     {
         Ammo -= ammoCost;
-        if (Data.Is(out IKitRequests req))
-        {
-            await req.KitManager.Requests.ResupplyKit(player, kit, true, token).ConfigureAwait(false);
-            await UniTask.SwitchToMainThread(token);
-        }
-        else
-        {
-            L.LogWarning("Failed to resupply " + player + ", KitManager is not loaded.");
-            return;
-        }
+        await _serviceProvider.GetRequiredService<KitManager>().Requests.ResupplyKit(player, kit, true, token).ConfigureAwait(false);
+        await UniTask.SwitchToMainThread(token);
 
-        UCPlayer? owner = UCPlayer.FromID(Drop.GetServersideData().owner);
+        WarfarePlayer? owner = _serviceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayerOrNull(Drop.GetServersideData().owner);
+
         if (owner != null && owner.Steam64 != player.Steam64)
-            Points.AwardXP(owner, XPReward.Resupply);
+        {
+            // todo Points.AwardXP(owner, XPReward.Resupply);
+        }
 
         if (Ammo <= 0 && Regions.tryGetCoordinate(Drop.model.position, out byte x, out byte y))
         {

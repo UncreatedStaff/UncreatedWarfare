@@ -24,15 +24,12 @@ internal class Countermeasure : MonoBehaviour
             Burning = false;
 
         if (elapsed > 8)
-            Destroy(this);
+            Destroy(gameObject);
     }
 
     [UsedImplicitly]
     private void OnDestroy()
     {
         ActiveCountermeasures.Remove(this);
-
-        if (transform.TryGetComponent(out InteractableVehicle v))
-            VehicleSpawner.DeleteVehicle(v);
     }
 }

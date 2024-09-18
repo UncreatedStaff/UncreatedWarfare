@@ -1,4 +1,6 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Commands;
@@ -7,6 +9,8 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class HealCommand : IExecutableCommand
 {
+    private readonly ChatService _chatService;
+
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
@@ -29,35 +33,37 @@ public class HealCommand : IExecutableCommand
         };
     }
 
+    public HealCommand(ChatService chatService)
+    {
+        _chatService = chatService;
+    }
+
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertHelpCheck(0, "/heal [player] - Heal yourself or someone else to max health and revive them if they're injured.");
-
         Context.AssertOnDuty();
 
-        if (Context.TryGet(0, out _, out UCPlayer? onlinePlayer) && onlinePlayer is not null)
+        if (!Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer) || onlinePlayer == null)
         {
-            onlinePlayer.Player.life.sendRevive();
+            if (Context.HasArgs(1))
+                throw Context.SendPlayerNotFound();
 
-            if (Data.Is(out IRevives rev))
-                rev.ReviveManager.RevivePlayer(onlinePlayer);
+            onlinePlayer = Context.Player;
+        }
 
+        onlinePlayer.UnturnedPlayer.life.sendRevive();
+
+        PlayerInjureComponent? injureComponent = onlinePlayer.ComponentOrNull<PlayerInjureComponent>();
+        if (injureComponent != null)
+            injureComponent.Revive();
+
+        _chatService.Send(onlinePlayer, T.HealSelf);
+
+        if (onlinePlayer.Steam64.m_SteamID != Context.CallerId.m_SteamID)
             Context.Reply(T.HealPlayer, onlinePlayer);
-
-            if (onlinePlayer.Steam64 != Context.CallerId.m_SteamID)
-                onlinePlayer.SendChat(T.HealSelf);
-        }
         else
-        {
-            Context.AssertRanByPlayer();
+            Context.Defer();
 
-            Context.Player.UnturnedPlayer.life.sendRevive();
-
-            if (Data.Is(out IRevives rev))
-                rev.ReviveManager.RevivePlayer(Context.Player);
-
-            Context.Reply(T.HealSelf);
-        }
+        return UniTask.CompletedTask;
     }
 }

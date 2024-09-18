@@ -1,6 +1,7 @@
 ﻿using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Players;
 
@@ -17,9 +18,9 @@ public class PlayerDied : PlayerEvent
     public bool WasSuicide { get; internal set; }
     public bool WasBleedout { get; internal set; }
     public bool WasEffectiveKill => !WasSuicide && !WasTeamkill;
-    public ulong DeadTeam { get; internal set; }
-    public ulong KillerTeam { get; internal set; }
-    public ulong ThirdPartyTeam { get; internal set; }
+    public Team DeadTeam { get; internal set; }
+    public Team? KillerTeam { get; internal set; }
+    public Team? ThirdPartyTeam { get; internal set; }
     public IAssetLink<Asset>? PrimaryAsset { get; internal set; }
     public IAssetLink<Asset>? SecondaryAsset { get; internal set; }
     public IAssetLink<VehicleAsset>? TurretVehicleOwner { get; internal set; }

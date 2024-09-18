@@ -61,7 +61,6 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     /// <exception cref="SingletonLoadException"/>
     protected void CreateFileIfNotExists(string text = "[]")
     {
-        F.CheckDir(directory, out _, true);
         if (!File.Exists(file))
         {
             using StreamWriter creator = File.CreateText(file);
@@ -104,7 +103,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
 
                 using (FileStream rs = new FileStream(file, FileMode.Truncate, FileAccess.Write, FileShare.None))
                 {
-                    Utf8JsonWriter writer = new Utf8JsonWriter(rs, JsonEx.writerOptions);
+                    Utf8JsonWriter writer = new Utf8JsonWriter(rs, ConfigurationSettings.JsonWriterOptions);
                     writer.WriteStartArray();
                     for (int i = 0; i < Count; i++)
                     {
@@ -131,7 +130,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
         {
             using (StreamWriter file = File.CreateText(this.file))
             {
-                file.Write(JsonSerializer.Serialize(this as List<T>, JsonEx.serializerSettings));
+                file.Write(JsonSerializer.Serialize(this as List<T>, ConfigurationSettings.JsonSerializerSettings));
             }
         }
         catch (Exception ex)
@@ -161,7 +160,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
                     }
                     byte[] buffer = new byte[len];
                     rs.Read(buffer, 0, (int)len);
-                    Utf8JsonReader reader = new Utf8JsonReader(buffer.AsSpan(), JsonEx.readerOptions);
+                    Utf8JsonReader reader = new Utf8JsonReader(buffer.AsSpan(), ConfigurationSettings.JsonReaderOptions);
                     if (reader.Read() && reader.TokenType == JsonTokenType.StartArray)
                     {
                         Clear();
@@ -203,7 +202,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
             r.Dispose();
             clsd = true;
             _threadLocker.Release();
-            T[]? vals = JsonSerializer.Deserialize<T[]>(json, JsonEx.serializerSettings);
+            T[]? vals = JsonSerializer.Deserialize<T[]>(json, ConfigurationSettings.JsonSerializerSettings);
             if (vals != null)
             {
                 Clear();

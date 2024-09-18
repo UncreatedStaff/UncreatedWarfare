@@ -7,9 +7,6 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class SpeedCommand : IExecutableCommand
 {
-    private const string Syntax = "/speed [player] <multiplier>";
-    private const string Help = "Sets a player's speed modifier.";
-
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
@@ -55,12 +52,11 @@ public class SpeedCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertArgs(1, Syntax);
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
+        Context.AssertArgs(1);
 
         Context.AssertOnDuty();
 
-        UCPlayer? target = Context.Player;
+        WarfarePlayer? target = Context.Player;
 
         if (Context.HasArgs(2) && (!Context.TryGet(0, out _, out target) || target == null))
         {
@@ -83,12 +79,12 @@ public class SpeedCommand : IExecutableCommand
 
         multiplier = Mathf.Clamp(multiplier, 0f, 10f);
 
-        if (target.Player.movement.pluginSpeedMultiplier == multiplier)
+        if (target.UnturnedPlayer.movement.pluginSpeedMultiplier == multiplier)
         {
             throw Context.Reply(T.SpeedMultiplierAlreadySet, multiplier);
         }
 
-        target.Player.movement.sendPluginSpeedMultiplier(multiplier);
+        target.UnturnedPlayer.movement.sendPluginSpeedMultiplier(multiplier);
         Context.Reply(T.SetSpeedMultiplier, multiplier, target);
         return default;
     }

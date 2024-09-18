@@ -2,6 +2,7 @@
 using System.Globalization;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Layouts.UI;
@@ -109,21 +110,21 @@ public class ConventionalLeaderboardUI : UnturnedUI
             : ("DataEmpty/Scalar/BottomContainer/Stats/ColumnGroupRight/ColumnLeft/playerstats_" + index.ToString(CultureInfo.InvariantCulture) + "_v")
     ), 0, to: 11);
 
-    public ConventionalLeaderboardUI() : base(Gamemodes.Gamemode.Config.UIConventionalLeaderboard.GetId(), reliable: false)
+    public ConventionalLeaderboardUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:Leaderboard"), reliable: false)
     {
         IsSendReliable = true;
     }
 
-    public void UpdateTime(LanguageSet set, int secondsLeft)
-    {
-        const int time = 30;
+    //public void UpdateTime(LanguageSet set, int secondsLeft)
+    //{
+    //    const int time = 30;
 
-        string l1 = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss", set.Culture);
-        string l2 = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(Mathf.RoundToInt(time - secondsLeft), time)], 1);
-        while (set.MoveNext())
-        {
-            NextGameSeconds.SetText(set.Next.Connection, l1);
-            NextGameSecondsCircle.SetText(set.Next.Connection, l2);
-        }
-    }
+    //    string l1 = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss", set.Culture);
+    //    string l2 = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(Mathf.RoundToInt(time - secondsLeft), time)], 1);
+    //    while (set.MoveNext())
+    //    {
+    //        NextGameSeconds.SetText(set.Next.Connection, l1);
+    //        NextGameSecondsCircle.SetText(set.Next.Connection, l2);
+    //    }
+    //}
 }

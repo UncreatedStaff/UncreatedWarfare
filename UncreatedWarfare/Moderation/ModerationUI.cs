@@ -9,20 +9,19 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Steam;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation;
 
 [UnturnedUI(BasePath = "Container/Backdrop/PageModeration")]
-internal partial class ModerationUI : UnturnedUI
+public partial class ModerationUI : UnturnedUI
 {
     // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
     private readonly ITranslationValueFormatter _valueFormatter;
@@ -38,7 +37,7 @@ internal partial class ModerationUI : UnturnedUI
     public const string DateTimeFormat = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss\\ \\U\\T\\C\\-\\2\\4";
     public const string DateTimeFormatInput = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss";
 
-    private readonly List<UCPlayer> _tempPlayerSearchBuffer = new List<UCPlayer>(Provider.maxPlayers);
+    private readonly List<WarfarePlayer> _tempPlayerSearchBuffer = new List<WarfarePlayer>(Provider.maxPlayers);
     
     /* HEADERS */
     public LabeledButton[] Headers { get; } =
@@ -186,7 +185,8 @@ internal partial class ModerationUI : UnturnedUI
         );
     }, 1, to: 4);
 
-    public ModerationUI(ITranslationValueFormatter valueFormatter, IPlayerService playerService, SteamAPIService steamAPI) : base(GamemodeOld.Config.UIModerationMenu.GetId(), debugLogging: false)
+    public ModerationUI(ITranslationValueFormatter valueFormatter, IPlayerService playerService, SteamAPIService steamAPI, AssetConfiguration assetConfig)
+        : base(assetConfig.GetAssetLink<EffectAsset>("UI:ModerationMenu"), debugLogging: false)
     {
         _valueFormatter = valueFormatter;
         _playerService = playerService;
@@ -390,9 +390,8 @@ internal partial class ModerationUI : UnturnedUI
     }
     private void OnModerationPlayerSearchModeUpdated(UnturnedEnumButtonTracker<PlayerSearchMode> button, Player player, PlayerSearchMode value)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer != null)
-            SendModerationPlayerList(ucPlayer);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(Player.player);
+        SendModerationPlayerList(ucp);
     }
     private void OnModerationPlayerSearchTextUpdated(UnturnedTextBox button, Player player, string text)
     {
@@ -525,8 +524,8 @@ internal partial class ModerationUI : UnturnedUI
         GameThread.AssertCurrent();
 
         player.ModalNeeded = false;
-        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
-        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
+        player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
         ClearFromPlayer(player.Connection);
         player.HasModerationUI = false;
     }
@@ -563,10 +562,10 @@ internal partial class ModerationUI : UnturnedUI
         if (textBoxData != null)
             ModerationPlayerSearch.SetText(player, textBoxData.Text ?? string.Empty);
 
-        ModerationHistoryTypeButton.Update(player.Player, false);
-        ModerationHistorySearchTypeButton.Update(player.Player, false);
-        ModerationHistorySortModeButton.Update(player.Player, false);
-        ModerationPlayerSearchModeButton.Update(player.Player, false);
+        ModerationHistoryTypeButton.Update(player.UnturnedPlayer, false);
+        ModerationHistorySearchTypeButton.Update(player.UnturnedPlayer, false);
+        ModerationHistorySortModeButton.Update(player.UnturnedPlayer, false);
+        ModerationPlayerSearchModeButton.Update(player.UnturnedPlayer, false);
 
         SendModerationPlayerList(player);
 
@@ -639,7 +638,8 @@ internal partial class ModerationUI : UnturnedUI
             return;
         }
 
-        if (UCPlayer.FromID(data.SelectedPlayer) is null)
+        
+        if (_playerService.GetOnlinePlayerOrNull(data.SelectedPlayer) == null)
         {
             ModerationButtonKick.Disable(player);
             if (data.PendingType == ModerationEntryType.Kick)
@@ -723,17 +723,17 @@ internal partial class ModerationUI : UnturnedUI
         data.PlayerList ??= new ulong[ModerationPlayerList.Length];
         if (searchText.Length < 1 || searchMode == PlayerSearchMode.Online)
         {
-            List<UCPlayer> buffer;
+            IReadOnlyList<WarfarePlayer> buffer;
             bool clr;
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                UCPlayer.Search(searchText, UCPlayer.NameSearch.PlayerName, _tempPlayerSearchBuffer);
+                _playerService.Search(searchText, NameSearchPriority.PlayerName, _tempPlayerSearchBuffer);
                 buffer = _tempPlayerSearchBuffer;
                 clr = true;
             }
             else
             {
-                buffer = PlayerManager.OnlinePlayers;
+                buffer = _playerService.OnlinePlayers;
                 clr = false;
             }
 
@@ -743,10 +743,10 @@ internal partial class ModerationUI : UnturnedUI
                 int i = 0;
                 for (; i < ct; ++i)
                 {
-                    UCPlayer listPlayer = buffer[i];
+                    WarfarePlayer listPlayer = buffer[i];
                     PlayerListEntry entry = ModerationPlayerList[i];
-                    entry.SteamId.SetText(connection, listPlayer.Steam64.ToString(CultureInfo.InvariantCulture));
-                    entry.Name.SetText(connection, listPlayer.Name.PlayerName);
+                    entry.SteamId.SetText(connection, listPlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
+                    entry.Name.SetText(connection, listPlayer.Names.PlayerName);
                     if (Data.ModerationSql.TryGetAvatar(listPlayer.Steam64, AvatarSize.Small, out string avatarUrl))
                         entry.ProfilePicture.SetImage(connection, avatarUrl);
                     else
@@ -763,7 +763,7 @@ internal partial class ModerationUI : UnturnedUI
                     if (i >= data.InfoActorCount)
                         entry.Root.SetVisibility(player, true);
 
-                    data.PlayerList[i] = listPlayer.Steam64;
+                    data.PlayerList[i] = listPlayer.Steam64.m_SteamID;
                 }
 
                 for (; i < data.PlayerCount; ++i)
@@ -777,7 +777,7 @@ internal partial class ModerationUI : UnturnedUI
             finally
             {
                 if (clr)
-                    buffer.Clear();
+                    ((IList<WarfarePlayer>)buffer).Clear();
             }
         }
         else
@@ -1239,10 +1239,10 @@ internal partial class ModerationUI : UnturnedUI
                     condition += $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
                                  $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
                                  $"AND " +
-                                 $"EXISTS (SELECT COUNT(*) FROM `{WarfareSQL.TableUsernames}` AS `u` " +
-                                  $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{WarfareSQL.ColumnUsernamesSteam64}` " +
+                                 $"EXISTS (SELECT COUNT(*) FROM `{DatabaseInterface.TableUsernames}` AS `u` " +
+                                  $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{DatabaseInterface.ColumnUsernamesSteam64}` " +
                                  $"AND " +
-                                  $"(`u`.`{WarfareSQL.ColumnUsernamesPlayerName}` LIKE {{0}} OR `u`.`{WarfareSQL.ColumnUsernamesCharacterName}` LIKE {{0}} OR `u`.`{WarfareSQL.ColumnUsernamesNickName}` LIKE {{0}}))" +
+                                  $"(`u`.`{DatabaseInterface.ColumnUsernamesPlayerName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUsernamesCharacterName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUsernamesNickName}` LIKE {{0}}))" +
                                  $" > 0)" +
                                 $" > 0";
                     conditionArgs = [ "%" + text + "%" ];

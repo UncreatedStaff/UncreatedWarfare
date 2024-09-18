@@ -128,6 +128,11 @@ public class PlayerInjureComponent : MonoBehaviour,
         }
     }
 
+    /// <summary>
+    /// The death info for if the player bleeds out.
+    /// </summary>
+    public PlayerDied? PendingDeathInfo { get; private set; }
+
     void IPlayerComponent.Init(IServiceProvider serviceProvider)
     {
         _deathTracker = serviceProvider.GetRequiredService<DeathTracker>();
@@ -368,13 +373,13 @@ public class PlayerInjureComponent : MonoBehaviour,
                 }
 
                 if (medicAsset != null)
-                    F.TriggerEffectReliable(medicAsset, Player.Connection, player.Position);
+                    EffectUtility.TriggerEffect(medicAsset, Player.Connection, player.Position, true);
 
                 medicList.Add(player.Connection);
             }
 
             if (injuredAsset != null)
-                F.TriggerEffectReliable(injuredAsset, medicList, position);
+                EffectUtility.TriggerEffect(injuredAsset, medicList, position, true);
 
             yield return new WaitForSeconds(MarkerUpdateFrequency);
         }

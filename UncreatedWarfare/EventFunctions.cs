@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Commands;
@@ -26,6 +27,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Records;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
@@ -1272,7 +1274,7 @@ public static class EventFunctions
             PlaceMarker(ucplayer, hit.point, true, true);
         }
     }
-    private static void PlaceMarker(UCPlayer ucplayer, Vector3 point, bool requireSquad, bool placeMarkerOnMap)
+    private static void PlaceMarker(WarfarePlayer ucplayer, Vector3 point, bool requireSquad, bool placeMarkerOnMap)
     {
         GameThread.AssertCurrent();
         if (placeMarkerOnMap)
@@ -1290,7 +1292,7 @@ public static class EventFunctions
             if (marker == null) return;
             if (lastping != null)
                 EffectManager.ClearEffectByGuid(lastping.GUID, ucplayer.Player.channel.owner.transportConnection);
-            F.TriggerEffectReliable(marker, ucplayer.Player.channel.owner.transportConnection, point);
+            EffectUtility.TriggerEffect(marker, ucplayer.Player.channel.owner.transportConnection, point, true);
             ucplayer.LastPing = marker;
             return;
         }
@@ -1299,7 +1301,7 @@ public static class EventFunctions
         {
             if (lastping != null)
                 EffectManager.ClearEffectByGuid(lastping.GUID, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection);
-            F.TriggerEffectReliable(marker, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection, point);
+            EffectUtility.TriggerEffect(marker, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection, point, true);
         }
     }
     public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer)

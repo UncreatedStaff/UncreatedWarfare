@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 using Unity.Collections;
 
 namespace Uncreated.Warfare.Moderation;
@@ -53,16 +54,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     internal int StartIndex => _startIndex;
     internal int ByteCount => _byteCount;
     internal IReadOnlyList<PacketInfo> Packets => _packetsReadOnly ??= new ReadOnlyCollection<PacketInfo>(_packets ??= []);
-    public static AudioRecordPlayerComponent Get(UCPlayer player)
-    {
-        foreach (object component in player.Components)
-        {
-            if (component is AudioRecordPlayerComponent audioRecorder)
-                return audioRecorder;
-        }
 
-        return null!;
-    }
     public void Reset()
     {
         _startIndex = 0;
@@ -77,7 +69,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
         {
             if (_voiceBuffer == null || _packets!.Count == 0 || packet.Count > _voiceBuffer.Length)
             {
-                _voiceBuffer = new byte[Math.Max(UCWarfare.Config.AudioRecordConfig?.VoiceBufferSize ?? 0, packet.Count)];
+                _voiceBuffer = new byte[Math.Max(_audioListenService.VoiceBufferSize, packet.Count)];
                 _packets = new List<PacketInfo>(256);
                 _packetsReadOnly = null;
                 _byteCount = 0;
@@ -171,7 +163,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
         writer.Write((byte)1); // player count
         WriteMetaFilePlayerSection(writer, includeData);
     }
-    public static void WriteMetaFileForPlayers(IEnumerable<UCPlayer> players, Stream writeTo, bool includeData = false, bool leaveOpen = true)
+    public static void WriteMetaFileForPlayers(IEnumerable<WarfarePlayer> players, Stream writeTo, bool includeData = false, bool leaveOpen = true)
     {
         GameThread.AssertCurrent();
 
@@ -188,12 +180,12 @@ public class AudioRecordPlayerComponent : IPlayerComponent
             MetaWriter.Stream = null;
         }
     }
-    public static void WriteMetaFileForPlayers(ByteWriter writer, IEnumerable<UCPlayer> players, bool includeData = false)
+    public static void WriteMetaFileForPlayers(ByteWriter writer, IEnumerable<WarfarePlayer> players, bool includeData = false)
     {
         GameThread.AssertCurrent();
 
         writer.Write(DataVersion | (includeData ? 1 << 31 : 0));
-        List<AudioRecordPlayerComponent> playerComps = players.Select(Get).ToList();
+        List<AudioRecordPlayerComponent> playerComps = players.Select(player => player.Component<AudioRecordPlayerComponent>()).ToList();
         playerComps.RemoveAll(x => x == null);
 
         int ct = Math.Min(byte.MaxValue, playerComps.Count);

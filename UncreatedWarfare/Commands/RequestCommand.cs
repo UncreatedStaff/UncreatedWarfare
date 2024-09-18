@@ -509,7 +509,7 @@ public class RequestCommand : ICompoundingCooldownCommand
         vehicle.updatePhysics();
 
         if (Gamemode.Config.EffectUnlockVehicle.TryGetAsset(out EffectAsset? effect))
-            F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
+            EffectUtility.TriggerEffect(effect, EffectManager.SMALL, vehicle.transform.position, true);
 
         ucplayer.SendChat(T.RequestVehicleSuccess, data);
 

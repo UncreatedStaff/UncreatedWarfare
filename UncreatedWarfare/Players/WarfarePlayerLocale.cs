@@ -1,12 +1,16 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players;
 
 public class WarfarePlayerLocale
 {
+    private readonly IServiceProvider _serviceProvider;
     public static event Action<WarfarePlayer>? OnLocaleUpdated;
 
     private LanguagePreferences _preferences;
@@ -22,13 +26,14 @@ public class WarfarePlayerLocale
         get => _preferences;
         set
         {
-            LanguageInfo info = value.Language ?? Localization.GetDefaultLanguage();
+            LanguageService langService = _serviceProvider.GetRequiredService<LanguageService>();
+            LanguageInfo info = value.Language ?? langService.GetDefaultLanguage();
             bool updated = false;
 
             IsDefaultLanguage = info.Code.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
 
-            if (!(value.Culture != null && Localization.TryGetCultureInfo(value.Culture, out CultureInfo culture)) &&
-                !(info is { DefaultCultureCode: { } defaultCultureName } && Localization.TryGetCultureInfo(defaultCultureName, out culture)))
+            if (!(value.Culture != null && langService.TryGetCultureInfo(value.Culture, out CultureInfo culture)) &&
+                !(info is { DefaultCultureCode: { } defaultCultureName } && langService.TryGetCultureInfo(defaultCultureName, out culture)))
             {
                 culture = Data.LocalLocale;
             }
@@ -62,8 +67,9 @@ public class WarfarePlayerLocale
     public LanguageInfo LanguageInfo { get; private set; }
     public bool IsDefaultLanguage { get; private set; }
     public bool IsDefaultCulture { get; private set; }
-    public WarfarePlayerLocale(WarfarePlayer player, LanguagePreferences preferences)
+    public WarfarePlayerLocale(WarfarePlayer player, LanguagePreferences preferences, IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider;
         Player = player;
         Preferences = preferences;
         _init = true;
@@ -72,7 +78,8 @@ public class WarfarePlayerLocale
     {
         Preferences = Preferences;
         PreferencesIsDirty = false;
-        return Data.LanguageDataStore.UpdateLanguagePreferences(Preferences, token);
+        ILanguageDataStore dataStore = _serviceProvider.GetRequiredService<ILanguageDataStore>();
+        return dataStore.UpdateLanguagePreferences(Preferences, token);
     }
     internal Task Update(string? language, CultureInfo? culture, bool holdSave = false, CancellationToken token = default)
     {
@@ -88,7 +95,8 @@ public class WarfarePlayerLocale
             save = true;
         }
 
-        if (language != null && Data.LanguageDataStore.GetInfoCached(language) is { } languageInfo && !languageInfo.Code.Equals(LanguageInfo.Code, StringComparison.Ordinal))
+        ICachableLanguageDataStore dataStore = _serviceProvider.GetRequiredService<ICachableLanguageDataStore>();
+        if (language != null && dataStore.GetInfoCached(language) is { } languageInfo && !languageInfo.Code.Equals(LanguageInfo.Code, StringComparison.Ordinal))
         {
             L.Log($"Updated language for {Player}: {LanguageInfo.DisplayName} -> {languageInfo.DisplayName}.");
             ActionLog.Add(ActionLogType.ChangeLanguage, LanguageInfo.Code + " >> " + languageInfo.Code, Player.Steam64.m_SteamID);
@@ -109,7 +117,7 @@ public class WarfarePlayerLocale
             }
             else
             {
-                Task task = Data.LanguageDataStore.UpdateLanguagePreferences(Preferences, token);
+                Task task = dataStore.UpdateLanguagePreferences(Preferences, token);
                 InvokeOnLocaleUpdated(Player);
                 PreferencesIsDirty = false;
                 return task;

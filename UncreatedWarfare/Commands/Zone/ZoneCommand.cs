@@ -25,10 +25,10 @@ public class ZoneCommandTranslations : PropertiesTranslationCollection
     public readonly Translation ZoneNoResults = new Translation("<#ff8c69>You must be in a zone or specify a valid zone name to use this command.");
 
     [TranslationData("Sent when a player visualizes a zone's border.", Parameters = [ "Number of border particles spawned", "Zone name" ])]
-    public readonly Translation<int, Zone> ZoneVisualizeSuccess = new Translation<int, Zone>("<#e6e3d5>Spawned {0} particles around <color=#cedcde>{1}</color>.", arg1Fmt: Flag.NAME_FORMAT);
+    public readonly Translation<int, Zone> ZoneVisualizeSuccess = new Translation<int, Zone>("<#e6e3d5>Spawned {0} particles around <color=#cedcde>{1}</color>.", arg1Fmt: Flags.NameFormat);
 
     [TranslationData("Sent after a player teleports to a zone.", IsPriorityTranslation = false)]
-    public readonly Translation<Zone> ZoneGoSuccess = new Translation<Zone>("<#e6e3d5>Teleported to <#5a6e5c>{0}</color>.", arg0Fmt: Flag.NAME_FORMAT);
+    public readonly Translation<Zone> ZoneGoSuccess = new Translation<Zone>("<#e6e3d5>Teleported to <#5a6e5c>{0}</color>.", arg0Fmt: Flags.NameFormat);
 
     [TranslationData("Sent after a player teleports to a location that isn't a zone.", IsPriorityTranslation = false)]
     public readonly Translation<string> ZoneGoSuccessRaw = new Translation<string>("<#e6e3d5>Teleported to <#cedcde>{0}</color>.");

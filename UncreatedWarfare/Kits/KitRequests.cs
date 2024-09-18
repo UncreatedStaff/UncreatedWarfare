@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Translations;
@@ -27,6 +28,9 @@ public class KitRequests
     private readonly RequestTranslations _translations;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly LanguageService _languageService;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IPlayerService _playerService;
+    private readonly CooldownManager _cooldownManager;
     public KitManager Manager { get; }
     public KitRequests(KitManager manager, IServiceProvider serviceProvider)
     {
@@ -34,19 +38,26 @@ public class KitRequests
         _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<RequestTranslations>>().Value;
         _languageService = serviceProvider.GetRequiredService<LanguageService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
+        _serviceProvider = serviceProvider;
         Manager = manager;
     }
 
     /// <exception cref="CommandContext"/>
     public async Task RequestLoadout(int loadoutId, CommandContext ctx, CancellationToken token = default)
     {
-        Kit? loadout = await Manager.Loadouts.GetLoadout(ctx.Caller, loadoutId, token).ConfigureAwait(false);
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+
+        Kit? loadout = await Manager.Loadouts.GetLoadout(dbContext, ctx.CallerId, loadoutId, token).ConfigureAwait(false);
 
         if (loadout != null)
-            loadout = await Manager.GetKit(loadout.PrimaryKey, token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
+            loadout = await Manager.GetKit(dbContext, loadout.PrimaryKey, token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
 
         await RequestLoadoutIntl(loadout, ctx, token).ConfigureAwait(false);
     }
+
     private async Task RequestLoadoutIntl(Kit? loadout, CommandContext ctx, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
@@ -56,21 +67,25 @@ public class KitRequests
             throw ctx.Reply(_translations.RequestKitNeedsUpgrade);
         if (loadout.NeedsSetup)
             throw ctx.Reply(_translations.RequestKitNeedsSetup);
-        if (loadout.Disabled || loadout.Season != UCWarfare.Season && loadout.Season > 0)
+        if (loadout.Disabled || loadout.Season != WarfareModule.Season && loadout.Season > 0)
             throw ctx.Reply(_translations.RequestKitDisabled);
         if (!loadout.IsCurrentMapAllowed())
             throw ctx.Reply(_translations.RequestKitMapBlacklisted);
 
-        ulong team = ctx.Caller.GetTeam();
+        Team team = ctx.Player.Team;
 
-        if (!loadout.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
+        if (!loadout.IsFactionAllowed(team.Faction))
+        {
             throw ctx.Reply(_translations.RequestKitFactionBlacklisted);
-        if (loadout.IsClassLimited(out _, out int allowedPlayers, team))
+        }
+
+        if (loadout.IsClassLimited(_playerService, out _, out int allowedPlayers, team))
         {
             ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
             return;
         }
-        ctx.LogAction(ActionLogType.RequestKit, $"Loadout {KitEx.GetLoadoutLetter(KitEx.ParseStandardLoadoutId(loadout.InternalName))}: {loadout.InternalName}, Team {team}, Class: {_valueFormatter.FormatEnum(loadout.Class, ctx.Language)}");
+
+        ctx.LogAction(ActionLogType.RequestKit, $"Loadout {LoadoutIdHelper.GetLoadoutLetter(LoadoutIdHelper.Parse(loadout.InternalName))}: {loadout.InternalName}, Team {team}, Class: {_valueFormatter.FormatEnum(loadout.Class, ctx.Language)}");
 
         if (!await GrantKitRequest(ctx, loadout, token).ConfigureAwait(false))
         {
@@ -78,15 +93,16 @@ public class KitRequests
             throw ctx.SendUnknownError();
         }
 
-        if (loadout.Class == Class.Squadleader)
-        {
-            if (SquadManager.MaxSquadsReached(team))
-                ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
-            else if (SquadManager.AreSquadLimited(team, out int requiredTeammatesForMoreSquads))
-                ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
-            else
-                Manager.TryCreateSquadOnRequestSquadleaderKit(ctx);
-        }
+        // todo
+        //if (loadout.Class == Class.Squadleader)
+        //{
+        //    if (SquadManager.MaxSquadsReached(team))
+        //        ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
+        //    else if (SquadManager.AreSquadLimited(team, out int requiredTeammatesForMoreSquads))
+        //        ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
+        //    else
+        //        Manager.TryCreateSquadOnRequestSquadleaderKit(ctx);
+        //}
     }
 
     /// <exception cref="CommandContext"/>
@@ -106,7 +122,7 @@ public class KitRequests
             throw ctx.Reply(_translations.RequestKitAlreadyOwned);
 
         // outdated kit
-        if (kit.Disabled || kit.Season != UCWarfare.Season && kit.Season > 0)
+        if (kit.Disabled || kit.Season != WarfareModule.Season && kit.Season > 0)
             throw ctx.Reply(_translations.RequestKitDisabled);
 
         // map filter
@@ -140,14 +156,14 @@ public class KitRequests
 
         // cooldowns
         if (
-            CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestKit, out Cooldown requestCooldown) &&
+            _cooldownManager.HasCooldown(ctx.Player, CooldownType.RequestKit, out Cooldown requestCooldown) &&
             !ctx.Caller.OnDutyOrAdmin() &&
             !UCWarfare.Config.OverrideKitRequirements &&
             kit.Class is not Class.Crewman and not Class.Pilot)
             throw ctx.Reply(T.KitOnGlobalCooldown, requestCooldown);
 
         if (kit is { IsPaid: true, RequestCooldown: > 0f } &&
-            CooldownManager.HasCooldown(ctx.Caller, CooldownType.PremiumKit, out Cooldown premiumCooldown, kit.InternalName) &&
+            _cooldownManager.HasCooldown(ctx.Player, CooldownType.PremiumKit, out Cooldown premiumCooldown, kit.InternalName) &&
             !ctx.Caller.OnDutyOrAdmin() &&
             !UCWarfare.Config.OverrideKitRequirements)
             throw ctx.Reply(T.KitOnCooldown, premiumCooldown);
@@ -168,7 +184,7 @@ public class KitRequests
         if (!hasAccess)
         {
             // double check access against database
-            hasAccess = await Manager.HasAccess(kit, ctx.CallerId.m_SteamID, token).ConfigureAwait(false);
+            hasAccess = await Manager.HasAccess(kit, ctx.CallerId, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             if (!hasAccess)
             {
@@ -282,8 +298,8 @@ public class KitRequests
         ctx.Reply(_translations.RequestSignGiven, kit.Class);
 
         if (kit is { IsPaid: true, RequestCooldown: > 0 })
-            CooldownManager.StartCooldown(ctx.Player, CooldownType.PremiumKit, kit.RequestCooldown, kit.InternalName);
-        CooldownManager.StartCooldown(ctx.Player, CooldownType.RequestKit, CooldownManager.Config.RequestKitCooldown);
+            _cooldownManager.StartCooldown(ctx.Player, CooldownType.PremiumKit, kit.RequestCooldown, kit.InternalName);
+        _cooldownManager.StartCooldown(ctx.Player, CooldownType.RequestKit, CooldownManager.Config.RequestKitCooldown);
 
         return true;
     }
@@ -419,13 +435,13 @@ public class KitRequests
         Manager.Signs.UpdateSigns(kit, ctx.Player);
         if (Gamemode.Config.EffectPurchase.TryGetAsset(out EffectAsset? effect))
         {
-            F.TriggerEffectReliable(effect, EffectManager.SMALL, effectPos ?? (ctx.Player.UnturnedPlayer.look.aim.position + ctx.Player.UnturnedPlayer.look.aim.forward * 0.25f));
+            EffectUtility.TriggerEffect(effect, EffectManager.SMALL, effectPos ?? (ctx.Player.UnturnedPlayer.look.aim.position + ctx.Player.UnturnedPlayer.look.aim.forward * 0.25f), true);
         }
 
         ctx.Reply(_translations.RequestKitBought, kit.CreditCost);
     }
 
-    public async Task ResupplyKit(UCPlayer player, bool ignoreAmmoBags = false, CancellationToken token = default)
+    public async Task ResupplyKit(WarfarePlayer player, bool ignoreAmmoBags = false, CancellationToken token = default)
     {
         if (!player.HasKit)
             return;
@@ -435,7 +451,7 @@ public class KitRequests
         if (kit != null)
             await ResupplyKit(player, kit, ignoreAmmoBags, token).ConfigureAwait(false);
     }
-    public async Task ResupplyKit(UCPlayer player, Kit kit, bool ignoreAmmoBags = false, CancellationToken token = default)
+    public async Task ResupplyKit(WarfarePlayer player, Kit kit, bool ignoreAmmoBags = false, CancellationToken token = default)
     {
         if (kit is null) throw new ArgumentNullException(nameof(kit));
         await UniTask.SwitchToMainThread(token);

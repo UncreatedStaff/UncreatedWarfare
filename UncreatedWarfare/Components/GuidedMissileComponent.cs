@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
 
@@ -20,13 +22,20 @@ internal class GuidedMissileComponent : MonoBehaviour
 
     private bool _isActive;
 
-    public void Initialize(GameObject projectile, Player firer, float projectileSpeed, float responsiveness, float cutoffDistance = 1000)
+    private IAssetLink<EffectAsset> _fxSilent = null!;
+    private IAssetLink<EffectAsset> _fxSound = null!;
+
+    public void Initialize(GameObject projectile, Player firer, IServiceProvider serviceProvider, float projectileSpeed, float responsiveness, float cutoffDistance = 1000)
     {
         _projectile = projectile;
         //this._firer = firer;
         _maxTurnDegrees = responsiveness;
         _projectileSpeed = projectileSpeed;
         _cutoffDistance = cutoffDistance;
+
+        AssetConfiguration assetConfig = serviceProvider.GetRequiredService<AssetConfiguration>();
+        _fxSilent = assetConfig.GetAssetLink<EffectAsset>("Effects:Projectiles:GuidedMissileSilent");
+        _fxSound = assetConfig.GetAssetLink<EffectAsset>("Effects:Projectiles:GuidedMissileSound");
 
         _guiderDistance = 30; // offset the distance of the guider position so that it will always be 30m in front of the actual projectile
         // this also means you shouldn't make your projectile's hitbox long if you're still using it for client-side effects
@@ -99,14 +108,11 @@ internal class GuidedMissileComponent : MonoBehaviour
 
         while (_isActive) // this loop runs every 0.05 seconds. every iteration it will send a small smoke trail effect to all clients here
         {
-            IAssetLink<EffectAsset> id = Gamemode.Config.EffectGuidedMissileNoSound; // effect ids. this one has no sound effect
+            IAssetLink<EffectAsset> id = _fxSilent; // effect ids. this one has no sound effect
 
             if (count % 20 == 0 || !id.TryGetAsset(out _))
             {
-                id = Gamemode.Config.EffectGuidedMissileSound; // this one has a sound effect, so we will play it only after around 20 loops (1 second) have passed
-                if (!id.TryGetAsset(out _))
-                    id = Gamemode.Config.EffectGuidedMissileNoSound;
-
+                id = _fxSound; // this one has a sound effect, so we will play it only after around 20 loops (1 second) have passed
                 count = 0;
             }
             yield return new WaitForSeconds(0.05f);

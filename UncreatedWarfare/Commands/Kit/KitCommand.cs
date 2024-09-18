@@ -23,7 +23,7 @@ public class KitCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<Kit> KitGiveSuccess = new Translation<Kit>("<#a0ad8e>Equipped kit: <#fff>{0}</color>.", arg0Fmt: Kit.FormatDisplayName);
     
     [TranslationData("Sent when the player gives someone a kit via command.", "The Kit that was given", "The player that received the kit", IsPriorityTranslation = false)]
-    public readonly Translation<Kit, IPlayer> KitGiveSuccessToPlayer = new Translation<Kit, IPlayer>("<#a0ad8e>Equipped <#fff>{0}</color> for {1}.", arg0Fmt: Kit.FormatDisplayName, arg1Fmt: UCPlayer.FormatColoredCharacterName);
+    public readonly Translation<Kit, IPlayer> KitGiveSuccessToPlayer = new Translation<Kit, IPlayer>("<#a0ad8e>Equipped <#fff>{0}</color> for {1}.", arg0Fmt: Kit.FormatDisplayName, arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
     
     [TranslationData("Sent when the player creates a new kit with /kit create <name>", "New Kit", IsPriorityTranslation = false)]
     public readonly Translation<Kit> KitCreated = new Translation<Kit>("<#a0ad8e>Created kit: <#fff>{0}</color>.", arg0Fmt: Kit.FormatId);
@@ -128,19 +128,19 @@ public class KitCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<string, Type, string> KitInvalidPropertyValue = new Translation<string, Type, string>("<#ff8c69><#fff>{2}</color> isn't a valid value for <#eee>{0}</color> (<#aaa>{1}</color>).");
     
     [TranslationData("Sent to a player when they try to give a player access to a kit that already has access.", IsPriorityTranslation = false)]
-    public readonly Translation<IPlayer, Kit> KitAlreadyHasAccess = new Translation<IPlayer, Kit>("<#ff8c69>{0} already has access to <#fff>{1}</color>.", arg0Fmt: UCPlayer.FormatColoredCharacterName, arg1Fmt: Kit.FormatId);
+    public readonly Translation<IPlayer, Kit> KitAlreadyHasAccess = new Translation<IPlayer, Kit>("<#ff8c69>{0} already has access to <#fff>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: Kit.FormatId);
 
     [TranslationData("Sent to a player when they try to take a player's access to a kit that already doesn't have access.", IsPriorityTranslation = false)]
-    public readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess = new Translation<IPlayer, Kit>("<#ff8c69>{0} doesn't have access to <#fff>{1}</color>.", arg0Fmt: UCPlayer.FormatColoredCharacterName, arg1Fmt: Kit.FormatId);
+    public readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess = new Translation<IPlayer, Kit>("<#ff8c69>{0} doesn't have access to <#fff>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: Kit.FormatId);
 
     [TranslationData("Sent to a player when they give another player access to a kit.", IsPriorityTranslation = false)]
-    public readonly Translation<IPlayer, IPlayer, Kit> KitAccessGiven = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", arg0Fmt: UCPlayer.FormatColoredPlayerName, arg1Fmt: UCPlayer.FormatSteam64, arg2Fmt: Kit.FormatId);
+    public readonly Translation<IPlayer, IPlayer, Kit> KitAccessGiven = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: Kit.FormatId);
     
     [TranslationData("Sent to a player when they remove another player's access to a kit.", IsPriorityTranslation = false)]
-    public readonly Translation<IPlayer, IPlayer, Kit> KitAccessRevoked = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", arg0Fmt: UCPlayer.FormatColoredPlayerName, arg1Fmt: UCPlayer.FormatSteam64, arg2Fmt: Kit.FormatId);
+    public readonly Translation<IPlayer, IPlayer, Kit> KitAccessRevoked = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: Kit.FormatId);
 
     [TranslationData("Sent to a player after they start creating a new loadout.", IsPriorityTranslation = false)]
-    public readonly Translation<Class, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<Class, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: UCPlayer.FormatColoredCharacterName, arg2Fmt: UCPlayer.FormatSteam64, arg3Fmt: Kit.FormatId);
+    public readonly Translation<Class, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<Class, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: WarfarePlayer.FormatColoredCharacterName, arg2Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: Kit.FormatId);
     
     [TranslationData("Sent to a player when they try to create a kit with a faction that isn't in our database.", IsPriorityTranslation = false)]
     public readonly Translation<string> FactionNotFound = new Translation<string>("<#ff8c69>Unable to find a faction called <#fff>{0}</color>.");

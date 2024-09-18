@@ -1,6 +1,7 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Translations;
@@ -22,6 +23,10 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
         new Skillset(EPlayerOffense.DIVING, 0),
         new Skillset(EPlayerDefense.VITALITY, 5),
     };
+
+    public static readonly string SkillSqlEnumType = "enum('" + string.Join("','",
+        typeof(EPlayerOffense).GetEnumNames().Concat(typeof(EPlayerDefense).GetEnumNames())
+            .Concat(typeof(EPlayerSupport).GetEnumNames())) + "')";
 
     public readonly EPlayerSpeciality Speciality;
     public readonly byte Level;

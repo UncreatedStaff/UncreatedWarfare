@@ -1,5 +1,6 @@
 ﻿using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Tickets;
 
@@ -10,5 +11,5 @@ public class TicketUI : UnturnedUI
     public readonly UnturnedLabel Tickets = new UnturnedLabel("Tickets");
     public readonly UnturnedLabel Bleed = new UnturnedLabel("Bleed");
     public readonly UnturnedLabel Status = new UnturnedLabel("Status");
-    public TicketUI() : base(Gamemode.Config.UITickets.GetId()) { }
+    public TicketUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:Tickets")) { }
 }

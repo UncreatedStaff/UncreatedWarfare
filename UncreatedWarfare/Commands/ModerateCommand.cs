@@ -7,6 +7,8 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public sealed class ModerateCommand : IExecutableCommand
 {
+    private readonly ModerationUI _ui;
+
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
@@ -21,6 +23,11 @@ public sealed class ModerateCommand : IExecutableCommand
         };
     }
 
+    public ModerateCommand(ModerationUI ui)
+    {
+        _ui = ui;
+    }
+
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
@@ -28,7 +35,7 @@ public sealed class ModerateCommand : IExecutableCommand
 
         Context.AssertRanByPlayer();
         
-        await ModerationUI.Instance.Open(Context.Player, token).ConfigureAwait(false);
+        await _ui.Open(Context.Player, token);
         Context.Defer();
     }
 }

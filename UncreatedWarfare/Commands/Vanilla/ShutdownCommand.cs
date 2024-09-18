@@ -1,10 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using System;
-using System.Collections.Generic;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -73,8 +69,7 @@ public class ShutdownCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
-
+#if false
         if (Context.ArgumentCount == 0)
         {
 #if RELEASE
@@ -145,7 +140,12 @@ public class ShutdownCommand : IExecutableCommand
         }
         
         throw Context.SendCorrectUsage(Syntax + " - " + Help);
+#else
+        Provider.shutdown();
+#endif
+        return UniTask.CompletedTask;
     }
+#if false
     internal static void ShutdownIn(int seconds, string reason, ulong instigator = 0)
     {
         string time;
@@ -193,7 +193,6 @@ public class ShutdownCommand : IExecutableCommand
             Chat.Broadcast(T.ShutdownBroadcastReminder, reason);
         }
     }
-#if false
     public static class NetCalls
     {
         public static readonly NetCall<ulong, string> SendShuttingDownInstant = new NetCall<ulong, string>(KnownNetMessage.SendShuttingDownInstant);

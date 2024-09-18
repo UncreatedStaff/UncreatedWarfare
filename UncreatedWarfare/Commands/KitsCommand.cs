@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public sealed class KitsCommand : IExecutableCommand
 {
+    private readonly KitMenuUI _ui;
     private const string Syntax = "/kits";
     private const string Help = "Open the kit menu.";
 
@@ -24,13 +25,18 @@ public sealed class KitsCommand : IExecutableCommand
         };
     }
 
+    public KitsCommand(KitMenuUI ui)
+    {
+        _ui = ui;
+    }
+
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
 
-        if (UCWarfare.Config.DisableKitMenu)
-            throw Context.SendNotImplemented();
+        //if (UCWarfare.Config.DisableKitMenu)
+        //    throw Context.SendNotImplemented();
 
 #if false
         if (!Context.Caller.OnDuty() && Context.CallerID is not 76561198839009178ul)
@@ -54,9 +60,9 @@ public sealed class KitsCommand : IExecutableCommand
         }
 #endif
 
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
+        //Context.AssertHelpCheck(0, Syntax + " - " + Help);
         
-        KitManager.MenuUI.OpenUI(Context.Player);
+        _ui.OpenUI(Context.Player);
         throw Context.Defer();
     }
 }

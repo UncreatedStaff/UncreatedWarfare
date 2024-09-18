@@ -1,5 +1,6 @@
 ﻿using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Actions;
 
@@ -39,5 +40,5 @@ public class ActionMenuUI : UnturnedUI
     public readonly UnturnedUIElement SquadSection = new UnturnedUIElement("AC_DefaultMenu/AC_SquadLeader");
     public readonly UnturnedUIElement LogiSection  = new UnturnedUIElement("AC_DefaultMenu/AC_Logi");
 
-    public ActionMenuUI() : base(Gamemode.Config.UIActionMenu.GetId()) { }   
+    public ActionMenuUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:ActionMenu")) { }
 }

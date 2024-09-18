@@ -269,9 +269,9 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
                 throw new KitNotFoundException(loadoutInternalId);
             }
 
-            if (kit.Season >= UCWarfare.Season)
+            if (kit.Season >= WarfareModule.Season)
             {
-                throw new InvalidOperationException($"Kit is already up to date for season {UCWarfare.Season}.");
+                throw new InvalidOperationException($"Kit is already up to date for season {WarfareModule.Season}.");
             }
 
             oldClass = kit.Class;
@@ -287,7 +287,7 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
             kit.RequiresNitro = false;
             kit.WeaponText = string.Empty;
             kit.Disabled = true;
-            kit.Season = UCWarfare.Season;
+            kit.Season = WarfareModule.Season;
             kit.MapFilterIsWhitelist = false;
             kit.MapFilter.Clear();
             kit.Branch = KitDefaults.GetDefaultBranch(@class);

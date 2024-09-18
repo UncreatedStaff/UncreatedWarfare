@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Configuration;
@@ -33,7 +32,6 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             return;
 
         _reloadKey = reloadKey;
-        _regReload = ReloadCommand.RegisterConfigForReload(this);
     }
     public Config(string directory, string filename)
     {
@@ -60,11 +58,6 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
         else
             Reload();
         _isFirst = false;
-    }
-    public void DeregisterReload()
-    {
-        if (_regReload && _reloadKey is not null)
-            ReloadCommand.DeregisterConfigForReload(_reloadKey);
     }
     public Config(string directory, string filename, CustomDeserializer deserializer, CustomSerializer serializer)
     {

@@ -29,6 +29,8 @@ public class AudioRecordManager
     private readonly Uri? _decodeUri;
     private readonly System.Random _boundaryGenerator = new System.Random();
 
+    public int VoiceBufferSize { get; }
+
     public AudioRecordManager(IConfiguration systemConfiguration)
     {
         IConfigurationSection section = systemConfiguration.GetSection("audio_recording");
@@ -48,6 +50,8 @@ public class AudioRecordManager
 
         _authenticateUri = new Uri(baseUri, $"authentication?username={username}&key={password}");
         _decodeUri = new Uri(baseUri, "decoder/form");
+
+        VoiceBufferSize = section.GetValue<int>("buffer_size");
     }
 
     public async UniTask<AudioConvertResult> TryWriteWavAsync(byte[] multipartData, Stream writeTo, bool leaveOpen = true, CancellationToken token = default)

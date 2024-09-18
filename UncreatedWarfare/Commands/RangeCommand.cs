@@ -7,10 +7,6 @@ namespace Uncreated.Warfare.Commands;
 public class RangeCommand : IExecutableCommand
 {
     private const int Precision = 10;
-
-    private const string Syntax = "/range";
-    private static readonly string Help = $"Shows you how far away you are from your squad leader's marker within {Precision} meters.";
-
     
     /// <inheritdoc />
     public CommandContext Context { get; set; }
@@ -22,7 +18,7 @@ public class RangeCommand : IExecutableCommand
     {
         return new CommandStructure
         {
-            Description = Help
+            Description = $"Shows you how far away you are from your squad leader's marker within {Precision} meters."
         };
     }
 
@@ -31,13 +27,14 @@ public class RangeCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
-
         int distance;
+#if false
         if (!Data.Is<ISquads>())
         {
+#endif
             distance = Mathf.RoundToInt((Context.Player.Position - Context.Player.UnturnedPlayer.quests.markerPosition).magnitude / Precision) * Precision;
             throw Context.Reply(T.RangeOutput, distance);
+#if false
         }
 
         if (Context.Player.Squad is null)
@@ -50,5 +47,6 @@ public class RangeCommand : IExecutableCommand
 
         distance = Mathf.RoundToInt((Context.Player.Position - squadLeader.Player.quests.markerPosition).magnitude / Precision) * Precision;
         throw Context.Reply(T.RangeOutput, distance);
+#endif
     }
 }

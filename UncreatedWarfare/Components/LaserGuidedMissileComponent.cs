@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
@@ -7,7 +9,7 @@ namespace Uncreated.Warfare.Components;
 
 internal class LaserGuidedMissileComponent : MonoBehaviour
 {
-    private UCPlayer _firer;
+    private Player _firer;
     private GameObject _projectile;
 
     private Rigidbody _rigidbody;
@@ -26,9 +28,13 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
     private bool _armed;
     private bool _isActive;
 
+    private IAssetLink<EffectAsset> _fxSilent = null!;
+    private IAssetLink<EffectAsset> _fxSound = null!;
+
     public float InitializationTime { get; private set; }
     public bool LockedOn { get => _laserTarget != null; }
-    public void Initialize(GameObject projectile, UCPlayer firer, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
+
+    public void Initialize(GameObject projectile, Player firer, IServiceProvider serviceProvider, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
     {
         _projectile = projectile;
         _firer = firer;
@@ -39,6 +45,10 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
         _fullGuidanceDelay = fullGuidanceDelay;
         _guiderDistance = 30;
         _turnMultiplier = 0;
+
+        AssetConfiguration assetConfig = serviceProvider.GetRequiredService<AssetConfiguration>();
+        _fxSilent = assetConfig.GetAssetLink<EffectAsset>("Effects:Projectiles:GuidedMissileSilent");
+        _fxSound = assetConfig.GetAssetLink<EffectAsset>("Effects:Projectiles:GuidedMissileSound");
 
         _count = 0;
 
@@ -56,7 +66,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
             return;
         }
 
-        InteractableVehicle? vehicle = firer.CurrentVehicle;
+        InteractableVehicle? vehicle = firer.movement.getVehicle();
         if (vehicle != null)
         {
             foreach (Passenger turret in vehicle.turrets)
@@ -83,7 +93,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
         }
         else
         {
-            _aim = firer.Player.look.aim.transform;
+            _aim = firer.look.aim.transform;
             _isActive = true;
             projectile.transform.forward = _aim.forward;
             _rigidbody.velocity = projectile.transform.forward * projectileSpeed;
@@ -109,7 +119,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
         foreach (SpottedComponent spotted in SpottedComponent.ActiveMarkers)
         {
-            if (spotted.SpottingTeam == _firer.Player.quests.groupID.m_SteamID && spotted.IsLaserTarget)
+            if (spotted.SpottingTeam == _firer.quests.groupID.m_SteamID && spotted.IsLaserTarget)
             {
                 if ((spotted.transform.position - _projectile.transform.position).sqrMagnitude < _aquisitionRange * _aquisitionRange)
                 {
@@ -169,12 +179,10 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
         if (Time.time - _lastSent > 0.05f)
         {
-            IAssetLink<EffectAsset> id = Gamemode.Config.EffectLaserGuidedNoSound;
+            IAssetLink<EffectAsset> id = _fxSilent;
             if (_count % 10 == 0 && _armed || !id.TryGetAsset(out _))
             {
-                id = Gamemode.Config.EffectLaserGuidedSound;
-                if (!id.TryGetAsset(out _))
-                    id = Gamemode.Config.EffectLaserGuidedNoSound;
+                id = _fxSound;
             }
 
             if (id.TryGetAsset(out EffectAsset? effect))

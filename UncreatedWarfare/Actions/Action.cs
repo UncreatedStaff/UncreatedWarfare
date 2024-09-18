@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿#if false
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
@@ -6,6 +7,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Actions;
@@ -167,14 +169,14 @@ public class Action
         {
             Vector3 position = _action._origin == ActionOrigin.FollowCaller ? transform.position : _action._initialPosition!.Value;
             if (_action._viewerEffect != null)
-                F.TriggerEffectReliable(_action._viewerEffect, Data.GetPooledTransportConnectionList(_action._viewers.Select(x => x.Connection), Provider.clients.Count / 2), position);
+                EffectUtility.TriggerEffect(_action._viewerEffect, Data.GetPooledTransportConnectionList(_action._viewers.Select(x => x.Connection), Provider.clients.Count / 2), position, true);
 
             if (_action._callerEffect == null)
                 return;
 
             foreach (WarfarePlayer player in _action._viewers)
             {
-                F.TriggerEffectReliable(_action._callerEffect, player.Connection, player.Position);
+                EffectUtility.TriggerEffect(_action._callerEffect, player.Connection, player.Position, true);
             }
         }
         private IEnumerator Loop()
@@ -222,3 +224,4 @@ public enum ActionType
     SquadleaderRequest,
     Emote
 }
+#endif

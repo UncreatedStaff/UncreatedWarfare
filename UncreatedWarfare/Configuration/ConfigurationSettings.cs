@@ -44,7 +44,7 @@ public static class ConfigurationSettings
         new AssetLinkJsonFactory(),
         new TranslationListConverter(),
         new ByteArraySegmentJsonConverter(),
-        new ByteArrayConverter()
+        new ByteArrayJsonConverter()
     };
 
     static ConfigurationSettings()

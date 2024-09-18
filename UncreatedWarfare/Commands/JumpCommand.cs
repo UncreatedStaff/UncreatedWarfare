@@ -56,7 +56,6 @@ public class JumpCommand : IExecutableCommand
     public UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertArgs(1, Syntax);
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
         Context.AssertOnDuty();
 

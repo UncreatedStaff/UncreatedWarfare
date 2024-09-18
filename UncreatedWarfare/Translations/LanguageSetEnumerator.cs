@@ -73,7 +73,7 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
         e.Reset();
         return e;
     }
-    public struct Cache
+    public readonly struct Cache : IEnumerable<LanguageSet>
     {
         public readonly LanguageSet[]? Sets;
         internal Cache(in LanguageSetEnumerator enumerator)
@@ -89,6 +89,16 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
                 ref LanguageSet s = ref Sets[i];
                 s.SetPlayers(new ArraySegment<WarfarePlayer>(players, s.StartIndex, s.Count));
             }
+        }
+
+        public IEnumerator<LanguageSet> GetEnumerator()
+        {
+            return ((IEnumerable<LanguageSet>)Sets!).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return Sets!.GetEnumerator();
         }
     }
 }

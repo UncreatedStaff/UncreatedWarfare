@@ -222,7 +222,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public static void TriggerBuildEffect(Vector3 pos)
     {
         if (GamemodeOld.Config.EffectDig.TryGetAsset(out EffectAsset? effect))
-            F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pos);
+            EffectUtility.TriggerEffect(effect, EffectManager.MEDIUM, pos, true);
     }
     public static float GetBuildIncrementMultiplier(UCPlayer player)
     {

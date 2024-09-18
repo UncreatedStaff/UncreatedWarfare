@@ -42,7 +42,7 @@ internal class KitHotkeyRemoveCommand : IExecutableCommand
                 throw Context.Reply(_translations.KitHotkeyNoKit);
             }
 
-            bool removed = await _kitManager.RemoveHotkey(kit.PrimaryKey, Context.CallerId.m_SteamID, slot, token).ConfigureAwait(false);
+            bool removed = await _kitManager.RemoveHotkey(kit.PrimaryKey, Context.CallerId, slot, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             if (!removed)
             {

@@ -1,15 +1,20 @@
 ﻿using System;
+using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -17,7 +22,11 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class StructureCommand : IExecutableCommand
 {
+    // todo split
     private readonly BuildableSaver _saver;
+    private readonly VehicleService _vehicleService;
+    private readonly EventDispatcher2 _eventDispatcher;
+    private readonly StructureTranslations _translations;
     private const string Syntax = "/structure <save|remove|examine|pop|set>";
     private const string Help = "Managed saved structures.";
 
@@ -30,9 +39,12 @@ public class StructureCommand : IExecutableCommand
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public StructureCommand(BuildableSaver saver)
+    public StructureCommand(BuildableSaver saver, VehicleService vehicleService, TranslationInjection<StructureTranslations> translations, EventDispatcher2 eventDispatcher)
     {
         _saver = saver;
+        _vehicleService = vehicleService;
+        _eventDispatcher = eventDispatcher;
+        _translations = translations.Value;
     }
 
     /// <summary>
@@ -102,16 +114,12 @@ public class StructureCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
-
         Context.AssertArgs(1, Syntax);
 
         Context.Defer();
         
         if (Context.MatchParameter(0, "save"))
         {
-            Context.AssertGamemode<IStructureSaving>();
-
             await Context.AssertPermissions(PermissionSave, token);
             await UniTask.SwitchToMainThread(token);
 
@@ -119,12 +127,12 @@ public class StructureCommand : IExecutableCommand
             {
                 if (!await _saver.SaveStructureAsync(structure, token))
                 {
-                    throw Context.Reply(T.StructureAlreadySaved, structure.asset);
+                    throw Context.Reply(_translations.StructureAlreadySaved, structure.asset);
                 }
 
                 await UniTask.SwitchToMainThread(token);
 
-                Context.Reply(T.StructureSaved, structure.asset);
+                Context.Reply(_translations.StructureSaved, structure.asset);
                 Context.LogAction(ActionLogType.SaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
                                                                $"at {structure.GetServersideData().point:0:##} ({structure.instanceID})");
             }
@@ -132,21 +140,19 @@ public class StructureCommand : IExecutableCommand
             {
                 if (!await _saver.SaveBarricadeAsync(barricade, token))
                 {
-                    throw Context.Reply(T.StructureAlreadySaved, barricade.asset);
+                    throw Context.Reply(_translations.StructureAlreadySaved, barricade.asset);
                 }
 
                 await UniTask.SwitchToMainThread(token);
 
-                Context.Reply(T.StructureSaved, barricade.asset);
+                Context.Reply(_translations.StructureSaved, barricade.asset);
                 Context.LogAction(ActionLogType.SaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
                                                                $"at {barricade.GetServersideData().point:0:##} ({barricade.instanceID})");
             }
-            else throw Context.Reply(T.StructureNoTarget);
+            else throw Context.Reply(_translations.StructureNoTarget);
         }
         else if (Context.MatchParameter(0, "remove", "delete"))
         {
-            Context.AssertGamemode<IStructureSaving>();
-
             await Context.AssertPermissions(PermissionRemove, token);
             await UniTask.SwitchToMainThread(token);
 
@@ -154,29 +160,29 @@ public class StructureCommand : IExecutableCommand
             {
                 if (!await _saver.DiscardStructureAsync(structure.instanceID, token))
                 {
-                    throw Context.Reply(T.StructureAlreadyUnsaved, structure.asset);
+                    throw Context.Reply(_translations.StructureAlreadyUnsaved, structure.asset);
                 }
 
                 await UniTask.SwitchToMainThread(token);
 
                 Context.LogAction(ActionLogType.UnsaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
                                                                  $"at {structure.GetServersideData().point} ({structure.instanceID})");
-                Context.Reply(T.StructureUnsaved, structure.asset);
+                Context.Reply(_translations.StructureUnsaved, structure.asset);
             }
             else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
             {
                 if (!await _saver.DiscardStructureAsync(barricade.instanceID, token))
                 {
-                    throw Context.Reply(T.StructureAlreadyUnsaved, barricade.asset);
+                    throw Context.Reply(_translations.StructureAlreadyUnsaved, barricade.asset);
                 }
 
                 await UniTask.SwitchToMainThread(token);
 
                 Context.LogAction(ActionLogType.UnsaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
                                                                  $"at {barricade.GetServersideData().point} ({barricade.instanceID})");
-                Context.Reply(T.StructureUnsaved, barricade.asset);
+                Context.Reply(_translations.StructureUnsaved, barricade.asset);
             }
-            else throw Context.Reply(T.StructureNoTarget);
+            else throw Context.Reply(_translations.StructureNoTarget);
         }
         else if (Context.MatchParameter(0, "destroy", "pop"))
         {
@@ -185,12 +191,12 @@ public class StructureCommand : IExecutableCommand
 
             if (Context.TryGetVehicleTarget(out InteractableVehicle? vehicle))
             {
-                VehicleSpawner.DeleteVehicle(vehicle);
+                await _vehicleService.DeleteVehicleAsync(vehicle, token);
 
                 Context.LogAction(ActionLogType.PopStructure,
                     $"VEHICLE: {vehicle.asset.vehicleName} / {vehicle.asset.id} /" +
                     $" {vehicle.asset.GUID:N} at {vehicle.transform.position:N2} ({vehicle.instanceID})");
-                Context.Reply(T.StructureDestroyed, vehicle.asset);
+                Context.Reply(_translations.StructureDestroyed, vehicle.asset);
             }
             else if (Context.TryGetStructureTarget(out StructureDrop? structure))
             {
@@ -200,7 +206,7 @@ public class StructureCommand : IExecutableCommand
                 {
                     Context.LogAction(ActionLogType.UnsaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
                                                                      $"at {structure.GetServersideData().point} ({structure.instanceID})");
-                    Context.Reply(T.StructureUnsaved, structure.asset);
+                    Context.Reply(_translations.StructureUnsaved, structure.asset);
                 }
 
                 await DestroyStructure(structure, Context.Player, token);
@@ -216,7 +222,7 @@ public class StructureCommand : IExecutableCommand
                 {
                     Context.LogAction(ActionLogType.UnsaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
                                                                      $"at {barricade.GetServersideData().point} ({barricade.instanceID})");
-                    Context.Reply(T.StructureUnsaved, barricade.asset);
+                    Context.Reply(_translations.StructureUnsaved, barricade.asset);
                 }
 
                 await DestroyBarricade(barricade, Context.Player, token);
@@ -243,7 +249,7 @@ public class StructureCommand : IExecutableCommand
             {
                 await ExamineBarricade(barricade, Context.Player, true, token).ConfigureAwait(false);
             }
-            else throw Context.Reply(T.StructureExamineNotExaminable);
+            else throw Context.Reply(_translations.StructureExamineNotExaminable);
 
             Context.Defer();
         }
@@ -251,9 +257,7 @@ public class StructureCommand : IExecutableCommand
         {
             await Context.AssertPermissions(PermissionSet, token);
             await UniTask.SwitchToMainThread(token);
-
-            Context.AssertHelpCheck(1, "/structure <set|s> <group|owner> <value> - Sets properties for strcuture saves.");
-
+            
             if (!Context.HasArgs(3))
             {
                 throw Context.SendCorrectUsage("/structure <set|s> <group|owner> <value>");
@@ -273,35 +277,35 @@ public class StructureCommand : IExecutableCommand
             {
                 asset = barricade.asset;
             }
-            else throw Context.Reply(T.StructureNoTarget);
+            else throw Context.Reply(_translations.StructureNoTarget);
 
             await UniTask.SwitchToMainThread(token);
-            if (!Context.TryGet(2, out ulong s64) || s64 != 0 && (!grp && new CSteamID(s64).GetEAccountType() != EAccountType.k_EAccountTypeIndividual))
+            if (!Context.TryGet(2, out CSteamID s64) || s64 != CSteamID.Nil && (!grp && s64.GetEAccountType() != EAccountType.k_EAccountTypeIndividual))
             {
-                if (Context.MatchParameter(2, "me"))
-                    s64 = grp ? Context.Player.UnturnedPlayer.quests.groupID.m_SteamID : Context.CallerId.m_SteamID;
-                else
-                    throw Context.SendCorrectUsage(
-                        "/structure <set|s> <group|owner> <value> - Value must be 'me', '0' or a valid Steam64 ID");
+                if (!Context.MatchParameter(2, "me"))
+                    throw Context.SendHelp();
+                
+                // self
+                s64 = grp ? Context.Player.UnturnedPlayer.quests.groupID : Context.CallerId;
             }
 
-            string str64 = s64.ToString(CultureInfo.InvariantCulture);
+            string str64 = s64.m_SteamID.ToString(CultureInfo.InvariantCulture);
 
-            ulong? group = grp ? s64 : null;
-            ulong? owner = grp ? null : s64;
+            CSteamID? group = grp ? s64 : null;
+            CSteamID? owner = grp ? null : s64;
             uint instanceId;
             if (structure != null)
             {
                 instanceId = structure.instanceID;
-                F.SetOwnerOrGroup(structure, owner, group);
+                StructureUtility.SetOwnerOrGroup(structure, owner, group);
             }
             else if (barricade != null)
             {
                 instanceId = barricade.instanceID;
-                F.SetOwnerOrGroup(barricade, owner, group);
+                BarricadeUtility.SetOwnerOrGroup(barricade, Context.ServiceProvider, owner, group);
             }
             else
-                throw Context.Reply(T.StructureNoTarget);
+                throw Context.Reply(_translations.StructureNoTarget);
 
             bool isSaved = await _saver.IsBuildableSavedAsync(instanceId, structure != null, token);
             if (isSaved)
@@ -316,129 +320,181 @@ public class StructureCommand : IExecutableCommand
                                                                            $"SET {(grp ? "GROUP" : "OWNER")} >> {str64}.");
             }
 
-            if (grp)
-            {
-                FactionInfo? info = TeamManager.GetFactionSafe(s64);
-                if (info != null)
-                    str64 = info.GetName(Context.Language).Colorize(info.Color, Context.IMGUI);
-            }
+            //if (grp)
+            //{
+            //    FactionInfo? info = TeamManager.GetFactionSafe(s64);
+            //    if (info != null)
+            //        str64 = info.GetName(Context.Language).Colorize(info.Color, Context.IMGUI);
+            //}
 
-            Context.Reply(T.StructureSaveSetProperty!, grp ? "Group" : "Owner", asset, str64);
+            Context.Reply(_translations.StructureSaveSetProperty!, grp ? "Group" : "Owner", asset, str64);
         }
         else
             Context.SendCorrectUsage(Syntax);
     }
 
-    private async UniTask DestroyBarricade(BarricadeDrop bDrop, UCPlayer player, CancellationToken token = default)
+    private async UniTask DestroyBarricade(BarricadeDrop bDrop, WarfarePlayer player, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
         if (bDrop == null || !BarricadeManager.tryGetRegion(bDrop.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region))
         {
-            player.SendChat(T.StructureNotDestroyable);
+            Context.Reply(_translations.StructureNotDestroyable);
             return;
         }
 
-        ISalvageInfo[] components = bDrop.model.GetComponents<ISalvageInfo>();
-        
-        if (components.Length == 0)
-            return;
-
-        SalvageBarricadeRequested args = new SalvageBarricadeRequested(player, bDrop, bDrop.GetServersideData(),
-            region, x, y, plant, await _saver.GetBarricadeSaveAsync(bDrop.instanceID, token), default, default);
-
-        await UniTask.SwitchToMainThread(token);
-
-        for (int i = 0; i < components.Length; ++i)
+        // simulate salvaging the barricade
+        SalvageBarricadeRequested args = new SalvageBarricadeRequested(region)
         {
-            ISalvageInfo salvage = components[i];
-            salvage.IsSalvaged = true;
-            salvage.Salvager = player.Steam64;
+            Player = player,
+            InstanceId = bDrop.instanceID,
+            Barricade = bDrop,
+            ServersideData = bDrop.GetServersideData(),
+            RegionPosition = new RegionCoord(x, y),
+            VehicleRegionIndex = plant
+        };
 
-            if (salvage is not ISalvageListener listener)
-                continue;
-
-            listener.OnSalvageRequested(args);
-            if (!args.CanContinue)
-                break;
-        }
-
-        if (args is { CanContinue: false })
+        BuildableExtensions.SetDestroyInfo(bDrop.model, args, null);
+        bool shouldAllow = true;
+        try
         {
-            for (int i = 0; i < components.Length; ++i)
+            bool shouldAllowTemp = shouldAllow;
+            BuildableExtensions.SetSalvageInfo(bDrop.model, Context.CallerId, true, salvageInfo =>
             {
-                ISalvageInfo salvage = components[i];
-                salvage.IsSalvaged = false;
-                salvage.Salvager = 0;
-            }
+                if (salvageInfo is not ISalvageListener listener)
+                    return true;
 
-            player.SendChat(T.WhitelistProhibitedSalvage, bDrop.asset);
-            return;
+                listener.OnSalvageRequested(args);
+
+                if (args.IsActionCancelled)
+                    shouldAllowTemp = false;
+
+                return !args.IsCancelled;
+            });
+
+            shouldAllow = shouldAllowTemp;
+
+            EventContinuations.Dispatch(args, _eventDispatcher, token, out shouldAllow, continuation: args =>
+            {
+                if (args.ServersideData.barricade.isDead)
+                    return;
+
+                // simulate BarricadeDrop.ReceiveSalvageRequest
+                ItemBarricadeAsset asset = args.Barricade.asset;
+                if (asset.isUnpickupable)
+                    return;
+
+                // re-apply ISalvageInfo components
+                BuildableExtensions.SetSalvageInfo(args.Transform, args.Steam64, true, null);
+
+                if (!BarricadeManager.tryGetRegion(args.Barricade.model, out byte x, out byte y, out ushort plant, out _))
+                {
+                    x = args.RegionPosition.x;
+                    y = args.RegionPosition.y;
+                    plant = args.VehicleRegionIndex;
+                }
+
+                BarricadeManager.destroyBarricade(args.Barricade, x, y, plant);
+            });
+        }
+        finally
+        {
+            // undo setting this if the task needs continuing, it'll be re-set later
+            if (!shouldAllow)
+            {
+                BuildableExtensions.SetSalvageInfo(bDrop.model, null, false, null);
+            }
         }
 
         BarricadeManager.destroyBarricade(bDrop, x, y, ushort.MaxValue);
-        player.SendChat(T.StructureDestroyed, bDrop.asset);
+        Context.Reply(_translations.StructureDestroyed, bDrop.asset);
     }
-    private async UniTask DestroyStructure(StructureDrop sDrop, UCPlayer player, CancellationToken token = default)
+    private async UniTask DestroyStructure(StructureDrop sDrop, WarfarePlayer player, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
         if (sDrop == null || !StructureManager.tryGetRegion(sDrop.model, out byte x, out byte y, out StructureRegion region))
         {
-            player.SendChat(T.StructureNotDestroyable);
+            Context.Reply(_translations.StructureNotDestroyable);
             return;
         }
 
-        ISalvageInfo[] components = sDrop.model.GetComponents<ISalvageInfo>();
-
-        if (components.Length == 0)
-            return;
-
-        SalvageStructureRequested args = new SalvageStructureRequested(player, sDrop, sDrop.GetServersideData(),
-            region, x, y, await _saver.GetStructureSaveAsync(sDrop.instanceID, token), default, default);
-
-        await UniTask.SwitchToMainThread(token);
-
-        for (int i = 0; i < components.Length; ++i)
+        // simulate salvaging the structure
+        SalvageStructureRequested args = new SalvageStructureRequested(region)
         {
-            ISalvageInfo salvage = components[i];
-            salvage.IsSalvaged = true;
-            salvage.Salvager = player.Steam64;
+            Player = player,
+            InstanceId = sDrop.instanceID,
+            Structure = sDrop,
+            ServersideData = sDrop.GetServersideData(),
+            RegionPosition = new RegionCoord(x, y)
+        };
 
-            if (salvage is not ISalvageListener listener)
-                continue;
+        BuildableExtensions.SetDestroyInfo(sDrop.model, args, null);
 
-            listener.OnSalvageRequested(args);
-            if (!args.CanContinue)
-                break;
-        }
-
-        if (args is { CanContinue: false })
+        bool shouldAllow = true;
+        try
         {
-            for (int i = 0; i < components.Length; ++i)
+            BuildableExtensions.SetSalvageInfo(sDrop.model, Context.CallerId, true, salvageInfo =>
             {
-                ISalvageInfo salvage = components[i];
-                salvage.IsSalvaged = false;
-                salvage.Salvager = 0;
-            }
+                if (salvageInfo is not ISalvageListener listener)
+                    return true;
 
-            player.SendChat(T.WhitelistProhibitedSalvage, sDrop.asset);
-            return;
+                listener.OnSalvageRequested(args);
+
+                if (args.IsActionCancelled)
+                    shouldAllow = false;
+
+                return !args.IsCancelled;
+            });
+
+            EventContinuations.Dispatch(args, _eventDispatcher, token, out shouldAllow, continuation: args =>
+            {
+                if (args.ServersideData.structure.isDead)
+                    return;
+
+                // simulate StructureDrop.ReceiveSalvageRequest
+                ItemStructureAsset? asset = args.Structure.asset;
+                if (asset is { isUnpickupable: true })
+                    return;
+
+                // re-apply ISalvageInfo components
+                BuildableExtensions.SetSalvageInfo(args.Transform, args.Steam64, true, null);
+
+                if (!StructureManager.tryGetRegion(args.Structure.model, out byte x, out byte y, out _))
+                {
+                    x = args.RegionPosition.x;
+                    y = args.RegionPosition.y;
+                }
+
+                StructureManager.destroyStructure(sDrop, x, y, Vector3.Reflect(sDrop.GetServersideData().point - player.Position, Vector3.up).normalized * 4);
+                Context.Reply(_translations.StructureDestroyed, sDrop.asset);
+            });
         }
+        finally
+        {
+            if (!shouldAllow)
+            {
+                BuildableExtensions.SetSalvageInfo(sDrop.model, null, false, null);
+            }
+        }
+
+        if (!shouldAllow)
+            return;
 
         StructureManager.destroyStructure(sDrop, x, y, Vector3.Reflect(sDrop.GetServersideData().point - player.Position, Vector3.up).normalized * 4);
-        player.SendChat(T.StructureDestroyed, sDrop.asset);
+        Context.Reply(_translations.StructureDestroyed, sDrop.asset);
     }
-    private async Task ExamineVehicle(InteractableVehicle vehicle, UCPlayer player, bool sendurl, CancellationToken token = default)
+
+    private async Task ExamineVehicle(InteractableVehicle vehicle, WarfarePlayer player, bool sendurl, CancellationToken token = default)
     {
         GameThread.AssertCurrent();
         if (vehicle.lockedOwner == default || vehicle.lockedOwner == Steamworks.CSteamID.Nil)
         {
-            player.SendChat(T.StructureExamineNotLocked);
+            Context.Reply(_translations.StructureExamineNotLocked);
         }
         else
         {
-            ulong team = vehicle.lockedGroup.m_SteamID.GetTeam();
+            Team team = Team.NoTeam; // todo vehicle.lockedGroup.m_SteamID.GetTeam();
             ulong prevOwner = vehicle.transform.TryGetComponent(out VehicleComponent vcomp) ? vcomp.PreviousOwner : 0ul;
             IPlayer names = await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ConfigureAwait(false);
             string prevOwnerName;
@@ -451,21 +507,19 @@ public class StructureCommand : IExecutableCommand
             await UniTask.SwitchToMainThread(token);
             if (sendurl)
             {
-                player.SteamPlayer.SendSteamURL(
-                    T.VehicleExamineLastOwnerPrompt.Translate(player, false, vehicle.asset, names,
-                    Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!, prevOwnerName, prevOwner), vehicle.lockedOwner.m_SteamID);
+                Context.ReplySteamProfileUrl(_translations.VehicleExamineLastOwnerPrompt
+                        .Translate(vehicle.asset, names, team.Faction, prevOwnerName, prevOwner, player, canUseIMGUI: true), vehicle.lockedOwner);
             }
             else
             {
-                OfflinePlayer pl = new OfflinePlayer(vehicle.lockedOwner.m_SteamID);
+                OfflinePlayer pl = new OfflinePlayer(vehicle.lockedOwner);
                 await pl.CacheUsernames(token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
-                player.SendChat(T.VehicleExamineLastOwnerChat,
-                    vehicle.asset, names, pl, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!, prevOwnerName, prevOwner);
+                Context.Reply(_translations.VehicleExamineLastOwnerChat, vehicle.asset, names, pl, team.Faction, prevOwnerName, prevOwner);
             }
         }
     }
-    private async Task ExamineBarricade(BarricadeDrop bdrop, UCPlayer player, bool sendurl, CancellationToken token = default)
+    private async Task ExamineBarricade(BarricadeDrop bdrop, WarfarePlayer player, bool sendurl, CancellationToken token = default)
     {
         GameThread.AssertCurrent();
         if (bdrop != null)
@@ -473,32 +527,31 @@ public class StructureCommand : IExecutableCommand
             BarricadeData data = bdrop.GetServersideData();
             if (data.owner == 0)
             {
-                player.SendChat(T.StructureExamineNotExaminable);
+                Context.Reply(_translations.StructureExamineNotExaminable);
                 return;
             }
-
+            Team team = Team.NoTeam; // todo data.owner.GetTeamFromPlayerSteam64ID()
             IPlayer names = await F.GetPlayerOriginalNamesAsync(data.owner, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             if (sendurl)
             {
-                player.SteamPlayer.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player, false, data.barricade.asset,
-                        names, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
+                Context.ReplySteamProfileUrl(_translations.StructureExamineLastOwnerPrompt.Translate(data.barricade.asset, names, team.Faction, player, canUseIMGUI: true),
+                    new CSteamID(data.owner));
             }
             else
             {
-                OfflinePlayer pl = new OfflinePlayer(data.owner);
+                OfflinePlayer pl = new OfflinePlayer(new CSteamID(data.owner));
                 await pl.CacheUsernames(token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
-                player.SendChat(T.StructureExamineLastOwnerChat, data.barricade.asset, names,
-                    pl, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
+                Context.Reply(_translations.StructureExamineLastOwnerChat, data.barricade.asset, names, pl, team.Faction);
             }
         }
         else
         {
-            player.SendChat(T.StructureExamineNotExaminable);
+            Context.Reply(_translations.StructureExamineNotExaminable);
         }
     }
-    private async Task ExamineStructure(StructureDrop sdrop, UCPlayer player, bool sendurl, CancellationToken token = default)
+    private async Task ExamineStructure(StructureDrop sdrop, WarfarePlayer player, bool sendurl, CancellationToken token = default)
     {
         GameThread.AssertCurrent();
         if (sdrop != null)
@@ -506,28 +559,83 @@ public class StructureCommand : IExecutableCommand
             StructureData data = sdrop.GetServersideData();
             if (data.owner == default)
             {
-                player.SendChat(T.StructureExamineNotExaminable);
+                Context.Reply(_translations.StructureExamineNotExaminable);
                 return;
             }
+            Team team = Team.NoTeam; // todo data.owner.GetTeamFromPlayerSteam64ID()
             IPlayer names = await F.GetPlayerOriginalNamesAsync(data.owner, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             if (sendurl)
             {
-                player.SteamPlayer.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player, false, data.structure.asset, names,
-                        Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
+                Context.ReplySteamProfileUrl(_translations.StructureExamineLastOwnerPrompt.Translate(data.structure.asset, names, team.Faction, player, canUseIMGUI: true), new CSteamID(data.owner));
             }
             else
             {
-                OfflinePlayer pl = new OfflinePlayer(data.owner);
+                OfflinePlayer pl = new OfflinePlayer(new CSteamID(data.owner));
                 await pl.CacheUsernames(token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
-                player.SendChat(T.StructureExamineLastOwnerChat, data.structure.asset, names,
-                    pl, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
+                Context.Reply(_translations.StructureExamineLastOwnerChat, data.structure.asset, names, pl, team.Faction);
             }
         }
         else
         {
-            player.SendChat(T.StructureExamineNotExaminable);
+            Context.Reply(_translations.StructureExamineNotExaminable);
         }
     }
+}
+
+public class StructureTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Structure Command";
+    
+    [TranslationData]
+    public readonly Translation StructureNoTarget = new Translation("<#ff8c69>You must be looking at a barricade, structure, or vehicle.");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<ItemAsset> StructureSaved = new Translation<ItemAsset>("<#e6e3d5>Saved <#c6d4b8>{0}</color>.");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<ItemAsset> StructureAlreadySaved = new Translation<ItemAsset>("<#e6e3d5><#c6d4b8>{0}</color> is already saved.");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<ItemAsset> StructureUnsaved = new Translation<ItemAsset>("<#e6e3d5>Removed <#c6d4b8>{0}</color> save.");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<ItemAsset> StructureAlreadyUnsaved = new Translation<ItemAsset>("<#ff8c69><#c6d4b8>{0}</color> is not saved.");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<Asset> StructureDestroyed = new Translation<Asset>("<#e6e3d5>Destroyed <#c6d4b8>{0}</color>.");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation StructureNotDestroyable = new Translation("<#ff8c69>That object can not be destroyed.");
+    
+    [TranslationData]
+    public readonly Translation StructureExamineNotExaminable = new Translation("<#ff8c69>That object can not be examined.");
+    
+    [TranslationData]
+    public readonly Translation StructureExamineNotLocked = new Translation("<#ff8c69>This vehicle is not locked.");
+    
+    [TranslationData]
+    public readonly Translation<Asset, IPlayer, FactionInfo> StructureExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo>("Last owner of {0}: {1}, Team: {2}.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg1Fmt: WarfarePlayer.FormatPlayerName, arg2Fmt: FactionInfo.FormatDisplayName);
+    
+    [TranslationData]
+    public readonly Translation<Asset, IPlayer, IPlayer, FactionInfo> StructureExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo>("<#c6d4b8>Last owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg0Fmt: RarityColorAddon.Instance, arg1Fmt: WarfarePlayer.FormatColoredPlayerName, arg2Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: FactionInfo.FormatColorDisplayName);
+    
+    [TranslationData]
+    public readonly Translation<Asset, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo, string, ulong>("Owner of {0}: {1}, Team: {2}. Previous Owner: {3} ({4}).", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg1Fmt: WarfarePlayer.FormatPlayerName, arg2Fmt: FactionInfo.FormatDisplayName);
+    
+    [TranslationData]
+    public readonly Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong>("<#c6d4b8>Owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}. Previous Owner: {4} <i>({5})</i>.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg0Fmt: RarityColorAddon.Instance, arg1Fmt: WarfarePlayer.FormatColoredPlayerName, arg2Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: FactionInfo.FormatColorDisplayName);
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<string> StructureSaveInvalidProperty = new Translation<string>("<#ff8c69>{0} isn't a valid a structure property. Try putting 'owner' or 'group'.");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<string, string> StructureSaveInvalidSetValue = new Translation<string, string>("<#ff8c69><#ddd>{0}</color> isn't a valid value for structure property: <#a0ad8e>{1}</color>.");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<string> StructureSaveNotJsonSettable = new Translation<string>("<#ff8c69><#a0ad8e>{0}</color> is not marked as settable.");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<string, ItemAsset, string> StructureSaveSetProperty = new Translation<string, ItemAsset, string>("<#a0ad8e>Set <#8ce4ff>{0}</color> for {1} save to: <#ffffff>{2}</color>.", arg1Fmt: RarityColorAddon.Instance);
 }

@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.NetTransport;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -76,6 +79,48 @@ public static class BuildableExtensions
 
             default:
                 throw new InvalidOperationException($"Unable to get drop from IBuildable of type \"{obj.Drop?.GetType().AssemblyQualifiedName ?? "null"}\".");
+        }
+    }
+    private static readonly List<IDestroyInfo> WorkingDestroyInfo = new List<IDestroyInfo>(2);
+    private static readonly List<ISalvageInfo> WorkingSalvageInfo = new List<ISalvageInfo>(2);
+
+    internal static void SetDestroyInfo(Transform buildableTransform, IBuildableDestroyedEvent args, Func<ISalvageInfo, bool>? whileAction)
+    {
+        GameThread.AssertCurrent();
+        buildableTransform.GetComponents(WorkingDestroyInfo);
+        try
+        {
+            foreach (IDestroyInfo destroyInfo in WorkingDestroyInfo)
+            {
+                destroyInfo.DestroyInfo = args;
+            }
+        }
+        finally
+        {
+            WorkingDestroyInfo.Clear();
+        }
+    }
+
+    internal static void SetSalvageInfo(Transform buildableTransform, CSteamID? salvager, bool? isSalvaged, Func<ISalvageInfo, bool>? whileAction)
+    {
+        GameThread.AssertCurrent();
+        buildableTransform.GetComponents(WorkingSalvageInfo);
+        try
+        {
+            foreach (ISalvageInfo salvageInfo in WorkingSalvageInfo)
+            {
+                if (salvager.HasValue)
+                    salvageInfo.Salvager = salvager.Value;
+                if (isSalvaged.HasValue)
+                    salvageInfo.IsSalvaged = isSalvaged.Value;
+
+                if (whileAction != null && !whileAction(salvageInfo))
+                    break;
+            }
+        }
+        finally
+        {
+            WorkingSalvageInfo.Clear();
         }
     }
 }

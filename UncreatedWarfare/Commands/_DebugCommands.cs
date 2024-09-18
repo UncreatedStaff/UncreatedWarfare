@@ -2,35 +2,13 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
-using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Models.Users;
-using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Translations;
-using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 #if DEBUG
-using Uncreated.Warfare.Squads.Commander;
 #endif
 
 // ReSharper disable UnusedMember.Local
@@ -154,6 +132,7 @@ public class DebugCommand : IExecutableCommand
     }
 #pragma warning disable IDE1006
 #pragma warning disable IDE0051
+#if false
     private const string UsageGiveXp = "/test givexp <player> <amount> [team - required if offline]";
     private async UniTask givexp(CancellationToken token)
     {
@@ -1025,7 +1004,7 @@ public class DebugCommand : IExecutableCommand
             }
         }
 
-        F.TriggerEffectReliable(asset, Context.Player.Connection, Context.Player.Position);
+        EffectUtility.TriggerEffect(asset, Context.Player.Connection, Context.Player.Position, true);
         throw Context.ReplyString($"<#9fa1a6>Sent {asset.name} to you at {Context.Player.Position.ToString("0.##", Context.Culture)}." + (Context.HasArgs(2) ? " To spawn as UI instead, the effect must have the \"UI\" tag in unity." : string.Empty));
     }
 
@@ -1384,4 +1363,5 @@ public class DebugCommand : IExecutableCommand
 
         Context.ReplyString(Environment.NewLine + JsonSerializer.Serialize(TeamManager.Factions, ConfigurationSettings.JsonSerializerSettings));
     }
+#endif
 }

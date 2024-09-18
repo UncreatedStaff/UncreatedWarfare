@@ -1,6 +1,7 @@
 ﻿using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Squads.UI;
 
@@ -12,7 +13,7 @@ public class SquadMenuUI : UnturnedUI
 
     public readonly OtherSquad[] Squads = ElementPatterns.CreateArray<OtherSquad>("S{0}", 0, to: 7);
     public readonly SquadMember[] Members = ElementPatterns.CreateArray<SquadMember>("M{0}", 0, to: 5);
-    public SquadMenuUI() : base(Gamemode.Config.UISquadMenu.GetId()) { }
+    public SquadMenuUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenu")) { }
     public class OtherSquad
     {
         [Pattern(Root = true)]

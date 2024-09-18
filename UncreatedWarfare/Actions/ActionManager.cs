@@ -507,7 +507,7 @@ public class ActionManager
 
             if (successfullyAdded > 0 && (build ? GamemodeOld.Config.EffectUnloadBuild : GamemodeOld.Config.EffectUnloadAmmo).TryGetAsset(out EffectAsset? effect))
             {
-                F.TriggerEffectReliable(effect, EffectManager.MEDIUM, vehicle.transform.position);
+                EffectUtility.TriggerEffect(effect, EffectManager.MEDIUM, vehicle.transform.position, true);
             }
         }
     }

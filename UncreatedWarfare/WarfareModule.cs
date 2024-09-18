@@ -21,11 +21,14 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.UI;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking.Purchasing;
@@ -35,6 +38,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
@@ -222,13 +226,20 @@ public sealed class WarfareModule : IModuleNexus
 
         // UI
         serviceCollection.AddSingleton<ModerationUI>();
-
         serviceCollection.AddSingleton<KitMenuUI>();
-
         serviceCollection.AddSingleton<ActionMenuUI>();
-
         serviceCollection.AddSingleton<SquadMenuUI>();
         serviceCollection.AddSingleton<SquadListUI>();
+        serviceCollection.AddSingleton<FobListUI>();
+        serviceCollection.AddSingleton<PopupUI>();
+        serviceCollection.AddSingleton<CaptureUI>();
+        serviceCollection.AddSingleton<ConventionalLeaderboardUI>();
+        serviceCollection.AddSingleton<FlagListUI>();
+        serviceCollection.AddSingleton<StagingUI>();
+        serviceCollection.AddSingleton<WinToastUI>();
+        serviceCollection.AddSingleton<XPUI>();
+        serviceCollection.AddSingleton<CreditsUI>();
+        serviceCollection.AddSingleton<TeamSelectorUI>();
 
         serviceCollection.AddScoped<TipService>();
 
@@ -315,22 +326,22 @@ public sealed class WarfareModule : IModuleNexus
         // Translations
         serviceCollection.AddSingleton<ITranslationValueFormatter, TranslationValueFormatter>();
         serviceCollection.AddSingleton<ITranslationService, TranslationService>();
+        serviceCollection.AddSingleton<ItemIconProvider>();
         serviceCollection.AddTransient(typeof(TranslationInjection<>));
         serviceCollection.AddSingleton<AnnouncementService>();
 
         // Database
         serviceCollection.AddDbContext<WarfareDbContext>(contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Singleton);
         
-        serviceCollection.AddTransient<IDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IBuildablesDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IFactionDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IGameDataDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IKitsDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<ILanguageDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<ISeasonsDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IStatsDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IUserDataDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IWhitelistDbContext>(serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IDbContext>          (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IFactionDbContext>   (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IGameDataDbContext>  (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IKitsDbContext>      (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<ILanguageDbContext>  (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<ISeasonsDbContext>   (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IStatsDbContext>     (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IUserDataDbContext>  (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        serviceCollection.AddTransient<IWhitelistDbContext> (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
 
         serviceCollection.AddTransient<IManualMySqlProvider, ManualMySqlProvider>(serviceProvider =>
         {

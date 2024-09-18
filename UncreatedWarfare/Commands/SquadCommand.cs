@@ -82,6 +82,7 @@ public class SquadCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
+#if false
         Context.AssertRanByPlayer();
 
         Context.AssertGamemode<ISquads>();
@@ -230,5 +231,7 @@ public class SquadCommand : IExecutableCommand
         }
         
         throw Context.SendCorrectUsage(Syntax);
+#endif
+        return UniTask.CompletedTask;
     }
 }

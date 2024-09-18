@@ -48,6 +48,7 @@ public class LoadCommand : IExecutableCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+#if false
         Context.AssertRanByPlayer();
 
         Context.AssertHelpCheck(0, T.LoadUsage);
@@ -165,5 +166,6 @@ public class LoadCommand : IExecutableCommand
 
         Context.LogAction(ActionLogType.LoadSupplies, type + " x" + amount);
         Context.Defer();
+#endif
     }
 }

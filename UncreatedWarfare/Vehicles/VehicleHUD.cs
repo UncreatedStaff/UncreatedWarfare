@@ -1,5 +1,6 @@
 ﻿using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -10,7 +11,7 @@ public class VehicleHUD : UnturnedUI
     public readonly UnturnedLabel MissileWarningDriver = new UnturnedLabel("VH_MissileWarningDriver");
     public readonly UnturnedLabel FlareCount = new UnturnedLabel("VH_FlareCount");
 
-    public VehicleHUD() : base(Gamemode.Config.UIVehicleHUD.GetId())
+    public VehicleHUD(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:VehicleHud"))
     {
         
     }

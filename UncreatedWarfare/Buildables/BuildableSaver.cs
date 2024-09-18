@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -26,21 +27,28 @@ public class BuildableSaver : ISessionHostedService, IDisposable
     private readonly SignInstancer? _signs;
 
     private List<BuildableSave>? _saves;
-    public BuildableSaver(IBuildablesDbContext dbContext, ILogger<BuildableSaver> logger, IPlayerService playerService, IServiceProvider serviceProvider)
+
+    // region numbers correspond to which server if we ever open up more than one off the same database
+    private readonly byte _region;
+
+    public BuildableSaver(IServiceProvider serviceProvider)
     {
-        _dbContext = dbContext;
+        _dbContext = serviceProvider.GetRequiredService<IBuildablesDbContext>();
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         _signs = serviceProvider.GetService<SignInstancer>();
-        _logger = logger;
-        _playerService = playerService;
+        _logger = serviceProvider.GetRequiredService<ILogger<BuildableSaver>>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+
+        IConfiguration config = serviceProvider.GetRequiredService<IConfiguration>();
+        _region = config.GetValue<byte>("region");
     }
 
     async UniTask ISessionHostedService.StartAsync(CancellationToken token)
     {
         await UniTask.SwitchToThreadPool();
 
-        byte region = UCWarfare.Config.Region;
+        byte region = _region;
         int mapId = MapScheduler.Current;
 
         await _semaphore.WaitAsync(token);
@@ -55,7 +63,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
 
             foreach (BuildableSave save in saves)
             {
-                save.InstanceId = save.InstanceIds!.First(instanceId => instanceId.RegionId == UCWarfare.Config.Region).InstanceId;
+                save.InstanceId = save.InstanceIds!.First(instanceId => instanceId.RegionId == _region).InstanceId;
             }
 
             _saves = saves;
@@ -73,7 +81,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
                     continue;
                 
                 _dbContext.Update(save);
-                if (save.InstanceIds?.FirstOrDefault(instanceId => instanceId.RegionId == UCWarfare.Config.Region) is { } instId && instId.InstanceId != oldInstanceId)
+                if (save.InstanceIds?.FirstOrDefault(instanceId => instanceId.RegionId == _region) is { } instId && instId.InstanceId != oldInstanceId)
                 {
                     _dbContext.Update(instId);
                 }
@@ -112,7 +120,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         await _semaphore.WaitAsync(token);
         try
         {
-            byte region = UCWarfare.Config.Region;
+            byte region = _region;
             int mapId = MapScheduler.Current;
             uint instId = barricade.instanceID;
 
@@ -231,7 +239,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         try
         {
             _dbContext.Update(newSave);
-            if (newSave.InstanceIds.FirstOrDefault(x => x.RegionId == UCWarfare.Config.Region) is { } instanceId)
+            if (newSave.InstanceIds.FirstOrDefault(x => x.RegionId == _region) is { } instanceId)
                 _dbContext.Update(instanceId);
 
             await _dbContext.SaveChangesAsync(token);
@@ -259,7 +267,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         await _semaphore.WaitAsync(token);
         try
         {
-            byte region = UCWarfare.Config.Region;
+            byte region = _region;
             int mapId = MapScheduler.Current;
             uint instId = structure.instanceID;
 
@@ -323,7 +331,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         try
         {
             _dbContext.Update(newSave);
-            if (newSave.InstanceIds.FirstOrDefault(x => x.RegionId == UCWarfare.Config.Region) is { } instanceId)
+            if (newSave.InstanceIds.FirstOrDefault(x => x.RegionId == _region) is { } instanceId)
                 _dbContext.Update(instanceId);
 
             await _dbContext.SaveChangesAsync(token);
@@ -360,7 +368,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         await _semaphore.WaitAsync(token);
         try
         {
-            byte region = UCWarfare.Config.Region;
+            byte region = _region;
             int mapId = MapScheduler.Current;
 
             return await _dbContext.Saves
@@ -399,7 +407,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         await _semaphore.WaitAsync(token);
         try
         {
-            byte region = UCWarfare.Config.Region;
+            byte region = _region;
             int mapId = MapScheduler.Current;
 
             return await _dbContext.Saves
@@ -443,7 +451,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         await _semaphore.WaitAsync(token);
         try
         {
-            byte region = UCWarfare.Config.Region;
+            byte region = _region;
             int mapId = MapScheduler.Current;
 
             List<BuildableSave> saves = await _dbContext.Saves
@@ -530,12 +538,12 @@ public class BuildableSaver : ISessionHostedService, IDisposable
                 instanceId = ((StructureDrop)drop).instanceID;
                 save.InstanceId = instanceId;
                 save.Buildable = new BuildableStructure((StructureDrop)drop);
-                instanceIdObj = (save.InstanceIds ??= new List<BuildableInstanceId>()).FirstOrDefault(id => id.RegionId == UCWarfare.Config.Region);
+                instanceIdObj = (save.InstanceIds ??= new List<BuildableInstanceId>()).FirstOrDefault(id => id.RegionId == _region);
                 if (instanceIdObj == null)
                 {
                     instanceIdObj = new BuildableInstanceId
                     {
-                        RegionId = UCWarfare.Config.Region,
+                        RegionId = _region,
                         InstanceId = instanceId,
                         Save = save,
                         SaveId = save.Id
@@ -576,12 +584,12 @@ public class BuildableSaver : ISessionHostedService, IDisposable
             save.Buildable = new BuildableBarricade((BarricadeDrop)drop);
             instanceId = ((BarricadeDrop)drop).instanceID;
             save.InstanceId = instanceId;
-            instanceIdObj = (save.InstanceIds ??= new List<BuildableInstanceId>()).FirstOrDefault(id => id.RegionId == UCWarfare.Config.Region);
+            instanceIdObj = (save.InstanceIds ??= new List<BuildableInstanceId>()).FirstOrDefault(id => id.RegionId == _region);
             if (instanceIdObj == null)
             {
                 instanceIdObj = new BuildableInstanceId
                 {
-                    RegionId = UCWarfare.Config.Region,
+                    RegionId = _region,
                     InstanceId = instanceId,
                     Save = save,
                     SaveId = save.Id

@@ -139,10 +139,10 @@ public class ZoneVisualizerComponent : IPlayerComponent
             Vector3 pointPos = new Vector3(point.x, 0f, point.y);
             pointPos.y = TerrainUtility.GetHighestPoint(pointPos, info.MinHeight);
 
-            F.TriggerEffectReliable(info.SideEffect!, channel, pointPos);
+            EffectUtility.TriggerEffect(info.SideEffect!, channel, pointPos, true);
             if (!hasCommonZonesWorkshopInstalled)
             {
-                F.TriggerEffectReliable(info.AirdropEffect!, channel, pointPos);
+                EffectUtility.TriggerEffect(info.AirdropEffect!, channel, pointPos, true);
             }
         }
 
@@ -151,20 +151,20 @@ public class ZoneVisualizerComponent : IPlayerComponent
         {
             Vector3 cornerPos = new Vector3(point.x, 0f, point.y);
             cornerPos.y = TerrainUtility.GetHighestPoint(cornerPos, info.MinHeight);
-            F.TriggerEffectReliable(info.CornerEffect!, channel, cornerPos);
+            EffectUtility.TriggerEffect(info.CornerEffect!, channel, cornerPos, true);
             if (!hasCommonZonesWorkshopInstalled)
             {
-                F.TriggerEffectReliable(info.AirdropEffect!, channel, cornerPos);
+                EffectUtility.TriggerEffect(info.AirdropEffect!, channel, cornerPos, true);
             }
         }
 
         // Center
         Vector3 centerPos = new Vector3(info.Center.x, 0f, info.Center.y);
         centerPos.y = TerrainUtility.GetHighestPoint(centerPos, info.MinHeight);
-        F.TriggerEffectReliable(info.CenterEffect!, channel, centerPos);
+        EffectUtility.TriggerEffect(info.CenterEffect!, channel, centerPos, true);
         if (!hasCommonZonesWorkshopInstalled)
         {
-            F.TriggerEffectReliable(info.AirdropEffect!, channel, centerPos);
+            EffectUtility.TriggerEffect(info.AirdropEffect!, channel, centerPos, true);
         }
     }
 

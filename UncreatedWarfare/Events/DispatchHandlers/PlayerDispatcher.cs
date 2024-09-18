@@ -2,6 +2,7 @@
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
@@ -49,5 +50,19 @@ partial class EventDispatcher2
         {
             player.ComponentOrNull<PlayerInjureComponent>()?.PrepAidRevive(args);
         }
+    }
+
+    /// <summary>
+    /// Invoked by <see cref="PlayerEquipment.OnPunch_Global"/> when a player punches with either hand.
+    /// </summary>
+    private void OnPlayerPunch(PlayerEquipment player, EPlayerPunch punchType)
+    {
+        PlayerPunched args = new PlayerPunched
+        {
+            Player = _playerService.GetOnlinePlayer(player.player),
+            PunchType = punchType
+        };
+
+        _ = DispatchEventAsync(args, _unloadToken);
     }
 }

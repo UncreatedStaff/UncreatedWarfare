@@ -20,6 +20,11 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     TTeam? FindTeam(string teamSearch);
 
     /// <summary>
+    /// Will return the default team if <paramref name="groupId"/> doesn't correspond to a team.
+    /// </summary>
+    TTeam GetTeam(CSteamID groupId);
+
+    /// <summary>
     /// Used to initialize team info from the layout and map configuration.
     /// </summary>
     UniTask InitializeAsync(CancellationToken token = default);

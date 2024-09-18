@@ -16,7 +16,7 @@ using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
@@ -1649,6 +1649,12 @@ public class DatabaseInterface
     public const string TableHWIDs = "hwids";
     public const string TableDiscordIds = "discordnames";
     public const string TableIPWhitelists = "ip_whitelists";
+    public const string TableUsernames = "usernames";
+
+    public const string ColumnUsernamesSteam64 = "Steam64";
+    public const string ColumnUsernamesPlayerName = "PlayerName";
+    public const string ColumnUsernamesCharacterName = "CharacterName";
+    public const string ColumnUsernamesNickName = "NickName";
 
     public const string ColumnDiscordIdsSteam64 = "Steam64";
     public const string ColumnDiscordIdsDiscordId = "DiscordID";

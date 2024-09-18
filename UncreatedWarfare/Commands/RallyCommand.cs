@@ -36,6 +36,7 @@ public class RallyCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
+#if false
         Context.AssertGamemode<ISquads>();
 
         Context.AssertRanByPlayer();
@@ -91,5 +92,7 @@ public class RallyCommand : IExecutableCommand
             else throw Context.Reply(T.RallyAlreadyDeploying);
         }
         else throw Context.SendCorrectUsage(Syntax);
+#endif
+        return UniTask.CompletedTask;
     }
 }

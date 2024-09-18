@@ -75,6 +75,7 @@ public partial class EventDispatcher2 : IHostedService
         /* Players */
         DamageTool.damagePlayerRequested += OnPlayerDamageRequested;
         UseableConsumeable.onPerformingAid += OnPlayerPerformingAid;
+        PlayerEquipment.OnPunch_Global += OnPlayerPunch;
 
         return UniTask.CompletedTask;
     }
@@ -109,6 +110,7 @@ public partial class EventDispatcher2 : IHostedService
         /* Players */
         DamageTool.damagePlayerRequested -= OnPlayerDamageRequested;
         UseableConsumeable.onPerformingAid -= OnPlayerPerformingAid;
+        PlayerEquipment.OnPunch_Global -= OnPlayerPunch;
 
         return UniTask.CompletedTask;
     }

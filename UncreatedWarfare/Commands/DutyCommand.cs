@@ -1,15 +1,16 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Tweaks;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -21,19 +22,28 @@ public class DutyCommand : IExecutableCommand
     private readonly WarfareModule _warfare;
     private readonly SignInstancer _signs;
     private readonly DutyCommandTranslations _translations;
+    private readonly ITranslationService _translationService;
+    private readonly ChatService _chatService;
 
-    private const string Syntax = "/duty";
     private const string Help = "Swap your duty status between on and off. For admins and trial admins.";
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    internal DutyCommand(UserPermissionStore permissions, WarfareModule warfare, SignInstancer signs, TranslationInjection<DutyCommandTranslations> translations)
+    internal DutyCommand(
+        UserPermissionStore permissions,
+        WarfareModule warfare,
+        SignInstancer signs,
+        TranslationInjection<DutyCommandTranslations> translations,
+        ITranslationService translationService,
+        ChatService chatService)
     {
         _translations = translations.Value;
         _permissions = permissions;
         _warfare = warfare;
         _signs = signs;
+        _translationService = translationService;
+        _chatService = chatService;
     }
 
     /// <summary>
@@ -51,8 +61,6 @@ public class DutyCommand : IExecutableCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
-
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
         IReadOnlyList<PermissionGroup> permGroups = await _permissions.GetPermissionGroupsAsync(Context.CallerId, forceRedownload: true, token).ConfigureAwait(false);
 
@@ -141,22 +149,22 @@ public class DutyCommand : IExecutableCommand
             ClearAdminPermissions(Context.Player);
 
             Context.Reply(_translations.DutyOffFeedback);
-            Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), _translations.DutyOffBroadcast, Context.Player);
+            _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOffBroadcast, Context.Player);
 
             L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went off duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", Context.CallerId.m_SteamID);
 
-            PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, false);
+            // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, false);
         }
         else
         {
             Context.Reply(_translations.DutyOnFeedback);
-            Chat.Broadcast(LanguageSet.AllBut(Context.CallerId.m_SteamID), _translations.DutyOnBroadcast, Context.Player);
+            _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOnBroadcast, Context.Player);
 
             L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went on duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", Context.CallerId.m_SteamID);
 
-            PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, true);
+            // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, true);
 
             GiveAdminPermissions(Context.Player, isAdmin);
         }
@@ -180,9 +188,9 @@ public class DutyCommand : IExecutableCommand
             }
         }
 
-        player.JumpOnPunch = false;
-        player.VanishMode = false;
-        player.GodMode = false;
+        player.Component<PlayerJumpComponent>().IsActive = false;
+        player.Component<VanishPlayerComponent>().IsActive = false;
+        player.Component<GodPlayerComponent>().IsActive = false;
 
         _signs.UpdateSigns<KitSignInstanceProvider>(player);
     }

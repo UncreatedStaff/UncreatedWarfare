@@ -63,7 +63,7 @@ public sealed class HelpCommand : IExecutableCommand
             return;
         }
 
-        cmd.Metadata?.OnHelpCommand(Context, cmd); // will throw exception if it has data
+        //cmd.Metadata?.OnHelpCommand(Context, cmd); // will throw exception if it has data
 
         await CommandDispatcher.AssertPermissions(cmd, Context, token);
         await UniTask.SwitchToMainThread(token);
@@ -112,15 +112,16 @@ public sealed class HelpCommand : IExecutableCommand
 
     private void SendDefaultHelp()
     {
-        if (T.HelpOutputCombined.HasLanguage(Context.Language) && !Context.IMGUI)
-        {
-            Context.Reply(T.HelpOutputCombined);
-        }
-        else
-        {
-            Context.Reply(T.HelpOutputDiscord);
-            Context.Reply(T.HelpOutputDeploy);
-            Context.Reply(T.HelpOutputRequest);
-        }
+        // todo
+        //if (T.HelpOutputCombined.HasLanguage(Context.Language) && !Context.IMGUI)
+        //{
+        //    Context.Reply(T.HelpOutputCombined);
+        //}
+        //else
+        //{
+        //    Context.Reply(T.HelpOutputDiscord);
+        //    Context.Reply(T.HelpOutputDeploy);
+        //    Context.Reply(T.HelpOutputRequest);
+        //}
     }
 }

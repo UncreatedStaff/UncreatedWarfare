@@ -182,7 +182,7 @@ public class Kit : ITranslationArgument, ICloneable
     /// </summary>
     [JsonIgnore]
     [NotMapped]
-    public bool NeedsUpgrade => Type == KitType.Loadout && Season < UCWarfare.Season;
+    public bool NeedsUpgrade => Type == KitType.Loadout && Season < WarfareModule.Season;
 
     /// <summary>
     /// Loadout is in the process of being created or updated.
@@ -203,15 +203,15 @@ public class Kit : ITranslationArgument, ICloneable
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist. Checks both active teams, use <see cref="IsRequestable(ulong)"/> to check for a certain team.</summary>
     [JsonIgnore]
     [NotMapped]
-    public bool Requestable => !Disabled && (Type is not KitType.Loadout || Season >= UCWarfare.Season || Season < 1) &&
+    public bool Requestable => !Disabled && (Type is not KitType.Loadout || Season >= WarfareModule.Season || Season < 1) &&
                              IsCurrentMapAllowed() &&
                              (IsFactionAllowed(TeamManager.Team1Faction) || IsFactionAllowed(TeamManager.Team2Faction));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
-    public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Type is not KitType.Loadout || Season >= UCWarfare.Season || Season < 1) &&
+    public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Type is not KitType.Loadout || Season >= WarfareModule.Season || Season < 1) &&
                              IsCurrentMapAllowed() &&
                              IsFactionAllowed(TeamManager.GetFaction(team)));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
-    public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Type is not KitType.Loadout || Season >= UCWarfare.Season || Season < 1) &&
+    public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Type is not KitType.Loadout || Season >= WarfareModule.Season || Season < 1) &&
                                                                                IsCurrentMapAllowed() &&
                                                                                IsFactionAllowed(faction));
 
@@ -236,7 +236,7 @@ public class Kit : ITranslationArgument, ICloneable
         Branch = branch;
         Type = type;
         SquadLevel = squadLevel;
-        Season = UCWarfare.Season;
+        Season = WarfareModule.Season;
         TeamLimit = KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(@class);
         RequestCooldown = KitDefaults<WarfareDbContext>.GetDefaultRequestCooldown(@class);
         CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
@@ -340,7 +340,7 @@ public class Kit : ITranslationArgument, ICloneable
         Branch = KitDefaults<WarfareDbContext>.GetDefaultBranch(@class);
         Type = KitType.Loadout;
         SquadLevel = SquadLevel.Member;
-        Season = UCWarfare.Season;
+        Season = WarfareModule.Season;
         TeamLimit = KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(@class);
         RequestCooldown = KitDefaults<WarfareDbContext>.GetDefaultRequestCooldown(@class);
         PremiumCost = UCWarfare.Config.LoadoutCost;

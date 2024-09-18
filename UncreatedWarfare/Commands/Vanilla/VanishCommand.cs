@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Tweaks;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -6,9 +7,6 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class VanishCommand : IExecutableCommand
 {
-    private const string Syntax = "/vanish";
-    private const string Help = "Toggle your visibility to other players.";
-
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
@@ -24,17 +22,21 @@ public class VanishCommand : IExecutableCommand
     }
 
     /// <inheritdoc />
-    public UniTask ExecuteAsync(CancellationToken token)
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
-
         Context.AssertRanByPlayer();
 
         Context.AssertOnDuty();
 
-        bool isUnvanished = Context.Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates;
-        Context.Player.VanishMode = isUnvanished;
-        if (isUnvanished)
+        await Context.AssertPermissions(VanishPlayerComponent.VanishPermission, token);
+
+        await UniTask.SwitchToMainThread(token);
+        
+        VanishPlayerComponent component = Context.Player.Component<VanishPlayerComponent>();
+
+        component.IsActive = !component.IsActive;
+
+        if (component.IsActive)
         {
             Context.Reply(T.VanishModeEnabled);
         }

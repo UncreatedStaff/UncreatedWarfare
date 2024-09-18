@@ -4,18 +4,21 @@ using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Players.UI;
 
-public delegate void PopupButtonPressed(UCPlayer player, int button, ref bool consume, ref bool closeWindow);
-public delegate void ToastPopupButtonPressed(UCPlayer player, int button, in ToastMessage message, ref bool consume, ref bool closeWindow);
+public delegate void PopupButtonPressed(WarfarePlayer player, int button, ref bool consume, ref bool closeWindow);
+public delegate void ToastPopupButtonPressed(WarfarePlayer player, int button, in ToastMessage message, ref bool consume, ref bool closeWindow);
 
 [UnturnedUI(BasePath = "Container/MainBox")]
 public class PopupUI : UnturnedUI
 {
-    public static PopupUI Instance { get; } = new PopupUI();
-    public static event PopupButtonPressed? OnButtonPressed;
-    public static event PopupButtonPressed? OnToastButtonPressed;
+    private readonly IPlayerService _playerService;
+
+    public event PopupButtonPressed? OnButtonPressed;
+    public event PopupButtonPressed? OnToastButtonPressed;
     public LabeledStateButton[] Buttons { get; } =
     [
         new LabeledStateButton("ButtonContainer/Button1", "./Button1Label", "./Button1State"),
@@ -25,8 +28,9 @@ public class PopupUI : UnturnedUI
     ];
 
     public UnturnedImage Image { get; } = new UnturnedImage("Image");
-    public PopupUI() : base(Gamemode.Config.UIPopup.GetId())
+    public PopupUI(AssetConfiguration assetConfig, IPlayerService playerService) : base(assetConfig.GetAssetLink<EffectAsset>("UI:Toasts:Popup"))
     {
+        _playerService = playerService;
         for (int i = 0; i < Buttons.Length; ++i)
         {
             Buttons[i].OnClicked += OnButtonClicked;
@@ -93,26 +97,25 @@ public class PopupUI : UnturnedUI
         int index = Array.FindIndex(Buttons, x => x.Button == button);
         if (index == -1)
             return;
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer == null)
-            return;
+
+        WarfarePlayer warfarePlayer = _playerService.GetOnlinePlayer(player);
         bool consumed = false;
         bool closeWindow = true;
 
-        if (ucPlayer.Toasts.TryFindCurrentToastInfo(ToastMessageStyle.Popup, out ToastMessage message))
+        if (warfarePlayer.Component<ToastManager>().TryFindCurrentToastInfo(ToastMessageStyle.Popup, out ToastMessage message))
         {
             if (OnToastButtonPressed != null)
             {
                 foreach (ToastPopupButtonPressed action in OnToastButtonPressed.GetInvocationList().Cast<ToastPopupButtonPressed>())
                 {
-                    action.Invoke(ucPlayer, index, in message, ref consumed, ref closeWindow);
+                    action.Invoke(warfarePlayer, index, in message, ref consumed, ref closeWindow);
                     if (consumed)
                         break;
                 }
             }
 
             if (closeWindow)
-                ucPlayer.Toasts.SkipExpiration(ToastMessageStyle.Popup);
+                warfarePlayer.Component<ToastManager>().SkipExpiration(ToastMessageStyle.Popup);
         }
         else
         {
@@ -120,14 +123,14 @@ public class PopupUI : UnturnedUI
             {
                 foreach (PopupButtonPressed action in OnButtonPressed.GetInvocationList().Cast<PopupButtonPressed>())
                 {
-                    action.Invoke(ucPlayer, index, ref consumed, ref closeWindow);
+                    action.Invoke(warfarePlayer, index, ref consumed, ref closeWindow);
                     if (consumed)
                         break;
                 }
             }
 
             if (closeWindow)
-                ClearFromPlayer(ucPlayer.Connection);
+                ClearFromPlayer(warfarePlayer.Connection);
         }
     }
     private void EnableButtons(ITransportConnection connection, int count)

@@ -2,6 +2,8 @@
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -76,7 +78,7 @@ public class AttachCommand : IExecutableCommand
 
             Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
-                F.TriggerEffectReliable(_firemodeEffect, EffectManager.SMALL, Context.Player.Position);
+                EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
             Context.LogAction(ActionLogType.Detach, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Type: " + type + (Assets.find(EAssetType.ITEM, oldItem) is ItemAsset iAsset ? (" | Prev: " + ActionLog.AsAsset(iAsset)) : string.Empty));
             throw Context.Reply(_translations.AttachClearSuccess, gunAsset, type);
         }
@@ -87,7 +89,7 @@ public class AttachCommand : IExecutableCommand
             state[10] = amt;
             Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
-                F.TriggerEffectReliable(_firemodeEffect, EffectManager.SMALL, Context.Player.Position);
+                EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
             Context.LogAction(ActionLogType.SetAmmo, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Amt: " + amt + (prevAmt != amt ? " | Prev: " + prevAmt : string.Empty));
             throw Context.Reply(_translations.AttachSetAmmoSuccess, gunAsset, amt);
         }
@@ -98,7 +100,7 @@ public class AttachCommand : IExecutableCommand
             state[11] = (byte)mode;
             Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
-                F.TriggerEffectReliable(_firemodeEffect, EffectManager.SMALL, Context.Player.Position);
+                EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
             Context.LogAction(ActionLogType.SetFiremode, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Mode: " + mode + (prevMode != mode ? " | Prev: " + prevMode : string.Empty));
             throw Context.Reply(_translations.AttachSetFiremodeSuccess, gunAsset, mode);
         }
@@ -130,7 +132,7 @@ public class AttachCommand : IExecutableCommand
 
         Context.Player.UnturnedPlayer.equipment.sendUpdateState();
         if (_firemodeEffect != null)
-            F.TriggerEffectReliable(_firemodeEffect, EffectManager.SMALL, Context.Player.Position);
+            EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
         Context.LogAction(ActionLogType.Attach, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Type: " + type + " | Item: " + ActionLog.AsAsset(asset) + (Assets.find(EAssetType.ITEM, oldItem) is ItemAsset iAsset2 ? " | Prev: " + ActionLog.AsAsset(iAsset2) : string.Empty));
         throw Context.Reply(_translations.AttachSuccess, gunAsset, type, asset);
     }
@@ -189,20 +191,20 @@ public class AttachTranslations : PropertiesTranslationCollection
     public readonly Translation<string> AttachClearInvalidType = new Translation<string>("<#ff8c69><#fff>{0}</color> is not a valid attachment type. Enter one of the following: <#fff><sight|tact|grip|barrel|ammo></color>.");
 
     [TranslationData("Sent when a player tries to use /attach remove <type> without that attachment.", "Held gun asset", "Type of attachment", IsPriorityTranslation = false)]
-    public readonly Translation<ItemGunAsset, AttachmentType> AttachClearAlreadyGone = new Translation<ItemGunAsset, AttachmentType>("<#ff8c69>There is not a <#cedcde>{1}</color> on your {0}.", FormatRarityColor, FormatUppercase);
+    public readonly Translation<ItemGunAsset, AttachmentType> AttachClearAlreadyGone = new Translation<ItemGunAsset, AttachmentType>("<#ff8c69>There is not a <#cedcde>{1}</color> on your {0}.", arg0Fmt: RarityColorAddon.Instance, arg1Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent when a player successfully uses /attach remove <type>.", "Held gun asset", "Type of attachment", IsPriorityTranslation = false)]
-    public readonly Translation<ItemGunAsset, AttachmentType> AttachClearSuccess = new Translation<ItemGunAsset, AttachmentType>("<#bfb9ac>You removed the <#cedcde>{1}</color> from your {0}.", FormatRarityColor, FormatUppercase);
+    public readonly Translation<ItemGunAsset, AttachmentType> AttachClearSuccess = new Translation<ItemGunAsset, AttachmentType>("<#bfb9ac>You removed the <#cedcde>{1}</color> from your {0}.", arg0Fmt: RarityColorAddon.Instance, arg1Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent when a player successfully uses /attach <attachment>.", "Held gun asset", "Type of attachment", "Attachment item asset", IsPriorityTranslation = false)]
-    public readonly Translation<ItemGunAsset, AttachmentType, ItemCaliberAsset> AttachSuccess = new Translation<ItemGunAsset, AttachmentType, ItemCaliberAsset>("<#bfb9ac>Added {2} as a <#cedcde>{1}</color> to your {0}.", FormatRarityColor, FormatUppercase, FormatRarityColor);
+    public readonly Translation<ItemGunAsset, AttachmentType, ItemCaliberAsset> AttachSuccess = new Translation<ItemGunAsset, AttachmentType, ItemCaliberAsset>("<#bfb9ac>Added {2} as a <#cedcde>{1}</color> to your {0}.", arg0Fmt: RarityColorAddon.Instance, arg1Fmt: UppercaseAddon.Instance, arg2Fmt: RarityColorAddon.Instance);
 
     [TranslationData("Sent when a player tries to attach an item but either it's not an attachment or can't be found.", "Caller's input", IsPriorityTranslation = false)]
-    public readonly Translation<string> AttachCaliberNotFound = new Translation<string>("<#ff8c69>Unable to find an attachment named <#fff>{0}</color>.", FormatPropercase);
+    public readonly Translation<string> AttachCaliberNotFound = new Translation<string>("<#ff8c69>Unable to find an attachment named <#fff>{0}</color>.");
 
     [TranslationData("Sent when a player successfully sets the ammo count of a gun.", "Held gun asset", "Amount of ammo", IsPriorityTranslation = false)]
-    public readonly Translation<ItemGunAsset, byte> AttachSetAmmoSuccess = new Translation<ItemGunAsset, byte>("<#bfb9ac>Set the ammo count in your {0} to <#fff>{1}</color>.", FormatRarityColor);
+    public readonly Translation<ItemGunAsset, byte> AttachSetAmmoSuccess = new Translation<ItemGunAsset, byte>("<#bfb9ac>Set the ammo count in your {0} to <#fff>{1}</color>.", arg0Fmt: RarityColorAddon.Instance);
 
     [TranslationData("Sent when a player successfully sets the ammo count of a gun.", "Held gun asset", "Amount of ammo", IsPriorityTranslation = false)]
-    public readonly Translation<ItemGunAsset, EFiremode> AttachSetFiremodeSuccess = new Translation<ItemGunAsset, EFiremode>("<#bfb9ac>Set the fire mode of your {0} to <#cedcde>{1}</color>.", FormatRarityColor, FormatUppercase);
+    public readonly Translation<ItemGunAsset, EFiremode> AttachSetFiremodeSuccess = new Translation<ItemGunAsset, EFiremode>("<#bfb9ac>Set the fire mode of your {0} to <#cedcde>{1}</color>.", arg0Fmt: RarityColorAddon.Instance, arg1Fmt: UppercaseAddon.Instance);
 }

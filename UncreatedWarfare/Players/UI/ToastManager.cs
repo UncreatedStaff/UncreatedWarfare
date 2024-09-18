@@ -32,7 +32,7 @@ public sealed class ToastManager : IPlayerComponent
     /// <summary>
     /// Makes toasts wait until this is set to false before continuing.
     /// </summary>
-    public bool Hold { get; private set; }
+    public bool Hold { get; set; }
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider)
     {
@@ -43,17 +43,21 @@ public sealed class ToastManager : IPlayerComponent
         if (_initialized)
             return;
 
-        InitToastData(serviceProvider.GetRequiredService<AssetConfiguration>(), serviceProvider.GetRequiredService<ILogger<ToastManager>>());
+        InitToastData(serviceProvider);
     }
 
-    private static void InitToastData(AssetConfiguration configuration, ILogger logger)
+    private static void InitToastData(IServiceProvider serviceProvider)
     {
+        AssetConfiguration configuration = serviceProvider.GetRequiredService<AssetConfiguration>();
+        ILogger logger = serviceProvider.GetRequiredService<ILogger<ToastManager>>();
+
         configuration.OnChange += ReloadToastIds;
+
         ToastMessageStyle[] vals = (ToastMessageStyle[])typeof(ToastMessageStyle).GetEnumValues();
         int len = vals.Length == 0 ? 0 : (int)vals.Max() + 1;
 
         ToastMessages = new ToastMessageInfo[len];
-        ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, Gamemode.WinToastUI, WinToastUI.SendToastCallback)
+        ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, serviceProvider.GetRequiredService<WinToastUI>(), WinToastUI.SendToastCallback)
         {
             ResendNames = [ "Canvas/Content/Header", "Canvas/Content/Header/Team1Tickets", "Canvas/Content/Header/Team2Tickets", "Canvas/Content/Header/Team1Image", "Canvas/Content/Header/Team2Image" ],
             ClearableSlots = 3
@@ -83,7 +87,7 @@ public sealed class ToastManager : IPlayerComponent
             ResendNames = [ "Canvas/Content/Text" ],
             ClearableSlots = 1
         };
-        ToastMessages[(int)ToastMessageStyle.Popup] = new ToastMessageInfo(ToastMessageStyle.Popup, 3, PopupUI.Instance, PopupUI.SendToastCallback, requiresClearing: true)
+        ToastMessages[(int)ToastMessageStyle.Popup] = new ToastMessageInfo(ToastMessageStyle.Popup, 3, serviceProvider.GetRequiredService<PopupUI>(), PopupUI.SendToastCallback, requiresClearing: true)
         {
             Duration = 300,
             DisableFlags = EPluginWidgetFlags.ShowCenterDot | EPluginWidgetFlags.ShowInteractWithEnemy,
@@ -111,14 +115,14 @@ public sealed class ToastManager : IPlayerComponent
 
     internal static void ReloadToastIds(IConfiguration configuration)
     {
-        ToastMessages[(int)ToastMessageStyle.GameOver].UpdateAsset(configuration.GetValue<IAssetLink<EffectAsset>>("UI:Toasts:GameOver"));
+        ToastMessages[(int)ToastMessageStyle.GameOver].UpdateAsset(configuration.GetAssetLink<EffectAsset>("UI:Toasts:GameOver"));
         ToastMessages[(int)ToastMessageStyle.Large].UpdateAsset(configuration.GetAssetLink<EffectAsset>("UI:Toasts:Large"));
         ToastMessages[(int)ToastMessageStyle.Medium].UpdateAsset(configuration.GetAssetLink<EffectAsset>("UI:Toasts:Medium"));
         ToastMessages[(int)ToastMessageStyle.Mini].UpdateAsset(configuration.GetAssetLink<EffectAsset>("UI:Toasts:Mini"));
         ToastMessages[(int)ToastMessageStyle.ProgressBar].UpdateAsset(configuration.GetAssetLink<EffectAsset>("UI:Toasts:Progress"));
         ToastMessages[(int)ToastMessageStyle.Tip].UpdateAsset(configuration.GetAssetLink<EffectAsset>("UI:Toasts:Tip"));
-        ToastMessages[(int)ToastMessageStyle.Popup].UpdateAsset(configuration.GetValue<IAssetLink<EffectAsset>>("UI:Toasts:Popup"));
-        ToastMessages[(int)ToastMessageStyle.FlashingWarning].UpdateAsset(configuration.GetValue<IAssetLink<EffectAsset>>("UI:Toasts:Alert"));
+        ToastMessages[(int)ToastMessageStyle.Popup].UpdateAsset(configuration.GetAssetLink<EffectAsset>("UI:Toasts:Popup"));
+        ToastMessages[(int)ToastMessageStyle.FlashingWarning].UpdateAsset(configuration.GetAssetLink<EffectAsset>("UI:Toasts:Alert"));
     }
 
     /// <remarks>Thread Safe</remarks>

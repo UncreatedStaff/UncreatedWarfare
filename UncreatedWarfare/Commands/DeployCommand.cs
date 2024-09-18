@@ -55,7 +55,7 @@ public class DeployCommand : IExecutableCommand
 
         DeploySettings deploySettings = default;
 
-        if (!FOBManager.Loaded || !FOBManager.TryFindFOB(input, Context.Player.Team, out destination))
+        if (false /*!FOBManager.Loaded || !FOBManager.TryFindFOB(input, Context.Player.Team, out destination) */)
         {
             if (input.Equals("lobby", StringComparison.InvariantCultureIgnoreCase))
                 throw Context.Reply(_translations.DeployLobbyRemoved);

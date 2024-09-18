@@ -67,6 +67,12 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     }
 
     /// <inheritdoc />
+    public Team GetTeam(CSteamID groupId)
+    {
+        return Array.Find(_teams, team => team.GroupId.m_SteamID == groupId.m_SteamID);
+    }
+
+    /// <inheritdoc />
     public async UniTask InitializeAsync(CancellationToken token = default)
     {
         if (Teams is not { Length: 2 })

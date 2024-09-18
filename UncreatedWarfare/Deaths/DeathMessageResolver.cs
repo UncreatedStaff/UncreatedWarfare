@@ -1,10 +1,9 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
@@ -15,7 +14,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.NewQuests.Parameters;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
@@ -25,19 +24,36 @@ public class DeathMessageResolver
     private readonly EventDispatcher2 _dispatcher;
     private readonly ILogger<DeathMessageResolver> _logger;
     private readonly ITranslationValueFormatter _valueFormatter;
+    private readonly ITranslationService _translationService;
+    private readonly ChatService _chatService;
     private readonly LanguageService _languageService;
+    private readonly ICachableLanguageDataStore _languageDataStore;
+    private readonly DatabaseInterface _moderationDb;
+
+    // intentional dont change
+    private readonly string _dscIn;
 
     public DeathMessageResolver(
         EventDispatcher2 dispatcher,
         ILogger<DeathMessageResolver> logger,
         ITranslationValueFormatter valueFormatter,
-        LanguageService languageService
-        )
+        ITranslationService translationService,
+        ChatService chatService,
+        LanguageService languageService,
+        IConfiguration systemConfig,
+        DatabaseInterface moderationDb,
+        ICachableLanguageDataStore languageDataStore)
     {
         _dispatcher = dispatcher;
         _logger = logger;
         _valueFormatter = valueFormatter;
+        _translationService = translationService;
+        _chatService = chatService;
         _languageService = languageService;
+        _moderationDb = moderationDb;
+        _languageDataStore = languageDataStore;
+        // intentional dont change
+        _dscIn = systemConfig["d" + "is" + "co" + "rd" + "_i" + "nv" + "ite" + "_co" + "de"];
     }
 
     /*
@@ -503,14 +519,15 @@ public class DeathMessageResolver
     {
         // red if its a teamkill, otherwise white
         bool tk = (e.MessageFlags & DeathFlags.Suicide) != DeathFlags.Suicide && e.WasTeamkill;
-        Color color = UCWarfare.GetColor(tk ? "death_background_teamkill" : "death_background");
+        Color32 color = tk ? new Color32(255, 153, 153, 255) : new Color32(255, 255, 255, 255);
         string? str = null;
-        foreach (LanguageSet set in LanguageSet.All())
+
+        foreach (LanguageSet set in _translationService.SetOf.AllPlayers().ToCache().Sets!)
         {
-            string msg = await TranslateMessage(set.Language, set.CultureInfo, e, false, token);
+            string msg = await TranslateMessage(set.Language, set.Culture, e, false, token);
             while (set.MoveNext())
             {
-                Chat.SendSingleMessage(msg, color, EChatMode.SAY, null, true, set.Next.Player.channel.owner);
+                _chatService.Send(set.Next, msg, color, EChatMode.SAY, null, true);
             }
         }
 
@@ -520,8 +537,8 @@ public class DeathMessageResolver
         e.DefaultMessage = str!;
 
         // todo move to somewhere else
-        if (e.Player.UnturnedPlayer.TryGetPlayerData(out UCPlayerData data))
-            data.CancelDeployment();
+        // if (e.Player.UnturnedPlayer.TryGetPlayerData(out UCPlayerData data))
+        //     data.CancelDeployment();
 
         PlayerDied toDispatch = e;
 
@@ -531,15 +548,16 @@ public class DeathMessageResolver
             await _dispatcher.DispatchEventAsync(toDispatch, CancellationToken.None);
             await UniTask.SwitchToMainThread();
 
-            if (e is { WasEffectiveKill: true, Killer.PendingCheaterDeathBan: false } and { Cause: EDeathCause.GUN, Limb: ELimb.LEFT_FOOT or ELimb.RIGHT_FOOT or ELimb.LEFT_HAND or ELimb.RIGHT_HAND or ELimb.LEFT_BACK or ELimb.RIGHT_BACK or ELimb.LEFT_FRONT or ELimb.RIGHT_FRONT, KillDistance: > 3f })
-            {
-                e.Killer.PendingCheaterDeathBan = true;
-                UCWarfare.I.StartCoroutine(BanInRandomTime(e.Killer.Steam64, e.Killer.SteamPlayer.joined));
-            }
+            // todo
+            //if (e is { WasEffectiveKill: true, Killer.PendingCheaterDeathBan: false } and { Cause: EDeathCause.GUN, Limb: ELimb.LEFT_FOOT or ELimb.RIGHT_FOOT or ELimb.LEFT_HAND or ELimb.RIGHT_HAND or ELimb.LEFT_BACK or ELimb.RIGHT_BACK or ELimb.LEFT_FRONT or ELimb.RIGHT_FRONT, KillDistance: > 3f })
+            //{
+            //    e.Killer.PendingCheaterDeathBan = true;
+            //    UCWarfare.I.StartCoroutine(BanInRandomTime(e.Killer.Steam64, e.Killer.SteamPlayer.joined));
+            //}
         });
     }
 
-    private static IEnumerator<WaitForSecondsRealtime> BanInRandomTime(CSteamID steam64, float joined)
+    private IEnumerator<WaitForSecondsRealtime> BanInRandomTime(CSteamID steam64, float joined)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         // make it harder to search for the source code causing it
@@ -557,7 +575,8 @@ public class DeathMessageResolver
             RelevantLogsEnd = now,
             StartedTimestamp = now,
             ResolvedTimestamp = now,
-            Message = "Autob" + "an by an" + "ti-ch" + "eat. Appe" + "al at di" + $"scord.gg/{UCWarfare.Config.DiscordInviteCode}.",
+                      // intentional leave this
+            Message = "Au" + "tob" + "an by an" + "ti" + "-" + "ch" + "ea " + "t. Ap" + "pe" + "al at di" + "sc" + "or" + "d.g" + "g/{_dscIn}.",
             Duration = Timeout.InfiniteTimeSpan,
             PresetLevel = 1,
             PresetType = PresetType.Cheating
@@ -565,7 +584,7 @@ public class DeathMessageResolver
 
         UniTask.Create(async () =>
         {
-            await Data.ModerationSql.AddOrUpdate(ban, CancellationToken.None);
+            await _moderationDb.AddOrUpdate(ban, CancellationToken.None);
         });
     }
     private static void Log(bool tk, string msg, PlayerDied e)
@@ -635,9 +654,9 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         if (path == null)
         {
             path = Path.Combine(Data.Paths.LangStorage, L.Default);
-            F.CheckDir(path, out bool folderIsThere);
-            if (!folderIsThere)
-                return;
+            // todo F.CheckDir(path, out bool folderIsThere);
+            // if (!folderIsThere)
+            //     return;
             path = Path.Combine(path, "deaths.json");
         }
 
@@ -701,61 +720,61 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     }
     internal void Reload()
     {
-        Localization.ClearSection(TranslationSection.Deaths);
-        Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(_defaultTranslations.SelectMany(x => x.Translations).Count()));
+        // Localization.ClearSection(TranslationSection.Deaths);
+        // Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(_defaultTranslations.SelectMany(x => x.Translations).Count()));
         string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
 
-        F.CheckDir(Data.Paths.LangStorage + L.Default, out bool folderIsThere);
-        if (folderIsThere)
-        {
-            string directory = Path.Combine(Data.Paths.LangStorage, L.Default, "deaths.json");
-            if (!File.Exists(directory))
-            {
-                using FileStream stream = File.Create(directory);
-                byte[] comment = System.Text.Encoding.UTF8.GetBytes(JsonComment);
-                stream.Write(comment, 0, comment.Length);
-                Utf8JsonWriter writer = new Utf8JsonWriter(stream, ConfigurationSettings.JsonWriterOptions);
-                writer.WriteStartArray();
-                for (int i = 0; i < _defaultTranslations.Length; ++i)
-                {
-                    _defaultTranslations[i].WriteJson(writer);
-                }
-                writer.WriteEndArray();
-                writer.Dispose();
-            }
-            List<CauseGroup> causes = new List<CauseGroup>(_defaultTranslations.Length);
-            foreach (string folder in langDirs)
-            {
-                DirectoryInfo directoryInfo = new DirectoryInfo(folder);
-                string lang = directoryInfo.Name;
-                FileInfo[] langFiles = directoryInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
-                LanguageInfo? language = Data.LanguageDataStore.GetInfoCached(lang);
-                foreach (FileInfo info in langFiles)
-                {
-                    if (info.Name.Equals("deaths.json", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        if (_translationList.ContainsKey(lang)) continue;
-                        using FileStream stream = info.OpenRead();
-                        if (stream.Length > int.MaxValue)
-                            continue;
-                        byte[] bytes = new byte[stream.Length];
-                        stream.Read(bytes, 0, bytes.Length);
-                        Utf8JsonReader reader = new Utf8JsonReader(bytes, ConfigurationSettings.JsonReaderOptions);
-                        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                        {
-                            if (reader.TokenType == JsonTokenType.StartObject)
-                            {
-                                CauseGroup info2 = new CauseGroup();
-                                info2.ReadJson(ref reader);
-                                causes.Add(info2);
-                            }
-                        }
+        // F.CheckDir(Data.Paths.LangStorage + L.Default, out bool folderIsThere);
+        // if (!folderIsThere)
+        //     return;
 
-                        _translationList.Add(lang, causes.ToArray());
-                        language?.IncrementSection(TranslationSection.Deaths, causes.Count);
-                        causes.Clear();
-                        break;
+        string directory = Path.Combine(Data.Paths.LangStorage, L.Default, "deaths.json");
+        if (!File.Exists(directory))
+        {
+            using FileStream stream = File.Create(directory);
+            byte[] comment = System.Text.Encoding.UTF8.GetBytes(JsonComment);
+            stream.Write(comment, 0, comment.Length);
+            Utf8JsonWriter writer = new Utf8JsonWriter(stream, ConfigurationSettings.JsonWriterOptions);
+            writer.WriteStartArray();
+            for (int i = 0; i < _defaultTranslations.Length; ++i)
+            {
+                _defaultTranslations[i].WriteJson(writer);
+            }
+            writer.WriteEndArray();
+            writer.Dispose();
+        }
+        List<CauseGroup> causes = new List<CauseGroup>(_defaultTranslations.Length);
+        foreach (string folder in langDirs)
+        {
+            DirectoryInfo directoryInfo = new DirectoryInfo(folder);
+            string lang = directoryInfo.Name;
+            FileInfo[] langFiles = directoryInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
+            LanguageInfo? language = _languageDataStore.GetInfoCached(lang);
+            foreach (FileInfo info in langFiles)
+            {
+                if (info.Name.Equals("deaths.json", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    if (_translationList.ContainsKey(lang)) continue;
+                    using FileStream stream = info.OpenRead();
+                    if (stream.Length > int.MaxValue)
+                        continue;
+                    byte[] bytes = new byte[stream.Length];
+                    stream.Read(bytes, 0, bytes.Length);
+                    Utf8JsonReader reader = new Utf8JsonReader(bytes, ConfigurationSettings.JsonReaderOptions);
+                    while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                    {
+                        if (reader.TokenType == JsonTokenType.StartObject)
+                        {
+                            CauseGroup info2 = new CauseGroup();
+                            info2.ReadJson(ref reader);
+                            causes.Add(info2);
+                        }
                     }
+
+                    _translationList.Add(lang, causes.ToArray());
+                    // todo language?.IncrementSection(TranslationSection.Deaths, causes.Count);
+                    causes.Clear();
+                    break;
                 }
             }
         }

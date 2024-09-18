@@ -1,6 +1,7 @@
 ﻿using SDG.NetTransport;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits;
@@ -12,7 +13,7 @@ public class BuffUI : UnturnedUI
     
     public readonly BuffIcon[] Buffs = ElementPatterns.CreateArray<BuffIcon>("Canvas/GameObject/Buff{0}", 1, length: MaxBuffs);
     public BuffUI() : base(Gamemode.Config.UIBuffs.GetId(), true, false) { }
-    public void SendBuffs(UCPlayer player)
+    public void SendBuffs(WarfarePlayer player)
     {
         ITransportConnection c = player.Connection;
         SendToPlayer(c);
@@ -33,7 +34,7 @@ public class BuffUI : UnturnedUI
             else break;
         }
     }
-    public bool AddBuff(UCPlayer player, IBuff buff)
+    public bool AddBuff(WarfarePlayer player, IBuff buff)
     {
         bool res = buff.Reserved;
         lock (player.ActiveBuffs)
@@ -65,7 +66,7 @@ public class BuffUI : UnturnedUI
         }
         return true;
     }
-    public static bool HasBuffRoom(UCPlayer player, bool reserved)
+    public static bool HasBuffRoom(WarfarePlayer player, bool reserved)
     {
         lock (player.ActiveBuffs)
         {
@@ -82,7 +83,7 @@ public class BuffUI : UnturnedUI
         return false;
     }
 
-    public bool RemoveBuff(UCPlayer player, IBuff buff)
+    public bool RemoveBuff(WarfarePlayer player, IBuff buff)
     {
         lock (player.ActiveBuffs)
         {
@@ -154,7 +155,7 @@ public class BuffUI : UnturnedUI
         if (buff.Player.IsOnline)
             UpdateBuffTimeState(buff, buff.Player, blink);
     }
-    private void UpdateBuffTimeState(IBuff buff, UCPlayer player, bool isBlinking)
+    private void UpdateBuffTimeState(IBuff buff, WarfarePlayer player, bool isBlinking)
     {
         for (int i = 0; i < MaxBuffs; ++i)
         {

@@ -16,11 +16,10 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private InteractableVehicle _vehicle;
     private EffectAsset? _effect;
-    private UCPlayer? _lastKnownGunner;
+    private Player? _lastKnownGunner;
     public List<Transform> Hardpoints { get; set; }
     public List<HeatSeekingMissileComponent> MissilesInFlight { get; set; }
-
-
+    
     private float _aquisitionTime;
     private float _timeOutTime;
 
@@ -107,7 +106,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         }
     }
 
-    public UCPlayer? GetGunner(InteractableVehicle vehicle)
+    public Player? GetGunner(InteractableVehicle vehicle)
     {
         if (vehicle.turrets == null)
             return null;
@@ -115,7 +114,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         {
             if (turret != null && turret.turretAim == transform && turret.player != null)
             {
-                return UCPlayer.FromSteamPlayer(turret.player);
+                return turret.player.player;
             }
         }
         return null;
@@ -125,7 +124,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     {
         Transform? newTarget = null;
 
-        UCPlayer? gunner = GetGunner(_vehicle);
+        Player? gunner = GetGunner(_vehicle);
 
         if (gunner != null)
             _lastKnownGunner = gunner;
@@ -139,7 +138,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         foreach (InteractableVehicle v in VehicleManager.vehicles)
         {
-            if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead && v.lockedGroup != _vehicle.lockedGroup && v.isEngineOn && !(v.anySeatsOccupied && TeamManager.IsInAnyMain(v.transform.position)))
+            if (v.asset.engine is EEngine.PLANE or EEngine.HELICOPTER && !v.isDead && v.lockedGroup != _vehicle.lockedGroup && v.isEngineOn && !(v.anySeatsOccupied && TeamManager.IsInAnyMain(v.transform.position)))
             {
                 if (IsInRange(v.transform.position))
                 {
@@ -197,11 +196,11 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         LockOn(newTarget, gunner);
     }
 
-    private void LockOn(Transform? newTarget, UCPlayer? gunner)
+    private void LockOn(Transform? newTarget, Player? gunner)
     {
-        bool noAmmo = gunner != null && gunner.Player.equipment.state[10] == 0;
+        bool noAmmo = gunner != null && gunner.equipment.state[10] == 0;
 
-        UseableGun? gun = gunner?.Player.equipment.useable as UseableGun;
+        UseableGun? gun = gunner?.equipment.useable as UseableGun;
         bool reloading = gun != null && Data.GetUseableGunReloading != null && Data.GetUseableGunReloading(gun);
         bool noActiveMissiles = MissilesInFlight.Count == 0;
 
@@ -255,21 +254,21 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         }
     }
     private static readonly short LockOnEffectKey = UnturnedUIKeyPool.Claim();
-    private void PlayLockOnSound(UCPlayer gunner)
+    private void PlayLockOnSound(Player gunner)
     {
-        if (_effect == null || gunner is not { IsOnline: true })
+        if (_effect == null || gunner == null)
             return;
 
         L.LogDebug($"            tone: playing...");
 
-        EffectManager.sendUIEffect(_effect.id, LockOnEffectKey, gunner.Connection, true);
+        EffectManager.sendUIEffect(_effect.id, LockOnEffectKey, gunner.channel.owner.transportConnection, true);
     }
-    private void CancelLockOnSound(UCPlayer gunner)
+    private void CancelLockOnSound(Player gunner)
     {
-        if (_effect == null || gunner is not { IsOnline: true })
+        if (_effect == null || gunner == null)
             return;
 
-        EffectManager.ClearEffectByGuid(_effect.GUID, gunner.Connection);
+        EffectManager.ClearEffectByGuid(_effect.GUID, gunner.channel.owner.transportConnection);
         L.LogDebug($"            tone: cancelled");
     }
 

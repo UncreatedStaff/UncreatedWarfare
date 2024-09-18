@@ -49,6 +49,7 @@ public sealed class OptionsCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
+#if false
         Context.AssertRanByPlayer();
 
         Context.AssertHelpCheck(0, Syntax + " - " + Help);
@@ -109,5 +110,7 @@ public sealed class OptionsCommand : IExecutableCommand
             throw Context.SendCorrectUsage(Syntax);
 
         return default;
+#endif
+        return UniTask.CompletedTask;
     }
 }

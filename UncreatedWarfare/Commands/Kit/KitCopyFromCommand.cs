@@ -67,7 +67,7 @@ internal class KitCopyFromCommand : IExecutableCommand
         {
             kit = new Kit(newKitId.ToLowerInvariant().Replace(' ', '_'), sourceKit)
             {
-                Season = UCWarfare.Season,
+                Season = WarfareModule.Season,
                 Disabled = true, // temporarily lock the kit until all the properties can be copied over
                 Creator = Context.CallerId.m_SteamID
             };

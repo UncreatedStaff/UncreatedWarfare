@@ -18,7 +18,7 @@ public class ClearBuildablesCommand : IExecutableCommand
     public UniTask ExecuteAsync(CancellationToken token)
     {
         // todo
-        Data.Gamemode.ReplaceBarricadesAndStructures();
+        //Data.Gamemode.ReplaceBarricadesAndStructures();
         Context.LogAction(ActionLogType.ClearStructures);
         Context.Reply(_translations.ClearStructures);
 

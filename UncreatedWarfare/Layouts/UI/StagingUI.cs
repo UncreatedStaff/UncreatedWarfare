@@ -2,6 +2,7 @@
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -13,7 +14,7 @@ public class StagingUI : UnturnedUI
 {
     public readonly UnturnedLabel Top = new UnturnedLabel("Top");
     public readonly UnturnedLabel Bottom = new UnturnedLabel("Bottom");
-    public StagingUI() : base(GamemodeOld.Config.UIHeader) { }
+    public StagingUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:Header")) { }
     public void SetText(ITransportConnection connection, string top, string bottom)
     {
         Top.SetText(connection, top);
@@ -23,7 +24,7 @@ public class StagingUI : UnturnedUI
     /// <summary>
     /// Send the initial UI to <paramref name="player"/> without a timer.
     /// </summary>
-    public void SendToPlayer(UCPlayer player, TranslationList name, TimeSpan timeLeft)
+    public void SendToPlayer(WarfarePlayer player, TranslationList name, TimeSpan timeLeft)
     {
         if (timeLeft < TimeSpan.Zero)
             timeLeft = default;
@@ -36,7 +37,7 @@ public class StagingUI : UnturnedUI
     /// <summary>
     /// Send the initial UI to <paramref name="player"/> without a timer.
     /// </summary>
-    public void SendToPlayer(UCPlayer player, TranslationList name)
+    public void SendToPlayer(WarfarePlayer player, TranslationList name)
     {
         string translatedName = name.Translate(player.Locale.LanguageInfo, string.Empty);
         SendToPlayer(player.Connection, translatedName, string.Empty);
@@ -45,7 +46,7 @@ public class StagingUI : UnturnedUI
     /// <summary>
     /// Update the timer for <paramref name="player"/>.
     /// </summary>
-    public void UpdateForPlayer(UCPlayer player, TimeSpan timeLeft)
+    public void UpdateForPlayer(WarfarePlayer player, TimeSpan timeLeft)
     {
         if (timeLeft < TimeSpan.Zero)
             timeLeft = default;

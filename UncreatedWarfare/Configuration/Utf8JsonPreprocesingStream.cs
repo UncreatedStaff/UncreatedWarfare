@@ -12,6 +12,11 @@ namespace Uncreated.Warfare.Configuration;
 ///  * Skip UTF-8 byte order mark.
 /// </summary>
 /// <remarks>Stolen from DevitServer.</remarks>
+/*
+ * The version of System.Text.Json we're using doesn't support comments
+ * or UTF8 Byte-order-marks. This stream wraps another stream and removes
+ * all comments and the BOM.
+ */
 public class Utf8JsonPreProcessingStream : Stream
 {
     private static byte[]? _readBuffer;

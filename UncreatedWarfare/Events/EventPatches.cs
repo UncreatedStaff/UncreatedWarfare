@@ -7,6 +7,7 @@ using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Util;
 using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Events;
@@ -174,7 +175,7 @@ internal static class EventPatches
         EffectAsset effect = __instance.asset.FindExplosionEffectAsset();
         if (effect != null)
         {
-            F.TriggerEffectReliable(effect, Provider.GatherRemoteClientConnections(), __instance.transform.position);
+            EffectUtility.TriggerEffect(effect, Provider.GatherRemoteClientConnections(), __instance.transform.position, true);
         }
         if (data != null)
             data.ExplodingVehicle = null;

@@ -6,10 +6,15 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Util;
-internal static class ItemIconProvider
+
+/// <summary>
+/// Stores information about pre-made font icons for different items or item redirect types.
+/// </summary>
+/// <remarks>These are hard-coded for now.</remarks>
+public class ItemIconProvider
 {
     private const int WhiteColor = unchecked((int)0xFFFFFFFF);
-    internal static readonly ItemIconData[] Defaults =
+    internal readonly ItemIconData[] Defaults =
     {
         // Block: IPA Extensions
 
@@ -227,10 +232,12 @@ internal static class ItemIconProvider
 
     private static ItemIconData New(RedirectType type, char character, int color = WhiteColor) => new ItemIconData(type, character, Unsafe.As<int, Color32>(ref color));
 
-    private static readonly Dictionary<Guid, ItemIconData> ItemData = new Dictionary<Guid, ItemIconData>(Defaults.Length);
-    private static readonly Dictionary<RedirectType, ItemIconData> RedirectData = new Dictionary<RedirectType, ItemIconData>(Defaults.Length);
-    static ItemIconProvider()
+    private readonly Dictionary<Guid, ItemIconData> _itemData;
+    private readonly Dictionary<RedirectType, ItemIconData> _redirectData;
+    public ItemIconProvider()
     {
+        _itemData = new Dictionary<Guid, ItemIconData>(128);
+        _redirectData = new Dictionary<RedirectType, ItemIconData>(24);
         for (int i = 0; i < Defaults.Length; ++i)
         {
             ref ItemIconData data = ref Defaults[i];
@@ -253,24 +260,24 @@ internal static class ItemIconProvider
             ref ItemIconData data = ref Defaults[i];
             Guid p = data.Parent;
             if (p != Guid.Empty)
-                ItemData[p] = data;
+                _itemData[p] = data;
             else
-                RedirectData[data.RedirectType] = data;
+                _redirectData[data.RedirectType] = data;
         }
     }
-    public static char? GetCharacter(ItemAsset asset) => GetCharacter(asset.GUID);
-    public static char? GetCharacter(Guid guid)
+    public char? GetCharacter(ItemAsset asset) => GetCharacter(asset.GUID);
+    public char? GetCharacter(Guid guid)
     {
-        return ItemData.TryGetValue(guid, out ItemIconData data) ? data.Character : null;
+        return _itemData.TryGetValue(guid, out ItemIconData data) ? data.Character : null;
     }
-    public static char? GetCharacter(RedirectType type)
+    public char? GetCharacter(RedirectType type)
     {
-        return RedirectData.TryGetValue(type, out ItemIconData data) ? data.Character : null;
+        return _redirectData.TryGetValue(type, out ItemIconData data) ? data.Character : null;
     }
 
-    public static string GetIcon(RedirectType type, bool rich = true, bool tmpro = false)
+    public string GetIcon(RedirectType type, bool rich = true, bool tmpro = false)
     {
-        if (RedirectData.TryGetValue(type, out ItemIconData data))
+        if (_redirectData.TryGetValue(type, out ItemIconData data))
         {
             if (data.Character.HasValue)
             {
@@ -280,9 +287,9 @@ internal static class ItemIconProvider
 
         return Class.None.GetIcon().ToString();
     }
-    public static bool TryGetIcon(RedirectType type, out string str, bool rich = true, bool tmpro = false)
+    public bool TryGetIcon(RedirectType type, out string str, bool rich = true, bool tmpro = false)
     {
-        if (RedirectData.TryGetValue(type, out ItemIconData data))
+        if (_redirectData.TryGetValue(type, out ItemIconData data))
         {
             if (data.Character.HasValue)
             {
@@ -294,11 +301,11 @@ internal static class ItemIconProvider
         str = new string(Class.None.GetIcon(), 1);
         return false;
     }
-    public static bool TryGetIcon(ItemAsset asset, out string str, bool rich = true, bool tmpro = false) => TryGetIcon(asset.GUID, out str, rich, tmpro);
-    public static string GetIcon(ItemAsset asset, bool rich = true, bool tmpro = false) => GetIcon(asset.GUID, rich, tmpro);
-    public static bool TryGetIcon(Guid guid, out string str, bool rich = true, bool tmpro = false)
+    public bool TryGetIcon(ItemAsset asset, out string str, bool rich = true, bool tmpro = false) => TryGetIcon(asset.GUID, out str, rich, tmpro);
+    public string GetIcon(ItemAsset asset, bool rich = true, bool tmpro = false) => GetIcon(asset.GUID, rich, tmpro);
+    public bool TryGetIcon(Guid guid, out string str, bool rich = true, bool tmpro = false)
     {
-        if (ItemData.TryGetValue(guid, out ItemIconData data))
+        if (_itemData.TryGetValue(guid, out ItemIconData data))
         {
             if (data.Character.HasValue)
             {
@@ -311,9 +318,9 @@ internal static class ItemIconProvider
         return false;
     }
 
-    public static string GetIcon(Guid guid, bool rich = true, bool tmpro = false)
+    public string GetIcon(Guid guid, bool rich = true, bool tmpro = false)
     {
-        if (ItemData.TryGetValue(guid, out ItemIconData data))
+        if (_itemData.TryGetValue(guid, out ItemIconData data))
         {
             if (data.Character.HasValue)
             {
@@ -324,9 +331,9 @@ internal static class ItemIconProvider
         return Class.None.GetIcon().ToString();
     }
 
-    public static string GetIconOrName(ItemAsset asset, bool rich = true, bool tmpro = false)
+    public string GetIconOrName(ItemAsset asset, bool rich = true, bool tmpro = false)
     {
-        if (ItemData.TryGetValue(asset.GUID, out ItemIconData data))
+        if (_itemData.TryGetValue(asset.GUID, out ItemIconData data))
         {
             return GetString(in data, rich, tmpro, asset);
         }
@@ -334,7 +341,7 @@ internal static class ItemIconProvider
         return asset.itemName;
     }
 
-    private static string GetString(in ItemIconData data, bool rich, bool tmpro, ItemAsset? asset = null)
+    private string GetString(in ItemIconData data, bool rich, bool tmpro, ItemAsset? asset = null)
     {
         if (!rich || Unsafe.As<Color32, int>(ref Unsafe.AsRef(in data.Color)) == WhiteColor)
         {

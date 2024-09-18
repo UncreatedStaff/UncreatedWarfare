@@ -1,4 +1,6 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Tweaks;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -21,28 +23,33 @@ public class GodCommand : IExecutableCommand
     }
 
     /// <inheritdoc />
-    public UniTask ExecuteAsync(CancellationToken token)
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertHelpCheck(0, "/god - Toggles your ability to take damage.");
-
         Context.AssertRanByPlayer();
 
         Context.AssertOnDuty();
 
-        Context.Player.GodMode = !Context.Player.GodMode;
+        await Context.AssertPermissions(GodPlayerComponent.GodPermission, token);
 
-        if (Context.Player.GodMode)
+        await UniTask.SwitchToMainThread(token);
+
+        GodPlayerComponent component = Context.Player.Component<GodPlayerComponent>();
+
+        component.IsActive = !component.IsActive;
+
+        if (component.IsActive)
         {
             Context.Player.UnturnedPlayer.life.sendRevive();
-            if (Data.Is(out IRevives rev))
-                rev.ReviveManager.RevivePlayer(Context.Player);
+
+            PlayerInjureComponent? injureComponent = Context.Player.ComponentOrNull<PlayerInjureComponent>();
+            if (injureComponent != null)
+                injureComponent.Revive();
+
             Context.Reply(T.GodModeEnabled);
         }
         else
         {
             Context.Reply(T.GodModeDisabled);
         }
-
-        return default;
     }
 }

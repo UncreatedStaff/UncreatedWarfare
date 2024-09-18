@@ -10,6 +10,7 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
@@ -39,7 +40,7 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
         return UniTask.CompletedTask;
     }
 
-    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+   void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
         for (int i = _icons.Count - 1; i >= 0; i--)
         {
@@ -52,7 +53,7 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
         }
     }
 
-    public  void DeleteAllIcons()
+    public void DeleteAllIcons()
     {
         for (int i = _icons.Count - 1; i >= 0; i--)
         {
@@ -60,7 +61,7 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
             DeleteIcon(iconRenderer);
         }
     }
-    public  void CheckExistingBuildables()
+    public void CheckExistingBuildables()
     {
         foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
         {
@@ -98,11 +99,11 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
         DrawNewMarkers(e.Player, true);
     }
 
-    public  void DrawNewMarkers(UCPlayer player, bool clearOld)
+    public void DrawNewMarkers(WarfarePlayer player, bool clearOld)
     {
         List<Guid> seenTypes = clearOld ? new List<Guid>(_icons.Count) : null!;
 
-        ulong team = player.GetTeam();
+        Team team = player.Team;
         foreach (IconRenderer icon in _icons)
         {
             if (clearOld)
@@ -120,22 +121,22 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
             }
         }
     }
-    public  void AttachIcon(Guid effectGUID, Transform transform, Team? team, float yOffset = 0, ulong player = 0)
+    public void AttachIcon(Guid effectGUID, Transform transform, Team team, float yOffset = 0, ulong player = 0)
         => AttachIcon(effectGUID, transform, new Vector3(0f, yOffset, 0f), team, player);
-    public  void AttachIcon(Guid effectGUID, Transform transform, Vector3 offset, Team? team, ulong player = 0)
+    public void AttachIcon(Guid effectGUID, Transform transform, Vector3 offset, Team team, ulong player = 0)
     {
         if (transform.gameObject.TryGetComponent(out IconRenderer icon))
             DeleteIcon(icon);
         
         icon = transform.gameObject.AddComponent<IconRenderer>();
-        icon.Initialize(effectGUID, offset, team, player);
+        icon.Initialize(effectGUID, offset, team, this, player);
 
         SpawnIcons(icon);
 
         _icons.Add(icon);
         L.LogDebug($"[ICONS] [{icon.Effect?.name}] Icon attached.");
     }
-    public  void DeleteIcon(IconRenderer icon, bool destroy = true)
+    public void DeleteIcon(IconRenderer icon, bool destroy = true)
     {
         if (!_icons.Contains(icon))
             return;
@@ -147,12 +148,12 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
         SpawnNewIconsOfType(icon.EffectGUID);
         L.LogDebug($"[ICONS] [{icon.Effect?.name}] Icon deleted.");
     }
-    public  void DrawNewIconsOfType(Guid effectGUID)
+    public void DrawNewIconsOfType(Guid effectGUID)
     {
         EffectManager.ClearEffectByGuid_AllPlayers(effectGUID);
         SpawnNewIconsOfType(effectGUID);
     }
-    public  void SpawnNewIconsOfType(Guid effectGUID)
+    public void SpawnNewIconsOfType(Guid effectGUID)
     {
         foreach (IconRenderer icon in _icons)
         {
@@ -160,14 +161,14 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
                 SpawnIcons(icon);
         }
     }
-    public  void SpawnIcons(IconRenderer icon)
+    public void SpawnIcons(IconRenderer icon)
     {
         icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Player == 0 ? (icon.Team == 0
                 ? PlayerManager.OnlinePlayers
-                : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team)) : (UCPlayer.FromID(icon.Player) is not { } player ? Array.Empty<UCPlayer>() : new UCPlayer[] { player }))
+                : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team)) : (WarfarePlayer.FromID(icon.Player) is not { } player ? Array.Empty<WarfarePlayer>() : new WarfarePlayer[] { player }))
             .Select(x => x.Connection)));
     }
-    private  void OnUpdate()
+    private void OnUpdate()
     {
         if (_icons.Count == 0) return;
         float tickAmount = Time.deltaTime * _icons.Count / FullTickLoopTime;
@@ -243,7 +244,7 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
     }
 
     [UsedImplicitly]
-    void OnDestroy()
+   void OnDestroy()
     {
         _iconManager.DeleteIcon(this, false);
         L.LogDebug($"[ICONS] [{Effect?.name}] Icon destroyed: {Effect?.FriendlyName ?? EffectGUID.ToString("N")}");
@@ -279,7 +280,7 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
         if (Effect == null)
             return;
         _lastPosition = transform.position;
-        F.TriggerEffectUnreliable(Effect, player, _lastPosition + Offset);
+        EffectUtility.TriggerEffect(Effect, player, _lastPosition + Offset, false);
         _lastBroadcast = Time.realtimeSinceStartup;
         L.LogDebug($"[ICONS] [{Effect.name}] Spawning icon for {player.GetAddressString(true)}.");
     }
@@ -288,12 +289,12 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
         if (Effect == null)
             return;
         _lastPosition = transform.position;
-        F.TriggerEffectUnreliable(Effect, players, _lastPosition + Offset);
+        EffectUtility.TriggerEffect(Effect, players, _lastPosition + Offset, false);
         _lastBroadcast = Time.realtimeSinceStartup;
         L.LogDebug($"[ICONS] [{Effect.name}] Spawning icon for {players.Count} player(s).");
     }
 
-    void IManualOnDestroy.ManualOnDestroy()
+   void IManualOnDestroy.ManualOnDestroy()
     {
         Destroy();
     }

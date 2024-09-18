@@ -75,6 +75,7 @@ public class TraitCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
+#if false
         Context.AssertOnDuty();
 
         Context.AssertHelpCheck(0, Syntax + " - " + Help);
@@ -188,5 +189,7 @@ public class TraitCommand : IExecutableCommand
         }
         
         throw Context.SendCorrectUsage(Syntax);
+#endif
+        return UniTask.CompletedTask;
     }
 }

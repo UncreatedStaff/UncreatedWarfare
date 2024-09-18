@@ -1,6 +1,7 @@
 ﻿using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Layouts.UI;
 
@@ -9,7 +10,7 @@ public class FlagListUI : UnturnedUI
 {
     public readonly UnturnedLabel Header = new UnturnedLabel("Header");
     public readonly FlagListRow[] Rows = ElementPatterns.CreateArray<FlagListRow>("{0}", 0, to: 9);
-    public FlagListUI() : base(Gamemode.Config.UIFlagList.GetId()) { }
+    public FlagListUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:FlagList")) { }
     public class FlagListRow
     {
         [Pattern(Root = true)]

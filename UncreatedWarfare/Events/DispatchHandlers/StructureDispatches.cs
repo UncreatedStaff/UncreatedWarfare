@@ -5,6 +5,7 @@ using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Events.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
@@ -106,38 +107,25 @@ partial class EventDispatcher2
             RegionPosition = new RegionCoord(x, y)
         };
 
-        structure.model.GetComponents(WorkingDestroyInfo);
+        BuildableExtensions.SetDestroyInfo(structure.model, args, null);
+        
         try
         {
-            foreach (IDestroyInfo destroyInfo in WorkingDestroyInfo)
+            bool shouldAllowTemp = shouldAllow;
+            BuildableExtensions.SetSalvageInfo(structure.model, instigatorClient.playerID.steamID, true, salvageInfo =>
             {
-                destroyInfo.DestroyInfo = args;
-            }
-        }
-        finally
-        {
-            WorkingDestroyInfo.Clear();
-        }
-
-        // handle ISalvageInfo components
-        structure.model.GetComponents(_workingSalvageInfos);
-        try
-        {
-            foreach (ISalvageInfo salvageInfo in _workingSalvageInfos)
-            {
-                salvageInfo.Salvager = instigatorClient.playerID.steamID;
-                salvageInfo.IsSalvaged = true;
                 if (salvageInfo is not ISalvageListener listener)
-                    continue;
+                    return true;
 
                 listener.OnSalvageRequested(args);
 
                 if (args.IsActionCancelled)
-                    shouldAllow = false;
+                    shouldAllowTemp = false;
 
-                if (args.IsCancelled)
-                    return;
-            }
+                return !args.IsCancelled;
+            });
+
+            shouldAllow = shouldAllowTemp;
 
             EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
             {
@@ -150,20 +138,7 @@ partial class EventDispatcher2
                     return;
 
                 // re-apply ISalvageInfo components
-                structure.model.GetComponents(_workingSalvageInfos);
-                try
-                {
-                    for (int i = 0; i < _workingSalvageInfos.Count; ++i)
-                    {
-                        ISalvageInfo salvageInfo = _workingSalvageInfos[i];
-                        salvageInfo.Salvager = instigatorClient.playerID.steamID;
-                        salvageInfo.IsSalvaged = true;
-                    }
-                }
-                finally
-                {
-                    _workingSalvageInfos.Clear();
-                }
+                BuildableExtensions.SetSalvageInfo(args.Transform, args.Steam64, true, null);
 
                 if (asset != null)
                 {
@@ -177,34 +152,26 @@ partial class EventDispatcher2
                         ItemAsset? salvagable = asset.FindSalvageItemAsset();
                         if (salvagable != null)
                         {
-                            player.UnturnedPlayer.inventory.forceAddItem(new Item(salvagable, EItemOrigin.NATURE), true);
+                            args.Player.UnturnedPlayer.inventory.forceAddItem(new Item(salvagable, EItemOrigin.NATURE), true);
                         }
                     }
                 }
 
-                if (!StructureManager.tryGetRegion(structure.model, out byte x, out byte y, out _))
+                if (!StructureManager.tryGetRegion(args.Structure.model, out byte x, out byte y, out _))
                 {
                     x = args.RegionPosition.x;
                     y = args.RegionPosition.y;
                 }
 
-                StructureManager.destroyStructure(args.Structure, x, y, player.IsOnline ? (structure.model.position - player.Position).normalized * 100f : new Vector3(0f, 100f, 0f), true);
+                StructureManager.destroyStructure(args.Structure, x, y, args.Player.IsOnline ? (args.Structure.model.position - args.Player.Position).normalized * 100f : new Vector3(0f, 100f, 0f), true);
             });
         }
         finally
         {
-            try
+            // undo setting this if the task needs continuing, it'll be re-set later
+            if (!shouldAllow)
             {
-                // undo setting this if the task needs continuing, it'll be re-set later
-                if (!shouldAllow)
-                {
-                    foreach (ISalvageInfo salvageInfo in _workingSalvageInfos)
-                        salvageInfo.IsSalvaged = false;
-                }
-            }
-            finally
-            {
-                _workingSalvageInfos.Clear();
+                BuildableExtensions.SetSalvageInfo(structure.model, null, false, null);
             }
         }
     }

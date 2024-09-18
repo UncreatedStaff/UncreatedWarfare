@@ -5,20 +5,22 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Tweaks;
 internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, IEventListener<PlaceStructureRequested>, IEventListener<TriggerTrapRequested>
 {
     private readonly ZoneStore _globalZoneStore;
-    private readonly FOBManager? _fobManager;
+    private readonly FobManager? _fobManager;
+    private readonly ChatService _chatService;
 
     public PlacementRestrictions(ZoneStore globalZoneStore, IServiceProvider serviceProvider)
     {
         _globalZoneStore = globalZoneStore;
-        _fobManager = serviceProvider.GetService<FOBManager>(); // optional dependency
+        _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _fobManager = serviceProvider.GetService<FobManager>(); // optional dependency
     }
 
     [EventListener(Priority = 1)]
@@ -30,7 +32,7 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
         // in any main or lobby
         if (_globalZoneStore.IsInMainBase(e.Position) || _globalZoneStore.IsInLobby(e.Position))
         {
-            e.OriginalPlacer.SendChat(T.WhitelistProhibitedPlace, e.Asset);
+            _chatService.Send(e.OriginalPlacer, T.WhitelistProhibitedPlace, e.Asset);
             e.Cancel();
             return;
         }
@@ -39,7 +41,7 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
         if (e.IsOnVehicle && !UCWarfare.Config.ModerationSettings.AllowedBarricadesOnVehicles.ContainsAsset(e.Asset))
         {
             e.Cancel();
-            e.OriginalPlacer.SendChat(T.NoPlacementOnVehicle, e.Asset);
+            _chatService.Send(e.OriginalPlacer, T.NoPlacementOnVehicle, e.Asset);
             return;
         }
 
@@ -47,7 +49,7 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
         if (e.Asset.build is EBuild.SPIKE or EBuild.WIRE && !IsTrapPositionValid(e.Position))
         {
             e.Cancel();
-            e.OriginalPlacer.SendChat(T.ProhibitedPlacement, e.Asset);
+            _chatService.Send(e.OriginalPlacer,T.ProhibitedPlacement, e.Asset);
             return;
         }
 
@@ -63,7 +65,7 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
         if (e.OriginalPlacer.Team.Opponents.Any(x => _globalZoneStore.IsInAntiMainCamp(e.Position, x.Faction)))
         {
             e.Cancel();
-            e.OriginalPlacer.SendChat(T.WhitelistProhibitedPlace, e.Asset);
+            _chatService.Send(e.OriginalPlacer, T.WhitelistProhibitedPlace, e.Asset);
         }
     }
 
@@ -76,7 +78,7 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
         // in any main or lobby
         if (_globalZoneStore.IsInMainBase(e.Position) || _globalZoneStore.IsInLobby(e.Position))
         {
-            e.OriginalPlacer.SendChat(T.WhitelistProhibitedPlace, e.Asset);
+            _chatService.Send(e.OriginalPlacer, T.WhitelistProhibitedPlace, e.Asset);
             e.Cancel();
             return;
         }
@@ -85,7 +87,7 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
         if (e.OriginalPlacer.Team.Opponents.Any(x => _globalZoneStore.IsInAntiMainCamp(e.Position, x.Faction)))
         {
             e.Cancel();
-            e.OriginalPlacer.SendChat(T.WhitelistProhibitedPlace, e.Asset);
+            _chatService.Send(e.OriginalPlacer, T.WhitelistProhibitedPlace, e.Asset);
         }
     }
 
@@ -109,7 +111,7 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
         if (_fobManager != null)
         {
             // todo non-static
-            return !FOBManager.IsPointInFOB(point, out _);
+            return !FobManager.IsPointInFOB(point, out _);
         }
 
         return true;

@@ -308,7 +308,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         Radio.LastRestock = Time.realtimeSinceStartup;
         Vector3 pos = transform.position;
         if (GamemodeOld.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? asset))
-            F.TriggerEffectReliable(asset, 40, pos);
+            EffectUtility.TriggerEffect(asset, 40, pos, true);
 
         if (Radio.Barricade.interactable is not InteractableStorage storage)
             return;
@@ -872,7 +872,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     ++index;
                 }
                 if (GamemodeOld.Config.EffectUnloadBuild.TryGetAsset(out EffectAsset? effect))
-                    F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
+                    EffectUtility.TriggerEffect(effect, EffectManager.MEDIUM, pt, true);
                 UpdateResourceUI(true, false, false);
                 update = true;
             }
@@ -893,7 +893,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     ++index;
                 }
                 if (GamemodeOld.Config.EffectUnloadAmmo.TryGetAsset(out EffectAsset? effect))
-                    F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
+                    EffectUtility.TriggerEffect(effect, EffectManager.MEDIUM, pt, true);
                 UpdateResourceUI(false, true, false);
                 update = true;
             }
@@ -1272,7 +1272,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             {
                 marker ??= Assets.find<EffectAsset>(new Guid("2c17fbd0f0ce49aeb3bc4637b68809a2"));
                 if (marker != null)
-                    F.TriggerEffectReliable(marker, target.Connection, pos);
+                    EffectUtility.TriggerEffect(marker, target.Connection, pos, true);
             }
         }
     }

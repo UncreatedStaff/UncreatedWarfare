@@ -292,6 +292,7 @@ public class ReportCommand : IExecutableCommand
         new KeyValuePair<string, ReportType>("hacker",                  ReportType.Custom),
         new KeyValuePair<string, ReportType>("cheater",                 ReportType.Custom)
     };
+#if false
     public UCPlayer.NameSearch GetNameType(ReportType type)
     {
         return type switch
@@ -301,6 +302,7 @@ public class ReportCommand : IExecutableCommand
             _ => UCPlayer.NameSearch.CharacterName,
         };
     }
+#endif
     public string GetName(ReportType type)
     {
         return type switch
@@ -320,10 +322,12 @@ public class ReportCommand : IExecutableCommand
         }
         return ReportType.Custom;
     }
+#if false
     public async Task<bool> CheckLinked(UCPlayer player, CancellationToken token) =>
         (await Data.DatabaseManager.GetDiscordID(player.Steam64, token).ConfigureAwait(false)) != 0;
     public void NotifyAdminsOfReport(PlayerNames violator, PlayerNames reporter, Report report, string typename)
     {
         Chat.Broadcast(LanguageSet.AllStaff(), T.ReportNotifyAdmin, reporter, violator, report.Message!, typename);
     }
+#endif
 }

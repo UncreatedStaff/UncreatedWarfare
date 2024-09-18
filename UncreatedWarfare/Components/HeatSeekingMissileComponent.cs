@@ -1,5 +1,7 @@
 ﻿#if DEBUG
 #endif
+using System;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
 using Random = UnityEngine.Random;
@@ -27,13 +29,21 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
     private const float TIMEOUT = 10;
 
-    public void Initialize(GameObject projectile, UCPlayer firer, float projectileSpeed, float responsiveness, float guidanceRampTime)
+    private IAssetLink<EffectAsset> _fxSilent = null!;
+    private IAssetLink<EffectAsset> _fxSound = null!;
+
+    public void Initialize(GameObject projectile, Player firer, IServiceProvider serviceProvider, float projectileSpeed, float responsiveness, float guidanceRampTime)
     {
-        if (firer.CurrentVehicle is not null)
+        AssetConfiguration assetConfig = serviceProvider.GetRequiredService<AssetConfiguration>();
+        _fxSilent = assetConfig.GetAssetLink<EffectAsset>("Effects:Projectiles:HeatSeekingSilent");
+        _fxSound = assetConfig.GetAssetLink<EffectAsset>("Effects:Projectiles:HeatSeekingSound");
+
+        InteractableVehicle vehicle = firer.movement.getVehicle();
+        if (vehicle != null && !vehicle.isDead)
         {
-            foreach (var passenger in firer.CurrentVehicle.turrets)
+            foreach (var passenger in vehicle.turrets)
             {
-                if (passenger.turretAim.TryGetComponent(out HeatSeekingController controller) && controller.GetGunner(firer.CurrentVehicle) == firer)
+                if (passenger.turretAim.TryGetComponent(out HeatSeekingController controller) && controller.GetGunner(vehicle) == firer)
                 {
                     _controller = controller;
                     var hardpoint = _controller.CycleHardpoint();
@@ -154,10 +164,10 @@ public class HeatSeekingMissileComponent : MonoBehaviour
             return;
         
 
-        IAssetLink<EffectAsset> id = Gamemode.Config.EffectHeatSeekingMissileNoSound;
+        IAssetLink<EffectAsset> id = _fxSilent;
         if (timeDifference > 0.4f)
         {
-            id = Gamemode.Config.EffectHeatSeekingMissileSound;
+            id = _fxSound;
 
             _timeOfLastLoop = Time.time;
         }

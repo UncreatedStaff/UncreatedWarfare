@@ -409,7 +409,7 @@ public class UAV : MonoBehaviour//, IBuff
             return;
 
         EffectManager.ClearEffectByGuid_AllPlayers(asset.GUID);
-        F.TriggerEffectReliable(asset, Level.size * 2, _modelAnimTransform.position);
+        EffectUtility.TriggerEffect(asset, Level.size * 2, _modelAnimTransform.position, false);
 #endif
     }
     private void Activate()
@@ -422,11 +422,11 @@ public class UAV : MonoBehaviour//, IBuff
         CircleZone.CalculateParticleSpawnPoints(out Vector2[] pts, _radius, new Vector2(_deployPosition.x, _deployPosition.z));
         if (ZonePlayerComponent.Airdrop != null)
         {
-            F.TriggerEffectReliable(ZonePlayerComponent.Airdrop, Level.size, _deployPosition);
+            EffectUtility.TriggerEffect(ZonePlayerComponent.Airdrop, Level.size, _deployPosition, false);
             for (int i = 0; i < pts.Length; ++i)
             {
                 ref Vector2 pt = ref pts[i];
-                F.TriggerEffectReliable(ZonePlayerComponent.Airdrop, Level.size, new Vector3(pt.x, F.GetHeight(pt, 0f), pt.y));
+                EffectUtility.TriggerEffect(ZonePlayerComponent.Airdrop, Level.size, new Vector3(pt.x, F.GetHeight(pt, 0f), pt.y), false);
             }
         }
 #endif

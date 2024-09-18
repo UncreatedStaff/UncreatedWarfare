@@ -717,6 +717,21 @@ public class CommandContext : ControlException
     }
 
     /// <summary>
+    /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="ulong"/>, or returns <see langword="false"/> if out of range or unable to parse.
+    /// </summary>
+    /// <remarks>Zero based indexing. Use <see cref="TryGet(int,out ulong,out EditorUser?, bool)"/> instead for Steam64 IDs.</remarks>
+    public bool TryGet(int parameter, out CSteamID value)
+    {
+        parameter += ArgumentOffset;
+        if (parameter < 0 || parameter >= _argumentCount)
+        {
+            value = CSteamID.Nil;
+            return false;
+        }
+        return FormattingUtility.TryParseSteamId(_parameters[parameter], out value);
+    }
+
+    /// <summary>
     /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="bool"/>, or returns <see langword="false"/> if out of range or unable to parse.
     /// </summary>
     /// <remarks>Zero based indexing.</remarks>

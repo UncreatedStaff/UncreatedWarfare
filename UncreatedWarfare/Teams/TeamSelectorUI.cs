@@ -4,12 +4,17 @@ using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.Saves;
 
 namespace Uncreated.Warfare.Teams;
 
 [UnturnedUI(BasePath = "Canvas/menu_base")]
 public class TeamSelectorUI : UnturnedUI
 {
+    private readonly IPlayerService _playerService;
     public const int PlayerListCount = 30;
 
     /* LOGIC */
@@ -53,15 +58,16 @@ public class TeamSelectorUI : UnturnedUI
         "menu_options/lang_settings/Viewport/Content/search_i14n/tgl_use_for_cmd_input",
         "./state_tgl_use_for_cmd_input", "../lbl_use_for_cmd_input", null);
 
-    public event Action<UCPlayer, ulong>? OnTeamButtonClicked;
-    public event Action<UCPlayer>? OnConfirmClicked;
-    public event Action<UCPlayer>? OnOptionsBackClicked;
-    public event Action<UCPlayer, string>? OnLanguageSearch;
-    public event Action<UCPlayer, string>? OnCultureSearch;
-    public event Action<UCPlayer, int>? OnLanguageApply;
-    public event Action<UCPlayer, int>? OnCultureApply;
-    public TeamSelectorUI() : base(Gamemode.Config.UITeamSelector.GetId(), true, false)
+    public event Action<WarfarePlayer, ulong>? OnTeamButtonClicked;
+    public event Action<WarfarePlayer>? OnConfirmClicked;
+    public event Action<WarfarePlayer>? OnOptionsBackClicked;
+    public event Action<WarfarePlayer, string>? OnLanguageSearch;
+    public event Action<WarfarePlayer, string>? OnCultureSearch;
+    public event Action<WarfarePlayer, int>? OnLanguageApply;
+    public event Action<WarfarePlayer, int>? OnCultureApply;
+    public TeamSelectorUI(AssetConfiguration assetConfig, IPlayerService playerService) : base(assetConfig.GetAssetLink<EffectAsset>("UI:TeamSelector"))
     {
+        _playerService = playerService;
         TeamPlayers =
         [
             TeamPlayersTeam1,
@@ -85,9 +91,9 @@ public class TeamSelectorUI : UnturnedUI
 
     private void OnOptionsBack(UnturnedButton button, Player player)
     {
-        if (OnOptionsBackClicked == null || UCPlayer.FromPlayer(player) is not { } ucplayer)
+        if (OnOptionsBackClicked == null)
             return;
-        OnOptionsBackClicked?.Invoke(ucplayer);
+        OnOptionsBackClicked?.Invoke(_playerService.GetOnlinePlayer(player));
     }
 
     public void SetTeamEnabled(ITransportConnection c, ulong team, bool value)
@@ -96,65 +102,69 @@ public class TeamSelectorUI : UnturnedUI
     }
     private static void OnIMGUIToggle(UnturnedToggle toggle, Player player, bool value)
     {
-        if (!PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
+        if (!BinaryPlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out BinaryPlayerSave save))
             return;
 
         save.IMGUI = value;
-        PlayerSave.WriteToSaveFile(save);
+        BinaryPlayerSave.WriteToSaveFile(save);
     }
     private static void OnTrackQuestsToggle(UnturnedToggle toggle, Player player, bool value)
     {
-        if (!PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
+        if (!BinaryPlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out BinaryPlayerSave save))
             return;
 
         save.TrackQuests = value;
-        PlayerSave.WriteToSaveFile(save);
+        BinaryPlayerSave.WriteToSaveFile(save);
     }
     private void OnApplyLanguageButtonPressed(UnturnedButton button, Player player)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        if (ucp is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
         int index = Array.FindIndex(Languages, x => x.ApplyButton == button);
         if (index == -1) return;
 
-        OnLanguageApply?.Invoke(ucPlayer, index);
+        OnLanguageApply?.Invoke(ucp, index);
     }
     private void OnApplyCultureButtonPressed(UnturnedButton button, Player player)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        if (ucp is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
         int index = Array.FindIndex(Cultures, x => x.ApplyButton == button);
         if (index == -1) return;
 
-        OnCultureApply?.Invoke(ucPlayer, index);
+        OnCultureApply?.Invoke(ucp, index);
     }
     private void OnLanguageTextUpdated(UnturnedTextBox textBox, Player player, string text)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        if (ucp is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
 
-        OnLanguageSearch?.Invoke(ucPlayer, text);
+        OnLanguageSearch?.Invoke(ucp, text);
     }
     private void OnCultureTextUpdated(UnturnedTextBox textBox, Player player, string text)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        if (ucp is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
 
-        OnCultureSearch?.Invoke(ucPlayer, text);
+        OnCultureSearch?.Invoke(ucp, text);
     }
     private void OnTeamClicked(UnturnedButton button, Player player)
     {
         if (OnTeamButtonClicked == null) return;
         ulong team = (ulong)(1 + Array.FindIndex(Teams, team => team.Root == button));
-        if (team is not 1 and not 2 || UCPlayer.FromPlayer(player) is not { } ucplayer)
+        if (team is not 1 and not 2)
             return;
-        OnTeamButtonClicked?.Invoke(ucplayer, team);
+
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        OnTeamButtonClicked?.Invoke(ucp, team);
     }
     private void OnConfirm(UnturnedButton button, Player player)
     {
-        if (OnConfirmClicked == null || UCPlayer.FromPlayer(player) is not { } ucplayer)
+        if (OnConfirmClicked == null)
             return;
-        OnConfirmClicked?.Invoke(ucplayer);
+
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        OnConfirmClicked?.Invoke(ucp);
     }
     public class TeamButton
     {

@@ -40,6 +40,7 @@ public class TeamsCommand : IExecutableCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+#if false
         Context.AssertHelpCheck(0, Syntax + " - " + Help);
 
         Context.AssertRanByPlayer();
@@ -73,5 +74,6 @@ public class TeamsCommand : IExecutableCommand
 
         teamgm.TeamSelector!.JoinSelectionMenu(Context.Player, TeamSelector.JoinTeamBehavior.KeepTeam);
         throw Context.Defer();
+#endif
     }
 }

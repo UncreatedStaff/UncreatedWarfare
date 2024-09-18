@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Traits.Buffs;
 
 // ReSharper disable InconsistentNaming
@@ -108,7 +108,7 @@ public static partial class Patches
         [HarmonyPatch("fire")]
         internal static class ProjectTranspiler
         {
-            private readonly static MethodInfo info = typeof(DeathsPatches).GetMethod("OnPreProject", BindingFlags.Static | BindingFlags.NonPublic);
+            private static readonly MethodInfo? _info = typeof(DeathsPatches).GetMethod("OnPreProject", BindingFlags.Static | BindingFlags.NonPublic);
 
             [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -120,7 +120,7 @@ public static partial class Patches
                     {
                         yield return new CodeInstruction(OpCodes.Ldarg_0);
                         yield return new CodeInstruction(OpCodes.Ldloc, builder);
-                        yield return new CodeInstruction(OpCodes.Call, info);
+                        yield return new CodeInstruction(OpCodes.Call, _info);
                     }
                 }
             }

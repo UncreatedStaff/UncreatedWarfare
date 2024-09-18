@@ -1220,7 +1220,7 @@ public class RepairStationComponent : ShovelableComponent
 
         VehicleManager.sendVehicleHealth(vehicle, newHealth);
         if (GamemodeOld.Config.EffectRepair.TryGetAsset(out EffectAsset? effect))
-            F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
+            EffectUtility.TriggerEffect(effect, EffectManager.SMALL, vehicle.transform.position, true);
         vehicle.updateVehicle();
     }
     public void TickRefuel(InteractableVehicle vehicle)
@@ -1233,7 +1233,7 @@ public class RepairStationComponent : ShovelableComponent
         vehicle.askFillFuel(amount);
 
         if (GamemodeOld.Config.EffectRefuel.TryGetAsset(out EffectAsset? effect))
-            F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
+            EffectUtility.TriggerEffect(effect, EffectManager.SMALL, vehicle.transform.position, true);
         vehicle.updateVehicle();
     }
 }

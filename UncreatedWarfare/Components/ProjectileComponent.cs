@@ -79,7 +79,7 @@ internal class ProjectileComponent : MonoBehaviour
         if (time - _lastSpawn > 0.25f)
         {
             if (Gamemode.Config.EffectAmmo.TryGetAsset(out EffectAsset? effect))
-                F.TriggerEffectReliable(effect, Level.size * 2, this.transform.position);
+                EffectUtility.TriggerEffect(effect, Level.size * 2, this.transform.position, false);
             _lastSpawn = time;
         }
     }

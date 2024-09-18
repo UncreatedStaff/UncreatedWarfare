@@ -29,10 +29,10 @@ public class SaveVoiceBufferCommand : IExecutableCommand
     }
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(0, out _, out UCPlayer? onlinePlayer, true) || onlinePlayer == null)
+        if (!Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer, true) || onlinePlayer == null)
             throw Context.SendPlayerNotFound();
 
-        AudioRecordPlayerComponent? playerComp = AudioRecordPlayerComponent.Get(onlinePlayer);
+        AudioRecordPlayerComponent? playerComp = onlinePlayer.Component<AudioRecordPlayerComponent>();
         if (playerComp == null)
             throw Context.SendUnknownError();
 

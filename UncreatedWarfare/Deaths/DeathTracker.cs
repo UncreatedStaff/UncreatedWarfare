@@ -1,5 +1,4 @@
 ﻿using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +6,8 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
@@ -80,11 +81,10 @@ public class DeathTracker : IHostedService
         {
             if (cause != EDeathCause.BLEEDING || comp?.BleedOutInfo == null)
             {
-                ReviveManagerOld? reviveManager = _warfare.ScopedProvider.GetService<ReviveManagerOld>();
-
-                if (reviveManager != null && reviveManager.IsInjured(dead.Steam64.m_SteamID) && _injuredPlayers.TryGetValue(dead.Steam64, out PlayerDied deathInfo))
+                PlayerInjureComponent? injureComp = dead.ComponentOrNull<PlayerInjureComponent>();
+                if (injureComp != null && injureComp is { State: PlayerHealthState.Injured, PendingDeathInfo: not null })
                 {
-                    await _deathMessageResolver.BroadcastDeath(deathInfo);
+                    await _deathMessageResolver.BroadcastDeath(injureComp.PendingDeathInfo);
                 }
                 else
                 {
@@ -131,7 +131,7 @@ public class DeathTracker : IHostedService
 
     internal void FillArgs(WarfarePlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, PlayerDied e)
     {
-        ulong deadTeam = dead.GetTeam();
+        Team deadTeam = dead.Team;
         e.DeadTeam = deadTeam;
         e.MessageFlags = DeathFlags.None;
         e.WasTeamkill = false;
@@ -141,7 +141,7 @@ public class DeathTracker : IHostedService
         e.Cause = cause;
         e.MessageCause = cause;
         e.Point = dead.Position;
-        e.Session = dead.CurrentSession;
+       // todo e.Session = dead.CurrentSession;
         switch (cause)
         {
             // death causes only possible through PvE:
@@ -182,11 +182,11 @@ public class DeathTracker : IHostedService
         e.Killer = killer;
         if (killer != null)
         {
-            e.KillerSession = killer.CurrentSession;
-            e.KillerPoint = killer.Position;
-            e.KillerKitName = killer.ActiveKitName;
-            e.KillerClass = killer.KitClass;
-            e.KillerBranch = killer.KitBranch;
+            // todo e.KillerSession = killer.CurrentSession;
+            // todo e.KillerPoint = killer.Position;
+            // todo e.KillerKitName = killer.ActiveKitName;
+            // todo e.KillerClass = killer.KitClass;
+            // todo e.KillerBranch = killer.KitBranch;
         }
         else
         {
@@ -264,7 +264,7 @@ public class DeathTracker : IHostedService
                 // checks if the dead player triggered the trap and it's on their own team.
                 if (isTriggerer && drop != null)
                 {
-                    if (drop.GetServersideData().group.GetTeam() == deadTeam)
+                    if (drop.GetServersideData().group == deadTeam)
                         e.MessageFlags |= DeathFlags.Suicide;
                     else
                         e.MessageFlags &= ~DeathFlags.Killer; // removes the killer as it's them but from the other team
@@ -275,18 +275,18 @@ public class DeathTracker : IHostedService
                     e.ThirdParty = triggerer;
                     e.ThirdPartyId = triggerer.Steam64;
                     e.ThirdPartyPoint = triggerer.Position;
-                    e.ThirdPartySession = triggerer.CurrentSession;
-                    e.ThirdPartyTeam = triggerer.GetTeam();
+                    // todo e.ThirdPartySession = triggerer.CurrentSession;
+                    // todo e.ThirdPartyTeam = triggerer.GetTeam();
 
                     // if all 3 parties are on the same team count it as a teamkill on the triggerer, as it's likely intentional
-                    if (triggerer.GetTeam() == deadTeam && killer != null && killer.GetTeam() == deadTeam)
+                    if (triggerer.Team == deadTeam && killer != null && killer.Team == deadTeam)
                     {
                         e.WasTeamkill = true;
                         e.ThirdPartyAtFault = true;
                     }
                 }
                 // if triggerer == placer, count it as a teamkill on the placer
-                else if (killer.GetTeam() == deadTeam)
+                else if (killer.Team == deadTeam)
                 {
                     e.WasTeamkill = true;
                 }
@@ -306,7 +306,7 @@ public class DeathTracker : IHostedService
         {
             if (killer.Steam64 != dead.Steam64)
             {
-                e.KillerTeam = killer.GetTeam();
+                e.KillerTeam = killer.Team;
                 e.MessageFlags |= DeathFlags.Killer;
                 e.KillDistance = (killer.Position - dead.Position).magnitude;
                 if (deadTeam == e.KillerTeam)
@@ -361,7 +361,7 @@ public class DeathTracker : IHostedService
                             e.ThirdParty = e.DriverAssist;
                             e.ThirdPartyId = e.DriverAssist.Steam64;
                             e.ThirdPartyPoint = e.DriverAssist.Position;
-                            e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                            // todo e.ThirdPartySession = e.DriverAssist.CurrentSession;
                             e.MessageFlags |= DeathFlags.Player3;
                         }
                     }
@@ -482,7 +482,7 @@ public class DeathTracker : IHostedService
                         e.ThirdParty = e.DriverAssist;
                         e.ThirdPartyId = e.DriverAssist.Steam64;
                         e.ThirdPartyPoint = e.DriverAssist.Position;
-                        e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                        // todo e.ThirdPartySession = e.DriverAssist.CurrentSession;
                         e.MessageFlags |= DeathFlags.Player3;
                     }
                 }
@@ -513,7 +513,7 @@ public class DeathTracker : IHostedService
                                 e.ThirdParty = e.DriverAssist;
                                 e.ThirdPartyId = e.DriverAssist.Steam64;
                                 e.ThirdPartyPoint = e.DriverAssist.Position;
-                                e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                                // todo e.ThirdPartySession = e.DriverAssist.CurrentSession;
                                 e.MessageFlags |= DeathFlags.Player3;
                             }
                         }
@@ -582,7 +582,7 @@ public class DeathTracker : IHostedService
             case >= MainCampDeathCauseOffset:
                 EDeathCause mainCampCause = e.MessageCause;
 
-                GetItems(mainCampCause, instigator.m_SteamID, killer?.UnturnedPlayer, killerData, deadData, dead.UnturnedPlayer, out IAssetLink<Asset>? primary, out IAssetLink<Asset>? secondary);
+                GetItems(mainCampCause, instigator.m_SteamID, killer?.UnturnedPlayer, killerData, deadData, dead.UnturnedPlayer!, out IAssetLink<Asset>? primary, out IAssetLink<Asset>? secondary);
 
                 if (primary != null)
                 {

@@ -5,13 +5,11 @@ using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
 {
-    private readonly List<ISalvageInfo> _workingSalvageInfos = new List<ISalvageInfo>(2);
-    internal readonly List<IDestroyInfo> WorkingDestroyInfo = new List<IDestroyInfo>(2);
-
     /// <summary>
     /// Invoked by <see cref="BarricadeManager.onDeployBarricadeRequested"/> when a player tries to place a barricade. Can be cancelled.
     /// </summary>
@@ -180,38 +178,25 @@ partial class EventDispatcher2
             VehicleRegionIndex = plant
         };
 
-        barricade.model.GetComponents(WorkingDestroyInfo);
-        try
-        {
-            foreach (IDestroyInfo destroyInfo in WorkingDestroyInfo)
-            {
-                destroyInfo.DestroyInfo = args;
-            }
-        }
-        finally
-        {
-            WorkingDestroyInfo.Clear();
-        }
+        BuildableExtensions.SetDestroyInfo(barricade.model, args, null);
         
-        // handle ISalvageInfo components
-        barricade.model.GetComponents(_workingSalvageInfos);
         try
         {
-            foreach (ISalvageInfo salvageInfo in _workingSalvageInfos)
+            bool shouldAllowTemp = shouldAllow;
+            BuildableExtensions.SetSalvageInfo(barricade.model, instigatorClient.playerID.steamID, true, salvageInfo =>
             {
-                salvageInfo.Salvager = instigatorClient.playerID.steamID;
-                salvageInfo.IsSalvaged = true;
                 if (salvageInfo is not ISalvageListener listener)
-                    continue;
+                    return true;
 
                 listener.OnSalvageRequested(args);
 
                 if (args.IsActionCancelled)
-                    shouldAllow = false;
+                    shouldAllowTemp = false;
 
-                if (args.IsCancelled)
-                    return;
-            }
+                return !args.IsCancelled;
+            });
+
+            shouldAllow = shouldAllowTemp;
 
             EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
             {
@@ -224,20 +209,7 @@ partial class EventDispatcher2
                     return;
 
                 // re-apply ISalvageInfo components
-                barricade.model.GetComponents(_workingSalvageInfos);
-                try
-                {
-                    for (int i = 0; i < _workingSalvageInfos.Count; ++i)
-                    {
-                        ISalvageInfo salvageInfo = _workingSalvageInfos[i];
-                        salvageInfo.Salvager = instigatorClient.playerID.steamID;
-                        salvageInfo.IsSalvaged = true;
-                    }
-                }
-                finally
-                {
-                    _workingSalvageInfos.Clear();
-                }
+                BuildableExtensions.SetSalvageInfo(args.Transform, args.Steam64, true, null);
 
                 // add salvaged item
                 if (args.ServersideData.barricade.health >= asset.health)
@@ -249,11 +221,11 @@ partial class EventDispatcher2
                     ItemAsset? salvagable = asset.FindSalvageItemAsset();
                     if (salvagable != null)
                     {
-                        player.UnturnedPlayer.inventory.forceAddItem(new Item(salvagable, EItemOrigin.NATURE), true);
+                        args.Player.UnturnedPlayer.inventory.forceAddItem(new Item(salvagable, EItemOrigin.NATURE), true);
                     }
                 }
 
-                if (!BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out _))
+                if (!BarricadeManager.tryGetRegion(args.Barricade.model, out byte x, out byte y, out ushort plant, out _))
                 {
                     x = args.RegionPosition.x;
                     y = args.RegionPosition.y;
@@ -265,18 +237,10 @@ partial class EventDispatcher2
         }
         finally
         {
-            try
+            // undo setting this if the task needs continuing, it'll be re-set later
+            if (!shouldAllow)
             {
-                // undo setting this if the task needs continuing, it'll be re-set later
-                if (!shouldAllow)
-                {
-                    foreach (ISalvageInfo salvageInfo in _workingSalvageInfos)
-                        salvageInfo.IsSalvaged = false;
-                }
-            }
-            finally
-            {
-                _workingSalvageInfos.Clear();
+                BuildableExtensions.SetSalvageInfo(barricade.model, null, false, null);
             }
         }
     }

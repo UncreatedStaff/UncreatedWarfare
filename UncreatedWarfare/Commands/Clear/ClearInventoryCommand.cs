@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+﻿using System.Globalization;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;

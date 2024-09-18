@@ -139,6 +139,7 @@ public class DevCommand : IExecutableCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+#if false
         Context.AssertHelpCheck(0, Syntax + " - Developer commands for config setup.");
 
         if (Context.MatchParameter(0, "caches", "cache"))
@@ -291,5 +292,6 @@ public class DevCommand : IExecutableCommand
                 "ebd491");
         }
         else throw Context.SendCorrectUsage(Syntax);
+#endif
     }
 }

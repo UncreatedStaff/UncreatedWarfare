@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Factions;
@@ -27,6 +28,14 @@ public interface IFactionDataStore
 
 public static class FactionDataStoreExtensions
 {
+    /// <summary>
+    /// Search a faction from it's database model.
+    /// </summary>
+    public static FactionInfo? FindFaction(this IFactionDataStore dataStore, [NotNullWhen(true)] Faction? faction)
+    {
+        return faction == null ? null : dataStore.Factions.FirstOrDefault(f => f.PrimaryKey == faction.Key);
+    }
+
     /// <summary>
     /// Search a faction using text.
     /// </summary>

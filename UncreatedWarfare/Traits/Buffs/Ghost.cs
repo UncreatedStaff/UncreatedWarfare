@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 
@@ -28,10 +29,12 @@ public class Ghost : Buff
         Data = string.Empty
     };
 
-    public static bool IsHidden(UCPlayer player)
+    public static bool IsHidden(WarfarePlayer player)
     {
-        if (player is null || !TraitManager.Loaded || player.Player.movement.getVehicle() != null) return false;
-        if (player.Player.life.isDead) return true;
+        return false;
+#if false
+        if (player is null || !TraitManager.Loaded || player.UnturnedPlayer.movement.getVehicle() != null) return false;
+        if (player.UnturnedPlayer.life.isDead) return true;
         TraitData? d = DATA ??= TraitManager.GetData(typeof(Ghost));
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
         {
@@ -54,5 +57,6 @@ public class Ghost : Buff
         }
 
         return false;
+#endif
     }
 }

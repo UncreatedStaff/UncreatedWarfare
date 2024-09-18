@@ -94,7 +94,7 @@ internal class KitRenameCommand : IExecutableCommand
                 throw Context.Reply(_translations.KitNotFound, kitId);
             }
 
-            if (kit.Disabled || kit.Season < UCWarfare.Season || !await _kitManager.HasAccess(dbContext, kit, Context.Player, token))
+            if (kit.Disabled || kit.Season < WarfareModule.Season || !await _kitManager.HasAccess(dbContext, kit, Context.Player, token))
             {
                 throw Context.Reply(_translations.KitRenameNoAccess, kit);
             }
@@ -104,7 +104,7 @@ internal class KitRenameCommand : IExecutableCommand
             string oldName = kit.GetDisplayName(_languageService, defaultLanguage, removeNewLine: false);
             string newName = KitEx.ReplaceNewLineSubstrings(name);
 
-            kit.SetSignText(dbContext, Context.CallerId.m_SteamID, newName, defaultLanguage);
+            kit.SetSignText(dbContext, Context.CallerId, newName, defaultLanguage);
             if (kit.Translations.Count > 1)
             {
                 for (int i = kit.Translations.Count - 1; i >= 0; i--)
@@ -122,8 +122,8 @@ internal class KitRenameCommand : IExecutableCommand
             newName = newName.Replace("\n", "<br>");
 
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-            int ldId = KitEx.ParseStandardLoadoutId(kit.InternalName);
-            string ldIdStr = ldId == -1 ? "???" : KitEx.GetLoadoutLetter(ldId).ToUpperInvariant();
+            int ldId = LoadoutIdHelper.Parse(kit.InternalName);
+            string ldIdStr = ldId == -1 ? "???" : LoadoutIdHelper.GetLoadoutLetter(ldId).ToUpperInvariant();
             Context.LogAction(ActionLogType.SetKitProperty, kit.FactionId + ": SIGN TEXT >> \"" + newName + "\" (using /kit rename)");
             _kitManager.Signs.UpdateSigns(kit);
             Context.Reply(_translations.KitRenamed, ldIdStr, oldName, newName);

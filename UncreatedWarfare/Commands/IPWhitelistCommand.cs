@@ -77,18 +77,17 @@ public class IPWhitelistCommand : IExecutableCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
-
         bool remove = Context.MatchParameter(0, RemArgs);
         if (remove || Context.MatchParameter(0, "add", "whitelist", "create"))
         {
             IPv4Range range = default;
-            if (!Context.TryGet(1, out ulong player, out _) || Context.TryGet(2, out string str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
+            if (!Context.TryGet(1, out CSteamID player, out _) || Context.TryGet(2, out string? str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
             {
                 throw Context.SendCorrectUsage(Syntax);
             }
 
-            PlayerNames names = await F.GetPlayerOriginalNamesAsync(player, token).ConfigureAwait(false);
+            PlayerNames names = await F.GetPlayerOriginalNamesAsync(player.m_SteamID, token).ConfigureAwait(false);
+#if false
             if (await Data.ModerationSql.WhitelistIP(player, Context.CallerId.m_SteamID, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false))
             {
                 Context.Reply(remove ? _translations.IPUnwhitelistSuccess : _translations.IPWhitelistSuccess, names, range);
@@ -97,6 +96,7 @@ public class IPWhitelistCommand : IExecutableCommand
             {
                 Context.Reply(_translations.IPWhitelistNotFound, names, range);
             }
+#endif
         }
         else Context.SendCorrectUsage(Syntax);
     }

@@ -11,7 +11,7 @@ public static class HexStringHelper
     //
     // I'm not using unity's ColorUtility for two reasons:
     //  * it doesn't work on 3 length hex strings
-    //  * it needs a native call, which won't work with tests.
+    //  * it needs a native call, which won't work with tests or external use.
 
     private static KeyValuePair<string, Color>[]? _presets;
     private static void CheckPresets()

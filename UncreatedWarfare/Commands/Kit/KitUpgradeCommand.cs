@@ -40,9 +40,9 @@ internal class KitUpgradeCommand : IExecutableCommand
 
         if (!kit.NeedsUpgrade)
         {
-            if (kit.Season != UCWarfare.Season)
+            if (kit.Season != WarfareModule.Season)
             {
-                kit.Season = UCWarfare.Season;
+                kit.Season = WarfareModule.Season;
                 _dbContext.Update(kit);
                 await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                 throw Context.Reply(_translations.KitUpgraded, kit);

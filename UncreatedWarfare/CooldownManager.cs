@@ -90,25 +90,25 @@ public class CooldownManager : IHostedService
     }
 
     /// <exception cref="SingletonUnloadedException"/>
-    public bool HasCooldownNoStateCheck(UCPlayer player, CooldownType type, out Cooldown cooldown)
+    public bool HasCooldownNoStateCheck(WarfarePlayer player, CooldownType type, out Cooldown cooldown)
     {
         GameThread.AssertCurrent();
 
         Cooldowns.RemoveAll(c => c.Player == null || c.Timeleft.TotalSeconds <= 0);
-        cooldown = Cooldowns.Find(c => c.CooldownType == type && c.Player.Steam64 == player.CSteamID);
+        cooldown = Cooldowns.Find(c => c.CooldownType == type && c.Player.Steam64.m_SteamID == player.Steam64.m_SteamID);
         return cooldown != null;
     }
-    public void RemoveCooldown(UCPlayer player, CooldownType type)
+    public void RemoveCooldown(WarfarePlayer player, CooldownType type)
     {
         GameThread.AssertCurrent();
 
-        Cooldowns.RemoveAll(c => c.Player == null || c.Player.Steam64 == player.CSteamID && c.CooldownType == type);
+        Cooldowns.RemoveAll(c => c.Player == null || c.Player.Steam64.m_SteamID == player.Steam64.m_SteamID && c.CooldownType == type);
     }
-    public void RemoveCooldown(UCPlayer player)
+    public void RemoveCooldown(WarfarePlayer player)
     {
         GameThread.AssertCurrent();
 
-        Cooldowns.RemoveAll(c => c.Player.Steam64 == player.CSteamID);
+        Cooldowns.RemoveAll(c => c.Player.Steam64.m_SteamID == player.Steam64.m_SteamID);
     }
     public void RemoveCooldown(CooldownType type)
     {

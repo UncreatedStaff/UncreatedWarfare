@@ -227,7 +227,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                 KitId = kitComp.ActiveKitKey,
                 KitName = kitComp.ActiveKitId,
                 MapId = MapScheduler.Current,
-                SeasonId = UCWarfare.Season,
+                SeasonId = WarfareModule.Season,
                 SquadName = player.Squad?.Name,
                 SquadLeader = player.Squad?.Leader?.Steam64,
                 FinishedGame = false,
