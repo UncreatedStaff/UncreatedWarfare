@@ -1,20 +1,44 @@
 ﻿using DanielWillett.ModularRpcs;
 using DanielWillett.ModularRpcs.Protocol;
 using DanielWillett.ModularRpcs.WebSockets;
+using Microsoft.Extensions.Configuration;
 using System;
-using Uncreated.Warfare.Logging;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Networking;
-internal static class HomebaseConnector
+public class HomebaseConnector
 {
-    public static async Task<bool> ConnectAsync(CancellationToken token = default)
+    private readonly ILogger<HomebaseConnector> _logger;
+    private readonly string? _authKey;
+    private readonly Uri? _authEndpoint;
+    private readonly Uri? _connectEndpoint;
+
+    public bool Enabled { get; }
+    
+    public HomebaseConnector(IConfiguration systemConfig, ILogger<HomebaseConnector> logger)
+    {
+        _logger = logger;
+
+        IConfigurationSection homebaseSection = systemConfig.GetSection("homebase");
+
+        Enabled = string.Equals(homebaseSection["enabled"], "true", StringComparison.InvariantCultureIgnoreCase);
+
+        _authKey = homebaseSection["auth_key"];
+
+        string authEndpoint = homebaseSection["auth_endpoint"];
+        string connectEndpoint = homebaseSection["connect_endpoint"];
+
+        _authEndpoint = string.IsNullOrWhiteSpace(authEndpoint) ? null : new Uri(authEndpoint);
+        _connectEndpoint = string.IsNullOrWhiteSpace(connectEndpoint) ? null : new Uri(connectEndpoint);
+    }
+
+    public async Task<bool> ConnectAsync(CancellationToken token = default)
     {
         Uri? connectUri = await GetConnectUri(token);
         if (connectUri == null)
             return false;
 
-        L.LogDebug($"Connecting to homebase at: {connectUri}.");
+        _logger.LogDebug("Connecting to homebase at: {0}.", connectUri);
 
         WebSocketEndpoint endpoint = WebSocketEndpoint.AsClient(connectUri);
         endpoint.ShouldAutoReconnect = true;
@@ -26,13 +50,12 @@ internal static class HomebaseConnector
         try
         {
             connection = await endpoint.RequestConnectionAsync(Data.RpcRouter, Data.HomebaseLifetime, Data.RpcSerializer, token).ConfigureAwait(false);
-            connection.Local.SetLogger(L.Logger);
+            connection.Local.SetLogger(_logger);
             connection.OnReconnect += GetConnectUri;
         }
         catch (Exception ex)
         {
-            L.LogError("Failed to open WebSocket client.");
-            L.LogError(ex);
+            _logger.LogError(ex, "Failed to open WebSocket client.");
             return false;
         }
 
@@ -41,37 +64,37 @@ internal static class HomebaseConnector
         return true;
     }
 
-    private static Task<Uri?> GetConnectUri(WebSocketClientsideRemoteRpcConnection connection)
+    private Task<Uri?> GetConnectUri(WebSocketClientsideRemoteRpcConnection connection)
     {
         return GetConnectUri(CancellationToken.None);
     }
 
-    private static async Task<Uri?> GetConnectUri(CancellationToken token = default)
+    private async Task<Uri?> GetConnectUri(CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
         
-        if (UCWarfare.Config.HomebaseConfig is not { Enabled: true, ConnectEndpoint.Length: > 0 })
+        if (!Enabled || _connectEndpoint == null)
         {
-            L.LogWarning("Homebase disabled or not configured.");
+            _logger.LogWarning("Homebase disabled or not configured.");
             return null;
         }
 
         string? authJwt = null;
 
-        if (!string.IsNullOrEmpty(UCWarfare.Config.HomebaseConfig.AuthEndpoint))
+        if (_authEndpoint != null)
         {
-            if (string.IsNullOrEmpty(UCWarfare.Config.HomebaseConfig.AuthKey))
+            if (string.IsNullOrWhiteSpace(_authKey))
             {
-                L.LogWarning("Authentication key not configured.");
+                _logger.LogWarning("Authentication key not configured.");
                 return null;
             }
 
-            Uri authUri = new Uri(UCWarfare.Config.HomebaseConfig.AuthEndpoint);
-            
-            using UnityWebRequest authRequest = UnityWebRequest.Get(authUri);
-            authRequest.SetRequestHeader("Authorization", "Bearer " + UCWarfare.Config.HomebaseConfig.AuthKey);
+            using UnityWebRequest authRequest = UnityWebRequest.Get(_authEndpoint);
+            authRequest.SetRequestHeader("Authorization", "Bearer " + _authKey);
 
-            L.LogDebug($"Authenticating for homebase at: {authUri} with key {UCWarfare.Config.HomebaseConfig.AuthKey}.");
+#if DEBUG
+            _logger.LogDebug("Authenticating for homebase at: {0}.", _authEndpoint);
+#endif
 
             try
             {
@@ -79,8 +102,7 @@ internal static class HomebaseConnector
             }
             catch (Exception ex)
             {
-                L.LogError("Failed to authenticate WebSocket client.");
-                L.LogError(ex);
+                _logger.LogError(ex, "Failed to authenticate WebSocket client.");
                 return null;
             }
 
@@ -89,7 +111,7 @@ internal static class HomebaseConnector
             authJwt = authRequest.downloadHandler.text;
         }
 
-        Uri connectUri = new Uri(UCWarfare.Config.HomebaseConfig.ConnectEndpoint);
+        Uri connectUri = _connectEndpoint;
 
         if (authJwt != null)
         {

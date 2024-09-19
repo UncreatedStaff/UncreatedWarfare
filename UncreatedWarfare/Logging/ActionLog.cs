@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
@@ -86,7 +87,7 @@ public class ActionLog : MonoBehaviour
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     // the brackets are separated on purpose
     public static string AsAsset(Asset asset) => "{" + $"{asset.FriendlyName} / {asset.id} / {asset.GUID:N}" + "}";
-    public static void Add(ActionLogType type, string? data, UCPlayer? player) => Add(type, data, player == null ? 0ul : player.Steam64);
+    public static void Add(ActionLogType type, string? data, WarfarePlayer? player) => Add(type, data, player == null ? 0ul : player.Steam64.m_SteamID);
     public static void Add(ActionLogType type, string? data = null, ulong player = 0)
     {
         _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));

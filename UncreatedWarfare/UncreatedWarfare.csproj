@@ -111,8 +111,8 @@
   <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->
   <ItemGroup>
     <PackageReference Include="DanielWillett.StackCleaner" Version="[1.4.2,)" />
-    <PackageReference Include="DanielWillett.ReflectionTools" Version="[3.2.1,)" />
-    <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="[3.0.0,)" />
+    <PackageReference Include="DanielWillett.ReflectionTools" Version="[4.0.0,)" />
+    <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="[4.0.0,)" />
     <PackageReference Include="DanielWillett.SpeedBytes" Version="[1.1.2,)" />
     <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="[1.1.1,)" />
     <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="[1.0.0,)" />
@@ -222,55 +222,61 @@
     <!-- Unturned -->
     <Reference Include="Assembly-CSharp">
       <HintPath>$(UnturnedDllPath)/Assembly-CSharp.dll</HintPath>
-      <Private>true</Private>
+
+      <!-- Prevents copying to output dir -->
+      <Private>!$(CopyToModule)</Private>
     </Reference>
     <Reference Include="SDG.NetTransport">
       <HintPath>$(UnturnedDllPath)/SDG.NetTransport.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
     <Reference Include="SDG.NetPak.Runtime">
       <HintPath>$(UnturnedDllPath)/SDG.NetPak.Runtime.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
     <Reference Include="UnturnedDat">
       <HintPath>$(UnturnedDllPath)/UnturnedDat.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
     <Reference Include="UnityEx">
       <HintPath>$(UnturnedDllPath)/UnityEx.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
 
     <!-- Third Party -->
     <Reference Include="com.rlabrecque.steamworks.net">
       <HintPath>$(UnturnedDllPath)/com.rlabrecque.steamworks.net.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
     <Reference Include="UniTask">
       <HintPath>../Libraries/UniTask.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
 
     <!-- Unity -->
+    <Reference Include="UnityEngine">
+      <HintPath>$(UnturnedDllPath)/UnityEngine.dll</HintPath>
+      <Private>!$(CopyToModule)</Private>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.CoreModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.PhysicsModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.ImageConversionModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.UnityWebRequestModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
     <Reference Include="UnityEngine.AssetBundleModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.AssetBundleModule.dll</HintPath>
-      <Private>true</Private>
+      <Private>!$(CopyToModule)</Private>
     </Reference>
   </ItemGroup>
 
@@ -279,6 +285,6 @@
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(U3DSPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
-    <Exec Command="XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),Assembly-CSharp.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,Assembly-CSharp.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnturnedDat.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnturnedDat.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEx.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEx.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetTransport.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetTransport.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetPak.Runtime.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetPak.Runtime.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),com.rlabrecque.steamworks.net.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,com.rlabrecque.steamworks.net.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.CoreModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.CoreModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.ImageConversionModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.ImageConversionModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.PhysicsModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.PhysicsModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UnityWebRequestModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UnityWebRequestModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.AssetBundleModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.AssetBundleModule.dll))*&quot;" />
+    <Exec Command="XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),Assembly-CSharp.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,Assembly-CSharp.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnturnedDat.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnturnedDat.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEx.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEx.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetTransport.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetTransport.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetPak.Runtime.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetPak.Runtime.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),com.rlabrecque.steamworks.net.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,com.rlabrecque.steamworks.net.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.CoreModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.CoreModule.dll))*&quot;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.ImageConversionModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.ImageConversionModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.PhysicsModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.PhysicsModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UnityWebRequestModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UnityWebRequestModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.AssetBundleModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.AssetBundleModule.dll))*&quot;" />
   </Target>
 </Project>

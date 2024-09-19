@@ -184,7 +184,7 @@ public abstract class Punishment : ModerationEntry
         await base.AddExtraInfo(db, workingList, formatter, token);
         if (PresetType != PresetType.None)
         {
-            workingList.Add($"Preset: {(Provider.isInitialized ? Localization.TranslateEnum(PresetType) : PresetType.ToString())} | Level {PresetLevel.ToString(formatter)}");
+            workingList.Add($"Preset: {(/* todo Provider.isInitialized ? Localization.TranslateEnum(PresetType) : */PresetType.ToString())} | Level {PresetLevel.ToString(formatter)}");
         }
     }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
@@ -483,7 +483,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnDurationsDurationSeconds, DatabaseInterface.ColumnDurationsForgiven,
             DatabaseInterface.ColumnDurationsForgivenBy, DatabaseInterface.ColumnDurationsForgivenTimestamp, DatabaseInterface.ColumnDurationsForgivenReason)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 5, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 5, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnDurationsDurationSeconds}` = `t`.`{DatabaseInterface.ColumnDurationsDurationSeconds}`," +
                        $"`{DatabaseInterface.ColumnDurationsForgiven}` = `t`.`{DatabaseInterface.ColumnDurationsForgiven}`," +

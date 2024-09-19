@@ -20,7 +20,7 @@ public static partial class Patches
     {
         internal static GameObject? lastProjected;
         // SDG.Unturned.UseableGun
-
+#if false
         /// <summary>
         /// Postfix of <see cref="UseableGun.project(Vector3, Vector3, ItemBarrelAsset, ItemMagazineAsset)"/> to predict mortar hits.
         /// </summary>
@@ -125,5 +125,6 @@ public static partial class Patches
                 }
             }
         }
+#endif
     }
 }

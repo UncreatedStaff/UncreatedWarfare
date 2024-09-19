@@ -42,7 +42,7 @@ public class XPReward : IQuestReward
 
         XPParameters parameters = new XPParameters(player, player.Team, XP, tracker.Quest.Name.ToUpper() + " REWARD", false);
 
-        await Points.AwardXPAsync(parameters, token).ConfigureAwait(false);
+        // await Points.AwardXPAsync(parameters, token).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -73,7 +73,7 @@ public class CreditsReward : IQuestReward
 
         CreditsParameters parameters = new CreditsParameters(player, player.Team, Credits, tracker.Quest.Name.ToUpper() + " REWARD");
 
-        await Points.AwardCreditsAsync(parameters, token).ConfigureAwait(false);
+        // await Points.AwardCreditsAsync(parameters, token).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -100,15 +100,16 @@ public class RankReward : IQuestReward
     /// <inheritdoc />
     public UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        Ranks.RankManager.SkipToRank(player, RankOrder);
+        // Ranks.RankManager.SkipToRank(player, RankOrder);
         return UniTask.CompletedTask;
     }
 
     /// <inheritdoc />
     public override string ToString()
     {
-        ref Ranks.RankData d = ref Ranks.RankManager.GetRank(RankOrder, out bool success);
-        return "Reward: Unlock " + (success ? d.GetName(null, Data.LocalLocale) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
+        // ref Ranks.RankData d = ref Ranks.RankManager.GetRank(RankOrder, out bool success);
+        // return "Reward: Unlock " + (success ? d.GetName(null, Data.LocalLocale) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
+        return "rank reward " + RankOrder;
     }
 }
 

@@ -7,9 +7,10 @@ namespace Uncreated.Warfare.Models.Buildables;
 [Table("buildables_stored_items")]
 public class BuildableStorageItem
 {
-    [Column("pk")]
+    [Column("Save")]
     [ForeignKey(nameof(Save))]
     public int SaveId { get; set; }
+
     public BuildableSave? Save { get; set; }
     public UnturnedAssetReference Item { get; set; }
     public byte Amount { get; set; }

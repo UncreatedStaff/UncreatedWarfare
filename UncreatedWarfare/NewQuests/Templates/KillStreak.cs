@@ -5,6 +5,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.NewQuests.Parameters;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Util;
 
@@ -53,7 +54,7 @@ public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStre
         private int _streaksCompleted;
         public override bool IsComplete => _streaksCompleted >= _targetStreaksCompleted;
         public override short FlagValue => (short)_streaksCompleted;
-        public Tracker(UCPlayer player, IServiceProvider serviceProvider, KillStreak quest, State state, IQuestPreset? preset)
+        public Tracker(WarfarePlayer player, IServiceProvider serviceProvider, KillStreak quest, State state, IQuestPreset? preset)
             : base(player, serviceProvider, quest, state, preset)
         {
             _targetStreaksCompleted = state.StreakCount.GetSingleValueOrMinimum();
@@ -69,7 +70,7 @@ public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStre
                 return;
             }
 
-            if (e.Instigator.m_SteamID != Player.Steam64 || !e.WasEffectiveKill || e.Cause == EDeathCause.SHRED)
+            if (e.Instigator.m_SteamID != Player.Steam64.m_SteamID || !e.WasEffectiveKill || e.Cause == EDeathCause.SHRED)
                 return;
 
             _streakProgress++;

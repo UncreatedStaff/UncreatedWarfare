@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
@@ -12,7 +13,7 @@ public class SignTextChanged
     /// <summary>
     /// Player that changed the sign text, if they exist.
     /// </summary>
-    public required UCPlayer? Instigator { get; init; }
+    public required WarfarePlayer? Instigator { get; init; }
 
     /// <summary>
     /// The index of the vehicle region in <see cref="BarricadeManager.vehicleRegions"/>. <see cref="ushort.MaxValue"/> if the barricade is not planted.

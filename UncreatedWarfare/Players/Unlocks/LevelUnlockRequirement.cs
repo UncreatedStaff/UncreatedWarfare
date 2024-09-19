@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Text.Json;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
@@ -16,7 +14,7 @@ public class LevelUnlockRequirement : UnlockRequirement
     /// <inheritdoc />
     public override bool CanAccessFast(WarfarePlayer player)
     {
-        return player.Level.Level >= UnlockLevel;
+        return false;// todo player.Level.Level >= UnlockLevel;
     }
 
     /// <inheritdoc />
@@ -25,8 +23,8 @@ public class LevelUnlockRequirement : UnlockRequirement
         if (UnlockLevel == 0)
             return string.Empty;
 
-        int lvl = Points.GetLevel(player.CachedXP);
-        return T.KitRequiredLevel.Translate(player, false, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
+        // int lvl = Points.GetLevel(player.CachedXP);
+        return string.Empty; // todo T.KitRequiredLevel.Translate(player, false, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
     }
 
     /// <inheritdoc />
@@ -70,23 +68,25 @@ public class LevelUnlockRequirement : UnlockRequirement
     /// <inheritdoc />
     public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
-        LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
-        return ctx.Reply(T.RequestKitLowLevel, data);
+        // LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
+        return ctx.Reply(T.NotImplemented/* T.RequestKitLowLevel, data */);
     }
 
     /// <inheritdoc />
     public override Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
     {
-        LevelData data2 = new LevelData(Points.GetLevelXP(UnlockLevel));
-        return ctx.Reply(T.RequestVehicleMissingLevels, data2);
+        // LevelData data2 = new LevelData(Points.GetLevelXP(UnlockLevel));
+        return ctx.Reply(T.NotImplemented/* T.RequestVehicleMissingLevels, data2 */);
     }
 
+#if false
     /// <inheritdoc />
     public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
         LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestTraitLowLevel, trait, data);
     }
+#endif
 
     /// <inheritdoc />
     public override bool Equals(object? obj)

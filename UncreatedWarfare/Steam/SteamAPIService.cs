@@ -16,15 +16,17 @@ namespace Uncreated.Warfare.Steam;
 public class SteamAPIService
 {
     private const string BaseUrl = "https://api.steampowered.com/";
-    private readonly IConfiguration _systemConfig;
     private readonly ILogger<SteamAPIService> _logger;
     private readonly IPlayerService _playerService;
 
+    private readonly string? _steamApiKey;
+
     public SteamAPIService(IConfiguration systemConfig, ILogger<SteamAPIService> logger, IPlayerService playerService)
     {
-        _systemConfig = systemConfig;
         _logger = logger;
         _playerService = playerService;
+
+        _steamApiKey = systemConfig["steam_api_key"];
     }
 
     public async UniTask TryDownloadAllPlayerSummaries(bool allowCache = true, CancellationToken token = default)
@@ -76,7 +78,7 @@ public class SteamAPIService
 
     public async UniTask<PlayerSummary[]> GetPlayerSummaries(IList<ulong> players, int index, int length, CancellationToken token = default)
     {
-        if (string.IsNullOrEmpty(UCWarfare.Config.SteamAPIKey))
+        if (string.IsNullOrEmpty(_steamApiKey))
             throw new InvalidOperationException("Steam API key not present.");
         if (length == 0)
             return Array.Empty<PlayerSummary>();
@@ -135,7 +137,7 @@ public class SteamAPIService
                 L.LogDebug($"  Done with {webRequest.url}.");
 
                 if (webRequest.result != UnityWebRequest.Result.Success)
-                    throw new Exception($"Error getting player summaries from {webRequest.url.Replace(UCWarfare.Config.SteamAPIKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
+                    throw new Exception($"Error getting player summaries from {webRequest.url.Replace(_steamApiKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
 
                 responseText = webRequest.downloadHandler.text;
                 if (string.IsNullOrEmpty(responseText))
@@ -173,20 +175,19 @@ public class SteamAPIService
 
     public string? CreateUrl(string @interface, int version, string method, string? query)
     {
-        string? apiKey = _systemConfig["steam_api_key"];
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (string.IsNullOrWhiteSpace(_steamApiKey))
         {
             _logger.LogError("Steam API key is not configured in configuration at \"{0}\".", "steam_api_key");
             throw new InvalidOperationException("Missing Steam API key.");
         }
 
         int vLen = MathUtility.CountDigits(version);
-        int stringLen = BaseUrl.Length + @interface.Length + 1 + method.Length + 2 + vLen + 5 + UCWarfare.Config.SteamAPIKey.Length;
+        int stringLen = BaseUrl.Length + @interface.Length + 1 + method.Length + 2 + vLen + 5 + _steamApiKey.Length;
         if (query != null)
             stringLen += 1 + query.Length;
 
         CreateUrlState state = default;
-        state.APIKey = UCWarfare.Config.SteamAPIKey;
+        state.APIKey = _steamApiKey;
         state.Version = version;
         state.Method = method;
         state.Interface = @interface;

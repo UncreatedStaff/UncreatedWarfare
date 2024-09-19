@@ -1,17 +1,16 @@
 ﻿using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.Transform;
 
 namespace Uncreated.Warfare.Players;
 
@@ -30,6 +29,8 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     private readonly ILogger _logger;
     private readonly PlayerNames _playerNameHelper;
     private readonly uint _acctId;
+    private readonly IPlayerComponent[] _componentsArray;
+
     public CSteamID Steam64 { get; }
     public Player UnturnedPlayer { get; }
     public SteamPlayer SteamPlayer { get; }
@@ -95,7 +96,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// A <see cref="CancellationToken"/> that cancels after the player leaves.
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
-    internal WarfarePlayer(Player player, ILogger logger, IReadOnlyList<IPlayerComponent> components, IServiceProvider serviceProvider)
+    internal WarfarePlayer(Player player, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
     {
         _disconnectTokenSource = new CancellationTokenSource();
         _logger = logger;
@@ -108,9 +109,9 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
 
-        Locale = new WarfarePlayerLocale(this, /* todo data.LanguagePreferences */ null, serviceProvider);
+        Locale = new WarfarePlayerLocale(this, /* todo data.LanguagePreferences */ null!, serviceProvider);
 
-        Components = components;
+        Components = new ReadOnlyCollection<IPlayerComponent>(components);
 
         Team = Team.NoTeam;
         _logger.LogInformation("Player {0} joined the server", this);
@@ -126,8 +127,9 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     [Pure]
     public TComponentType Component<TComponentType>() where TComponentType : IPlayerComponent
     {
-        foreach (IPlayerComponent component in Components)
+        for (int i = 0; i < Components.Count; i++)
         {
+            IPlayerComponent component = Components[i];
             if (component is TComponentType comp)
                 return comp;
         }
@@ -141,8 +143,9 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     [Pure]
     public TComponentType? ComponentOrNull<TComponentType>() where TComponentType : IPlayerComponent
     {
-        foreach (IPlayerComponent component in Components)
+        for (int i = 0; i < Components.Count; i++)
         {
+            IPlayerComponent component = Components[i];
             if (component is TComponentType comp)
                 return comp;
         }

@@ -3,6 +3,7 @@ using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs;
 public class FobTranslations : PropertiesTranslationCollection
@@ -55,7 +56,7 @@ public class FobTranslations : PropertiesTranslationCollection
     public readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
 
     [TranslationData("Indicates that a FOB can't be built because another FOB is already nearby.", "The existing FOB's name", "Distance from the existing FOB", "Minimum distance needed")]
-    public readonly Translation<IFob, float, float> BuildFOBTooClose = new Translation<IFob, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", arg0Fmt: FOB.FormatNameColored, arg1Fmt: "F0", arg2Fmt: "F0");
+    public readonly Translation<IFob, float, float> BuildFOBTooClose = new Translation<IFob, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", arg0Fmt: Flags.ColorNameFormat, arg1Fmt: "F0", arg2Fmt: "F0");
 
     [TranslationData("Indicates that a FOB can't be built because another FOB bunker is already nearby.", "Distance from the existing bunker", "Minimum distance needed")]
     public readonly Translation<float, float> BuildBunkerTooClose = new Translation<float, float>("<#ffa238>You are too close to an existing FOB Bunker ({0}m away). You must be at least {1}m away to place a new radio.", arg0Fmt: "F0", arg1Fmt: "F0");
@@ -67,7 +68,7 @@ public class FobTranslations : PropertiesTranslationCollection
     public readonly Translation BuildableNotAllowed = new Translation("<#ffa238>You are not allowed to place this buildable.");
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<IDeployable, GridLocation, string> FOBUI = new Translation<IDeployable, GridLocation, string>("{0}  <color=#d6d2c7>{1}</color>  {2}", TranslationOptions.UnityUI, arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable, GridLocation, string> FOBUI = new Translation<IDeployable, GridLocation, string>("{0}  <color=#d6d2c7>{1}</color>  {2}", TranslationOptions.UnityUI, arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Shows on the HUD when a cache has been destroyed and the player is on attack.")]
     public readonly Translation CacheDestroyedAttack = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationOptions.TMProUI);

@@ -7,7 +7,10 @@ using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
@@ -27,6 +30,8 @@ public class KitMenuUI : UnturnedUI
     private readonly IServiceProvider _serviceProvider;
     private readonly IPlayerService _playerService;
     private readonly ITranslationValueFormatter _valueFormatter;
+    private readonly IFactionDataStore _factionDataStore;
+    private readonly ItemIconProvider _itemIconProvider;
     private readonly KitManager _kitManager;
     private readonly ZoneStore _zoneStore;
     private readonly LanguageService _languageService;
@@ -195,7 +200,8 @@ public class KitMenuUI : UnturnedUI
     public readonly string[] ClassIconCache;
 
     public string[]? DefaultLanguageCache;
-    public KitMenuUI(IServiceProvider serviceProvider) : base(Gamemode.Config.UIKitMenu.GetId())
+
+    public KitMenuUI(IServiceProvider serviceProvider) : base(serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:KitMenu"))
     {
         _serviceProvider = serviceProvider;
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
@@ -203,6 +209,8 @@ public class KitMenuUI : UnturnedUI
         _kitManager = serviceProvider.GetRequiredService<KitManager>();
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _languageService = serviceProvider.GetRequiredService<LanguageService>();
+        _factionDataStore = serviceProvider.GetRequiredService<IFactionDataStore>();
+        _itemIconProvider = serviceProvider.GetRequiredService<ItemIconProvider>();
 
         DropdownButtons = new UnturnedButton[(int)ClassConverter.MaxClass + 1];
         DefaultClassCache = new string[DropdownButtons.Length];
@@ -251,7 +259,7 @@ public class KitMenuUI : UnturnedUI
         ElementPatterns.SubscribeAll(Kits, listedKit => listedKit.FavoriteButton, FavoriteClickedIntl);
         ElementPatterns.SubscribeAll(Kits, listedKit => listedKit.Root, KitClickedIntl);
 
-        Translation.OnReload += OnReload;
+        // Translation.OnReload += OnReload;
         CacheLanguages();
     }
 
@@ -319,7 +327,7 @@ public class KitMenuUI : UnturnedUI
 
         KitMenuUIData data = GetData(player);
 
-        data.ActiveTeam = player.GetTeam();
+        data.ActiveTeam = player.Team;
         if (!data.IsAlive)
         {
             SendToPlayer(c);
@@ -483,8 +491,9 @@ public class KitMenuUI : UnturnedUI
             CacheLanguages();
         L.LogDebug("Opening kit: " + kit.InternalName);
         ITransportConnection c = player.Connection;
-        LblInfoTitle.SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
-        FactionInfo? faction = TeamManager.GetFactionInfo(kit.FactionId);
+        LblInfoTitle.SetText(c, kit.GetDisplayName(_languageService, player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
+
+        FactionInfo? faction = kit.FactionId.HasValue ? _factionDataStore.FindFaction(kit.FactionId.Value) : null;
 
         ValInfoFaction.SetText(c, faction?.GetShortName(player.Locale.LanguageInfo) ?? (DefaultLanguageCache != null && player.Locale.LanguageInfo.IsDefault
                 ? DefaultLanguageCache[29]
@@ -508,18 +517,18 @@ public class KitMenuUI : UnturnedUI
             int amt = grp.Count;
             if (grp.Asset != null)
             {
-                if (!ItemIconProvider.TryGetIcon(grp.Asset, out icon, RichIcons, true))
+                if (!_itemIconProvider.TryGetIcon(grp.Asset, out icon, RichIcons, true))
                 {
                     if (grp.Asset is ItemMagazineAsset)
-                        icon = ItemIconProvider.GetIcon(RedirectType.StandardAmmoIcon, RichIcons, true);
+                        icon = _itemIconProvider.GetIcon(RedirectType.StandardAmmoIcon, RichIcons, true);
                     else if (grp.Asset is ItemMeleeAsset)
-                        icon = ItemIconProvider.GetIcon(RedirectType.StandardMeleeIcon, RichIcons, true);
+                        icon = _itemIconProvider.GetIcon(RedirectType.StandardMeleeIcon, RichIcons, true);
                     else if (grp.Asset is ItemThrowableAsset throwable)
                     {
                         if (throwable.isExplosive)
-                            icon = ItemIconProvider.GetIcon(RedirectType.StandardGrenadeIcon, RichIcons, true);
+                            icon = _itemIconProvider.GetIcon(RedirectType.StandardGrenadeIcon, RichIcons, true);
                         else if (throwable.itemName.IndexOf("smoke", StringComparison.InvariantCultureIgnoreCase) != -1)
-                            icon = ItemIconProvider.GetIcon(RedirectType.StandardSmokeGrenadeIcon, RichIcons, true);
+                            icon = _itemIconProvider.GetIcon(RedirectType.StandardSmokeGrenadeIcon, RichIcons, true);
                     }
                     else if (grp.Asset is ItemClothingAsset cloth)
                     {
@@ -535,19 +544,19 @@ public class KitMenuUI : UnturnedUI
                             _ => RedirectType.None
                         };
                         if (type != RedirectType.None)
-                            icon = ItemIconProvider.GetIcon(type, RichIcons, true);
+                            icon = _itemIconProvider.GetIcon(type, RichIcons, true);
                     }
                 }
                 name = grp.Asset.FriendlyName;
             }
             else if (grp.RedirectType != RedirectType.None)
             {
-                icon = ItemIconProvider.GetIcon(grp.RedirectType, RichIcons, true);
+                icon = _itemIconProvider.GetIcon(grp.RedirectType, RichIcons, true);
                 name = _valueFormatter.FormatEnum(grp.RedirectType, player.Locale.LanguageInfo);
             }
             else if (grp.ClothingSetName != null)
             {
-                icon = ItemIconProvider.GetIcon(RedirectType.Shirt, RichIcons, true);
+                icon = _itemIconProvider.GetIcon(RedirectType.Shirt, RichIcons, true);
                 name = grp.ClothingSetName + " Set";
                 amt = 1;
             }
@@ -601,7 +610,7 @@ public class KitMenuUI : UnturnedUI
             LblActionsActionButton.SetText(c, DefaultLanguageCache![25]);
         }
 
-        if (player.OnDuty())
+        if (true /* player.OnDuty() */)
         {
             BtnActionsStaff1.SetVisibility(c, true);
             LblActionsStaff1Button.SetText(c, DefaultLanguageCache![26]);
@@ -657,10 +666,10 @@ public class KitMenuUI : UnturnedUI
             kitUi.FavoriteIcon.SetText(c, favorited ? "<#fd0>¼" : "¼");
         kitUi.Weapon.SetText(c, kit.WeaponText ?? string.Empty);
         kitUi.Id.SetText(c, kit.InternalName);
-        kitUi.Name.SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
-        kitUi.Status.SetText(c, hasAccess ? Gamemode.Config.UIIconPlayer.ToString() : string.Empty);
+        kitUi.Name.SetText(c, kit.GetDisplayName(_languageService, player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
+        kitUi.Status.SetText(c, /* hasAccess ? Gamemode.Config.UIIconPlayer.ToString() : */string.Empty);
         kitUi.Class.SetText(c, kit.Class.GetIcon().ToString());
-        kitUi.Flag.SetText(c, kit.FactionInfo.GetFlagIcon());
+        kitUi.Flag.SetText(c, kit.Faction.GetFlagIcon());
         kitUi.FavoriteButton.SetVisibility(c, kit.Type != KitType.Loadout);
         
         Kits[index].Root.SetVisibility(c, true);
@@ -771,25 +780,20 @@ public class KitMenuUI : UnturnedUI
             return;
 
         CancellationToken tkn = ucp.DisconnectToken;
-        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(Data.Gamemode.UnloadToken);
         Task.Run(async () =>
         {
             Kit? kit = null;
             try
             {
-                kit = await _kitManager.GetKit(selectedKitPk.Value, tokens.Token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
+                kit = await _kitManager.GetKit(selectedKitPk.Value, tkn, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
                 if (kit == null)
                     return;
 
-                await _kitManager.Requests.RequestKit(kit, ucp, tokens.Token);
+                await _kitManager.Requests.RequestKit(kit, CommandContext.CreateTemporary(ucp, _serviceProvider), tkn);
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error requesting kit {0} ({1}).", selectedKitPk, kit?.InternalName ?? "unknown kit");
-            }
-            finally
-            {
-                tokens.Dispose();
             }
         });
     }
@@ -884,7 +888,7 @@ public sealed class KitMenuUIData : IUnturnedUIData
     public UnturnedUIElement Element { get; set; }
     CSteamID IUnturnedUIData.Player => Player.Steam64;
 
-    public ulong ActiveTeam { get; set; }
+    public Team ActiveTeam { get; set; }
     public byte Tab { get; set; }
     public Class Filter { get; set; }
     public uint? SelectedKit { get; set; }
@@ -956,8 +960,8 @@ public sealed class KitMenuUIData : IUnturnedUIData
         => x is { Type: KitType.Elite } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction);
     private bool KitListLoadoutPredicate(Kit x)
         => x is { Type: KitType.Loadout } && (Filter == Class.None || x.Class == Filter) && x is { Class: > Class.Unarmed, Requestable: true } &&
-           (Player.OnDuty() && Player.Equals(x.Creator) || _manager!.HasAccessQuick(x, Player!));
+           (/* todo Player.OnDuty() && Player.Equals(x.Creator) || */ _manager!.HasAccessQuick(x, Player!));
     private bool KitListSpecialPredicate(Kit x)
         => x is { Type: KitType.Special } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction)
-           && (Player.OnDuty() || _manager!.HasAccessQuick(x, Player!));
+           && (/* todo Player.OnDuty() || */_manager!.HasAccessQuick(x, Player!));
 }

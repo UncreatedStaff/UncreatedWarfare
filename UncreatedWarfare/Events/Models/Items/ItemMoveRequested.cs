@@ -1,4 +1,6 @@
-﻿using Uncreated.Warfare.Kits.Items;
+﻿using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 
@@ -16,8 +18,11 @@ public class ItemMoveRequested : CancellablePlayerEvent
     public bool IsSwap { get; }
     public ItemJar? Jar { get; }
     public ItemJar? SwappingJar { get; }
-    public ItemMoveRequested(UCPlayer player, Page oldPage, Page newPage, byte oldX, byte newX, byte oldY, byte newY, byte newRotation, bool isSwap, ItemJar? jar, ItemJar? swapping) : base(player)
+
+    [SetsRequiredMembers]
+    public ItemMoveRequested(WarfarePlayer player, Page oldPage, Page newPage, byte oldX, byte newX, byte oldY, byte newY, byte newRotation, bool isSwap, ItemJar? jar, ItemJar? swapping)
     {
+        Player = player;
         if (jar != null)
         {
             Jar = jar;

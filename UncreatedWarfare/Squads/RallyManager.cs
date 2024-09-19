@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
@@ -12,6 +13,7 @@ namespace Uncreated.Warfare.Squads;
 
 public static class RallyManager
 {
+#if false
     public const float TELEPORT_HEIGHT_OFFSET = 2f;
     public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
     {
@@ -19,7 +21,7 @@ public static class RallyManager
 
         if (IsRally(drop.asset))
         {
-            UCPlayer? player = UCPlayer.FromID(data.owner);
+            WarfarePlayer? player = WarfarePlayer.FromID(data.owner);
             if (player?.Squad != null)
             {
                 if (player.Squad.RallyPoint != null)
@@ -51,7 +53,7 @@ public static class RallyManager
         if (!IsRally(barricade.asset))
             return;
 
-        UCPlayer? player = UCPlayer.FromID(owner);
+        WarfarePlayer? player = WarfarePlayer.FromID(owner);
         if (player == null) return;
         if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
         {
@@ -119,11 +121,13 @@ public static class RallyManager
     {
         return Gamemode.Config.RallyPoints.ContainsAsset(asset);
     }
+#endif
 }
 
 public class RallyPoint : MonoBehaviour, IManualOnDestroy
 {
-    public List<UCPlayer> AwaitingPlayers { get; private set; } // list of players currently waiting to teleport to the rally
+#if false
+    public List<WarfarePlayer> AwaitingPlayers { get; private set; } // list of players currently waiting to teleport to the rally
     public Squad Squad { get; private set; }
     public bool IsDeploying { get; private set; }
     public bool IsActive { get; set; }
@@ -133,7 +137,7 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
     {
         Squad = squad;
         Squad.RallyPoint = this;
-        AwaitingPlayers = new List<UCPlayer>(6);
+        AwaitingPlayers = new List<WarfarePlayer>(6);
         IsActive = true;    
         IsDeploying = false;
         NearestLocation = F.GetClosestLocationName(transform.position);
@@ -150,7 +154,7 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
 
         for (int i = AwaitingPlayers.Count - 1; i >= 0; i--)
         {
-            UCPlayer? player = AwaitingPlayers[i];
+            WarfarePlayer? player = AwaitingPlayers[i];
             if (!player.IsOnline || player.Squad != Squad)
             {
                 AwaitingPlayers.RemoveAt(i);
@@ -160,7 +164,7 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
             SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUITimer.Translate(player, false, secondsLeft >= 0 ? seconds : TimeSpan.Zero, NearestLocation));
         }
     }
-    public void ShowUIForPlayer(UCPlayer player)
+    public void ShowUIForPlayer(WarfarePlayer player)
     {
         if (!player.IsOnline)
             return;
@@ -169,10 +173,10 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
     }
     public void ShowUIForSquad()
     {
-        foreach (UCPlayer member in Squad.Members)
+        foreach (WarfarePlayer member in Squad.Members)
             ShowUIForPlayer(member);
     }
-    public void ClearUIForPlayer(UCPlayer player)
+    public void ClearUIForPlayer(WarfarePlayer player)
     {
         if (!player.IsOnline)
             return;
@@ -181,10 +185,10 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
     }
     public void ClearUIForSquad ()
     {
-        foreach (UCPlayer member in Squad.Members)
+        foreach (WarfarePlayer member in Squad.Members)
             ClearUIForPlayer(member);
     }
-    public void TeleportPlayer(UCPlayer player)
+    public void TeleportPlayer(WarfarePlayer player)
     {
         if (player.IsOnline && !player.Player.life.isDead && player.Player.movement.getVehicle() == null)
         {
@@ -235,7 +239,7 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
             SecondsLeft--;
         }
 
-        foreach (UCPlayer player in AwaitingPlayers)
+        foreach (WarfarePlayer player in AwaitingPlayers)
         {
             if (player.IsOnline && player.Squad == Squad)
                 TeleportPlayer(player);
@@ -256,14 +260,14 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
             if (enemyTeam == 0)
                 return;
 
-            List<UCPlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
+            List<WarfarePlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
                 p.GetTeam() == enemyTeam &&
                 (p.Position - transform.position).sqrMagnitude < Math.Pow(SquadManager.Config.RallyDespawnDistance, 2)
             ).ToList();
 
             if (enemies.Count > 0)
             {
-                foreach (UCPlayer member in Squad.Members)
+                foreach (WarfarePlayer member in Squad.Members)
                 {
                     if (member is { IsOnline: true }) // was throwing an error for some reason
                         member.SendChat(T.RallyEnemiesNearbyTp);
@@ -273,12 +277,12 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
             }
         }
     }
-
+#endif
     void IManualOnDestroy.ManualOnDestroy()
     {
         if (this != null)
         {
-            Deactivate();
+            //Deactivate();
             Destroy(this);
         }
     }

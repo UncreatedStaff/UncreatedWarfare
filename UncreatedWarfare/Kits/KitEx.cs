@@ -1,22 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
+using System.Globalization;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
-using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -35,77 +28,77 @@ public static class KitEx
     public static readonly int WeaponTextMaxCharLimit = 128;
     public static readonly int SignTextMaxCharLimit = 50;
     public static readonly int MaxStateArrayLimit = 18;
-    public static async Task WriteKitLocalization(LanguageInfo language, ITranslationService translationService, string path, bool writeMising, CancellationToken token = default)
-    {
-        List<Kit> kits;
-        await using (IKitsDbContext context = new WarfareDbContext())
-        {
-            kits = await context.Kits.Where(x => x.Type != KitType.Loadout).ToListAsync(token);
-        }
+    // public static async Task WriteKitLocalization(LanguageInfo language, ITranslationService translationService, string path, bool writeMising, CancellationToken token = default)
+    // {
+    //     List<Kit> kits;
+    //     await using (IKitsDbContext context = new WarfareDbContext())
+    //     {
+    //         kits = await context.Kits.Where(x => x.Type != KitType.Loadout).ToListAsync(token);
+    //     }
+    // 
+    //     await using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+    //     await using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
+    //     writer.WriteLine("# Kit Name Translations");
+    //     writer.WriteLine("#  <br> = new line on signs");
+    //     writer.WriteLine();
+    //     for (int i = 0; i < kits.Count; i++)
+    //     {
+    //         Kit kit = kits[i];
+    //         if (kit is not { Class: > Class.Unarmed })
+    //             continue;
+    //         if (WriteKitIntl(kit, language, translationService, writer, writeMising) && i != kits.Count - 1)
+    //             writer.WriteLine();
+    //     }
+    // }
 
-        await using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
-        await using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
-        writer.WriteLine("# Kit Name Translations");
-        writer.WriteLine("#  <br> = new line on signs");
-        writer.WriteLine();
-        for (int i = 0; i < kits.Count; i++)
-        {
-            Kit kit = kits[i];
-            if (kit is not { Class: > Class.Unarmed })
-                continue;
-            if (WriteKitIntl(kit, language, translationService, writer, writeMising) && i != kits.Count - 1)
-                writer.WriteLine();
-        }
-    }
-
-    private static bool WriteKitIntl(Kit kit, LanguageInfo language, ITranslationService translationService, TextWriter writer, bool writeMising)
-    {
-        bool isDefaultValue = false;
-        string? value = null;
-        LanguageInfo def = translationService.LanguageService.GetDefaultLanguage();
-        if (kit.Translations != null)
-        {
-            KitTranslation? translation = kit.Translations.FirstOrDefault(x => x.LanguageId == language.Key);
-            value = translation?.Value;
-            isDefaultValue = translation == null;
-            if (isDefaultValue && !language.IsDefault && writeMising)
-            {
-                value = kit.Translations.FirstOrDefault(x => x.LanguageId == def.Key)?.Value;
-            }
-        }
-
-        if (value == null)
-        {
-            if (!writeMising)
-                return false;
-            isDefaultValue = true;
-            value = kit.InternalName;
-        }
-
-        string? @default = kit.Translations?.FirstOrDefault(x => x.LanguageId == def.Key)?.Value;
-        if (@default != null)
-            @default = @default.Replace("\r", string.Empty).Replace("\n", "<br>");
-
-        value = value.Replace("\r", string.Empty).Replace("\n", "<br>");
-        writer.WriteLine("# " + kit.GetDisplayName(def) + " (ID: " + kit.InternalName + ")");
-        if (kit.WeaponText != null)
-            writer.WriteLine("#  Weapons: " + kit.WeaponText);
-
-        writer.WriteLine("#  Class:   " + translationService.ValueFormatter.FormatEnum(kit.Class, def));
-        writer.WriteLine("#  Type:    " + translationService.ValueFormatter.FormatEnum(kit.Type, def));
-
-        FactionInfo? factionInfo = kit.FactionInfo;
-        if (factionInfo != null)
-            writer.WriteLine("#  Faction: " + factionInfo.GetName(def));
-
-        if (!isDefaultValue && @default != null)
-        {
-            writer.WriteLine("# Default: \"" + @default + "\".");
-        }
-
-        writer.WriteLine(kit.InternalName + ": " + value);
-        return true;
-    }
+    // private static bool WriteKitIntl(Kit kit, LanguageInfo language, ITranslationService translationService, TextWriter writer, bool writeMising)
+    // {
+    //     bool isDefaultValue = false;
+    //     string? value = null;
+    //     LanguageInfo def = translationService.LanguageService.GetDefaultLanguage();
+    //     if (kit.Translations != null)
+    //     {
+    //         KitTranslation? translation = kit.Translations.FirstOrDefault(x => x.LanguageId == language.Key);
+    //         value = translation?.Value;
+    //         isDefaultValue = translation == null;
+    //         if (isDefaultValue && !language.IsDefault && writeMising)
+    //         {
+    //             value = kit.Translations.FirstOrDefault(x => x.LanguageId == def.Key)?.Value;
+    //         }
+    //     }
+    // 
+    //     if (value == null)
+    //     {
+    //         if (!writeMising)
+    //             return false;
+    //         isDefaultValue = true;
+    //         value = kit.InternalName;
+    //     }
+    // 
+    //     string? @default = kit.Translations?.FirstOrDefault(x => x.LanguageId == def.Key)?.Value;
+    //     if (@default != null)
+    //         @default = @default.Replace("\r", string.Empty).Replace("\n", "<br>");
+    // 
+    //     value = value.Replace("\r", string.Empty).Replace("\n", "<br>");
+    //     writer.WriteLine("# " + kit.GetDisplayName(def) + " (ID: " + kit.InternalName + ")");
+    //     if (kit.WeaponText != null)
+    //         writer.WriteLine("#  Weapons: " + kit.WeaponText);
+    // 
+    //     writer.WriteLine("#  Class:   " + translationService.ValueFormatter.FormatEnum(kit.Class, def));
+    //     writer.WriteLine("#  Type:    " + translationService.ValueFormatter.FormatEnum(kit.Type, def));
+    // 
+    //     FactionInfo? factionInfo = kit.FactionInfo;
+    //     if (factionInfo != null)
+    //         writer.WriteLine("#  Faction: " + factionInfo.GetName(def));
+    // 
+    //     if (!isDefaultValue && @default != null)
+    //     {
+    //         writer.WriteLine("# Default: \"" + @default + "\".");
+    //     }
+    // 
+    //     writer.WriteLine(kit.InternalName + ": " + value);
+    //     return true;
+    // }
 
     public static void UpdateLastEdited(this Kit kit, CSteamID player)
     {
@@ -225,17 +218,17 @@ public static class KitEx
 
     public static char GetIcon(this Class @class)
     {
-        if (SquadManager.Config is { Classes: { Length: > 0 } arr })
-        {
-            int i = (int)@class;
-            if (arr.Length > i && arr[i].Class == @class)
-                return arr[i].Icon;
-            for (i = 0; i < arr.Length; ++i)
-            {
-                if (arr[i].Class == @class)
-                    return arr[i].Icon;
-            }
-        }
+        // if (SquadManager.Config is { Classes: { Length: > 0 } arr })
+        // {
+        //     int i = (int)@class;
+        //     if (arr.Length > i && arr[i].Class == @class)
+        //         return arr[i].Icon;
+        //     for (i = 0; i < arr.Length; ++i)
+        //     {
+        //         if (arr[i].Class == @class)
+        //             return arr[i].Icon;
+        //     }
+        // }
 
         return @class switch
         {
@@ -354,11 +347,11 @@ public static class KitEx
     public static async Task<bool> OpenUpgradeTicket(string displayName, Class @class, int id, ulong player, ulong discordId, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-        if (UCWarfare.CanUseNetCall)
-        {
-            RequestResponse response = await PlayerManager.NetCalls.RequestOpenTicket.RequestAck(UCWarfare.I.NetClient!, player, discordId, TicketType.ModifyLoadout, id.ToString(CultureInfo.InvariantCulture) + "_" + @class + "_" + displayName, 10000);
-            return response.Responded && response.ErrorCode.HasValue && (StandardErrorCode)response.ErrorCode.Value == StandardErrorCode.Success;
-        }
+        // if (UCWarfare.CanUseNetCall)
+        // {
+        //     RequestResponse response = await PlayerManager.NetCalls.RequestOpenTicket.RequestAck(UCWarfare.I.NetClient!, player, discordId, TicketType.ModifyLoadout, id.ToString(CultureInfo.InvariantCulture) + "_" + @class + "_" + displayName, 10000);
+        //     return response.Responded && response.ErrorCode.HasValue && (StandardErrorCode)response.ErrorCode.Value == StandardErrorCode.Success;
+        // }
 
         return false;
     }

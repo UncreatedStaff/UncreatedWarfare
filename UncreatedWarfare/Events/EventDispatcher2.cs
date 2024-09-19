@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
@@ -27,6 +28,7 @@ public partial class EventDispatcher2 : IHostedService
     private readonly IPlayerService _playerService;
     private readonly CancellationToken _unloadToken;
     private readonly ILogger<EventDispatcher2> _logger;
+    private WarfareTimeComponent _timeComponent;
     private readonly Dictionary<EventListenerCacheKey, EventListenerInfo> _listeners = new Dictionary<EventListenerCacheKey, EventListenerInfo>();
     private readonly Dictionary<Type, EventModelAttribute?> _modelInfo = new Dictionary<Type, EventModelAttribute?>();
 
@@ -43,6 +45,8 @@ public partial class EventDispatcher2 : IHostedService
         _unloadToken = serviceProvider.GetRequiredService<WarfareModule>().UnloadToken;
 
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+
+        _timeComponent = serviceProvider.GetRequiredService<WarfareTimeComponent>();
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)
@@ -112,6 +116,7 @@ public partial class EventDispatcher2 : IHostedService
         UseableConsumeable.onPerformingAid -= OnPlayerPerformingAid;
         PlayerEquipment.OnPunch_Global -= OnPlayerPunch;
 
+        _timeComponent = null!;
         return UniTask.CompletedTask;
     }
 
@@ -144,7 +149,7 @@ public partial class EventDispatcher2 : IHostedService
     /// Invoke an event with the given arguments.
     /// </summary>
     /// <returns>If the action should continue if <paramref name="eventArgs"/> is <see cref="ICancellable"/>, otherwise <see langword="true"/>.</returns>
-    public async UniTask<bool> DispatchEventAsync<TEventArgs>(TEventArgs eventArgs, CancellationToken token = default, bool allowAsync = true)
+    public async UniTask<bool> DispatchEventAsync<TEventArgs>(TEventArgs eventArgs, CancellationToken token = default, bool allowAsync = true) where TEventArgs : class
     {
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(_unloadToken);
 
@@ -208,7 +213,7 @@ public partial class EventDispatcher2 : IHostedService
             {
                 buckets = ListPool<SynchronizationBucket>.claim();
                 tasks = ListPool<Task>.claim();
-                EnterSynchronizationBuckets(eventArgs!, modelInfo, type, buckets, tasks, token);
+                EnterSynchronizationBuckets(eventArgs, modelInfo, type, buckets, tasks, token);
 #if LOG_SYNCHRONIZATION_STEPS
                 _logger.LogDebug("Invoke {0} - Synchronizing with {1} bucket(s).", Accessor.Formatter.Format(type), buckets.Count);
 #endif

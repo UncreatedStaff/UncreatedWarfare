@@ -34,6 +34,7 @@ public class AbandonService
         await UniTask.SwitchToMainThread(token);
 
         List<InteractableVehicle> candidates = new List<InteractableVehicle>(16);
+#if false
         for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
         {
             InteractableVehicle vehicle = VehicleManager.vehicles[i];
@@ -53,6 +54,7 @@ public class AbandonService
                 candidates.Add(vehicle);
             }
         }
+#endif
 
         foreach (InteractableVehicle vehicle in candidates)
         {
@@ -79,6 +81,7 @@ public class AbandonService
         VehicleSpawnInfo? originalSpawn = vehicleComponent.Spawn;
         if (originalSpawn != null)
         {
+#if false
             VehicleBayComponent? component =
                 originalSpawn.Spawner?.Model == null
                 ? null
@@ -102,6 +105,7 @@ public class AbandonService
             {
                 found = false;
             }
+#endif
         }
         else if (owner != null)
         {

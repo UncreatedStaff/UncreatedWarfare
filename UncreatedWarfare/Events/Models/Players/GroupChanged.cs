@@ -1,4 +1,7 @@
-﻿namespace Uncreated.Warfare.Events.Models.Players;
+﻿using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Players;
+
+namespace Uncreated.Warfare.Events.Models.Players;
 public class GroupChanged : PlayerEvent
 {
     public ulong OldGroup { get; }
@@ -7,13 +10,17 @@ public class GroupChanged : PlayerEvent
     public EPlayerGroupRank NewRank { get; }
     public ulong NewTeam { get; }
     public ulong OldTeam { get; }
-    public GroupChanged(UCPlayer player, ulong oldGroup, EPlayerGroupRank oldRank, ulong newGroup, EPlayerGroupRank newRank) : base(player)
+
+    [SetsRequiredMembers]
+    public GroupChanged(WarfarePlayer player, ulong oldGroup, EPlayerGroupRank oldRank, ulong newGroup, EPlayerGroupRank newRank)
     {
+        Player = player;
+
         OldGroup = oldGroup;
         OldRank = oldRank;
         NewGroup = newGroup;
         NewRank = newRank;
-        NewTeam = NewGroup.GetTeam();
-        OldTeam = OldGroup.GetTeam();
+        NewTeam = NewGroup;
+        OldTeam = OldGroup; // todo teams
     }
 }

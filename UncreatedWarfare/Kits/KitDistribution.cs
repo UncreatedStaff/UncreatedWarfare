@@ -111,7 +111,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
         KitPlayerComponent kitComponent = player.Component<KitPlayerComponent>();
         PlayerInventory inventory = player.UnturnedPlayer.inventory;
 
-        ItemLayoutTransformationData[] layout = itemTracker.LayoutTransformations == null || !kitComponent.HasDownloadedKitData || kit.PrimaryKey == 0
+        ItemLayoutTransformationData[] layout = itemTracker.LayoutTransformations == null || /* todo !kitComponent.HasDownloadedKitData || */ kit.PrimaryKey == 0
             ? Array.Empty<ItemLayoutTransformationData>()
             : itemTracker.LayoutTransformations.Where(x => x.Kit == kit.PrimaryKey).ToArray();
 
@@ -200,23 +200,23 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
 
                 ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
 
-                // Dootpressor
-                if (item is not IAssetRedirectKitItem
-                    && asset is ItemGunAsset
-                    && !UCWarfare.Config.DisableAprilFools
-                    && HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS)
-                    && Gamemode.Config.ItemAprilFoolsBarrel.TryGetAsset(out ItemBarrelAsset? barrel))
-                {
-                    BitConverter.TryWriteBytes(state.AsSpan((int)AttachmentType.Barrel), barrel.id);
-                    state[(int)AttachmentType.Barrel / 2 + 13] = 100;
-                }
+                // todo // Dootpressor
+                // if (item is not IAssetRedirectKitItem
+                //     && asset is ItemGunAsset
+                //     && !UCWarfare.Config.DisableAprilFools
+                //     && HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS)
+                //     && Gamemode.Config.ItemAprilFoolsBarrel.TryGetAsset(out ItemBarrelAsset? barrel))
+                // {
+                //     BitConverter.TryWriteBytes(state.AsSpan((int)AttachmentType.Barrel), barrel.id);
+                //     state[(int)AttachmentType.Barrel / 2 + 13] = 100;
+                // }
 
-                // ignore ammo bag if enabled
-                if (asset != null && ignoreAmmobags && Gamemode.Config.BarricadeAmmoBag.MatchGuid(asset.GUID))
-                {
-                    L.LogDebug("[GIVE KIT] Skipping ammo bag: " + jar + ".");
-                    continue;
-                }
+                // todo ignore ammo bag if enabled
+                // if (asset != null && ignoreAmmobags && Gamemode.Config.BarricadeAmmoBag.MatchGuid(asset.GUID))
+                // {
+                //     L.LogDebug("[GIVE KIT] Skipping ammo bag: " + jar + ".");
+                //     continue;
+                // }
 
                 bool layoutAffected = false;
                 byte giveX = jar.X;
@@ -432,7 +432,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
         // send action menu tip
         if (kit.Class != Class.Unarmed && sendActionTip)
         {
-            if (player.IsSquadLeader())
+            if (false /* todo player.IsSquadLeader() */)
                 _tipService.TryGiveTip(player, 1200, T.TipActionMenuSl);
             else
                 _tipService.TryGiveTip(player, 3600, T.TipActionMenu);

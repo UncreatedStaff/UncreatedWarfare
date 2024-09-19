@@ -41,8 +41,8 @@ public class SpecificClothingKitItem : IClothingKitItem, ISpecificKitItem
 
         return -1;
     }
-    public bool Equals(IKitItem? other) => other is SpecificClothingKitItem c && c.Type == Type && c.Item == Item && c.State.CompareBytes(State);
-    public override bool Equals(object obj) => Equals(obj as IKitItem);
+    public bool Equals(IKitItem? other) => other is SpecificClothingKitItem c && c.Type == Type && c.Item == Item && CollectionUtility.CompareBytes(c.State, State);
+    public override bool Equals(object? obj) => Equals(obj as IKitItem);
     public override int GetHashCode()
     {
         return HashCode.Combine(Type, Item, State.Length);
@@ -55,7 +55,7 @@ public class SpecificClothingKitItem : IClothingKitItem, ISpecificKitItem
 
         if (Item.TryGetAsset(out ItemAsset item))
         {
-            state = State is null ? item.getState(EItemOrigin.ADMIN) : Util.CloneBytes(State);
+            state = State is null ? item.getState(EItemOrigin.ADMIN) : State.CloneBytes();
             return item;
         }
 

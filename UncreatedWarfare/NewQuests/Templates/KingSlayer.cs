@@ -1,13 +1,17 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Linq;
 using System.Text.Json;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.NewQuests.Parameters;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.NewQuests.Templates;
 public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlayer.State>
@@ -37,12 +41,12 @@ public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlay
     public class Tracker : QuestTracker, IEventListener<PlayerDied>
     {
         private readonly int _targetKills;
-        private UCPlayer? _kingSlayer;
+        private WarfarePlayer? _kingSlayer;
 
         private int _kills;
         public override bool IsComplete => _kills >= _targetKills;
         public override short FlagValue => (short)_kills;
-        public Tracker(UCPlayer player, IServiceProvider serviceProvider, KingSlayer quest, State state, IQuestPreset? preset)
+        public Tracker(WarfarePlayer player, IServiceProvider serviceProvider, KingSlayer quest, State state, IQuestPreset? preset)
             : base(player, serviceProvider, quest, state, preset)
         {
             _targetKills = state.Kills.GetSingleValueOrMinimum();
@@ -50,12 +54,12 @@ public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlay
 
         void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
         {
-            if (e.Instigator.m_SteamID != Player.Steam64 || !e.WasEffectiveKill || e.Cause == EDeathCause.SHRED || e.DeadTeam is not 1 and not 2)
+            if (e.Instigator.m_SteamID != Player.Steam64.m_SteamID || !e.WasEffectiveKill || e.Cause == EDeathCause.SHRED || !e.DeadTeam.IsValid)
                 return;
 
-            UCPlayer? kingSlayer = PlayerManager.OnlinePlayers
-                .Where(player => player.GetTeam() == e.DeadTeam)
-                .Aggregate((kingSlayer, next) => next.CachedXP > kingSlayer.CachedXP ? next : kingSlayer);
+            WarfarePlayer? kingSlayer = serviceProvider.GetRequiredService<IPlayerService>().OnlinePlayers
+                .Where(player => player.Team == e.DeadTeam)
+                .Aggregate((kingSlayer, next) => next /* todo next.CachedXP > kingSlayer.CachedXP ? next : kingSlayer */);
             
             if (kingSlayer.Steam64 == e.Player.Steam64)
             {
@@ -65,7 +69,7 @@ public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlay
                 return;
             }
 
-            if (_kingSlayer == kingSlayer)
+            if (Equals(_kingSlayer, kingSlayer))
                 return;
 
             HandleUpdated(true);

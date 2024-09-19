@@ -1,23 +1,19 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Projectiles;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Events.Models.Throwables;
 using Uncreated.Warfare.Events.Models.Vehicles;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Events;
 public static class EventDispatcher
@@ -33,10 +29,8 @@ public static class EventDispatcher
 
     public static event EventDelegate<DamageStructureRequested> DamageStructureRequested;
 
-    public static event EventDelegate<ItemDropRequested> ItemDropRequested;
     public static event EventDelegate<ItemDropped> ItemDropped;
     public static event EventDelegate<InventoryItemRemoved> InventoryItemRemoved;
-    public static event EventDelegate<ItemPickedUp> ItemPickedUp;
     public static event EventDelegate<CraftRequested> CraftRequested;
     public static event EventDelegate<ItemMoveRequested> ItemMoveRequested;
     public static event EventDelegate<ItemMoved> ItemMoved;
@@ -143,6 +137,7 @@ public static class EventDispatcher
     }
     private static void VehicleManagerOnExitVehicleRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
     {
+#if false
         if (ExitVehicleRequested == null || !shouldAllow) return;
         ExitVehicleRequested request = new ExitVehicleRequested(player, vehicle, shouldAllow, pendingLocation, pendingYaw);
         foreach (EventDelegate<ExitVehicleRequested> inv in ExitVehicleRequested.GetInvocationList().Cast<EventDelegate<ExitVehicleRequested>>())
@@ -157,9 +152,11 @@ public static class EventDispatcher
             pendingLocation = request.ExitLocation;
             pendingYaw = request.ExitLocationYaw;
         }
+#endif
     }
     internal static void InvokeVehicleManagerOnEnterVehicleRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
     {
+#if false
         if (EnterVehicleRequested == null || !shouldAllow || vehicle == null || player == null) return;
         EnterVehicleRequested request = new EnterVehicleRequested(player, vehicle, shouldAllow);
         foreach (EventDelegate<EnterVehicleRequested> inv in EnterVehicleRequested.GetInvocationList().Cast<EventDelegate<EnterVehicleRequested>>())
@@ -169,9 +166,11 @@ public static class EventDispatcher
         }
         if (!request.CanContinue)
             shouldAllow = false;
+#endif
     }
     internal static void InvokeVehicleManagerOnSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
     {
+#if false
         if (VehicleSwapSeatRequested == null || !shouldAllow) return;
         VehicleSwapSeatRequested request = new VehicleSwapSeatRequested(player, vehicle, shouldAllow, fromSeatIndex, toSeatIndex);
         foreach (EventDelegate<VehicleSwapSeatRequested> inv in VehicleSwapSeatRequested.GetInvocationList().Cast<EventDelegate<VehicleSwapSeatRequested>>())
@@ -181,9 +180,11 @@ public static class EventDispatcher
         }
         if (!request.CanContinue) shouldAllow = false;
         else toSeatIndex = request.FinalSeat;
+#endif
     }
     private static void VehicleManagerOnVehicleExploded(InteractableVehicle vehicle)
     {
+#if false
         SpottedComponent spotted = vehicle.transform.GetComponent<SpottedComponent>();
 
         VehicleDestroyed request = new VehicleDestroyed(vehicle, spotted);
@@ -199,9 +200,11 @@ public static class EventDispatcher
         }
         if (spotted != null)
             UnityEngine.Object.Destroy(spotted);
+#endif
     }
     private static void InteractableVehicleOnPassengerChangedSeats(InteractableVehicle vehicle, int fromSeatIndex, int toSeatIndex)
     {
+#if false
         if (VehicleSwapSeat == null) return;
         Passenger? pl = vehicle.passengers[toSeatIndex];
         if (pl is null || pl.player is null || pl.player.player == null) return;
@@ -213,9 +216,11 @@ public static class EventDispatcher
             if (!request.CanContinue) break;
             TryInvoke(inv, request, nameof(VehicleSwapSeat));
         }
+#endif
     }
     private static void InteractableVehicleOnPassengerRemoved(InteractableVehicle vehicle, int seatIndex, Player player)
     {
+#if false
         if (ExitVehicle == null || player == null) return;
         UCPlayer? pl2 = UCPlayer.FromPlayer(player);
         if (pl2 is null) return;
@@ -225,9 +230,11 @@ public static class EventDispatcher
             if (!request.CanContinue) break;
             TryInvoke(inv, request, nameof(ExitVehicle));
         }
+#endif
     }
     private static void InteractableVehicleOnPassengerAdded(InteractableVehicle vehicle, int seatIndex)
     {
+#if false
         if (EnterVehicle == null || vehicle == null) return;
         Passenger? pl = vehicle.passengers[seatIndex];
         if (pl is null || pl.player is null || pl.player.player == null) return;
@@ -239,9 +246,11 @@ public static class EventDispatcher
             if (!request.CanContinue) break;
             TryInvoke(inv, request, nameof(EnterVehicle));
         }
+#endif
     }
     private static void VehicleManagerOnOnToggleVehicleLockRequested(InteractableVehicle vehicle, ref bool shouldallow)
     {
+#if false
         if (VehicleLockChangeRequested == null || vehicle == null || !vehicle.isDriven) return;
         UCPlayer? pl2 = UCPlayer.FromSteamPlayer(vehicle.passengers[0].player);
         if (pl2 is null) return;
@@ -254,9 +263,11 @@ public static class EventDispatcher
 
         if (!request.CanContinue)
             shouldallow = false;
+#endif
     }
     internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, ulong instigator, BarricadeRegion region, byte x, byte y, ushort plant, EDamageOrigin origin)
     {
+#if false
         UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
@@ -273,9 +284,11 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(BarricadeDestroyed));
         }
+#endif
     }
     internal static void InvokeOnPlayerDied(PlayerDied e)
     {
+#if false
         if (PlayerDied == null) return;
         if (e.Player.Player.TryGetPlayerData(out UCPlayerData data))
             data.CancelDeployment();
@@ -286,10 +299,12 @@ public static class EventDispatcher
             TryInvoke(inv, e, nameof(PlayerDied));
         }
         e.ActiveVehicle = null;
+#endif
     }
 
     private static void UseableThrowableOnThrowableSpawned(UseableThrowable useable, GameObject throwable)
     {
+#if false
         ThrowableComponent c = throwable.AddComponent<ThrowableComponent>();
         c.Throwable = useable.equippedThrowableAsset.GUID;
         c.Owner = useable.player.channel.owner.playerID.steamID.m_SteamID;
@@ -305,9 +320,11 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(ThrowableSpawned));
         }
+#endif
     }
     internal static void InvokeOnThrowableDespawning(ThrowableComponent throwableComponent)
     {
+#if false
         if (ThrowableDespawning == null) return;
         UCPlayer? owner = UCPlayer.FromID(throwableComponent.Owner);
         if (owner is null || Assets.find(throwableComponent.Throwable) is not ItemThrowableAsset asset) return;
@@ -318,9 +335,11 @@ public static class EventDispatcher
             TryInvoke(inv, args, nameof(ThrowableDespawning));
         }
         owner.Player.StartCoroutine(ThrowableDespawnCoroutine(owner, throwableComponent.UnityInstanceID));
+#endif
     }
-    private static IEnumerator ThrowableDespawnCoroutine(UCPlayer player, int instId)
+    private static IEnumerator ThrowableDespawnCoroutine(WarfarePlayer player, int instId)
     {
+#if false
         yield return null;
         if (player.IsOnline && player.Player.TryGetPlayerData(out UCPlayerData component))
         {
@@ -328,9 +347,12 @@ public static class EventDispatcher
                 if (component.ActiveThrownItems[i] == null || component.ActiveThrownItems[i].UnityInstanceID == instId)
                     component.ActiveThrownItems.RemoveAt(i);
         }
+#endif
+        yield break;
     }
     private static void ProjectileOnProjectileSpawned(UseableGun gun, GameObject projectile)
     {
+#if false
         foreach (Rocket rocket in projectile.GetComponentsInChildren<Rocket>(true))
         {
             ProjectileComponent c = rocket.gameObject.AddComponent<ProjectileComponent>();
@@ -347,9 +369,11 @@ public static class EventDispatcher
                 TryInvoke(inv, args, nameof(ProjectileSpawned));
             }
         }
+#endif
     }
     internal static void InvokeOnProjectileExploded(ProjectileComponent projectileComponent, Collider other)
     {
+#if false
         InteractableVehicle vehicle = other.GetComponentInParent<InteractableVehicle>();
 
         if (vehicle != null)
@@ -365,17 +389,21 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(ProjectileExploded));
         }
+#endif
     }
     internal static void OnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo input, ref bool shouldAllow)
     {
+#if false
         //L.Log("     Normal: " + input.normal);
         //L.Log("     Bullet Forward: " + bullet.);
 
         if (input.vehicle != null)
             VehicleDamageCalculator.RegisterForAdvancedDamage(input.vehicle, VehicleDamageCalculator.GetComponentDamageMultiplier(input));
+#endif
     }
-    internal static void InvokeOnLandmineExploding(UCPlayer? owner, BarricadeDrop barricade, InteractableTrap trap, UCPlayer triggerer, GameObject triggerObject, ref bool shouldExplode)
+    internal static void InvokeOnLandmineExploding(WarfarePlayer? owner, BarricadeDrop barricade, InteractableTrap trap, WarfarePlayer triggerer, GameObject triggerObject, ref bool shouldExplode)
     {
+#if false
         if (LandmineExploding == null || !shouldExplode) return;
         TriggerTrapRequested request = new TriggerTrapRequested(owner, barricade, trap, triggerer, triggerObject, shouldExplode);
         foreach (EventDelegate<TriggerTrapRequested> inv in LandmineExploding.GetInvocationList().Cast<EventDelegate<TriggerTrapRequested>>())
@@ -384,9 +412,11 @@ public static class EventDispatcher
             TryInvoke(inv, request, nameof(LandmineExploding));
         }
         if (!request.CanContinue) shouldExplode = false;
+#endif
     }
     private static void PlayerCraftingOnCraftRequested(PlayerCrafting crafting, ref ushort itemID, ref byte blueprintIndex, ref bool shouldAllow)
     {
+#if false
         if (CraftRequested == null || !shouldAllow) return;
         UCPlayer? pl = UCPlayer.FromPlayer(crafting.player);
         if (pl == null || Assets.find(EAssetType.ITEM, itemID) is not ItemAsset asset || asset.blueprints.Count <= blueprintIndex)
@@ -403,9 +433,11 @@ public static class EventDispatcher
         itemID = request.ItemId;
         blueprintIndex = request.BlueprintIndex;
         if (!request.CanContinue) shouldAllow = false;
+#endif
     }
-    internal static void InvokeOnDropItemRequested(UCPlayer player, PlayerInventory inventory, Item item, ref bool shouldAllow)
+    internal static void InvokeOnDropItemRequested(WarfarePlayer player, PlayerInventory inventory, Item item, ref bool shouldAllow)
     {
+#if false
         if (ItemDropRequested == null || !shouldAllow) return;
         ItemJar? jar = null;
         byte pageNum = default, index = default;
@@ -437,9 +469,11 @@ public static class EventDispatcher
             }
             if (!request.CanContinue) shouldAllow = false;
         }
+#endif
     }
     private static void PlayerQuestsOnGroupChanged(PlayerQuests sender, CSteamID oldgroupid, EPlayerGroupRank oldgrouprank, CSteamID newgroupid, EPlayerGroupRank newgrouprank)
     {
+#if false
         if (GroupChanged == null || sender == null || UCPlayer.FromPlayer(sender.player) is not { IsOnline: true } player) return;
         GroupChanged args = new GroupChanged(player, oldgroupid.m_SteamID, oldgrouprank, newgroupid.m_SteamID, newgrouprank);
         foreach (EventDelegate<GroupChanged> inv in GroupChanged.GetInvocationList().Cast<EventDelegate<GroupChanged>>())
@@ -447,9 +481,11 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(GroupChanged));
         }
+#endif
     }
-    internal static void InvokeUIRefreshRequest(UCPlayer player)
+    internal static void InvokeUIRefreshRequest(WarfarePlayer player)
     {
+#if false
         if (UIRefreshRequested == null || player is null) return;
         PlayerEvent args = new PlayerEvent(player);
         foreach (EventDelegate<PlayerEvent> inv in UIRefreshRequested.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
@@ -457,14 +493,18 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(UIRefreshRequested));
         }
+#endif
     }
     private static void OnPluginKeyTick(Player player, uint simulation, byte key, bool state)
     {
+#if false
         if (key == 0)
             PlayerManager.FromID(player.channel.owner.playerID.steamID.m_SteamID)?.Keys.Simulate();
+#endif
     }
     private static void StructureManagerOnDamageStructureRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
+#if false
         if (!shouldAllow) return;
         try
         {
@@ -499,12 +539,14 @@ public static class EventDispatcher
                     DestroyerComponent.AddOrUpdate(structureTransform.gameObject, 0ul, EDamageOrigin.Unknown);
             }
         }
+#endif
 
     }
 
     private static readonly List<IManualOnDestroy> WorkingOnDestroy = new List<IManualOnDestroy>(2);
     internal static void InvokeOnStructureDestroyed(StructureDrop drop, ulong instigator, Vector3 ragdoll, bool wasPickedUp, StructureRegion region, byte x, byte y, EDamageOrigin origin)
     {
+#if false
         UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
@@ -534,18 +576,22 @@ public static class EventDispatcher
         {
             WorkingOnDestroy.Clear();
         }
+#endif
     }
-    internal static void InvokeOnInjuringPlayer(PlayerInjuring args)
+    internal static void InvokeOnInjuringPlayer(InjurePlayerRequested args)
     {
+#if false
         if (PlayerInjuring == null) return;
         foreach (EventDelegate<PlayerInjuring> inv in PlayerInjuring.GetInvocationList().Cast<EventDelegate<PlayerInjuring>>())
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(PlayerInjuring));
         }
+#endif
     }
-    internal static void InvokeOnPlayerAided(UCPlayer medic, UCPlayer player, ItemConsumeableAsset asset, bool isRevive, ref bool shouldAllow)
+    internal static void InvokeOnPlayerAided(WarfarePlayer medic, WarfarePlayer player, ItemConsumeableAsset asset, bool isRevive, ref bool shouldAllow)
     {
+#if false
         if (!shouldAllow || PlayerAidRequested == null && PlayerAided == null)
             return;
 
@@ -569,18 +615,22 @@ public static class EventDispatcher
         {
             TryInvoke(inv, args, nameof(PlayerAided));
         }
+#endif
     }
     internal static void InvokeOnPlayerInjured(InjurePlayerRequested args)
     {
+#if false
         if (PlayerInjured == null) return;
         foreach (EventDelegate<InjurePlayerRequested> inv in PlayerInjured.GetInvocationList().Cast<EventDelegate<InjurePlayerRequested>>())
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(PlayerInjured));
         }
+#endif
     }
     internal static bool OnDraggingOrSwappingItem(PlayerInventory playerInv, byte pageFrom, ref byte pageTo, byte xFrom, ref byte xTo, byte yFrom, ref byte yTo, ref byte rotTo, bool swap)
     {
+#if false
         if (ItemMoveRequested != null && UCPlayer.FromPlayer(playerInv.player) is { IsOnline: true } pl)
         {
             if (pageTo < PlayerInventory.SLOTS)
@@ -601,11 +651,13 @@ public static class EventDispatcher
             yTo = args.NewY;
             rotTo = args.NewRotation;
         }
+#endif
 
         return true;
     }
     internal static void OnDraggedOrSwappedItem(PlayerInventory playerInv, byte pageFrom, byte pageTo, byte xFrom, byte xTo, byte yFrom, byte yTo, byte rotFrom, byte rotTo, bool swap)
     {
+#if false
         if (ItemMoved != null && UCPlayer.FromPlayer(playerInv.player) is { IsOnline: true } pl)
         {
             ItemJar? jar = playerInv.getItem(pageTo, playerInv.getIndex(pageTo, xTo, yTo));
@@ -618,10 +670,12 @@ public static class EventDispatcher
                 TryInvoke(inv, args, nameof(ItemMoved));
             }
         }
+#endif
     }
 
     internal static void OnPickedUpItem(Player player, byte regionX, byte regionY, uint instanceId, byte toX, byte toY, byte toRot, byte toPage, ItemData? data)
     {
+#if false
         if (ItemPickedUp != null && UCPlayer.FromPlayer(player) is { IsOnline: true } pl)
         {
             PlayerInventory playerInv = player.inventory;
@@ -662,10 +716,12 @@ public static class EventDispatcher
                 TryInvoke(inv, args, nameof(ItemPickedUp));
             }
         }
+#endif
     }
 
-    public static void InvokeOnItemRemoved(UCPlayer player, byte page, byte index, ItemJar jar)
+    public static void InvokeOnItemRemoved(WarfarePlayer player, byte page, byte index, ItemJar jar)
     {
+#if false
         if (InventoryItemRemoved == null) return;
 
         InventoryItemRemoved args = new InventoryItemRemoved(player, (Page)page, jar.x, jar.y, index, jar);
@@ -674,6 +730,7 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(InventoryItemRemoved));
         }
+#endif
     }
 }
 

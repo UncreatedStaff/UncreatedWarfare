@@ -6,6 +6,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Unlocks;
 
 namespace Uncreated.Warfare.Traits.Buffs;
+#if false
 /// <summary>
 /// Incoming enemy mortars near a player under this effect will trigger a notification.
 /// </summary>
@@ -153,3 +154,4 @@ public class BadOmen : Buff
         return highest;
     }
 }
+#endif

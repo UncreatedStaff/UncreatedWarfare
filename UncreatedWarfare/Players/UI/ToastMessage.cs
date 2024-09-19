@@ -67,22 +67,22 @@ public struct ToastMessage
     }
     public static void QueueMessage(SteamPlayer player, in ToastMessage message)
     {
-        if (UCPlayer.FromSteamPlayer(player) is { } pl)
-            pl.Toasts.Queue(in message);
+        // todo if (UCPlayer.FromSteamPlayer(player) is { } pl)
+        // todo     pl.Toasts.Queue(in message);
     }
     public static void QueueMessage(Player player, in ToastMessage message)
     {
-        if (UCPlayer.FromPlayer(player) is { } pl)
-            pl.Toasts.Queue(in message);
+        // todo if (UCPlayer.FromPlayer(player) is { } pl)
+        // todo     pl.Toasts.Queue(in message);
     }
     public static void QueueMessage(ulong steam64, in ToastMessage message)
     {
-        if (UCPlayer.FromID(steam64) is { } pl)
-            pl.Toasts.Queue(in message);
+        // todo if (UCPlayer.FromID(steam64) is { } pl)
+        // todo     pl.Toasts.Queue(in message);
     }
     public static void QueueMessage(CSteamID steam64, in ToastMessage message)
     {
-        if (UCPlayer.FromCSteamID(steam64) is { } pl)
-            pl.Toasts.Queue(in message);
+        // todo if (UCPlayer.FromCSteamID(steam64) is { } pl)
+        // todo     pl.Toasts.Queue(in message);
     }
 }

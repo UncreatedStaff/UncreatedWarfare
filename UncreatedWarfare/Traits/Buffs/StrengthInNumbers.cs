@@ -5,7 +5,7 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits.Buffs;
-
+#if false
 /// <summary>
 /// Increases player armor by 10% when fighting near the rest of their squad.
 /// </summary>
@@ -141,3 +141,4 @@ public class StrengthInNumbers : Buff
         base.StartEffect(onStart);
     }
 }
+#endif

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 [ModerationEntry(ModerationEntryType.ChatAbuseReport)]
@@ -68,10 +69,10 @@ public class ChatAbuseReport : Report
             for (int i = 0; i < Messages.Length; ++i)
             {
                 ref AbusiveChatRecord record = ref Messages[i];
-                F.AppendPropertyList(builder, args.Count, 3, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 3, i, 1);
                 args.Add(record.Timestamp.UtcDateTime);
                 args.Add(i);
-                args.Add(record.Message.MaxLength(512) ?? string.Empty);
+                args.Add(record.Message.Truncate(512) ?? string.Empty);
             }
 
             builder.Append(';');

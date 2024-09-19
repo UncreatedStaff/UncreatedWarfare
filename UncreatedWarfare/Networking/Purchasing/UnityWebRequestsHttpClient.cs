@@ -192,10 +192,7 @@ internal class UnityWebRequestsHttpClient : IHttpClient
 
     private static string BuildUserAgentString()
     {
-        string userAgent = $"Stripe/v1 .NetBindings/{StripeConfiguration.StripeNetVersion}  Warfare/{Assembly.GetExecutingAssembly().GetName().Version}";
-
-        if (UCWarfare.Config.WebsiteUri != null)
-            userAgent += " (" + UCWarfare.Config.WebsiteUri.OriginalString + ")";
+        string userAgent = $"Stripe/v1 .NetBindings/{StripeConfiguration.StripeNetVersion}  Warfare/{Assembly.GetExecutingAssembly().GetName().Version} (https://uncreated.network/)";
 
         return userAgent;
     }
@@ -238,9 +235,8 @@ internal class UnityWebRequestsHttpClient : IHttpClient
             sb.Append("\",\"newtonsoft_json_version\":\"(unknown)\"");
         }
 
-        string str = $"Uncreated Warfare/{UCWarfare.Version}";
-        if (UCWarfare.Config.WebsiteUri != null)
-            str += " (" + UCWarfare.Config.WebsiteUri.OriginalString + ")";
+        Version version = Assembly.GetExecutingAssembly().GetName().Version;
+        string str = $"Uncreated Warfare/{version} (https://uncreated.network/)";
         sb.Append($"\",\"application\":\"{str}\"");
 
         sb.Append('}');

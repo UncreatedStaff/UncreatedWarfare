@@ -6,8 +6,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.NewQuests.Parameters;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.NewQuests;
@@ -50,7 +52,7 @@ public abstract class QuestTemplate<TSelf, TTracker, TState> : QuestTemplate
         public abstract QuestParameterValue<int> FlagValue { get; }
         public abstract UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token);
         public abstract UniTask CreateFromTemplateAsync(TSelf data, CancellationToken token);
-        public virtual bool IsEligible(UCPlayer player) => true;
+        public virtual bool IsEligible(WarfarePlayer player) => true;
     }
 
     protected internal class TemplatePreset : IQuestPreset
@@ -229,6 +231,11 @@ public abstract class QuestTemplate : ITranslationArgument
             return UniTask.FromResult<RewardExpression?>(null);
         }
     }
+
+    public static readonly SpecialFormat FormatType = new SpecialFormat("Quest Type", "t");
+
+    /// <summary>For <see cref="QuestAsset"/> formatting.</summary>
+    public static readonly SpecialFormat FormatColorQuestAsset = new SpecialFormat("Quest Name", "c");
 
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {

@@ -415,7 +415,9 @@ public sealed class ToastManager : IPlayerComponent
         {
             Player.UnturnedPlayer.setAllPluginWidgetFlags((Player.UnturnedPlayer.pluginWidgetFlags | info.EnableFlags) & ~info.DisableFlags);
             if ((info.EnableFlags & EPluginWidgetFlags.Modal) != 0)
-                Player.ModalNeeded = true;
+            {
+                // todo Player.ModalNeeded = true;
+            }
         }
     }
 
@@ -425,7 +427,9 @@ public sealed class ToastManager : IPlayerComponent
         {
             Player.UnturnedPlayer.setAllPluginWidgetFlags((Player.UnturnedPlayer.pluginWidgetFlags | info.DisableFlags) & ~info.EnableFlags);
             if ((info.EnableFlags & EPluginWidgetFlags.Modal) != 0)
-                Player.ModalNeeded = Player.TeamSelectorData is { IsSelecting: true };
+            {
+                // todo Player.ModalNeeded = Player.TeamSelectorData is { IsSelecting: true };
+            }
         }
     }
 

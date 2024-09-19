@@ -70,7 +70,9 @@ internal static class EventPatches
         {
             BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(__instance.transform);
             if (drop != null)
-                data.LastChargeDetonated = drop.asset.GUID;
+            {
+                //data.LastChargeDetonated = drop.asset.GUID;
+            }
         }
     }
     // SDG.Unturned.InteractableCharge.detonate
@@ -81,7 +83,9 @@ internal static class EventPatches
     {
         Player? player = PlayerTool.getPlayer(killer);
         if (player != null && player.TryGetPlayerData(out UCPlayerData data))
-            data.LastChargeDetonated = default;
+        {
+            //data.LastChargeDetonated = default;
+        }
     }
     // SDG.Unturned.InteractableVehicle.explode
     /// <summary>
@@ -146,7 +150,9 @@ internal static class EventPatches
 
         UCPlayerData? data = null;
         if (instigator2 != CSteamID.Nil && instigator2.TryGetPlayerData(out data))
-            data.ExplodingVehicle = vehicleData;
+        {
+            //data.ExplodingVehicle = vehicleData;
+        }
         L.LogDebug("Decided explosion instigator: " + instigator2.ToString());
         Vector3 force = new Vector3(
             Random.Range(__instance.asset.minExplosionForce.x, __instance.asset.maxExplosionForce.x),
@@ -177,8 +183,11 @@ internal static class EventPatches
         {
             EffectUtility.TriggerEffect(effect, Provider.GatherRemoteClientConnections(), __instance.transform.position, true);
         }
+
         if (data != null)
-            data.ExplodingVehicle = null;
+        {
+            //data.ExplodingVehicle = null;
+        }
         return false;
     }
     // SDG.Unturned.Rocket.OnTriggerEnter
@@ -195,7 +204,7 @@ internal static class EventPatches
             if (target != null)
             {
                 Player? pl = PlayerTool.getPlayer(__instance.killer);
-                return pl == null || target.GetTeam() != pl.GetTeam();
+                return true;// pl == null || target.GetTeam() != pl.GetTeam();
             }
         }
         return true;
@@ -206,37 +215,38 @@ internal static class EventPatches
     /// </summary>
     private static bool PlayerDamageRequested(PlayerLife __instance, byte amount, Vector3 newRagdoll, EDeathCause newCause, ELimb newLimb, CSteamID newKiller, ref EPlayerKill kill, bool trackKill, ERagdollEffect newRagdollEffect, bool canCauseBleeding)
     {
-        UCPlayer? pl = UCPlayer.FromPlayer(__instance.player);
-        if (pl is not null && pl.GodMode)
-        {
-            if (pl.GodMode || Teams.TeamManager.IsInAnyMainOrLobby(pl))
-                return false;
-        }
+        // todo god mode
+        //UCPlayer? pl = UCPlayer.FromPlayer(__instance.player);
+        //if (pl is not null && pl.GodMode)
+        //{
+        //    if (pl.GodMode || Teams.TeamManager.IsInAnyMainOrLobby(pl))
+        //        return false;
+        //}
 
         return true;
     }
 
     private static bool OnCalculatingPower(InteractablePower __instance, ref bool __result)
     {
-        if (!Data.UseElectricalGrid) return true;
-        if (Data.Gamemode is not FlagGamemode fg || fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.Disabled)
-        {
-            __result = false;
-            return true;
-        }
-        if (fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.AllEnabled)
-        {
-            __result = true;
-            return false;
-        }
-        if (__instance is InteractableObject obj)
-        {
-            __result = fg.IsPowerObjectEnabled(obj);
-            return false;
-        }
-
-        __result = fg.IsInteractableEnabled(__instance);
-        return false;
+        //if (!Data.UseElectricalGrid) return true;
+        // todo if (Data.Gamemode is not FlagGamemode fg || fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.Disabled)
+        // {
+             __result = false;
+             return true;
+        // }
+        //if (fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.AllEnabled)
+        //{
+        //    __result = true;
+        //    return false;
+        //}
+        //if (__instance is InteractableObject obj)
+        //{
+        //    __result = fg.IsPowerObjectEnabled(obj);
+        //    return false;
+        //}
+        //
+        //__result = fg.IsInteractableEnabled(__instance);
+        //return false;
     }
 
     private static bool OnReceiveToggleObjectBinaryStateRequest(in ServerInvocationContext context, byte x, byte y, ushort index, bool isUsed)
@@ -250,10 +260,11 @@ internal static class EventPatches
             return false;
         LevelObject obj = levelObjects[index];
         L.LogDebug($"Received request from {player} for obj {obj.asset.FriendlyName} @ {obj.transform.position} to state: {isUsed}.");
-        if (Data.Gamemode is not FlagGamemode fg || fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.Disabled)
-            return true;
+        //if (Data.Gamemode is not FlagGamemode fg || fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.Disabled)
+        //    return true;
 
-        return obj.interactable != null && fg.IsPowerObjectEnabled(obj.interactable);
+        return true;
+        //return obj.interactable != null && fg.IsPowerObjectEnabled(obj.interactable);
     }
     private static readonly MethodInfo? MthdRemoveItem = typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.removeItem));
     private static readonly MethodInfo? MthdAddItem = typeof(SDG.Unturned.Items).GetMethod(nameof(SDG.Unturned.Items.addItem));

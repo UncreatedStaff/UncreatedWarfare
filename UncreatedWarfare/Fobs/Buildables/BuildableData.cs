@@ -89,12 +89,9 @@ public class BuildableData : ITranslationArgument
     /// <inheritdoc />
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        string? format = parameters.Format.Format;
         if (Emplacement is not null && Emplacement.EmplacementVehicle.TryGetAsset(out VehicleAsset? vasset))
         {
             string name = vasset.vehicleName;
-            if (format is not null && format.Equals(T.FormatRarityColor))
-                return formatter.Colorize(name, ItemTool.getRarityColorUI(vasset.rarity), parameters.Options);
 
             return name;
         }
@@ -102,8 +99,6 @@ public class BuildableData : ITranslationArgument
         if (Foundation.TryGetAsset(out ItemAsset? iasset) || FullBuildable.TryGetAsset(out iasset))
         {
             string name = GetItemName(iasset.itemName);
-            if (format is not null && format.Equals(T.FormatRarityColor))
-                return formatter.Colorize(name, ItemTool.getRarityColorUI(iasset.rarity), parameters.Options);
 
             return name;
         }
@@ -113,16 +108,12 @@ public class BuildableData : ITranslationArgument
             if (Emplacement.BaseBuildable.TryGetAsset(out iasset))
             {
                 string name = GetItemName(iasset.itemName);
-                if (format is not null && format.Equals(T.FormatRarityColor))
-                    return formatter.Colorize(name, ItemTool.getRarityColorUI(iasset.rarity), parameters.Options);
 
                 return name;
             }
             if (Emplacement.Ammo.TryGetAsset(out iasset))
             {
                 string name = GetItemName(iasset.itemName);
-                if (format is not null && format.Equals(T.FormatRarityColor))
-                    return formatter.Colorize(name, ItemTool.getRarityColorUI(iasset.rarity), parameters.Options);
 
                 return name;
             }

@@ -1,15 +1,17 @@
-﻿namespace Uncreated.Warfare.Events.Models.Projectiles;
+﻿using Uncreated.Warfare.Players;
+
+namespace Uncreated.Warfare.Events.Models.Projectiles;
 public class ProjectileSpawned
 {
-    private readonly UCPlayer? _player;
+    private readonly WarfarePlayer? _player;
     private readonly GameObject _projectile;
     private readonly ItemGunAsset _asset;
     private readonly Rocket _rocketComponent;
-    public UCPlayer? Player => _player;
+    public WarfarePlayer? Player => _player;
     public ItemGunAsset Asset => _asset;
     public Rocket RocketComponent => _rocketComponent;
     public GameObject Object => _projectile;
-    public ProjectileSpawned(UCPlayer? player, ItemGunAsset asset, GameObject @object, Rocket rocketComponent)
+    public ProjectileSpawned(WarfarePlayer? player, ItemGunAsset asset, GameObject @object, Rocket rocketComponent)
     {
         _player = player;
         _projectile = @object;

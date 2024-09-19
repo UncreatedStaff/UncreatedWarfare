@@ -1,6 +1,7 @@
 ﻿using SDG.NetTransport;
 using System.Collections.Generic;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -74,7 +75,7 @@ public class SquadManager
     {
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            WarfarePlayer pl = PlayerManager.OnlinePlayers[i];
             pl.Squad = null;
             ClearMenu(pl);
         }
@@ -83,12 +84,12 @@ public class SquadManager
 
         Squads.Clear();
     }
-    private static void OnKitChanged(UCPlayer player, Kit? kit, Kit? oldKit)
+    private static void OnKitChanged(WarfarePlayer player, Kit? kit, Kit? oldKit)
     {
         _singleton.IsLoaded();
         ReplicateKitChange(player);
         ulong team = player.GetTeam();
-        UCPlayer? cmd = _singleton.Commanders.GetCommander(team);
+        WarfarePlayer? cmd = _singleton.Commanders.GetCommander(team);
         if (cmd != null && cmd.Steam64 == player.Steam64 && kit is not { SquadLevel: SquadLevel.Commander })
         {
             if (team == 1ul)
@@ -101,7 +102,7 @@ public class SquadManager
     private void OnPlayerLeaving(PlayerEvent e)
     {
         ulong team = e.Player.GetTeam();
-        UCPlayer? cmd = _singleton.Commanders.GetCommander(team);
+        WarfarePlayer? cmd = _singleton.Commanders.GetCommander(team);
         if (cmd != null && cmd.Steam64 == e.Steam64)
         {
             if (team == 1ul)
@@ -255,7 +256,7 @@ public class SquadManager
             }
         }
     }
-    void IJoinedTeamListener.OnJoinTeam(UCPlayer player, ulong team)
+    void IJoinedTeamListener.OnJoinTeam(WarfarePlayer player, ulong team)
     {
         _singleton.IsLoaded();
         if (player.Save.LastGame == Data.Gamemode.GameId && player.Save.SquadLeader != 0ul && !string.IsNullOrEmpty(player.Save.SquadName))
@@ -283,8 +284,8 @@ public class SquadManager
                 SendSquadList(PlayerManager.OnlinePlayers[i], team);
         }
     }
-    public static void SendSquadList(UCPlayer player) => SendSquadList(player, player.GetTeam());
-    public static void SendSquadList(UCPlayer player, ulong team)
+    public static void SendSquadList(WarfarePlayer player) => SendSquadList(player, player.GetTeam());
+    public static void SendSquadList(WarfarePlayer player, ulong team)
     {
         _singleton.AssertLoaded();
         ITransportConnection c = player.Player.channel.owner.transportConnection;
@@ -344,7 +345,7 @@ public class SquadManager
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
-                UCPlayer player = PlayerManager.OnlinePlayers[i];
+                WarfarePlayer player = PlayerManager.OnlinePlayers[i];
 
                 if (squad.Team != player.GetTeam() || squad == player.Squad)
                     continue;
@@ -380,14 +381,14 @@ public class SquadManager
 
             for (int m = 0; m < s.Members.Count; ++m)
             {
-                UCPlayer pl = s.Members[m];
+                WarfarePlayer pl = s.Members[m];
                 MenuUI.Squads[index].MemberCount.SetText(pl.Connection,
                     (squad.IsLocked ? T.SquadsUIPlayerCountSmallLocked : T.SquadsUIPlayerCountSmall).Translate(pl, false, squad.Members.Count, SQUAD_MAX_MEMBERS)
                 );
             }
         }
     }
-    public static void ReplicateKitChange(UCPlayer player)
+    public static void ReplicateKitChange(WarfarePlayer player)
     {
         _singleton.AssertLoaded();
         Squad? squad = player.Squad;
@@ -415,7 +416,7 @@ public class SquadManager
         _singleton.AssertLoaded();
         for (int m = 0; m < squad.Members.Count; m++)
         {
-            UCPlayer player = squad.Members[m];
+            WarfarePlayer player = squad.Members[m];
             ITransportConnection c = player.Player.channel.owner.transportConnection;
             MenuUI.Header.SetText(c, T.SquadsUIHeaderPlayerCount.Translate(player, false, squad, squad.Members.Count, SQUAD_MAX_MEMBERS));
             int i = 0;
@@ -425,7 +426,7 @@ public class SquadManager
                 SquadMember ui = MenuUI.Members[i];
 
                 ui.Root.SetVisibility(c, true);
-                UCPlayer member = squad.Members[i];
+                WarfarePlayer member = squad.Members[i];
                 ui.Name.SetText(c, member.Name.NickName);
                 ui.Icon.SetText(c, new string(member.Icon, 1));
             }
@@ -453,7 +454,7 @@ public class SquadManager
         }
         return SquadNames[SquadNames.Length - 1];
     }
-    public static Squad CreateSquad(UCPlayer leader, ulong team)
+    public static Squad CreateSquad(WarfarePlayer leader, ulong team)
     {
         GameThread.AssertCurrent();
         _singleton.AssertLoaded();
@@ -479,10 +480,10 @@ public class SquadManager
     {
         Squads.Sort((a, b) => a.Name[0].CompareTo(b.Name[0]));
     }
-    public static void JoinSquad(UCPlayer player, Squad squad)
+    public static void JoinSquad(WarfarePlayer player, Squad squad)
     {
         _singleton.AssertLoaded();
-        foreach (UCPlayer p in squad.Members)
+        foreach (WarfarePlayer p in squad.Members)
         {
             if (p.Steam64 != player.Steam64)
                 p.SendChat(T.SquadPlayerJoined, player);
@@ -520,7 +521,7 @@ public class SquadManager
             squad.Members.Insert(0, squad.Leader);
         }
     }
-    public static void LeaveSquad(UCPlayer player, Squad squad)
+    public static void LeaveSquad(WarfarePlayer player, Squad squad)
     {
         _singleton.AssertLoaded();
         player.SendChat(T.SquadLeft, squad);
@@ -579,7 +580,7 @@ public class SquadManager
         }
         for (int i = 0; i < squad.Members.Count; i++)
         {
-            UCPlayer p = squad.Members[i];
+            WarfarePlayer p = squad.Members[i];
             if (p.Steam64 != player.Steam64 && p is { IsOnline: true, IsLeaving: false })
                 p.SendChat(T.SquadPlayerLeft, player);
         }
@@ -613,7 +614,7 @@ public class SquadManager
 
         for (int i = 0; i < squad.Members.Count; i++)
         {
-            UCPlayer member = squad.Members[i];
+            WarfarePlayer member = squad.Members[i];
             member.Squad = null;
 
             member.SendChat(T.SquadDisbanded, squad);
@@ -629,7 +630,7 @@ public class SquadManager
         for (int i = 0; i < squad.Members.Count; ++i)
             SquadStatusUpdated?.Invoke(squad.Members[i], squad, null, squad.Leader.Steam64 == squad.Members[i].Steam64, false);
     }
-    public static void KickPlayerFromSquad(UCPlayer player, Squad squad)
+    public static void KickPlayerFromSquad(WarfarePlayer player, Squad squad)
     {
         _singleton.AssertLoaded();
         if (player == null || squad == null || squad.Members.Count < 2)
@@ -643,7 +644,7 @@ public class SquadManager
         SortMembers(squad);
         for (int i = 0; i < squad.Members.Count; i++)
         {
-            UCPlayer p = squad.Members[i];
+            WarfarePlayer p = squad.Members[i];
             if (p.Steam64 != player.Steam64)
                 p.SendChat(T.SquadPlayerKicked, player);
         }
@@ -659,7 +660,7 @@ public class SquadManager
         PlayerManager.ApplyTo(player);
         SquadStatusUpdated?.Invoke(player, squad, null, false, false);
     }
-    public static void PromoteToLeader(Squad squad, UCPlayer newLeader)
+    public static void PromoteToLeader(Squad squad, WarfarePlayer newLeader)
     {
         _singleton.AssertLoaded();
         if (newLeader == squad.Leader)
@@ -673,12 +674,12 @@ public class SquadManager
 
         Traits.TraitManager.OnPlayerPromotedSquadleader(newLeader, squad);
 
-        UCPlayer oldLeader = squad.Leader;
+        WarfarePlayer oldLeader = squad.Leader;
         squad.Leader = newLeader;
 
         for (int i = 0; i < squad.Members.Count; i++)
         {
-            UCPlayer p = squad.Members[i];
+            WarfarePlayer p = squad.Members[i];
             if (p.CSteamID != squad.Leader.CSteamID)
                 p.SendChat(T.SquadPlayerPromoted, newLeader);
             else
@@ -741,13 +742,13 @@ public class SquadManager
 
         return squadsCount >= maxSquads;
     }
-    public void HideUI(UCPlayer player)
+    public void HideUI(WarfarePlayer player)
     {
         ClearList(player.Player);
         ClearMenu(player.Player);
     }
-    public void ShowUI(UCPlayer player) => this.UpdateUI(player);
-    public void UpdateUI(UCPlayer player)
+    public void ShowUI(WarfarePlayer player) => this.UpdateUI(player);
+    public void UpdateUI(WarfarePlayer player)
     {
         if (player.Squad == null)
             SendSquadList(player);
@@ -804,14 +805,14 @@ public class SquadManager
 #endif
 }
 
-public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
+public class Squad : IEnumerable<WarfarePlayer>, ITranslationArgument
 {
     public string Name;
-    public ulong Team;
+    public Team Team;
     public Branch Branch;
     public bool IsLocked;
-    public UCPlayer Leader;
-    public List<UCPlayer> Members;
+    public WarfarePlayer Leader;
+    public List<WarfarePlayer> Members;
     public bool Disbanded;
     public RallyPoint? RallyPoint;
     public int DisbandStrikes;
@@ -828,7 +829,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
 #if false
             if (Leader is not null && Leader.IsOnline && SquadManager.Loaded)
             {
-                UCPlayer? cmd = SquadManager.Singleton.Commanders.GetCommander(Team);
+                WarfarePlayer? cmd = SquadManager.Singleton.Commanders.GetCommander(Team);
                 if (cmd is not null && cmd.Steam64 == Leader.Steam64)
                     return true;
             }
@@ -837,7 +838,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
         }
     }
 
-    public Squad(string name, UCPlayer leader, ulong team, Branch branch)
+    public Squad(string name, WarfarePlayer leader, Team team, Branch branch)
     {
         Name = name;
         Team = team;
@@ -845,19 +846,19 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
         Leader = leader;
         IsLocked = false;
         LockedId = 1;
-        Members = new List<UCPlayer>(6) { leader };
+        Members = new List<WarfarePlayer>(6) { leader };
         DisbandStrikes = 0;
     }
     public void Lock() => LockOrUnlock(true);
     public void Unlock() => LockOrUnlock(false);
-    public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
+    public IEnumerator<WarfarePlayer> GetEnumerator() => Members.GetEnumerator();
     public bool IsFull() => Members.Count >= SquadManager.SQUAD_MAX_MEMBERS;
     public bool IsNotSolo() => Members.Count > 1;
     public bool ContainsMember(IPlayer player)
     {
         for (int i = 0; i < Members.Count; ++i)
         {
-            if (Members[i].Steam64 == player.Steam64.m_SteamID)
+            if (Members[i].Steam64.m_SteamID == player.Steam64.m_SteamID)
                 return true;
         }
 
@@ -877,9 +878,9 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     IEnumerator IEnumerable.GetEnumerator() => Members.GetEnumerator();
     public IEnumerator<ITransportConnection> EnumerateMembers()
     {
-        IEnumerator<UCPlayer> players = Members.GetEnumerator();
+        IEnumerator<WarfarePlayer> players = Members.GetEnumerator();
         while (players.MoveNext())
-            yield return players.Current!.Player.channel.owner.transportConnection;
+            yield return players.Current!.UnturnedPlayer.channel.owner.transportConnection;
         players.Dispose();
     }
     
@@ -890,9 +891,9 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         return FormatColorName.Match(in parameters)
-            ? formatter.Colorize(Name, Team.Color, parameters.Options)
+            ? formatter.Colorize(Name, Team.Faction.Color, parameters.Options)
             : Name;
     }
 }
 
-public delegate void SquadUpdated(UCPlayer player, Squad? oldSquad, Squad? newSquad, bool oldIsLeader, bool newIsLeader);
+public delegate void SquadUpdated(WarfarePlayer player, Squad? oldSquad, Squad? newSquad, bool oldIsLeader, bool newIsLeader);

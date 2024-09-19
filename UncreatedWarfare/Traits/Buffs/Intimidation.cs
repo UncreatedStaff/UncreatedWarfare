@@ -2,6 +2,7 @@
 using Uncreated.Warfare.Players.Unlocks;
 
 namespace Uncreated.Warfare.Traits.Buffs;
+#if false
 /// <summary>
 /// If there are more players with <see cref="Intimidation"/> on one team than the other when a <see cref="Flag"/> would've been contested, that team still captures.
 /// </summary>
@@ -65,3 +66,4 @@ public class Intimidation : Buff
         }
     }
 }
+#endif

@@ -1,14 +1,18 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
@@ -115,7 +119,9 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
             destroyer = 0ul;
         }
 
-        UCPlayer? player = UCPlayer.FromID(destroyer);
+        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>();
+
+        WarfarePlayer? player = playerService.GetOnlinePlayerOrNull(destroyer);
 
         StructureDestroyed args = new StructureDestroyed
         {
@@ -130,18 +136,7 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
             // todo Primary and Secondary assets need filling
         };
 
-        structure.model.GetComponents(WarfareModule.EventDispatcher.WorkingDestroyInfo);
-        try
-        {
-            foreach (IDestroyInfo destroyInfo in WarfareModule.EventDispatcher.WorkingDestroyInfo)
-            {
-                destroyInfo.DestroyInfo = args;
-            }
-        }
-        finally
-        {
-            WarfareModule.EventDispatcher.WorkingDestroyInfo.Clear();
-        }
+        BuildableExtensions.SetDestroyInfo(structure.model, args, null);
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
     }

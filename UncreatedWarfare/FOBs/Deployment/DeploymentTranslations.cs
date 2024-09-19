@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
 public class DeploymentTranslations : PropertiesTranslationCollection
@@ -7,25 +8,25 @@ public class DeploymentTranslations : PropertiesTranslationCollection
     protected override string FileName => "Deployment";
 
     [TranslationData("Sent to a player after they deploy to a location.", "The location name.")]
-    public readonly Translation<IDeployable> DeploySuccess = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable> DeploySuccess = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player after they request deployment to a location and pass initial checks.", "The location name", "Seconds left")]
-    public readonly Translation<IDeployable, int> DeployStandby = new Translation<IDeployable, int>("<#fae69c>Now deploying to {0}. You will arrive in <#eee>{1} ${p:1:second}</color>", arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable, int> DeployStandby = new Translation<IDeployable, int>("<#fae69c>Now deploying to {0}. You will arrive in <#eee>{1} ${p:1:second}</color>", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player after they request deployment to a location and the location isn't valid, gets destroyed, etc.", "The location name")]
-    public readonly Translation<IDeployable> DeployNotSpawnable = new Translation<IDeployable>("<#ffa238>{0} is not active.", arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable> DeployNotSpawnable = new Translation<IDeployable>("<#ffa238>{0} is not active.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player while they're waiting for deployment and the location becomes invalid.", "The location name")]
-    public readonly Translation<IDeployable> DeployNotSpawnableTick = new Translation<IDeployable>("<#ffa238>{0} is no longer active.", arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable> DeployNotSpawnableTick = new Translation<IDeployable>("<#ffa238>{0} is no longer active.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player while they're waiting for deployment and the location get's destroyed.", "The location name")]
-    public readonly Translation<IDeployable> DeployDestroyed = new Translation<IDeployable>("<#ffa238>{0} was destroyed.", arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable> DeployDestroyed = new Translation<IDeployable>("<#ffa238>{0} was destroyed.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player after they request deployment to a FOB if it doesn't have a Bunker.", "The location name")]
-    public readonly Translation<IDeployable> DeployNoBunker = new Translation<IDeployable>("<#ffaa42>{0} doesn't have a <#cedcde>FOB BUNKER</color>. Your team must build one to use the <#cedcde>FOB</color> as a spawnpoint.", arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable> DeployNoBunker = new Translation<IDeployable>("<#ffaa42>{0} doesn't have a <#cedcde>FOB BUNKER</color>. Your team must build one to use the <#cedcde>FOB</color> as a spawnpoint.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player after they request deployment to a FOB if it's radio is damaged.", "The location name")]
-    public readonly Translation<IDeployable> DeployRadioDamaged = new Translation<IDeployable>("<#ffaa42>The <#cedcde>FOB RADIO</color> at {0} is damaged. Repair it with an <#cedcde>ENTRENCHING TOOL</color>.", arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable> DeployRadioDamaged = new Translation<IDeployable>("<#ffaa42>The <#cedcde>FOB RADIO</color> at {0} is damaged. Repair it with an <#cedcde>ENTRENCHING TOOL</color>.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player while they're waiting for deployment if they move mid-deployment.")]
     public readonly Translation DeployMoved = new Translation("<#ffa238>You moved and can no longer deploy.");
@@ -34,7 +35,7 @@ public class DeploymentTranslations : PropertiesTranslationCollection
     public readonly Translation DeployDamaged = new Translation("<#ffa238>You were damaged and can no longer deploy.");
 
     [TranslationData("Sent to a player while they're waiting for deployment if enemies go within their range.", "The location name")]
-    public readonly Translation<IDeployable> DeployEnemiesNearbyTick = new Translation<IDeployable>("<#ffa238>You no longer deploy to {0} - there are enemies nearby.", arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable> DeployEnemiesNearbyTick = new Translation<IDeployable>("<#ffa238>You no longer deploy to {0} - there are enemies nearby.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player after they request deployment to a FOB if there are enemies nearby.", "The location name")]
     public readonly Translation<IDeployable> DeployEnemiesNearby = new Translation<IDeployable>("<#ffaa42>You cannot deploy to {0} - there are enemies nearby.");
@@ -46,7 +47,7 @@ public class DeploymentTranslations : PropertiesTranslationCollection
     public readonly Translation<string> DeployableNotFound = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent to a player after they request deployment to a FOB if they're already on the FOB.", "The location name")]
-    public readonly Translation<IDeployable> DeployableAlreadyOnFOB = new Translation<IDeployable>("<#ffa238>You are already on <#e3c27f>{0}</color>.", arg0Fmt: FOB.FormatNameColored);
+    public readonly Translation<IDeployable> DeployableAlreadyOnFOB = new Translation<IDeployable>("<#ffa238>You are already on <#e3c27f>{0}</color>.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player after they request deployment to a location if they're not near another FOB or in main (in non-insurgency gamemodes).")]
     public readonly Translation DeployNotNearFOB = new Translation("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or in <#cedcde>MAIN BASE</color> in order to deploy.");

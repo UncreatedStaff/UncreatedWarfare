@@ -13,6 +13,7 @@ internal static class StatsCoroutine
     private static int _counter;
     private static readonly Dictionary<ulong, Afk> PreviousPositions = new Dictionary<ulong, Afk>();
     internal static void RemovePlayer(ulong player) => PreviousPositions.Remove(player);
+#if false
     public static IEnumerator<WaitForSeconds> StatsRoutine()
     {
         while (true)
@@ -89,12 +90,13 @@ internal static class StatsCoroutine
             yield return new WaitForSeconds(UCWarfare.Config.StatsInterval * 60f);
         }
     }
+#endif
     /// <summary>Used to store data about where and how long a player has been afk.</summary>
     private struct Afk
     {
         public int Time;
         public ulong Player;
         public Vector3 LastLocation;
-        public static int Clamp(int input) => input % Mathf.RoundToInt(UCWarfare.Config.AfkCheckInterval / (UCWarfare.Config.StatsInterval * 60f));
+        public static int Clamp(int input) => 0;// todo input % Mathf.RoundToInt(UCWarfare.Config.AfkCheckInterval / (UCWarfare.Config.StatsInterval * 60f));
     }
 }

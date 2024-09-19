@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Events;
@@ -19,6 +19,13 @@ partial class EventDispatcher2
     private void ProviderOnServerConnected(CSteamID steam64)
     {
         SteamPlayer? steamPlayer = PlayerTool.getSteamPlayer(steam64.m_SteamID);
+
+        if (_playerService is not PlayerService implPlayerService)
+        {
+            ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerConnected));
+            logger.LogError("Invalid IPlayerService implementation player connecting: {0}.", steam64);
+            return;
+        }
         
         if (steamPlayer == null || steamPlayer.player == null)
         {
@@ -27,7 +34,8 @@ partial class EventDispatcher2
             return;
         }
 
-        int index = PendingAsyncData.FindIndex(x => x.Steam64.m_SteamID == steam64.m_SteamID);
+        ulong s64 = steam64.m_SteamID;
+        int index = PendingAsyncData.FindIndex(x => x.Steam64.m_SteamID == s64);
         if (index == -1)
         {
             ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerConnected));
@@ -36,12 +44,12 @@ partial class EventDispatcher2
             return;
         }
 
-        PendingAsyncData data = PendingAsyncData[index];
+        // todo PendingAsyncData data = PendingAsyncData[index];
 
         PendingAsyncData.RemoveAt(index);
         PendingAsyncData.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Steam64.m_SteamID));
 
-        WarfarePlayer newPlayer = _playerService.CreateWarfarePlayer(steamPlayer.player);
+        WarfarePlayer newPlayer = implPlayerService.CreateWarfarePlayer(steamPlayer.player);
 
         PlayerJoined args = new PlayerJoined
         {
@@ -66,6 +74,13 @@ partial class EventDispatcher2
             return;
         }
 
+        if (_playerService is not PlayerService implPlayerService)
+        {
+            ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerDisconnected));
+            logger.LogError("Invalid IPlayerService implementation player disconnecting: {0}.", steam64);
+            return;
+        }
+
         player.StartDisconnecting();
 
         Transform t = player.Transform;
@@ -79,7 +94,7 @@ partial class EventDispatcher2
             Rotation = t.rotation,
             LookPosition = aim.position,
             LookForward = aim.forward,
-            Team = player.UnturnedPlayer == null ? null : new Team { GroupId = new CSteamID(player.GetTeam()), Faction = player.Faction, Id = (int)player.GetTeam() }, // todo
+            Team = player.Team,
             DisconnectToken = disconnectToken.Token
         };
 
@@ -89,7 +104,7 @@ partial class EventDispatcher2
 
         try
         {
-            _playerService.OnPlayerLeft(player);
+            implPlayerService.OnPlayerLeft(player);
         }
         catch (Exception ex)
         {

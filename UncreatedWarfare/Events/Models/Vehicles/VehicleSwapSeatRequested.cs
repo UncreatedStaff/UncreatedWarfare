@@ -1,4 +1,7 @@
-﻿namespace Uncreated.Warfare.Events.Models.Vehicles;
+﻿using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Players;
+
+namespace Uncreated.Warfare.Events.Models.Vehicles;
 public class VehicleSwapSeatRequested : CancellablePlayerEvent
 {
     private readonly InteractableVehicle _vehicle;
@@ -11,10 +14,12 @@ public class VehicleSwapSeatRequested : CancellablePlayerEvent
         get => finalSeat;
         set => finalSeat = value;
     }
-    public VehicleSwapSeatRequested(Player player, InteractableVehicle vehicle, bool shouldAllow, byte sourceSeat, byte resultSeat) : base(UCPlayer.FromPlayer(player)!)
+
+    [SetsRequiredMembers]
+    public VehicleSwapSeatRequested(WarfarePlayer player, InteractableVehicle vehicle, bool shouldAllow, byte sourceSeat, byte resultSeat)
     {
+        Player = player;
         _vehicle = vehicle;
-        if (!shouldAllow) Break();
         this.sourceSeat = sourceSeat;
         finalSeat = resultSeat;
     }

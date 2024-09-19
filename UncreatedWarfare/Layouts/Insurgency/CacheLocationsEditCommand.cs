@@ -12,6 +12,7 @@ internal static class CacheLocationsEditCommand
     internal static readonly Dictionary<CacheLocation, BarricadeDrop> Drops = new Dictionary<CacheLocation, BarricadeDrop>(EqualityComparer<CacheLocation>.Default);
     internal static async UniTask Execute(CommandContext ctx)
     {
+#if false
         await UniTask.SwitchToMainThread();
 
         ctx.AssertRanByPlayer();
@@ -214,8 +215,10 @@ internal static class CacheLocationsEditCommand
             ctx.ReplyString("<#ffe7ff>Closed cache editor mode.");
         }
         else throw ctx.SendCorrectUsage(Syntax);
+#endif
     }
 
+#if false
     private static void CheckEditOperation(CommandContext ctx, CacheLocationStore locations)
     {
         if (ctx.Player.CacheLocationIndex == -1)
@@ -261,4 +264,5 @@ internal static class CacheLocationsEditCommand
                 IconManager.AttachIcon(effect.GUID, drop2.model, player: player.Steam64);
         }
     }
+#endif
 }

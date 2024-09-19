@@ -136,7 +136,7 @@ public class Report : ModerationEntry
         builder.Append($" INSERT INTO `{DatabaseInterface.TableReports}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsType)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 1, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 1, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnReportsType}` = " +
                        $"`t`.`{DatabaseInterface.ColumnReportsType}`;");

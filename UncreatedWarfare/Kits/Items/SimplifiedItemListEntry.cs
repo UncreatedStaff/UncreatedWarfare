@@ -21,7 +21,7 @@ internal readonly struct SimplifiedItemListEntry
 
     internal static List<SimplifiedItemListEntry> GetSimplifiedItemList(Kit kit)
     {
-        FactionInfo? faction = TeamManager.GetFactionInfo(kit.FactionId);
+        FactionInfo? faction = null;// todo TeamManager.GetFactionInfo(kit.FactionId);
         List<SimplifiedItemListEntry> groups = new List<SimplifiedItemListEntry>(16);
         List<IKitItem> items = new List<IKitItem>(kit.Items.OrderBy(x => x is not IPageKitItem jar || jar.Page > Page.Secondary));
         items.Sort((a, b) => a.CompareTo(b));
@@ -40,7 +40,7 @@ internal readonly struct SimplifiedItemListEntry
                 }
                 if (redir.RedirectType <= RedirectType.Glasses)
                 {
-                    ItemAsset? asset = TeamManager.GetRedirectInfo(redir.RedirectType, redir.RedirectVariant ?? string.Empty, faction, null, out _, out _);
+                    ItemAsset? asset = null;// todo TeamManager.GetRedirectInfo(redir.RedirectType, redir.RedirectVariant ?? string.Empty, faction, null, out _, out _);
                     if (asset != null)
                     {
                         if (redir.RedirectType is RedirectType.Shirt or RedirectType.Pants && clothingSetName == null)

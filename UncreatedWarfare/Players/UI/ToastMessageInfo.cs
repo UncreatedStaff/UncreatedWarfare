@@ -149,12 +149,10 @@ public sealed class ToastMessageInfo
         if (level != Level.BUILD_INDEX_GAME)
             return;
 
-        if (Asset != null)
+        if (Asset.TryGetAsset(out EffectAsset? asset))
         {
             if (!_durationOverridden)
-                _duration = Asset.lifetime;
-            Guid = Asset.GUID;
-            Id = Asset.id;
+                _duration = asset.lifetime;
             UI?.LoadFromConfig(Asset);
         }
         else

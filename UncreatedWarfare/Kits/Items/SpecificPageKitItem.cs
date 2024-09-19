@@ -2,6 +2,7 @@
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits.Items;
 public class SpecificPageKitItem : ISpecificPageKitItem
@@ -34,7 +35,7 @@ public class SpecificPageKitItem : ISpecificPageKitItem
         Rotation = copy.Rotation;
         Page = copy.Page;
         Amount = copy.Amount;
-        State = Util.CloneBytes(copy.State);
+        State = copy.State.CloneBytes();
     }
     public object Clone() => new SpecificPageKitItem(this);
     public int CompareTo(object obj)
@@ -53,7 +54,7 @@ public class SpecificPageKitItem : ISpecificPageKitItem
         return -1;
     }
     public override bool Equals(object obj) => Equals(obj as SpecificPageKitItem);
-    public bool Equals(IKitItem? other) => other is SpecificPageKitItem c && c.X == X && c.Y == Y && c.Page == Page && c.Amount == Amount && c.Item == Item && c.Rotation == Rotation && c.State.CompareBytes(State);
+    public bool Equals(IKitItem? other) => other is SpecificPageKitItem c && c.X == X && c.Y == Y && c.Page == Page && c.Amount == Amount && c.Item == Item && c.Rotation == Rotation && CollectionUtility.CompareBytes(c.State, State);
     public override int GetHashCode()
     {
         return HashCode.Combine(Item, X, Y, Rotation, Page, Amount, State.Length);
@@ -64,7 +65,7 @@ public class SpecificPageKitItem : ISpecificPageKitItem
         if (Item.TryGetAsset(out ItemAsset item))
         {
             amount = Amount < 1 ? item.amount : Amount;
-            state = State is null ? item.getState(EItemOrigin.ADMIN) : Util.CloneBytes(State);
+            state = State is null ? item.getState(EItemOrigin.ADMIN) : State.CloneBytes();
             return item;
         }
 

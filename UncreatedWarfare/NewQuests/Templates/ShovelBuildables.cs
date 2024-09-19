@@ -6,6 +6,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.NewQuests.Parameters;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Util;
 
@@ -54,7 +55,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
             Type = data.Type == null ? null : await data.Type.CreateValue(data.ServiceProvider);
         }
     }
-    public class Tracker : QuestTracker, INotifyBuildableBuilt //IEventListener<BuildableBuilt>
+    public class Tracker : QuestTracker //, todo INotifyBuildableBuilt //IEventListener<BuildableBuilt>
     {
         private readonly int _targetAmount;
         private readonly QuestParameterValue<Guid> _base;
@@ -63,7 +64,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
         private int _amount;
         public override bool IsComplete => _amount >= _targetAmount;
         public override short FlagValue => (short)_amount;
-        public Tracker(UCPlayer player, IServiceProvider serviceProvider, ShovelBuildables quest, State state, IQuestPreset? preset)
+        public Tracker(WarfarePlayer player, IServiceProvider serviceProvider, ShovelBuildables quest, State state, IQuestPreset? preset)
             : base(player, serviceProvider, quest, state, preset)
         {
             _targetAmount = state.Amount.GetSingleValueOrMinimum();
@@ -72,20 +73,20 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
             _type = state.Type ?? EnumParameterTemplate<BuildableType>.WildcardInclusive;
         }
 
-        [EventListener(RequiresMainThread = false)] // todo use actual event listener
-        void INotifyBuildableBuilt.OnBuildableBuilt(UCPlayer player, BuildableData buildable)
-        {
-            if (player.Steam64 != Player.Steam64
-                || !_type.IsMatch(buildable.Type)
-                || !buildable.Foundation.TryGetAsset(out ItemAsset? asset)
-                || !_base.IsMatch<ItemPlaceableAsset>(asset))
-            {
-                return;
-            }
-
-            Interlocked.Increment(ref _amount);
-            InvokeUpdate();
-        }
+        // todo [EventListener(RequiresMainThread = false)] // todo use actual event listener
+        // todo void INotifyBuildableBuilt.OnBuildableBuilt(UCPlayer player, BuildableData buildable)
+        // todo {
+        // todo     if (player.Steam64 != Player.Steam64
+        // todo         || !_type.IsMatch(buildable.Type)
+        // todo         || !buildable.Foundation.TryGetAsset(out ItemAsset? asset)
+        // todo         || !_base.IsMatch<ItemPlaceableAsset>(asset))
+        // todo     {
+        // todo         return;
+        // todo     }
+        // todo 
+        // todo     Interlocked.Increment(ref _amount);
+        // todo     InvokeUpdate();
+        // todo }
 
         protected override void WriteProgress(Utf8JsonWriter writer)
         {

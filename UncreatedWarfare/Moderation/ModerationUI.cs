@@ -1,8 +1,9 @@
-﻿using SDG.NetTransport;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
+using Microsoft.Extensions.Configuration;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
@@ -23,11 +24,12 @@ namespace Uncreated.Warfare.Moderation;
 [UnturnedUI(BasePath = "Container/Backdrop/PageModeration")]
 public partial class ModerationUI : UnturnedUI
 {
-    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
     private readonly ITranslationValueFormatter _valueFormatter;
-
-    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
     private readonly IPlayerService _playerService;
+    private readonly DatabaseInterface _moderationSql;
+    private readonly ItemIconProvider _itemIconProvider;
+
+    private readonly string _discordInviteCode;
 
     private readonly SteamAPIService _steamAPI;
 
@@ -38,7 +40,7 @@ public partial class ModerationUI : UnturnedUI
     public const string DateTimeFormatInput = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss";
 
     private readonly List<WarfarePlayer> _tempPlayerSearchBuffer = new List<WarfarePlayer>(Provider.maxPlayers);
-    
+
     /* HEADERS */
     public LabeledButton[] Headers { get; } =
     {
@@ -185,12 +187,17 @@ public partial class ModerationUI : UnturnedUI
         );
     }, 1, to: 4);
 
-    public ModerationUI(ITranslationValueFormatter valueFormatter, IPlayerService playerService, SteamAPIService steamAPI, AssetConfiguration assetConfig)
-        : base(assetConfig.GetAssetLink<EffectAsset>("UI:ModerationMenu"), debugLogging: false)
+    public ModerationUI(IServiceProvider serviceProvider)
+        : base(serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:ModerationMenu"), debugLogging: false)
     {
-        _valueFormatter = valueFormatter;
-        _playerService = playerService;
-        _steamAPI = steamAPI;
+        _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _steamAPI = serviceProvider.GetRequiredService<SteamAPIService>();
+        _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
+        _itemIconProvider = serviceProvider.GetRequiredService<ItemIconProvider>();
+
+        IConfiguration systemConfig = serviceProvider.GetRequiredService<IConfiguration>();
+        _discordInviteCode = systemConfig["discord_invite_code"];
 
         ModerationHistorySearchTypeButton = new UnturnedEnumButton<ModerationHistorySearchMode>(ModerationHistorySearchMode.Message, "ModerationButtonToggleSearchMode",
             "./ModerationButtonToggleSearchModeLabel", null, "./ModerationButtonToggleSearchModeRightClickListener")
@@ -499,18 +506,18 @@ public partial class ModerationUI : UnturnedUI
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
         await UniTask.SwitchToMainThread(token);
 
-        if (TeamSelector.Instance != null)
-            TeamSelector.Instance.Close(player);
+        // todo if (TeamSelector.Instance != null)
+        // todo     TeamSelector.Instance.Close(player);
 
-        player.ModalNeeded = true;
+        // player.ModalNeeded = true;
         player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
         player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
 
-        if (!player.HasModerationUI)
-        {
-            SendToPlayer(player.Connection);
-            player.HasModerationUI = true;
-        }
+        // if (!player.HasModerationUI)
+        // {
+        //     SendToPlayer(player.Connection);
+        //     player.HasModerationUI = true;
+        // }
 
         ModerationData data = GetOrAddModerationData(player);
         data.HistoryCount = 0;
@@ -523,11 +530,11 @@ public partial class ModerationUI : UnturnedUI
     {
         GameThread.AssertCurrent();
 
-        player.ModalNeeded = false;
+        // player.ModalNeeded = false;
         player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
         player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
         ClearFromPlayer(player.Connection);
-        player.HasModerationUI = false;
+        // player.HasModerationUI = false;
     }
     public async UniTask SetPage(WarfarePlayer player, Page page, bool isAlreadyInView, CancellationToken token = default)
     {
@@ -558,7 +565,7 @@ public partial class ModerationUI : UnturnedUI
 
         ModerationData data = GetOrAddModerationData(player);
         
-        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch);
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.Steam64, ModerationPlayerSearch);
         if (textBoxData != null)
             ModerationPlayerSearch.SetText(player, textBoxData.Text ?? string.Empty);
 
@@ -727,7 +734,7 @@ public partial class ModerationUI : UnturnedUI
             bool clr;
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                _playerService.Search(searchText, NameSearchPriority.PlayerName, _tempPlayerSearchBuffer);
+                // todo _playerService.Search(searchText, NameSearchPriority.PlayerName, _tempPlayerSearchBuffer);
                 buffer = _tempPlayerSearchBuffer;
                 clr = true;
             }
@@ -747,14 +754,14 @@ public partial class ModerationUI : UnturnedUI
                     PlayerListEntry entry = ModerationPlayerList[i];
                     entry.SteamId.SetText(connection, listPlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
                     entry.Name.SetText(connection, listPlayer.Names.PlayerName);
-                    if (Data.ModerationSql.TryGetAvatar(listPlayer.Steam64, AvatarSize.Small, out string avatarUrl))
+                    if (_moderationSql.TryGetAvatar(listPlayer.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
                         entry.ProfilePicture.SetImage(connection, avatarUrl);
                     else
                     {
                         entry.ProfilePicture.SetImage(connection, string.Empty);
                         UniTask.Create(async () =>
                         {
-                            string? icon = await listPlayer.GetProfilePictureURL(AvatarSize.Small, player.DisconnectToken);
+                            string? icon = null;// await listPlayer.GetProfilePictureURL(AvatarSize.Small, player.DisconnectToken);
                             await UniTask.SwitchToMainThread(player.DisconnectToken);
                             entry.ProfilePicture.SetImage(player, icon ?? string.Empty);
                         });
@@ -790,7 +797,7 @@ public partial class ModerationUI : UnturnedUI
                 token.ThrowIfCancellationRequested();
 
                 int version = Interlocked.Increment(ref data.SearchVersion);
-                List<PlayerNames> names = await Data.AdminSql.SearchAllPlayers(searchText, UCPlayer.NameSearch.PlayerName, true, token);
+                List<PlayerNames> names = new List<PlayerNames>(); // todo await Data.AdminSql.SearchAllPlayers(searchText, UCPlayer.NameSearch.PlayerName, true, token);
 
                 if (data.SearchVersion != version)
                     return;
@@ -807,7 +814,7 @@ public partial class ModerationUI : UnturnedUI
                     PlayerListEntry entry = ModerationPlayerList[i2];
                     entry.SteamId.SetText(connection, name.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
                     entry.Name.SetText(connection, name.PlayerName);
-                    if (Data.ModerationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
+                    if (_moderationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
                         entry.ProfilePicture.SetImage(connection, avatarUrl);
                     else
                         entry.ProfilePicture.SetImage(connection, string.Empty);
@@ -828,14 +835,14 @@ public partial class ModerationUI : UnturnedUI
                 data.PlayerCount = ct;
 
                 
-                await Data.ModerationSql.CacheAvatars(names.Select(x => x.Steam64.m_SteamID), token);
+                // await _moderationSql.CacheAvatars(names.Select(x => x.Steam64.m_SteamID), token);
 #if DEBUG
                 GameThread.AssertCurrent();
 #endif
                 for (int i = 0; i < ct; ++i)
                 {
                     PlayerNames name = names[i];
-                    if (Data.ModerationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
+                    if (_moderationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
                         ModerationPlayerList[i].ProfilePicture.SetImage(connection, avatarUrl);
                 }
             });
@@ -878,14 +885,14 @@ public partial class ModerationUI : UnturnedUI
         ModerationInfoReputation.SetText(c, FormatReputation(entry.Reputation, player.Locale.CultureInfo, false) + " Reputation");
         ModerationInfoReason.SetText(c, string.IsNullOrWhiteSpace(entry.Message) ? "No message." : entry.Message!);
         ModerationInfoPlayerId.SetText(c, entry.Player.ToString(CultureInfo.InvariantCulture));
-        if (Data.ModerationSql.TryGetAvatar(entry.Player, AvatarSize.Full, out string avatarUrl))
+        if (_moderationSql.TryGetAvatar(entry.Player, AvatarSize.Full, out string avatarUrl))
             ModerationInfoProfilePicture.SetImage(c, avatarUrl);
         else
         {
             ModerationInfoProfilePicture.SetImage(c, string.Empty);
             UniTask.Create(async () =>
             {
-                string? icon = await F.GetProfilePictureURL(entry.Player, AvatarSize.Full, player.DisconnectToken);
+                string? icon = null; // todo await F.GetProfilePictureURL(entry.Player, AvatarSize.Full, player.DisconnectToken);
 
                 await UniTask.SwitchToMainThread(player.DisconnectToken);
 
@@ -960,7 +967,7 @@ public partial class ModerationUI : UnturnedUI
                 for (int j = 0; j < ct; ++j)
                 {
                     IModerationActor actor = entry.Evidence[j].Actor;
-                    ValueTask<string> name = actor.GetDisplayName(Data.ModerationSql, player.DisconnectToken);
+                    ValueTask<string> name = new ValueTask<string>(actor.ToString()); // todo actor.GetDisplayName(_moderationSql, player.DisconnectToken);
                     UnturnedLabel nameLbl = ModerationInfoEvidenceEntries[j].ActorName;
                     if (name.IsCompleted)
                     {
@@ -1000,7 +1007,7 @@ public partial class ModerationUI : UnturnedUI
                         profilePictures.Add(actor.Actor.Id);
                 }
 
-                await Data.ModerationSql.CacheAvatars(profilePictures, player.DisconnectToken);
+                //await _moderationSql.CacheAvatars(profilePictures, player.DisconnectToken);
 
                 if (data.InfoVersion != v)
                     return;
@@ -1025,17 +1032,17 @@ public partial class ModerationUI : UnturnedUI
                 {
                     RelatedActor actor = entry.Actors[j];
                     ModerationInfoActor actorUi = ModerationInfoActors[j];
-                    ValueTask<string> unTask = actor.Actor.GetDisplayName(Data.ModerationSql, player.DisconnectToken);
+                    ValueTask<string> unTask = actor.Actor.GetDisplayName(_moderationSql, player.DisconnectToken);
                     ValueTask<string?> imgTask;
 
                     if (new CSteamID(actor.Actor.Id).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
-                        && Data.ModerationSql.TryGetAvatar(actor.Actor.Id, AvatarSize.Medium, out string avatar))
+                        && _moderationSql.TryGetAvatar(actor.Actor.Id, AvatarSize.Medium, out string avatar))
                     {
                         imgTask = new ValueTask<string?>(avatar);
                     }
                     else
                     {
-                        imgTask = actor.Actor.GetProfilePictureURL(Data.ModerationSql, AvatarSize.Medium, player.DisconnectToken);
+                        imgTask = actor.Actor.GetProfilePictureURL(_moderationSql, AvatarSize.Medium, player.DisconnectToken);
                     }
 
                     bool imgDone = false;
@@ -1089,7 +1096,7 @@ public partial class ModerationUI : UnturnedUI
         UniTask.Create(async () =>
         {
             List<string> extraInfo = new List<string>();
-            await entry.AddExtraInfo(Data.ModerationSql, extraInfo, player.Locale.CultureInfo, player.DisconnectToken);
+            await entry.AddExtraInfo(_moderationSql, extraInfo, player.Locale.CultureInfo, player.DisconnectToken);
 
             await UniTask.SwitchToMainThread(player.DisconnectToken);
 
@@ -1128,13 +1135,13 @@ public partial class ModerationUI : UnturnedUI
         {
             if (!actor.Actor.Async)
             {
-                ui.Admin.SetText(connection, actor.Actor.GetDisplayName(Data.ModerationSql, CancellationToken.None).Result);
-                ui.AdminProfilePicture.SetImage(connection, actor.Actor.GetProfilePictureURL(Data.ModerationSql, AvatarSize.Medium, CancellationToken.None).Result ?? string.Empty, false);
+                ui.Admin.SetText(connection, actor.Actor.GetDisplayName(_moderationSql, CancellationToken.None).Result);
+                ui.AdminProfilePicture.SetImage(connection, actor.Actor.GetProfilePictureURL(_moderationSql, AvatarSize.Medium, CancellationToken.None).Result ?? string.Empty, false);
             }
             else
             {
-                bool av = Data.ModerationSql.TryGetAvatar(actor.Actor, AvatarSize.Medium, out string avatarUrl);
-                bool nm = Data.ModerationSql.TryGetUsernames(actor.Actor, out PlayerNames names);
+                bool av = _moderationSql.TryGetAvatar(actor.Actor, AvatarSize.Medium, out string avatarUrl);
+                bool nm = _moderationSql.TryGetUsernames(actor.Actor, out PlayerNames names);
                 if (av)
                     ui.AdminProfilePicture.SetImage(connection, avatarUrl);
                 else
@@ -1147,8 +1154,8 @@ public partial class ModerationUI : UnturnedUI
                 {
                     UniTask.Create(async () =>
                     {
-                        ValueTask<string?> pfpTask = av ? new ValueTask<string?>(avatarUrl) : actor.Actor.GetProfilePictureURL(Data.ModerationSql, AvatarSize.Medium, player.DisconnectToken);
-                        ValueTask<string> displayNameTask = nm ? new ValueTask<string>(names.PlayerName) : actor.Actor.GetDisplayName(Data.ModerationSql, player.DisconnectToken);
+                        ValueTask<string?> pfpTask = av ? new ValueTask<string?>(avatarUrl) : actor.Actor.GetProfilePictureURL(_moderationSql, AvatarSize.Medium, player.DisconnectToken);
+                        ValueTask<string> displayNameTask = nm ? new ValueTask<string>(names.PlayerName) : actor.Actor.GetDisplayName(_moderationSql, player.DisconnectToken);
                         string displayName = await displayNameTask.ConfigureAwait(false);
                         string? icon = await pfpTask.ConfigureAwait(false);
                         await UniTask.SwitchToMainThread(player.DisconnectToken);
@@ -1175,7 +1182,7 @@ public partial class ModerationUI : UnturnedUI
         {
             ui.Duration.SetText(connection, string.Empty);
             Guid? icon = entry.GetIcon();
-            ui.Icon.SetText(connection, icon.HasValue ? ItemIconProvider.GetIcon(icon.Value, tmpro: true) : string.Empty);
+            ui.Icon.SetText(connection, icon.HasValue ? _itemIconProvider.GetIcon(icon.Value, tmpro: true) : string.Empty);
         }
     }
     private async UniTask RefreshModerationHistory(WarfarePlayer player, CancellationToken token = default)
@@ -1293,12 +1300,12 @@ public partial class ModerationUI : UnturnedUI
         bool showRecentActors = text is not { Length: > 0 } && !validPlayer;
         if (showRecentActors || validPlayer)
         {
-            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, showRecentActors ? player.Steam64.m_SteamID : data.SelectedPlayer,
+            entries = (ModerationEntry[])await _moderationSql.ReadAll(type, showRecentActors ? player.Steam64 : new CSteamID(data.SelectedPlayer),
                 showRecentActors ? ActorRelationType.IsActor : ActorRelationType.IsTarget, false, true, start, end, condition, orderBy, conditionArgs, token);
         }
         else
         {
-            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, false, true, start, end, condition, orderBy, conditionArgs, token);
+            entries = (ModerationEntry[])await _moderationSql.ReadAll(type, false, true, start, end, condition, orderBy, conditionArgs, token);
         }
 
         await UniTask.SwitchToMainThread(token);
@@ -1320,11 +1327,11 @@ public partial class ModerationUI : UnturnedUI
 
         UniTask.Create(async () =>
         {
-            ulong[] steam64Ids = await Data.ModerationSql.GetActorSteam64IDs(usernamesAndPicturesToCache, player.DisconnectToken);
+            ulong[] steam64Ids = await _moderationSql.GetActorSteam64IDs(usernamesAndPicturesToCache, player.DisconnectToken);
 
-            Task usernames = Data.ModerationSql.CacheUsernames(steam64Ids, player.DisconnectToken);
+            Task usernames = _moderationSql.CacheUsernames(steam64Ids, player.DisconnectToken);
 
-            await Data.ModerationSql.CacheAvatars(steam64Ids, player.DisconnectToken);
+            // todo await _moderationSql.CacheAvatars(steam64Ids, player.DisconnectToken);
             await usernames;
 
             await UniTask.SwitchToMainThread(player.DisconnectToken);

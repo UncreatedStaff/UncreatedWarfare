@@ -147,13 +147,13 @@ public class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
                         DefaultPriceData = new ProductDefaultPriceDataOptions
                         {
                             Currency = "USD",
-                            UnitAmount = (long)decimal.Round((Provider.isInitialized ? UCWarfare.Config.LoadoutCost : 10m) * 100),
+                            UnitAmount = (long)decimal.Round(10m * 100),
                             TaxBehavior = "inclusive"
                         },
                         Shippable = false,
                         StatementDescriptor = "LOADOUT",
                         TaxCode = Networking.Purchasing.StripeService.TaxCode,
-                        Url = Provider.isInitialized && UCWarfare.Config.WebsiteUri != null ? new Uri(UCWarfare.Config.WebsiteUri, "kits/loadout").AbsoluteUri : "https://uncreated.network/kits/loadout",
+                        Url = "https://uncreated.network/kits/loadout",
                         Features = LoadoutFeatures,
                         Metadata = new Dictionary<string, string>
                         {
@@ -484,7 +484,7 @@ public class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
                 Shippable = false,
                 StatementDescriptor = id.ToUpperInvariant() + " BNDL",
                 TaxCode = Networking.Purchasing.StripeService.TaxCode,
-                Url = UCWarfare.Config.WebsiteUri == null ? null : new Uri(UCWarfare.Config.WebsiteUri, "kits/elites/bundles/" + Uri.EscapeDataString(bundle.Id)).AbsoluteUri,
+                Url = "https://uncreated.network/kits/elites/bundles/",
                 Features = BundleFeatures,
                 Metadata = new Dictionary<string, string>
                 {

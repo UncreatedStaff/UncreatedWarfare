@@ -30,6 +30,8 @@ public interface ICachableLanguageDataStore : ILanguageDataStore
 
 public class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore where TDbContext : ILanguageDbContext
 {
+    private static readonly char[] SpaceSplit = [ ' ' ];
+
     private readonly IServiceProvider _serviceProvider;
     private List<LanguageInfo>? _langs;
     private Dictionary<string, LanguageInfo>? _codes;
@@ -67,7 +69,7 @@ public class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore whe
             if (lang != null)
                 return lang;
 
-            string[] words = name.Split(F.SpaceSplit);
+            string[] words = name.Split(SpaceSplit);
             lang = _langs.Find(x => words.All(l => x.Aliases.Any(x => F.RoughlyEquals(l, x.Alias))));
             if (lang != null)
                 return lang;

@@ -21,7 +21,7 @@ public struct HotkeyBinding
         {
             null => null,
             ISpecificKitItem item => item.Item.GetAsset<ItemAsset>(),
-            _ => Item.GetItem(kit, TeamManager.GetFactionSafe(team), out _, out _)
+            _ => Item.GetItem(kit, null/* todo TeamManager.GetFactionSafe(team) */, out _, out _)
         };
     }
 }

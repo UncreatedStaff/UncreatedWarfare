@@ -30,22 +30,23 @@ public static partial class Patches
         [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askStarve))]
         [HarmonyPrefix]
         [UsedImplicitly]
-        static bool OnPlayerFoodTick(byte amount, PlayerLife __instance) => !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
+        static bool OnPlayerFoodTick(byte amount, PlayerLife __instance) => true;// todo !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
 
         // SDG.Unturned.PlayerLife
         /// <summary>Prefix of <see cref="PlayerLife.askDehydrate(byte)"/> to prevent dehydrating in main base.</summary>
         [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askDehydrate))]
         [HarmonyPrefix]
         [UsedImplicitly]
-        static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
+        static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => true;// todo !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
 
         // SDG.Unturned.PlayerLife
         /// <summary>Prefix of <see cref="PlayerLife.askTire(byte)"/> to prevent tiring in main base.</summary>
         [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askTire))]
         [HarmonyPrefix]
         [UsedImplicitly]
-        static bool OnPlayerTireTick(byte amount, PlayerLife __instance) => !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
+        static bool OnPlayerTireTick(byte amount, PlayerLife __instance) => true;// todo !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
 
+#if false // todo REVIVES
         // SDG.Unturned.PlayerLife
         /// <summary>
         /// Turn off bleeding for the real function.
@@ -105,6 +106,7 @@ public static partial class Patches
                 }
             }
         }
+
         // SDG.Unturned.PlayerInventory
         /// <summary>
         /// Postfix of <see cref="PlayerInventory.closeStorage()"/> to stop the coroutine that auto-closes storages.
@@ -120,5 +122,7 @@ public static partial class Patches
                 player.Player.StopCoroutine(player.StorageCoroutine);
             return;
         }
+
+#endif
     }
 }

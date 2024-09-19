@@ -4,6 +4,7 @@ using SDG.NetTransport;
 using System;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Util;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable UnusedMember.Local
@@ -16,11 +17,12 @@ public static partial class Patches
     [HarmonyPatch]
     public class RegionsPatches
     {
+#if false
         // SDG.Unturned.BarricadeManager
         /// <summary>
         /// Prefix of <see cref="BarricadeManager.ServerSetSignTextInternal(InteractableSign, BarricadeRegion, byte, byte, ushort, string)"/> to set translation data of signs.
         /// </summary>
-        
+
         [HarmonyPatch(typeof(BarricadeManager), "ServerSetSignTextInternal")]
         [HarmonyPrefix]
         static bool ServerSetSignTextInternalLang(InteractableSign sign, BarricadeRegion region, byte x, byte y, ushort plant, string trimmedText)
@@ -64,6 +66,7 @@ public static partial class Patches
                 return true;
             }
         }
+#endif
         
         [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
         [HarmonyPrefix]
@@ -90,7 +93,7 @@ public static partial class Patches
                 }
             }
         }
-
+#if false
         [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
         [HarmonyPostfix]
         static void OnItemDropRemovedPostfix(
@@ -228,5 +231,6 @@ public static partial class Patches
                 });
             return false;
         }
+#endif
     }
 }

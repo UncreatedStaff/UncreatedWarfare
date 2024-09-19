@@ -24,16 +24,19 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
     private readonly IPlayerService _playerService;
     private readonly ILoopTickerFactory _tickerFactory;
     private readonly ILogger<CommandDispatcher> _logger;
+    private readonly CooldownManager? _cooldownManager;
     public CommandParser Parser { get; }
     public IReadOnlyList<CommandInfo> Commands { get; }
-    public CommandDispatcher(WarfareModule module, UserPermissionStore permissions, ILogger<CommandDispatcher> logger, ChatService chatService, IPlayerService playerService, ILoopTickerFactory tickerFactory)
+    public CommandDispatcher(IServiceProvider serviceProvider)
     {
-        _module = module;
-        _permissions = permissions;
-        _logger = logger;
-        _chatService = chatService;
-        _playerService = playerService;
-        _tickerFactory = tickerFactory;
+        _module = serviceProvider.GetRequiredService<WarfareModule>();
+        _permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
+        _logger = serviceProvider.GetRequiredService<ILogger<CommandDispatcher>>();
+        _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _tickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
+
+        _cooldownManager = serviceProvider.GetService<CooldownManager>();
 
         Parser = new CommandParser(this);
 
@@ -50,7 +53,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
             }
             catch
             {
-                logger.LogDebug("Unable to load referenced assembly {0}.", referencedAssembly);
+                _logger.LogDebug("Unable to load referenced assembly {0}.", referencedAssembly);
             }
         }
 
@@ -72,7 +75,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
                 continue;
 
             circularReferenceBuffer.Add(commandType);
-            CommandInfo info = new CommandInfo(commandType, logger, GetParentInfo(commandType, allCommands, logger, circularReferenceBuffer));
+            CommandInfo info = new CommandInfo(commandType, _logger, GetParentInfo(commandType, allCommands, _logger, circularReferenceBuffer));
 
             allCommands.Add(info);
             if (!info.IsSubCommand)
@@ -95,13 +98,13 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
             command.RedirectCommandInfo = allCommands.Find(x => x.Type == redirAttribute.CommandType);
             if (command.RedirectCommandInfo == null)
             {
-                logger.LogWarning("Redirect command {0} not registered.", Accessor.Formatter.Format(redirAttribute.CommandType));
+                _logger.LogWarning("Redirect command {0} not registered.", Accessor.Formatter.Format(redirAttribute.CommandType));
             }
 
             command.IsExecutable = command.VanillaCommand != null || (command.RedirectCommandInfo == null && typeof(IExecutableCommand).IsAssignableFrom(command.Type));
             if (command is { IsExecutable: false, SubCommands.Length: 0, RedirectCommandInfo: null })
             {
-                logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", Accessor.Formatter.Format(command.Type));
+                _logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", Accessor.Formatter.Format(command.Type));
             }
         }
 
@@ -716,10 +719,10 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
     internal bool CheckCommandOnCooldown(CommandContext context)
     {
         if (context.Player == null
-            || context.Player.OnDuty()
-            || !CooldownManager.IsLoaded
+            // todo || context.Player.OnDuty()
+            || _cooldownManager == null
             || context.CommandInfo == null
-            || !CooldownManager.HasCooldown(context.Player, CooldownType.Command, out Cooldown cooldown, context.CommandInfo))
+            || !_cooldownManager.HasCooldown(context.Player, CooldownType.Command, out Cooldown cooldown, context.CommandInfo))
         {
             return true;
         }
@@ -738,15 +741,15 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
 
     internal void CheckCommandShouldStartCooldown(CommandContext context)
     {
-        if (context.CommandCooldownTime is > 0f && context.Player != null && !context.Player.OnDuty() && CooldownManager.IsLoaded && context.CommandInfo != null)
+        if (context.CommandCooldownTime is > 0f && context.Player != null && /* todo !context.Player.OnDuty() && */ _cooldownManager != null && context.CommandInfo != null)
         {
-            CooldownManager.StartCooldown(context.Player, CooldownType.Command, context.CommandCooldownTime.Value, context.CommandInfo);
+            _cooldownManager.StartCooldown(context.Player, CooldownType.Command, context.CommandCooldownTime.Value, context.CommandInfo);
         }
 
         if (!context.OnIsolatedCooldown)
         {
-            if (context.IsolatedCommandCooldownTime is > 0f && context.Player != null && !context.Player.OnDuty() && CooldownManager.IsLoaded && context.CommandInfo != null)
-                CooldownManager.StartCooldown(context.Player, CooldownType.IsolatedCommand, context.IsolatedCommandCooldownTime.Value, context.CommandInfo);
+            if (context.IsolatedCommandCooldownTime is > 0f && context.Player != null && /* todo !context.Player.OnDuty() && */ _cooldownManager != null && context.CommandInfo != null)
+                _cooldownManager.StartCooldown(context.Player, CooldownType.IsolatedCommand, context.IsolatedCommandCooldownTime.Value, context.CommandInfo);
         }
         else if (context.IsolatedCommandCooldownTime is > 0f)
         {

@@ -1,4 +1,7 @@
-﻿namespace Uncreated.Warfare.Events.Models.Vehicles;
+﻿using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Players;
+
+namespace Uncreated.Warfare.Events.Models.Vehicles;
 public class VehicleSwapSeat : PlayerEvent
 {
     private readonly InteractableVehicle _vehicle;
@@ -9,8 +12,11 @@ public class VehicleSwapSeat : PlayerEvent
     public byte NewSeat => _toSeatIndex;
     public Passenger OldPassengerData => _vehicle.passengers.Length >= _fromSeatIndex ? null! : _vehicle.passengers[_fromSeatIndex];
     public Passenger PassengerData => _vehicle.passengers.Length >= _toSeatIndex ? null! : _vehicle.passengers[_toSeatIndex];
-    public VehicleSwapSeat(UCPlayer player, InteractableVehicle vehicle, byte fromSeatIndex, byte toSeatIndex) : base(player)
+
+    [SetsRequiredMembers]
+    public VehicleSwapSeat(WarfarePlayer player, InteractableVehicle vehicle, byte fromSeatIndex, byte toSeatIndex)
     {
+        Player = player;
         _vehicle = vehicle;
         _fromSeatIndex = fromSeatIndex;
         _toSeatIndex = toSeatIndex;

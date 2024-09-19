@@ -169,7 +169,7 @@ public static class L
             _notWindows = Application.platform is not RuntimePlatform.WindowsEditor and not RuntimePlatform.WindowsPlayer and not RuntimePlatform.WindowsServer;
             if (_init) return;
             _init = true;
-            F.CheckDir(Data.Paths.Logs, out _, true);
+            // todo F.CheckDir(Data.Paths.Logs, out _, true);
             if (File.Exists(Data.Paths.CurrentLog))
             {
                 string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLog.DateHeaderFormat) + ".txt");
@@ -270,7 +270,7 @@ public static class L
             if (_outputToConsoleMethod is not null)
                 AddLog(message);
             // todo
-            CommandHandler.OnLog(message);
+            // todo CommandHandler.OnLog(message);
         }
     }
 
@@ -353,7 +353,7 @@ public static class L
             color = ConsoleColor.Gray;
         if (!Provider.isInitialized)
             LogAsLibrary("[DEBUG] " + info, color);
-        else if (UCWarfare.Config.Debug)
+        else // todo if (UCWarfare.Config.Debug)
         {
             if (GameThread.IsCurrent)
             {
@@ -367,14 +367,17 @@ public static class L
             }
             else
             {
-                ThreadQueue.Queue.RunOnMainThread(() =>
+                string info2 = info;
+                ConsoleColor color2 = color;
+                UniTask.Create(async () =>
                 {
-                    AddLine("[DEBUG] " + info, color);
+                    await UniTask.SwitchToMainThread();
+                    AddLine("[DEBUG] " + info2, color2);
                     if (_outputToConsoleMethod is null)
                         return;
 
                     _inL = true;
-                    UnturnedLog.info($"[DB] {info}");
+                    UnturnedLog.info($"[DB] {info2}");
                     _inL = false;
                 });
             }
@@ -402,14 +405,17 @@ public static class L
             }
             else
             {
-                ThreadQueue.Queue.RunOnMainThread(() =>
+                string info2 = info;
+                ConsoleColor color2 = color;
+                UniTask.Create(async () =>
                 {
-                    AddLine("[INFO]  " + info, color);
+                    await UniTask.SwitchToMainThread();
+                    AddLine("[INFO]  " + info2, color2);
                     if (_outputToConsoleMethod is null)
                         return;
 
                     _inL = true;
-                    UnturnedLog.info($"[IN] {info}");
+                    UnturnedLog.info($"[IN] {info2}");
                     _inL = false;
                 });
             }
@@ -451,14 +457,18 @@ public static class L
             }
             else
             {
-                ThreadQueue.Queue.RunOnMainThread(() =>
+                string warning2 = warning;
+                string msg2 = msg;
+                ConsoleColor color2 = color;
+                UniTask.Create(async () =>
                 {
-                    AddLine(msg, color);
+                    await UniTask.SwitchToMainThread();
+                    AddLine(msg2, color2);
                     if (_outputToConsoleMethod is null)
                         return;
 
                     _inL = true;
-                    UnturnedLog.warn($"[WA] {warning}");
+                    UnturnedLog.warn($"[WA] {warning2}");
                     _inL = false;
                 });
             }
@@ -488,14 +498,18 @@ public static class L
             }
             else
             {
-                ThreadQueue.Queue.RunOnMainThread(() =>
+                string error2 = error;
+                string msg2 = msg;
+                ConsoleColor color2 = color;
+                UniTask.Create(async () =>
                 {
-                    AddLine(msg, color);
+                    await UniTask.SwitchToMainThread();
+                    AddLine(msg2, color2);
                     if (_outputToConsoleMethod is null)
                         return;
 
                     _inL = true;
-                    UnturnedLog.warn($"[ER] {error}");
+                    UnturnedLog.warn($"[ER] {error2}");
                     _inL = false;
                 });
             }
@@ -510,14 +524,25 @@ public static class L
                 lock (BadLogBuffer)
                     BadLogBuffer.Add(new LogMessage(false, ConsoleColor.Red, "[ERROR] [" + method.ToUpperInvariant() + "]\n" + ex));
             }
-            Logging.LogException(ex, cleanStack);
+
+            LogAsLibrary(ex.ToString(), ConsoleColor.Red);
+            // todo Logging.LogException(ex, cleanStack);
         }
         else
         {
             if (GameThread.IsCurrent)
                 WriteExceptionIntl(ex, cleanStack, _indention, method);
             else
-                ThreadQueue.Queue.RunOnMainThread(() => WriteExceptionIntl(ex, cleanStack, _indention, method));
+            {
+                Exception ex2 = ex;
+                bool cleanStack2 = cleanStack;
+                string method2 = method;
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    WriteExceptionIntl(ex2, cleanStack2, _indention, method2);
+                });
+            }
         }
     }
 
@@ -728,7 +753,11 @@ public static class L
                 string str2 = str;
                 LogLevel logLvl2 = logLevel;
                 EventId ev2 = eventId;
-                UCWarfare.RunOnMainThread(() => SendLogIntl(logLvl2, str2, ev2));
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    SendLogIntl(logLvl2, str2, ev2);
+                });
             }
         }
         private static void SendLogIntl(LogLevel logLevel, string str, EventId eventId)

@@ -136,9 +136,10 @@ public class DatabaseInterface
         if (Provider.isInitialized)
             return await F.GetPlayerOriginalNamesAsync(id.m_SteamID, token).ConfigureAwait(false);
 
-        names = await Sql.GetUsernamesAsync(id, token).ConfigureAwait(false);
-        UpdateUsernames(id, names);
-        return names;
+        // names = await Sql.GetUsernamesAsync(id, token).ConfigureAwait(false);
+        // UpdateUsernames(id, names);
+        // return names;
+        return PlayerNames.Nil;
     }
     public async Task<T?> ReadOne<T>(uint id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
     {
@@ -1322,7 +1323,7 @@ public class DatabaseInterface
         if (!isNew)
             objs[15] = pk;
 
-        string query = F.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, !isNew, null, null,
+        string query = MySqlSnippets.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, !isNew, null, null,
             ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
             ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
@@ -1469,16 +1470,16 @@ public class DatabaseInterface
     {
         if (Provider.isInitialized)
         {
-            _ = await Sql.GetUsernamesAsync(players, token);
+            // _ = await Sql.GetUsernamesAsync(players, token);
         }
         else
         {
-            PlayerNames[] names = await Sql.GetUsernamesAsync(players, token);
-            for (int i = 0; i < names.Length; ++i)
-            {
-                PlayerNames name = names[i];
-                UpdateUsernames(name.Steam64, name);
-            }
+            // PlayerNames[] names = await Sql.GetUsernamesAsync(players, token);
+            // for (int i = 0; i < names.Length; ++i)
+            // {
+            //     PlayerNames name = names[i];
+            //     UpdateUsernames(name.Steam64, name);
+            // }
         }
     }
     public async Task<PlayerIPAddress[]> GetIPAddresses(CSteamID player, bool removeFiltered, CancellationToken token = default)

@@ -11,6 +11,7 @@ using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
@@ -18,12 +19,14 @@ namespace Uncreated.Warfare.Components;
 
 public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
 {
+    private readonly IPlayerService _playerService;
     private const float FullTickLoopTime = 0.25f;
     private readonly List<IconRenderer> _icons = new List<IconRenderer>();
     private int _tickIndex;
     private float _tickIndexProgress;
-    public IconManager()
+    public IconManager(IPlayerService playerService)
     {
+        _playerService = playerService;
         EventDispatcher.GroupChanged += OnGroupChanged;
         TimeUtility.updated += OnUpdate;
     }
@@ -63,35 +66,35 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
     }
     public void CheckExistingBuildables()
     {
-        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
-        {
-            CheckBuildable(barricade.Drop.asset, barricade.Drop.model, /* todo team */ null);
-        }
-
-        foreach (StructureInfo structure in StructureUtility.EnumerateStructures())
-        {
-            CheckBuildable(structure.Drop.asset, structure.Drop.model, /* todo team */ null);
-        }
-
-        void CheckBuildable(Asset asset, Transform transform, Team? team)
-        {
-            BuildableData? buildableData = FobManager.FindBuildable(asset);
-            if (buildableData == null || !buildableData.FullBuildable.MatchGuid(asset.GUID))
-                return;
-
-            L.LogDebug($"[ICONS] [{asset.FriendlyName}] Found existing buildable, try-applying marker type: {buildableData.Type}.");
-            switch (buildableData.Type)
-            {
-                case BuildableType.AmmoCrate:
-                    if (Gamemode.Config.EffectMarkerAmmo.TryGetGuid(out Guid guid))
-                        AttachIcon(guid, transform, team, 1.75f);
-                    break;
-                case BuildableType.RepairStation:
-                    if (Gamemode.Config.EffectMarkerRepair.TryGetGuid(out guid))
-                        AttachIcon(guid, transform, team, 4.5f);
-                    break;
-            }
-        }
+        // foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
+        // {
+        //     CheckBuildable(barricade.Drop.asset, barricade.Drop.model, /* todo team */ null);
+        // }
+        // 
+        // foreach (StructureInfo structure in StructureUtility.EnumerateStructures())
+        // {
+        //     CheckBuildable(structure.Drop.asset, structure.Drop.model, /* todo team */ null);
+        // }
+        // 
+        // void CheckBuildable(Asset asset, Transform transform, Team? team)
+        // {
+        //     BuildableData? buildableData = FobManager.FindBuildable(asset);
+        //     if (buildableData == null || !buildableData.FullBuildable.MatchGuid(asset.GUID))
+        //         return;
+        // 
+        //     L.LogDebug($"[ICONS] [{asset.FriendlyName}] Found existing buildable, try-applying marker type: {buildableData.Type}.");
+        //     switch (buildableData.Type)
+        //     {
+        //         case BuildableType.AmmoCrate:
+        //             if (Gamemode.Config.EffectMarkerAmmo.TryGetGuid(out Guid guid))
+        //                 AttachIcon(guid, transform, team, 1.75f);
+        //             break;
+        //         case BuildableType.RepairStation:
+        //             if (Gamemode.Config.EffectMarkerRepair.TryGetGuid(out guid))
+        //                 AttachIcon(guid, transform, team, 4.5f);
+        //             break;
+        //     }
+        // }
     }
     
     private void OnGroupChanged(GroupChanged e)
@@ -163,9 +166,10 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
     }
     public void SpawnIcons(IconRenderer icon)
     {
+        // todo optimize
         icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Player == 0 ? (icon.Team == 0
-                ? PlayerManager.OnlinePlayers
-                : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team)) : (WarfarePlayer.FromID(icon.Player) is not { } player ? Array.Empty<WarfarePlayer>() : new WarfarePlayer[] { player }))
+                ? _playerService.OnlinePlayers
+                : _playerService.OnlinePlayers.Where(x => x.Team == icon.Team)) : (_playerService.GetOnlinePlayerOrNull(icon.Player) is not { } player ? Array.Empty<WarfarePlayer>() : [ player ]))
             .Select(x => x.Connection)));
     }
     private void OnUpdate()

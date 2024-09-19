@@ -22,15 +22,15 @@ public class Team : IEquatable<Team>
             FactionId = "noteam",
             NameTranslations =
             {
-                { "en-us", "Unaffilated" }
+                { string.Empty, "Unaffilated" }
             },
             ShortNameTranslations =
             {
-                { "en-us", "Unaffilated" }
+                { string.Empty, "Unaffilated" }
             },
             AbbreviationTranslations =
             {
-                { "en-us", "UA" }
+                { string.Empty, "UA" }
             },
             Color = new Color(0.7058823529f, 0.7058823529f, 0.7058823529f, 1f), // 0xb4b4b4
             KitPrefix = "ua",

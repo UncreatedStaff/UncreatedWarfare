@@ -1,4 +1,6 @@
-﻿using Uncreated.Warfare.Kits.Items;
+﻿using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 
@@ -16,8 +18,11 @@ public class ItemMoved : PlayerEvent
     public bool IsSwap { get; }
     public ItemJar? Jar { get; }
     public ItemJar? SwappedJar { get; }
-    public ItemMoved(UCPlayer player, Page oldPage, Page newPage, byte oldX, byte newX, byte oldY, byte newY, byte oldRotation, byte newRotation, bool isSwap, ItemJar? jar, ItemJar? swapped) : base(player)
+
+    [SetsRequiredMembers]
+    public ItemMoved(WarfarePlayer player, Page oldPage, Page newPage, byte oldX, byte newX, byte oldY, byte newY, byte oldRotation, byte newRotation, bool isSwap, ItemJar? jar, ItemJar? swapped)
     {
+        Player = player;
         Jar = jar;
         SwappedJar = swapped;
         OldPage = oldPage;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -287,10 +286,10 @@ partial class EventDispatcher2
             if (args.Sign == null || args.Barricade.GetServersideData().barricade.isDead)
                 return;
 
-            if (args.Player is not null && args.Sign.transform.TryGetComponent(out BarricadeComponent bcomp))
+            if (args.Player is not null && _timeComponent is not null && args.Sign.transform.TryGetComponent(out BarricadeComponent bcomp))
             {
                 bcomp.LastEditor = args.Player.Steam64;
-                bcomp.EditTick = UCWarfare.I.Debugger.Updates;
+                bcomp.EditTick = _timeComponent.Updates;
             }
 
             BarricadeManager.ServerSetSignText(args.Sign, args.Text);
@@ -299,10 +298,10 @@ partial class EventDispatcher2
         if (!shouldallow)
             return;
 
-        if (instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && sign.transform.TryGetComponent(out BarricadeComponent bcomp))
+        if (instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && _timeComponent is not null && sign.transform.TryGetComponent(out BarricadeComponent bcomp))
         {
             bcomp.LastEditor = instigator;
-            bcomp.EditTick = UCWarfare.I.Debugger.Updates;
+            bcomp.EditTick = _timeComponent.Updates;
         }
 
         text = args.Text;

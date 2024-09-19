@@ -8,17 +8,19 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Traits;
-public abstract class Trait : MonoBehaviour, ITranslationArgument
+public abstract class Trait : MonoBehaviour//, ITranslationArgument
 {
+#if false
     protected static readonly char[] DataSplitChars = [ ',' ];
     private TraitData _data;
-    private UCPlayer _targetPlayer;
+    private WarfarePlayer _targetPlayer;
     private bool _inited;
     protected Coroutine? Coroutine;
     public float ActiveTime { get; private set; }
@@ -29,11 +31,11 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         get => _data;
         internal set => _data = value;
     }
-    public UCPlayer TargetPlayer => _targetPlayer;
+    public WarfarePlayer TargetPlayer => _targetPlayer;
     public bool Inited => _inited;
     public bool IsAwaitingStagingPhase { get; private set; }
     public bool HasStarted = false;
-    public virtual void Init(TraitData data, UCPlayer target)
+    public virtual void Init(TraitData data, WarfarePlayer target)
     {
         _data = data;
         _targetPlayer = target;
@@ -46,6 +48,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     {
         if (!_inited)
             throw new InvalidOperationException("Trait " + GetType().Name + " was not initialized. You must run Trait.Init(...) within the same frame of creating it.");
+
         TraitManager.ActivateTrait(this);
         if (Warfare.Data.Gamemode.State == Gamemodes.State.Staging)
         {
@@ -138,7 +141,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
                 GiveItems(_targetPlayer.Squad.Members[i]);
         }
     }
-    private void GiveItems(UCPlayer player)
+    private void GiveItems(WarfarePlayer player)
     {
         for (int i = 0; i < Data.ItemsGiven.Length; ++i)
         {
@@ -360,4 +363,5 @@ public class TraitData : ITranslationArgument
             ? NameTranslations.Translate(parameters.Language, TypeName).Replace('\n', ' ')
             : TypeName;
     }
+#endif
 }

@@ -4,7 +4,7 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits.Buffs;
-
+#if false
 /// <summary>
 /// Makes the player invisible to UAVs and laser designators. Doesn't work when they're in a vehicle.
 /// </summary>
@@ -60,3 +60,4 @@ public class Ghost : Buff
 #endif
     }
 }
+#endif

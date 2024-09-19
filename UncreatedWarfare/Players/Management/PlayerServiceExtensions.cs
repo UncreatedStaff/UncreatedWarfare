@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Layouts.Teams;
+﻿using System.Collections.Generic;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
@@ -14,6 +15,43 @@ public static class PlayerServiceExtensions
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static TrackingWhereEnumerable<WarfarePlayer> OnlinePlayersOnTeam(this IPlayerService playerService, Team team) => playerService.OnlinePlayers.Where(p => p.Team == team);
+
+    /// <summary>
+    /// Gets an array of the Steam64 IDs of all online players as an array for database queries.
+    /// </summary>
+    public static ulong[] GetOnlinePlayerSteam64Array(this IPlayerService playerService)
+    {
+        IReadOnlyList<WarfarePlayer> plList;
+        if (GameThread.IsCurrent)
+        {
+            if (playerService is PlayerService)
+            {
+                List<SteamPlayer> players = Provider.clients;
+                ulong[] ids = new ulong[players.Count];
+                for (int i = 0; i < ids.Length; ++i)
+                {
+                    ids[i] = players[i].playerID.steamID.m_SteamID;
+                }
+
+                return ids;
+            }
+
+            plList = playerService.OnlinePlayers;
+        }
+        else
+        {
+            plList = playerService.GetThreadsafePlayerList();
+        }
+
+        ulong[] outIds = new ulong[plList.Count];
+        int ind = -1;
+        foreach (WarfarePlayer player in plList)
+        {
+            outIds[++ind] = player.Steam64.m_SteamID;
+        }
+
+        return outIds;
+    }
 
     /// <summary>
     /// Get a player who's known to be online. Not to be invoked from any thread other than the game thread.

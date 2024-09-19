@@ -1,19 +1,20 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
-using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Events.Models;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -22,6 +23,7 @@ namespace Uncreated.Warfare.Kits;
 /// </summary>
 public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) : IAsyncEventListener<PlayerJoined>, IEventListener<PlayerLeft>, IEventListener<QuestCompleted>
 {
+    private readonly IPlayerService _playerService = serviceProvider.GetRequiredService<IPlayerService>();
     public KitManager Manager { get; } = manager;
     internal ConcurrentDictionary<string, Kit> KitDataById { get; } = new ConcurrentDictionary<string, Kit>(StringComparer.OrdinalIgnoreCase);
     internal ConcurrentDictionary<uint, Kit> KitDataByKey { get; } = [];
@@ -75,7 +77,7 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
     {
         using IServiceScope scope = serviceProvider.CreateScope();
         await using WarfareDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
-        ulong[] online = PlayerManager.GetOnlinePlayersArray();
+        ulong[] online = _playerService.GetOnlinePlayerSteam64Array();
 
         List<Kit> kits = await IncludeCachedKitData(dbContext.Kits)
             .Where(x =>
@@ -128,13 +130,15 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
                     continue;
 
                 if (Assets.find(req.QuestId) is QuestAsset quest)
-                    QuestManager.TryAddQuest(e.Player, quest);
+                {
+                    // todo QuestManager.TryAddQuest(e.Player, quest);
+                }
                 else
                     L.LogWarning("Unknown quest id " + req.QuestId + " in kit requirement for " + kit.InternalName);
 
                 for (int r = 0; r < req.UnlockPresets.Length; r++)
                 {
-                    BaseQuestTracker? tracker = QuestManager.CreateTracker(e.Player, req.UnlockPresets[r]);
+                    QuestTemplate? tracker = null;// todo QuestManager.CreateTracker(e.Player, req.UnlockPresets[r]);
                     if (tracker == null)
                         L.LogWarning("Failed to create tracker for kit " + kit.InternalName + ", player " + e.Player.Names.PlayerName);
                 }
@@ -148,7 +152,6 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
             ulong steam64 = e.Steam64.m_SteamID;
 
             CancellationToken tkn = e.Player.DisconnectToken;
-            using CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
 
             List<Kit> kits = await IncludeCachedKitData(dbContext.Kits)
                 .Where(x =>

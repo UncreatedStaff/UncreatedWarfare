@@ -5,11 +5,14 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Vehicles;
 
 [CannotApplyEqualityOperator]
-public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>
+public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationArgument
 {
     /// <summary>
     /// Since info objects are re-created when they're updated, the old objects still need to stay updated.
@@ -28,7 +31,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>
     public IReadOnlyList<UnlockRequirement> UnlockRequirements { get; set; } = Array.Empty<UnlockRequirement>();
     public IReadOnlyList<UnlockCost> UnlockCosts { get; set; } = Array.Empty<UnlockCost>();
     public IReadOnlyList<TrunkItem> Trunk { get; set; } = Array.Empty<TrunkItem>();
-    public IReadOnlyList<Delay> Delays { get; set; } = Array.Empty<Delay>();
+    //public IReadOnlyList<Delay> Delays { get; set; } = Array.Empty<Delay>();
 
     public class CrewInfo
     {
@@ -85,7 +88,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>
         UnlockRequirements = other.UnlockRequirements;
         UnlockCosts = other.UnlockCosts;
         Trunk = other.Trunk;
-        Delays = other.Delays;
+        // todo Delays = other.Delays;
 
         if (DependantInfo != null && DependantInfo.TryGetTarget(out WarfareVehicleInfo? info))
         {
@@ -107,5 +110,16 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>
     {
         // ReSharper disable once NonReadonlyMemberInGetHashCode
         return Vehicle.GetHashCode();
+    }
+
+
+    public static readonly SpecialFormat FormatNameColored = new SpecialFormat("Colored Vehicle Name", "cn");
+
+    public static readonly SpecialFormat FormatName = new SpecialFormat("Vehicle Name", "n");
+
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        // todo
+        return ToString();
     }
 }

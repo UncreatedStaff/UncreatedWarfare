@@ -4,6 +4,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Signs;
 
@@ -42,12 +43,12 @@ public class KitSignInstanceProvider : ISignInstanceProvider
         }
     }
 
-    public string Translate(LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
         if (LoadoutNumber != -1)
         {
             // todo move translation methods
-            return LocalizationOld.TranslateLoadoutSign(checked ( (byte)LoadoutNumber ), player!);
+            return "Loadout " + LoadoutIdHelper.GetLoadoutLetter(LoadoutNumber); // todo LocalizationOld.TranslateLoadoutSign(checked ( (byte)LoadoutNumber ), player!);
         }
 
         if (!_kitManager.Cache.KitDataById.TryGetValue(KitId, out Kit kit))
@@ -55,6 +56,6 @@ public class KitSignInstanceProvider : ISignInstanceProvider
             return KitId;
         }
 
-        return LocalizationOld.TranslateKitSign(kit, player!);
+        return KitId; // todo LocalizationOld.TranslateKitSign(kit, player!);
     }
 }

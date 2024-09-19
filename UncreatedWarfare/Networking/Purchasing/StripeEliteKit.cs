@@ -182,7 +182,7 @@ public class StripeEliteKit
                 Shippable = false,
                 StatementDescriptor = id.ToUpperInvariant(),
                 TaxCode = StripeService.TaxCode,
-                Url = Provider.isInitialized && UCWarfare.Config.WebsiteUri != null ? new Uri(UCWarfare.Config.WebsiteUri, "kits/elites/" + Uri.EscapeDataString(kit.InternalName)).AbsoluteUri : ("https://uncreated.network/kits/elites/" + Uri.EscapeDataString(kit.InternalName)),
+                Url = "https://uncreated.network/kits/elites/" + Uri.EscapeDataString(kit.InternalName),
                 Features = Features,
                 Metadata = new Dictionary<string, string>
                 {

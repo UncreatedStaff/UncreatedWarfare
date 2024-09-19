@@ -62,7 +62,7 @@ public class PlayerActor : IModerationActor
     public override string ToString() => Id.ToString(CultureInfo.InvariantCulture);
     public virtual async ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default)
     {
-        return (await database.GetUsernames(Id, true, token)).PlayerName;
+        return (await database.GetUsernames(new CSteamID(Id), true, token)).PlayerName;
     }
     public virtual async ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
     {
@@ -104,9 +104,10 @@ public class DiscordActor : IModerationActor
         if (GetDiscordDisplayNameOverride != null)
             return await GetDiscordDisplayNameOverride(Id, token).ConfigureAwait(false);
 
-        ulong steam64 = await database.Sql.GetSteam64(Id, token).ConfigureAwait(false);
+        // todo ulong steam64 = await database.Sql.GetSteam64(Id, token).ConfigureAwait(false);
+        ulong steam64 = 0;
         if (steam64 != 0)
-            return (await database.GetUsernames(steam64, true, token).ConfigureAwait(false)).PlayerName;
+            return (await database.GetUsernames(new CSteamID(steam64), true, token).ConfigureAwait(false)).PlayerName;
 
         return "<@" + Id + ">";
     }
@@ -115,14 +116,15 @@ public class DiscordActor : IModerationActor
         if (GetDiscordProfilePictureOverride != null)
             return await GetDiscordProfilePictureOverride(Id, token).ConfigureAwait(false);
 
-        ulong steam64 = await database.Sql.GetSteam64(Id, token).ConfigureAwait(false);
+        // todo ulong steam64 = await database.Sql.GetSteam64(Id, token).ConfigureAwait(false);
+        ulong steam64 = 0;
         if (steam64 == 0) return null;
         if (database.TryGetAvatar(steam64, size, out string url))
             return url;
         if (Provider.isInitialized)
         {
-            if (UCPlayer.FromID(steam64) is { } pl)
-                return await (pl as IModerationActor).GetProfilePictureURL(database, size, token).ConfigureAwait(false);
+            // todo if (UCPlayer.FromID(steam64) is { } pl)
+            // todo     return await (pl as IModerationActor).GetProfilePictureURL(database, size, token).ConfigureAwait(false);
 
             PlayerSummary? summary = await database.SteamAPI.GetPlayerSummary(steam64, token);
             if (summary == null)

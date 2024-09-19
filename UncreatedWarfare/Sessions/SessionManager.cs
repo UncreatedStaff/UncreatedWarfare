@@ -15,6 +15,7 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
@@ -27,6 +28,7 @@ namespace Uncreated.Warfare.Sessions;
 public class SessionManager : IHostedService, IEventListener<PlayerLeft>
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly IPlayerService _playerService;
     private readonly ConcurrentDictionary<ulong, SessionRecord> _sessions = new ConcurrentDictionary<ulong, SessionRecord>();
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
     private readonly ILogger<SessionManager> _logger;
@@ -45,18 +47,18 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
 
         await RestartSessionsForAll(false, true, token);
 
-        SquadManager.SquadStatusUpdated += OnSquadChanged;
-        KitManager.OnManualKitChanged += OnKitChanged;
-        EventDispatcher.GroupChanged += OnGroupChanged;
-        GamemodeOld.OnGamemodeChanged += OnGamemodeChanged;
+        // SquadManager.SquadStatusUpdated += OnSquadChanged;
+        // KitManager.OnManualKitChanged += OnKitChanged;
+        // EventDispatcher.GroupChanged += OnGroupChanged;
+        // GamemodeOld.OnGamemodeChanged += OnGamemodeChanged;
     }
 
     async UniTask IHostedService.StopAsync(CancellationToken token)
     {
-        GamemodeOld.OnGamemodeChanged -= OnGamemodeChanged;
-        EventDispatcher.GroupChanged -= OnGroupChanged;
-        KitManager.OnManualKitChanged -= OnKitChanged;
-        SquadManager.SquadStatusUpdated -= OnSquadChanged;
+        // GamemodeOld.OnGamemodeChanged -= OnGamemodeChanged;
+        // EventDispatcher.GroupChanged -= OnGroupChanged;
+        // KitManager.OnManualKitChanged -= OnKitChanged;
+        // SquadManager.SquadStatusUpdated -= OnSquadChanged;
 
         KeyValuePair<ulong, SessionRecord>[] sessions;
         lock (_sessions)
@@ -88,7 +90,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                 using IServiceScope scope = _serviceProvider.CreateScope();
                 await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
                 SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
-                player.CurrentSession = record;
+                // player.CurrentSession = record;
 
                 await dbContext.AddAsync(record, token).ConfigureAwait(false);
                 FixupSession(dbContext, record);
@@ -122,7 +124,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
         {
             await UniTask.SwitchToMainThread(token);
 
-            WarfarePlayer[] onlinePlayers = PlayerManager.OnlinePlayers.ToArray();
+            WarfarePlayer[] onlinePlayers = _playerService.OnlinePlayers.ToArray();
             BitArray waitMask = new BitArray(onlinePlayers.Length);
 
             try
@@ -139,7 +141,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                     WarfarePlayer player = onlinePlayers[i];
 
                     SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
-                    player.CurrentSession = record;
+                    // todo player.CurrentSession = record;
                     records.Add((record, previousSession));
                     anyPrev |= previousSession != null;
 
@@ -211,25 +213,25 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
         SessionRecord record;
         lock (_sessions)
         {
-            _sessions.TryGetValue(player.Steam64, out previous);
+            _sessions.TryGetValue(player.Steam64.m_SteamID, out previous);
 
             KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
 
             record = new SessionRecord
             {
-                Steam64 = player.Steam64,
+                Steam64 = player.Steam64.m_SteamID,
                 StartedTimestamp = DateTimeOffset.UtcNow,
                 FactionId = player.Team.Faction?.PrimaryKey,
                 PreviousSessionId = previous?.SessionId,
                 NextSessionId = null,
-                GameId = Data.Gamemode.GameId,
+                GameId = 0, // todo Data.Gamemode.GameId,
                 StartedGame = startedGame,
                 KitId = kitComp.ActiveKitKey,
                 KitName = kitComp.ActiveKitId,
                 MapId = MapScheduler.Current,
                 SeasonId = WarfareModule.Season,
-                SquadName = player.Squad?.Name,
-                SquadLeader = player.Squad?.Leader?.Steam64,
+                SquadName = null, // todo player.Squad?.Name,
+                SquadLeader = null, // todo player.Squad?.Leader?.Steam64,
                 FinishedGame = false,
                 Team = player.Team.Id,
                 UnexpectedTermination = true
@@ -238,7 +240,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
             if (previous is { UnexpectedTermination: true })
                 EndSession(dbContext, previous, startedGame, false);
 
-            _sessions[player.Steam64] = record;
+            _sessions[player.Steam64.m_SteamID] = record;
         }
 
         return record;
@@ -257,101 +259,101 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
 
         L.LogDebug($"[SESSIONS] Ended session {record.SessionId} for {record.Steam64}.");
     }
-    private void OnSquadChanged(WarfarePlayer player, Squad? oldsquad, Squad? newsquad, bool oldisleader, bool newisleader)
-    {
-        if (player.IsLeaving || !player.HasInitedOnce)
-            return;
-
-        if (Data.Gamemode.State is not State.Staging and not State.Active || player.IsInitializing)
-        {
-            L.LogDebug($"[SESSIONS] Skipped creating session for {player.Steam64}. (gamemode initializing)");
-            return;
-        }
-
-        if (IsSessionExpired(player))
-        {
-            UCWarfare.RunTask(RestartSession, player, true, false, CancellationToken.None);
-            L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (squad changed)");
-        }
-        else
-        {
-            L.LogDebug($"[SESSIONS] Skipping creating session for {player.Steam64}. (squad changed)");
-        }
-    }
-    private void OnKitChanged(WarfarePlayer player, Kit? kit, Kit? oldkit)
-    {
-        if (!player.HasInitedOnce)
-            return;
-
-        if (Data.Gamemode.State is not State.Staging and not State.Active || player.IsInitializing)
-        {
-            L.LogDebug($"[SESSIONS] Skipped creating session for {player.Steam64}. (gamemode initializing)");
-            return;
-        }
-
-        if (IsSessionExpired(player))
-        {
-            UCWarfare.RunTask(RestartSession, player, true, false, CancellationToken.None);
-            L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (kit changed)");
-        }
-        else
-        {
-            L.LogDebug($"[SESSIONS] Skipping creating session for {player.Steam64}. (kit changed)");
-        }
-    }
-    private void OnGroupChanged(GroupChanged e)
-    {
-        if (!e.Player.HasInitedOnce)
-            return;
-
-        if (Data.Gamemode.State is not State.Staging and not State.Active || e.Player.IsInitializing)
-        {
-            L.LogDebug($"[SESSIONS] Skipped creating session for {e.Steam64}. (gamemode initializing)");
-            return;
-        }
-
-        if (IsSessionExpired(e.Player))
-        {
-            UCWarfare.RunTask(RestartSession, e.Player, true, false, CancellationToken.None);
-            L.LogDebug($"[SESSIONS] Creating session for {e.Steam64}. (group changed)");
-        }
-        else
-        {
-            L.LogDebug($"[SESSIONS] Skipping creating session for {e.Player.Steam64}. (group changed)");
-        }
-    }
-    private void OnGamemodeChanged()
-    {
-        UCWarfare.RunTask(RestartSessionsForAll, true, true, CancellationToken.None);
-        L.LogDebug("[SESSIONS] Creating session for all players. (gamemode changed)");
-    }
+    // private void OnSquadChanged(WarfarePlayer player, Squad? oldsquad, Squad? newsquad, bool oldisleader, bool newisleader)
+    // {
+    //     if (player.IsLeaving || !player.HasInitedOnce)
+    //         return;
+    // 
+    //     if (Data.Gamemode.State is not State.Staging and not State.Active || player.IsInitializing)
+    //     {
+    //         L.LogDebug($"[SESSIONS] Skipped creating session for {player.Steam64}. (gamemode initializing)");
+    //         return;
+    //     }
+    // 
+    //     if (IsSessionExpired(player))
+    //     {
+    //         UCWarfare.RunTask(RestartSession, player, true, false, CancellationToken.None);
+    //         L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (squad changed)");
+    //     }
+    //     else
+    //     {
+    //         L.LogDebug($"[SESSIONS] Skipping creating session for {player.Steam64}. (squad changed)");
+    //     }
+    // }
+    // private void OnKitChanged(WarfarePlayer player, Kit? kit, Kit? oldkit)
+    // {
+    //     if (!player.HasInitedOnce)
+    //         return;
+    // 
+    //     if (Data.Gamemode.State is not State.Staging and not State.Active || player.IsInitializing)
+    //     {
+    //         L.LogDebug($"[SESSIONS] Skipped creating session for {player.Steam64}. (gamemode initializing)");
+    //         return;
+    //     }
+    // 
+    //     if (IsSessionExpired(player))
+    //     {
+    //         UCWarfare.RunTask(RestartSession, player, true, false, CancellationToken.None);
+    //         L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (kit changed)");
+    //     }
+    //     else
+    //     {
+    //         L.LogDebug($"[SESSIONS] Skipping creating session for {player.Steam64}. (kit changed)");
+    //     }
+    // }
+    // private void OnGroupChanged(GroupChanged e)
+    // {
+    //     if (!e.Player.HasInitedOnce)
+    //         return;
+    // 
+    //     if (Data.Gamemode.State is not State.Staging and not State.Active || e.Player.IsInitializing)
+    //     {
+    //         L.LogDebug($"[SESSIONS] Skipped creating session for {e.Steam64}. (gamemode initializing)");
+    //         return;
+    //     }
+    // 
+    //     if (IsSessionExpired(e.Player))
+    //     {
+    //         UCWarfare.RunTask(RestartSession, e.Player, true, false, CancellationToken.None);
+    //         L.LogDebug($"[SESSIONS] Creating session for {e.Steam64}. (group changed)");
+    //     }
+    //     else
+    //     {
+    //         L.LogDebug($"[SESSIONS] Skipping creating session for {e.Player.Steam64}. (group changed)");
+    //     }
+    // }
+    // private void OnGamemodeChanged()
+    // {
+    //     UCWarfare.RunTask(RestartSessionsForAll, true, true, CancellationToken.None);
+    //     L.LogDebug("[SESSIONS] Creating session for all players. (gamemode changed)");
+    // }
     private static bool IsSessionExpired(WarfarePlayer player)
     {
-        SessionRecord? currentSession = player.CurrentSession;
+        SessionRecord? currentSession = null;// todo player.CurrentSession;
         if (currentSession == null)
             return player.IsOnline;
 
-        if (player.ActiveKit != currentSession.KitId)
+        if (player.Component<KitPlayerComponent>().ActiveKitKey != currentSession.KitId)
             return true;
 
-        FactionInfo? faction = player.Faction;
+        FactionInfo? faction = player.Team.Faction;
 
-        if (faction == null != !currentSession.FactionId.HasValue || faction != null && currentSession.FactionId.HasValue && faction.PrimaryKey.Key != currentSession.FactionId!.Value)
+        if (faction == null != !currentSession.FactionId.HasValue || faction != null && currentSession.FactionId.HasValue && faction.PrimaryKey != currentSession.FactionId!.Value)
             return true;
 
-        if (Data.Gamemode is not null && Data.Gamemode.GameId != currentSession.GameId)
-            return true;
+        // if (Data.Gamemode is not null && Data.Gamemode.GameId != currentSession.GameId)
+        //     return true;
 
-        if (player.Squad != null)
-        {
-            if (!currentSession.SquadLeader.HasValue || currentSession.SquadLeader.Value != player.Squad.Leader.Steam64)
-                return true;
-
-            if (currentSession.SquadName == null || !currentSession.SquadName.Equals(player.Squad.Name, StringComparison.Ordinal))
-                return true;
-        }
-        else if (currentSession.SquadLeader.HasValue || currentSession.SquadName != null)
-            return true;
+        // if (player.Squad != null)
+        // {
+        //     if (!currentSession.SquadLeader.HasValue || currentSession.SquadLeader.Value != player.Squad.Leader.Steam64)
+        //         return true;
+        // 
+        //     if (currentSession.SquadName == null || !currentSession.SquadName.Equals(player.Squad.Name, StringComparison.Ordinal))
+        //         return true;
+        // }
+        // else if (currentSession.SquadLeader.HasValue || currentSession.SquadName != null)
+        //     return true;
 
 
         return false;
@@ -360,45 +362,45 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
-        SessionRecord record;
-        lock (_sessions)
-        {
-            if (!_sessions.TryRemove(e.Steam64.m_SteamID, out record))
-                return;
-        }
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                using IServiceScope scope = _serviceProvider.CreateScope();
-                await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
-
-                EndSession(dbContext, record, Data.Gamemode != null && Data.Gamemode.State is State.Finished or State.Discarded, false);
-                await SaveSession(dbContext, record, CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error handling player disconnect.");
-            }
-        });
+        // SessionRecord record;
+        // lock (_sessions)
+        // {
+        //     if (!_sessions.TryRemove(e.Steam64.m_SteamID, out record))
+        //         return;
+        // }
+        // 
+        // Task.Run(async () =>
+        // {
+        //     try
+        //     {
+        //         using IServiceScope scope = _serviceProvider.CreateScope();
+        //         await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+        // 
+        //         EndSession(dbContext, record, Data.Gamemode != null && Data.Gamemode.State is State.Finished or State.Discarded, false);
+        //         await SaveSession(dbContext, record, CancellationToken.None);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error handling player disconnect.");
+        //     }
+        // });
     }
 
-    async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(WarfarePlayer player, bool wasAlreadyOnline, CancellationToken token)
-    {
-        if (Data.Gamemode is null)
-            return;
-
-        if (!wasAlreadyOnline && IsSessionExpired(player))
-        {
-            L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (initing)");
-            await RestartSession(player, false, false, token);
-        }
-        else
-        {
-            L.LogDebug($"[SESSIONS] Skipping creating session for {player.Steam64}. (initing)");
-        }
-    }
+    // async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(WarfarePlayer player, bool wasAlreadyOnline, CancellationToken token)
+    // {
+    //     if (Data.Gamemode is null)
+    //         return;
+    // 
+    //     if (!wasAlreadyOnline && IsSessionExpired(player))
+    //     {
+    //         L.LogDebug($"[SESSIONS] Creating session for {player.Steam64}. (initing)");
+    //         await RestartSession(player, false, false, token);
+    //     }
+    //     else
+    //     {
+    //         L.LogDebug($"[SESSIONS] Skipping creating session for {player.Steam64}. (initing)");
+    //     }
+    // }
     private static void FixupSession(IGameDataDbContext dbContext, SessionRecord session)
     {
         if (session.Kit != null)
@@ -432,7 +434,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
             using (IServiceScope scope = _serviceProvider.CreateScope())
             await using (IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>())
             {
-                byte region = UCWarfare.Config.RegionKey;
+                byte region = 1;// todo UCWarfare.Config.RegionKey;
                 List<SessionRecord> records = await dbContext.Sessions.Where(x => x.UnexpectedTermination && x.EndedTimestamp == null && x.Game.Region == region).ToListAsync(token);
 
                 ct = records.Count;

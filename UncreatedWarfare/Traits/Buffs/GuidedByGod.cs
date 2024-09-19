@@ -4,7 +4,7 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits.Buffs;
-
+#if false
 /// <summary>
 /// Increases the accuracy of ground AA.
 /// </summary>
@@ -78,3 +78,4 @@ public class GuidedByGod : Buff
         return max < 0f ? 1f : (1 + max);
     }
 }
+#endif

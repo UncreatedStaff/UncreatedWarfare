@@ -1,11 +1,11 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Exceptions;
@@ -79,15 +79,15 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             throw new LayoutConfigurationException(this, "Expected exactly 2 team infos in the 'Teams' section.");
 
         FactionInfo? factionInfo1, factionInfo2;
+        IFactionDataStore factionDataStore = _serviceProvider.GetRequiredService<IFactionDataStore>();
         using (IServiceScope scope = _serviceProvider.CreateScope())
         await using (IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>())
         {
             Faction f1 = await TeamUtility.ResolveTeamFactionHint(Teams[0].Faction, dbContext, this, token);
             Faction f2 = await TeamUtility.ResolveTeamFactionHint(Teams[1].Faction, dbContext, this, token);
 
-            // todo this will change once TeamManager is replaced
-            factionInfo1 = TeamManager.GetFactionInfo(f1);
-            factionInfo2 = TeamManager.GetFactionInfo(f2);
+            factionInfo1 = factionDataStore.FindFaction(f1);
+            factionInfo2 = factionDataStore.FindFaction(f2);
         }
 
         _teams[0] = new Team
@@ -142,19 +142,19 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             return teamId is not 1 and not 2 ? null : _teams[teamId];
         }
 
-        int index = F.StringIndexOf(AllTeams, x => x.Faction.Name, teamSearch);
+        int index = CollectionUtility.StringIndexOf(AllTeams, x => x.Faction.Name, teamSearch);
         if (index != -1)
         {
             return AllTeams[index];
         }
 
-        index = F.StringIndexOf(AllTeams, x => x.Faction.Abbreviation, teamSearch);
+        index = CollectionUtility.StringIndexOf(AllTeams, x => x.Faction.Abbreviation, teamSearch);
         if (index != -1)
         {
             return AllTeams[index];
         }
 
-        index = F.StringIndexOf(AllTeams, x => x.Faction.ShortName, teamSearch);
+        index = CollectionUtility.StringIndexOf(AllTeams, x => x.Faction.ShortName, teamSearch);
 
         return index != -1 ? AllTeams[index] : null;
     }

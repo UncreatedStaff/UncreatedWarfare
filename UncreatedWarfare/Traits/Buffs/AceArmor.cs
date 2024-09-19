@@ -8,6 +8,7 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Traits.Buffs;
+#if false
 /// <summary>
 /// Any crewmen that enter a vehicle driven by a player under this effect will get a xp boost until they leave.
 /// </summary>
@@ -227,3 +228,4 @@ public class AceArmor : Buff
         void IXPBoostBuff.OnXPBoostUsed(float amount, bool awardCredits) { }
     }
 }
+#endif

@@ -18,15 +18,15 @@ public readonly struct LevelData : ITranslationArgument
     public LevelData(int xp)
     {
         TotalXP = xp;
-        Level = Points.GetLevel(xp);
-        int startXP = Points.GetLevelXP(Level);
-        CurrentXP = xp - startXP;
-        RequiredXP = Points.GetNextLevelXP(Level) - startXP;
-        Name = GetRankName(Level);
-        Abbreviation = GetRankAbbreviation(Level);
-        NextName = GetRankName(Level + 1);
-        NextAbbreviation = GetRankAbbreviation(Level + 1);
-        ProgressBar = Points.GetProgressBar(CurrentXP, RequiredXP);
+        //Level = Points.GetLevel(xp);
+        //int startXP = Points.GetLevelXP(Level);
+        //CurrentXP = xp - startXP;
+        //RequiredXP = Points.GetNextLevelXP(Level) - startXP;
+        //Name = GetRankName(Level);
+        //Abbreviation = GetRankAbbreviation(Level);
+        //NextName = GetRankName(Level + 1);
+        //NextAbbreviation = GetRankAbbreviation(Level + 1);
+        //ProgressBar = Points.GetProgressBar(CurrentXP, RequiredXP);
     }
     public static string GetRankName(int level)
     {

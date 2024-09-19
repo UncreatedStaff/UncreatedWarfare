@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Util;
@@ -16,16 +15,16 @@ public class RankUnlockRequirement : UnlockRequirement
     /// <inheritdoc />
     public override bool CanAccessFast(WarfarePlayer player)
     {
-        ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
-        return success && data.Order >= UnlockRank;
+        // ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
+        return false;// success && data.Order >= UnlockRank;
     }
 
     /// <inheritdoc />
     public override string GetSignText(WarfarePlayer player)
     {
-        ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
-        ref Ranks.RankData reqData = ref Ranks.RankManager.GetRank(UnlockRank, out _);
-        return T.KitRequiredRank.Translate(player, false, reqData, success && data.Order >= reqData.Order ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
+        // ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
+        // ref Ranks.RankData reqData = ref Ranks.RankManager.GetRank(UnlockRank, out _);
+        return T.NotImplemented.Translate(player); // T.KitRequiredRank.Translate(player, false, reqData, success && data.Order >= reqData.Order ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
     }
 
     /// <inheritdoc />
@@ -69,29 +68,31 @@ public class RankUnlockRequirement : UnlockRequirement
     /// <inheritdoc />
     public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
-        ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
-        if (!success)
-            L.LogWarning("Invalid rank order in kit requirement: " + (kit?.InternalName ?? string.Empty) + " :: " + UnlockRank + ".");
-        return ctx.Reply(T.RequestKitLowRank, data);
+        // ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
+        // if (!success)
+        //     L.LogWarning("Invalid rank order in kit requirement: " + (kit?.InternalName ?? string.Empty) + " :: " + UnlockRank + ".");
+        return ctx.SendNotImplemented();// todo ctx.Reply(T.RequestKitLowRank, data);
     }
 
     /// <inheritdoc />
     public override Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
     {
-        ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
-        if (!success)
-            L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + UnlockRank + ".");
-        return ctx.Reply(T.RequestVehicleRankIncomplete, rankData);
+        // ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
+        // if (!success)
+        //     L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + UnlockRank + ".");
+        return ctx.SendNotImplemented();// todo ctx.Reply(T.RequestVehicleRankIncomplete, rankData);
     }
 
+#if false
     /// <inheritdoc />
     public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
-        ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
-        if (!success)
-            L.LogWarning("Invalid rank order in trait requirement: " + trait.TypeName + " :: " + UnlockRank + ".");
-        return ctx.Reply(T.RequestTraitLowRank, trait, data);
+        // ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
+        // if (!success)
+        //     L.LogWarning("Invalid rank order in trait requirement: " + trait.TypeName + " :: " + UnlockRank + ".");
+        return ctx.SendNotImplemented();// todo ctx.Reply(T.RequestTraitLowRank, trait, data);
     }
+#endif
 
     /// <inheritdoc />
     public override bool Equals(object? obj)

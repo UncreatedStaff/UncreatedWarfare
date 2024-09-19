@@ -7,6 +7,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -131,7 +132,7 @@ public class Kit : ITranslationArgument, ICloneable
             int v = UnlockRequirementsModels.GetListVersion();
             if (_listUnlockRequirementsArrayVersion != v || _unlockRequirements == null)
             {
-                UpdateUnlockRequirementArray();
+                UpdateUnlockRequirementArray(WarfareModule.Singleton.ScopedProvider /* todo */);
                 _listUnlockRequirementsArrayVersion = v;
             }
 
@@ -204,12 +205,12 @@ public class Kit : ITranslationArgument, ICloneable
     [JsonIgnore]
     [NotMapped]
     public bool Requestable => !Disabled && (Type is not KitType.Loadout || Season >= WarfareModule.Season || Season < 1) &&
-                             IsCurrentMapAllowed() &&
-                             (IsFactionAllowed(TeamManager.Team1Faction) || IsFactionAllowed(TeamManager.Team2Faction));
+                             IsCurrentMapAllowed()/* todo &&
+                             (IsFactionAllowed(TeamManager.Team1Faction) || IsFactionAllowed(TeamManager.Team2Faction)) */;
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
     public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Type is not KitType.Loadout || Season >= WarfareModule.Season || Season < 1) &&
-                             IsCurrentMapAllowed() &&
-                             IsFactionAllowed(TeamManager.GetFaction(team)));
+                             IsCurrentMapAllowed() /* todo &&
+                             IsFactionAllowed(TeamManager.GetFaction(team)) */);
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
     public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Type is not KitType.Loadout || Season >= WarfareModule.Season || Season < 1) &&
                                                                                IsCurrentMapAllowed() &&
@@ -237,8 +238,8 @@ public class Kit : ITranslationArgument, ICloneable
         Type = type;
         SquadLevel = squadLevel;
         Season = WarfareModule.Season;
-        TeamLimit = KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(@class);
-        RequestCooldown = KitDefaults<WarfareDbContext>.GetDefaultRequestCooldown(@class);
+        TeamLimit = KitDefaults.GetDefaultTeamLimit(@class);
+        RequestCooldown = KitDefaults.GetDefaultRequestCooldown(@class);
         CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
     }
     public Kit(string internalName, Kit copy)
@@ -337,13 +338,13 @@ public class Kit : ITranslationArgument, ICloneable
         FactionId = null;
         InternalName = loadout;
         Class = @class;
-        Branch = KitDefaults<WarfareDbContext>.GetDefaultBranch(@class);
+        Branch = KitDefaults.GetDefaultBranch(@class);
         Type = KitType.Loadout;
         SquadLevel = SquadLevel.Member;
         Season = WarfareModule.Season;
-        TeamLimit = KitDefaults<WarfareDbContext>.GetDefaultTeamLimit(@class);
-        RequestCooldown = KitDefaults<WarfareDbContext>.GetDefaultRequestCooldown(@class);
-        PremiumCost = UCWarfare.Config.LoadoutCost;
+        TeamLimit = KitDefaults.GetDefaultTeamLimit(@class);
+        RequestCooldown = KitDefaults.GetDefaultRequestCooldown(@class);
+        PremiumCost = 10;// todo UCWarfare.Config.LoadoutCost;
         CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
         if (displayName != null)
         {
@@ -377,13 +378,13 @@ public class Kit : ITranslationArgument, ICloneable
 
     public bool IsFactionAllowed(FactionInfo? faction)
     {
-        FactionInfo? factionInfo = FactionInfo;
-        if (Type == KitType.Public)
-            return faction != TeamManager.Team1Faction && faction != TeamManager.Team2Faction || string.Equals(faction?.FactionId, factionInfo?.FactionId, StringComparison.Ordinal);
-
-        if (faction == TeamManager.Team1Faction && string.Equals(factionInfo?.FactionId, TeamManager.Team2Faction?.FactionId, StringComparison.Ordinal) ||
-            faction == TeamManager.Team2Faction && string.Equals(factionInfo?.FactionId, TeamManager.Team1Faction?.FactionId, StringComparison.Ordinal))
-            return false;
+        // FactionInfo? factionInfo = FactionInfo;
+        // todo if (Type == KitType.Public)
+        // todo     return faction != TeamManager.Team1Faction && faction != TeamManager.Team2Faction || string.Equals(faction?.FactionId, factionInfo?.FactionId, StringComparison.Ordinal);
+        // todo 
+        // todo if (faction == TeamManager.Team1Faction && string.Equals(factionInfo?.FactionId, TeamManager.Team2Faction?.FactionId, StringComparison.Ordinal) ||
+        // todo     faction == TeamManager.Team2Faction && string.Equals(factionInfo?.FactionId, TeamManager.Team1Faction?.FactionId, StringComparison.Ordinal))
+        // todo     return false;
 
         if (FactionFilter.IsNullOrEmpty() || faction is null || faction.PrimaryKey == 0)
             return true;
@@ -635,7 +636,7 @@ public class Kit : ITranslationArgument, ICloneable
         _listUnlockRequirementsArrayVersion = models.GetListVersion();
         _unlockRequirements = items;
     }
-    private void UpdateUnlockRequirementArray()
+    private void UpdateUnlockRequirementArray(IServiceProvider serviceProvider)
     {
         KitUnlockRequirement[] models = UnlockRequirementsModels.ToArray();
         if (models is not { Length: > 0 })
@@ -646,13 +647,14 @@ public class Kit : ITranslationArgument, ICloneable
 
         bool pooled = Provider.isInitialized && GameThread.IsCurrent;
         List<UnlockRequirement> tempList = pooled ? ListPool<UnlockRequirement>.claim() : new List<UnlockRequirement>(models.Length);
+        ILogger logger = serviceProvider.GetRequiredService<ILogger<Kit>>();
         try
         {
             foreach (KitUnlockRequirement model in models)
             {
                 try
                 {
-                    UnlockRequirement? requirement = model.CreateRuntimeRequirement();
+                    UnlockRequirement? requirement = model.CreateRuntimeRequirement(logger, serviceProvider);
                     if (requirement != null)
                         tempList.Add(requirement);
                 }

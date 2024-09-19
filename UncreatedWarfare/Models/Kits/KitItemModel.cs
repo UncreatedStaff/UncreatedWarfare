@@ -126,8 +126,8 @@ public class KitItemModel : ICloneable, IEquatable<KitItemModel>
         ItemAsset? asset;
         if (Item.HasValue)
             asset = Item.Value.GetAsset<ItemAsset>();
-        else if (Redirect.HasValue)
-            asset = TeamManager.GetRedirectInfo(Redirect.Value, RedirectVariant ?? string.Empty, null, null, out _, out _);
+        // todo else if (Redirect.HasValue)
+        // todo     asset = TeamManager.GetRedirectInfo(Redirect.Value, RedirectVariant ?? string.Empty, null, null, out _, out _);
         else
             return false;
 

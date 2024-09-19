@@ -1,8 +1,9 @@
 ﻿using System.Globalization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Unlocks;
 
 namespace Uncreated.Warfare.Traits.Buffs;
-
+#if false
 /// <summary>
 /// Decrease those affected's deployment cooldown by 25% (* by .75).
 /// </summary>
@@ -30,28 +31,29 @@ public class RapidDeployment : Buff
     private float _multiplier;
     protected override void StartEffect(bool onStart)
     {
-        if (onStart && (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.CultureInfo.InvariantCulture, out _multiplier)))
+        if (onStart && (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, CultureInfo.InvariantCulture, out _multiplier)))
             _multiplier = 0.75f;
         base.StartEffect(onStart);
     }
-    public static float GetDeployTime(UCPlayer player)
+    public static float GetDeployTime(WarfarePlayer player)
     {
-        TraitData? d = DATA ??= TraitManager.GetData(typeof(RapidDeployment));
-        float cooldown = CooldownManager.GetFOBDeployCooldown();
+        TraitData? d = DATA;// ??= TraitManager.GetData(typeof(RapidDeployment));
+        float cooldown = 0;//_cooldownManager.GetFOBDeployCooldown();
         if (d != null)
         {
-            if (TraitManager.IsAffected(d, player, out Trait trait) && trait is RapidDeployment dep)
-            {
-                if (player.Steam64 == dep.TargetPlayer.Steam64)
-                    return cooldown * dep._multiplier;
-
-                if (dep.TargetPlayer.IsSquadLeader())
-                    return cooldown * dep._multiplier * dep.Data.SquadLeaderDistributedMultiplier;
-                
-                return cooldown * dep._multiplier * dep.Data.SquadDistributedMultiplier;
-            }
+            //if (TraitManager.IsAffected(d, player, out Trait trait) && trait is RapidDeployment dep)
+            //{
+            //    if (player.Steam64 == dep.TargetPlayer.Steam64)
+            //        return cooldown * dep._multiplier;
+            //
+            //    if (dep.TargetPlayer.IsSquadLeader())
+            //        return cooldown * dep._multiplier * dep.Data.SquadLeaderDistributedMultiplier;
+            //    
+            //    return cooldown * dep._multiplier * dep.Data.SquadDistributedMultiplier;
+            //}
         }
 
         return cooldown;
     }
 }
+#endif

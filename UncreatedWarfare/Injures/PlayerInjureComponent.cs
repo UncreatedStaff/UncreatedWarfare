@@ -17,8 +17,6 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -38,6 +36,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     IEventListener<AidPlayerRequested>,
     IEventListener<PlayerAided>
 {
+
     /// <summary>
     /// Number of seconds after a player is injured before they can take damage.
     /// </summary>
@@ -104,6 +103,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     private bool _isInjured;
     private bool _isReviving;
     private WarfarePlayer? _reviver;
+    private CooldownManager _cooldownManager;
 
     private DamagePlayerParameters _injureParameters;
     private float _injureStart;
@@ -140,6 +140,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
+        _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
 
         PlayerKeys.PressedPluginKey3 += OnPressedGiveUp;
         PlayerKeys.PressedPluginKey2 += OnPressedReviveSelf;
@@ -190,6 +191,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
     private void OnPressedReviveSelf(WarfarePlayer player, ref bool handled)
     {
+#if false // todo
         if (!player.Equals(Player) || !_isInjured) 
             return;
 
@@ -211,6 +213,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         }
 
         handled = true;
+#endif
     }
 
 
@@ -288,7 +291,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         // times per second simulate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
         float bleedsPerSecond = Time.timeScale / PlayerInput.RATE / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
-        player.life.serverModifyHealth(UCWarfare.Config.InjuredLifeTimeSeconds * bleedsPerSecond - player.life.health);
+        player.life.serverModifyHealth(/* todo UCWarfare.Config.InjuredLifeTimeSeconds */ 30 * bleedsPerSecond - player.life.health);
         player.life.serverSetBleeding(true);
         player.movement.sendPluginSpeedMultiplier(0.35f);
         player.movement.sendPluginJumpMultiplier(0);
@@ -455,12 +458,12 @@ public class PlayerInjureComponent : MonoBehaviour,
             return;
 
         // prevent injure/revive spamming to farm XP
-        if (CooldownManager.Config.ReviveXPCooldown <= 0
-            || !CooldownManager.HasCooldown(e.Medic, CooldownType.Revive, out _, e.Steam64.m_SteamID))
+        if (_cooldownManager.Config.ReviveXPCooldown <= 0
+            || !_cooldownManager.HasCooldown(e.Medic, CooldownType.Revive, out _, e.Steam64.m_SteamID))
         {
-            Points.AwardXP(e.Medic, XPReward.Revive);
-            QuestManager.OnRevive(e.Medic, e.Player);
-            CooldownManager.StartCooldown(e.Medic, CooldownType.Revive, CooldownManager.Config.ReviveXPCooldown, e.Steam64.m_SteamID);
+            // todo Points.AwardXP(e.Medic, XPReward.Revive);
+            // QuestManager.OnRevive(e.Medic, e.Player);
+            _cooldownManager.StartCooldown(e.Medic, CooldownType.Revive, _cooldownManager.Config.ReviveXPCooldown, e.Steam64.m_SteamID);
         }
         else
         {
@@ -485,7 +488,7 @@ public class PlayerInjureComponent : MonoBehaviour,
             // times per second simulate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
             float bleedsPerSecond = Time.timeScale / PlayerInput.RATE / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
             e.Parameters = _injureParameters;
-            e.Parameters.damage *= UCWarfare.Config.InjuredDamageMultiplier / 10 * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
+            e.Parameters.damage *= /* todo UCWarfare.Config.InjuredDamageMultiplier */ 0.4f / 10 * bleedsPerSecond * /* todo UCWarfare.Config.InjuredLifeTimeSeconds */ 30;
             return;
         }
 

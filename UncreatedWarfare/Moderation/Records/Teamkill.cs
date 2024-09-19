@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Records;
 [ModerationEntry(ModerationEntryType.Teamkill)]
@@ -192,7 +193,7 @@ public class Teamkill : ModerationEntry
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnTeamkillsAsset, DatabaseInterface.ColumnTeamkillsAssetName,
             DatabaseInterface.ColumnTeamkillsDeathCause, DatabaseInterface.ColumnTeamkillsDistance, DatabaseInterface.ColumnTeamkillsLimb)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 5, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 5, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnTeamkillsAsset}` = `t`.`{DatabaseInterface.ColumnTeamkillsAsset}`," +
                        $"`{DatabaseInterface.ColumnTeamkillsAssetName}` = `t`.`{DatabaseInterface.ColumnTeamkillsAssetName}`," +
@@ -201,7 +202,7 @@ public class Teamkill : ModerationEntry
                        $"`{DatabaseInterface.ColumnTeamkillsLimb}` = `t`.`{DatabaseInterface.ColumnTeamkillsLimb}`;");
         
         args.Add(Item.HasValue ? Item.Value.ToString("N") : DBNull.Value);
-        args.Add((object?)ItemName.MaxLength(48) ?? DBNull.Value);
+        args.Add((object?)ItemName.Truncate(48) ?? DBNull.Value);
         args.Add(Cause.HasValue ? Cause.Value.ToString() : DBNull.Value);
         args.Add(Distance.HasValue ? Distance.Value : DBNull.Value);
         args.Add(Limb.HasValue ? Limb.Value.ToString() : DBNull.Value);

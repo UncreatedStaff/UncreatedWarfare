@@ -35,6 +35,14 @@ public static class FactionDataStoreExtensions
     {
         return faction == null ? null : dataStore.Factions.FirstOrDefault(f => f.PrimaryKey == faction.Key);
     }
+    
+    /// <summary>
+    /// Search a faction from it's primary key.
+    /// </summary>
+    public static FactionInfo? FindFaction(this IFactionDataStore dataStore, uint primaryKey)
+    {
+        return dataStore.Factions.FirstOrDefault(f => f.PrimaryKey == primaryKey);
+    }
 
     /// <summary>
     /// Search a faction using text.
@@ -102,7 +110,8 @@ public class FactionDataStore : IFactionDataStore, IHostedService
 
     public async Task ReloadCache(CancellationToken token = default)
     {
-        await using IFactionDbContext dbContext = _serviceProvider.GetRequiredService<DontDispose<IFactionDbContext>>().Value;
+        IServiceScope scope = _serviceProvider.CreateScope();
+        await using IFactionDbContext dbContext = scope.ServiceProvider.GetRequiredService<IFactionDbContext>();
 
         List<Faction> dbModels = await dbContext.Factions
             .Include(faction => faction.Assets)

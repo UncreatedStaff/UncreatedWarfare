@@ -28,8 +28,8 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     {
         for (int i = 0; i < UnlockPresets.Length; i++)
         {
-            if (!player.QuestComplete(UnlockPresets[i]))
-                return false;
+            // todo if (!player.QuestComplete(UnlockPresets[i]))
+            //     return false;
         }
         return true;
     }
@@ -40,10 +40,10 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
         bool access = CanAccessFast(player);
         if (access)
             return T.KitRequiredQuestsComplete.Translate(player);
-        if (Assets.find(QuestId) is QuestAsset quest)
-            return T.KitRequiredQuest.Translate(quest, UCWarfare.GetColor("kit_level_unavailable"), player);
+        // if (Assets.find(QuestId) is QuestAsset quest)
+        //     return T.KitRequiredQuest.Translate(quest, UCWarfare.GetColor("kit_level_unavailable"), player);
 
-        return T.KitRequiredQuestsMultiple.Translate(UnlockPresets.Length, UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length == 1 ? string.Empty : "S", player);
+        return T.NotImplemented.Translate(player);/*KitRequiredQuestsMultiple.Translate(UnlockPresets.Length , UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length == 1 ? string.Empty : "S", player );*/
     }
 
     /// <inheritdoc />
@@ -142,7 +142,7 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
             return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, null!);
         }
 
-        QuestManager.TryAddQuest(ctx.Player, asset);
+        // todo QuestManager.TryAddQuest(ctx.Player, asset);
         return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, asset);
     }
 
@@ -154,10 +154,11 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
             return ctx.Reply(_reqTranslations.RequestVehicleQuestIncomplete, null!);
         }
 
-        QuestManager.TryAddQuest(ctx.Player, asset);
+        // todo QuestManager.TryAddQuest(ctx.Player, asset);
         return ctx.Reply(_reqTranslations.RequestVehicleQuestIncomplete, asset);
     }
 
+#if false
     /// <inheritdoc />
     public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
@@ -166,9 +167,10 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
             return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
         }
 
-        QuestManager.TryAddQuest(ctx.Player, asset);
+        // todo QuestManager.TryAddQuest(ctx.Player, asset);
         return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
     }
+#endif
 
     /// <inheritdoc />
     public override bool Equals(object? obj)

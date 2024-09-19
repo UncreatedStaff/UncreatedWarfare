@@ -6,7 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
 using System.Linq;
+using System.Security;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Database;
 
@@ -29,6 +32,14 @@ public class EFMigrationDesignTimeFactory : IDesignTimeDbContextFactory<WarfareD
                                         $"Add the path to \"possiblePaths\" in \"EFMigrationDesignTimeFactory.cs\".");
         }
 
+        try
+        {
+            ThreadUtil.setupGameThread();
+        }
+        catch (SecurityException) { }
+
+        GameThread.AssertCurrent();
+
         Accessor.LogDebugMessages = true;
         Accessor.LogInfoMessages = true;
         Accessor.LogWarningMessages = true;
@@ -42,11 +53,12 @@ public class EFMigrationDesignTimeFactory : IDesignTimeDbContextFactory<WarfareD
         IServiceCollection serviceCollection = new ServiceCollection();
         serviceCollection.AddDbContext<WarfareDbContext>();
         serviceCollection.AddSingleton<IConfiguration>(sysConfig);
+        serviceCollection.AddLogging(builder => builder.AddProvider(new L.UCLoggerFactory()));
 
         IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateOnBuild = true,
-            ValidateScopes = true
+            ValidateScopes = false
         });
 
         WarfareDbContext dbContext = serviceProvider.GetRequiredService<WarfareDbContext>();

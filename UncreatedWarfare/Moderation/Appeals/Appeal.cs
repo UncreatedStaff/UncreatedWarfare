@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Moderation.Punishments;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Appeals;
 [ModerationEntry(ModerationEntryType.Appeal)]
@@ -159,7 +160,7 @@ public class Appeal : ModerationEntry
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAppealsTicketId, DatabaseInterface.ColumnAppealsState,
             DatabaseInterface.ColumnAppealsDiscordId)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 3, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 3, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnAppealsTicketId}` = `t`.`{DatabaseInterface.ColumnAppealsTicketId}`," +
                        $"`{DatabaseInterface.ColumnAppealsState}` = `t`.`{DatabaseInterface.ColumnAppealsState}`," +
@@ -178,7 +179,7 @@ public class Appeal : ModerationEntry
 
             for (int i = 0; i < PunishmentKeys.Length; ++i)
             {
-                F.AppendPropertyList(builder, args.Count, 1, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 1, i, 1);
                 args.Add(PunishmentKeys[i]);
             }
 
@@ -195,9 +196,9 @@ public class Appeal : ModerationEntry
             for (int i = 0; i < Responses.Length; ++i)
             {
                 ref AppealResponse response = ref Responses[i];
-                F.AppendPropertyList(builder, args.Count, 2, i, 1);
-                args.Add(response.Question.MaxLength(255) ?? string.Empty);
-                args.Add(response.Response.MaxLength(1024) ?? string.Empty);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 2, i, 1);
+                args.Add(response.Question.Truncate(255) ?? string.Empty);
+                args.Add(response.Response.Truncate(1024) ?? string.Empty);
             }
 
             builder.Append(';');

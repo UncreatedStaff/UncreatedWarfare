@@ -8,7 +8,7 @@ public static class EventContinuations
     /// <summary>
     /// Try to execute an 'on requested' event on the main thread and if a context switch is required, run <paramref name="continuation"/> after the event is done executing.
     /// </summary>
-    public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuationAsync<TArgs> continuation) where TArgs : ICancellable
+    public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuationAsync<TArgs> continuation) where TArgs : class, ICancellable
     {
         GameThread.AssertCurrent();
 
@@ -37,7 +37,7 @@ public static class EventContinuations
     /// <summary>
     /// Try to execute an 'on requested' event on the main thread and if a context switch is required, run <paramref name="continuation"/> after the event is done executing.
     /// </summary>
-    public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuation<TArgs> continuation) where TArgs : ICancellable
+    public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuation<TArgs> continuation) where TArgs : class, ICancellable
     {
         GameThread.AssertCurrent();
 
@@ -67,7 +67,7 @@ public static class EventContinuations
     /// Try to execute an 'on requested' event on the main thread and if a context switch is required, run <paramref name="continuation"/> after the event is done executing.
     /// </summary>
     /// <remarks>This overload allows you to continue even if the task ends in time.</remarks>
-    public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuationAsync<TArgs> continuation, Func<TArgs, bool> needsToContinue) where TArgs : ICancellable
+    public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuationAsync<TArgs> continuation, Func<TArgs, bool> needsToContinue) where TArgs : class, ICancellable
     {
         GameThread.AssertCurrent();
 
@@ -110,7 +110,7 @@ public static class EventContinuations
     /// Try to execute an 'on requested' event on the main thread and if a context switch is required, run <paramref name="continuation"/> after the event is done executing.
     /// </summary>
     /// <remarks>This overload allows you to continue even if the task ends in time.</remarks>
-    public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuation<TArgs> continuation, Func<TArgs, bool> needsToContinue) where TArgs : ICancellable
+    public static void Dispatch<TArgs>(TArgs eventArgs, EventDispatcher2 eventDispatcher, CancellationToken token, out bool shouldAllow, CancellableEventContinuation<TArgs> continuation, Func<TArgs, bool> needsToContinue) where TArgs : class, ICancellable
     {
         GameThread.AssertCurrent();
 

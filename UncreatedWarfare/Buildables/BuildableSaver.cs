@@ -169,6 +169,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
                     BuildableStorageItem storageItem = new BuildableStorageItem
                     {
                         Save = newSave,
+                        SaveId = newSave.Id,
                         Amount = item.item.amount,
                         Quality = item.item.quality,
                         State = state,

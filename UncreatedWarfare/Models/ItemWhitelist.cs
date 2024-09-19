@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Assets;
 
 namespace Uncreated.Warfare.Models;
@@ -6,7 +7,9 @@ namespace Uncreated.Warfare.Models;
 [Table("item_whitelists")]
 public class ItemWhitelist
 {
+    [Key]
     [Column("pk")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int PrimaryKey { get; set; }
 
     public UnturnedAssetReference Item { get; set; }

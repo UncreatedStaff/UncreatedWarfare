@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -131,10 +132,10 @@ public class GriefingReport : Report
             for (int i = 0; i < DamageRecord.Length; ++i)
             {
                 ref StructureDamageRecord record = ref DamageRecord[i];
-                F.AppendPropertyList(builder, args.Count, 9, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 9, i, 1);
 
                 args.Add(record.Structure.ToString("N"));
-                args.Add(record.Name.MaxLength(48) ?? string.Empty);
+                args.Add(record.Name.Truncate(48) ?? string.Empty);
                 args.Add(record.Owner);
                 args.Add(record.IsStructure);
                 args.Add(record.Origin.ToString());
@@ -160,13 +161,13 @@ public class GriefingReport : Report
             for (int i = 0; i < TeamkillRecord.Length; ++i)
             {
                 ref TeamkillRecord record = ref TeamkillRecord[i];
-                F.AppendPropertyList(builder, args.Count, 6, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 6, i, 1);
 
                 args.Add(record.Teamkill != 0u ? record.Teamkill : DBNull.Value);
                 args.Add(record.Victim);
                 args.Add(record.Cause.ToString());
                 args.Add(record.Intentional.HasValue ? record.Intentional.Value : DBNull.Value);
-                args.Add((object?)record.Message.MaxLength(255) ?? DBNull.Value);
+                args.Add((object?)record.Message.Truncate(255) ?? DBNull.Value);
                 args.Add(record.Timestamp.UtcDateTime);
             }
 
@@ -185,12 +186,12 @@ public class GriefingReport : Report
             for (int i = 0; i < VehicleTeamkillRecord.Length; ++i)
             {
                 ref VehicleTeamkillRecord record = ref VehicleTeamkillRecord[i];
-                F.AppendPropertyList(builder, args.Count, 5, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 5, i, 1);
 
                 args.Add(record.Teamkill != 0u ? record.Teamkill : DBNull.Value);
                 args.Add(record.Origin.ToString());
                 args.Add(record.Victim);
-                args.Add((object?)record.Message.MaxLength(255) ?? DBNull.Value);
+                args.Add((object?)record.Message.Truncate(255) ?? DBNull.Value);
                 args.Add(record.Timestamp.UtcDateTime);
             }
 
@@ -210,10 +211,10 @@ public class GriefingReport : Report
             for (int i = 0; i < VehicleRequestRecord.Length; ++i)
             {
                 ref VehicleRequestRecord record = ref VehicleRequestRecord[i];
-                F.AppendPropertyList(builder, args.Count, 6, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 6, i, 1);
 
                 args.Add(record.Vehicle.ToString("N"));
-                args.Add(record.Name.MaxLength(48) ?? string.Empty);
+                args.Add(record.Name.Truncate(48) ?? string.Empty);
                 args.Add(record.Origin.ToString());
                 args.Add(record.Timestamp.UtcDateTime);
                 args.Add(record.Destroyed.HasValue ? record.Destroyed.Value.UtcDateTime : DBNull.Value);

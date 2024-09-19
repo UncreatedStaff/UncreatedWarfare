@@ -8,6 +8,7 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Fobs;
 
@@ -125,8 +126,8 @@ public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
         throw new NotImplementedException();
     }
 
-    public Vector3 SpawnPosition => throw new NotImplementedException();
-    public float Yaw => throw new NotImplementedException();
+    public Vector3 SpawnPosition => Position; // todo
+    public float Yaw => 0f;
 
     public TimeSpan GetDelay(WarfarePlayer player)
     {
@@ -255,6 +256,16 @@ public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
     IReadOnlyList<InteractableVehicle> ITrackingProximity<InteractableVehicle>.ActiveObjects => Vehicles;
 
     Matrix4x4 ITransformObject.WorldToLocal => transform.worldToLocalMatrix;
+
+    public Matrix4x4 LocalToWorld => throw new NotImplementedException();
+
+    public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Matrix4x4 WorldToLocal => throw new NotImplementedException();
+
     Matrix4x4 ITransformObject.LocalToWorld => transform.localToWorldMatrix;
     BoundingSphere ISphereProximity.Sphere
     {

@@ -18,4 +18,6 @@ public static class Flags
     public static readonly SpecialFormat ColorShortNameDiscoverFormat = new SpecialFormat("Colored Short Name (Discovered Check)", "scd");
 
     public static readonly SpecialFormat ShortNameDiscoverFormat = new SpecialFormat("Short Name (Discovered Check)", "sd");
+
+    public static readonly SpecialFormat LocationNameFormat = new SpecialFormat("Nearest Location Name", "lc");
 }

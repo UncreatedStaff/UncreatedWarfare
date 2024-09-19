@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Networking;
 public sealed class MySqlAddressFilter : IIPAddressFilter
@@ -14,7 +15,7 @@ public sealed class MySqlAddressFilter : IIPAddressFilter
     public async ValueTask<bool> IsFiltered(IPAddress ip, CSteamID player, CancellationToken token)
     {
         bool matched = false;
-        await _database().QueryAsync($"SELECT `{WarfareSQL.ColumnIPWhitelistsIPRange}` FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0;",
+        await _database().QueryAsync($"SELECT `{DatabaseInterface.ColumnIPWhitelistsIPRange}` FROM `{DatabaseInterface.TableIPWhitelists}` WHERE `{DatabaseInterface.ColumnIPWhitelistsSteam64}` = @0;",
             [ player.m_SteamID ], token, reader =>
             {
                 if (reader.IsDBNull(0))
@@ -38,7 +39,7 @@ public sealed class MySqlAddressFilter : IIPAddressFilter
     }
     public async ValueTask RemoveFilteredIPs<T>(IList<T> ips, Func<T, uint> selector, CSteamID player, CancellationToken token)
     {
-        await _database().QueryAsync($"SELECT `{WarfareSQL.ColumnIPWhitelistsIPRange}` FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0;",
+        await _database().QueryAsync($"SELECT `{DatabaseInterface.ColumnIPWhitelistsIPRange}` FROM `{DatabaseInterface.TableIPWhitelists}` WHERE `{DatabaseInterface.ColumnIPWhitelistsSteam64}` = @0;",
             [ player.m_SteamID ], token, reader =>
             {
                 if (reader.IsDBNull(0))

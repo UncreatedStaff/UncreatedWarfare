@@ -30,7 +30,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
             return signProvider.KitId == null ? null : await Manager.FindKit(signProvider.KitId, token, true, KitManager.Set);
         }
 
-        Kit? kit = await Manager.Loadouts.GetLoadout(looker.m_SteamID, signProvider.LoadoutNumber, token).ConfigureAwait(false);
+        Kit? kit = await Manager.Loadouts.GetLoadout(looker, signProvider.LoadoutNumber, token).ConfigureAwait(false);
         return kit;
     }
 
@@ -147,7 +147,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
     {
         if (kit.Type == KitType.Loadout)
         {
-            int loadoutId = KitEx.ParseStandardLoadoutId(kit.InternalName, out ulong s64);
+            int loadoutId = LoadoutIdHelper.Parse(kit.InternalName, out CSteamID s64);
             if (loadoutId == -1)
                 return;
 
@@ -157,7 +157,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
                 if (player == null)
                     return;
             }
-            else if (player.Steam64.m_SteamID != s64)
+            else if (player.Steam64.m_SteamID != s64.m_SteamID)
                 return;
 
             _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => provider.LoadoutNumber == loadoutId);
@@ -170,7 +170,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
 
     private void UpdateSignsIntl(string kitId, WarfarePlayer? player)
     {
-        int loadoutId = KitEx.ParseStandardLoadoutId(kitId, out ulong s64);
+        int loadoutId = LoadoutIdHelper.Parse(kitId, out CSteamID s64);
         if (loadoutId != -1)
         {
             if (player == null)
@@ -179,7 +179,7 @@ public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
                 if (player == null)
                     return;
             }
-            else if (player.Steam64.m_SteamID != s64)
+            else if (player.Steam64.m_SteamID != s64.m_SteamID)
                 return;
 
             _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => provider.LoadoutNumber == loadoutId);

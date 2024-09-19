@@ -9,6 +9,7 @@ using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.NewQuests.Parameters;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Util;
@@ -148,7 +149,7 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
         private int _kills;
         public override bool IsComplete => _kills >= _targetKills;
         public override short FlagValue => (short)_kills;
-        public Tracker(UCPlayer player, IServiceProvider serviceProvider, KillEnemies quest, State state, IQuestPreset? preset)
+        public Tracker(WarfarePlayer player, IServiceProvider serviceProvider, KillEnemies quest, State state, IQuestPreset? preset)
             : base(player, serviceProvider, quest, state, preset)
         {
             _targetKills = state.Kills.GetSingleValueOrMinimum();
@@ -171,7 +172,7 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
         [EventListener(RequiresMainThread = false)]
         void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
         {
-            if (e.Instigator.m_SteamID != Player.Steam64 || !e.WasEffectiveKill || e.Cause == EDeathCause.SHRED)
+            if (e.Instigator.m_SteamID != Player.Steam64.m_SteamID || !e.WasEffectiveKill || e.Cause == EDeathCause.SHRED)
                 return;
 
             // distance
@@ -223,7 +224,7 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
 
             if (emplOrTurrets != null)
             {
-                InteractableVehicle? veh = Player.Player.movement.getVehicle();
+                InteractableVehicle? veh = Player.UnturnedPlayer.movement.getVehicle();
                 if (veh == null)
                     return;
 
@@ -232,7 +233,7 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
                 {
                     Passenger passenger = veh.turrets[i];
                     if (passenger is not { player: not null }
-                        || passenger.player.playerID.steamID.m_SteamID != Player.Steam64
+                        || passenger.player.playerID.steamID.m_SteamID != Player.Steam64.m_SteamID
                         || passenger.turret == null)
                     {
                         continue;
@@ -241,11 +242,11 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
                     if (!_turrets.IsMatch<ItemWeaponAsset>(Assets.find(EAssetType.ITEM, passenger.turret.itemID)))
                         return;
 
-                    if (VehicleBay.GetSingletonQuick() is { } manager)
-                    {
-                        if (manager.GetDataSync(veh.asset.GUID) is { } data && VehicleData.IsEmplacement(data.Type) != ReferenceEquals(emplOrTurrets, _emplacements))
-                            return;
-                    }
+                    // todo if (VehicleBay.GetSingletonQuick() is { } manager)
+                    // todo {
+                    // todo     if (manager.GetDataSync(veh.asset.GUID) is { } data && VehicleData.IsEmplacement(data.Type) != ReferenceEquals(emplOrTurrets, _emplacements))
+                    // todo         return;
+                    // todo }
 
                     found = true;
                     break;
@@ -255,16 +256,16 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
                     return;
             }
 
-            // squads
-            if (_needsSquad && Player.Squad is not { Members.Count: > 1 })
-            {
-                return;
-            }
-
-            if (_squadMustBeFull && Player.Squad is not { Members.Count: SquadManager.SQUAD_MAX_MEMBERS })
-            {
-                return;
-            }
+            // todo // squads
+            // todo if (_needsSquad && Player.Squad is not { Members.Count: > 1 })
+            // todo {
+            // todo     return;
+            // todo }
+            // todo 
+            // todo if (_squadMustBeFull && Player.Squad is not { Members.Count: SquadManager.SQUAD_MAX_MEMBERS })
+            // todo {
+            // todo     return;
+            // todo }
 
             // objectives
             bool obj = false;

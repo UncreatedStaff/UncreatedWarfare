@@ -4,7 +4,7 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits.Buffs;
-
+#if false
 /// <summary>
 /// Shovel buildables at 2x speed. Does not stack with squadmates or with combat engineer (you can not have this while having a <see cref="Class.CombatEngineer"/> kit).
 /// </summary>
@@ -92,3 +92,4 @@ public sealed class Motivated : Buff
         base.StartEffect(onStart);
     }
 }
+#endif

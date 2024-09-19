@@ -1,14 +1,21 @@
-﻿namespace Uncreated.Warfare.Events.Models.Vehicles;
+﻿using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Players;
+
+namespace Uncreated.Warfare.Events.Models.Vehicles;
 public class ExitVehicle : PlayerEvent
 {
     private readonly InteractableVehicle _vehicle;
-    private readonly byte previousSeat;
+    private readonly byte _previousSeat;
     public InteractableVehicle Vehicle => _vehicle;
-    public byte OldPassengerIndex => previousSeat;
-    public Passenger OldPassengerData => _vehicle.passengers.Length >= previousSeat ? null! : _vehicle.passengers[previousSeat];
-    public ExitVehicle(UCPlayer player, InteractableVehicle vehicle, byte previousSeat) : base(player)
+    public byte OldPassengerIndex => _previousSeat;
+    public Passenger OldPassengerData => _vehicle.passengers.Length >= _previousSeat ? null! : _vehicle.passengers[_previousSeat];
+
+
+    [SetsRequiredMembers]
+    public ExitVehicle(WarfarePlayer player, InteractableVehicle vehicle, byte previousSeat)
     {
+        Player = player;
         _vehicle = vehicle;
-        this.previousSeat = previousSeat;
+        this._previousSeat = previousSeat;
     }
 }

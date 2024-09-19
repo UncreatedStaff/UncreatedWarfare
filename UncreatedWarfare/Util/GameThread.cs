@@ -43,7 +43,6 @@ public static class GameThread
 
     static GameThread()
     {
-        GameThread.AssertCurrent();
         IsCurrent = true;
     }
 }

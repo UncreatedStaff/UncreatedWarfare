@@ -59,8 +59,10 @@ public class AssetRedirectPageKitItem : IAssetRedirectKitItem, IPageKitItem
     public object Clone() => new AssetRedirectPageKitItem(this);
     public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
-        if (!Provider.isInitialized) throw new SingletonUnloadedException(typeof(UCWarfare));
-        return TeamManager.GetRedirectInfo(RedirectType, RedirectVariant ?? string.Empty, kit?.FactionInfo, targetTeam, out state, out amount);
+        if (!Provider.isInitialized) throw new InvalidOperationException("Not loaded.");
+        state = Array.Empty<byte>();
+        amount = 1;
+        return null;// todo TeamManager.GetRedirectInfo(RedirectType, RedirectVariant ?? string.Empty, kit?.FactionInfo, targetTeam, out state, out amount);
     }
     public KitItemModel CreateModel(Kit kit)
     {

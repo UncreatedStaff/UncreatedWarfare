@@ -28,6 +28,7 @@ public class CommandContext : ControlException
 
     private readonly UserPermissionStore _permissionsStore;
     private readonly IPlayerService _playerService;
+    private readonly CooldownManager? _cooldownManager;
     private readonly ChatService _chatService;
     private readonly string[] _parameters;
     private readonly int _argumentCount;
@@ -179,12 +180,10 @@ public class CommandContext : ControlException
     /// Type information about the command.
     /// </summary>
     public CommandInfo CommandInfo { get; }
-    public CommandContext(ICommandUser user, CancellationToken token, string[] args, string originalMessage, CommandInfo commandInfo, IServiceProvider serviceProvider)
+
+    private CommandContext(ICommandUser user, IServiceProvider serviceProvider)
     {
-        Command = null!;
         Caller = user;
-        Token = token;
-        CommandInfo = commandInfo;
         Player = user as WarfarePlayer;
 
         ServiceProvider = serviceProvider;
@@ -192,6 +191,39 @@ public class CommandContext : ControlException
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _permissionsStore = serviceProvider.GetRequiredService<UserPermissionStore>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _cooldownManager = serviceProvider.GetService<CooldownManager>();
+
+        if (Player == null)
+        {
+            Language = serviceProvider.GetRequiredService<LanguageService>().GetDefaultLanguage();
+            Culture = CultureInfo.InvariantCulture;
+            ParseFormat = Culture.NumberFormat;
+        }
+        else
+        {
+            Language = Player.Locale.LanguageInfo;
+            Culture = Player.Locale.CultureInfo;
+            ParseFormat = Player.Locale.ParseFormat;
+            IMGUI = Player is { Save.IMGUI: true };
+        }
+
+        _parameters = Array.Empty<string>();
+        ParametersWithFlags = Array.Empty<string>();
+        Flags = Array.Empty<string>();
+        OriginalMessage = string.Empty;
+        Command = null!;
+        CommandInfo = null!;
+        Parameters = new ArraySegment<string>(_parameters, 0, 0);
+
+        CallerId = user.Steam64;
+    }
+
+    public CommandContext(ICommandUser user, CancellationToken token, string[] args, string originalMessage, CommandInfo commandInfo, IServiceProvider serviceProvider) : this(user, serviceProvider)
+    {
+        Caller = user;
+        Token = token;
+        CommandInfo = commandInfo;
+        Player = user as WarfarePlayer;
 
         OriginalMessage = originalMessage;
         args ??= Array.Empty<string>();
@@ -228,7 +260,6 @@ public class CommandContext : ControlException
                     nonFlagParameters[i] = nonFlagParameters[i][1..];
             }
         }
-        else Flags = Array.Empty<string>();
 
         ArgumentCountWithFlags = args.Length;
         ParametersWithFlags = args;
@@ -237,22 +268,14 @@ public class CommandContext : ControlException
         _argumentCount = nonFlagParameters.Length;
         ArgumentCount = _argumentCount;
         Parameters = new ArraySegment<string>(nonFlagParameters);
+    }
 
-        CallerId = user.Steam64;
-
-        if (Player == null)
-        {
-            Language = serviceProvider.GetRequiredService<LanguageService>().GetDefaultLanguage();
-            Culture = Warfare.CultureInfo.InvariantCulture;
-            ParseFormat = Culture.NumberFormat;
-        }
-        else
-        {
-            Language = Player.Locale.LanguageInfo;
-            Culture = Player.Locale.CultureInfo;
-            ParseFormat = Player.Locale.ParseFormat;
-            IMGUI = Player is { Save.IMGUI: true };
-        }
+    /// <summary>
+    /// Creates a temporary <see cref="CommandContext"/> that can only be used for sending messages.
+    /// </summary>
+    public static CommandContext CreateTemporary(ICommandUser user, IServiceProvider serviceProvider)
+    {
+        return new CommandContext(user ?? throw new ArgumentNullException(nameof(user)), serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider)));
     }
 
     private static bool IsFlag(string arg)
@@ -1042,7 +1065,7 @@ public class CommandContext : ControlException
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed (even when the user is offline).</returns>
-    public bool TryGet(int parameter, out CSteamID steam64, out WarfarePlayer? onlinePlayer, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
+    public bool TryGet(int parameter, out CSteamID steam64, out WarfarePlayer? onlinePlayer, bool remainder = false /*, NameSearch searchType = UCPlayer.NameSearch.CharacterName todo */)
     {
         parameter += ArgumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
@@ -1067,7 +1090,8 @@ public class CommandContext : ControlException
                 onlinePlayer = _playerService.GetOnlinePlayer(steam64);
                 return true;
             }
-            onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
+
+            onlinePlayer = null; // todo _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
             if (onlinePlayer is { IsOnline: true })
             {
                 steam64 = onlinePlayer.Steam64;
@@ -1088,7 +1112,7 @@ public class CommandContext : ControlException
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed and that player is in <paramref name="selection"/>.</returns>
-    public bool TryGet(int parameter, out CSteamID steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
+    public bool TryGet(int parameter, out CSteamID steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false /*, NameSearch searchType = NameSearch.CharacterName todo */)
     {
         parameter += ArgumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
@@ -1123,7 +1147,8 @@ public class CommandContext : ControlException
                 }
             }
         }
-        onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, searchType)!;
+
+        onlinePlayer = null;//_playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, searchType)!;
         if (onlinePlayer is { IsOnline: true })
         {
             steam64 = onlinePlayer.Steam64;
@@ -1769,7 +1794,7 @@ public class CommandContext : ControlException
     /// <exception cref="CommandContext"/>
     public void AssertOnDuty()
     {
-        if (Player != null && !Player.OnDuty())
+        if (Player != null /* && !Player.OnDuty() */)
             throw Reply(T.NotOnDuty);
     }
 
@@ -1982,27 +2007,13 @@ public class CommandContext : ControlException
         return this;
     }
 
-    /// <summary>
-    /// Parse <paramref name="value"/> into the type of <paramref name="property"/> using <see cref="Culture"/> (a field or property in <see cref="TItem"/>) and set the property if it has the <see cref="CommandSettableAttribute"/>.
-    /// </summary>
-    /// <param name="instance">Object to set the property for.</param>
-    /// <param name="property">Name of a property, field, custom handler, or an alias defined in <see cref="CommandSettableAttribute"/>.</param>
-    /// <param name="value">The value to set in string format.</param>
-    /// <param name="actualPropertyName">Actual name of the discovered member. Never <see langword="null"/> unless <paramref name="property"/> is <see langword="null"/>.</param>
-    /// <param name="propertyType">Actual type of the discovered member. Never <see langword="null"/>, defaults to <see cref="string"/> if a property isn't found..</param>
-    /// <returns>A success/error code.</returns>
-    public SetPropertyResult SetProperty<TItem>(TItem instance, string property, string value, [NotNullIfNotNull(nameof(property))] out string? actualPropertyName, out Type propertyType) where TItem : class
-    {
-        return SettableUtil<TItem>.SetProperty(instance, property, value, Culture, out actualPropertyName, out propertyType);
-    }
-
     internal void CheckIsolatedCooldown()
     {
         if (Player != null
-            && !Player.OnDuty()
-            && CooldownManager.IsLoaded
+            // && todo !Player.OnDuty()
+            && _cooldownManager != null
             && CommandInfo != null
-            && CooldownManager.HasCooldown(Player, CooldownType.IsolatedCommand, out Cooldown cooldown, CommandInfo))
+            && _cooldownManager.HasCooldown(Player, CooldownType.IsolatedCommand, out Cooldown cooldown, CommandInfo))
         {
             OnIsolatedCooldown = true;
             IsolatedCooldown = cooldown;

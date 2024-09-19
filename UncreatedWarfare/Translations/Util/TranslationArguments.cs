@@ -67,7 +67,7 @@ public readonly ref struct TranslationArguments
         ValueSet = valueSet;
         UseIMGUI = useIMGUI;
         UseUncoloredTranslation = useUncoloredTranslation;
-        PreformattedValue = valueSet.GetValueSpan(useIMGUI, useUncoloredTranslation);
+        PreformattedValue = valueSet.GetValueSpan(useIMGUI, useUncoloredTranslation, (options & TranslationOptions.ForTerminal) != 0);
         Language = language;
         Player = player;
         Team = team is { IsValid: true } ? team : null;

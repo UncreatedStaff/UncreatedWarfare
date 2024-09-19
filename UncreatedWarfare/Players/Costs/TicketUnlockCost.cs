@@ -1,5 +1,6 @@
 ﻿namespace Uncreated.Warfare.Players.Costs;
 
+#if false
 public class TicketUnlockCost : UnlockCost
 {
     public int Tickets { get; set; }
@@ -49,6 +50,7 @@ public class TicketUnlockCost : UnlockCost
 
     public override object Clone()
     {
-        return new CreditUnlockCost { Credits = Credits, Message = Message?.Clone() };
+        return new TicketUnlockCost { Credits = Credits, Message = Message?.Clone() };
     }
 }
+#endif

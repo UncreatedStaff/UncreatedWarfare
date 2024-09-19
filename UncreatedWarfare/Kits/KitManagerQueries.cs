@@ -11,6 +11,7 @@ using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 
@@ -18,17 +19,17 @@ namespace Uncreated.Warfare.Kits;
 
 partial class KitManager
 {
-    public async Task DownloadPlayersKitData(IEnumerable<UCPlayer> playerList, bool lockPurchaseSync,
-        CancellationToken token = default)
+    /*
+    public async Task DownloadPlayersKitData(IEnumerable<WarfarePlayer> playerList, bool lockPurchaseSync, CancellationToken token = default)
     {
-        UCPlayer[] players = playerList.AsArrayFast(true);
+        WarfarePlayer[] players = playerList.AsArrayFast(true);
         if (players.Length == 0)
             return;
         ulong[] steam64Ids = new ulong[players.Length];
         for (int i = 0; i < players.Length; ++i)
         {
             steam64Ids[i] = players[i].Steam64;
-            UCPlayer player = players[i];
+            WarfarePlayer player = players[i];
             if (player is { IsDownloadingKitData: true, HasDownloadedKitData: false })
             {
                 L.LogDebug("Spin-waiting for player kit data for " + player + "...");
@@ -52,7 +53,7 @@ partial class KitManager
             CombinedTokenSources[] tknSources = new CombinedTokenSources[players.Length];
             for (int i = 0; i < players.Length; ++i)
             {
-                UCPlayer pl = players[i];
+                WarfarePlayer pl = players[i];
                 CancellationToken token2 = token;
                 tknSources[i] = token2.CombineTokensIfNeeded(pl.DisconnectToken);
                 tasks[i] = pl.PurchaseSync.WaitAsync(token2);
@@ -159,7 +160,7 @@ partial class KitManager
 
             for (int p = 0; p < players.Length; ++p)
             {
-                UCPlayer player = players[p];
+                WarfarePlayer player = players[p];
                 if (!player.IsOnline)
                     continue;
 
@@ -242,7 +243,7 @@ partial class KitManager
         {
             for (int i = 0; i < players.Length; ++i)
             {
-                UCPlayer player = players[i];
+                WarfarePlayer player = players[i];
                 player.HasDownloadedKitData = true;
                 player.IsDownloadingKitData = false;
                 if (lockPurchaseSync)
@@ -264,9 +265,10 @@ partial class KitManager
         await UniTask.SwitchToMainThread(token);
         Signs.UpdateSigns();
     }
+    */
 
-    public Task DownloadPlayerKitData(UCPlayer player, bool lockPurchaseSync, CancellationToken token = default) =>
-        DownloadPlayersKitData([ player ], lockPurchaseSync, token);
+    //public Task DownloadPlayerKitData(WarfarePlayer player, bool lockPurchaseSync, CancellationToken token = default) =>
+    //    DownloadPlayersKitData([ player ], lockPurchaseSync, token);
 
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> HasAccess(uint kit, CSteamID player, CancellationToken token = default)
@@ -401,9 +403,10 @@ partial class KitManager
 
         dbContext.KitHotkeys.RemoveRange(hotkeys);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        if (Provider.isInitialized && UCPlayer.FromID(player) is { IsOnline: true } ucPlayer)
+        WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNull(player);
+        if (onlinePlayer != null)
         {
-            ucPlayer.HotkeyBindings?.RemoveAll(x => x.Kit == kit && hotkeys.Any(y => y.Slot == x.Slot));
+            onlinePlayer.Component<HotkeyPlayerComponent>().HotkeyBindings?.RemoveAll(x => x.Kit == kit && hotkeys.Any(y => y.Slot == x.Slot));
         }
         return true;
     }
@@ -445,7 +448,7 @@ partial class KitManager
     }
     internal async Task SaveFavorites(WarfarePlayer player, IReadOnlyList<uint> favoriteKits, CancellationToken token = default)
     {
-        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
+        // using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
 
         using IServiceScope scope = _serviceProvider.CreateScope();
         await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
@@ -462,7 +465,7 @@ partial class KitManager
 
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
         
-        player.KitMenuData.FavoritesDirty = false;
+        // todo player.KitMenuData.FavoritesDirty = false;
     }
     public async Task ResetLayout(WarfarePlayer player, uint kit, bool lockPurchaseSync, CancellationToken token = default)
     {
@@ -475,7 +478,7 @@ partial class KitManager
         {
             ulong steam64 = player.Steam64.m_SteamID;
 
-            player.LayoutTransformations?.RemoveAll(x => x.Kit == kit);
+            player.Component<ItemTrackingPlayerComponent>().LayoutTransformations?.RemoveAll(x => x.Kit == kit);
 
             List<KitLayoutTransformation> list = await dbContext.KitLayoutTransformations
                 .Where(x => x.Steam64 == steam64 && x.KitId == kit)
@@ -560,7 +563,7 @@ partial class KitManager
                     }
                     else continue;
                 }
-                else if (jar.GetItem(kit, TeamManager.GetFactionSafe(player.GetTeam()), out _, out _) is { } ia)
+                else if (jar.GetItem(kit, player.Team.Faction, out _, out _) is { } ia)
                 {
                     sizeX1 = ia.size_x;
                     sizeY1 = ia.size_y;
@@ -587,10 +590,11 @@ partial class KitManager
                 }
                 byte origx, origy;
                 Page origPage;
-                ItemTransformation t = player.ItemTransformations.FirstOrDefault(x => x.Item == colliding.Value.Item);
+                ItemTrackingPlayerComponent comp = player.Component<ItemTrackingPlayerComponent>();
+                ItemTransformation t = comp.ItemTransformations.FirstOrDefault(x => x.Item == colliding.Value.Item);
                 if (t.Item == null)
                 {
-                    ItemDropTransformation t2 = player.ItemDropTransformations.FirstOrDefault(x => x.Item == colliding.Value.Item);
+                    ItemDropTransformation t2 = comp.ItemDropTransformations.FirstOrDefault(x => x.Item == colliding.Value.Item);
                     if (t.Item == null)
                     {
                         L.LogDebug("Unable to find transformations for original item blocking " + jar + ".");

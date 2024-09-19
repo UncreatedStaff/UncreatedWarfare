@@ -1,8 +1,10 @@
 ﻿using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits;
+#if false
 public abstract class Buff : Trait, IBuff
 {
     public const float BLINK_LEAD_TIME = 10f;
@@ -10,7 +12,7 @@ public abstract class Buff : Trait, IBuff
     private bool _isActivated = true;
     public virtual bool IsBlinking => _shouldBlink;
     bool IBuff.Reserved => false;
-    UCPlayer IBuff.Player => TargetPlayer;
+    WarfarePlayer IBuff.Player => TargetPlayer;
     string IBuff.Icon => Data.Icon.HasValue ? Data.Icon.Value : BuffUI.DefaultBuffIcon;
     public bool IsActivated
     {
@@ -106,12 +108,13 @@ public abstract class Buff : Trait, IBuff
         ClearEffect(true);
     }
 }
+#endif
 public interface IBuff
 {
     bool IsBlinking { get; }
     bool Reserved { get; }
     string Icon { get; }
-    UCPlayer Player { get; }
+    WarfarePlayer Player { get; }
 }
 public interface IXPBoostBuff
 {

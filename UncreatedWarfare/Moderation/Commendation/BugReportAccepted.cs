@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Commendation;
 
@@ -74,7 +75,7 @@ public class BugReportAccepted : ModerationEntry
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnTableBugReportAcceptedsCommit}` = `t`.`{DatabaseInterface.ColumnTableBugReportAcceptedsCommit}`," +
                        $"`{DatabaseInterface.ColumnTableBugReportAcceptedsIssue}` = `t`.`{DatabaseInterface.ColumnTableBugReportAcceptedsIssue}`;");
 
-        args.Add((object?)Commit.MaxLength(7) ?? DBNull.Value);
+        args.Add((object?)Commit.Truncate(7) ?? DBNull.Value);
         args.Add(Issue.HasValue ? Issue.Value : DBNull.Value);
 
         return hasEvidenceCalls;

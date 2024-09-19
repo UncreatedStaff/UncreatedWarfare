@@ -8,8 +8,11 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using UnityEngine.Networking;
 
@@ -371,11 +374,10 @@ public class AudioRecordManager
     {
         L.LogDebug(data.Count + " B received.");
 
-        UCPlayer? player = UCPlayer.FromPlayer(voice.player);
-        if (player == null)
-            return;
-
-        AudioRecordPlayerComponent.Get(player)?.AppendPacket(data);
+        IServiceProvider serviceProvider = WarfareModule.Singleton.ServiceProvider;
+        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        WarfarePlayer? player = playerService.GetOnlinePlayerOrNull(voice.player);
+        player?.Component<AudioRecordPlayerComponent>().AppendPacket(data);
     }
 
     [UsedImplicitly]

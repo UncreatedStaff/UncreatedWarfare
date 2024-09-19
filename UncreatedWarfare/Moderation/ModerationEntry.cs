@@ -5,8 +5,10 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation;
 
@@ -144,7 +146,7 @@ public abstract class ModerationEntry : IModerationEntry
             }
             if (RemovedMessage != null)
             {
-                workingList.Add("For: \"" + RemovedMessage.MaxLength(64) + "\"");
+                workingList.Add("For: \"" + RemovedMessage.Truncate(64) + "\"");
             }
         }
 
@@ -358,7 +360,7 @@ public abstract class ModerationEntry : IModerationEntry
         builder.Append($"DELETE FROM `{DatabaseInterface.TableActors}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
         if (Actors is { Length: > 0 })
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableActors}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableActors}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnActorsIndex,
                 DatabaseInterface.ColumnActorsId, DatabaseInterface.ColumnActorsRole, DatabaseInterface.ColumnActorsAsAdmin)}) VALUES ");
             
@@ -366,11 +368,11 @@ public abstract class ModerationEntry : IModerationEntry
             {
                 ref RelatedActor actor = ref Actors[i];
 
-                F.AppendPropertyList(builder, args.Count, 4, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 4, i, 1);
 
                 args.Add(i);
                 args.Add(actor.Actor.Id);
-                args.Add(actor.Role.MaxLength(255) ?? string.Empty);
+                args.Add(actor.Role.Truncate(255) ?? string.Empty);
                 args.Add(actor.Admin);
             }
             builder.Append(';');
@@ -394,7 +396,7 @@ public abstract class ModerationEntry : IModerationEntry
 
             if (anyOld)
             {
-                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({SqlTypes.ColumnList(
+                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({MySqlSnippets.ColumnList(
                     DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnEvidenceId,
                     DatabaseInterface.ColumnEvidenceActorId, DatabaseInterface.ColumnEvidenceIsImage,
                     DatabaseInterface.ColumnEvidenceLink, DatabaseInterface.ColumnEvidenceLocalSource,
@@ -406,14 +408,14 @@ public abstract class ModerationEntry : IModerationEntry
                     if (evidence.Id == 0u)
                         continue;
 
-                    F.AppendPropertyList(builder, args.Count, 7, i, 1);
+                    MySqlSnippets.AppendPropertyList(builder, args.Count, 7, i, 1);
 
                     args.Add(evidence.Id);
                     args.Add(evidence.Actor == null ? DBNull.Value : evidence.Actor.Id);
                     args.Add(evidence.Image);
-                    args.Add(evidence.URL.MaxLength(512)!);
-                    args.Add((object?)evidence.SavedLocation.MaxLength(512) ?? DBNull.Value);
-                    args.Add((object?)evidence.Message.MaxLength(1024) ?? DBNull.Value);
+                    args.Add(evidence.URL.Truncate(512)!);
+                    args.Add((object?)evidence.SavedLocation.Truncate(512) ?? DBNull.Value);
+                    args.Add((object?)evidence.Message.Truncate(1024) ?? DBNull.Value);
                     args.Add(evidence.Timestamp.UtcDateTime);
                 }
 
@@ -429,7 +431,7 @@ public abstract class ModerationEntry : IModerationEntry
 
             if (anyNew)
             {
-                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({SqlTypes.ColumnList(
+                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({MySqlSnippets.ColumnList(
                     DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnEvidenceActorId,
                     DatabaseInterface.ColumnEvidenceIsImage, DatabaseInterface.ColumnEvidenceLink,
                     DatabaseInterface.ColumnEvidenceLocalSource, DatabaseInterface.ColumnEvidenceMessage,
@@ -441,17 +443,17 @@ public abstract class ModerationEntry : IModerationEntry
                     if (evidence.Id != 0u)
                         continue;
 
-                    F.AppendPropertyList(builder, args.Count, 6, i, 1);
+                    MySqlSnippets.AppendPropertyList(builder, args.Count, 6, i, 1);
 
                     args.Add(evidence.Actor == null ? DBNull.Value : evidence.Actor.Id);
                     args.Add(evidence.Image);
-                    args.Add(evidence.URL.MaxLength(512)!);
-                    args.Add((object?)evidence.SavedLocation?.MaxLength(512) ?? DBNull.Value);
-                    args.Add((object?)evidence.Message?.MaxLength(1024) ?? DBNull.Value);
+                    args.Add(evidence.URL.Truncate(512)!);
+                    args.Add((object?)evidence.SavedLocation?.Truncate(512) ?? DBNull.Value);
+                    args.Add((object?)evidence.Message?.Truncate(1024) ?? DBNull.Value);
                     args.Add(evidence.Timestamp.UtcDateTime);
                 }
 
-                builder.Append($"; SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnEvidenceId,
+                builder.Append($"; SELECT {MySqlSnippets.ColumnList(DatabaseInterface.ColumnEvidenceId,
                     DatabaseInterface.ColumnEvidenceLink, DatabaseInterface.ColumnEvidenceMessage,
                     DatabaseInterface.ColumnEvidenceLocalSource, DatabaseInterface.ColumnEvidenceIsImage,
                     DatabaseInterface.ColumnEvidenceTimestamp, DatabaseInterface.ColumnEvidenceActorId)} FROM `{DatabaseInterface.TableEvidence}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");

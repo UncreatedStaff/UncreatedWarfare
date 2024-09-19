@@ -2,6 +2,10 @@
 using Uncreated.Framework.UI.Presets;
 
 namespace Uncreated.Warfare.Players;
+
+/// <summary>
+/// Allows using <see cref="WarfarePlayer"/> with Uncreated.UI.
+/// </summary>
 internal static class WarfarePlayerUIExtensions
 {
     internal static void SetVisibility(this IElement element, WarfarePlayer player, bool isEnabled)

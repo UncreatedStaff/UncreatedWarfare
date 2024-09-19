@@ -28,6 +28,7 @@ namespace Uncreated.Warfare.Levels;
 
 public sealed class Points
 {
+#if false
     private static readonly string UpdateAllPointsQuery = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` in (";
 
     public static readonly XPUI XPUI;
@@ -1229,6 +1230,7 @@ public sealed class Points
                         ? spawn.PrimaryKey : PrimaryKey.NotAssigned, e.InstigatorId, e.Vehicle.asset.GUID, e.Component.LastItem, e.Component.LastDamageOrigin, vehicleWasFriendly);
         }
     }
+#endif
 }
 public enum XPReward
 {
@@ -1638,8 +1640,8 @@ public struct CreditsParameters
         IsPunishment = amount < 0 && isPunishment;
     }
 
-    public readonly Task Award() => Points.AwardCreditsAsync(this);
-    public readonly Task Award(CancellationToken token) => Points.AwardCreditsAsync(this, token);
+    // public readonly Task Award() => Points.AwardCreditsAsync(this);
+    // public readonly Task Award(CancellationToken token) => Points.AwardCreditsAsync(this, token);
 }
 public class XPParameters
 {
@@ -1788,6 +1790,6 @@ public class XPParameters
         Reward = XPReward.Custom;
     }
 
-    public Task Award() => Points.AwardXPAsync(this);
-    public Task Award(CancellationToken token) => Points.AwardXPAsync(this, token);
+    // public Task Award() => Points.AwardXPAsync(this);
+    // public Task Award(CancellationToken token) => Points.AwardXPAsync(this, token);
 }

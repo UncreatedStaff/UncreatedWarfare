@@ -192,9 +192,11 @@ public class VehicleService
 
             VehicleManager.forceRemovePlayer(vehicle, pl.playerID.steamID);
             Vector3 p = pl.player.transform.position;
-            if (F.TryGetHeight(p.x, p.z, out float height, 1f) && Mathf.Abs(p.y - height) > 5f)
+            float y = TerrainUtility.GetHighestPoint(in p, 1f);
+            if (Mathf.Abs(p.y - y) > 5f)
             {
-                pl.player.teleportToLocationUnsafe(p with { y = height }, pl.player.look.aim.transform.rotation.eulerAngles.y);
+                p.y = y;
+                pl.player.teleportToLocationUnsafe(p, pl.player.look.aim.transform.rotation.eulerAngles.y);
             }
         }
 

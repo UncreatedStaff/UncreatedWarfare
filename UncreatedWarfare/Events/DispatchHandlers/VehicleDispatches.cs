@@ -3,6 +3,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
@@ -34,7 +35,7 @@ partial class EventDispatcher2
             if (args.Vehicle == null || args.Vehicle.isDead || args.Vehicle.isLocked == isLocking)
                 return;
 
-            if (vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
+            if (args.Vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
             {
                 vehicleComponent.LastLocker = args.Player.Steam64;
             }

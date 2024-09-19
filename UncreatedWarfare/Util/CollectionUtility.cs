@@ -7,6 +7,14 @@ namespace Uncreated.Warfare.Util;
 public static class CollectionUtility
 {
     /// <summary>
+    /// Compares two byte arrays.
+    /// </summary>
+    public static bool CompareBytes(byte[] arr1, byte[] arr2)
+    {
+        return ReferenceEquals(arr1, arr2) || arr1.Length == arr2.Length && arr1.AsSpan().SequenceEqual(arr2);
+    }
+
+    /// <summary>
     /// Check if a collection is <see langword="null"/> or if it has no elements.
     /// </summary>
     public static bool IsNullOrEmpty<T>(this ICollection<T>? collection)

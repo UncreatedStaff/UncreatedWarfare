@@ -7,6 +7,7 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Stats.Records;
 
 namespace Uncreated.Warfare.FOBs;
+#if false
 public class FobRecordTracker : IAsyncDisposable
 {
     private readonly IServiceProvider _serviceProvider;
@@ -163,3 +164,4 @@ public class FobRecordTracker : IAsyncDisposable
         }
     }
 }
+#endif

@@ -1,5 +1,7 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Components;
@@ -7,7 +9,10 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
@@ -61,9 +66,9 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
             time - ___lastActive < ___setupDelay ||     // in setup phase
                                                         // collider is part of the trap barricade
             __instance.transform.parent == other.transform.parent && other.transform.parent != null ||
-            time - ___lastTriggered < ___cooldown ||    // on cooldown
+            time - ___lastTriggered < ___cooldown// ||    // on cooldown
                                                         // gamemode not active
-            Data.Gamemode is null || Data.Gamemode.State != Gamemodes.State.Active
+            // todo Data.Gamemode is null || Data.Gamemode.State != Gamemodes.State.Active
             )
         {
             return false;
@@ -80,21 +85,24 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
             return false;
         }
 
-        ulong triggerTeam = 0;
-        UCPlayer? playerTriggerer = null;
+        IServiceProvider serviceProvider = WarfareModule.Singleton.ServiceProvider;
+        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
+
+        Team? triggerTeam = null;
+        WarfarePlayer? playerTriggerer = null;
         Zombie? zombieTriggerer = null;
         Animal? animalTriggerer = null;
         ThrowableComponent? throwable = null;
         ItemThrowableAsset? throwableAsset = null;
         if (other.transform.CompareTag("Player"))
         {
-            playerTriggerer = UCPlayer.FromPlayer(DamageTool.getPlayer(other.transform));
+            playerTriggerer = playerService.GetOnlinePlayerOrNull(DamageTool.getPlayer(other.transform));
             if (playerTriggerer == null)
             {
                 return false;
             }
 
-            triggerTeam = playerTriggerer.GetTeam();
+            triggerTeam = playerTriggerer.Team;
         }
         else if (other.transform.CompareTag("Vehicle"))
         {
@@ -107,20 +115,20 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
 
             if (vehicle.passengers.Length > 0 && vehicle.passengers[0].player != null)
             {
-                playerTriggerer = UCPlayer.FromPlayer(vehicle.passengers[0].player.player);
+                playerTriggerer = playerService.GetOnlinePlayerOrNull(vehicle.passengers[0].player.player);
             }
 
             if (playerTriggerer == null)
             {
                 if (vehicle.TryGetComponent(out VehicleComponent comp2))
-                    playerTriggerer = UCPlayer.FromID(comp2.LastDriver);
+                    playerTriggerer = playerService.GetOnlinePlayerOrNull(comp2.LastDriver);
                 if (playerTriggerer == null)
                 {
                     return false;
                 }
             }
 
-            triggerTeam = playerTriggerer.GetTeam();
+            triggerTeam = playerTriggerer.Team;
         }
         else if (other.transform.CompareTag("Agent"))
         {
@@ -133,7 +141,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
         }
         else if (other.TryGetComponent(out throwable!))
         {
-            playerTriggerer = UCPlayer.FromSteamPlayer(PlayerTool.getSteamPlayer(throwable.Owner));
+            playerTriggerer = playerService.GetOnlinePlayerOrNull(PlayerTool.getSteamPlayer(throwable.Owner));
             throwableAsset = Assets.find<ItemThrowableAsset>(throwable.Throwable);
 
             if (playerTriggerer == null)
@@ -141,7 +149,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
                 return false;
             }
             
-            triggerTeam = playerTriggerer.GetTeam();
+            triggerTeam = playerTriggerer.Team;
         }
 
         BarricadeData serversideData = barricade.GetServersideData();
@@ -150,7 +158,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
             Trap = __instance,
             Barricade = barricade,
             ServersideData = serversideData,
-            BarricadeOwner = UCPlayer.FromID(serversideData.owner),
+            BarricadeOwner = playerService.GetOnlinePlayerOrNull(serversideData.owner),
             TriggerCollider = other,
             TriggerObject = other.gameObject,
             TriggeringPlayer = playerTriggerer,
@@ -222,14 +230,14 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
 
             if (args.BarricadeOwner is { IsOnline: true })
             {
-                ownerData = PlayerDeathTrackingComponent.GetOrAdd(args.BarricadeOwner.Player);
+                ownerData = PlayerDeathTrackingComponent.GetOrAdd(args.BarricadeOwner.UnturnedPlayer);
 
                 ownerData.OwnedTrap = args.Barricade;
             }
 
             if (args.TriggeringPlayer is { IsOnline: true })
             {
-                triggererData = PlayerDeathTrackingComponent.GetOrAdd(args.TriggeringPlayer.Player);
+                triggererData = PlayerDeathTrackingComponent.GetOrAdd(args.TriggeringPlayer.UnturnedPlayer);
 
                 triggererData.TriggeredTrapExplosive = args.Barricade;
                 triggererData.ThrowableTrapTrigger = args.TriggeringThrowable;
@@ -290,16 +298,16 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
             }
             else if (args.TriggeringPlayer is { IsOnline: true })
             {
-                if (args.TriggeringPlayer.IsInVehicle)
+                if (args.TriggeringPlayer.UnturnedPlayer.movement.getVehicle() != null)
                     return;
 
-                data = PlayerDeathTrackingComponent.GetOrAdd(args.TriggeringPlayer.Player);
+                data = PlayerDeathTrackingComponent.GetOrAdd(args.TriggeringPlayer.UnturnedPlayer);
                 data.LastShreddedBy = AssetLink.Create(args.Barricade.asset);
 
-                DamageTool.damage(args.TriggeringPlayer.Player, EDeathCause.SHRED, ELimb.SPINE, new CSteamID(args.ServersideData.owner), Vector3.up, args.PlayerDamage, 1f, out _, trackKill: true);
-                if (args.ShouldBreakLegs && !args.TriggeringPlayer.Player.life.isDead)
+                DamageTool.damage(args.TriggeringPlayer.UnturnedPlayer, EDeathCause.SHRED, ELimb.SPINE, new CSteamID(args.ServersideData.owner), Vector3.up, args.PlayerDamage, 1f, out _, trackKill: true);
+                if (args.ShouldBreakLegs && !args.TriggeringPlayer.UnturnedPlayer.life.isDead)
                 {
-                    args.TriggeringPlayer.Player.life.breakLegs();
+                    args.TriggeringPlayer.UnturnedPlayer.life.breakLegs();
                 }
             }
 
@@ -307,11 +315,11 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
 
             if (args.WearAndTearDamage > 0)
             {
-                BarricadeManager.damage(args.Barricade.model, args.WearAndTearDamage, 1f, false, args.TriggeringPlayer?.CSteamID ?? CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
+                BarricadeManager.damage(args.Barricade.model, args.WearAndTearDamage, 1f, false, args.TriggeringPlayer?.Steam64 ?? CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
             }
             else if (args.WearAndTearDamage < 0)
             {
-                BarricadeManager.repair(args.Barricade.model, -args.WearAndTearDamage, 1f, args.TriggeringPlayer?.CSteamID ?? CSteamID.Nil);
+                BarricadeManager.repair(args.Barricade.model, -args.WearAndTearDamage, 1f, args.TriggeringPlayer?.Steam64 ?? CSteamID.Nil);
             }
 
             if (data != null)

@@ -2,6 +2,7 @@
 using System.Globalization;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Signs;
 
@@ -12,5 +13,5 @@ public interface ISignInstanceProvider
     /// </summary>
     bool CanBatchTranslate { get; }
     void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider);
-    string Translate(LanguageInfo language, CultureInfo culture, WarfarePlayer? player);
+    string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player);
 }

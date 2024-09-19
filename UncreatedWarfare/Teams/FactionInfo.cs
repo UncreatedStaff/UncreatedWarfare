@@ -11,6 +11,7 @@ using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
@@ -218,7 +219,7 @@ public class FactionInfo : ICloneable, ITranslationArgument
         FOBRadio = model.FOBRadio;
     }
 
-    internal Faction CreateModel()
+    internal Faction CreateModel(ICachableLanguageDataStore languageDataStore)
     {
         Faction faction = new Faction
         {
@@ -242,7 +243,7 @@ public class FactionInfo : ICloneable, ITranslationArgument
             foreach (KeyValuePair<string, string> kvp in NameTranslations)
             {
                 FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-                if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
+                if (languageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
                     continue;
                 if (loc == null)
                 {
@@ -264,7 +265,7 @@ public class FactionInfo : ICloneable, ITranslationArgument
             foreach (KeyValuePair<string, string> kvp in ShortNameTranslations)
             {
                 FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-                if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
+                if (languageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
                     continue;
                 if (loc == null)
                 {
@@ -286,7 +287,7 @@ public class FactionInfo : ICloneable, ITranslationArgument
             foreach (KeyValuePair<string, string> kvp in AbbreviationTranslations)
             {
                 FactionLocalization? loc = faction.Translations.FirstOrDefault(x => x.Language.Code.Equals(kvp.Key, StringComparison.Ordinal));
-                if (Data.LanguageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
+                if (languageDataStore.GetInfoCached(kvp.Key) is not { Key: not 0 } lang)
                     continue;
                 if (loc == null)
                 {
@@ -642,9 +643,9 @@ public class FactionInfo : ICloneable, ITranslationArgument
 
     public static async Task DownloadFactions(IFactionDbContext db, List<FactionInfo> list, bool uploadDefaultIfMissing, CancellationToken token = default)
     {
-        if (Provider.isInitialized)
-            Localization.ClearSection(TranslationSection.Factions);
-
+        // if (Provider.isInitialized)
+        //     Localization.ClearSection(TranslationSection.Factions);
+        // 
         List<Faction> factions = await db.Factions
             .Include(x => x.Assets)
             .Include(x => x.Translations)
@@ -653,12 +654,12 @@ public class FactionInfo : ICloneable, ITranslationArgument
 
         if (factions.Count == 0)
         {
-            for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
-            {
-                Faction faction = TeamManager.DefaultFactions[i].CreateModel();
-                faction.Key = default;
-                factions.Add(faction);
-            }
+            // todo for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
+            // todo {
+            // todo     Faction faction = TeamManager.DefaultFactions[i].CreateModel();
+            // todo     faction.Key = default;
+            // todo     factions.Add(faction);
+            // todo }
 
             if (uploadDefaultIfMissing)
             {
@@ -691,18 +692,18 @@ public class FactionInfo : ICloneable, ITranslationArgument
                     if (local.Language.Code.IsDefault())
                         continue;
 
-                    if (Data.LanguageDataStore.GetInfoCached(local.Language.Code) is { } language)
-                        language.IncrementSection(TranslationSection.Factions, (local.Name != null ? 1 : 0) + (local.ShortName != null ? 1 : 0) + (local.Abbreviation != null ? 1 : 0));
+                    // if (languageDataStore.GetInfoCached(local.Language.Code) is { } language)
+                    //     language.IncrementSection(TranslationSection.Factions, (local.Name != null ? 1 : 0) + (local.ShortName != null ? 1 : 0) + (local.Abbreviation != null ? 1 : 0));
                 }
             }
         }
 
         list.Sort((a, b) => a.PrimaryKey.CompareTo(b.PrimaryKey));
 
-        if (Provider.isInitialized)
-        {
-            Localization.IncrementSection(TranslationSection.Factions, list.Count * 3);
-        }
+        // if (Provider.isInitialized)
+        // {
+        //     Localization.IncrementSection(TranslationSection.Factions, list.Count * 3);
+        // }
 
         L.LogDebug($"Loaded {list.Count} faction(s).");
     }

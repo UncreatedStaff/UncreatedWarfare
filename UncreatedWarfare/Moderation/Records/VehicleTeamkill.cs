@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Records;
 [ModerationEntry(ModerationEntryType.VehicleTeamkill)]
@@ -125,14 +126,14 @@ public class VehicleTeamkill : ModerationEntry
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset,
             DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName, DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 3, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 3, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset}`," +
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}`," +
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}`;");
 
         args.Add(Vehicle.HasValue ? Vehicle.Value.ToString("N") : DBNull.Value);
-        args.Add((object?)VehicleName.MaxLength(48) ?? DBNull.Value);
+        args.Add((object?)VehicleName.Truncate(48) ?? DBNull.Value);
         args.Add(Origin.HasValue ? Origin.Value.ToString() : DBNull.Value);
 
         return hasEvidenceCalls;

@@ -6,6 +6,7 @@ using System.Linq;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Zones;
 
@@ -229,10 +230,10 @@ public class ZoneStore : IHostedService
     /// </summary>
     public Zone? SearchZone(string term)
     {
-        int index = F.StringIndexOf(Zones, x => x.Name, term, false);
+        int index = CollectionUtility.StringIndexOf(Zones, x => x.Name, term, false);
         if (index < 0)
         {
-            index = F.StringIndexOf(Zones, x => x.ShortName, term, false);
+            index = CollectionUtility.StringIndexOf(Zones, x => x.ShortName, term, false);
         }
 
         if (index >= 0)
@@ -240,14 +241,14 @@ public class ZoneStore : IHostedService
 
         if (term.Equals("lobby", StringComparison.OrdinalIgnoreCase) || term.Equals("spawn", StringComparison.OrdinalIgnoreCase))
             return Zones.FirstOrDefault(x => x.Type == ZoneType.Lobby);
-        if (term.Equals("t1main", StringComparison.OrdinalIgnoreCase) || term.Equals("t1", StringComparison.OrdinalIgnoreCase))
-            return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, TeamManager.Team1Faction));
-        if (term.Equals("t2main", StringComparison.OrdinalIgnoreCase) || term.Equals("t2", StringComparison.OrdinalIgnoreCase))
-            return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, TeamManager.Team2Faction));
-        if (term.Equals("t1amc", StringComparison.OrdinalIgnoreCase))
-            return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, TeamManager.Team1Faction));
-        if (term.Equals("t2amc", StringComparison.OrdinalIgnoreCase))
-            return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, TeamManager.Team2Faction));
+        //if (term.Equals("t1main", StringComparison.OrdinalIgnoreCase) || term.Equals("t1", StringComparison.OrdinalIgnoreCase))
+        //    return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, TeamManager.Team1Faction));
+        //if (term.Equals("t2main", StringComparison.OrdinalIgnoreCase) || term.Equals("t2", StringComparison.OrdinalIgnoreCase))
+        //    return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, TeamManager.Team2Faction));
+        //if (term.Equals("t1amc", StringComparison.OrdinalIgnoreCase))
+        //    return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, TeamManager.Team1Faction));
+        //if (term.Equals("t2amc", StringComparison.OrdinalIgnoreCase))
+        //    return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, TeamManager.Team2Faction));
 
         // todo lookup obj1, obj2, and obj
         //Flag? fl = null;

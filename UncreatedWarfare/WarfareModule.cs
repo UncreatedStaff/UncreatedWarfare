@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -31,6 +32,7 @@ using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
@@ -128,6 +130,8 @@ public sealed class WarfareModule : IModuleNexus
 
         Singleton = this;
         _gameObjectHost = new GameObject("Uncreated.Warfare");
+        Object.DontDestroyOnLoad(_gameObjectHost);
+
         _cancellationTokenSource = new CancellationTokenSource();
 
         ConfigurationSettings.SetupTypeConverters();
@@ -221,8 +225,12 @@ public sealed class WarfareModule : IModuleNexus
         serviceCollection.AddSingleton(this);
         serviceCollection.AddSingleton(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)));
 
+        serviceCollection.AddSingleton(_gameObjectHost.GetOrAddComponent<WarfareTimeComponent>());
 
         serviceCollection.AddSingleton<AssetConfiguration>();
+
+        // homebase
+        serviceCollection.AddSingleton<HomebaseConnector>();
 
         // UI
         serviceCollection.AddSingleton<ModerationUI>();

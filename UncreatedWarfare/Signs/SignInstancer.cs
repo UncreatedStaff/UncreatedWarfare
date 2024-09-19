@@ -89,7 +89,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
             return sign.text;
         }
 
-        return provider.Translate(language, culture, null);
+        return provider.Translate(_translationService.ValueFormatter, _serviceProvider, language, culture, null);
     }
 
     public string GetSignText(BarricadeDrop drop, WarfarePlayer player)
@@ -106,7 +106,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
             return sign.text;
         }
 
-        return provider.Translate(player.Locale.LanguageInfo, player.Locale.CultureInfo, player);
+        return provider.Translate(_translationService.ValueFormatter, _serviceProvider, player.Locale.LanguageInfo, player.Locale.CultureInfo, player);
     }
 
     public int UpdateSigns()
@@ -229,7 +229,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         return ct;
     }
 
-    private static void BroadcastUpdate(LanguageSet set, ISignInstanceProvider provider, in BarricadeInfo barricade, InteractableSign sign, ref bool canBatch, ref bool hasCanBatch, ref string? batchTranslate)
+    private void BroadcastUpdate(LanguageSet set, ISignInstanceProvider provider, in BarricadeInfo barricade, InteractableSign sign, ref bool canBatch, ref bool hasCanBatch, ref string? batchTranslate)
     {
         NetId netId = sign.GetNetId();
 
@@ -243,7 +243,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         string? text;
         if (canBatch)
         {
-            text = batchTranslate ??= provider.Translate(set.Language, set.Culture, null);
+            text = batchTranslate ??= provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, null);
             Data.SendChangeText.Invoke(netId, ENetReliability.Unreliable, set.GatherTransportConnections(region.x, region.y, BarricadeManager.BARRICADE_REGIONS), text);
         }
         else while (set.MoveNext())
@@ -252,7 +252,7 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
             if (!Regions.checkArea(movement.region_x, movement.region_y, region.x, region.y, BarricadeManager.BARRICADE_REGIONS))
                 continue;
 
-            text = provider.Translate(set.Language, set.Culture, set.Next);
+            text = provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, set.Next);
             Data.SendChangeText.Invoke(netId, ENetReliability.Unreliable, set.Next.Connection, text);
         }
     }

@@ -3,6 +3,7 @@ using Uncreated.Warfare.Levels;
 
 namespace Uncreated.Warfare.Players.Costs;
 
+#if false
 /// <summary>
 /// TODO I want to rewrite how XP is queried to make it safer and faster.
 /// </summary>
@@ -12,19 +13,19 @@ public class XPUnlockCost : UnlockCost
     public XPReward? RewardType { get; set; }
     public double? RewardMultiplier { get; set; }
     public TranslationList? Message { get; set; }
-    public override async UniTask<bool> CanApply(UCPlayer player, ulong team, CancellationToken token = default)
+    public override async UniTask<bool> CanApply(WarfarePlayer player, ulong team, CancellationToken token = default)
     {
         int xp = await Data.AdminSql.GetXP(player.Steam64, team, token);
         return xp >= CalculateActualXPAmount();
     }
 
-    public override async UniTask Undo(UCPlayer player, ulong team, CancellationToken token = default)
+    public override async UniTask Undo(WarfarePlayer player, ulong team, CancellationToken token = default)
     {
         int amt = CalculateActualXPAmount();
         await Points.AwardXPAsync(new XPParameters(player, team, -amt, message: null, awardCredits: false), token);
     }
 
-    public override async UniTask<bool> TryApply(UCPlayer player, ulong team, CancellationToken token = default)
+    public override async UniTask<bool> TryApply(WarfarePlayer player, ulong team, CancellationToken token = default)
     {
         int xp = await Data.AdminSql.GetXP(player.Steam64, team, token);
 
@@ -60,3 +61,4 @@ public class XPUnlockCost : UnlockCost
         return new XPUnlockCost { XP = XP, Message = Message?.Clone(), RewardMultiplier = RewardMultiplier, RewardType = RewardType };
     }
 }
+#endif

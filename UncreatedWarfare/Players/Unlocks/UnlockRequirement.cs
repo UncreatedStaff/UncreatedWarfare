@@ -78,11 +78,14 @@ public abstract class UnlockRequirement : ICloneable
         L.LogWarning("Unhandled vehicle requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
+
+#if false
     public virtual Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
         L.LogWarning("Unhandled trait requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
+#endif
 
     /// <summary>
     /// Write a <see cref="UnlockRequirement"/> to JSON.

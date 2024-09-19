@@ -307,7 +307,7 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
         if (!await Manager.HasAccess(kit, player, CancellationToken.None))
         {
             await Manager.GiveAccess(kit, player, KitAccessType.Purchase, CancellationToken.None).ConfigureAwait(false);
-            KitSync.OnAccessChanged(player.m_SteamID);
+            // todo KitSync.OnAccessChanged(player.m_SteamID);
             ActionLog.Add(ActionLogType.ChangeKitAccess, player.m_SteamID.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + loadoutInternalId + ", REASON: " + KitAccessType.Purchase, adminInstigator);
         }
 
@@ -489,7 +489,7 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
 
             ActionLog.Add(ActionLogType.ChangeKitAccess, forPlayer.m_SteamID.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, adminInstigator);
 
-            KitSync.OnAccessChanged(forPlayer.m_SteamID);
+            // todo KitSync.OnAccessChanged(forPlayer.m_SteamID);
 
             await UniTask.SwitchToMainThread(CancellationToken.None);
 

@@ -2,12 +2,13 @@
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.Translations;
 public class RequestTranslations : PropertiesTranslationCollection
@@ -98,11 +99,8 @@ public class RequestTranslations : PropertiesTranslationCollection
     [TranslationData("Sent when a player tries to request a kit but they're too low level.", "Name of the level needed", "Number of the level needed")]
     public readonly Translation<LevelData, LevelData> RequestKitLowLevel = new Translation<LevelData, LevelData>("<#b3ab9f>You must be <#ffc29c>{0}</color> (L {1}) to use this kit.", arg0Fmt: LevelData.FormatName, arg1Fmt: LevelData.FormatNumeric);
 
-    [TranslationData("Sent when a player tries to request a kit but they're too low rank.", "Name of the rank needed", IsPriorityTranslation = false)]
-    public readonly Translation<RankData> RequestKitLowRank = new Translation<RankData>("<#b3ab9f>You must be {0} to use this kit.", arg0Fmt: RankData.FormatColorName);
-
     [TranslationData("Sent when a player tries to request a kit but they're missing a completed quest.", "Name of the quest")]
-    public readonly Translation<QuestAsset> RequestKitQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this kit.", arg0Fmt: BaseQuestData.FormatColorQuestAsset);
+    public readonly Translation<QuestAsset> RequestKitQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this kit.", arg0Fmt: QuestTemplate.FormatColorQuestAsset);
 
     [TranslationData("Sent when a player tries to request a kit but they have to be a Squad Leader.")]
     public readonly Translation RequestKitNotSquadleader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to get this kit.");
@@ -134,23 +132,20 @@ public class RequestTranslations : PropertiesTranslationCollection
     [TranslationData("Sent when a player tries to request a vehicle but they're too low level.", "Name of the level needed", "Number of the level needed")]
     public readonly Translation<LevelData, LevelData> RequestVehicleMissingLevels = new Translation<LevelData, LevelData>("<#b3ab9f>You must be <#ffc29c>{0}</color> (L {1}) to request this vehicle.", arg0Fmt: LevelData.FormatName, arg1Fmt: LevelData.FormatNumeric);
 
-    [TranslationData("Sent when a player tries to request a vehicle but they're too low rank.", "Name of the rank needed", IsPriorityTranslation = false)]
-    public readonly Translation<RankData> RequestVehicleRankIncomplete = new Translation<RankData>("<#b3ab9f>You must be {0} to request this vehicle.", arg0Fmt: RankData.FormatColorName);
-
     [TranslationData("Sent when a player tries to request a vehicle but they're missing a completed quest.", "Name of the quest")]
-    public readonly Translation<QuestAsset> RequestVehicleQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this vehicle.", arg0Fmt: BaseQuestData.FormatColorQuestAsset);
+    public readonly Translation<QuestAsset> RequestVehicleQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this vehicle.", arg0Fmt: QuestTemplate.FormatColorQuestAsset);
 
     [TranslationData("Sent when a player tries to request a vehicle that's owned by another player.", "The other player")]
-    public readonly Translation<IPlayer> RequestVehicleAlreadyRequested = new Translation<IPlayer>("<#a8918a>This vehicle was already requested by {0}.", arg0Fmt: UCPlayer.FormatColoredCharacterName);
+    public readonly Translation<IPlayer> RequestVehicleAlreadyRequested = new Translation<IPlayer>("<#a8918a>This vehicle was already requested by {0}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
 
     [TranslationData("Sent when a player tries to request a vehicle when they already have one nearby.", "The name of the existing vehicle")]
-    public readonly Translation<InteractableVehicle> RequestVehicleAlreadyOwned = new Translation<InteractableVehicle>("<#a8918a>You already have a nearby {0}.", arg0Fmt: WarfareVehicleInfo.FormatColoredName);
+    public readonly Translation<InteractableVehicle> RequestVehicleAlreadyOwned = new Translation<InteractableVehicle>("<#a8918a>You already have a nearby {0}.", arg0Fmt: WarfareVehicleInfo.FormatNameColored);
 
     [TranslationData("Sent when a player tries to request a vehicle.", "The name of the vehicle")]
-    public readonly Translation<WarfareVehicleInfo> RequestVehicleSuccess = new Translation<WarfareVehicleInfo>("<#b3a591>This {0} is now yours to take into battle.", arg0Fmt: WarfareVehicleInfo.FormatColoredName);
+    public readonly Translation<WarfareVehicleInfo> RequestVehicleSuccess = new Translation<WarfareVehicleInfo>("<#b3a591>This {0} is now yours to take into battle.", arg0Fmt: WarfareVehicleInfo.FormatNameColored);
 
     [TranslationData("Sent when a player tries to request a vehicle that isn't in stock.", "The name of the vehicle")]
-    public readonly Translation<WarfareVehicleInfo> RequestVehicleDead = new Translation<WarfareVehicleInfo>("<#b3a591>The {0} was destroyed and will be restocked soon.", arg0Fmt: WarfareVehicleInfo.FormatColoredName);
+    public readonly Translation<WarfareVehicleInfo> RequestVehicleDead = new Translation<WarfareVehicleInfo>("<#b3a591>The {0} was destroyed and will be restocked soon.", arg0Fmt: WarfareVehicleInfo.FormatNameColored);
 
     [TranslationData("Sent when a player tries to request a vehicle but is permanently asset banned for all vehicles.")]
     public readonly Translation RequestVehicleAssetBannedGlobalPermanent = new Translation("<#b3a591>You are permanently banned from using all vehicles.");
@@ -169,10 +164,10 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<TimeSpan> RequestVehicleTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This vehicle is delayed for another: <#c$vbs_delay$>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in Insurgency on attack.", "The cache that needs to be destroyed")]
-    public readonly Translation<Cache> RequestVehicleCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this vehicle.", arg0Fmt: FOB.FormatName);
+    public readonly Translation<Cache> RequestVehicleCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this vehicle.", arg0Fmt: Flags.NameFormat);
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in Insurgency on defense.", "The cache that needs to be lost")]
-    public readonly Translation<Cache> RequestVehicleCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this vehicle until you lose <color=#c$vbs_delay$>{0}</color>.", arg0Fmt: FOB.FormatName);
+    public readonly Translation<Cache> RequestVehicleCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this vehicle until you lose <color=#c$vbs_delay$>{0}</color>.", arg0Fmt: Flags.NameFormat);
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in Insurgency on attack, but the cache is undiscovered")]
     public readonly Translation RequestVehicleCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#c$vbs_delay$>Discover and Destroy</color> the next cache to request this vehicle.");
@@ -187,10 +182,10 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<int> RequestVehicleCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this vehicle until you've lost <#c$vbs_delay$>{0} more caches</color>.");
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in a flag gamemode.", "Flag that needs captured")]
-    public readonly Translation<IDeployable> RequestVehicleFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>Capture {0} to request this vehicle.", TranslationOptions.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public readonly Translation<IDeployable> RequestVehicleFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>Capture {0} to request this vehicle.", TranslationOptions.PerTeamTranslation, Flags.ColorNameDiscoverFormat);
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in a flag gamemode.", "Flag that needs lost")]
-    public readonly Translation<IDeployable> RequestVehicleLoseFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>You can't request this vehicle until you lose {0}.", TranslationOptions.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public readonly Translation<IDeployable> RequestVehicleLoseFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>You can't request this vehicle until you lose {0}.", TranslationOptions.PerTeamTranslation, Flags.ColorNameDiscoverFormat);
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 2+ in a flag gamemode.", "Number of flags that need to be captured")]
     public readonly Translation<int> RequestVehicleFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#c$vbs_delay$>{0} more flags</color> to request this vehicle.");
@@ -213,10 +208,10 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<TimeSpan> RequestTraitTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This trait is delayed for another: <#c$vbs_delay$>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in Insurgency on attack.", "The cache that needs to be destroyed")]
-    public readonly Translation<Cache> RequestTraitCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this trait.", arg0Fmt: FOB.FormatName);
+    public readonly Translation<Cache> RequestTraitCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this trait.", arg0Fmt: Flags.NameFormat);
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in Insurgency on defense.", "The cache that needs to be lost")]
-    public readonly Translation<Cache> RequestTraitCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this trait until you lose <color=#c$vbs_delay$>{0}</color>.", arg0Fmt: FOB.FormatName);
+    public readonly Translation<Cache> RequestTraitCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this trait until you lose <color=#c$vbs_delay$>{0}</color>.", arg0Fmt: Flags.NameFormat);
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in Insurgency on attack, but the cache is undiscovered")]
     public readonly Translation RequestTraitCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#c$vbs_delay$>Discover and Destroy</color> the next cache to request this trait.");
@@ -231,10 +226,10 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<int> RequestTraitCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this trait until you've lost <#c$vbs_delay$>{0} more caches</color>.");
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in a flag gamemode.", "Flag that needs captured")]
-    public readonly Translation<IDeployable> RequestTraitFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>Capture {0} to request this trait.", TranslationOptions.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public readonly Translation<IDeployable> RequestTraitFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>Capture {0} to request this trait.", TranslationOptions.PerTeamTranslation, Flags.ColorNameDiscoverFormat);
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in a flag gamemode.", "Flag that needs lost")]
-    public readonly Translation<IDeployable> RequestTraitLoseFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>You can't request this trait until you lose {0}.", TranslationOptions.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public readonly Translation<IDeployable> RequestTraitLoseFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>You can't request this trait until you lose {0}.", TranslationOptions.PerTeamTranslation, Flags.ColorNameDiscoverFormat);
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 2+ in a flag gamemode.", "Number of flags that need to be captured")]
     public readonly Translation<int> RequestTraitFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#c$vbs_delay$>{0} more flags</color> to request this trait.");

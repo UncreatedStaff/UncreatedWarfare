@@ -66,7 +66,7 @@ public sealed class CommandStructure
         */
 
         string? desc = GetDescription(ctx.Language);
-
+#if false
         StringBuilder builder = new StringBuilder(ctx.IsConsole ? "/" : (ctx.IMGUI ? "/<color=#ffffff>" : "/<#fff>"), Chat.MaxMessageSize);
         builder.Append(cmd.CommandName.ToLowerInvariant());
         if (!ctx.IsConsole)
@@ -101,6 +101,7 @@ public sealed class CommandStructure
             str = "Syntax: " + str;
 
         ctx.ReplyString(str, "b3ffb3");
+#endif
         throw ctx;
     }
     private static string GetTypeColor(object[] types)
@@ -330,7 +331,7 @@ public sealed class CommandStructure
             }
             if (any)
                 builder.Append(allIsOptional ? ']' : '>');
-            if (paramters.Length == 1 && string.IsNullOrEmpty(paramters[0].FlagName) && builder.Length < Chat.MaxMessageSize / 2)
+            if (paramters.Length == 1 && string.IsNullOrEmpty(paramters[0].FlagName) && builder.Length < ChatService.MaxMessageSize / 2)
             {
                 builder.Append(' ');
                 await FormatParameters(paramters[0].Parameters, builder, ctx, colors);

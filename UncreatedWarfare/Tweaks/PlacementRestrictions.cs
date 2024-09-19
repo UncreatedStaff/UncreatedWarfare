@@ -26,6 +26,7 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
     [EventListener(Priority = 1)]
     void IEventListener<PlaceBarricadeRequested>.HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
+#if false
         if (e.OriginalPlacer == null || e.OriginalPlacer.OnDuty())
             return;
 
@@ -67,11 +68,13 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
             e.Cancel();
             _chatService.Send(e.OriginalPlacer, T.WhitelistProhibitedPlace, e.Asset);
         }
+#endif
     }
 
     [EventListener(Priority = 1)]
     void IEventListener<PlaceStructureRequested>.HandleEvent(PlaceStructureRequested e, IServiceProvider serviceProvider)
     {
+#if false
         if (e.OriginalPlacer == null || e.OriginalPlacer.OnDuty())
             return;
 
@@ -89,6 +92,7 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
             e.Cancel();
             _chatService.Send(e.OriginalPlacer, T.WhitelistProhibitedPlace, e.Asset);
         }
+#endif
     }
 
     [EventListener(Priority = 1)]
@@ -108,11 +112,13 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
             return false;
         }
 
+#if false
         if (_fobManager != null)
         {
             // todo non-static
             return !FobManager.IsPointInFOB(point, out _);
         }
+#endif
 
         return true;
     }

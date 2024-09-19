@@ -7,7 +7,6 @@ using Uncreated.Warfare.Traits;
 namespace Uncreated.Warfare.Commands;
 
 [Command("trait")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class TraitCommand : IExecutableCommand
 {
     private const string Syntax = "/trait <give|take|clear|set>";
@@ -16,61 +15,6 @@ public class TraitCommand : IExecutableCommand
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Manage properties of traits.",
-            Parameters =
-            [
-                new CommandParameter("Give")
-                {
-                    Aliases = [ "get" ],
-                    Description = "Give the caller a trait.",
-                    Parameters =
-                    [
-                        new CommandParameter("Trait", typeof(TraitData))
-                    ]
-                },
-                new CommandParameter("Take")
-                {
-                    Aliases = [ "revoke", "remove" ],
-                    Description = "Remove a trait from the caller.",
-                    Parameters =
-                    [
-                        new CommandParameter("Trait", typeof(TraitData))
-                    ]
-                },
-                new CommandParameter("Clear")
-                {
-                    Description = "Clear all traits from the caller."
-                },
-                new CommandParameter("Set")
-                {
-                    Description = "Set a config value for a trait.",
-                    Parameters =
-                    [
-                        new CommandParameter("Trait", typeof(TraitData))
-                        {
-                            Parameters =
-                            [
-                                new CommandParameter("Property", typeof(string))
-                                {
-                                    Parameters =
-                                    [
-                                        new CommandParameter("Value", typeof(object))
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        };
-    }
 
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)

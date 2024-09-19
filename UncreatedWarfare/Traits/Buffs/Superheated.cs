@@ -4,7 +4,7 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits.Buffs;
-
+#if false
 /// <summary>
 /// Increases the influence that flares have on heat-seeking missiles.
 /// </summary>
@@ -90,3 +90,4 @@ public class Superheated : Buff
         return max < 0f ? 1f : (1 + max);
     }
 }
+#endif

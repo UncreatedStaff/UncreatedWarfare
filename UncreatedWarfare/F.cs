@@ -344,34 +344,34 @@ public static class F
         ClothingType.Glasses => EItemType.GLASSES,
         _ => throw new ArgumentOutOfRangeException(nameof(type))
     };
-    public static bool ServerTrackQuest(this UCPlayer player, QuestAsset quest)
+    public static bool ServerTrackQuest(this WarfarePlayer player, QuestAsset quest)
     {
         GameThread.AssertCurrent();
         if (player is not { IsOnline: true })
             return false;
-        QuestAsset? current = player.Player.quests.GetTrackedQuest();
+        QuestAsset? current = player.UnturnedPlayer.quests.GetTrackedQuest();
         if (current != null && quest != null)
         {
             if (current.GUID == quest.GUID && !player.Save.TrackQuests)
-                player.Player.quests.ServerAddQuest(quest);
+                player.UnturnedPlayer.quests.ServerAddQuest(quest);
 
             return false;
         }
         if (player.Save.TrackQuests)
-            player.Player.quests.ServerAddQuest(quest);
+            player.UnturnedPlayer.quests.ServerAddQuest(quest);
         return true;
     }
-    public static bool ServerUntrackQuest(this UCPlayer player, QuestAsset quest)
+    public static bool ServerUntrackQuest(this WarfarePlayer player, QuestAsset quest)
     {
         GameThread.AssertCurrent();
         if (player is not { IsOnline: true })
             return false;
-        QuestAsset current = player.Player.quests.GetTrackedQuest();
+        QuestAsset current = player.UnturnedPlayer.quests.GetTrackedQuest();
         if (current == quest)
             return false;
 
-        if (player.Player.quests.GetTrackedQuest() == quest)
-            player.Player.quests.TrackQuest(null);
+        if (player.UnturnedPlayer.quests.GetTrackedQuest() == quest)
+            player.UnturnedPlayer.quests.TrackQuest(null);
         return true;
     }
     public static CombinedTokenSources CombineTokensIfNeeded(this ref CancellationToken token, CancellationToken other)

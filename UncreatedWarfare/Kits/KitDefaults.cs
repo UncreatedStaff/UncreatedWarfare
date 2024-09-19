@@ -110,7 +110,7 @@ public class KitDefaults(KitManager manager, IServiceProvider serviceProvider)
             existing.FactionFilter.Add(kitFilteredFaction);
             existing.FactionFilterIsWhitelist = true;
 
-            existing.SetSignText(dbContext, 0ul, "Unarmed Kit", _languageService.GetDefaultLanguage());
+            existing.SetSignText(dbContext, CSteamID.Nil, "Unarmed Kit", _languageService.GetDefaultLanguage());
 
             dbContext.Update(existing);
 
@@ -132,7 +132,7 @@ public class KitDefaults(KitManager manager, IServiceProvider serviceProvider)
             await dbContext.AddAsync(existing, token).ConfigureAwait(false);
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
-            existing.SetSignText(dbContext, 0ul, "Default Kit", _languageService.GetDefaultLanguage());
+            existing.SetSignText(dbContext, CSteamID.Nil, "Default Kit", _languageService.GetDefaultLanguage());
 
             existing.SetItemArray(items.ToArray(), dbContext);
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);

@@ -47,6 +47,9 @@ public class PlayerService : IPlayerService
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;
     private readonly PlayerDictionary<WarfarePlayer> _onlinePlayersDictionary;
 
+    // makes sure only one player is ever joining at once.
+    internal readonly SemaphoreSlim PlayerJoinLock = new SemaphoreSlim(1, 1);
+
     /// <inheritdoc />
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers
     {
@@ -96,9 +99,9 @@ public class PlayerService : IPlayerService
                 player.channel.owner.playerID.steamID.m_SteamID.ToString("D17", CultureInfo.InvariantCulture)
             );
 
-            List<IPlayerComponent> components = AddComponents(player);
+            IPlayerComponent[] components = AddComponents(player);
 
-            WarfarePlayer joined = new WarfarePlayer(player, logger, components.AsReadOnly(), _serviceProvider);
+            WarfarePlayer joined = new WarfarePlayer(player, logger, components, _serviceProvider);
             _onlinePlayers.Add(joined);
             _onlinePlayersDictionary.Add(joined, joined);
 
@@ -107,7 +110,7 @@ public class PlayerService : IPlayerService
             newList[^1] = joined;
             _threadsafeList = newList;
             
-            for (int i = 0; i < components.Count; ++i)
+            for (int i = 0; i < components.Length; ++i)
             {
                 IPlayerComponent component = components[i];
 
@@ -149,11 +152,12 @@ public class PlayerService : IPlayerService
         }
     }
 
-    private List<IPlayerComponent> AddComponents(Player player)
+    private IPlayerComponent[] AddComponents(Player player)
     {
-        List<IPlayerComponent> components = new List<IPlayerComponent>();
-        foreach (Type type in PlayerComponents)
+        IPlayerComponent[] components = new IPlayerComponent[PlayerComponents.Length];
+        for (int i = 0; i < PlayerComponents.Length; i++)
         {
+            Type type = PlayerComponents[i];
             if (!typeof(IPlayerComponent).IsAssignableFrom(type))
             {
                 throw new InvalidOperationException($"Type {Accessor.ExceptionFormatter.Format(type)} does not " +
@@ -167,10 +171,11 @@ public class PlayerService : IPlayerService
             }
             else
             {
-                component = (IPlayerComponent)ActivatorUtilities.CreateInstance(_serviceProvider, type, player, player.channel.owner, player.channel.owner.playerID);
+                component = (IPlayerComponent)ActivatorUtilities.CreateInstance(_serviceProvider, type, player,
+                    player.channel.owner, player.channel.owner.playerID);
             }
 
-            components.Add(component);
+            components[i] = component;
         }
 
         return components;

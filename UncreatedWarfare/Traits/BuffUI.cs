@@ -1,10 +1,12 @@
 ﻿using SDG.NetTransport;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits;
+#if false
 public class BuffUI : UnturnedUI
 {
     public const int MaxBuffs = 8;
@@ -12,7 +14,7 @@ public class BuffUI : UnturnedUI
     public const string DefaultBuffIcon = "±";
     
     public readonly BuffIcon[] Buffs = ElementPatterns.CreateArray<BuffIcon>("Canvas/GameObject/Buff{0}", 1, length: MaxBuffs);
-    public BuffUI() : base(Gamemode.Config.UIBuffs.GetId(), true, false) { }
+    public BuffUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:Buffs")) { }
     public void SendBuffs(WarfarePlayer player)
     {
         ITransportConnection c = player.Connection;
@@ -183,3 +185,4 @@ public class BuffUI : UnturnedUI
         public UnturnedLabel Blinking { get; set; }
     }
 }
+#endif

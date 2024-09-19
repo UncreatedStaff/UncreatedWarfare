@@ -3,6 +3,7 @@ namespace System.Runtime.CompilerServices;
 
 sealed class IsExternalInit;
 sealed class RequiredMemberAttribute : Attribute;
+sealed class SetsRequiredMembersAttribute : Attribute;
 sealed class CompilerFeatureRequiredAttribute(string featureName) : Attribute
 {
     public const string RefStructs = "RefStructs";

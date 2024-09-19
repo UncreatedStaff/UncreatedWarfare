@@ -1,15 +1,18 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
@@ -126,7 +129,10 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
             destroyer = 0ul;
         }
 
-        UCPlayer? player = UCPlayer.FromID(destroyer);
+        IServiceProvider serviceProvider = WarfareModule.Singleton.ServiceProvider;
+        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
+
+        WarfarePlayer? player = playerService.GetOnlinePlayerOrNull(destroyer);
 
         BarricadeDestroyed args = new BarricadeDestroyed
         {
@@ -142,18 +148,7 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
             // todo Primary and Secondary assets need filling
         };
 
-        barricade.model.GetComponents(WarfareModule.EventDispatcher.WorkingDestroyInfo);
-        try
-        {
-            foreach (IDestroyInfo destroyInfo in WarfareModule.EventDispatcher.WorkingDestroyInfo)
-            {
-                destroyInfo.DestroyInfo = args;
-            }
-        }
-        finally
-        {
-            WarfareModule.EventDispatcher.WorkingDestroyInfo.Clear();
-        }
+        BuildableExtensions.SetDestroyInfo(barricade.model, args, null);
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
     }

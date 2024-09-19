@@ -106,7 +106,7 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
                 if (binding.Kit != activeKit.PrimaryKey || binding.Item.X != origX || binding.Item.Y != origY || binding.Item.Page != origPage)
                     continue;
 
-                ItemAsset? asset = binding.GetAsset(activeKit, e.PickUpPlayer.Team);
+                ItemAsset? asset = binding.GetAsset(activeKit, 0ul /* todo e.PickUpPlayer.Team */);
                 if (asset == null)
                     continue;
 
@@ -260,7 +260,7 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
 
                 if (binding.Item.X == origX && binding.Item.Y == origY && binding.Item.Page == origPage)
                 {
-                    ItemAsset? asset = binding.GetAsset(kit, Player.GetTeam());
+                    ItemAsset? asset = binding.GetAsset(kit, 0/* todo Player.Team */);
                     if (asset != null && KitEx.CanBindHotkeyTo(asset, e.NewPage))
                     {
                         Player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.NewPage, e.NewX, e.NewY);
@@ -273,7 +273,7 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
                 }
                 else if (binding.Item.X == swapOrigX && binding.Item.Y == swapOrigY && binding.Item.Page == swapOrigPage)
                 {
-                    ItemAsset? asset = binding.GetAsset(kit, Player.GetTeam());
+                    ItemAsset? asset = binding.GetAsset(kit, 0/* todo Player.Team */);
                     if (asset != null && !KitEx.CanBindHotkeyTo(asset, e.OldPage))
                     {
                         Player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.OldPage, e.OldX, e.OldY);

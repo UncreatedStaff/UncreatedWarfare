@@ -36,8 +36,8 @@ internal class TranslatableSignInstanceProvider : ISignInstanceProvider
             .FirstOrDefault(x => string.Equals(x.SignId, _translationKey, StringComparison.Ordinal));
     }
 
-    public string Translate(LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        return _translation == null ? _translationKey : _translation.Translate(language, culture);
+        return _translation == null ? _translationKey : _translation.Translate(language);
     }
 }

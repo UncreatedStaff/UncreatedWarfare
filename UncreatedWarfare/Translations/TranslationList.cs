@@ -26,11 +26,11 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
     public TranslationList(IDictionary<string, string> dictionary) : base(dictionary, StringComparer.Ordinal) { }
     public TranslationList(string @default) : base(StringComparer.Ordinal)
     {
-        Add(Localization.GetDefaultLanguage().Code, @default);
+        Add(string.Empty, @default);
     }
     public TranslationList(int capacity, string @default) : base(capacity, StringComparer.Ordinal)
     {
-        Add(Localization.GetDefaultLanguage().Code, @default);
+        Add(string.Empty, @default);
     }
     public TranslationList(TranslationList copy) : base(copy.Count, StringComparer.Ordinal)
     {
@@ -40,19 +40,42 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
         }
     }
 
+    /// <summary>
+    /// Use language overload if possible.
+    /// </summary>
+    public new void Add(string? code, string value)
+    {
+        code ??= string.Empty;
+        base.Add(code, value);
+    }
+
+    public void Add(LanguageInfo? language, string value)
+    {
+        if (language == null || language.IsDefault)
+            base.Add(string.Empty, value);
+        else
+            base.Add(language.Code, value);
+    }
+
     [return: NotNullIfNotNull(nameof(@default))]
     public string? Translate(LanguageInfo? language, string? @default) => Translate(language) ?? @default;
     public string? Translate(LanguageInfo? language)
     {
-        language ??= Localization.GetDefaultLanguage();
-        if (TryGetValue(language.Code, out string value))
+        string code = language == null || language.IsDefault ? String.Empty : language.Code;
+        if (TryGetValue(code, out string value))
+            return value;
+        
+        if (code.Length == 0 && language != null && TryGetValue(language.Code, out value))
             return value;
 
-        if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value))
-            return value;
+        if (language != null)
+        {
+            if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value))
+                return value;
 
-        if (!language.IsDefault && TryGetValue(L.Default, out value))
-            return value;
+            if (!language.IsDefault && TryGetValue(L.Default, out value))
+                return value;
+        }
 
         return Count > 0 ? Values.ElementAt(0) : null;
     }

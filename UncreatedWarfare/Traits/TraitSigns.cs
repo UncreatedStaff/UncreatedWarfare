@@ -1,19 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Players.Unlocks;
-using Uncreated.Warfare.Vehicles;
-
-namespace Uncreated.Warfare.Traits;
+﻿namespace Uncreated.Warfare.Traits;
 
 internal static class TraitSigns
 {
+#if false
     internal static string TranslateTraitSign(TraitData trait, UCPlayer player)
     {
         ulong team = trait.Team is 1 or 2 ? trait.Team : player.GetTeam();
@@ -294,4 +283,5 @@ internal static class TraitSigns
             Ready = 4,
         }
     }
+#endif
 }

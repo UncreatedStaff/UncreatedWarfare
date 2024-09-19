@@ -125,7 +125,7 @@ internal class ItemManagerDespawnItems : IHarmonyPatch
         ItemInfo item = ItemUtility.FindItem(instanceId, maybeX, maybeY);
         if (item.HasValue)
         {
-            ItemUtility.InvokeOnItemDestroyed(item, true, false, CSteamID.Nil);
+            ItemUtility.InvokeOnItemDestroyed(item, true, false, CSteamID.Nil, 0, 0, 0, 0);
         }
     }
 }

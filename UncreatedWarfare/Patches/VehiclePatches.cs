@@ -18,6 +18,7 @@ public static partial class Patches
     [HarmonyPatch]
     public class VehiclePatches
     {
+#if false
         public static int DesiredSeat = -1;
         // SDG.Unturned.PlayerAnimator
         /// <summary>
@@ -130,5 +131,6 @@ public static partial class Patches
             }
             L.LogDebug($"tryAddPlayer: Seat: {seat}, result: {__result}.");
         }
+#endif
     }
 }

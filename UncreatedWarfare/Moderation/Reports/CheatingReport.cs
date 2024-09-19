@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -206,11 +207,11 @@ public class CheatingReport : Report
             for (int i = 0; i < Shots.Length; ++i)
             {
                 ref ShotRecord record = ref Shots[i];
-                F.AppendPropertyList(builder, args.Count, 22, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 22, i, 1);
                 args.Add(record.Ammo.ToString("N"));
-                args.Add(record.AmmoName.MaxLength(48) ?? string.Empty);
+                args.Add(record.AmmoName.Truncate(48) ?? string.Empty);
                 args.Add(record.Item.ToString("N"));
-                args.Add(record.ItemName.MaxLength(48) ?? string.Empty);
+                args.Add(record.ItemName.Truncate(48) ?? string.Empty);
                 args.Add(record.DamageDone);
                 args.Add(record.Limb.HasValue ? record.Limb.Value.ToString() : DBNull.Value);
                 args.Add(record.IsProjectile);

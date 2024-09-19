@@ -10,10 +10,10 @@ public interface IBuildablesDbContext : ISeasonsDbContext
     public new static void ConfigureModels(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<BuildableStorageItem>()
-            .HasKey(x => new { x.Save, x.PositionX, x.PositionY });
+            .HasKey(x => new { x.SaveId, x.PositionX, x.PositionY });
 
         modelBuilder.Entity<BuildableInstanceId>()
-            .HasKey(x => new { x.Save, x.RegionId });
+            .HasKey(x => new { x.SaveId, x.RegionId });
 
         modelBuilder.Entity<BuildableSave>()
             .HasMany(x => x.Items)

@@ -46,12 +46,8 @@ internal static class LoadingQueueBlockerPatches
         else
             Patches.Patcher.Unpatch(verifyNextPlayerInQueueMethod, disallowWhenLoadingPrefix);
     }
-    /*
-    private static MethodInfo IsLoadingMethod =
-        typeof(LoadingQueueBlockerPatches).GetMethod(nameof(GetIsLoading),
-            BindingFlags.NonPublic | BindingFlags.Static)!;
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]*/
-    private static bool GetIsLoading() => Data.Gamemode is null || Data.Gamemode.IsLoading;
+
+    private static bool GetIsLoading() => false;// todo Data.Gamemode is null || Data.Gamemode.IsLoading;
 
     [UsedImplicitly]
     private static bool DisallowOnLoadingPrefix()

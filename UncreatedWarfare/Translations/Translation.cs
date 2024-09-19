@@ -195,7 +195,7 @@ public class Translation : IDisposable
         Type[] genericArguments = GetType().GetGenericArguments();
         if (genericArguments.Length == 0)
         {
-            return arguments.ValueSet.GetValueString(arguments.UseIMGUI, arguments.UseUncoloredTranslation);
+            return arguments.ValueSet.GetValueString(arguments.UseIMGUI, arguments.UseUncoloredTranslation, (arguments.Options & TranslationOptions.ForTerminal) != 0);
         }
 
         // resize formatting to correct length

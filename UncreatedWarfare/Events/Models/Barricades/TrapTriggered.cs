@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
@@ -10,7 +11,7 @@ public class TrapTriggered
     /// <summary>
     /// Player that placed the barricade.
     /// </summary>
-    public required UCPlayer? BarricadeOwner { get; init; }
+    public required WarfarePlayer? BarricadeOwner { get; init; }
 
     /// <summary>
     /// The barricade's object and model data.
@@ -40,7 +41,7 @@ public class TrapTriggered
     /// <summary>
     /// Player that instsigated the trap triggering.
     /// </summary>
-    public required UCPlayer? TriggeringPlayer { get; init; }
+    public required WarfarePlayer? TriggeringPlayer { get; init; }
 
     /// <summary>
     /// Throwable that triggered the trap.

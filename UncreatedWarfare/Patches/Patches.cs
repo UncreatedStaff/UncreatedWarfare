@@ -8,11 +8,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Squads;
 using Module = SDG.Framework.Modules.Module;
 
 // ReSharper disable InconsistentNaming
@@ -54,8 +51,8 @@ public static partial class Patches
         }
 
         Patcher.PatchAll();
-        if (!UCWarfare.Config.DisableMissingAssetKick)
-            InternalPatches.ServerMessageHandler_ValidateAssets_Patch.Patch(Patcher);
+        // if (!UCWarfare.Config.DisableMissingAssetKick)
+        //     InternalPatches.ServerMessageHandler_ValidateAssets_Patch.Patch(Patcher);
     }
     /// <summary>Unpatch methods</summary>
     public static void Unpatch(IServiceProvider serviceProvider)
@@ -159,7 +156,7 @@ public static partial class Patches
 #endif
         }
 
-
+#if false
         // SDG.Unturned.Provider
         /// <summary>
         /// Postfix of <see cref="Provider.verifyNextPlayerInQueue()"/> to check if the new player in the queue is an admin, then pass them.
@@ -181,6 +178,7 @@ public static partial class Patches
                 }
             }
         }
+#endif
         private static readonly string[] dontLogCommands =
         {
             "request",
@@ -212,6 +210,7 @@ public static partial class Patches
                 if (cmd.Equals(dontLogCommands[i], StringComparison.OrdinalIgnoreCase)) return false;
             return true;
         }
+#if false
         // SDG.Unturned.ChatManager
         /// <summary>
         /// Postfix of <see cref="ChatManager.ReceiveChatRequest"/> to reroute local chats to squad.
@@ -391,6 +390,7 @@ public static partial class Patches
             Data.Reporter?.OnPlayerChat(callingPlayer.playerID.steamID.m_SteamID, text);
             return false;
         }
+#endif
         // SDG.Unturned.PlayerAnimator
         /// <summary>
         /// Prefix of <see cref="PlayerAnimator.ReceiveGesture(EPlayerGesture)"/> to add an event.
@@ -437,6 +437,7 @@ public static partial class Patches
             return allow;
         }
 
+#if false
         // SDG.Unturned.GroupManager
         ///<summary>
         /// Prefix of <see cref="GroupManager.requestGroupExit(Player)"/> to disallow players leaving their group.
@@ -451,6 +452,8 @@ public static partial class Patches
             player.SendChat(T.NoLeavingGroup);
             return false;
         }
+#endif
+
         // SDG.Unturned.PlayerClothing
         /// <summary>
         /// Prefix of <see cref="PlayerClothing.ReceiveVisualToggleRequest(EVisualToggleType)"/> to use an event to cancel it.
@@ -480,6 +483,8 @@ public static partial class Patches
         }
 
         private static readonly List<IShovelable> WorkingShovelable = new List<IShovelable>(3);
+
+#if false
         // SDG.Unturned.UseableMelee
         /// <summary>
         /// prefix of <see cref="UseableMelee.fire()"/> to determine hits with the Entrenching Tool.
@@ -559,6 +564,8 @@ public static partial class Patches
                 }
             }
         }
+#endif
+
         [HarmonyPatch(typeof(Rocket), "OnTriggerEnter")]
         [HarmonyPrefix]
         [UsedImplicitly]

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 
@@ -34,8 +36,11 @@ public class CraftRequested : CancellablePlayerEvent
             BlueprintIndex = (byte)index;
         }
     }
-    public CraftRequested(UCPlayer player, ItemAsset item, Blueprint blueprint, bool shouldAllow) : base(player, shouldAllow)
+
+    [SetsRequiredMembers]
+    public CraftRequested(WarfarePlayer player, ItemAsset item, Blueprint blueprint)
     {
+        Player = player;
         Item = item;
         Blueprint = blueprint;
     }

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Layouts.Phases;
@@ -11,16 +12,18 @@ namespace Uncreated.Warfare.Layouts.Phases;
 /// </summary>
 public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
 {
-    protected static readonly StagingUI StagingUI = new StagingUI();
-
     private readonly Layout _session;
     private readonly ILoopTickerFactory _tickerFactory;
+    private readonly StagingUI _stagingUi;
+    private readonly ITranslationService _translationService;
     
     private ILoopTicker? _ticker;
     public PreparationPhase(IServiceProvider serviceProvider, IConfigurationSection config) : base(serviceProvider, config)
     {
         _tickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
         _session = serviceProvider.GetRequiredService<Layout>();
+        _stagingUi = serviceProvider.GetRequiredService<StagingUI>();
+        _translationService = serviceProvider.GetRequiredService<ITranslationService>();
     }
 
     /// <inheritdoc />
@@ -38,7 +41,7 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
     {
         await UniTask.SwitchToMainThread(token);
 
-        StagingUI.ClearFromAllPlayers();
+        _stagingUi.ClearFromAllPlayers();
         _ticker?.Dispose();
 
         await base.EndPhaseAsync(token);
@@ -52,9 +55,9 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
         if (Name is { Count: > 0 })
         {
             if (Duration.HasValue)
-                StagingUI.SendToAll(Name, Duration.Value);
+                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), Name, Duration.Value);
             else
-                StagingUI.SendToAll(Name);
+                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), Name);
         }
         else if (Teams != null)
         {
@@ -65,9 +68,9 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
                     continue;
 
                 if (Duration.HasValue)
-                    StagingUI.SendToAll(LanguageSet.OnTeam((ulong)settings.TeamInfo.Id), settings.Name, Duration.Value);
+                    _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(settings.TeamInfo), settings.Name, Duration.Value);
                 else
-                    StagingUI.SendToAll(LanguageSet.OnTeam((ulong)settings.TeamInfo.Id), settings.Name);
+                    _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(settings.TeamInfo), settings.Name);
             }
         }
 
@@ -79,12 +82,12 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
         {
             if (timeSinceStart >= Duration.Value)
             {
-                StagingUI.UpdateForAll(TimeSpan.Zero);
+                _stagingUi.UpdateForAll(_translationService.SetOf.AllPlayers(), TimeSpan.Zero);
                 UniTask.Create(() => _session.MoveToNextPhase(CancellationToken.None));
             }
             else
             {
-                StagingUI.UpdateForAll(Duration.Value - timeSinceStart);
+                _stagingUi.UpdateForAll(_translationService.SetOf.AllPlayers(), Duration.Value - timeSinceStart);
             }
         });
     }

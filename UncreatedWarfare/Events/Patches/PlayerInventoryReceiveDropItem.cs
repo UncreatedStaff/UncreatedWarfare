@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;

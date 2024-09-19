@@ -34,10 +34,10 @@ public static class OffenseManager
     // calls the type initializer
     internal static void Init()
     {
+#if false
         EventDispatcher.PlayerDied += OnPlayerDied;
         EventDispatcher.PlayerJoined += OnPlayerJoined;
         EventDispatcher.PlayerPendingAsync += OnPlayerPending;
-#if false
         List<IPv4Range> ranges = new List<IPv4Range>(128);
         for (int i = 0; i < RemotePlayAddressFilters.Length; ++i)
             ranges.AddRange(RemotePlayAddressFilters[i].Ranges);
@@ -62,9 +62,11 @@ public static class OffenseManager
     }
     internal static void Deinit()
     {
+#if false
         EventDispatcher.PlayerPendingAsync -= OnPlayerPending;
         EventDispatcher.PlayerJoined -= OnPlayerJoined;
         EventDispatcher.PlayerDied -= OnPlayerDied;
+#endif
     }
     public static HWID[] ConvertVanillaHWIDs(IEnumerable<byte[]> hwids)
     {
@@ -75,11 +77,12 @@ public static class OffenseManager
         
         return outArray;
     }
+#if false
     public static void OnModerationEntryUpdated(ModerationEntry entry)
     {
         L.LogDebug(JsonSerializer.Serialize(entry, JsonEx.serializerSettings));
 
-        UCPlayer? player = UCPlayer.FromID(entry.Player);
+        WarfarePlayer? player = WarfarePlayer.FromID(entry.Player);
         if (player == null)
             return;
         if (entry.PendingReputation != 0d)
@@ -130,7 +133,7 @@ public static class OffenseManager
                 : null;
             IPlayer player;
 
-            if (UCPlayer.FromID(entry.Player) is { } pl)
+            if (WarfarePlayer.FromID(entry.Player) is { } pl)
                 player = pl;
             else
                 player = await Data.ModerationSql.GetUsernames(entry.Player, true, token).ConfigureAwait(false);
@@ -194,7 +197,7 @@ public static class OffenseManager
         if (warning.HasBeenDisplayed)
             return true;
 
-        if (UCPlayer.FromID(warning.Player) is not { } onlinePlayer)
+        if (WarfarePlayer.FromID(warning.Player) is not { } onlinePlayer)
             return false;
 
         warning.DisplayedTimestamp = DateTimeOffset.UtcNow;
@@ -352,7 +355,7 @@ public static class OffenseManager
             }
         }).ConfigureAwait(false);
     }
-    public static async Task ApplyMuteSettings(UCPlayer joining, CancellationToken token = default)
+    public static async Task ApplyMuteSettings(WarfarePlayer joining, CancellationToken token = default)
     {
         if (joining == null) return;
         MuteType type = MuteType.None;
@@ -388,6 +391,7 @@ public static class OffenseManager
         joining.MuteReason = longest.Message;
         joining.MuteType = type;
     }
+#endif
     public static bool IsValidSteam64Id(CSteamID id)
     {
         return id.m_SteamID / 100000000000000ul == 765;
@@ -396,8 +400,8 @@ public static class OffenseManager
     /// <returns>0 for a successful ban.</returns>
     internal static async Task<StandardErrorCode> BanPlayerAsync(ulong targetId, ulong callerId, string reason, int duration, DateTimeOffset timestamp, CancellationToken token = default)
     {
-        UCPlayer? target = UCPlayer.FromID(targetId);
-        UCPlayer? caller = UCPlayer.FromID(callerId);
+        WarfarePlayer? target = WarfarePlayer.FromID(targetId);
+        WarfarePlayer? caller = WarfarePlayer.FromID(callerId);
         PlayerNames name;
         PlayerNames callerName;
         uint ipv4;
@@ -481,7 +485,7 @@ public static class OffenseManager
     /// <returns>0 for a successful kick, 2 when the target is offline.</returns>
     internal static async Task<StandardErrorCode> KickPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
-        UCPlayer? target = UCPlayer.FromID(targetId);
+        WarfarePlayer? target = WarfarePlayer.FromID(targetId);
         if (target is null)
             return StandardErrorCode.NotFound;
         PlayerNames names = target.Name;
@@ -497,7 +501,7 @@ public static class OffenseManager
         }
         else
         {
-            UCPlayer? callerPlayer = UCPlayer.FromID(callerId);
+            WarfarePlayer? callerPlayer = WarfarePlayer.FromID(callerId);
             PlayerNames callerNames = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             L.Log($"{names.PlayerName} ({targetId}) was kicked by {callerNames.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
@@ -529,7 +533,7 @@ public static class OffenseManager
         }
         else
         {
-            UCPlayer? caller = UCPlayer.FromID(callerId);
+            WarfarePlayer? caller = WarfarePlayer.FromID(callerId);
             PlayerNames callerNames = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {callerNames.PlayerName} ({callerId}).", ConsoleColor.Cyan);
@@ -542,10 +546,10 @@ public static class OffenseManager
     /// <returns>0 for a successful warn, 2 when the target isn't banned.</returns>
     internal static async Task<StandardErrorCode> WarnPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
-        UCPlayer? target = UCPlayer.FromID(targetId);
+        WarfarePlayer? target = WarfarePlayer.FromID(targetId);
         if (target is null)
             return StandardErrorCode.NotFound;
-        UCPlayer? caller = UCPlayer.FromID(callerId);
+        WarfarePlayer? caller = WarfarePlayer.FromID(callerId);
         PlayerNames targetNames = target.Name;
 
         LogWarnPlayer(targetId, callerId, reason, DateTime.Now);
@@ -579,7 +583,7 @@ public static class OffenseManager
     /// <returns>0 for a successful mute.</returns>
     internal static async Task<StandardErrorCode> MutePlayerAsync(ulong target, ulong admin, MuteType type, int duration, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
-        UCPlayer? muted = UCPlayer.FromID(target);
+        WarfarePlayer? muted = WarfarePlayer.FromID(target);
         DateTime now = DateTime.Now;
         await Data.DatabaseManager.NonQueryAsync(
             "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4, @5);",
@@ -657,8 +661,8 @@ public static class OffenseManager
     /// <returns>0 for a successful unmute, 2 when the target isn't muted.</returns>
     internal static async Task<StandardErrorCode> UnmutePlayerAsync(ulong targetId, ulong callerId, DateTimeOffset timestamp)
     {
-        UCPlayer? caller = UCPlayer.FromID(callerId);
-        UCPlayer? onlinePlayer = UCPlayer.FromID(targetId);
+        WarfarePlayer? caller = WarfarePlayer.FromID(callerId);
+        WarfarePlayer? onlinePlayer = WarfarePlayer.FromID(targetId);
         PlayerNames names = await Data.DatabaseManager.GetUsernamesAsync(targetId).ConfigureAwait(false);
         DateTime now = DateTime.UtcNow;
         if (names.WasFound)
@@ -679,7 +683,7 @@ public static class OffenseManager
             }
             else
             {
-                onlinePlayer ??= UCPlayer.FromID(targetId);
+                onlinePlayer ??= WarfarePlayer.FromID(targetId);
                 if (onlinePlayer is not null)
                 {
                     onlinePlayer.MuteReason = null;
@@ -715,7 +719,6 @@ public static class OffenseManager
             return StandardErrorCode.NotFound;
         }
     }
-#endif
     private static void OnPlayerDied(PlayerDied e)
     {
         if (!e.WasTeamkill || e.Killer is null)
@@ -750,6 +753,7 @@ public static class OffenseManager
 
         UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, log, CancellationToken.None, ctx: "Log teamkill.");
     }
+#endif
     // ReSharper restore AutoPropertyCanBeMadeGetOnly.Local
     public static class NetCalls
     {

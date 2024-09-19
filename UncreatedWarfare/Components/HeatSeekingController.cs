@@ -138,7 +138,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         foreach (InteractableVehicle v in VehicleManager.vehicles)
         {
-            if (v.asset.engine is EEngine.PLANE or EEngine.HELICOPTER && !v.isDead && v.lockedGroup != _vehicle.lockedGroup && v.isEngineOn && !(v.anySeatsOccupied && TeamManager.IsInAnyMain(v.transform.position)))
+            if (v.asset.engine is EEngine.PLANE or EEngine.HELICOPTER && !v.isDead && v.lockedGroup != _vehicle.lockedGroup && v.isEngineOn && !(v.anySeatsOccupied && false /* todo && TeamManager.IsInAnyMain(v.transform.position) */))
             {
                 if (IsInRange(v.transform.position))
                 {

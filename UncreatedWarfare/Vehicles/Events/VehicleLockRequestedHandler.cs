@@ -4,6 +4,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
 
 namespace Uncreated.Warfare.Vehicles.Events;
+#if false
 internal class VehicleLockRequestedHandler : IEventListener<ChangeVehicleLockRequested>
 {
     void IEventListener<ChangeVehicleLockRequested>.HandleEvent(ChangeVehicleLockRequested e, IServiceProvider serviceProvider)
@@ -23,3 +24,4 @@ internal class VehicleLockRequestedHandler : IEventListener<ChangeVehicleLockReq
         e.Cancel();
     }
 }
+#endif

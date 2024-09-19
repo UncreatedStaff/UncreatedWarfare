@@ -3,7 +3,7 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players.Unlocks;
 
 namespace Uncreated.Warfare.Traits.Buffs;
-
+#if false
 /// <summary>
 /// Gives the player a trait that allows them to revive themselves once.
 /// </summary>
@@ -52,3 +52,4 @@ public class SelfRevive : Buff
         return false;
     }
 }
+#endif

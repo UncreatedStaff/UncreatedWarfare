@@ -1,4 +1,7 @@
-﻿namespace Uncreated.Warfare.Events.Models.Vehicles;
+﻿using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Players;
+
+namespace Uncreated.Warfare.Events.Models.Vehicles;
 public class ExitVehicleRequested : CancellablePlayerEvent
 {
     private readonly InteractableVehicle _vehicle;
@@ -15,11 +18,12 @@ public class ExitVehicleRequested : CancellablePlayerEvent
         get => pendingYaw;
         set => pendingYaw = value;
     }
-    public ExitVehicleRequested(Player player, InteractableVehicle vehicle, bool shouldAllow, Vector3 pendingLocation, float pendingYaw) : base(UCPlayer.FromPlayer(player)!)
+
+    [SetsRequiredMembers]
+    public ExitVehicleRequested(WarfarePlayer player, InteractableVehicle vehicle, Vector3 pendingLocation, float pendingYaw)
     {
+        Player = player;
         _vehicle = vehicle;
-        if (!shouldAllow)
-            Break();
         this.pendingLocation = pendingLocation;
         this.pendingYaw = pendingYaw;
     }

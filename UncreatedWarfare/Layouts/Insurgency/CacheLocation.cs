@@ -60,7 +60,7 @@ public class CacheLocation : IEquatable<CacheLocation>
     {
         if (location is null)
             return this is null;
-        return location.Position.AlmostEquals(Position) && location.Rotation.AlmostEquals(Rotation);
+        return location.Position.IsNearlyEqual(Position) && location.Rotation.IsNearlyEqual(Rotation);
     }
 
     // ReSharper disable NonReadonlyMemberInGetHashCode

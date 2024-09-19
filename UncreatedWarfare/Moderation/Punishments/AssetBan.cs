@@ -174,7 +174,7 @@ public class AssetBan : DurationPunishment
         {
             if (sb.Length > 0)
                 sb.Append(", ");
-            sb.Append(roundTrip ? types[i].ToString() : Localization.TranslateEnum(types[i], lang));
+            sb.Append(types[i].ToString() /* todo roundTrip ? types[i].ToString() : Localization.TranslateEnum(types[i], lang) */);
         }
         return sb.ToString();
     }
@@ -306,7 +306,7 @@ public class AssetBan : DurationPunishment
 
             for (int i = 0; i < VehicleTypeFilter.Length; ++i)
             {
-                F.AppendPropertyList(builder, args.Count, 1, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 1, i, 1);
                 args.Add(VehicleTypeFilter[i].ToString());
             }
 

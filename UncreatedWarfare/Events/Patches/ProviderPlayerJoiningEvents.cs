@@ -1,11 +1,13 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Management.Legacy;
 using static Uncreated.Warfare.Harmony.Patches;
 
@@ -75,22 +77,23 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         PendingAsyncData data = new PendingAsyncData(__instance);
         CancellationTokenSource? src = null;
 
-        for (int i = 0; i < PlayerManager.PlayerConnectCancellationTokenSources.Count; ++i)
-        {
-            KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerManager.PlayerConnectCancellationTokenSources[i];
-            if (kvp.Key == s64)
-            {
-                src = kvp.Value;
-                break;
-            }
-        }
+        // todo
+        // for (int i = 0; i < PlayerManager.PlayerConnectCancellationTokenSources.Count; ++i)
+        // {
+        //     KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerManager.PlayerConnectCancellationTokenSources[i];
+        //     if (kvp.Key == s64)
+        //     {
+        //         src = kvp.Value;
+        //         break;
+        //     }
+        // }
 
-        PlayerSave.TryReadSaveFile(s64, out PlayerSave? save);
+        //PlayerSave.TryReadSaveFile(s64, out PlayerSave? save);
         PlayerPending args = new PlayerPending
         {
             PendingPlayer = __instance,
             AsyncData = data,
-            SaveData = save,
+            SaveData = null, // todo
             RejectReason = "An unknown error has occurred.",
 #if RELEASE
             IsAdmin = __instance.playerID.steamID.m_SteamID == 9472428428462828ul + 67088769839464181ul
@@ -113,7 +116,15 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
 
     private static async Task InvokePrePlayerConnectAsync(PlayerPending args, CombinedTokenSources tokens)
     {
-        await UCWarfare.I.PlayerJoinLock.WaitAsync(tokens.Token).ConfigureAwait(false);
+        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>();
+
+        if (playerService is not PlayerService impl)
+        {
+            throw new NotSupportedException("Unsupported PlayerService implementation.");
+        }
+
+
+        await impl.PlayerJoinLock.WaitAsync(tokens.Token).ConfigureAwait(false);
         try
         {
             bool isCancelled = await WarfareModule.EventDispatcher.DispatchEventAsync(args, tokens.Token);
@@ -135,7 +146,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         }
         finally
         {
-            UCWarfare.I.PlayerJoinLock.Release();
+            impl.PlayerJoinLock.Release();
             tokens.Dispose();
         }
     }

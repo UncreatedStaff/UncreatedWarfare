@@ -1,24 +1,7 @@
-﻿using SDG.Framework.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.GameData;
-using Uncreated.Warfare.Models.Stats.Records;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
-using XPReward = Uncreated.Warfare.Levels.XPReward;
+﻿using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.FOBs;
-
+#if false
 public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovelable, ISalvageListener
 {
     private bool _destroyed;
@@ -1237,14 +1220,16 @@ public class RepairStationComponent : ShovelableComponent
         vehicle.updateVehicle();
     }
 }
+#endif
 
 public interface IShovelable
 {
     TickResponsibilityCollection Builders { get; }
-    bool Shovel(UCPlayer shoveler, Vector3 point);
-    void QuickShovel(UCPlayer shoveler);
+    bool Shovel(WarfarePlayer shoveler, Vector3 point);
+    void QuickShovel(WarfarePlayer shoveler);
 }
 
+#if false
 public interface IFOBItem
 {
     FOB? FOB { get; set; }
@@ -1259,7 +1244,7 @@ public interface IFOBItem
     Quaternion Rotation { get; }
     event Action<Action<FobItemRecord>> UpdateRecord;
 }
-
+#endif
 public enum FobRadius : byte
 {
     Short,

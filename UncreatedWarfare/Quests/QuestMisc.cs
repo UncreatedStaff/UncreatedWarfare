@@ -7,6 +7,7 @@ using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.NewQuests.Parameters;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
@@ -190,7 +191,7 @@ public static class QuestJsonEx
 
 public interface INotifyTracker
 {
-    public UCPlayer? Player { get; }
+    public WarfarePlayer? Player { get; }
 }
 
 public interface IQuestPreset
@@ -206,7 +207,7 @@ public interface IQuestPreset
 public interface IQuestState
 {
     public QuestParameterValue<int> FlagValue { get; }
-    public bool IsEligible(UCPlayer player);
+    public bool IsEligible(WarfarePlayer player);
     public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token = default);
 }
 /// <inheritdoc/>

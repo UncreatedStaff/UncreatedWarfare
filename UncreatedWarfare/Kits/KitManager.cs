@@ -752,29 +752,29 @@ public partial class KitManager :
         return kits.Count == 0 ? null : kits[RandomUtility.GetIndex((ICollection)kits)];
     }
 
-    public bool TryCreateSquadOnRequestSquadleaderKit(CommandContext ctx)
-    {
-        if (ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
-        {
-            ctx.Reply(T.RequestKitNotSquadleader);
-            return false;
-        }
-
-        if (ctx.Caller.Squad is not null)
-            return false;
-        
-        ulong team = ctx.Caller.GetTeam();
-        if (SquadManager.Squads.Count(x => x.Team == team) < 8)
-        {
-            // create a squad automatically if someone requests a squad leader kit.
-            Squad squad = SquadManager.CreateSquad(ctx.Caller, team);
-            ctx.Reply(T.SquadCreated, squad);
-            return true;
-        }
-
-        ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
-        return false;
-    }
+    // public bool TryCreateSquadOnRequestSquadleaderKit(CommandContext ctx)
+    // {
+    //     if (ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
+    //     {
+    //         ctx.Reply(T.RequestKitNotSquadleader);
+    //         return false;
+    //     }
+    // 
+    //     if (ctx.Caller.Squad is not null)
+    //         return false;
+    //     
+    //     ulong team = ctx.Caller.GetTeam();
+    //     if (SquadManager.Squads.Count(x => x.Team == team) < 8)
+    //     {
+    //         // create a squad automatically if someone requests a squad leader kit.
+    //         Squad squad = SquadManager.CreateSquad(ctx.Caller, team);
+    //         ctx.Reply(T.SquadCreated, squad);
+    //         return true;
+    //     }
+    // 
+    //     ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
+    //     return false;
+    // }
 
     private void ValidateKit(Kit kit, IDbContext context)
     {
@@ -929,11 +929,11 @@ public partial class KitManager :
     private async Task SetupPlayer(WarfarePlayer player, CancellationToken token = default)
     {
         Kit? kit = await player.Component<KitPlayerComponent>().GetActiveKitAsync(token).ConfigureAwait(false);
-        if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(out _, out _, player.Team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out _, player.Team)))
+        if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(_playerService, out _, out _, player.Team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(_playerService, out _, out _, player.Team)))
         {
             await TryGiveRiflemanKit(player, false, false, token).ConfigureAwait(false);
         }
-        else if (UCWarfare.Config.ModifySkillLevels)
+        else
         {
             if (kit.Skillsets is { Count: > 0 })
                 player.Component<SkillsetPlayerComponent>().EnsureSkillsets(kit.Skillsets.Select(x => x.Skillset));
@@ -942,21 +942,21 @@ public partial class KitManager :
         }
     }
 
-    async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(WarfarePlayer player, bool wasAlreadyOnline, CancellationToken token)
-    {
-        if (Data.Gamemode is not TeamGamemode { UseTeamSelector: true })
-        {
-            _ = RefreshFavorites(player, false, token);
-            await SetupPlayer(player, token).ConfigureAwait(false);
-            return;
-        }
-
-        //ItemUtility.ClearInventory(player);
-        player.Component<SkillsetPlayerComponent>().EnsureDefaultSkillsets();
-        _ = RefreshFavorites(player, false, token);
-        _ = Boosting.IsNitroBoosting(player.Steam64.m_SteamID, token);
-        _ = Requests.RemoveKit(player, false, player.DisconnectToken);
-    }
+    // todo async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(WarfarePlayer player, bool wasAlreadyOnline, CancellationToken token)
+    // todo {
+    // todo     if (Data.Gamemode is not TeamGamemode { UseTeamSelector: true })
+    // todo     {
+    // todo         _ = RefreshFavorites(player, false, token);
+    // todo         await SetupPlayer(player, token).ConfigureAwait(false);
+    // todo         return;
+    // todo     }
+    // todo 
+    // todo     //ItemUtility.ClearInventory(player);
+    // todo     player.Component<SkillsetPlayerComponent>().EnsureDefaultSkillsets();
+    // todo     _ = RefreshFavorites(player, false, token);
+    // todo     _ = Boosting.IsNitroBoosting(player.Steam64.m_SteamID, token);
+    // todo     _ = Requests.RemoveKit(player, false, player.DisconnectToken);
+    // todo }
 
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> GiveAccess(string kitId, WarfarePlayer player, KitAccessType type, CancellationToken token = default)
@@ -1259,7 +1259,7 @@ public partial class KitManager :
 
     internal Task OnKitDeleted(Kit kit)
     {
-        KitSync.OnKitDeleted(kit.PrimaryKey);
+        // todo KitSync.OnKitDeleted(kit.PrimaryKey);
 
         Task.Run(async () =>
         {
@@ -1277,7 +1277,7 @@ public partial class KitManager :
 
     internal Task OnKitUpdated(Kit kit)
     {
-        KitSync.OnKitUpdated(kit);
+        // todo KitSync.OnKitUpdated(kit);
 
         return Task.CompletedTask;
     }
@@ -1385,15 +1385,15 @@ public partial class KitManager :
     void IEventListener<SwapClothingRequested>.HandleEvent(SwapClothingRequested e, IServiceProvider serviceProvider)
     {
         // prevent removing clothing that has storage to make item tracking much easier
-        if (e.Player.OnDuty())
-            return;
+        // if (e.Player.OnDuty())
+        //     return;
 
         if (e.CurrentClothing == null || !e.Player.Component<KitPlayerComponent>().HasKit || e.Type is not ClothingType.Backpack and not ClothingType.Pants and not ClothingType.Shirt and not ClothingType.Vest)
         {
             return;
         }
 
-        e.Player.SendChat(T.NoRemovingClothing);
+        // todo e.Player.SendChat(T.NoRemovingClothing);
         e.Cancel();
     }
 }

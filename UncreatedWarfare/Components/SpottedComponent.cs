@@ -293,7 +293,7 @@ public class SpottedComponent : MonoBehaviour
             L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
             spotted.Activate(spotter, isUav);
         }
-        else if (transform.TryGetComponent(out Player player) && (warfarePlayer = playerService.GetOnlinePlayer(player)).Team != spotter.Team && !Ghost.IsHidden(warfarePlayer))
+        else if (transform.TryGetComponent(out Player player) && (warfarePlayer = playerService.GetOnlinePlayer(player)).Team != spotter.Team /* todo && !Ghost.IsHidden(warfarePlayer) */)
         {
             spotted.TryAnnounce(spotter, T.SpottedTargetPlayer.Translate(formatter.LanguageService.GetDefaultLanguage()));
             L.LogDebug("Spotting player " + player.name);
