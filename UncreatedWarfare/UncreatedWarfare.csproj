@@ -116,9 +116,9 @@
     <PackageReference Include="DanielWillett.SpeedBytes" Version="[1.1.2,)" />
     <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="[1.1.1,)" />
     <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="[1.0.0,)" />
-    <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease01, 2)" />
-    <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease01, 2)" />
-    <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease01, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease02, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease02, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease02, 2)" />
     <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease10" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
     <PackageReference Include="JetBrains.Annotations" Version="[2018.2.1,)" Aliases="JetBrains" />

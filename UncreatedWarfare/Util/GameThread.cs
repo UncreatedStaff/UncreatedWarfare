@@ -15,6 +15,11 @@ public static class GameThread
     [ThreadStatic]
     public static readonly bool IsCurrent;
 
+    static GameThread()
+    {
+        IsCurrent = true;
+    }
+
     /// <summary>
     /// Throw an error if this function isn't ran on the main thread.
     /// </summary>
@@ -41,10 +46,8 @@ public static class GameThread
         throw new GameThreadException(feature);
     }
 
-    static GameThread()
-    {
-        IsCurrent = true;
-    }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static void Setup() { }
 }
 
 /// <summary>

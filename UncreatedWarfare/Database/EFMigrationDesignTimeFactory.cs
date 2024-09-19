@@ -38,7 +38,7 @@ public class EFMigrationDesignTimeFactory : IDesignTimeDbContextFactory<WarfareD
         }
         catch (SecurityException) { }
 
-        GameThread.AssertCurrent();
+        GameThread.Setup();
 
         Accessor.LogDebugMessages = true;
         Accessor.LogInfoMessages = true;

@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Configuration.TypeConverters;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Configuration;
 public static class ConfigurationSettings

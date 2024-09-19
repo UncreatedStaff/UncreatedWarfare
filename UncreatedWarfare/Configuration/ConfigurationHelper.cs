@@ -96,11 +96,11 @@ public static class ConfigurationHelper
         ReadOnlySpan<char> ext = Path.GetExtension(path.AsSpan());
         if (ext.Equals(".json", StringComparison.OrdinalIgnoreCase))
         {
-            configBuilder.AddJsonFile(Path.GetFullPath(path), optional, reloadOnChange);
+            configBuilder.AddJsonFile(null, Path.GetFullPath(path), optional, reloadOnChange);
         }
         else if (ext.Equals(".yml", StringComparison.OrdinalIgnoreCase))
         {
-            configBuilder.AddYamlFile(Path.GetFullPath(path), optional, reloadOnChange);
+            configBuilder.AddYamlFile(null, Path.GetFullPath(path), optional, reloadOnChange);
         }
         else
             throw new ArgumentException("Must provide a valid extension (.yml or .json).", nameof(path));

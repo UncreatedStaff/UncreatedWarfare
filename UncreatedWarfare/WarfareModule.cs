@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -123,11 +124,17 @@ public sealed class WarfareModule : IModuleNexus
     void IModuleNexus.initialize()
     {
         // will setup the main thread in GameThread before asserting
-        GameThread.AssertCurrent();
+        GameThread.Setup();
 
-        ModuleHook.PreVanillaAssemblyResolvePostRedirects += ResolveAssemblyCompiler;
+        AppDomain.CurrentDomain.AssemblyResolve += CheckForcedAssemblyVersionRedirects;
         ModuleHook.PostVanillaAssemblyResolve += ErrorAssemblyNotResolved;
 
+        // this needs to be separated to give the above events time to be subscribed before loading types
+        Init();
+    }
+
+    private void Init()
+    {
         Singleton = this;
         _gameObjectHost = new GameObject("Uncreated.Warfare");
         Object.DontDestroyOnLoad(_gameObjectHost);
@@ -153,12 +160,17 @@ public sealed class WarfareModule : IModuleNexus
         Provider.modeConfigData.Structures.Decay_Time = 0;
 
         // Set the environment directory to the folder now at U3DS/Servers/ServerId/Warfare/
-        HomeDirectory = Path.Combine(UnturnedPaths.RootDirectory.Name, "Servers", Provider.serverID, "Warfare");
+        HomeDirectory = Path.Combine(UnturnedPaths.RootDirectory.FullName, "Servers", Provider.serverID, "Warfare");
         Directory.CreateDirectory(HomeDirectory);
 
         // Add system configuration provider.
         IConfigurationBuilder configBuilder = new ConfigurationBuilder();
-        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, Path.Join(HomeDirectory, "System Config.yml"));
+
+        string systemConfigLocation = Path.Join(HomeDirectory, "System Config.yml");
+
+        CommandWindow.Log("Configuration location: " + systemConfigLocation);
+
+        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, systemConfigLocation);
         Configuration = configBuilder.Build();
 
         IServiceCollection serviceCollection = new ServiceCollection();
@@ -170,7 +182,7 @@ public sealed class WarfareModule : IModuleNexus
 
         ServiceProvider = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
         {
-            ValidateOnBuild = true,
+            ValidateOnBuild = false,
             ValidateScopes = true
         });
 
@@ -179,7 +191,7 @@ public sealed class WarfareModule : IModuleNexus
 
     void IModuleNexus.shutdown()
     {
-        ModuleHook.PreVanillaAssemblyResolvePostRedirects -= ResolveAssemblyCompiler;
+        AppDomain.CurrentDomain.AssemblyResolve -= CheckForcedAssemblyVersionRedirects;
         ModuleHook.PostVanillaAssemblyResolve -= ErrorAssemblyNotResolved;
 
         if (Singleton == this)
@@ -389,10 +401,18 @@ public sealed class WarfareModule : IModuleNexus
     {
         CancellationToken token = UnloadToken;
 
+        using (IServiceScope scope = ServiceProvider.CreateScope())
+        await using (WarfareDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>())
+        {
+            await dbContext.Database.MigrateAsync(token).ConfigureAwait(false);
+        }
+
         List<IHostedService> hostedServices = ServiceProvider
             .GetServices<IHostedService>()
             .OrderByDescending(x => x.GetType().GetPriority())
             .ToList();
+
+        await UniTask.SwitchToMainThread(token);
 
         int errIndex = -1;
         for (int i = 0; i < hostedServices.Count; i++)
@@ -633,14 +653,29 @@ public sealed class WarfareModule : IModuleNexus
         return null;
     }
 
-    private static Assembly? ResolveAssemblyCompiler(object sender, ResolveEventArgs args)
+    private static Assembly? CheckForcedAssemblyVersionRedirects(object sender, ResolveEventArgs args)
     {
+        // for some reason mono won't use newer versions of these libraries without some convincing
         const string runtime = "System.Runtime.CompilerServices.Unsafe";
+        const string primitives = "Microsoft.Extensions.Primitives";
+        const string confAbs = "Microsoft.Extensions.Configuration.Abstractions";
 
         if (args.Name.StartsWith(runtime, StringComparison.Ordinal))
         {
             CommandWindow.LogWarning($"Redirected {args.Name} -> {runtime}.dll");
             return typeof(Unsafe).Assembly;
+        }
+
+        if (args.Name.StartsWith(primitives, StringComparison.Ordinal))
+        {
+            CommandWindow.LogWarning($"Redirected {args.Name} -> {primitives}.dll");
+            return typeof(Microsoft.Extensions.Primitives.IChangeToken).Assembly;
+        }
+
+        if (args.Name.StartsWith(confAbs, StringComparison.Ordinal))
+        {
+            CommandWindow.LogWarning($"Redirected {args.Name} -> {confAbs}.dll");
+            return typeof(IConfiguration).Assembly;
         }
 
         return null;
