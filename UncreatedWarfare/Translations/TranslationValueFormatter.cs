@@ -21,8 +21,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     private const string NullColorTMPro = "<#569cd6><b>null</b></color>";
     private const string NullANSI = "\u001b[94mnull\u001b[39m";
     private const string NullExtendedANSI = "\u001b[38;2;86;156;214mnull\u001b[39m";
-    public LanguageService LanguageService { get; }
-    public ITranslationService TranslationService { get; }
+    public LanguageService LanguageService => _serviceProvider.GetRequiredService<LanguageService>();
+    public ITranslationService TranslationService => _serviceProvider.GetRequiredService<ITranslationService>();
 
     private readonly ConcurrentDictionary<Type, object> _valueFormatters = new ConcurrentDictionary<Type, object>();
     public TranslationValueFormatter(IServiceProvider serviceProvider, IConfiguration systemConfig)
@@ -31,8 +31,6 @@ public class TranslationValueFormatter : ITranslationValueFormatter
             ?? throw new InvalidOperationException("No enum formatter configured in 'enum_formatter_type'.");
 
         _serviceProvider = serviceProvider;
-        LanguageService = serviceProvider.GetRequiredService<LanguageService>();
-        TranslationService = serviceProvider.GetRequiredService<ITranslationService>();
     }
 
     // in order of priority. can either be a type or the object itself for singletons
@@ -138,15 +136,15 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     private IValueFormatter<T> GetValueFormatter<T>() => (IValueFormatter<T>)GetValueFormatter(typeof(T));
     private IValueFormatter GetValueFormatter(Type type)
     {
-        return (IValueFormatter)_valueFormatters.GetOrAdd(type, type =>
+        return (IValueFormatter)_valueFormatters.GetOrAdd(type, static (type, vf) =>
         {
             if (type.IsEnum)
             {
-                return ActivatorUtilities.CreateInstance(_serviceProvider, _enumFormatter.IsGenericTypeDefinition ? _enumFormatter.MakeGenericType(type) : _enumFormatter);
+                return ActivatorUtilities.CreateInstance(vf._serviceProvider, vf._enumFormatter.IsGenericTypeDefinition ? vf._enumFormatter.MakeGenericType(type) : vf._enumFormatter);
             }
 
             Type lookingForFormatterType = typeof(IValueFormatter<>).MakeGenericType(type);
-            foreach (object valueFormatter in _valueFormatterTypes)
+            foreach (object valueFormatter in vf._valueFormatterTypes)
             {
                 if (valueFormatter is not Type actualType)
                 {
@@ -176,11 +174,11 @@ public class TranslationValueFormatter : ITranslationValueFormatter
                 if (!lookingForFormatterType.IsAssignableFrom(actualType))
                     continue;
 
-                return ActivatorUtilities.CreateInstance(_serviceProvider, actualType);
+                return ActivatorUtilities.CreateInstance(vf._serviceProvider, actualType);
             }
 
             return new ToStringValueFormatter();
-        });
+        }, this);
     }
 
     public string Colorize(ReadOnlySpan<char> text, Color32 color, TranslationOptions options)

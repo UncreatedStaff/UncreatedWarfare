@@ -1,7 +1,6 @@
-﻿using DanielWillett.ReflectionTools;
+﻿using Autofac;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
-using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Components;
@@ -85,8 +84,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
             return false;
         }
 
-        IServiceProvider serviceProvider = WarfareModule.Singleton.ServiceProvider;
-        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
 
         Team? triggerTeam = null;
         WarfarePlayer? playerTriggerer = null;

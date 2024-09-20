@@ -255,7 +255,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Redirect")
                         .IsRequired()
-                        .HasColumnType("enum(Shirt,Pants,Vest,Hat,Mask,Backpack,Glasses,AmmoSupply,BuildSupply,RallyPoint,Radio,AmmoBag,AmmoCrate,RepairStation,Bunker,EntrenchingTool,UAV,RepairStationBuilt,AmmoCrateBuilt,BunkerBuilt,Cache,RadioDamaged,LaserDesignator)");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator')");
 
                     b.Property<string>("VariantKey")
                         .HasColumnType("varchar(32) CHARACTER SET utf8mb4")
@@ -520,11 +520,11 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Branch")
                         .IsRequired()
-                        .HasColumnType("enum(Infantry,Armor,Airforce,SpecOps,Navy)");
+                        .HasColumnType("enum('Infantry','Armor','Airforce','SpecOps','Navy')");
 
                     b.Property<string>("Class")
                         .IsRequired()
-                        .HasColumnType("enum(Unarmed,Squadleader,Rifleman,Medic,Breacher,AutomaticRifleman,Grenadier,MachineGunner,LAT,HAT,Marksman,Sniper,APRifleman,CombatEngineer,Crewman,Pilot,SpecOps)");
+                        .HasColumnType("enum('Unarmed','Squadleader','Rifleman','Medic','Breacher','AutomaticRifleman','Grenadier','MachineGunner','LAT','HAT','Marksman','Sniper','APRifleman','CombatEngineer','Crewman','Pilot','SpecOps')");
 
                     b.Property<DateTime>("CreatedTimestamp")
                         .HasColumnName("CreatedAt")
@@ -576,14 +576,14 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("SquadLevel")
                         .IsRequired()
-                        .HasColumnType("enum(Member,Commander)");
+                        .HasColumnType("enum('Member','Commander')");
 
                     b.Property<float?>("TeamLimit")
                         .HasColumnType("float");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("enum(Public,Elite,Special,Loadout,Template)");
+                        .HasColumnType("enum('Public','Elite','Special','Loadout','Template')");
 
                     b.Property<string>("WeaponText")
                         .HasColumnName("Weapons")
@@ -609,7 +609,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("AccessType")
                         .IsRequired()
-                        .HasColumnType("enum(Unknown,Credits,Event,Purchase,QuestReward)");
+                        .HasColumnType("enum('Unknown','Credits','Event','Purchase','QuestReward')");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnName("GivenAt")
@@ -689,10 +689,10 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Page")
                         .IsRequired()
-                        .HasColumnType("enum(Primary,Secondary,Hands,Backpack,Vest,Shirt,Pants,Storage,Area)");
+                        .HasColumnType("enum('Primary','Secondary','Hands','Backpack','Vest','Shirt','Pants','Storage','Area')");
 
                     b.Property<string>("Redirect")
-                        .HasColumnType("enum(Shirt,Pants,Vest,Hat,Mask,Backpack,Glasses,AmmoSupply,BuildSupply,RallyPoint,Radio,AmmoBag,AmmoCrate,RepairStation,Bunker,EntrenchingTool,UAV,RepairStationBuilt,AmmoCrateBuilt,BunkerBuilt,Cache,RadioDamaged,LaserDesignator)");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator')");
 
                     b.Property<byte>("X")
                         .HasColumnType("tinyint unsigned");
@@ -718,7 +718,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("tinyint unsigned");
 
                     b.Property<string>("ClothingSlot")
-                        .HasColumnType("enum(Shirt,Pants,Vest,Hat,Mask,Backpack,Glasses)");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses')");
 
                     b.Property<string>("Item")
                         .HasColumnType("char(32)");
@@ -732,10 +732,10 @@ namespace Uncreated.Warfare.Migrations
                         .HasMaxLength(18);
 
                     b.Property<string>("Page")
-                        .HasColumnType("enum(Primary,Secondary,Hands,Backpack,Vest,Shirt,Pants,Storage,Area)");
+                        .HasColumnType("enum('Primary','Secondary','Hands','Backpack','Vest','Shirt','Pants','Storage','Area')");
 
                     b.Property<string>("Redirect")
-                        .HasColumnType("enum(Shirt,Pants,Vest,Hat,Mask,Backpack,Glasses,AmmoSupply,BuildSupply,RallyPoint,Radio,AmmoBag,AmmoCrate,RepairStation,Bunker,EntrenchingTool,UAV,RepairStationBuilt,AmmoCrateBuilt,BunkerBuilt,Cache,RadioDamaged,LaserDesignator)");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator')");
 
                     b.Property<string>("RedirectVariant")
                         .HasColumnType("varchar(36) CHARACTER SET utf8mb4")
@@ -770,7 +770,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("NewPage")
                         .IsRequired()
-                        .HasColumnType("enum(Primary,Secondary,Hands,Backpack,Vest,Shirt,Pants,Storage,Area)");
+                        .HasColumnType("enum('Primary','Secondary','Hands','Backpack','Vest','Shirt','Pants','Storage','Area')");
 
                     b.Property<byte>("NewRotation")
                         .HasColumnType("tinyint unsigned");
@@ -783,7 +783,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("OldPage")
                         .IsRequired()
-                        .HasColumnType("enum(Primary,Secondary,Hands,Backpack,Vest,Shirt,Pants,Storage,Area)");
+                        .HasColumnType("enum('Primary','Secondary','Hands','Backpack','Vest','Shirt','Pants','Storage','Area')");
 
                     b.Property<byte>("OldX")
                         .HasColumnType("tinyint unsigned");
@@ -1188,7 +1188,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Cause")
                         .IsRequired()
-                        .HasColumnType("enum(BLEEDING,BONES,FREEZING,BURNING,FOOD,WATER,GUN,MELEE,ZOMBIE,ANIMAL,SUICIDE,KILL,INFECTION,PUNCH,BREATH,ROADKILL,VEHICLE,GRENADE,SHRED,LANDMINE,ARENA,MISSILE,CHARGE,SPLASH,SENTRY,ACID,BOULDER,BURNER,SPIT,SPARK)");
+                        .HasColumnType("enum('BLEEDING','BONES','FREEZING','BURNING','FOOD','WATER','GUN','MELEE','ZOMBIE','ANIMAL','SUICIDE','KILL','INFECTION','PUNCH','BREATH','ROADKILL','VEHICLE','GRENADE','SHRED','LANDMINE','ARENA','MISSILE','CHARGE','SPLASH','SENTRY','ACID','BOULDER','BURNER','SPIT','SPARK')");
 
                     b.Property<float>("Damage")
                         .HasColumnType("float");
@@ -1227,7 +1227,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Limb")
                         .IsRequired()
-                        .HasColumnType("enum(LEFT_FOOT,LEFT_LEG,RIGHT_FOOT,RIGHT_LEG,LEFT_HAND,LEFT_ARM,RIGHT_HAND,RIGHT_ARM,LEFT_BACK,RIGHT_BACK,LEFT_FRONT,RIGHT_FRONT,SPINE,SKULL)");
+                        .HasColumnType("enum('LEFT_FOOT','LEFT_LEG','RIGHT_FOOT','RIGHT_LEG','LEFT_HAND','LEFT_ARM','RIGHT_HAND','RIGHT_ARM','LEFT_BACK','RIGHT_BACK','LEFT_FRONT','RIGHT_FRONT','SPINE','SKULL')");
 
                     b.Property<string>("NearestLocation")
                         .IsRequired()
@@ -1326,7 +1326,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("DeathCause")
                         .IsRequired()
-                        .HasColumnType("enum(BLEEDING,BONES,FREEZING,BURNING,FOOD,WATER,GUN,MELEE,ZOMBIE,ANIMAL,SUICIDE,KILL,INFECTION,PUNCH,BREATH,ROADKILL,VEHICLE,GRENADE,SHRED,LANDMINE,ARENA,MISSILE,CHARGE,SPLASH,SENTRY,ACID,BOULDER,BURNER,SPIT,SPARK)");
+                        .HasColumnType("enum('BLEEDING','BONES','FREEZING','BURNING','FOOD','WATER','GUN','MELEE','ZOMBIE','ANIMAL','SUICIDE','KILL','INFECTION','PUNCH','BREATH','ROADKILL','VEHICLE','GRENADE','SHRED','LANDMINE','ARENA','MISSILE','CHARGE','SPLASH','SENTRY','ACID','BOULDER','BURNER','SPIT','SPARK')");
 
                     b.Property<string>("DeathMessage")
                         .IsRequired()
@@ -1630,7 +1630,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("enum(Bunker,AmmoCrate,RepairStation,Fortification,Emplacement)");
+                        .HasColumnType("enum('Bunker','AmmoCrate','RepairStation','Fortification','Emplacement')");
 
                     b.Property<double>("UseTimeSeconds")
                         .HasColumnType("double");
@@ -1735,7 +1735,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("FobType")
                         .IsRequired()
-                        .HasColumnType("enum(Other,RadioFob,SpecialFob,Cache)");
+                        .HasColumnType("enum('Other','RadioFob','SpecialFob','Cache')");
 
                     b.Property<int>("FortificationsBuilt")
                         .HasColumnType("int");

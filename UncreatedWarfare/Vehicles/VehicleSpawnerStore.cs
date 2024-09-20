@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Vehicles;
 /// <remarks>Decided to go with raw binary instead of SQL since this kind of relies on other level savedata and the map, plus it was easier.</remarks>
 
 [Priority(-1 /* load after BuildableSaver */)]
-public class VehicleSpawnerStore : ISessionHostedService
+public class VehicleSpawnerStore : ILayoutHostedService
 {
     private readonly ILogger<VehicleSpawnerStore> _logger;
     private readonly List<VehicleSpawnInfo> _spawns;
@@ -36,7 +36,7 @@ public class VehicleSpawnerStore : ISessionHostedService
         Spawns = new ReadOnlyCollection<VehicleSpawnInfo>(_spawns);
     }
 
-    UniTask ISessionHostedService.StartAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         if (Level.isLoaded)
         {
@@ -50,7 +50,7 @@ public class VehicleSpawnerStore : ISessionHostedService
         return UniTask.CompletedTask;
     }
 
-    UniTask ISessionHostedService.StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         Level.onLevelLoaded -= OnLevelLoaded;
         return UniTask.CompletedTask;

@@ -28,7 +28,7 @@ public interface ICachableLanguageDataStore : ILanguageDataStore
     Task ReloadCache(CancellationToken token = default);
 }
 
-public class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore where TDbContext : ILanguageDbContext
+public class MySqlLanguageDataStore : ICachableLanguageDataStore
 {
     private static readonly char[] SpaceSplit = [ ' ' ];
 
@@ -129,7 +129,7 @@ public class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore whe
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<TDbContext>();
+            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
             if (info.Key == 0)
                 await dbContext.Languages.AddAsync(info, token);
             else
@@ -161,7 +161,7 @@ public class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore whe
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<TDbContext>();
+            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
             if (!await dbContext.LanguagePreferences.AnyAsync(x => x.Steam64 == preferences.Steam64, token).ConfigureAwait(false))
                 await dbContext.LanguagePreferences.AddAsync(preferences, token);
             else
@@ -188,7 +188,7 @@ public class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore whe
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<TDbContext>();
+            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
             LanguagePreferences? pref = await dbContext.LanguagePreferences.FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
             return pref ?? new LanguagePreferences
             {
@@ -225,7 +225,7 @@ public class MySqlLanguageDataStore<TDbContext> : ICachableLanguageDataStore whe
     }
     public async Task GetLanguages(IList<LanguageInfo> outputList, CancellationToken token = default)
     {
-        await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<TDbContext>();
+        await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
         List<LanguageInfo> info = await Include(dbContext.Languages).ToListAsync(token).ConfigureAwait(false);
         if (outputList is List<LanguageInfo> list)
             list.AddRange(info);

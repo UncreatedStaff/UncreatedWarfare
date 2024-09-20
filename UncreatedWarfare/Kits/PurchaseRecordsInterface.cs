@@ -72,7 +72,7 @@ public class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
     public bool FilterLoadouts { get; set; } = true;
     public SemaphoreSlim Semaphore { get; } = new SemaphoreSlim(1, 1);
 
-    protected PurchaseRecordsInterface(IServiceProvider serviceProvider)
+    public PurchaseRecordsInterface(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         StripeService = serviceProvider.GetRequiredService<IStripeService>();

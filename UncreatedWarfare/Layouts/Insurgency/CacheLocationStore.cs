@@ -9,7 +9,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Layouts.Insurgency;
 
 [SessionHostedService(EnabledByDefault = false)]
-public class CacheLocationStore : ISessionHostedService
+public class CacheLocationStore : ILayoutHostedService
 {
     private readonly ILogger<CacheLocationStore> _logger;
 
@@ -22,7 +22,7 @@ public class CacheLocationStore : ISessionHostedService
         _logger = logger;
     }
 
-    async UniTask ISessionHostedService.StartAsync(CancellationToken token)
+    async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         await UniTask.SwitchToMainThread(token);
 
@@ -39,7 +39,7 @@ public class CacheLocationStore : ISessionHostedService
         Locations = _locationsIntl.AsReadOnly();
     }
 
-    UniTask ISessionHostedService.StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
     }

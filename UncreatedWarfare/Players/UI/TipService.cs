@@ -7,15 +7,15 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Players.UI;
 
-public class TipService : ISessionHostedService, IEventListener<PlayerLeft>
+public class TipService : ILayoutHostedService, IEventListener<PlayerLeft>
 {
     private readonly List<Tip> _tips = new List<Tip>(64);
-    UniTask ISessionHostedService.StartAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
     }
 
-    UniTask ISessionHostedService.StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         _tips.Clear();
         return UniTask.CompletedTask;

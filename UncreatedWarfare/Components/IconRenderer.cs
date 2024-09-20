@@ -17,7 +17,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Components;
 
-public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
+public class IconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 {
     private readonly IPlayerService _playerService;
     private const float FullTickLoopTime = 0.25f;
@@ -31,12 +31,12 @@ public class IconManager : ISessionHostedService, IEventListener<PlayerLeft>
         TimeUtility.updated += OnUpdate;
     }
 
-    UniTask ISessionHostedService.StartAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
     }
 
-    UniTask ISessionHostedService.StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         DeleteAllIcons();
         CheckExistingBuildables();

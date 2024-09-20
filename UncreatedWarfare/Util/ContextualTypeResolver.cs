@@ -135,11 +135,17 @@ internal static class ContextualTypeResolver
 
             if (index != -1)
             {
-                index = -1;
-                break;
+                type = null;
+                return false;
             }
 
             index = i;
+        }
+
+        if (index == -1)
+        {
+            type = null;
+            return false;
         }
 
         type = _allTypesCache[index];

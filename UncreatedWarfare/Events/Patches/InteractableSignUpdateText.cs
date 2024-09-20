@@ -1,7 +1,6 @@
-﻿using DanielWillett.ReflectionTools;
+﻿using Autofac;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
-using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Reflection;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -66,12 +65,12 @@ internal class InteractableSignUpdateText : IHarmonyPatch
 
         BarricadeData data = drop.GetServersideData();
 
-        IServiceProvider serviceProvider = WarfareModule.Singleton.ServiceProvider;
+        IContainer serviceProvider = WarfareModule.Singleton.ServiceProvider;
 
         WarfarePlayer? instigator = null;
-        if (drop.model.TryGetComponent(out BarricadeComponent comp) && comp.EditTick >= serviceProvider.GetRequiredService<WarfareTimeComponent>().Updates)
+        if (drop.model.TryGetComponent(out BarricadeComponent comp) && comp.EditTick >= serviceProvider.Resolve<WarfareTimeComponent>().Updates)
         {
-            instigator = serviceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayerOrNull(comp.LastEditor);
+            instigator = serviceProvider.Resolve<IPlayerService>().GetOnlinePlayerOrNull(comp.LastEditor);
         }
 
         SignTextChanged args = new SignTextChanged

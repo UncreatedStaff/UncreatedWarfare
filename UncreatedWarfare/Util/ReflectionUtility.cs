@@ -25,7 +25,7 @@ public static class ReflectionUtility
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is empty.", nameof(name));
 
-        TRpcType? rpc = Variables.FindStatic<TDeclaringType, TRpcType>("SendChangeText")?.GetValue();
+        TRpcType? rpc = Variables.FindStatic<TDeclaringType, TRpcType>(name)?.GetValue();
         if (rpc == null)
         {
             L.Logger.LogWarning("RPC not found in {0}: \"{1}\" of type {2}.", Accessor.ExceptionFormatter.Format(typeof(TDeclaringType)), name, Accessor.ExceptionFormatter.Format(typeof(TRpcType)));

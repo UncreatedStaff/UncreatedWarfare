@@ -15,7 +15,7 @@ public static class TeamUtility
     /// Get faction information about a faction string from a <see cref="ITeamManager{TTeam}"/> config.
     /// </summary>
     /// <exception cref="LayoutConfigurationException">Failed to find a valid faction.</exception>
-    public static async Task<Faction> ResolveTeamFactionHint(string faction, IGameDataDbContext dbContext, ITeamManager<Team> readFrom, CancellationToken token = default)
+    public static async Task<Faction> ResolveTeamFactionHint(string faction, IGameDataDbContext dbContext, ITeamManager<Team> readFrom, MapScheduler mapScheduler, CancellationToken token = default)
     {
         int mapId = -1;
         if (faction.StartsWith("Map", StringComparison.InvariantCultureIgnoreCase))
@@ -33,7 +33,7 @@ public static class TeamUtility
             return factionObj;
         }
 
-        int currentMapId = MapScheduler.Current;
+        int currentMapId = mapScheduler.Current;
 
         MapData? map = await dbContext.Maps
             .Include(x => x.Team1Faction)

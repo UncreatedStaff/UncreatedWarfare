@@ -1,9 +1,9 @@
 ﻿namespace Uncreated.Warfare.Services;
 
 /// <summary>
-/// Runs at game startup and shutdown.
+/// Runs at layout session startup and shutdown.
 /// </summary>
-public interface ISessionHostedService
+public interface ILayoutHostedService
 {
     /// <summary>
     /// Executes at the beginning of every game.

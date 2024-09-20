@@ -13,12 +13,15 @@ public static class GameThread
     /// </summary>
     /// <remarks>Much more effecient than <see cref="ThreadUtil.IsGameThread"/>.</remarks>
     [ThreadStatic]
-    public static readonly bool IsCurrent;
+    // ReSharper disable once FieldCanBeMadeReadOnly.Local (this is broken in mono for some reason)
+    private static bool _isCurrent = true;
 
-    static GameThread()
+    public static bool IsCurrent
     {
-        IsCurrent = true;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get { return _isCurrent; }
     }
+
 
     /// <summary>
     /// Throw an error if this function isn't ran on the main thread.
@@ -27,7 +30,7 @@ public static class GameThread
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AssertCurrent()
     {
-        if (IsCurrent)
+        if (_isCurrent)
             return;
 
         throw new GameThreadException();
@@ -40,14 +43,17 @@ public static class GameThread
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AssertCurrent(string feature)
     {
-        if (IsCurrent)
+        if (_isCurrent)
             return;
 
         throw new GameThreadException(feature);
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static void Setup() { }
+    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+    internal static void Setup()
+    {
+        ThreadUtil.assertIsGameThread();
+    }
 }
 
 /// <summary>

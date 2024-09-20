@@ -15,3 +15,11 @@ public interface IHostedService
     /// </summary>
     UniTask StopAsync(CancellationToken token);
 }
+
+public interface ILevelHostedService : IHostedService
+{
+    /// <summary>
+    /// Executes when the level finishes loading and all assets are loaded but before the first session starts.
+    /// </summary>
+    UniTask LoadLevelAsync(CancellationToken token);
+}

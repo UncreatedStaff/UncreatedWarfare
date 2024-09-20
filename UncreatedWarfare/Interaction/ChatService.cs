@@ -11,18 +11,18 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Interaction;
 public class ChatService
 {
-    private readonly TranslationService _translationService;
+    private readonly ITranslationService _translationService;
     private readonly ILogger<ChatService> _logger;
     private readonly ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>? _sendChatIndividual;
 
     public const int MaxMessageSize = 2047;
 
-    public ChatService(TranslationService translationService, ILogger<ChatService> logger)
+    public ChatService(ITranslationService translationService, ILogger<ChatService> logger)
     {
         _translationService = translationService;
         _logger = logger;
 
-        _sendChatIndividual = ReflectionUtility.FindRequiredRpc<ChatManager, ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>>("SendChatEntry");
+        _sendChatIndividual = ReflectionUtility.FindRpc<ChatManager, ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>>("SendChatEntry");
     }
 
     /// <summary>

@@ -5,7 +5,7 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
-public class DeploymentService : ISessionHostedService
+public class DeploymentService : ILayoutHostedService
 {
     public const float DefaultNearbyEnemyRange = 35;
 
@@ -15,12 +15,12 @@ public class DeploymentService : ISessionHostedService
         _playerService = playerService;
     }
 
-    UniTask ISessionHostedService.StartAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
     }
 
-    UniTask ISessionHostedService.StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {

@@ -387,7 +387,7 @@ public static class L
     internal static void NetLogWarning(string message, ConsoleColor color) => LogWarning(message, color, method: "UncreatedNetworking");
     internal static void NetLogError(string message, ConsoleColor color) => LogError(message, color, method: "UncreatedNetworking");
     internal static void NetLogException(Exception ex) => LogError(ex, method: "UncreatedNetworking");
-    public static void Log(string info, ConsoleColor color = ConsoleColor.White)
+    public static void Log(string info, ConsoleColor color = ConsoleColor.DarkCyan)
     {
         if (!Provider.isInitialized)
             LogAsLibrary("[INFO]  " + info, color);
@@ -726,12 +726,17 @@ public static class L
         //}
     }
 
-    public sealed class UCLogger : ILogger
+    public class UCLogger<T> : UCLogger, ILogger<T>
+    {
+        public UCLogger() : base(Accessor.Formatter.Format(typeof(T))) { }
+    }
+
+    public class UCLogger : ILogger
     {
         public bool DebugLogging { get; set; }
         private readonly string? _categoryName;
-        internal UCLogger() { }
-        internal UCLogger(string categoryName)
+        public UCLogger() { }
+        public UCLogger(string categoryName)
         {
             _categoryName = categoryName;
         }

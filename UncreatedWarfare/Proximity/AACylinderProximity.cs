@@ -38,7 +38,7 @@ public class AACylinderProximity : IAACylinderProximity
     /// <exception cref="ArgumentException">Radius or center is not finite.</exception>
     public AACylinderProximity(Vector3 center, float radius, float height, SnapAxis axis = SnapAxis.Y)
     {
-        if (_axis is not SnapAxis.X and not SnapAxis.Y and not SnapAxis.Z)
+        if (axis is not SnapAxis.X and not SnapAxis.Y and not SnapAxis.Z)
             throw new ArgumentOutOfRangeException(nameof(axis), "Axis must be X, Y, or Z.");
 
         if (!float.IsFinite(radius))

@@ -6,9 +6,9 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Exceptions;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
@@ -80,11 +80,13 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
         FactionInfo? factionInfo1, factionInfo2;
         IFactionDataStore factionDataStore = _serviceProvider.GetRequiredService<IFactionDataStore>();
+        MapScheduler mapScheduler = _serviceProvider.GetRequiredService<MapScheduler>();
+
         using (IServiceScope scope = _serviceProvider.CreateScope())
-        await using (IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>())
+        await using (IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IGameDataDbContext>())
         {
-            Faction f1 = await TeamUtility.ResolveTeamFactionHint(Teams[0].Faction, dbContext, this, token);
-            Faction f2 = await TeamUtility.ResolveTeamFactionHint(Teams[1].Faction, dbContext, this, token);
+            Faction f1 = await TeamUtility.ResolveTeamFactionHint(Teams[0].Faction, dbContext, this, mapScheduler, token);
+            Faction f2 = await TeamUtility.ResolveTeamFactionHint(Teams[1].Faction, dbContext, this, mapScheduler, token);
 
             factionInfo1 = factionDataStore.FindFaction(f1);
             factionInfo2 = factionDataStore.FindFaction(f2);

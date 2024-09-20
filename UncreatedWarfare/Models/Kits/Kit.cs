@@ -1,4 +1,6 @@
-﻿using DanielWillett.ReflectionTools;
+﻿using Autofac;
+using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
@@ -7,9 +9,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
@@ -132,7 +132,7 @@ public class Kit : ITranslationArgument, ICloneable
             int v = UnlockRequirementsModels.GetListVersion();
             if (_listUnlockRequirementsArrayVersion != v || _unlockRequirements == null)
             {
-                UpdateUnlockRequirementArray(WarfareModule.Singleton.ScopedProvider /* todo */);
+                UpdateUnlockRequirementArray(WarfareModule.Singleton.ScopedProvider.Resolve<IServiceProvider>() /* todo */);
                 _listUnlockRequirementsArrayVersion = v;
             }
 
@@ -400,7 +400,7 @@ public class Kit : ITranslationArgument, ICloneable
     {
         if (MapFilter.IsNullOrEmpty())
             return true;
-        int map = MapScheduler.Current;
+        int map = MapScheduler.CurrentStatic;
         if (map != -1)
         {
             for (int i = 0; i < MapFilter.Count; ++i)

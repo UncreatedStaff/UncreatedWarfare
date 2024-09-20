@@ -14,6 +14,9 @@ public class ElectricalGridService : IHostedService
 
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
+        // todo run this on level load.
+        return UniTask.CompletedTask;
+        
         if (!Level.info.configData.Has_Global_Electricity)
         {
             _logger.LogWarning("Level does not have global electricity enabled, electrical grid effects will not work!");

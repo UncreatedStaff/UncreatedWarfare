@@ -1,4 +1,5 @@
-﻿using DanielWillett.ReflectionTools;
+﻿using Autofac;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
@@ -300,7 +302,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
         if (foundTasks != null && foundTasks.Exists(task => (task.Options & CommandWaitOptions.BlockOriginalExecution) != 0))
         {
             Lazy<CommandContext> contextFactory = new Lazy<CommandContext>(
-                () => new CommandContext(user, CancellationToken.None, args, originalMessage, command, _module.ScopedProvider),
+                () => new CommandContext(user, CancellationToken.None, args, originalMessage, command, _module.ScopedProvider.Resolve<IServiceProvider>()),
                     LazyThreadSafetyMode.ExecutionAndPublication);
 
             foreach (CommandWaitTask task in foundTasks)
@@ -441,7 +443,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
 
         Type commandType = vanillaCommand.GetType();
 
-        CommandContext ctx = new CommandContext(user, token, args, originalMessage, commandInfo, _module.ScopedProvider);
+        CommandContext ctx = new CommandContext(user, token, args, originalMessage, commandInfo, _module.ScopedProvider.Resolve<IServiceProvider>());
         VanillaCommandListener listener = new VanillaCommandListener(ctx);
         Dedicator.commandWindow.addIOHandler(listener);
         try
@@ -486,11 +488,14 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
 
         CancellationTokenSource src = new CancellationTokenSource();
         CancellationTokenSource linkedSrc = CancellationTokenSource.CreateLinkedTokenSource(token, src.Token);
+        ILifetimeScope scope = _module.ScopedProvider.BeginLifetimeScope(LifetimeScopeTags.Command);
         try
         {
+            IServiceProvider serviceProvider = scope.Resolve<IServiceProvider>();
+
             await UniTask.SwitchToMainThread();
 
-            CommandContext ctx = new CommandContext(user, linkedSrc.Token, args, originalMessage, command, _module.ScopedProvider)
+            CommandContext ctx = new CommandContext(user, linkedSrc.Token, args, originalMessage, command, serviceProvider)
             {
                 ArgumentOffset = argumentOffset
             };
@@ -509,10 +514,9 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
             else
             {
                 IExecutableCommand cmdInstance;
-                using IServiceScope scope = _module.ScopedProvider.CreateScope();
                 try
                 {
-                    cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(scope.ServiceProvider, command.Type, [ ctx ]);
+                    cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(serviceProvider, command.Type, [ ctx ]);
                 }
                 catch (InvalidOperationException)
                 {
@@ -640,6 +644,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
             src.Dispose();
             linkedSrc.Dispose();
             lockTaken?.Release();
+            await scope.DisposeAsync();
         }
 
         // run switch-to command

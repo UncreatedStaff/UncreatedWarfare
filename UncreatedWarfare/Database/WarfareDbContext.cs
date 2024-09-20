@@ -23,11 +23,8 @@ using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Database;
 #pragma warning disable CS8644
-public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext, IWhitelistDbContext, IHostedService
+public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext, IWhitelistDbContext
 {
-    private readonly string _connectionString;
-    private readonly bool _sensitiveDataLogging;
-
     private readonly ILogger<WarfareDbContext> _logger;
     
     public DbSet<LanguageInfo> Languages => Set<LanguageInfo>();
@@ -55,10 +52,24 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<BuildableSave> Saves => Set<BuildableSave>();
     public DbSet<ItemWhitelist> Whitelists => Set<ItemWhitelist>();
 
-    public WarfareDbContext(IConfiguration sysConfig, ILogger<WarfareDbContext> logger) : base(new DbContextOptions<WarfareDbContext>())
+    public WarfareDbContext(ILogger<WarfareDbContext> logger, DbContextOptions<WarfareDbContext> options) : base(options)
     {
         _logger = logger;
+    }
 
+    /// <summary>
+    /// Used to auto-fill the 'options' parameters.
+    /// </summary>
+    internal static DbContextOptions<WarfareDbContext> GetOptions(IConfiguration sysConfig)
+    {
+        DbContextOptionsBuilder<WarfareDbContext> builder = new DbContextOptionsBuilder<WarfareDbContext>();
+        Configure(builder, sysConfig);
+        return builder.Options;
+    }
+
+    /* configure database settings */
+    private static void Configure(DbContextOptionsBuilder optionsBuilder, IConfiguration sysConfig)
+    {
         IConfiguration databaseSection = sysConfig.GetSection("database");
 
         string? connectionStringType = databaseSection["connection_string_name"];
@@ -71,23 +82,18 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException($"Missing connection string: \"{connectionStringType}\".");
 
+        bool sensitiveDataLogging = false;
         if (databaseSection.GetValue<bool>("sensitive_data_logging"))
         {
-            _logger.LogInformation("Sensitive data logging is enabled.");
-            _sensitiveDataLogging = true;
+            sensitiveDataLogging = true;
+            L.Log("Sensitive data logging is enabled.");
         }
 
-        _connectionString = connectionString;
-    }
-
-    /* configure database settings */
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        optionsBuilder.UseMySql(_connectionString, x => x
+        optionsBuilder.UseMySql(connectionString, x => x
             .CharSet(CharSet.Utf8Mb4)
             .CharSetBehavior(CharSetBehavior.AppendToAllColumns));
 
-        if (_sensitiveDataLogging)
+        if (sensitiveDataLogging)
         {
             optionsBuilder.EnableSensitiveDataLogging();
         }
@@ -121,23 +127,6 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder, _logger);
 
         _logger.LogInformation("Model created.");
-    }
-
-    async UniTask IHostedService.StartAsync(CancellationToken token)
-    {
-        try
-        {
-            await Database.MigrateAsync(token);
-        }
-        finally
-        {
-            await DisposeAsync();
-        }
-    }
-
-    UniTask IHostedService.StopAsync(CancellationToken token)
-    {
-        return DisposeAsync().AsUniTask();
     }
 }
 #pragma warning restore CS8644

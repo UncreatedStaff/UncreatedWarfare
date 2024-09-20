@@ -922,6 +922,12 @@ public static class AssetLink
 
 public class AssetLinkTypeConverter : TypeConverter
 {
+    private readonly Type _type;
+    public AssetLinkTypeConverter(Type type)
+    {
+        _type = type;
+    }
+
     public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
     {
         return destinationType == typeof(string)
@@ -949,24 +955,19 @@ public class AssetLinkTypeConverter : TypeConverter
 
     public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object? value)
     {
-        bool hasType = context.PropertyDescriptor is { PropertyType.IsGenericType: true }
-                       && context.PropertyDescriptor.PropertyType.GetGenericTypeDefinition() == typeof(IAssetLink<>);
-
-        Type? assetType = hasType
-            ? context.PropertyDescriptor!.PropertyType.GetGenericArguments()[0]
-            : null;
+        Type? assetType = _type.IsConstructedGenericType ? _type.GetGenericArguments()[0] : null;
 
         return value switch
         {
             IAssetLink<Asset> => value,
 
-            string str when hasType => AssetLink.Parse(str, assetType!),
+            string str when assetType != null => AssetLink.Parse(str, assetType),
             string str => AssetLink.Parse<Asset>(str),
 
-            Guid guid when hasType => AssetLink.Create(guid, assetType!),
+            Guid guid when assetType != null => AssetLink.Create(guid, assetType),
             Guid guid => AssetLink.Create<Asset>(guid),
 
-            ushort id when hasType => AssetLink.Create(id, assetType!),
+            ushort id when assetType != null => AssetLink.Create(id, assetType),
             ushort id => AssetLink.Create<Asset>(id),
 
             _ => base.ConvertFrom(context, culture, value)!

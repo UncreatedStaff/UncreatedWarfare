@@ -123,6 +123,9 @@
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
     <PackageReference Include="JetBrains.Annotations" Version="[2018.2.1,)" Aliases="JetBrains" />
 
+    <PackageReference Include="Autofac" Version="7.1.0" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.2.0" />
+
     <!-- for the love of god do not touch these version numbers -->
 
     <PackageReference Include="System.Data.Common" Version="4.3.0" />
@@ -143,6 +146,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.0" Private="true" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="3.1.2" />
     <!--<PackageReference Remove="System.ComponentModel.Annotations" />-->
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(CopyToModule)' == 'False'">
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0">
+      <Aliases>DepInj</Aliases>
+    </PackageReference>
   </ItemGroup>
   <!-- ReSharper restore VulnerablePackage -->
 
@@ -173,6 +182,7 @@
     <Using Remove="System.Text" />
     <Using Include="JetBrains.Annotations" />
     <Using Include="SDG.Unturned" />
+    <Using Include="Autofac" />
     <Using Include="Steamworks" />
     <Using Include="System.Collections" />
     <Using Include="UnityEngine" />

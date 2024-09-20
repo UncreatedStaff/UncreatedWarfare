@@ -1,7 +1,7 @@
-﻿using DanielWillett.ReflectionTools;
+﻿using Autofac;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -147,9 +147,9 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
 
     private static void DroppedItemInvoker(PlayerInventory playerInv, byte page, byte x, byte y, byte rot, Item? item)
     {
-        IServiceProvider serviceProvider = WarfareModule.Singleton.ServiceProvider;
+        IContainer serviceProvider = WarfareModule.Singleton.ServiceProvider;
 
-        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        IPlayerService playerService = serviceProvider.Resolve<IPlayerService>();
 
         WarfarePlayer player = playerService.GetOnlinePlayer(playerInv);
 

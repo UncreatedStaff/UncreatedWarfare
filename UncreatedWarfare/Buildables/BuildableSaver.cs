@@ -18,13 +18,14 @@ namespace Uncreated.Warfare.Buildables;
 /// <summary>
 /// Responsible for saving structures or barricades that are restored if they're destroyed.
 /// </summary>
-public class BuildableSaver : ISessionHostedService, IDisposable
+public class BuildableSaver : ILayoutHostedService, IDisposable
 {
     private readonly IBuildablesDbContext _dbContext;
     private readonly ILogger<BuildableSaver> _logger;
     private readonly IPlayerService _playerService;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     private readonly SignInstancer? _signs;
+    private readonly MapScheduler _mapScheduler;
 
     private List<BuildableSave>? _saves;
 
@@ -39,17 +40,18 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         _signs = serviceProvider.GetService<SignInstancer>();
         _logger = serviceProvider.GetRequiredService<ILogger<BuildableSaver>>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _mapScheduler = serviceProvider.GetRequiredService<MapScheduler>();
 
         IConfiguration config = serviceProvider.GetRequiredService<IConfiguration>();
         _region = config.GetValue<byte>("region");
     }
 
-    async UniTask ISessionHostedService.StartAsync(CancellationToken token)
+    async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         await UniTask.SwitchToThreadPool();
 
         byte region = _region;
-        int mapId = MapScheduler.Current;
+        int mapId = _mapScheduler.Current;
 
         await _semaphore.WaitAsync(token);
         try
@@ -95,7 +97,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         }
     }
 
-    UniTask ISessionHostedService.StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
     }
@@ -121,7 +123,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         try
         {
             byte region = _region;
-            int mapId = MapScheduler.Current;
+            int mapId = _mapScheduler.Current;
             uint instId = barricade.instanceID;
 
             saves = await _dbContext.Saves
@@ -149,7 +151,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
                     MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.y)),
                     MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.z))
                 ),
-                MapId = MapScheduler.Current
+                MapId = _mapScheduler.Current
             };
 
             if (barricade.interactable is InteractableStorage storage)
@@ -269,7 +271,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         try
         {
             byte region = _region;
-            int mapId = MapScheduler.Current;
+            int mapId = _mapScheduler.Current;
             uint instId = structure.instanceID;
 
             saves = await _dbContext.Saves
@@ -297,7 +299,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
                     MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.y)),
                     MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.z))
                 ),
-                MapId = MapScheduler.Current,
+                MapId = _mapScheduler.Current,
                 Items = new List<BuildableStorageItem>(0)
             };
 
@@ -370,7 +372,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         try
         {
             byte region = _region;
-            int mapId = MapScheduler.Current;
+            int mapId = _mapScheduler.Current;
 
             return await _dbContext.Saves
                 .Where(save => save.IsStructure == isStructure
@@ -409,7 +411,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         try
         {
             byte region = _region;
-            int mapId = MapScheduler.Current;
+            int mapId = _mapScheduler.Current;
 
             return await _dbContext.Saves
                 .Where(save => save.IsStructure == isStructure
@@ -453,7 +455,7 @@ public class BuildableSaver : ISessionHostedService, IDisposable
         try
         {
             byte region = _region;
-            int mapId = MapScheduler.Current;
+            int mapId = _mapScheduler.Current;
 
             List<BuildableSave> saves = await _dbContext.Saves
                 .Where(save => save.IsStructure == isStructure

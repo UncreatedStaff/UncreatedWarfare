@@ -1,5 +1,7 @@
-﻿#if DEBUG
+﻿#if DEBUG && NETCOREAPP
+extern alias DepInj;
 using DanielWillett.ReflectionTools;
+using DepInj::Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,7 +53,7 @@ public class EFMigrationDesignTimeFactory : IDesignTimeDbContextFactory<WarfareD
         IConfigurationRoot sysConfig = builder.Build();
 
         IServiceCollection serviceCollection = new ServiceCollection();
-        serviceCollection.AddDbContext<WarfareDbContext>();
+        serviceCollection.AddTransient(sp => new WarfareDbContext(sp.GetRequiredService<ILogger<WarfareDbContext>>(), WarfareDbContext.GetOptions(sysConfig)));
         serviceCollection.AddSingleton<IConfiguration>(sysConfig);
         serviceCollection.AddLogging(builder => builder.AddProvider(new L.UCLoggerFactory()));
 

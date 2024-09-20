@@ -7,17 +7,14 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
@@ -25,7 +22,6 @@ using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
@@ -36,7 +32,7 @@ using Uncreated.Warfare.Util.Timing;
 namespace Uncreated.Warfare.Kits;
 
 public partial class KitManager :
-    ISessionHostedService,
+    ILayoutHostedService,
     IEventListener<QuestCompleted>,
     IEventListener<PlayerJoined>,
     IEventListener<PlayerLeft>,
@@ -141,17 +137,44 @@ public partial class KitManager :
         }, "faction", "team", "group");
     }
 
-    internal static void ConfigureServices(IServiceCollection serviceCollection)
+    internal static void ConfigureServices(ContainerBuilder serviceCollection)
     {
-        serviceCollection.AddScoped<KitManager>();
-        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Cache);
-        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Distribution);
-        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Requests);
-        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Signs);
-        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Layouts);
-        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Boosting);
-        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Loadouts);
-        serviceCollection.AddScoped(serviceProvider => serviceProvider.GetRequiredService<KitManager>().Defaults);
+        serviceCollection.RegisterType<KitManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Cache)
+                         .AsSelf().AsImplementedInterfaces()
+                         .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
+                         .ExternallyOwned();
+        serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Distribution)
+                         .AsSelf().AsImplementedInterfaces()
+                         .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
+                         .ExternallyOwned();
+        serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Requests)
+                         .AsSelf().AsImplementedInterfaces()
+                         .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
+                         .ExternallyOwned();
+        serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Signs)
+                         .AsSelf().AsImplementedInterfaces()
+                         .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
+                         .ExternallyOwned();
+        serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Layouts)
+                         .AsSelf().AsImplementedInterfaces()
+                         .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
+                         .ExternallyOwned();
+        serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Boosting)
+                         .AsSelf().AsImplementedInterfaces()
+                         .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
+                         .ExternallyOwned();
+        serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Loadouts)
+                         .AsSelf().AsImplementedInterfaces()
+                         .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
+                         .ExternallyOwned();
+        serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Defaults)
+                         .AsSelf().AsImplementedInterfaces()
+                         .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
+                         .ExternallyOwned();
     }
 
     void IDisposable.Dispose()
@@ -193,7 +216,7 @@ public partial class KitManager :
         return set;
     }
 
-    async UniTask ISessionHostedService.StartAsync(CancellationToken token)
+    async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         await CreateMissingDefaultKits(token).ConfigureAwait(false);
 
@@ -206,7 +229,7 @@ public partial class KitManager :
         await Cache.ReloadCache(token).ConfigureAwait(false);
     }
 
-    UniTask ISessionHostedService.StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         PlayerLife.OnPreDeath -= OnPreDeath;
         Cache.Clear();
@@ -252,7 +275,7 @@ public partial class KitManager :
     public async Task<Kit?> GetKit(uint pk, CancellationToken token = default, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
     {
         using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
 
         return await GetKit(dbContext, pk, token, set);
     }
@@ -270,7 +293,7 @@ public partial class KitManager :
     public async Task<Kit?> FindKit(string id, CancellationToken token = default, bool exactMatchOnly = true, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
     {
         using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
 
         return await FindKit(dbContext, id, token, exactMatchOnly, set);
     }
@@ -346,7 +369,7 @@ public partial class KitManager :
     private async Task ValidateKits(CancellationToken token = default)
     {
         using IServiceScope scope = _serviceProvider.CreateScope();
-        await using WarfareDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
         List<Kit> allKits = await Set(dbContext)
             .Include(x => x.MapFilter)
             .Include(x => x.FactionFilter)
@@ -408,7 +431,7 @@ public partial class KitManager :
         using IServiceScope scope = _serviceProvider.CreateScope();
         ITeamManager<Team> teamManager = scope.ServiceProvider.GetRequiredService<ITeamManager<Team>>();
 
-        await using IFactionDbContext factionDbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+        await using IFactionDbContext factionDbContext = scope.ServiceProvider.GetRequiredService<IFactionDbContext>();
         factionDbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         foreach (Team team in teamManager.AllTeams)
@@ -670,7 +693,7 @@ public partial class KitManager :
     public async Task<Kit?> TryGiveRiflemanKit(WarfarePlayer player, bool manual, bool tip, CancellationToken token = default)
     {
         using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
 
         List<Kit> kits = await dbContext.Kits
             .Include(x => x.FactionFilter)
@@ -730,7 +753,7 @@ public partial class KitManager :
     public async Task<Kit?> GetRecommendedSquadleaderKit(ulong team, CancellationToken token = default)
     {
         using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
 
         List<Kit> kits = await dbContext.Kits
             .Where(x => x.Class == Class.Squadleader && !x.Disabled && x.Type == KitType.Public).ToListAsync(token).ConfigureAwait(false);
@@ -825,7 +848,7 @@ public partial class KitManager :
 
                     context.Remove(kit.MapFilter[j]);
                     kit.MapFilter.RemoveAt(j);
-                    _logger.LogWarning("Duplicate map filter found in kit \"{0}\" {1}: {2}.", kit.InternalName, kit.PrimaryKey, MapScheduler.GetMapName(comparer.Map));
+                    _logger.LogWarning("Duplicate map filter found in kit \"{0}\" {1}: {2}.", kit.InternalName, kit.PrimaryKey, comparer.Map);
                     kit.IsLoadDirty = true;
                 }
             }
@@ -1168,7 +1191,7 @@ public partial class KitManager :
         try
         {
             using IServiceScope scope = _serviceProvider.CreateScope();
-            await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+            await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
             ulong s64 = player.Steam64.m_SteamID;
 
             await UniTask.SwitchToMainThread(token);

@@ -8,6 +8,7 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
+using Autofac;
 using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Networking;
@@ -374,8 +375,7 @@ public class AudioRecordManager
     {
         L.LogDebug(data.Count + " B received.");
 
-        IServiceProvider serviceProvider = WarfareModule.Singleton.ServiceProvider;
-        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
         WarfarePlayer? player = playerService.GetOnlinePlayerOrNull(voice.player);
         player?.Component<AudioRecordPlayerComponent>().AppendPacket(data);
     }

@@ -1,7 +1,7 @@
-﻿using DanielWillett.ReflectionTools;
+﻿using Autofac;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -129,8 +129,7 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
             destroyer = 0ul;
         }
 
-        IServiceProvider serviceProvider = WarfareModule.Singleton.ServiceProvider;
-        IPlayerService playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
 
         WarfarePlayer? player = playerService.GetOnlinePlayerOrNull(destroyer);
 

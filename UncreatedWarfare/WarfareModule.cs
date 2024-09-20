@@ -1,8 +1,8 @@
 ﻿using DanielWillett.ModularRpcs.DependencyInjection;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Modules;
 using Stripe;
 using System;
@@ -11,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.EntityFrameworkCore;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -32,6 +31,7 @@ using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Networking.Purchasing;
@@ -67,7 +67,7 @@ public sealed class WarfareModule : IModuleNexus
     /// Static instance of the event dispatcher singleton for harmony patches to access it.
     /// </summary>
     /// <remarks>Do not use unless in a patch.</remarks>
-    public static EventDispatcher2 EventDispatcher => _dispatcher ??= Singleton?.ScopedProvider.GetRequiredService<EventDispatcher2>();
+    public static EventDispatcher2 EventDispatcher => _dispatcher ??= Singleton?.ScopedProvider.Resolve<EventDispatcher2>();
 
     /// <summary>
     /// Static instance of this module singleton for harmony patches to access it.
@@ -77,8 +77,8 @@ public sealed class WarfareModule : IModuleNexus
 
 #nullable restore
 
-    private bool _unloadedHostedServices;
-    private IServiceScope? _activeScope;
+    private bool _unloadedHostedServices = true;
+    private ILifetimeScope? _activeScope;
     private CancellationTokenSource _cancellationTokenSource;
     private Layout? _activeLayout;
     private GameObject _gameObjectHost;
@@ -96,12 +96,13 @@ public sealed class WarfareModule : IModuleNexus
     /// <summary>
     /// Global service provider. Gamemodes have their own scoped service providers and should be used instead.
     /// </summary>
-    public ServiceProvider ServiceProvider { get; private set; }
+    public IContainer ServiceProvider { get; private set; }
 
     /// <summary>
-    /// Game-specific service provider. If a game is not active, this will return <see cref="ServiceProvider"/>.
+    /// Game-specific service provider. If a game is not active, this will throw an error.
     /// </summary>
-    public IServiceProvider ScopedProvider => _activeScope?.ServiceProvider ?? ServiceProvider;
+    /// <exception cref="InvalidOperationException"/>
+    public ILifetimeScope ScopedProvider => _activeScope ?? throw new InvalidOperationException("A scope hasn't been created yet.");
 
     /// <summary>
     /// Token that will cancel when the module shuts down.
@@ -125,9 +126,10 @@ public sealed class WarfareModule : IModuleNexus
     {
         // will setup the main thread in GameThread before asserting
         GameThread.Setup();
+        GameThread.AssertCurrent();
 
-        AppDomain.CurrentDomain.AssemblyResolve += CheckForcedAssemblyVersionRedirects;
-        ModuleHook.PostVanillaAssemblyResolve += ErrorAssemblyNotResolved;
+        // setup UniTask
+        PlayerLoopHelper.Init();
 
         // this needs to be separated to give the above events time to be subscribed before loading types
         Init();
@@ -173,27 +175,35 @@ public sealed class WarfareModule : IModuleNexus
         ConfigurationHelper.AddSourceWithMapOverride(configBuilder, systemConfigLocation);
         Configuration = configBuilder.Build();
 
-        IServiceCollection serviceCollection = new ServiceCollection();
+        ContainerBuilder serviceCollection = new ContainerBuilder();
 
         // todo rewrite logging
-        serviceCollection.AddSingleton<ILoggerFactory, L.UCLoggerFactory>();
+        // register logging
+        serviceCollection.RegisterGeneric(typeof(L.UCLogger<>)).As(typeof(ILogger<>));
+        serviceCollection.RegisterType<L.UCLoggerFactory>().As<ILoggerFactory>();
 
         ConfigureServices(serviceCollection);
 
-        ServiceProvider = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = false,
-            ValidateScopes = true
-        });
+        ServiceProvider = serviceCollection.Build();
 
-        UniTask.Create(HostAsync);
+        UniTask.Create(async () =>
+        {
+            try
+            {
+                UniTask t = HostAsync();
+                await t;
+            }
+            catch (Exception ex)
+            {
+                CommandWindow.LogError(ExceptionFormatter.FormatException(ex, L.Cleaner));
+                UnloadModule();
+                Provider.shutdown();
+            }
+        });
     }
 
     void IModuleNexus.shutdown()
     {
-        AppDomain.CurrentDomain.AssemblyResolve -= CheckForcedAssemblyVersionRedirects;
-        ModuleHook.PostVanillaAssemblyResolve -= ErrorAssemblyNotResolved;
-
         if (Singleton == this)
             Singleton = null;
 
@@ -219,153 +229,227 @@ public sealed class WarfareModule : IModuleNexus
             Unhost();
         }
 
+        L.Log("Cleaning up container...");
         ServiceProvider.Dispose();
+        L.Log("Done - Shutting down");
     }
 
-    private void ConfigureServices(IServiceCollection serviceCollection)
+    private void ConfigureServices(ContainerBuilder bldr)
     {
         Assembly thisAsm = Assembly.GetExecutingAssembly();
 
+        bldr.RegisterType<MapScheduler>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         // global zones (not used for layouts)
-        serviceCollection.AddTransient<IZoneProvider, MapZoneProvider>();
-        serviceCollection.AddSingleton(serviceProvider => new ZoneStore(serviceProvider.GetServices<IZoneProvider>(), serviceProvider.GetRequiredService<ILogger<ZoneStore>>(), true));
-        serviceCollection.AddScoped<ElectricalGridService>();
+        bldr.RegisterType<MapZoneProvider>()
+            .As<IZoneProvider>();
 
-        serviceCollection.AddReflectionTools();
-        serviceCollection.AddModularRpcs(isServer: false, searchedAssemblies: [ Assembly.GetExecutingAssembly() ]);
+        bldr.Register(serviceProvider => new ZoneStore(serviceProvider.Resolve<IEnumerable<IZoneProvider>>(), serviceProvider.Resolve<ILogger<ZoneStore>>(), true))
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
-        serviceCollection.AddSingleton(this);
-        serviceCollection.AddSingleton(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)));
+        bldr.RegisterType<ElectricalGridService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
-        serviceCollection.AddSingleton(_gameObjectHost.GetOrAddComponent<WarfareTimeComponent>());
+        // external tools
+        bldr.RegisterFromCollection(collection =>
+        {
+            collection.AddReflectionTools();
+            collection.AddModularRpcs(isServer: false, searchedAssemblies: [Assembly.GetExecutingAssembly()]);
+        });
 
-        serviceCollection.AddSingleton<AssetConfiguration>();
+        bldr.RegisterInstance(this)
+            .ExternallyOwned();
+        bldr.RegisterInstance(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)))
+            .ExternallyOwned();
+
+        bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareTimeComponent>());
+
+        bldr.RegisterType<AssetConfiguration>().SingleInstance();
+        bldr.RegisterInstance(Configuration).ExternallyOwned();
 
         // homebase
-        serviceCollection.AddSingleton<HomebaseConnector>();
+        bldr.RegisterType<HomebaseConnector>().SingleInstance();
 
         // UI
-        serviceCollection.AddSingleton<ModerationUI>();
-        serviceCollection.AddSingleton<KitMenuUI>();
-        serviceCollection.AddSingleton<ActionMenuUI>();
-        serviceCollection.AddSingleton<SquadMenuUI>();
-        serviceCollection.AddSingleton<SquadListUI>();
-        serviceCollection.AddSingleton<FobListUI>();
-        serviceCollection.AddSingleton<PopupUI>();
-        serviceCollection.AddSingleton<CaptureUI>();
-        serviceCollection.AddSingleton<ConventionalLeaderboardUI>();
-        serviceCollection.AddSingleton<FlagListUI>();
-        serviceCollection.AddSingleton<StagingUI>();
-        serviceCollection.AddSingleton<WinToastUI>();
-        serviceCollection.AddSingleton<XPUI>();
-        serviceCollection.AddSingleton<CreditsUI>();
-        serviceCollection.AddSingleton<TeamSelectorUI>();
+        bldr.RegisterType<ModerationUI>().SingleInstance();
+        bldr.RegisterType<KitMenuUI>().SingleInstance();
+        bldr.RegisterType<ActionMenuUI>().SingleInstance();
+        bldr.RegisterType<SquadMenuUI>().SingleInstance();
+        bldr.RegisterType<SquadListUI>().SingleInstance();
+        bldr.RegisterType<FobListUI>().SingleInstance();
+        bldr.RegisterType<PopupUI>().SingleInstance();
+        bldr.RegisterType<CaptureUI>().SingleInstance();
+        bldr.RegisterType<ConventionalLeaderboardUI>().SingleInstance();
+        bldr.RegisterType<FlagListUI>().SingleInstance();
+        bldr.RegisterType<StagingUI>().SingleInstance();
+        bldr.RegisterType<WinToastUI>().SingleInstance();
+        bldr.RegisterType<XPUI>().SingleInstance();
+        bldr.RegisterType<CreditsUI>().SingleInstance();
+        bldr.RegisterType<TeamSelectorUI>().SingleInstance();
 
-        serviceCollection.AddScoped<TipService>();
+        bldr.RegisterType<TipService>()
+            .AsImplementedInterfaces().AsSelf()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // event handlers
-        serviceCollection.AddTransient<VehicleSpawnedHandler>();
+        bldr.RegisterType<VehicleSpawnedHandler>()
+            .AsImplementedInterfaces().AsSelf();
 
-        serviceCollection.AddTransient<SteamAPIService>();
+        bldr.RegisterType<SteamAPIService>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
 
-        serviceCollection.AddSingleton<AudioRecordManager>();
+        bldr.RegisterType<AudioRecordManager>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
 
-        serviceCollection.AddSingleton<LayoutFactory>();
-        serviceCollection.AddSingleton<ActionManager>();
-        serviceCollection.AddSingleton<EventDispatcher2>();
-        serviceCollection.AddSingleton<CommandDispatcher>();
-        serviceCollection.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<CommandDispatcher>().Parser);
-        serviceCollection.AddRpcSingleton<UserPermissionStore>();
-        serviceCollection.AddSingleton(_gameObjectHost);
+        bldr.RegisterType<LayoutFactory>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
 
-        serviceCollection.AddScoped<BuildableSaver>();
-        serviceCollection.AddSingleton<VehicleInfoStore>();
-        serviceCollection.AddSingleton<AbandonService>();
-        serviceCollection.AddSingleton<VehicleService>();
+        bldr.RegisterType<ActionManager>()
+            .AsImplementedInterfaces().AsSelf()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
-        serviceCollection.AddTransient<ILoopTickerFactory, UnityLoopTickerFactory>();
+        bldr.RegisterType<EventDispatcher2>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<CommandDispatcher>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<UserPermissionStore>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+        
+        bldr.RegisterInstance(_gameObjectHost).ExternallyOwned();
+
+        bldr.RegisterType<BuildableSaver>()
+            .AsImplementedInterfaces().AsSelf()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<VehicleInfoStore>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<AbandonService>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<VehicleService>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<UnityLoopTickerFactory>()
+            .As<ILoopTickerFactory>();
 
         // Players
-        serviceCollection.AddSingleton<IPlayerService, PlayerService>();
-        serviceCollection.AddSingleton<IEventListenerProvider, PlayerComponentListenerProvider>();
+        bldr.RegisterType<PlayerService>()
+            .As<IPlayerService>()
+            .SingleInstance();
+
+        bldr.RegisterType<PlayerComponentListenerProvider>()
+            .As<IEventListenerProvider>()
+            .SingleInstance();
 
         // Kits
-        KitManager.ConfigureServices(serviceCollection);
-        serviceCollection.AddSingleton<WhitelistService>();
+        KitManager.ConfigureServices(bldr);
+
+        bldr.RegisterType<WhitelistService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         // Stripe
-        serviceCollection.AddTransient<IHttpClient, UnityWebRequestsHttpClient>();
-        serviceCollection.AddTransient<IStripeClient, StripeClient>(serviceProvider =>
+        bldr.RegisterType<UnityWebRequestsHttpClient>()
+            .As<IHttpClient>();
+
+        bldr.Register(serviceProvider =>
         {
-            IConfiguration systemConfig = serviceProvider.GetRequiredService<IConfiguration>();
+            IConfiguration systemConfig = serviceProvider.Resolve<IConfiguration>();
             string? apiKey = systemConfig["stripe:api_key"];
             if (string.IsNullOrEmpty(apiKey))
                 throw new InvalidOperationException("Stripe API key missing at stripe:api_key.");
 
             string clientId = $"Uncreated Warfare/{Assembly.GetExecutingAssembly().GetName().Version}";
-            return new StripeClient(apiKey, clientId, httpClient: serviceProvider.GetRequiredService<IHttpClient>());
-        });
-        serviceCollection.AddSingleton(serviceProvider => new ProductService(serviceProvider.GetRequiredService<IStripeClient>()));
-        serviceCollection.AddSingleton<IStripeService, StripeService>();
-        serviceCollection.AddSingleton<IPurchaseRecordsInterface, PurchaseRecordsInterface>();
+            return new StripeClient(apiKey, clientId, httpClient: serviceProvider.Resolve<IHttpClient>());
+        }).As<IStripeClient>();
+
+        bldr.Register(serviceProvider => new ProductService(serviceProvider.Resolve<IStripeClient>()))
+            .ExternallyOwned();
+
+        bldr.RegisterType<StripeService>()
+            .As<IStripeService>();
+
+        bldr.RegisterType<PurchaseRecordsInterface>()
+            .As<IPurchaseRecordsInterface>();
 
         // Layouts
-        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout());
-        serviceCollection.AddTransient<IEventListenerProvider>(serviceProvider => serviceProvider.GetRequiredService<Layout>());
+        bldr.Register(_ => GetActiveLayout())
+            .AsSelf().As<IEventListenerProvider>()
+            .ExternallyOwned();
 
         // Active ILayoutPhase
-        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().ActivePhase
-                                                          ?? throw new InvalidOperationException("There is not a phase currently loaded."));
-
-        // All layout types so they can be individually requested (i'm not too sure about adding this)
-        foreach (Type type in Accessor.GetTypesSafe(thisAsm).Where(x => x.IsSubclassOf(typeof(Layout))))
-        {
-            serviceCollection.Add(new ServiceDescriptor(type, _ =>
-            {
-                Layout session = GetActiveLayout();
-                if (!type.IsInstanceOfType(session))
-                {
-                    throw new InvalidOperationException($"The current layout type is not {Accessor.ExceptionFormatter.Format(type)}.");
-                }
-
-                return session;
-            }, ServiceLifetime.Transient));
-        }
+        bldr.Register(_ => GetActiveLayout().ActivePhase ?? throw new InvalidOperationException("There is not a phase currently loaded."));
 
         // FOBs
-        serviceCollection.AddScoped<DeploymentService>();
-        serviceCollection.AddScoped<FobManager>();
+        bldr.RegisterType<DeploymentService>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<FobManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Active ITeamManager
-        serviceCollection.AddTransient(serviceProvider => serviceProvider.GetRequiredService<WarfareModule>().GetActiveLayout().TeamManager);
+        bldr.Register(_ => GetActiveLayout().TeamManager)
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Localization
-        serviceCollection.AddSingleton<LanguageService>();
-        serviceCollection.AddSingleton<ILanguageDataStore, MySqlLanguageDataStore<WarfareDbContext>>();
+        bldr.RegisterType<LanguageService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<MySqlLanguageDataStore>()
+            .As<ICachableLanguageDataStore>()
+            .As<ILanguageDataStore>()
+            .SingleInstance();
+
+        bldr.RegisterType<ChatService>()
+            .AsSelf()
+            .SingleInstance();
 
         // Translations
-        serviceCollection.AddSingleton<ITranslationValueFormatter, TranslationValueFormatter>();
-        serviceCollection.AddSingleton<ITranslationService, TranslationService>();
-        serviceCollection.AddSingleton<ItemIconProvider>();
-        serviceCollection.AddTransient(typeof(TranslationInjection<>));
-        serviceCollection.AddSingleton<AnnouncementService>();
+        bldr.RegisterType<TranslationValueFormatter>()
+            .As<ITranslationValueFormatter>()
+            .SingleInstance();
+
+        bldr.RegisterGeneric(typeof(TranslationInjection<>))
+            .SingleInstance();
+
+        bldr.RegisterType<TranslationService>()
+            .As<ITranslationService>()
+            .SingleInstance();
+
+        bldr.RegisterType<ItemIconProvider>()
+            .SingleInstance();
+
+        bldr.RegisterType<AnnouncementService>()
+            .AsSelf().AsImplementedInterfaces();
 
         // Database
-        serviceCollection.AddDbContext<WarfareDbContext>(contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Singleton);
-        
-        serviceCollection.AddTransient<IDbContext>          (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IFactionDbContext>   (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IGameDataDbContext>  (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IKitsDbContext>      (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<ILanguageDbContext>  (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<ISeasonsDbContext>   (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IStatsDbContext>     (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IUserDataDbContext>  (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
-        serviceCollection.AddTransient<IWhitelistDbContext> (serviceProvider => serviceProvider.GetRequiredService<WarfareDbContext>());
+        bldr.RegisterType<WarfareDbContext>()
+            .WithParameter("options", WarfareDbContext.GetOptions(Configuration))
+            .AsSelf().As(typeof(WarfareDbContext).GetInterfaces().Where(x => typeof(IDbContext).IsAssignableFrom(x)).ToArray())
+            .InstancePerDependency();
 
-        serviceCollection.AddTransient<IManualMySqlProvider, ManualMySqlProvider>(serviceProvider =>
+        bldr.Register<IManualMySqlProvider>(serviceProvider =>
         {
-            IConfiguration sysConfig = serviceProvider.GetRequiredService<IConfiguration>();
+            IConfiguration sysConfig = serviceProvider.Resolve<IConfiguration>();
             IConfiguration databaseSection = sysConfig.GetSection("database");
 
             string? connectionStringType = databaseSection["connection_string_name"];
@@ -399,28 +483,64 @@ public sealed class WarfareModule : IModuleNexus
     /// </summary>
     private async UniTask HostAsync()
     {
+        GameThread.AssertCurrent();
+
         CancellationToken token = UnloadToken;
 
-        using (IServiceScope scope = ServiceProvider.CreateScope())
-        await using (WarfareDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>())
+        // this needs to happen almost instantly, can't wait for migration
+        ServiceProvider.Resolve<MapScheduler>().ApplyMapSetting();
+
+        bool connected = false;
+
+        // migrate database before loading services
+        await using (ILifetimeScope scope = ServiceProvider.BeginLifetimeScope())
+        await using (IDbContext dbContext = scope.Resolve<IDbContext>())
         {
-            await dbContext.Database.MigrateAsync(token).ConfigureAwait(false);
+            const double timeoutSec = 2.5;
+
+            // check connection before migrating with a 2.5 second timeout
+            await Task.WhenAny(Task.Run(async () =>
+            {
+                // ReSharper disable once AccessToDisposedClosure
+                connected = await dbContext.Database.CanConnectAsync(token);
+
+            }, token), Task.Delay(TimeSpan.FromSeconds(timeoutSec), token));
+            
+            if (!connected)
+            {
+                L.LogWarning($"Connection for migration timed out after {timeoutSec} second(s).");
+            }
+            else
+            {
+                await dbContext.Database.MigrateAsync(token).ConfigureAwait(false);
+                L.Log("Migration completed.");
+            }
+        }
+
+        if (!connected)
+        {
+            L.LogError("Unable to connect to MySQL database. Please reconfigure and restart.");
+            UnloadModule();
+            Provider.shutdown();
+            return;
         }
 
         List<IHostedService> hostedServices = ServiceProvider
-            .GetServices<IHostedService>()
+            .Resolve<IEnumerable<IHostedService>>()
             .OrderByDescending(x => x.GetType().GetPriority())
             .ToList();
 
         await UniTask.SwitchToMainThread(token);
 
+        _unloadedHostedServices = false;
         int errIndex = -1;
         for (int i = 0; i < hostedServices.Count; i++)
         {
             IHostedService hostedService = hostedServices[i];
             try
             {
-                await UniTask.SwitchToMainThread(token);
+                if (!GameThread.IsCurrent)
+                    await UniTask.SwitchToMainThread(token);
                 await hostedService.StartAsync(token);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -483,6 +603,37 @@ public sealed class WarfareModule : IModuleNexus
         Provider.shutdown();
     }
 
+    public async UniTask InvokeLevelLoaded(CancellationToken token)
+    {
+        List<ILevelHostedService> hostedServices = ServiceProvider
+            .Resolve<IEnumerable<ILevelHostedService>>()
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
+
+        await UniTask.SwitchToMainThread(token);
+
+        for (int i = 0; i < hostedServices.Count; i++)
+        {
+            ILevelHostedService hostedService = hostedServices[i];
+            try
+            {
+                if (!GameThread.IsCurrent)
+                    await UniTask.SwitchToMainThread(token);
+                await hostedService.LoadLevelAsync(token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"Error hosting service {Accessor.Formatter.Format(hostedService.GetType())} on level load.");
+                L.LogError(ex);
+                break;
+            }
+        }
+    }
+
     private async UniTask UnhostAsync(CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
@@ -491,7 +642,7 @@ public sealed class WarfareModule : IModuleNexus
             return;
 
         List<IHostedService> hostedServices = ServiceProvider
-            .GetServices<IHostedService>()
+            .Resolve<IEnumerable<IHostedService>>()
             .OrderByDescending(x => x.GetType().GetPriority())
             .ToList();
 
@@ -531,7 +682,7 @@ public sealed class WarfareModule : IModuleNexus
         using CancellationTokenSource timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(3d));
 
         List<IHostedService> hostedServices = ServiceProvider
-            .GetServices<IHostedService>()
+            .Resolve<IEnumerable<IHostedService>>()
             .OrderByDescending(x => x.GetType().GetPriority())
             .ToList();
 
@@ -583,27 +734,24 @@ public sealed class WarfareModule : IModuleNexus
     /// Start a new scope, used for each game.
     /// </summary>
     /// <returns>The newly created scope.</returns>
-    internal async UniTask<IServiceProvider> CreateScopeAsync(CancellationToken token = default)
+    internal async UniTask<ILifetimeScope> CreateScopeAsync(Action<ContainerBuilder>? builder, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
         _activeLayout = null;
-        if (_activeScope is IAsyncDisposable asyncDisposableScope)
+        
+        ILifetimeScope? oldScope = Interlocked.Exchange(ref _activeScope, builder == null
+            ? ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Session)
+            : ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Session, builder)
+        );
+
+        if (oldScope != null)
         {
-            ValueTask vt = asyncDisposableScope.DisposeAsync();
-            _activeScope = null;
-            await vt.ConfigureAwait(false);
+            await oldScope.DisposeAsync().ConfigureAwait(false);
             await UniTask.SwitchToMainThread();
         }
-        else if (_activeScope is IDisposable disposableScope)
-        {
-            disposableScope.Dispose();
-            _activeScope = null;
-        }
 
-        IServiceScope scope = ServiceProvider.CreateScope();
-        _activeScope = scope;
-        return scope.ServiceProvider;
+        return _activeScope!;
     }
 
     /// <summary>
@@ -612,10 +760,12 @@ public sealed class WarfareModule : IModuleNexus
     internal void SetActiveLayout(Layout? layout)
     {
         Layout? oldLayout = Interlocked.Exchange(ref _activeLayout, layout);
-        if (oldLayout == null || layout == null)
+        if (oldLayout == null)
             return;
 
-        L.LogError("A layout was started while one was already active.");
+        if (layout != null)
+            L.LogError("A layout was started while one was already active.");
+
         oldLayout.Dispose();
     }
 
@@ -635,49 +785,6 @@ public sealed class WarfareModule : IModuleNexus
 
     private void UnloadModule()
     {
-        ServiceProvider.GetRequiredService<Module>().isEnabled = false;
-    }
-
-    // handles rerouting assemblies that aren't cooperating
-    private static Assembly? ErrorAssemblyNotResolved(object sender, ResolveEventArgs args)
-    {
-        // this can be raised when looking for other language translations for an assembly
-        if (!args.Name.Contains(".resources, ", StringComparison.Ordinal))
-        {
-            CommandWindow.LogError($"Unknown assembly: {args.Name}.");
-        }
-        else
-        {
-            CommandWindow.Log($"Unknown resx assembly: {args.Name}.");
-        }
-        return null;
-    }
-
-    private static Assembly? CheckForcedAssemblyVersionRedirects(object sender, ResolveEventArgs args)
-    {
-        // for some reason mono won't use newer versions of these libraries without some convincing
-        const string runtime = "System.Runtime.CompilerServices.Unsafe";
-        const string primitives = "Microsoft.Extensions.Primitives";
-        const string confAbs = "Microsoft.Extensions.Configuration.Abstractions";
-
-        if (args.Name.StartsWith(runtime, StringComparison.Ordinal))
-        {
-            CommandWindow.LogWarning($"Redirected {args.Name} -> {runtime}.dll");
-            return typeof(Unsafe).Assembly;
-        }
-
-        if (args.Name.StartsWith(primitives, StringComparison.Ordinal))
-        {
-            CommandWindow.LogWarning($"Redirected {args.Name} -> {primitives}.dll");
-            return typeof(Microsoft.Extensions.Primitives.IChangeToken).Assembly;
-        }
-
-        if (args.Name.StartsWith(confAbs, StringComparison.Ordinal))
-        {
-            CommandWindow.LogWarning($"Redirected {args.Name} -> {confAbs}.dll");
-            return typeof(IConfiguration).Assembly;
-        }
-
-        return null;
+        ServiceProvider.Resolve<Module>().isEnabled = false;
     }
 }

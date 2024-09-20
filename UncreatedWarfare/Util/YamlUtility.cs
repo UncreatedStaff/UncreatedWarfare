@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Uncreated.Warfare.Maps;
 using YamlDotNet.RepresentationModel;
 
 namespace Uncreated.Warfare.Util;
@@ -49,8 +48,7 @@ public static class YamlUtility
                 }
 
                 if (!map.Equals("all", StringComparison.OrdinalIgnoreCase)
-                    && !map.Equals(Provider.map, StringComparison.OrdinalIgnoreCase)
-                    && (!int.TryParse(map, NumberStyles.Number, CultureInfo.InvariantCulture, out int mapId) || mapId != MapScheduler.Current))
+                    && !map.Equals(Provider.map, StringComparison.OrdinalIgnoreCase))
                 {
                     wasFilteredOut = true;
                     break;
@@ -65,8 +63,7 @@ public static class YamlUtility
 
                 if (!sequence.Any(val => val is YamlScalarNode { Value: { } map } &&
                                         (map.Equals("all", StringComparison.OrdinalIgnoreCase)
-                                         || map.Equals(Provider.map, StringComparison.OrdinalIgnoreCase)
-                                         || int.TryParse(map, NumberStyles.Number, CultureInfo.InvariantCulture, out int mapId) && mapId == MapScheduler.Current)
+                                         || map.Equals(Provider.map, StringComparison.OrdinalIgnoreCase))
                                         ))
                 {
                     wasFilteredOut = true;

@@ -7,7 +7,7 @@ using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Fobs;
 
-public class FobManager : ISessionHostedService, IEventListener<BarricadePlaced>
+public class FobManager : ILayoutHostedService, IEventListener<BarricadePlaced>
 {
     private readonly FobConfiguration _config;
 
@@ -35,12 +35,12 @@ public class FobManager : ISessionHostedService, IEventListener<BarricadePlaced>
         Fobs = new ReadOnlyCollection<IFob>(_fobs);
     }
 
-    UniTask ISessionHostedService.StartAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
     }
 
-    UniTask ISessionHostedService.StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
     }

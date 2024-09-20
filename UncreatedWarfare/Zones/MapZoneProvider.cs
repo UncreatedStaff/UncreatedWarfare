@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Zones;
@@ -35,8 +36,14 @@ public class MapZoneProvider : IZoneProvider
             reader = new Utf8JsonReader(stream.ReadAllBytes(), ConfigurationSettings.JsonReaderOptions);
         }
 
-        List<Zone>? zones = JsonSerializer.Deserialize<List<Zone>>(ref reader, ConfigurationSettings.JsonSerializerSettings);
+        List<Zone>? zones = JsonSerializer.Deserialize<ZoneConfig>(ref reader, ConfigurationSettings.JsonSerializerSettings)?.Zones;
 
         return zones is not { Count: > 0 } ? Enumerable.Empty<Zone>() : zones;
+    }
+
+    private class ZoneConfig
+    {
+        [JsonPropertyName("zones")]
+        public List<Zone>? Zones { get; init; }
     }
 }

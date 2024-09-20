@@ -30,12 +30,12 @@ public static class MySqlSnippets
     /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>[,`<paramref name="columnPk"/>`]) VALUES (parameters[,LAST_INSERT_ID(@pk)]) ON DUPLICATE KEY UPDATE (<paramref name="columns"/>,`<paramref name="columnPk"/>`=LAST_INSERT_ID(`<paramref name="columnPk"/>`);<br/>SET @pk := (SELECT LAST_INSERT_ID() as `pk`);<br/>SELECT @pk</summary>
     public static string BuildInitialInsertQuery(string table, string columnPk, bool hasPk, string? extPk, string[]? deleteTables, params string[] columns)
     {
-        return "INSERT INTO `" + table + "` (" + MySqlSnippets.ColumnList(columns) +
+        return "INSERT INTO `" + table + "` (" + ColumnList(columns) +
                (hasPk ? $",`{columnPk}`" : string.Empty) +
-               ") VALUES (" + MySqlSnippets.ParameterList(0, columns.Length) +
+               ") VALUES (" + ParameterList(0, columns.Length) +
                (hasPk ? ",LAST_INSERT_ID(@" + columns.Length.ToString(CultureInfo.InvariantCulture) + ")" : string.Empty) +
                ") ON DUPLICATE KEY UPDATE " +
-               MySqlSnippets.ColumnUpdateList(0, columns) +
+               ColumnUpdateList(0, columns) +
                $",`{columnPk}`=LAST_INSERT_ID(`{columnPk}`);" +
                "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" + (hasPk && extPk != null && deleteTables != null ? GetDeleteText(deleteTables, extPk, columns.Length) : string.Empty) +
                " SELECT @pk;";
@@ -985,7 +985,7 @@ public static class MySqlSnippets
 
             string enumName = val.ToString();
             names[++index] = enumName;
-            ttlLen += enumName.Length + 1;
+            ttlLen += enumName.Length + 3;
         }
 
         return string.Create(ttlLen, names, WriteEnumListAction);
@@ -1040,7 +1040,7 @@ public static class MySqlSnippets
 
             string enumName = val.ToString();
             names[++index] = enumName;
-            ttlLen += enumName.Length + 1;
+            ttlLen += enumName.Length + 3;
         }
 
         return string.Create(ttlLen, names, WriteEnumListAction);
@@ -1059,7 +1059,7 @@ public static class MySqlSnippets
         {
             string enumName = values[i].ToString();
             names[i] = enumName;
-            ttlLen += enumName.Length + 1;
+            ttlLen += enumName.Length + 3;
         }
 
         return string.Create(ttlLen, names, WriteEnumListAction);
@@ -1078,8 +1078,10 @@ public static class MySqlSnippets
             }
 
             string name = state[i];
+            span[index++] = '\'';
             name.AsSpan().CopyTo(span[index..]);
             index += name.Length;
+            span[index++] = '\'';
         }
 
         span[index] = ')';

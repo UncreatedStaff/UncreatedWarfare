@@ -1,7 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -119,7 +118,7 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
             destroyer = 0ul;
         }
 
-        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>();
+        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
 
         WarfarePlayer? player = playerService.GetOnlinePlayerOrNull(destroyer);
 

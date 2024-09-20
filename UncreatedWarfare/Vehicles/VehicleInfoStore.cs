@@ -71,7 +71,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
                 continue;
 
             IConfigurationRoot config = new ConfigurationBuilder()
-                .AddYamlFile(_fileProvider, file, false, true)
+                .AddYamlFile(_fileProvider, Path.GetRelativePath(_fileProvider.Root, file), false, true)
                 .Build();
 
             WarfareVehicleInfo vehicle = config.Get<WarfareVehicleInfo>();

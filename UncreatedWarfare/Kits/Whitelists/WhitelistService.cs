@@ -1,13 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Autofac;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
@@ -48,7 +49,7 @@ public class WhitelistService :
     private readonly SemaphoreSlim _semaphore;
     private readonly WhitelistTranslations _translations;
 
-    public WhitelistService(WarfareDbContext dbContext, ZoneStore zoneStore, ChatService chatService, WarfareModule module, BuildableSaver buildableSaver, TranslationInjection<WhitelistTranslations> translations)
+    public WhitelistService(IWhitelistDbContext dbContext, ZoneStore zoneStore, ChatService chatService, WarfareModule module, BuildableSaver buildableSaver, TranslationInjection<WhitelistTranslations> translations)
     {
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -157,7 +158,7 @@ public class WhitelistService :
             return whitelist.Amount <= 0 ? -1 : whitelist.Amount;
         }
 
-        foreach (IWhitelistExceptionProvider provider in _module.ScopedProvider.GetServices<IWhitelistExceptionProvider>())
+        foreach (IWhitelistExceptionProvider provider in _module.ScopedProvider.Resolve<IEnumerable<IWhitelistExceptionProvider>>())
         {
             if (!GameThread.IsCurrent)
             {

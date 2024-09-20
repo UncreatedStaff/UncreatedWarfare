@@ -32,10 +32,12 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
     private readonly ConcurrentDictionary<ulong, SessionRecord> _sessions = new ConcurrentDictionary<ulong, SessionRecord>();
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
     private readonly ILogger<SessionManager> _logger;
+    private readonly MapScheduler _mapScheduler;
 
     public SessionManager(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
+        _mapScheduler = serviceProvider.GetRequiredService<MapScheduler>();
         _logger = serviceProvider.GetRequiredService<ILogger<SessionManager>>();
     }
 
@@ -68,7 +70,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
         }
 
         using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+        await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IGameDataDbContext>();
 
         foreach (KeyValuePair<ulong, SessionRecord> session in sessions)
             EndSession(dbContext, session.Value, true);
@@ -88,7 +90,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
             {
                 await UniTask.SwitchToMainThread(token);
                 using IServiceScope scope = _serviceProvider.CreateScope();
-                await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+                await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IGameDataDbContext>();
                 SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
                 // player.CurrentSession = record;
 
@@ -134,7 +136,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                 bool anyPrev = false;
 
                 using IServiceScope scope = _serviceProvider.CreateScope();
-                await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>();
+                await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IGameDataDbContext>();
 
                 for (int i = 0; i < onlinePlayers.Length; ++i)
                 {
@@ -228,7 +230,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                 StartedGame = startedGame,
                 KitId = kitComp.ActiveKitKey,
                 KitName = kitComp.ActiveKitId,
-                MapId = MapScheduler.Current,
+                MapId = _mapScheduler.Current,
                 SeasonId = WarfareModule.Season,
                 SquadName = null, // todo player.Squad?.Name,
                 SquadLeader = null, // todo player.Squad?.Leader?.Steam64,
@@ -432,7 +434,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
 
             int ct;
             using (IServiceScope scope = _serviceProvider.CreateScope())
-            await using (IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarfareDbContext>())
+            await using (IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IGameDataDbContext>())
             {
                 byte region = 1;// todo UCWarfare.Config.RegionKey;
                 List<SessionRecord> records = await dbContext.Sessions.Where(x => x.UnexpectedTermination && x.EndedTimestamp == null && x.Game.Region == region).ToListAsync(token);

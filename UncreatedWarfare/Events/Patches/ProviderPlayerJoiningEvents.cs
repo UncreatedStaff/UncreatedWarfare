@@ -1,6 +1,5 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -72,7 +71,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         if (_isSendVerifyPacketContinuation)
             return true;
 
-        ulong s64 = __instance.playerID.steamID.m_SteamID;
+        // ulong s64 = __instance.playerID.steamID.m_SteamID;
 
         PendingAsyncData data = new PendingAsyncData(__instance);
         CancellationTokenSource? src = null;
@@ -116,7 +115,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
 
     private static async Task InvokePrePlayerConnectAsync(PlayerPending args, CombinedTokenSources tokens)
     {
-        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.GetRequiredService<IPlayerService>();
+        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
 
         if (playerService is not PlayerService impl)
         {

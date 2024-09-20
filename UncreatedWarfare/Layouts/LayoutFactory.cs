@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
@@ -37,13 +36,13 @@ public class LayoutFactory : IHostedService
         if (!_warfare.IsLayoutActive())
             return;
         
-        Layout session = _warfare.GetActiveLayout();
-        if (session.IsActive)
+        Layout layout = _warfare.GetActiveLayout();
+        if (layout.IsActive)
         {
-            await session.EndSessionAsync(CancellationToken.None);
+            await layout.EndLayoutAsync(CancellationToken.None);
         }
 
-        session.Dispose();
+        layout.Dispose();
         _warfare.SetActiveLayout(null);
     }
 
@@ -52,7 +51,19 @@ public class LayoutFactory : IHostedService
         if (level != Level.BUILD_INDEX_GAME)
             return;
 
-        UniTask.Create(() => StartNextLayout(_warfare.UnloadToken));
+        UniTask.Create(async () =>
+        {
+            try
+            {
+                await StartNextLayout(_warfare.UnloadToken);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error starting layout.");
+                L.LogError(ex);
+                _ = _warfare.ShutdownAsync();
+            }
+        });
     }
 
     /// <summary>
@@ -62,44 +73,49 @@ public class LayoutFactory : IHostedService
     {
         await UniTask.SwitchToThreadPool();
         
-        LayoutInfo newSession = SelectRandomLayouts();
+        LayoutInfo newLayout = SelectRandomLayouts();
 
         await UniTask.SwitchToMainThread(token);
 
         if (_warfare.IsLayoutActive())
         {
-            Layout session = _warfare.GetActiveLayout();
-            if (session.IsActive)
+            Layout oldLayout = _warfare.GetActiveLayout();
+            if (oldLayout.IsActive)
             {
-                await session.EndSessionAsync(CancellationToken.None);
+                await oldLayout.EndLayoutAsync(CancellationToken.None);
             }
 
-            session.Dispose();
+            oldLayout.Dispose();
             _warfare.SetActiveLayout(null);
         }
+        else
+        {
+            // invoke ILevelHostedService
+            await _warfare.InvokeLevelLoaded(CancellationToken.None);
+        }
 
-        await CreateLayoutAsync(newSession, token);
+        await CreateLayoutAsync(newLayout, CancellationToken.None);
     }
 
     /// <summary>
-    /// Actually creates a new layout with <paramref name="sessionInfo"/> as it's startup args.
+    /// Actually creates a new layout with <paramref name="layoutInfo"/> as it's startup args.
     /// </summary>
-    public async UniTask CreateLayoutAsync(LayoutInfo sessionInfo, CancellationToken token = default)
+    public async UniTask CreateLayoutAsync(LayoutInfo layoutInfo, CancellationToken token = default)
     {
-        if (!typeof(Layout).IsAssignableFrom(sessionInfo.LayoutType))
+        if (!typeof(Layout).IsAssignableFrom(layoutInfo.LayoutType))
         {
-            throw new ArgumentException($"Type {Accessor.ExceptionFormatter.Format(sessionInfo.LayoutType)} is not assignable to GameSession.", nameof(sessionInfo));
+            throw new ArgumentException($"Type {Accessor.ExceptionFormatter.Format(layoutInfo.LayoutType)} is not assignable to Layout.", nameof(layoutInfo));
         }
 
-        IServiceProvider scopedProvider = await _warfare.CreateScopeAsync(token);
+        ILifetimeScope scopedProvider = await _warfare.CreateScopeAsync(null, token);
         await UniTask.SwitchToMainThread(token);
 
-        Layout session = (Layout)ActivatorUtilities.CreateInstance(scopedProvider, sessionInfo.LayoutType, [ sessionInfo ]);
-        _warfare.SetActiveLayout(session);
+        Layout layout = (Layout)Activator.CreateInstance(layoutInfo.LayoutType, [ scopedProvider, layoutInfo ]);
+        _warfare.SetActiveLayout(layout);
 
-        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(session.UnloadToken);
-        await session.InitializeSessionAsync(token);
-        await session.BeginSessionAsync(token);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(layout.UnloadToken);
+        await layout.InitializeLayoutAsync(token);
+        await layout.BeginLayoutAsync(token);
     }
 
     /// <summary>
@@ -109,18 +125,18 @@ public class LayoutFactory : IHostedService
     /// <exception cref="InvalidOperationException">No layouts are configured.</exception>
     public LayoutInfo SelectRandomLayouts()
     {
-        List<LayoutInfo> sessions = GetBaseLayoutFiles()
+        List<LayoutInfo> layouts = GetBaseLayoutFiles()
             .Select(x => ReadLayoutInfo(x.FullName))
             .Where(x => x != null)
             .ToList()!;
 
-        if (sessions.Count == 0)
+        if (layouts.Count == 0)
         {
             throw new InvalidOperationException("There are no layouts configured.");
         }
 
-        int index = RandomUtility.GetIndex(sessions, x => x.Weight);
-        return sessions[index];
+        int index = RandomUtility.GetIndex(layouts, x => x.Weight);
+        return layouts[index];
     }
 
     /// <summary>
@@ -136,17 +152,17 @@ public class LayoutFactory : IHostedService
         IConfigurationRoot root = configBuilder.Build();
 
         // read the full type name from the config file
-        string? sessionTypeName = root["Type"];
-        if (sessionTypeName == null)
+        string? layoutTypeName = root["Type"];
+        if (layoutTypeName == null)
         {
-            L.LogError($"Layout config file missing \"Type\" config value in \"{file}\".");
+            L.LogDebug($"Layout config file missing \"Type\" config value in \"{file}\".");
             return null;
         }
 
-        Type? sessionType = Type.GetType(sessionTypeName) ?? Assembly.GetExecutingAssembly().GetType(sessionTypeName);
-        if (sessionType == null)
+        Type? layoutType = ContextualTypeResolver.ResolveType(layoutTypeName, typeof(Layout));
+        if (layoutType == null)
         {
-            L.LogError($"Unknown session type \"{sessionTypeName}\" in layout config \"{file}\".");
+            L.LogError($"Unknown layout type \"{layoutTypeName}\" in layout config \"{file}\".");
             return null;
         }
 
@@ -164,7 +180,7 @@ public class LayoutFactory : IHostedService
 
         return new LayoutInfo
         {
-            LayoutType = sessionType,
+            LayoutType = layoutType,
             Layout = root,
             Weight = weight,
             DisplayName = displayName,
@@ -209,14 +225,18 @@ public class LayoutFactory : IHostedService
     }
 
     /// <summary>
-    /// Host a new session, starting all <see cref="ISessionHostedService"/> services. Should only be called from <see cref="Layout.BeginSessionAsync"/>.
+    /// Host a new layout, starting all <see cref="ILayoutHostedService"/> services. Should only be called from <see cref="Layout.BeginLayoutAsync"/>.
     /// </summary>
     /// <exception cref="OperationCanceledException"/>
     /// <exception cref="Exception"/>
-    internal async UniTask HostSessionAsync(Layout session, CancellationToken token)
+    internal async UniTask HostLayoutAsync(Layout layout, CancellationToken token)
     {
-        // start any services implementing ISessionHostedService
-        List<ISessionHostedService> hostedServices = session.ServiceProvider.GetServices<ISessionHostedService>().ToList();
+        // start any services implementing ILayoutHostedService
+        List<ILayoutHostedService> hostedServices = layout.ServiceProvider
+            .Resolve<IEnumerable<ILayoutHostedService>>()
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
+
         Exception? thrownException = null;
         int errIndex = -1;
         for (int i = 0; i < hostedServices.Count; ++i)
@@ -229,30 +249,30 @@ public class LayoutFactory : IHostedService
             }
             catch (OperationCanceledException ex) when (token.IsCancellationRequested)
             {
-                L.LogWarning($"Layout {session} canceled.");
+                L.LogWarning($"Layout {layout} canceled.");
                 errIndex = i;
                 thrownException = ex;
             }
             catch (Exception ex)
             {
-                L.LogError($"Error hosting service {Accessor.Formatter.Format(hostedServices[i].GetType())} in layout {session}.");
+                L.LogError($"Error hosting service {Accessor.Formatter.Format(hostedServices[i].GetType())} in layout {layout}.");
                 errIndex = i;
                 thrownException = ex;
             }
         }
 
-        // handles if a service failed to start up, unloads the services that did start up and ends the session.
+        // handles if a service failed to start up, unloads the services that did start up and ends the layout.
         if (errIndex == -1)
             return;
         
         await UniTask.SwitchToMainThread();
 
-        if (!session.UnloadedHostedServices)
+        if (!layout.UnloadedHostedServices)
         {
             UniTask[] tasks = new UniTask[errIndex];
             for (int i = errIndex - 1; i >= 0; --i)
             {
-                ISessionHostedService hostedService = hostedServices[i];
+                ILayoutHostedService hostedService = hostedServices[i];
                 try
                 {
                     tasks[i] = hostedService.StopAsync(CancellationToken.None);
@@ -264,7 +284,7 @@ public class LayoutFactory : IHostedService
                 }
             }
 
-            session.UnloadedHostedServices = true;
+            layout.UnloadedHostedServices = true;
 
             try
             {
@@ -273,29 +293,33 @@ public class LayoutFactory : IHostedService
             catch
             {
                 await UniTask.SwitchToMainThread();
-                L.LogError($"Errors encountered while ending layout {session}:");
+                L.LogError($"Errors encountered while ending layout {layout}:");
                 FormattingUtility.PrintTaskErrors(tasks, hostedServices);
             }
         }
 
-        await session.EndSessionAsync(CancellationToken.None);
+        await layout.EndLayoutAsync(CancellationToken.None);
 
         if (thrownException is OperationCanceledException && token.IsCancellationRequested)
             ExceptionDispatchInfo.Capture(thrownException).Throw();
 
-        throw new Exception($"Failed to load layout {session}.", thrownException);
+        throw new Exception($"Failed to load layout {layout}.", thrownException);
     }
 
     /// <summary>
-    /// Stop hosting a session, stopping all <see cref="ISessionHostedService"/> services. Should only be called from <see cref="Layout.EndSessionAsync"/>.
+    /// Stop hosting a layout, stopping all <see cref="ILayoutHostedService"/> services. Should only be called from <see cref="Layout.EndLayoutAsync"/>.
     /// </summary>
-    internal async UniTask UnhostSessionAsync(Layout session, CancellationToken token)
+    internal async UniTask UnhostLayoutAsync(Layout layout, CancellationToken token)
     {
-        if (session.UnloadedHostedServices)
+        if (layout.UnloadedHostedServices)
             return;
 
-        // stop any services implementing ISessionHostedService
-        List<ISessionHostedService> hostedServices = session.ServiceProvider.GetServices<ISessionHostedService>().ToList();
+        // stop any services implementing ILayoutHostedService
+        List<ILayoutHostedService> hostedServices = layout.ServiceProvider
+            .Resolve<IEnumerable<ILayoutHostedService>>()
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
+
         UniTask[] tasks = new UniTask[hostedServices.Count];
         for (int i = 0; i < tasks.Length; ++i)
         {
@@ -309,7 +333,7 @@ public class LayoutFactory : IHostedService
             }
         }
 
-        session.UnloadedHostedServices = true;
+        layout.UnloadedHostedServices = true;
 
         try
         {
@@ -317,7 +341,7 @@ public class LayoutFactory : IHostedService
         }
         catch
         {
-            L.LogError($"Errors encountered while ending layout {session}:");
+            L.LogError($"Errors encountered while ending layout {layout}:");
             FormattingUtility.PrintTaskErrors(tasks, hostedServices);
         }
     }
