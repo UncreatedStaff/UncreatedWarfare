@@ -1,5 +1,4 @@
-﻿using Autofac;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -23,6 +22,7 @@ using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Collections;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
@@ -36,10 +36,10 @@ public class WhitelistService :
     IAsyncEventListener<ItemPickupRequested>,
     IDisposable
 {
-    public static readonly PermissionLeaf PermissionChangeSignText = new PermissionLeaf("actions.barricades.edit_sign");
-    public static readonly PermissionLeaf PermissionPickUpAnyItem = new PermissionLeaf("actions.items.pickup_any");
-    public static readonly PermissionLeaf PermissionDestroyBuildable = new PermissionLeaf("actions.buildables.destroy_any");
-    public static readonly PermissionLeaf PermissionPlaceBuildable = new PermissionLeaf("actions.buildables.place_any");
+    public static readonly PermissionLeaf PermissionChangeSignText = new PermissionLeaf("warfare::actions.barricades.edit_sign");
+    public static readonly PermissionLeaf PermissionPickUpAnyItem = new PermissionLeaf("warfare::actions.items.pickup_any");
+    public static readonly PermissionLeaf PermissionDestroyBuildable = new PermissionLeaf("warfare::actions.buildables.destroy_any");
+    public static readonly PermissionLeaf PermissionPlaceBuildable = new PermissionLeaf("warfare::actions.buildables.place_any");
 
     private readonly IWhitelistDbContext _dbContext;
     private readonly ZoneStore _zoneStore;
@@ -257,7 +257,8 @@ public class WhitelistService :
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
         if (!await permissions.HasPermissionAsync(e.Player, PermissionChangeSignText, token))
         {
-            _chatService.Send(e.Player, T.NoPermissionsSpecific, PermissionChangeSignText);
+            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
+            _chatService.Send(e.Player, translations.NoPermissionsSpecific, PermissionChangeSignText);
             return;
         }
 
@@ -297,7 +298,8 @@ public class WhitelistService :
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
         if (!await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
         {
-            _chatService.Send(e.OriginalPlacer, T.NoPermissionsSpecific, PermissionPlaceBuildable);
+            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
+            _chatService.Send(e.OriginalPlacer, translations.NoPermissionsSpecific, PermissionPlaceBuildable);
             return;
         }
 
@@ -383,7 +385,8 @@ public class WhitelistService :
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
         if (!await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
         {
-            _chatService.Send(e.OriginalPlacer, T.NoPermissionsSpecific, PermissionPlaceBuildable);
+            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
+            _chatService.Send(e.OriginalPlacer, translations.NoPermissionsSpecific, PermissionPlaceBuildable);
             return;
         }
 
@@ -466,7 +469,8 @@ public class WhitelistService :
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
         if (!await permissions.HasPermissionAsync(e.Player, PermissionPickUpAnyItem, token))
         {
-            _chatService.Send(e.Player, T.NoPermissionsSpecific, PermissionPickUpAnyItem);
+            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
+            _chatService.Send(e.Player, translations.NoPermissionsSpecific, PermissionPickUpAnyItem);
             return;
         }
 
@@ -520,7 +524,8 @@ public class WhitelistService :
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
         if (!await permissions.HasPermissionAsync(e.Player, PermissionDestroyBuildable, token))
         {
-            _chatService.Send(e.Player, T.NoPermissionsSpecific, PermissionDestroyBuildable);
+            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
+            _chatService.Send(e.Player, translations.NoPermissionsSpecific, PermissionDestroyBuildable);
             return;
         }
 
@@ -542,7 +547,6 @@ public class WhitelistService :
 
     void IDisposable.Dispose()
     {
-        _dbContext.Dispose();
         _semaphore.Dispose();
     }
 }

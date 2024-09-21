@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Pomelo.EntityFrameworkCore.MySql.Storage;
 using System;
@@ -19,7 +19,6 @@ using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Models.Stats.Records;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Database;
 #pragma warning disable CS8644
@@ -60,10 +59,13 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     /// <summary>
     /// Used to auto-fill the 'options' parameters.
     /// </summary>
-    internal static DbContextOptions<WarfareDbContext> GetOptions(IConfiguration sysConfig)
+    internal static DbContextOptions<WarfareDbContext> GetOptions(IServiceProvider serviceProvider)
     {
         DbContextOptionsBuilder<WarfareDbContext> builder = new DbContextOptionsBuilder<WarfareDbContext>();
-        Configure(builder, sysConfig);
+
+        builder.UseApplicationServiceProvider(serviceProvider);
+        Configure(builder, serviceProvider.GetRequiredService<IConfiguration>());
+
         return builder.Options;
     }
 
@@ -97,15 +99,6 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         {
             optionsBuilder.EnableSensitiveDataLogging();
         }
-
-        IDbContextOptionsBuilderInfrastructure settings = optionsBuilder;
-        
-        // for some reason default logging completely crashes the server
-        CoreOptionsExtension extension = (
-                optionsBuilder.Options.FindExtension<CoreOptionsExtension>() ?? new CoreOptionsExtension()
-            ).WithLoggerFactory(new L.UCLoggerFactory { DebugLogging = false });
-
-        settings.AddOrUpdateExtension(extension);
     }
 
     /* further configure models than what's possible with attributes */

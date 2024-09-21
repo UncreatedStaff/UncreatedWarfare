@@ -43,7 +43,7 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
         // if (Assets.find(QuestId) is QuestAsset quest)
         //     return T.KitRequiredQuest.Translate(quest, UCWarfare.GetColor("kit_level_unavailable"), player);
 
-        return T.NotImplemented.Translate(player);/*KitRequiredQuestsMultiple.Translate(UnlockPresets.Length , UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length == 1 ? string.Empty : "S", player );*/
+        return "not implemented";/*KitRequiredQuestsMultiple.Translate(UnlockPresets.Length , UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length == 1 ? string.Empty : "S", player );*/
     }
 
     /// <inheritdoc />

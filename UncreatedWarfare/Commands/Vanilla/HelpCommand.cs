@@ -49,7 +49,7 @@ public sealed class HelpCommand : IExecutableCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(0, out string range))
+        if (!Context.TryGet(0, out string? range))
         {
             SendDefaultHelp();
             return;
@@ -59,7 +59,7 @@ public sealed class HelpCommand : IExecutableCommand
 
         if (cmd == null)
         {
-            Context.Reply(T.UnknownCommandHelp);
+            Context.Reply(Context.CommonTranslations.UnknownCommandHelp);
             return;
         }
 

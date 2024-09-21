@@ -10,7 +10,7 @@ public class ZoneCommand : ICommand;
 
 public class ZoneCommandTranslations : PropertiesTranslationCollection
 {
-    protected override string FileName => "Zone Command";
+    protected override string FileName => "Commands/Zone";
 
     [TranslationData("Send the caller's location and angle.", Parameters = [ "X (m)", "Y (m)", "Z (m)", "Yaw (°)" ])]
     public readonly Translation<float, float, float, float> ZoneUtilLocation = new Translation<float, float, float, float>("<#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.", arg0Fmt: "0.##", arg1Fmt: "0.##", arg2Fmt: "0.##", arg3Fmt: "0.##");

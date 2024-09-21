@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Tweaks;
@@ -14,7 +16,7 @@ namespace Uncreated.Warfare.Tweaks;
 /// </summary>
 public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerPunched>
 {
-    public static readonly PermissionLeaf AutoJumpPermission = new PermissionLeaf("commands.teleport");
+    public static readonly PermissionLeaf AutoJumpPermission = new PermissionLeaf("warfare::commands.teleport");
     private ChatService _chatService;
     public bool IsActive { get; set; }
     public WarfarePlayer Player { get; private set; }
@@ -39,7 +41,8 @@ public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerP
         Jump();
 
         Vector3 castPt = Player.Position;
-        _chatService.Send(Player, T.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
+        TeleportCommandTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<TeleportCommandTranslations>>().Value;
+        _chatService.Send(Player, translations.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
     }
 
     public void Jump()

@@ -32,9 +32,11 @@ public class KitMenuUI : UnturnedUI
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly IFactionDataStore _factionDataStore;
     private readonly ItemIconProvider _itemIconProvider;
-    private readonly KitManager _kitManager;
     private readonly ZoneStore _zoneStore;
     private readonly LanguageService _languageService;
+    private readonly WarfareModule _warfare;
+    private readonly KitMenuUITranslations _translations;
+
     private const bool RichIcons = true;
     private const EPluginWidgetFlags DisabledWidgets = EPluginWidgetFlags.ShowLifeMeters |
                                                        EPluginWidgetFlags.ShowCenterDot |
@@ -206,11 +208,12 @@ public class KitMenuUI : UnturnedUI
         _serviceProvider = serviceProvider;
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _languageService = serviceProvider.GetRequiredService<LanguageService>();
         _factionDataStore = serviceProvider.GetRequiredService<IFactionDataStore>();
         _itemIconProvider = serviceProvider.GetRequiredService<ItemIconProvider>();
+        _warfare = serviceProvider.GetRequiredService<WarfareModule>();
+        _translations = serviceProvider.GetRequiredService<TranslationInjection<KitMenuUITranslations>>().Value;
 
         DropdownButtons = new UnturnedButton[(int)ClassConverter.MaxClass + 1];
         DefaultClassCache = new string[DropdownButtons.Length];
@@ -261,6 +264,11 @@ public class KitMenuUI : UnturnedUI
 
         // Translation.OnReload += OnReload;
         CacheLanguages();
+    }
+
+    private KitManager GetKitManager()
+    {
+        return _warfare.ScopedProvider.Resolve<KitManager>();
     }
 
     private KitMenuUIData GetData(WarfarePlayer player)
@@ -383,29 +391,29 @@ public class KitMenuUI : UnturnedUI
 
     private void SetCachedValuesToOther(ITransportConnection c, LanguageInfo language)
     {
-        LblTabBaseKits.SetText(c, T.KitMenuUITabBaseKits.Translate(language));
-        LblTabEliteKits.SetText(c, T.KitMenuUITabEliteKits.Translate(language));
-        LblTabLoadouts.SetText(c, T.KitMenuUITabLoadouts.Translate(language));
-        LblTabSpecialKits.SetText(c, T.KitMenuUITabSpecialKits.Translate(language));
+        LblTabBaseKits.SetText(c, _translations.KitMenuUITabBaseKits.Translate(language));
+        LblTabEliteKits.SetText(c, _translations.KitMenuUITabEliteKits.Translate(language));
+        LblTabLoadouts.SetText(c, _translations.KitMenuUITabLoadouts.Translate(language));
+        LblTabSpecialKits.SetText(c, _translations.KitMenuUITabSpecialKits.Translate(language));
 
-        LblFilterTitle.SetText(c, T.KitMenuUIFilterLabel.Translate(language));
-        LblInfoFaction.SetText(c, T.KitMenuUIFactionLabel.Translate(language));
-        LblInfoClass.SetText(c, T.KitMenuUIClassLabel.Translate(language));
-        LblInfoIncludedItems.SetText(c, T.KitMenuUIIncludedItemsLabel.Translate(language));
+        LblFilterTitle.SetText(c, _translations.KitMenuUIFilterLabel.Translate(language));
+        LblInfoFaction.SetText(c, _translations.KitMenuUIFactionLabel.Translate(language));
+        LblInfoClass.SetText(c, _translations.KitMenuUIClassLabel.Translate(language));
+        LblInfoIncludedItems.SetText(c, _translations.KitMenuUIIncludedItemsLabel.Translate(language));
 
-        LblStatsPlaytime.SetText(c, T.KitMenuUIPlaytimeLabel.Translate(language));
-        LblStatsKills.SetText(c, T.KitMenuUIKillsLabel.Translate(language));
-        LblStatsDeaths.SetText(c, T.KitMenuUIDeathsLabel.Translate(language));
-        LblStatsPrimaryKills.SetText(c, T.KitMenuUIPrimaryKillsLabel.Translate(language));
-        LblStatsPrimaryAverageDistance.SetText(c, T.KitMenuUIPrimaryAvgDstLabel.Translate(language));
-        LblStatsSecondaryKills.SetText(c, T.KitMenuUISecondaryKillsLabel.Translate(language));
-        LblStatsDBNO.SetText(c, T.KitMenuUIDBNOLabel.Translate(language));
-        LblStatsDistanceTraveled.SetText(c, T.KitMenuUIDistanceTraveledLabel.Translate(language));
-        LblStatsTicketsLost.SetText(c, T.KitMenuUITicketsLostLabel.Translate(language));
-        LblStatsTicketsGained.SetText(c, T.KitMenuUITicketsGainedLabel.Translate(language));
+        LblStatsPlaytime.SetText(c, _translations.KitMenuUIPlaytimeLabel.Translate(language));
+        LblStatsKills.SetText(c, _translations.KitMenuUIKillsLabel.Translate(language));
+        LblStatsDeaths.SetText(c, _translations.KitMenuUIDeathsLabel.Translate(language));
+        LblStatsPrimaryKills.SetText(c, _translations.KitMenuUIPrimaryKillsLabel.Translate(language));
+        LblStatsPrimaryAverageDistance.SetText(c, _translations.KitMenuUIPrimaryAvgDstLabel.Translate(language));
+        LblStatsSecondaryKills.SetText(c, _translations.KitMenuUISecondaryKillsLabel.Translate(language));
+        LblStatsDBNO.SetText(c, _translations.KitMenuUIDBNOLabel.Translate(language));
+        LblStatsDistanceTraveled.SetText(c, _translations.KitMenuUIDistanceTraveledLabel.Translate(language));
+        LblStatsTicketsLost.SetText(c, _translations.KitMenuUITicketsLostLabel.Translate(language));
+        LblStatsTicketsGained.SetText(c, _translations.KitMenuUITicketsGainedLabel.Translate(language));
 
-        LblStatsTitle.SetText(c, T.KitMenuUIStatsLabel.Translate(language));
-        LblActionsTitle.SetText(c, T.KitMenuUIActionsLabel.Translate(language));
+        LblStatsTitle.SetText(c, _translations.KitMenuUIStatsLabel.Translate(language));
+        LblActionsTitle.SetText(c, _translations.KitMenuUIActionsLabel.Translate(language));
     }
     private void SetCachedValues(ITransportConnection c)
     {
@@ -470,7 +478,7 @@ public class KitMenuUI : UnturnedUI
 
         Task.Run(async () =>
         {
-            Kit? kit = await _kitManager.GetKit(selected.Value, player.DisconnectToken);
+            Kit? kit = await GetKitManager().GetKit(selected.Value, player.DisconnectToken);
 
             await UniTask.SwitchToMainThread(player.DisconnectToken);
 
@@ -497,7 +505,7 @@ public class KitMenuUI : UnturnedUI
 
         ValInfoFaction.SetText(c, faction?.GetShortName(player.Locale.LanguageInfo) ?? (DefaultLanguageCache != null && player.Locale.LanguageInfo.IsDefault
                 ? DefaultLanguageCache[29]
-                : T.KitMenuUINoFaction.Translate(player)));
+                : _translations.KitMenuUINoFaction.Translate(player)));
 
         LblInfoFactionFlag.SetText(c, faction.GetFlagIcon());
         ValInfoClass.SetText(c, TranslateClass(kit.Class, player));
@@ -595,7 +603,7 @@ public class KitMenuUI : UnturnedUI
         {
             if (kit.IsRequestable(player.Team.Faction))
             {
-                if (kit is { IsPublicKit: true, CreditCost: <= 0 } || (_kitManager.HasAccessQuick(kit, player)))
+                if (kit is { IsPublicKit: true, CreditCost: <= 0 } || (GetKitManager().HasAccessQuick(kit, player)))
                     LblActionsActionButton.SetText(c, DefaultLanguageCache![24]);
                 else
                     LblActionsActionButton.SetText(c, DefaultLanguageCache![30]);
@@ -629,10 +637,10 @@ public class KitMenuUI : UnturnedUI
             ];
         return (type switch
         {
-            KitType.Public  => T.KitMenuUIKitTypeLabelPublic,
-            KitType.Elite   => T.KitMenuUIKitTypeLabelElite,
-            KitType.Loadout => T.KitMenuUIKitTypeLabelLoadout,
-            _               => T.KitMenuUIKitTypeLabelSpecial
+            KitType.Public  => _translations.KitMenuUIKitTypeLabelPublic,
+            KitType.Elite   => _translations.KitMenuUIKitTypeLabelElite,
+            KitType.Loadout => _translations.KitMenuUIKitTypeLabelLoadout,
+            _               => _translations.KitMenuUIKitTypeLabelSpecial
         }).Translate(player.Locale.LanguageInfo);
     }
 
@@ -660,7 +668,7 @@ public class KitMenuUI : UnturnedUI
     {
         ITransportConnection c = player.Connection;
 
-        bool hasAccess = _kitManager.HasAccessQuick(kit, player);
+        bool hasAccess = GetKitManager().HasAccessQuick(kit, player);
         ListedKit kitUi = Kits[index];
         if (kit.Type != KitType.Loadout)
             kitUi.FavoriteIcon.SetText(c, favorited ? "<#fd0>¼" : "¼");
@@ -684,40 +692,40 @@ public class KitMenuUI : UnturnedUI
         for (int i = 0; i < DefaultClassCache.Length; ++i)
             DefaultClassCache[i] = _valueFormatter.FormatEnum((Class)i, lang);
         
-        DefaultLanguageCache[0]  = T.KitMenuUITabBaseKits.Translate(lang);
-        DefaultLanguageCache[1]  = T.KitMenuUITabEliteKits.Translate(lang);
-        DefaultLanguageCache[2]  = T.KitMenuUITabLoadouts.Translate(lang);
-        DefaultLanguageCache[3]  = T.KitMenuUITabSpecialKits.Translate(lang);
+        DefaultLanguageCache[0]  = _translations.KitMenuUITabBaseKits.Translate(lang);
+        DefaultLanguageCache[1]  = _translations.KitMenuUITabEliteKits.Translate(lang);
+        DefaultLanguageCache[2]  = _translations.KitMenuUITabLoadouts.Translate(lang);
+        DefaultLanguageCache[3]  = _translations.KitMenuUITabSpecialKits.Translate(lang);
                                  
-        DefaultLanguageCache[4]  = T.KitMenuUIFilterLabel.Translate(lang);
-        DefaultLanguageCache[5]  = T.KitMenuUIFactionLabel.Translate(lang);
-        DefaultLanguageCache[6]  = T.KitMenuUIClassLabel.Translate(lang);
-        DefaultLanguageCache[7]  = T.KitMenuUIIncludedItemsLabel.Translate(lang);
-        DefaultLanguageCache[8]  = T.KitMenuUIKitTypeLabelPublic.Translate(lang);
-        DefaultLanguageCache[9]  = T.KitMenuUIKitTypeLabelElite.Translate(lang);
-        DefaultLanguageCache[10] = T.KitMenuUIKitTypeLabelSpecial.Translate(lang);
-        DefaultLanguageCache[11] = T.KitMenuUIKitTypeLabelLoadout.Translate(lang);
+        DefaultLanguageCache[4]  = _translations.KitMenuUIFilterLabel.Translate(lang);
+        DefaultLanguageCache[5]  = _translations.KitMenuUIFactionLabel.Translate(lang);
+        DefaultLanguageCache[6]  = _translations.KitMenuUIClassLabel.Translate(lang);
+        DefaultLanguageCache[7]  = _translations.KitMenuUIIncludedItemsLabel.Translate(lang);
+        DefaultLanguageCache[8]  = _translations.KitMenuUIKitTypeLabelPublic.Translate(lang);
+        DefaultLanguageCache[9]  = _translations.KitMenuUIKitTypeLabelElite.Translate(lang);
+        DefaultLanguageCache[10] = _translations.KitMenuUIKitTypeLabelSpecial.Translate(lang);
+        DefaultLanguageCache[11] = _translations.KitMenuUIKitTypeLabelLoadout.Translate(lang);
 
-        DefaultLanguageCache[12] = T.KitMenuUIPlaytimeLabel.Translate(lang);
-        DefaultLanguageCache[13] = T.KitMenuUIKillsLabel.Translate(lang);
-        DefaultLanguageCache[14] = T.KitMenuUIDeathsLabel.Translate(lang);
-        DefaultLanguageCache[15] = T.KitMenuUIPrimaryKillsLabel.Translate(lang);
-        DefaultLanguageCache[16] = T.KitMenuUIPrimaryAvgDstLabel.Translate(lang);
-        DefaultLanguageCache[17] = T.KitMenuUISecondaryKillsLabel.Translate(lang);
-        DefaultLanguageCache[18] = T.KitMenuUIDBNOLabel.Translate(lang);
-        DefaultLanguageCache[19] = T.KitMenuUIDistanceTraveledLabel.Translate(lang);
-        DefaultLanguageCache[20] = T.KitMenuUITicketsLostLabel.Translate(lang);
-        DefaultLanguageCache[21] = T.KitMenuUITicketsGainedLabel.Translate(lang);
+        DefaultLanguageCache[12] = _translations.KitMenuUIPlaytimeLabel.Translate(lang);
+        DefaultLanguageCache[13] = _translations.KitMenuUIKillsLabel.Translate(lang);
+        DefaultLanguageCache[14] = _translations.KitMenuUIDeathsLabel.Translate(lang);
+        DefaultLanguageCache[15] = _translations.KitMenuUIPrimaryKillsLabel.Translate(lang);
+        DefaultLanguageCache[16] = _translations.KitMenuUIPrimaryAvgDstLabel.Translate(lang);
+        DefaultLanguageCache[17] = _translations.KitMenuUISecondaryKillsLabel.Translate(lang);
+        DefaultLanguageCache[18] = _translations.KitMenuUIDBNOLabel.Translate(lang);
+        DefaultLanguageCache[19] = _translations.KitMenuUIDistanceTraveledLabel.Translate(lang);
+        DefaultLanguageCache[20] = _translations.KitMenuUITicketsLostLabel.Translate(lang);
+        DefaultLanguageCache[21] = _translations.KitMenuUITicketsGainedLabel.Translate(lang);
 
-        DefaultLanguageCache[22] = T.KitMenuUIStatsLabel.Translate(lang);
-        DefaultLanguageCache[23] = T.KitMenuUIActionsLabel.Translate(lang);
-        DefaultLanguageCache[24] = T.KitMenuUIActionRequestKitLabel.Translate(lang);
-        DefaultLanguageCache[25] = T.KitMenuUIActionNotInMainKitLabel.Translate(lang);
-        DefaultLanguageCache[26] = T.KitMenuUIActionGiveKitLabel.Translate(lang);
-        DefaultLanguageCache[27] = T.KitMenuUIActionEditKitLabel.Translate(lang);
-        DefaultLanguageCache[28] = T.KitMenuUIActionSetLoadoutItemsLabel.Translate(lang);
-        DefaultLanguageCache[29] = T.KitMenuUINoFaction.Translate(lang);
-        DefaultLanguageCache[30] = T.KitMenuUIActionNoAccessLabel.Translate(lang);
+        DefaultLanguageCache[22] = _translations.KitMenuUIStatsLabel.Translate(lang);
+        DefaultLanguageCache[23] = _translations.KitMenuUIActionsLabel.Translate(lang);
+        DefaultLanguageCache[24] = _translations.KitMenuUIActionRequestKitLabel.Translate(lang);
+        DefaultLanguageCache[25] = _translations.KitMenuUIActionNotInMainKitLabel.Translate(lang);
+        DefaultLanguageCache[26] = _translations.KitMenuUIActionGiveKitLabel.Translate(lang);
+        DefaultLanguageCache[27] = _translations.KitMenuUIActionEditKitLabel.Translate(lang);
+        DefaultLanguageCache[28] = _translations.KitMenuUIActionSetLoadoutItemsLabel.Translate(lang);
+        DefaultLanguageCache[29] = _translations.KitMenuUINoFaction.Translate(lang);
+        DefaultLanguageCache[30] = _translations.KitMenuUIActionNoAccessLabel.Translate(lang);
     }
     private void OnClassButtonClicked(UnturnedButton button, Player player)
     {
@@ -785,11 +793,12 @@ public class KitMenuUI : UnturnedUI
             Kit? kit = null;
             try
             {
-                kit = await _kitManager.GetKit(selectedKitPk.Value, tkn, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
+                KitManager kitManager = GetKitManager();
+                kit = await kitManager.GetKit(selectedKitPk.Value, tkn, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
                 if (kit == null)
                     return;
 
-                await _kitManager.Requests.RequestKit(kit, CommandContext.CreateTemporary(ucp, _serviceProvider), tkn);
+                await kitManager.Requests.RequestKit(kit, CommandContext.CreateTemporary(ucp, _serviceProvider), tkn);
             }
             catch (Exception ex)
             {
@@ -964,4 +973,283 @@ public sealed class KitMenuUIData : IUnturnedUIData
     private bool KitListSpecialPredicate(Kit x)
         => x is { Type: KitType.Special } && (Filter == Class.None || x.Class == Filter) && x.Class > Class.Unarmed && x.IsRequestable(_faction)
            && (/* todo Player.OnDuty() || */_manager!.HasAccessQuick(x, Player!));
+}
+
+public class KitMenuUITranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "UI/Kit Menu";
+
+    
+    [TranslationData("Text that goes on the base kits tab.")]
+    public readonly Translation KitMenuUITabBaseKits = new Translation("Base Kits", TranslationOptions.TMProUI);
+    
+    [TranslationData("Text that goes on the elite kits tab.")]
+    public readonly Translation KitMenuUITabEliteKits = new Translation("Elite Kits", TranslationOptions.TMProUI);
+    
+    [TranslationData("Text that goes on the loadouts tab.")]
+    public readonly Translation KitMenuUITabLoadouts = new Translation("Loadouts", TranslationOptions.TMProUI);
+    
+    [TranslationData("Text that goes on the special kits tab.")]
+    public readonly Translation KitMenuUITabSpecialKits = new Translation("Special Kits", TranslationOptions.TMProUI);
+
+    
+    [TranslationData("Label that goes in front of the filter dropdown.")]
+    public readonly Translation KitMenuUIFilterLabel = new Translation("Filter", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of the faction in kit info.")]
+    public readonly Translation KitMenuUIFactionLabel = new Translation("Faction", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of the class in kit info.")]
+    public readonly Translation KitMenuUIClassLabel = new Translation("Class", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of the included items list in kit info.")]
+    public readonly Translation KitMenuUIIncludedItemsLabel = new Translation("Included Items", TranslationOptions.TMProUI);
+    
+    [TranslationData("Value for kit type (KitType.Public).")]
+    public readonly Translation KitMenuUIKitTypeLabelPublic = new Translation("Public Kit", TranslationOptions.TMProUI);
+    
+    [TranslationData("Value for kit type (KitType.Elite).")]
+    public readonly Translation KitMenuUIKitTypeLabelElite = new Translation("Elite Kit", TranslationOptions.TMProUI);
+    
+    [TranslationData("Value for kit type (KitType.Special).")]
+    public readonly Translation KitMenuUIKitTypeLabelSpecial = new Translation("Special/Event Kit", TranslationOptions.TMProUI);
+    
+    [TranslationData("Value for kit type (KitType.Loadout).")]
+    public readonly Translation KitMenuUIKitTypeLabelLoadout = new Translation("Custom Loadout", TranslationOptions.TMProUI);
+
+    
+    [TranslationData("Label that goes in front of playtime in kit stats.")]
+    public readonly Translation KitMenuUIPlaytimeLabel = new Translation("Playtime", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of total kills in kit stats.")]
+    public readonly Translation KitMenuUIKillsLabel = new Translation("Total Kills", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of total deaths in kit stats.")]
+    public readonly Translation KitMenuUIDeathsLabel = new Translation("Total Deaths", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of primary kills in kit stats.")]
+    public readonly Translation KitMenuUIPrimaryKillsLabel = new Translation("Primary Kills", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of primary average kill distance in kit stats.")]
+    public readonly Translation KitMenuUIPrimaryAvgDstLabel = new Translation("Primary Avg. Dst.", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of secondary kills in kit stats.")]
+    public readonly Translation KitMenuUISecondaryKillsLabel = new Translation("Secondary Kills", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of DBNO states in kit stats.")]
+    public readonly Translation KitMenuUIDBNOLabel = new Translation("Injures Without Kill", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of distance traveled in kit stats.")]
+    public readonly Translation KitMenuUIDistanceTraveledLabel = new Translation("Distance Traveled", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of tickets lost in kit stats.")]
+    public readonly Translation KitMenuUITicketsLostLabel = new Translation("Tickets Lost", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of tickets gained in kit stats.")]
+    public readonly Translation KitMenuUITicketsGainedLabel = new Translation("Tickets Recovered", TranslationOptions.TMProUI);
+
+    
+    [TranslationData("Label for kit stats title.")]
+    public readonly Translation KitMenuUIStatsLabel = new Translation("Stats", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for kit actions title.")]
+    public readonly Translation KitMenuUIActionsLabel = new Translation("Actions", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label actions button action 1, request kit.")]
+    public readonly Translation KitMenuUIActionRequestKitLabel = new Translation("Request Kit", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label actions button action 2, buy kit (can afford).", "Credit cost")]
+    public readonly Translation<int> KitMenuUIActionBuyPublicKitCanAffordLabel = new Translation<int>("<#ccffff>Buy Kit <#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label actions button action 2, buy kit (can't afford).", "Credit cost")]
+    public readonly Translation<int> KitMenuUIActionBuyPublicKitCantAffordLabel = new Translation<int>("<#ff6666>Requires <#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label actions button action 3, order kit.", "Price", "Currency Prefix")]
+    public readonly Translation<decimal, string> KitMenuUIActionBuyPremiumKitLabel = new Translation<decimal, string>("<#ccffff>Open Ticket <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");
+    
+    [TranslationData("Label actions button action not in main.")]
+    public readonly Translation KitMenuUIActionNotInMainKitLabel = new Translation("<#ff6666>Not in Main", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label actions button action premium not linked.", "Price", "Currency Prefix")]
+    public readonly Translation<decimal, string> KitMenuUIActionBuyPremiumKitNotLinkedLabel = new Translation<decimal, string>("<#ccffff>Premium kit: <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");
+    
+    [TranslationData("Label actions button action premium unlock requirement not met.", "Price", "Currency Prefix")]
+    public readonly Translation<decimal, string> KitMenuUIActionBuyPublicUnlockReqNotMetLabel = new Translation<decimal, string>("<#ccffff>Premium kit: <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");
+    
+    [TranslationData("Label actions button staff give kit.")]
+    public readonly Translation KitMenuUIActionGiveKitLabel = new Translation("<#0099ff>Give Kit", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label actions button staff edit kit.")]
+    public readonly Translation KitMenuUIActionEditKitLabel = new Translation("<#0099ff>Edit Kit</color> (Coming Soon)", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label actions button staff set loadout items kit.")]
+    public readonly Translation KitMenuUIActionSetLoadoutItemsLabel = new Translation("<#0099ff>Set Loadout Items", TranslationOptions.TMProUI);
+    
+    [TranslationData("Shown when a player doesn't have access to a kit.")]
+    public readonly Translation KitMenuUIActionNoAccessLabel = new Translation("No Access", TranslationOptions.TMProUI);
+    
+    [TranslationData("Shown when a kit's faction is not assigned.")]
+    public readonly Translation KitMenuUINoFaction = new Translation("Unaffiliated", TranslationOptions.TMProUI);
+
+    /* CLASS STATS */
+    // squadleader
+    
+    [TranslationData("Label that goes in front of FOBs started for Squadleaders in kit stats.")]
+    public readonly Translation KitMenuUISquadLeaderFOBsStartedLabel = new Translation("FOBs Started", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of UAVs requested for Squadleaders in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUISquadLeaderUAVsRequestedLabel = new Translation("UAVs Requested", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of targets spotted for Squadleaders in kit stats.")]
+    public readonly Translation KitMenuUISquadLeaderTargetsSpottedLabel = new Translation("Targets Spotted", TranslationOptions.TMProUI);
+
+    // rifleman
+    
+    [TranslationData("Label that goes in front of self restocked for Riflemen in kit stats.")]
+    public readonly Translation KitMenuUIRiflemanSelfRestockedLabel = new Translation("Self Restocked", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of teammates restocked for Riflemen in kit stats.")]
+    public readonly Translation KitMenuUIRiflemanTeammatesRestockedLabel = new Translation("Teammates Restocked", TranslationOptions.TMProUI);
+
+    // medic
+    
+    [TranslationData("Label that goes in front of teammates healed for Medics in kit stats.")]
+    public readonly Translation KitMenuUIMedicTeammatesHealedLabel = new Translation("Teammates Healed", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of teammates revived for Medics in kit stats.")]
+    public readonly Translation KitMenuUIMedicTeammatesRevivedLabel = new Translation("Teammates Revived", TranslationOptions.TMProUI);
+
+    // breacher
+    
+    [TranslationData("Label that goes in front of structures destroyed for Breachers in kit stats.")]
+    public readonly Translation KitMenuUIBreacherStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of radios destroyed for Breachers in kit stats.")]
+    public readonly Translation KitMenuUIBreacherRadiosDestroyedLabel = new Translation("Radios Destroyed", TranslationOptions.TMProUI);
+
+    // auto-rifleman
+    
+    [TranslationData("Label that goes in front of spray n pray streak (most kills without reloading) for Automatic Riflemen in kit stats.")]
+    public readonly Translation KitMenuUIAutoRiflemanStructuresDestroyedLabel = new Translation("Spray n Pray Streak", TranslationOptions.TMProUI);
+
+    // grenadier
+    
+    [TranslationData("Label that goes in front of grenade kills for Grenadiers in kit stats.")]
+    public readonly Translation KitMenuUIGrenadierGrenadeKillsLabel = new Translation("Grenade Kills", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of vehicle kills for Grenadiers in kit stats.")]
+    public readonly Translation KitMenuUIGrenadierVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
+
+    // machine gunner
+    
+    [TranslationData("Label that goes in front of spray n pray streak (most kills without reloading) for Machine Gunners in kit stats.")]
+    public readonly Translation KitMenuUIMachineGunnerStructuresDestroyedLabel = new Translation("Spray n Pray Streak", TranslationOptions.TMProUI);
+
+    // LAT
+    
+    [TranslationData("Label that goes in front of vehicle kills for LATs in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUILATVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of LAT player kills for LATs in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUILATPlayerKillsLabel = new Translation("LAT Player Kills", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of structure kills for LATs in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUILATStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationOptions.TMProUI);
+
+    // HAT
+    
+    [TranslationData("Label that goes in front of vehicle kills for HATs in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUIHATVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of HAT player kills for HATs in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUIHATPlayerKillsLabel = new Translation("HAT Player Kills", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of structure kills for HATs in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUIHATStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationOptions.TMProUI);
+
+    // marksman
+    
+    [TranslationData("Label that goes in front of primary kills from 150m to 250m away for Marksmen in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUIMarksmanKills100mLabel = new Translation("Kills 150m-250m", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of primary kills from 250m to 350m away for Marksmen in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUIMarksmanKills200mLabel = new Translation("Kills 250m-350m", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of primary kills over 350m away for Marksmen in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUIMarksmanKills300mLabel = new Translation("Kills 350m+", TranslationOptions.TMProUI);
+
+    // sniper
+    
+    [TranslationData("Label that goes in front of primary kills from 200m to 300m away for Snipers in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUISniperKills200mLabel = new Translation("Kills 200m-300m", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of primary kills from 300m to 400m away for Snipers in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUISniperKills300mLabel = new Translation("Kills 300m-400m", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of primary kills over 400m away for Snipers in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUISniperKills400mLabel = new Translation("Kills 400m+", TranslationOptions.TMProUI);
+
+    // ap-rifleman
+    
+    [TranslationData("Label that goes in front of vehicle kills for AP Riflemen in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUIAPRiflemanVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of player trap kills for AP Riflemen in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUIAPRiflemanTrapKillsLabel = new Translation("Trap Kills", TranslationOptions.TMProUI);
+
+    // combat engineer
+    
+    [TranslationData("Label that goes in front of shovel points for Combat Engineers in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUICombatEngineerShovelsLabel = new Translation("Shovel Points", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of fortifications built for Combat Engineers in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUICombatEngineerFortificationsBuiltLabel = new Translation("Fortifications Built", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of emplacements built for Combat Engineers in kit stats.")]
+    // ReSharper disable once InconsistentNaming
+    public readonly Translation KitMenuUICombatEngineerEmplacementsBuiltLabel = new Translation("Emplacements Built", TranslationOptions.TMProUI);
+
+    // crewman
+    
+    [TranslationData("Label that goes in front of km driven for Crewmen in kit stats.")]
+    public readonly Translation KitMenuUICrewmanKmDrivenLabel = new Translation("Distance Driven (km)", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of driver assists for Crewmen in kit stats.")]
+    public readonly Translation KitMenuUICrewmanDriverAssistsLabel = new Translation("Driver Assists", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of total transport distance built for Crewmen in kit stats.")]
+    public readonly Translation KitMenuUICrewmanTransportDistanceLabel = new Translation("Ttl. Transport Dst.", TranslationOptions.TMProUI);
+
+    // pilot
+    
+    [TranslationData("Label that goes in front of km flown for Pilots in kit stats.")]
+    public readonly Translation KitMenuUIPilotKmDrivenLabel = new Translation("Distance Flown (km)", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of pilot assists for Pilots in kit stats.")]
+    public readonly Translation KitMenuUIPilotDriverAssistsLabel = new Translation("Pilot Assists", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label that goes in front of total transport distance built for Pilots in kit stats.")]
+    public readonly Translation KitMenuUIPilotTransportDistanceLabel = new Translation("Ttl. Transport Dst.", TranslationOptions.TMProUI);
+
+    // spec ops
+    
+    [TranslationData("Label that goes in front of night vision kills for Special Ops in kit stats.")]
+    public readonly Translation KitMenuUISpecOpsNVGKillsLabel = new Translation("NVG Kills (Night)", TranslationOptions.TMProUI);
 }

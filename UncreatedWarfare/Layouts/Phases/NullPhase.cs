@@ -11,9 +11,9 @@ public class NullPhase : ILayoutPhase
     public bool IsActive => false;
 
     /// <inheritdoc />
-    public IConfigurationSection Configuration { get; }
+    public IConfiguration Configuration { get; }
 
-    public NullPhase(IConfigurationSection config)
+    public NullPhase(IConfiguration config)
     {
         Configuration = config;
     }

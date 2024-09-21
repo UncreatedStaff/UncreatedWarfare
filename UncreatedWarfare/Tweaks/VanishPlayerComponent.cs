@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Tweaks;
 /// </summary>
 public class VanishPlayerComponent : IPlayerComponent
 {
-    public static readonly PermissionLeaf VanishPermission = new PermissionLeaf("features.vanish");
+    public static readonly PermissionLeaf VanishPermission = new PermissionLeaf("warfare::features.vanish");
 
     public bool IsActive
     {

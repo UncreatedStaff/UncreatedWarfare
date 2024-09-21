@@ -134,7 +134,7 @@ public class GroupCommand : IExecutableCommand
 
 public class GroupCommandTranslations : PropertiesTranslationCollection
 {
-    protected override string FileName => "Group Command";
+    protected override string FileName => "Commands/Group";
 
     [TranslationData("Output from /group, tells the player their current group.", "Group ID", "Group Name", "Team Color (if applicable)")]
     public readonly Translation<ulong, string, Color> CurrentGroup = new Translation<ulong, string, Color>("<#e6e3d5>Group <#{2}>{0}</color>: <#{2}>{1}</color>");

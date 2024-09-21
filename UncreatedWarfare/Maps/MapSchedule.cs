@@ -8,7 +8,6 @@ using System.Linq;
 
 namespace Uncreated.Warfare.Maps;
 
-[Priority(int.MaxValue)]
 public class MapScheduler
 {
     private readonly ILogger<MapScheduler> _logger;

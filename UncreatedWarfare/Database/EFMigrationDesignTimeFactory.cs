@@ -53,7 +53,7 @@ public class EFMigrationDesignTimeFactory : IDesignTimeDbContextFactory<WarfareD
         IConfigurationRoot sysConfig = builder.Build();
 
         IServiceCollection serviceCollection = new ServiceCollection();
-        serviceCollection.AddTransient(sp => new WarfareDbContext(sp.GetRequiredService<ILogger<WarfareDbContext>>(), WarfareDbContext.GetOptions(sysConfig)));
+        serviceCollection.AddTransient(sp => new WarfareDbContext(sp.GetRequiredService<ILogger<WarfareDbContext>>(), WarfareDbContext.GetOptions(sp)));
         serviceCollection.AddSingleton<IConfiguration>(sysConfig);
         serviceCollection.AddLogging(builder => builder.AddProvider(new L.UCLoggerFactory()));
 

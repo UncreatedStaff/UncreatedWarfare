@@ -266,7 +266,7 @@ public class AmmoCommand : IExecutableCommand
 
 public class AmmoCommandTranslations : PropertiesTranslationCollection
 {
-    protected override string FileName => "Ammo Stocking";
+    protected override string FileName => "Commands/Ammo";
 
     public readonly Translation AmmoNoTarget = new Translation("<#ffab87>Look at an <#cedcde>AMMO CRATE</color>, <#cedcde>AMMO BAG</color> or <#cedcde>VEHICLE</color> in order to resupply.");
     

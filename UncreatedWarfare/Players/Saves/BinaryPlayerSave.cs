@@ -23,7 +23,7 @@ public class BinaryPlayerSave : ISaveableState
     public bool TrackQuests { get; set; }
 
     /// <summary>
-    /// If this save has been read to or written from a file.
+    /// If this save has been read from or written to a file.
     /// </summary>
     public bool WasReadFromFile { get; private set; }
     internal BinaryPlayerSave(CSteamID steam64, ILogger logger)

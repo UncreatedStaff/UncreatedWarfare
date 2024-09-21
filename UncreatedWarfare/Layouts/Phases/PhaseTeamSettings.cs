@@ -24,12 +24,12 @@ public class PhaseTeamSettings
     public bool Grounded { get; set; }
 
     /// <summary>
-    /// Display name on the toast, if any.
+    /// Display name on the toast specifically for this team, if any.
     /// </summary>
     public TranslationList? Name { get; set; }
 
     /// <summary>
     /// Extra configuration about the team, assign at initialization time.
     /// </summary>
-    public IConfigurationSection Configuration { get; internal set; }
+    public IConfiguration Configuration { get; internal set; }
 }

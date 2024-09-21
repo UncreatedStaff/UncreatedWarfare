@@ -1,5 +1,4 @@
-﻿using Autofac;
-using DanielWillett.ReflectionTools;
+﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System;
@@ -95,13 +94,13 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
         if (rotField == null)
             L.LogWarning("Unable to find 'ItemJar.rot' while transpiling ReceiveDropItem.");
 
-        yield return new CodeInstruction(OpCodes.Ldarg_3);
+        yield return new CodeInstruction(OpCodes.Ldc_I4_1);
         yield return new CodeInstruction(OpCodes.Stsfld, LastPlayEffectField);
         
-        yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4);
+        yield return new CodeInstruction(OpCodes.Ldc_I4_1);
         yield return new CodeInstruction(OpCodes.Stsfld, LastIsDroppedField);
         
-        yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)5);
+        yield return new CodeInstruction(OpCodes.Ldc_I4_0);
         yield return new CodeInstruction(OpCodes.Stsfld, LastWideSpreadField);
 
         bool foundOne = false;

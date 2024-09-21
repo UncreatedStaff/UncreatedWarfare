@@ -25,5 +25,5 @@ public class NullTeamManager : ITeamManager<Team>
     public CSteamID AdminGroupId => CSteamID.Nil;
 
     /// <inheritdoc />
-    public IConfigurationSection Configuration { get; set; }
+    public IConfiguration Configuration { get; set; }
 }

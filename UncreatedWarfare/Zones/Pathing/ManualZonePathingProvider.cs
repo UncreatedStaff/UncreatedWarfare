@@ -9,23 +9,21 @@ namespace Uncreated.Warfare.Zones.Pathing;
 public class ManualZonePathingProvider : IZonePathingProvider
 {
     private readonly ILogger<ManualZonePathingProvider> _logger;
-    private readonly ILayoutPhase _phase;
     private readonly ZoneStore _zones;
     public string[]? Zones { get; set; }
-    public ManualZonePathingProvider(ILogger<ManualZonePathingProvider> logger, ILayoutPhase phase, ZoneStore zones)
+    public ManualZonePathingProvider(ILogger<ManualZonePathingProvider> logger, ZoneStore zones)
     {
         _logger = logger;
-        _phase = phase;
         _zones = zones;
     }
 
-    public UniTask<IList<Zone>> CreateZonePathAsync(CancellationToken token = default)
+    public UniTask<IList<Zone>> CreateZonePathAsync(ILayoutPhase forPhase, CancellationToken token = default)
     {
         string[]? zoneNames = Zones;
         if (zoneNames == null || zoneNames.Length == 0)
         {
             _logger.LogError("Unable to detect the seed zone from the available zones. One main needs upstream zones defined, which will act as the seed zone.");
-            Fail();
+            Fail(forPhase);
         }
 
         List<Zone> zones = new List<Zone>(zoneNames!.Length);
@@ -38,13 +36,13 @@ public class ManualZonePathingProvider : IZonePathingProvider
             if (zone == null)
             {
                 _logger.LogError("There is no zone by the name \"{0}\" (#{1}).", zoneName.Length, i);
-                Fail();
+                Fail(forPhase);
             }
 
             if (zones.Contains(zone!))
             {
                 _logger.LogError("Duplicate zone \"{0}\" (#{1}) in zone list.", zoneName.Length, i);
-                Fail();
+                Fail(forPhase);
             }
 
             zones.Add(zone!);
@@ -53,15 +51,15 @@ public class ManualZonePathingProvider : IZonePathingProvider
         if (zones.Count <= 2 || zones[0].Type != ZoneType.MainBase || zones[^1].Type != ZoneType.MainBase)
         {
             _logger.LogError("The first and last zones must be main bases to dictate the order of the zones.");
-            Fail();
+            Fail(forPhase);
         }
 
         return new UniTask<IList<Zone>>(zones);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void Fail()
+    private void Fail(ILayoutPhase phase)
     {
-        throw new LayoutConfigurationException(_phase, "Failed to create a path using ManualZonePathingProvider.");
+        throw new LayoutConfigurationException(phase, "Failed to create a path using ManualZonePathingProvider.");
     }
 }

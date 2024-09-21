@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Tweaks;
 
 namespace Uncreated.Warfare.Commands;
@@ -8,6 +9,8 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class GodCommand : IExecutableCommand
 {
+    private readonly GodCommandTranslations _translations;
+
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
@@ -20,6 +23,11 @@ public class GodCommand : IExecutableCommand
         {
             Description = "Toggles your ability to take damage."
         };
+    }
+
+    public GodCommand(TranslationInjection<GodCommandTranslations> translations)
+    {
+        _translations = translations.Value;
     }
 
     /// <inheritdoc />
@@ -45,11 +53,22 @@ public class GodCommand : IExecutableCommand
             if (injureComponent != null)
                 injureComponent.Revive();
 
-            Context.Reply(T.GodModeEnabled);
+            Context.Reply(_translations.GodModeEnabled);
         }
         else
         {
-            Context.Reply(T.GodModeDisabled);
+            Context.Reply(_translations.GodModeDisabled);
         }
     }
+}
+
+public class GodCommandTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Commands/God";
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation GodModeEnabled = new Translation("<#bfb9ac>God mode <#99ff66>enabled</color>.");
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation GodModeDisabled = new Translation("<#ff9966>God mode <#ff9999>disabled</color>.");
 }

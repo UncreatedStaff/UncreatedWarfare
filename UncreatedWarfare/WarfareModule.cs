@@ -3,6 +3,7 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Modules;
 using Stripe;
 using System;
@@ -10,7 +11,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -39,6 +39,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Teams;
@@ -145,6 +146,9 @@ public sealed class WarfareModule : IModuleNexus
 
         ConfigurationSettings.SetupTypeConverters();
 
+        // todo rewrite action log
+        _gameObjectHost.AddComponent<ActionLog>();
+        
         // adds the plugin to the server lobby screen and sets the plugin framework type to 'Unknown'.
         IPluginAdvertising pluginAdvService = PluginAdvertising.Get();
         pluginAdvService.AddPlugin("Uncreated Warfare");
@@ -179,8 +183,18 @@ public sealed class WarfareModule : IModuleNexus
 
         // todo rewrite logging
         // register logging
-        serviceCollection.RegisterGeneric(typeof(L.UCLogger<>)).As(typeof(ILogger<>));
-        serviceCollection.RegisterType<L.UCLoggerFactory>().As<ILoggerFactory>();
+        L.Init();
+        serviceCollection.RegisterFromCollection(collection =>
+        {
+            collection.AddLogging(l => l
+                .SetMinimumLevel(LogLevel.Trace)
+                .AddFilter("Microsoft", LogLevel.Information)
+                .AddFilter("Uncreated.Warfare.Database", LogLevel.Information)
+                .AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning)
+                .AddFilter("Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning)
+                .AddProvider(new L.UCLoggerFactory())
+            );
+        });
 
         ConfigureServices(serviceCollection);
 
@@ -246,7 +260,8 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterType<MapZoneProvider>()
             .As<IZoneProvider>();
 
-        bldr.Register(serviceProvider => new ZoneStore(serviceProvider.Resolve<IEnumerable<IZoneProvider>>(), serviceProvider.Resolve<ILogger<ZoneStore>>(), true))
+        bldr.RegisterType<ZoneStore>()
+            .WithParameter("isGlobal", true)
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
@@ -319,6 +334,10 @@ public sealed class WarfareModule : IModuleNexus
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
+        bldr.RegisterType<CooldownManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         bldr.RegisterType<CommandDispatcher>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
@@ -357,10 +376,22 @@ public sealed class WarfareModule : IModuleNexus
             .As<IEventListenerProvider>()
             .SingleInstance();
 
+        bldr.RegisterType<FactionDataStore>()
+            .AsImplementedInterfaces()
+            .SingleInstance();
+
         // Kits
         KitManager.ConfigureServices(bldr);
 
+        bldr.RegisterType<DroppedItemTracker>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         bldr.RegisterType<WhitelistService>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<SignInstancer>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
@@ -405,6 +436,9 @@ public sealed class WarfareModule : IModuleNexus
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
+        bldr.RegisterType<FobConfiguration>()
+            .SingleInstance();
+
         // Active ITeamManager
         bldr.Register(_ => GetActiveLayout().TeamManager)
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -442,8 +476,11 @@ public sealed class WarfareModule : IModuleNexus
             .AsSelf().AsImplementedInterfaces();
 
         // Database
+
+        bldr.Register(sp => WarfareDbContext.GetOptions(sp.Resolve<IServiceProvider>()))
+            .SingleInstance();
+
         bldr.RegisterType<WarfareDbContext>()
-            .WithParameter("options", WarfareDbContext.GetOptions(Configuration))
             .AsSelf().As(typeof(WarfareDbContext).GetInterfaces().Where(x => typeof(IDbContext).IsAssignableFrom(x)).ToArray())
             .InstancePerDependency();
 
@@ -489,6 +526,9 @@ public sealed class WarfareModule : IModuleNexus
 
         // this needs to happen almost instantly, can't wait for migration
         ServiceProvider.Resolve<MapScheduler>().ApplyMapSetting();
+
+        // this too
+        Harmony.Patches.DoPatching(ServiceProvider.Resolve<Module>(), ServiceProvider.Resolve<IServiceProvider>());
 
         bool connected = false;
 

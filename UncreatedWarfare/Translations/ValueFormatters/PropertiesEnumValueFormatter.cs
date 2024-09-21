@@ -134,7 +134,7 @@ public class PropertiesEnumValueFormatter<TEnum> : IEnumFormatter<TEnum> where T
         string? nameTranslation = null;
         if (File.Exists(path))
         {
-            PropertiesReader reader = new PropertiesReader(path);
+            using PropertiesReader reader = new PropertiesReader(path);
             while (reader.TryReadPair(out string key, out string value))
             {
                 if (key.Equals("%NAME%", StringComparison.OrdinalIgnoreCase))

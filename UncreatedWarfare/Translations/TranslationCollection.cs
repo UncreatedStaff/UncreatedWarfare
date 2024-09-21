@@ -15,7 +15,7 @@ public abstract class TranslationCollection
 {
 #nullable disable
     private ILogger _logger;
-    private int _isInitialized;
+    private bool _isInitialized;
     private Dictionary<string, Translation> _translations;
     private Dictionary<TranslationLanguageKey, TranslationValue> _valueTable;
     private ICachableLanguageDataStore _languageDataStore;
@@ -32,11 +32,18 @@ public abstract class TranslationCollection
     /// <remarks>I have it set up like this to make thread-safety easier for service injections.</remarks>
     internal bool TryInitialize(ITranslationService translationService, IServiceProvider serviceProvider)
     {
-        if (Interlocked.Exchange(ref _isInitialized, 1) != 0)
+        if (_isInitialized)
             return false;
 
-        Initialize(translationService, serviceProvider);
-        return true;
+        lock (this)
+        {
+            if (_isInitialized)
+                return false;
+
+            Initialize(translationService, serviceProvider);
+            _isInitialized = true;
+            return true;
+        }
     }
 
     protected virtual void Initialize(ITranslationService translationService, IServiceProvider serviceProvider)

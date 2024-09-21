@@ -1,17 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Objectives;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
@@ -36,8 +32,8 @@ internal static class T
      *
      * Premade Formatting (Constants):
      *  • FormatPlural              "$plural$"  See Below
-     *  • UppercaseAddon.Instance           "upper"     Turns the argument UPPERCASE.
-     *  • LowercaseAddon.Instance           "lower"     Turns the argument lowercase.
+     *  • UppercaseAddon.Instance   "upper"     Turns the argument UPPERCASE.
+     *  • LowercaseAddon.Instance   "lower"     Turns the argument lowercase.
      *  • FormatPropercase          "proper"    Turns the argument ProperCase.
      *  • FormatTimeLong            "tlong"     Turns time to: 3 minutes and 4 seconds, etc.
      *  • FormatTimeShort_MM_SS     "tshort1"   Turns time to: 03:04, etc.
@@ -74,58 +70,6 @@ internal static class T
      *  Example: There are {0} {1} already on this FOB. arg1Fmt: RarityFormat + FormatPlural + "{0}"
      *   -> (4, FOB Radio Asset) There are 4 <#xxxxx>FOB Radios</color> already on this FOB.
      */
-
-    #region Common Errors
-    private const string SectionCommonErrors = "Common Errors";
-
-    [TranslationData(SectionCommonErrors, "Sent when a command is not used correctly.", "Command usage.")]
-    public static readonly Translation<string> CorrectUsage = new Translation<string>("<#ff8c69>Correct usage: {0}.");
-
-    [TranslationData(SectionCommonErrors, "A command or feature hasn't been completed or implemented.")]
-    public static readonly Translation NotImplemented = new Translation("<#ff8c69>This command hasn't been implemented yet.");
-
-    [TranslationData(SectionCommonErrors, "A player ran an unknown command.")]
-    public static readonly Translation UnknownCommand = new Translation("<#ff8c69>Unknown command. <#b3ffb3>Type <#fff>/help</color> to learn more.");
-
-    [TranslationData(SectionCommonErrors, "A command or feature can only be used by the server console.")]
-    public static readonly Translation ConsoleOnly = new Translation("<#ff8c69>This command can only be called from console.");
-
-    [TranslationData(SectionCommonErrors, "A command or feature can only be used by a player (instead of the server console).")]
-    public static readonly Translation PlayersOnly = new Translation("<#ff8c69>This command can not be called from console.");
-
-    [TranslationData(SectionCommonErrors, "A command or feature is on cooldown.")]
-    public static readonly Translation<Cooldown, string> CommandCooldown = new Translation<Cooldown, string>("<#ff8c69>You can't use <#fff>/{1}</color> for another <#aaa>{0}</color>.", arg0Fmt: Cooldown.FormatTimeLong, arg1Fmt: LowercaseAddon.Instance);
-
-    [TranslationData(SectionCommonErrors, "A player name or ID search turned up no results.")]
-    public static readonly Translation PlayerNotFound = new Translation("<#ff8c69>Player not found.");
-
-    [TranslationData(SectionCommonErrors, "A command didn't respond to an interaction, or a command chose to throw a vague error response to an uncommon problem.")]
-    public static readonly Translation UnknownError = new Translation("<#ff8c69>We ran into an unknown error executing that command.");
-
-    [TranslationData(SectionCommonErrors, "A vanilla command didn't print a response.")]
-    public static readonly Translation VanillaCommandDidNotRespond = new Translation("<#d09595>The vanilla command you ran didn't print a response.");
-
-    [TranslationData(SectionCommonErrors, "An async command was cancelled mid-execution.")]
-    public static readonly Translation ErrorCommandCancelled = new Translation("<#ff8c69>This command was cancelled during it's execution. This could be caused by the game ending or a bug.");
-
-    [TranslationData(SectionCommonErrors, "A command is disabled in the current gamemode type (ex, /deploy in a gamemode without FOBs).")]
-    public static readonly Translation GamemodeError = new Translation("<#ff8c69>This command is not enabled in this gamemode.");
-
-    [TranslationData(SectionCommonErrors, "The caller of a command is not allowed to use the command.")]
-    public static readonly Translation NoPermissions = new Translation("<#ff8c69>You do not have permission to use this command.");
-
-    [TranslationData(SectionCommonErrors, "The caller of a command is not allowed to use the command.")]
-    public static readonly Translation<PermissionLeaf> NoPermissionsSpecific = new Translation<PermissionLeaf>("<#ff8c69>You do not have the permission {0} to use this command.");
-
-    [TranslationData(SectionCommonErrors, "A command or feature is turned off in the configuration or for the current layout.")]
-    public static readonly Translation NotEnabled = new Translation("<#ff8c69>This feature is not currently enabled.");
-
-    [TranslationData(SectionCommonErrors, "The caller of a command has permission to use the command but isn't on duty.")]
-    public static readonly Translation NotOnDuty = new Translation("<#ff8c69>You must be on duty to execute that command.");
-
-    [TranslationData(SectionCommonErrors, "The value of a parameter was not in a valid time span format.", "Inputted text.")]
-    public static readonly Translation<string> InvalidTime = new Translation<string>("<#ff8c69><#d09595>{0}</color> should be in a valid <#cedcde>TIME SPAN</color> format. Example: <#d09595>10d12h</color>, <#d09595>4mo15d12h</color>, <#d09595>2y</color>, <#d09595>permanent</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    #endregion
 
     #region Flags
     private const string SectionFlags = "Flags";
@@ -720,47 +664,6 @@ internal static class T
     #endregion
 
     #endregion
-    
-    #region LangCommand
-    private const string SectionLanguages = "Languages";
-    
-    [TranslationData(SectionLanguages, "Output from /lang, lists all languages.", "Comma-serparated list of languages")]
-    public static readonly Translation<string> LanguageList              = new Translation<string>("<#f53b3b>Languages: <#e6e3d5>{0}</color>.");
-    
-    [TranslationData(SectionLanguages, "Fallback usage output from /lang, explains /lang reset.")]
-    public static readonly Translation ResetLanguageHow                  = new Translation("<#f53b3b>Do <#e6e3d5>/lang reset</color> to reset back to default language.");
-    
-    [TranslationData(SectionLanguages, "Result from using /lang refresh, reloads ui with updated text.")]
-    public static readonly Translation LanguageRefreshed                 = new Translation("<#f53b3b>Refreshed all signs and UI.");
-    
-    [TranslationData(SectionLanguages, "Output from /lang current, tells the player their selected language.", "Current Language")]
-    public static readonly Translation<LanguageInfo> LanguageCurrent = new Translation<LanguageInfo>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
-    
-    [TranslationData(SectionLanguages, "Output from /lang <language>, tells the player their new language.", "New Language")]
-    public static readonly Translation<LanguageInfo> ChangedLanguage = new Translation<LanguageInfo>("<#f53b3b>Changed your language to <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
-    
-    [TranslationData(SectionLanguages, "Output from /lang <language> when the player is using already that language.", "Current Language")]
-    public static readonly Translation<LanguageInfo> LangAlreadySet  = new Translation<LanguageInfo>("<#ff8c69>You are already set to <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
-    
-    [TranslationData(SectionLanguages, "Output from /lang reset, tells the player their language changed to the default language.", "Default Language")]
-    public static readonly Translation<LanguageInfo> ResetLanguage   = new Translation<LanguageInfo>("<#f53b3b>Reset your language to <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
-    
-    [TranslationData(SectionLanguages, "Output from /lang reset when the player is using already that language.", "Default Language")]
-    public static readonly Translation<LanguageInfo> ResetCurrent    = new Translation<LanguageInfo>("<#ff8c69>You are already on the default language: <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
-    
-    [TranslationData(SectionLanguages, "Output from /lang <language> when the language isn't found.", "Input language")]
-    public static readonly Translation<string> LanguageNotFound          = new Translation<string>("<#dd1111>We don't have translations for <#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.");
-
-    [TranslationData(SectionLanguages, "Tells the player that IMGUI is recommended for this language and how to enable it (part 1).", "Language id")]
-    public static readonly Translation<LanguageInfo> IMGUITip1       = new Translation<LanguageInfo>("<#f53b3b>{0} recommends using IMGUI mode. do <#fff>/options imgui true</color>...", arg0Fmt: LanguageInfo.FormatDisplayName);
-    [TranslationData(SectionLanguages, "Tells the player that IMGUI is recommended for this language and how to enable it (part 2).")]
-    public static readonly Translation IMGUITip2                         = new Translation("<#f53b3b>... go to your steam launch options and add <#fff>-Glazier IMGUI</color> to them.");
-
-    [TranslationData(SectionLanguages, "Tells the player that IMGUI is not recommended for this language and how to enable it (part 1).", "Language id")]
-    public static readonly Translation<LanguageInfo> NoIMGUITip1     = new Translation<LanguageInfo>("<#f53b3b>{0} recommends not using IMGUI mode. do <#fff>/options imgui false</color>...", arg0Fmt: LanguageInfo.FormatDisplayName);
-    [TranslationData(SectionLanguages, "Tells the player that IMGUI is not recommended for this language and how to enable it (part 2).")]
-    public static readonly Translation NoIMGUITip2 = new Translation("<#f53b3b>... go to your steam launch options and remove <#fff>-Glazier IMGUI</color>.");
-    #endregion
 
     #region Toasts
     private const string SectionToasts = "Toasts";
@@ -772,18 +675,6 @@ internal static class T
     public static readonly Translation LoadingOnJoin = new Translation("Loading Player Data", TranslationOptions.TMProUI);
     [TranslationData(SectionToasts, "Title for the welcome message.")]
     public static readonly Translation WelcomeMessageTitle = new Translation("Welcome to Uncreated Warfare", TranslationOptions.TMProUI);
-    #endregion
-
-    #region RangeCommand
-    private const string SectionRange = "Range Command";
-    [TranslationData(SectionRange)]
-    public static readonly Translation<float> RangeOutput  = new Translation<float>("<#9e9c99>The range to your squad's marker is: <#8aff9f>{0}m</color>.", arg0Fmt: "N0");
-    [TranslationData(SectionRange)]
-    public static readonly Translation RangeNoMarker       = new Translation("<#9e9c99>You squad has no marker.");
-    [TranslationData(SectionRange)]
-    public static readonly Translation RangeNotSquadleader = new Translation("<#9e9c99>Only <#cedcde>SQUAD LEADERS</color> can place markers.");
-    [TranslationData(SectionRange)]
-    public static readonly Translation RangeNotInSquad     = new Translation("<#9e9c99>You must JOIN A SQUAD in order to do /range.");
     #endregion
 
     #region Squads
@@ -1067,26 +958,6 @@ internal static class T
     public static readonly Translation<IPlayer> UnmuteSuccessDM                 = new Translation<IPlayer>("<#ffff00>{0} unmuted you.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName);
     [TranslationData(SectionUnmute)]
     public static readonly Translation UnmuteSuccessDMOperator                  = new Translation("<#ffff00>An operator unmuted you.");
-    #endregion
-
-    #region Speed Command
-    private const string SectionSpeed = "Speed Command";
-    [TranslationData(SectionSpeed, IsPriorityTranslation = false)]
-    public static readonly Translation<string> SpeedMultiplierInvalidValue = new Translation<string>("<#b3a6a2>Speed multiplier <#fff>{0}</color> is invalid.");
-    [TranslationData(SectionSpeed, IsPriorityTranslation = false)]
-    public static readonly Translation<float> SpeedMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Speed multiplier is already set to <#fff>{0}</color>.");
-    [TranslationData(SectionSpeed, IsPriorityTranslation = false)]
-    public static readonly Translation<float, IPlayer> SetSpeedMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", arg0Fmt: "0.##", arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
-    #endregion
-
-    #region Jump Command
-    private const string SectionJump = "Speed Command";
-    [TranslationData(SectionJump, IsPriorityTranslation = false)]
-    public static readonly Translation<string> JumpMultiplierInvalidValue = new Translation<string>("<#b3a6a2>Jump multiplier <#fff>{0}</color> is invalid.");
-    [TranslationData(SectionJump, IsPriorityTranslation = false)]
-    public static readonly Translation<float> JumpMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Jump multiplier is already set to <#fff>{0}</color>.");
-    [TranslationData(SectionJump, IsPriorityTranslation = false)]
-    public static readonly Translation<float, IPlayer> SetJumpMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", arg0Fmt: "0.##", arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
     #endregion
 
     #region Vehicles
@@ -1462,36 +1333,6 @@ internal static class T
     public static readonly Translation ReviveHealEnemies = new Translation("<#bdae9d>You cannot aid enemy soldiers.");
     #endregion
 
-    #region Reload Command
-    private const string SectionReload = "Reload Command";
-    [TranslationData(SectionReload, IsPriorityTranslation = false)]
-    public static readonly Translation ReloadedAll = new Translation("<#e6e3d5>Reloaded all Uncreated Warfare components.");
-    [TranslationData(SectionReload, IsPriorityTranslation = false)]
-    public static readonly Translation<int> ReloadedTranslations = new Translation<int>("<#e6e3d5>Reloaded all translation files. {0} total translation points.");
-    [TranslationData(SectionReload, IsPriorityTranslation = false)]
-    public static readonly Translation ReloadedFlags = new Translation("<#e6e3d5>Reloaded flag data.");
-    [TranslationData(SectionReload, IsPriorityTranslation = false)]
-    public static readonly Translation ReloadFlagsInvalidGamemode = new Translation("<#ff8c69>You must be on a flag gamemode to use this command!");
-    [TranslationData(SectionReload, IsPriorityTranslation = false)]
-    public static readonly Translation ReloadedPermissions = new Translation("<#e6e3d5>Reloaded the permission saver file.");
-    [TranslationData(SectionReload, IsPriorityTranslation = false)]
-    public static readonly Translation ReloadedTCP = new Translation("<#e6e3d5>Tried to close any existing TCP connection to homebase and re-open it.");
-    [TranslationData(SectionReload, IsPriorityTranslation = false)]
-    public static readonly Translation ReloadedSQL = new Translation("<#e6e3d5>Reopened the MySql Connection.");
-    [TranslationData(SectionReload, IsPriorityTranslation = false)]
-    public static readonly Translation<string> ReloadedGeneric = new Translation<string>("<#e6e3d5>Reloaded the '{0}' module.");
-    #endregion
-
-    #region Debug Commands
-    private const string SectionDebugCommand = "Test Command";
-    [TranslationData(SectionDebugCommand)]
-    public static readonly Translation<string> DebugNoMethod = new Translation<string>("<#ff8c69>No method found called <#ff758f>{0}</color>.");
-    [TranslationData(SectionDebugCommand)]
-    public static readonly Translation<string, string> DebugErrorExecuting = new Translation<string, string>("<#ff8c69>Ran into an error while executing: <#ff758f>{0}</color> - <#ff758f>{1}</color>.");
-    [TranslationData(SectionDebugCommand)]
-    public static readonly Translation<string> DebugMultipleMatches = new Translation<string>("<#ff8c69>Multiple methods match <#ff758f>{0}</color>.");
-    #endregion
-
     #region Phases
     private const string SectionPhases = "Phases";
     [TranslationData(SectionPhases)]
@@ -1835,86 +1676,6 @@ internal static class T
     public static readonly Translation ActionErrorInVehicle = new Translation("<#9e7d7d>Unavailable in vehicle", TranslationOptions.TMProUI);
     #endregion
 
-    #region Teleport
-    private const string SectionTeleport = "Teleport Command";
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> TeleportTargetDead = new Translation<IPlayer>("<#8f9494>{0} is not alive.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionTeleport)]
-    public static readonly Translation<IPlayer, InteractableVehicle> TeleportSelfSuccessVehicle = new Translation<IPlayer, InteractableVehicle>("<#bfb9ac>You were put in {0}'s {1}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionTeleport)]
-    public static readonly Translation<IPlayer> TeleportSelfSuccessPlayer = new Translation<IPlayer>("<#bfb9ac>You were teleported to {0}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> TeleportSelfPlayerObstructed = new Translation<IPlayer>("<#8f9494>Failed to teleport you to {0}, their position is obstructed.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<string> TeleportLocationNotFound = new Translation<string>("<#8f9494>Failed to find a location similar to <#ddd>{0}</color>.");
-    [TranslationData(SectionTeleport)]
-    public static readonly Translation<string> TeleportSelfLocationSuccess = new Translation<string>("<#bfb9ac>You were teleported to <#ddd>{0}</color>.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<string> TeleportStopJump = new Translation<string>("<#bfb9ac>You will no longer jump on right punch.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<string> TeleportStartJump = new Translation<string>("<#bfb9ac>You will jump on right punch. Do <#ddd>/tp jump stop</color> to stop.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<string> TeleportSelfLocationObstructed = new Translation<string>("<#8f9494>Failed to teleport you to <#ddd>{0}</color>, it's position is obstructed.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation TeleportWaypointNotFound = new Translation("<#8f9494>You must have a waypoint placed on the map.");
-    [TranslationData(SectionTeleport)]
-    public static readonly Translation<GridLocation> TeleportSelfWaypointSuccess = new Translation<GridLocation>("<#bfb9ac>You were teleported to your waypoint in <#ddd>{0}</color>.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<GridLocation> TeleportSelfWaypointObstructed = new Translation<GridLocation>("<#8f9494>Failed to teleport you to your waypoint in <#ddd>{0}</color>, it's position is obstructed.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<GridLocation> TeleportGridLocationNotFound = new Translation<GridLocation>("<#8f9494>There is no terrain at <#ddd>{0}</color>.");
-    [TranslationData(SectionTeleport)]
-    public static readonly Translation<GridLocation> TeleportSelfGridLocationSuccess = new Translation<GridLocation>("<#bfb9ac>You were teleported to <#ddd>{0}</color>.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<GridLocation> TeleportSelfGridLocationObstructed = new Translation<GridLocation>("<#8f9494>Failed to teleport you to <#ddd>{0}</color>, it's position is obstructed.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, GridLocation> TeleportOtherWaypointSuccess = new Translation<IPlayer, GridLocation>("<#bfb9ac>{0} was teleported to your waypoint in <#ddd>{1}</color>.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, GridLocation> TeleportOtherWaypointObstructed = new Translation<IPlayer, GridLocation>("<#8f9494>Failed to teleport {0} to your waypoint in <#ddd>{1}</color>, it's position is obstructed.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, GridLocation> TeleportOtherGridLocationSuccess = new Translation<IPlayer, GridLocation>("<#bfb9ac>{0} was teleported to <#ddd>{1}</color>.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, GridLocation> TeleportOtherGridLocationObstructed = new Translation<IPlayer, GridLocation>("<#8f9494>Failed to teleport {0} to <#ddd>{1}</color>, it's position is obstructed.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer, InteractableVehicle> TeleportOtherSuccessVehicle = new Translation<IPlayer, IPlayer, InteractableVehicle>("<#bfb9ac>{0} was put in {1}'s {2}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: WarfarePlayer.FormatColoredCharacterName, arg2Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer> TeleportOtherSuccessPlayer = new Translation<IPlayer, IPlayer>("<#bfb9ac>{0} was teleported to {1}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer> TeleportOtherObstructedPlayer = new Translation<IPlayer, IPlayer>("<#8f9494>Failed to teleport {0} to {1}, their position is obstructed.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, string> TeleportOtherSuccessLocation = new Translation<IPlayer, string>("<#bfb9ac>{0} was teleported to <#ddd>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, string> TeleportOtherObstructedLocation = new Translation<IPlayer, string>("<#8f9494>Failed to teleport {0} to <#ddd>{1}</color>, it's position is obstructed.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation<string> TeleportTargetNotFound = new Translation<string>("<#8f9494>Failed to find a player from <#ddd>{0}</color>.");
-    [TranslationData(SectionTeleport, IsPriorityTranslation = false)]
-    public static readonly Translation TeleportInvalidCoordinates = new Translation("<#8f9494>Use of coordinates should look like: <#eee>/tp [player] <x y z></color>.");
-    #endregion
-
-    #region Heal Command
-    private const string SectionHeal = "Heal Command";
-    [TranslationData(SectionHeal, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> HealPlayer = new Translation<IPlayer>("<#ff9966>You healed {0}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionHeal)]
-    public static readonly Translation HealSelf = new Translation("<#ff9966>You were healed.");
-    #endregion
-
-    #region God Command
-    private const string SectionGod = "God Command";
-    [TranslationData(SectionGod, IsPriorityTranslation = false)]
-    public static readonly Translation GodModeEnabled = new Translation("<#bfb9ac>God mode <#99ff66>enabled</color>.");
-    [TranslationData(SectionGod, IsPriorityTranslation = false)]
-    public static readonly Translation GodModeDisabled = new Translation("<#ff9966>God mode <#ff9999>disabled</color>.");
-    #endregion
-
-    #region Vanish Command
-    private const string SectionVanish = "Vanish Command";
-    [TranslationData(SectionVanish, IsPriorityTranslation = false)]
-    public static readonly Translation VanishModeEnabled = new Translation("<#bfb9ac>Vanish mode <#99ff66>enabled</color>.");
-    [TranslationData(SectionVanish, IsPriorityTranslation = false)]
-    public static readonly Translation VanishModeDisabled = new Translation("<#ff9966>Vanish mode <#ff9999>disabled</color>.");
-    #endregion
-
     #region Permission Command
     private const string SectionPermission = "Permission Command";
     [TranslationData(SectionPermission)]
@@ -1990,210 +1751,6 @@ internal static class T
 
     #endregion
 
-    #region Kit Menu UI
-    private const string SectionKitMenuUI = "Kit Menu";
-    [TranslationData(SectionKitMenuUI, "Text that goes on the base kits tab.")]
-    public static readonly Translation KitMenuUITabBaseKits    = new Translation("Base Kits", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Text that goes on the elite kits tab.")]
-    public static readonly Translation KitMenuUITabEliteKits   = new Translation("Elite Kits", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Text that goes on the loadouts tab.")]
-    public static readonly Translation KitMenuUITabLoadouts    = new Translation("Loadouts", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Text that goes on the special kits tab.")]
-    public static readonly Translation KitMenuUITabSpecialKits = new Translation("Special Kits", TranslationOptions.TMProUI);
-
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of the filter dropdown.")]
-    public static readonly Translation KitMenuUIFilterLabel = new Translation("Filter", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of the faction in kit info.")]
-    public static readonly Translation KitMenuUIFactionLabel = new Translation("Faction", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of the class in kit info.")]
-    public static readonly Translation KitMenuUIClassLabel = new Translation("Class", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of the included items list in kit info.")]
-    public static readonly Translation KitMenuUIIncludedItemsLabel = new Translation("Included Items", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Value for kit type (KitType.Public).")]
-    public static readonly Translation KitMenuUIKitTypeLabelPublic = new Translation("Public Kit", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Value for kit type (KitType.Elite).")]
-    public static readonly Translation KitMenuUIKitTypeLabelElite = new Translation("Elite Kit", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Value for kit type (KitType.Special).")]
-    public static readonly Translation KitMenuUIKitTypeLabelSpecial = new Translation("Special/Event Kit", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Value for kit type (KitType.Loadout).")]
-    public static readonly Translation KitMenuUIKitTypeLabelLoadout = new Translation("Custom Loadout", TranslationOptions.TMProUI);
-
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of playtime in kit stats.")]
-    public static readonly Translation KitMenuUIPlaytimeLabel = new Translation("Playtime", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of total kills in kit stats.")]
-    public static readonly Translation KitMenuUIKillsLabel = new Translation("Total Kills", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of total deaths in kit stats.")]
-    public static readonly Translation KitMenuUIDeathsLabel = new Translation("Total Deaths", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills in kit stats.")]
-    public static readonly Translation KitMenuUIPrimaryKillsLabel = new Translation("Primary Kills", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of primary average kill distance in kit stats.")]
-    public static readonly Translation KitMenuUIPrimaryAvgDstLabel = new Translation("Primary Avg. Dst.", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of secondary kills in kit stats.")]
-    public static readonly Translation KitMenuUISecondaryKillsLabel = new Translation("Secondary Kills", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of DBNO states in kit stats.")]
-    public static readonly Translation KitMenuUIDBNOLabel = new Translation("Injures Without Kill", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of distance traveled in kit stats.")]
-    public static readonly Translation KitMenuUIDistanceTraveledLabel = new Translation("Distance Traveled", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of tickets lost in kit stats.")]
-    public static readonly Translation KitMenuUITicketsLostLabel = new Translation("Tickets Lost", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of tickets gained in kit stats.")]
-    public static readonly Translation KitMenuUITicketsGainedLabel = new Translation("Tickets Recovered", TranslationOptions.TMProUI);
-
-    [TranslationData(SectionKitMenuUI, "Label for kit stats title.")]
-    public static readonly Translation KitMenuUIStatsLabel = new Translation("Stats", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label for kit actions title.")]
-    public static readonly Translation KitMenuUIActionsLabel = new Translation("Actions", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label actions button action 1, request kit.")]
-    public static readonly Translation KitMenuUIActionRequestKitLabel = new Translation("Request Kit", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label actions button action 2, buy kit (can afford).", "Credit cost")]
-    public static readonly Translation<int> KitMenuUIActionBuyPublicKitCanAffordLabel = new Translation<int>("<#ccffff>Buy Kit <#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label actions button action 2, buy kit (can't afford).", "Credit cost")]
-    public static readonly Translation<int> KitMenuUIActionBuyPublicKitCantAffordLabel = new Translation<int>("<#ff6666>Requires <#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label actions button action 3, order kit.", "Price", "Currency Prefix")]
-    public static readonly Translation<decimal, string> KitMenuUIActionBuyPremiumKitLabel = new Translation<decimal, string>("<#ccffff>Open Ticket <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");
-    [TranslationData(SectionKitMenuUI, "Label actions button action not in main.")]
-    public static readonly Translation KitMenuUIActionNotInMainKitLabel = new Translation("<#ff6666>Not in Main", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label actions button action premium not linked.", "Price", "Currency Prefix")]
-    public static readonly Translation<decimal, string> KitMenuUIActionBuyPremiumKitNotLinkedLabel = new Translation<decimal, string>("<#ccffff>Premium kit: <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");
-    [TranslationData(SectionKitMenuUI, "Label actions button action premium unlock requirement not met.", "Price", "Currency Prefix")]
-    public static readonly Translation<decimal, string> KitMenuUIActionBuyPublicUnlockReqNotMetLabel = new Translation<decimal, string>("<#ccffff>Premium kit: <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");
-    [TranslationData(SectionKitMenuUI, "Label actions button staff give kit.")]
-    public static readonly Translation KitMenuUIActionGiveKitLabel = new Translation("<#0099ff>Give Kit", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label actions button staff edit kit.")]
-    public static readonly Translation KitMenuUIActionEditKitLabel = new Translation("<#0099ff>Edit Kit</color> (Coming Soon)", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label actions button staff set loadout items kit.")]
-    public static readonly Translation KitMenuUIActionSetLoadoutItemsLabel = new Translation("<#0099ff>Set Loadout Items", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Shown when a player doesn't have access to a kit.")]
-    public static readonly Translation KitMenuUIActionNoAccessLabel = new Translation("No Access", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Shown when a kit's faction is not assigned.")]
-    public static readonly Translation KitMenuUINoFaction = new Translation("Unaffiliated", TranslationOptions.TMProUI);
-
-    /* CLASS STATS */
-    // squadleader
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of FOBs started for Squadleaders in kit stats.")]
-    public static readonly Translation KitMenuUISquadLeaderFOBsStartedLabel = new Translation("FOBs Started", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of UAVs requested for Squadleaders in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUISquadLeaderUAVsRequestedLabel = new Translation("UAVs Requested", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of targets spotted for Squadleaders in kit stats.")]
-    public static readonly Translation KitMenuUISquadLeaderTargetsSpottedLabel = new Translation("Targets Spotted", TranslationOptions.TMProUI);
-
-    // rifleman
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of self restocked for Riflemen in kit stats.")]
-    public static readonly Translation KitMenuUIRiflemanSelfRestockedLabel = new Translation("Self Restocked", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of teammates restocked for Riflemen in kit stats.")]
-    public static readonly Translation KitMenuUIRiflemanTeammatesRestockedLabel = new Translation("Teammates Restocked", TranslationOptions.TMProUI);
-    
-    // medic
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of teammates healed for Medics in kit stats.")]
-    public static readonly Translation KitMenuUIMedicTeammatesHealedLabel = new Translation("Teammates Healed", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of teammates revived for Medics in kit stats.")]
-    public static readonly Translation KitMenuUIMedicTeammatesRevivedLabel = new Translation("Teammates Revived", TranslationOptions.TMProUI);
-
-    // breacher
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of structures destroyed for Breachers in kit stats.")]
-    public static readonly Translation KitMenuUIBreacherStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of radios destroyed for Breachers in kit stats.")]
-    public static readonly Translation KitMenuUIBreacherRadiosDestroyedLabel = new Translation("Radios Destroyed", TranslationOptions.TMProUI);
-
-    // auto-rifleman
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of spray n pray streak (most kills without reloading) for Automatic Riflemen in kit stats.")]
-    public static readonly Translation KitMenuUIAutoRiflemanStructuresDestroyedLabel = new Translation("Spray n Pray Streak", TranslationOptions.TMProUI);
-
-    // grenadier
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of grenade kills for Grenadiers in kit stats.")]
-    public static readonly Translation KitMenuUIGrenadierGrenadeKillsLabel = new Translation("Grenade Kills", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of vehicle kills for Grenadiers in kit stats.")]
-    public static readonly Translation KitMenuUIGrenadierVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
-
-    // machine gunner
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of spray n pray streak (most kills without reloading) for Machine Gunners in kit stats.")]
-    public static readonly Translation KitMenuUIMachineGunnerStructuresDestroyedLabel = new Translation("Spray n Pray Streak", TranslationOptions.TMProUI);
-    
-    // LAT
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of vehicle kills for LATs in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUILATVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of LAT player kills for LATs in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUILATPlayerKillsLabel = new Translation("LAT Player Kills", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of structure kills for LATs in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUILATStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationOptions.TMProUI);
-    
-    // HAT
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of vehicle kills for HATs in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIHATVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of HAT player kills for HATs in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIHATPlayerKillsLabel = new Translation("HAT Player Kills", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of structure kills for HATs in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIHATStructuresDestroyedLabel = new Translation("Structures Destroyed", TranslationOptions.TMProUI);
-
-    // marksman
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills from 150m to 250m away for Marksmen in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIMarksmanKills100mLabel = new Translation("Kills 150m-250m", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills from 250m to 350m away for Marksmen in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIMarksmanKills200mLabel = new Translation("Kills 250m-350m", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills over 350m away for Marksmen in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIMarksmanKills300mLabel = new Translation("Kills 350m+", TranslationOptions.TMProUI);
-
-    // sniper
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills from 200m to 300m away for Snipers in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUISniperKills200mLabel = new Translation("Kills 200m-300m", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills from 300m to 400m away for Snipers in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUISniperKills300mLabel = new Translation("Kills 300m-400m", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of primary kills over 400m away for Snipers in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUISniperKills400mLabel = new Translation("Kills 400m+", TranslationOptions.TMProUI);
-
-    // ap-rifleman
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of vehicle kills for AP Riflemen in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIAPRiflemanVehicleKillsLabel = new Translation("Vehicle Kills", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of player trap kills for AP Riflemen in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUIAPRiflemanTrapKillsLabel = new Translation("Trap Kills", TranslationOptions.TMProUI);
-
-    // combat engineer
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of shovel points for Combat Engineers in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUICombatEngineerShovelsLabel = new Translation("Shovel Points", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of fortifications built for Combat Engineers in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUICombatEngineerFortificationsBuiltLabel = new Translation("Fortifications Built", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of emplacements built for Combat Engineers in kit stats.")]
-    // ReSharper disable once InconsistentNaming
-    public static readonly Translation KitMenuUICombatEngineerEmplacementsBuiltLabel = new Translation("Emplacements Built", TranslationOptions.TMProUI);
-
-    // crewman
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of km driven for Crewmen in kit stats.")]
-    public static readonly Translation KitMenuUICrewmanKmDrivenLabel = new Translation("Distance Driven (km)", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of driver assists for Crewmen in kit stats.")]
-    public static readonly Translation KitMenuUICrewmanDriverAssistsLabel = new Translation("Driver Assists", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of total transport distance built for Crewmen in kit stats.")]
-    public static readonly Translation KitMenuUICrewmanTransportDistanceLabel = new Translation("Ttl. Transport Dst.", TranslationOptions.TMProUI);
-
-    // pilot
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of km flown for Pilots in kit stats.")]
-    public static readonly Translation KitMenuUIPilotKmDrivenLabel = new Translation("Distance Flown (km)", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of pilot assists for Pilots in kit stats.")]
-    public static readonly Translation KitMenuUIPilotDriverAssistsLabel = new Translation("Pilot Assists", TranslationOptions.TMProUI);
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of total transport distance built for Pilots in kit stats.")]
-    public static readonly Translation KitMenuUIPilotTransportDistanceLabel = new Translation("Ttl. Transport Dst.", TranslationOptions.TMProUI);
-
-    // spec ops
-    [TranslationData(SectionKitMenuUI, "Label that goes in front of night vision kills for Special Ops in kit stats.")]
-    public static readonly Translation KitMenuUISpecOpsNVGKillsLabel = new Translation("NVG Kills (Night)", TranslationOptions.TMProUI);
-    #endregion
-
     #region Options
     private const string SectionOptions = "Options";
 
@@ -2222,7 +1779,5 @@ internal static class T
     [TranslationData(SectionHelp, "Output from help describing how to use /deploy.")]
     public static readonly Translation HelpOutputCombined = new Translation("<#b3ffb3>To get gear, look at a sign in the barracks and type <#fff>/request</color> (or <#fff>/req</color>). To deploy to battle, type <#fff>/deploy <location></color> with any of the FOBs listed on the left of your screen. For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");
 
-    [TranslationData(SectionCommonErrors, "A player tried to get help with an unknown command.")]
-    public static readonly Translation UnknownCommandHelp = new Translation("<#ff8c69>Unknown command. <#b3ffb3>Type <#fff>/help <command name></color> to look up a command.");
     #endregion
 }

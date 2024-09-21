@@ -9,7 +9,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 

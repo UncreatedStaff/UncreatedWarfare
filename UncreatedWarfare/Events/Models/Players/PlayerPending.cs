@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Players.Saves;
 
 namespace Uncreated.Warfare.Events.Models.Players;
@@ -31,11 +30,6 @@ public sealed class PlayerPending : CancellableEvent
     /// The pending player.
     /// </summary>
     public required SteamPending PendingPlayer { get; init; }
-
-    /// <summary>
-    /// Cached data that will be transferred to the <see cref="PlayerJoined"/> event.
-    /// </summary>
-    public required PendingAsyncData AsyncData { get; init; }
 
     /// <summary>
     /// Rejection reason type if the player is rejected. Defaults to <see cref="ESteamRejection.PLUGIN"/>.

@@ -18,7 +18,7 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
     private readonly ITranslationService _translationService;
     
     private ILoopTicker? _ticker;
-    public PreparationPhase(IServiceProvider serviceProvider, IConfigurationSection config) : base(serviceProvider, config)
+    public PreparationPhase(IServiceProvider serviceProvider, IConfiguration config) : base(serviceProvider, config)
     {
         _tickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
         _session = serviceProvider.GetRequiredService<Layout>();
@@ -54,40 +54,40 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
     {
         if (Name is { Count: > 0 })
         {
-            if (Duration.HasValue)
-                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), Name, Duration.Value);
+            if (Duration.Ticks > 0)
+                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), Name, Duration);
             else
                 _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), Name);
         }
         else if (Teams != null)
         {
-            for (int i = 0; i < Teams.Length; i++)
+            for (int i = 0; i < Teams.Count; i++)
             {
                 PhaseTeamSettings settings = Teams[i];
                 if (settings.Name is not { Count: > 0 } || settings.TeamInfo == null)
                     continue;
 
-                if (Duration.HasValue)
-                    _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(settings.TeamInfo), settings.Name, Duration.Value);
+                if (Duration.Ticks > 0)
+                    _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(settings.TeamInfo), settings.Name, Duration);
                 else
                     _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(settings.TeamInfo), settings.Name);
             }
         }
 
-        if (!Duration.HasValue)
+        if (Duration.Ticks <= 0)
             return;
 
         // tick down the UI timer
         _ticker = _tickerFactory.CreateTicker(TimeSpan.FromSeconds(1d), invokeImmediately: false, queueOnGameThread: true, (_, timeSinceStart, _) =>
         {
-            if (timeSinceStart >= Duration.Value)
+            if (timeSinceStart >= Duration)
             {
                 _stagingUi.UpdateForAll(_translationService.SetOf.AllPlayers(), TimeSpan.Zero);
                 UniTask.Create(() => _session.MoveToNextPhase(CancellationToken.None));
             }
             else
             {
-                _stagingUi.UpdateForAll(_translationService.SetOf.AllPlayers(), Duration.Value - timeSinceStart);
+                _stagingUi.UpdateForAll(_translationService.SetOf.AllPlayers(), Duration - timeSinceStart);
             }
         });
     }

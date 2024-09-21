@@ -24,7 +24,7 @@ public class ClearInventoryCommand : IExecutableCommand
         {
             // clear inv <player>
             if (pl == null)
-                throw Context.Reply(T.PlayerNotFound);
+                throw Context.SendPlayerNotFound();
             
             ItemUtility.ClearInventoryAndSlots(pl);
 

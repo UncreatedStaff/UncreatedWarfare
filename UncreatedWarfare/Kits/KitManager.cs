@@ -441,6 +441,7 @@ public partial class KitManager :
 
             uint? unarmedKit = team.Faction.UnarmedKit;
             Faction? factionModel;
+            string kitName = team.Faction.KitPrefix + "unarmed";
             if (unarmedKit.HasValue)
             {
                 Kit? kit = await GetKit(unarmedKit.Value, token);
@@ -449,12 +450,12 @@ public partial class KitManager :
 
                 factionModel = await factionDbContext.Factions.FirstOrDefaultAsync(x => x.Key == team.Faction.PrimaryKey, token).ConfigureAwait(false);
 
-                kit = await FindKit(team.Faction.KitPrefix + "unarmed", token);
+                kit = await FindKit(kitName, token);
                 if (kit != null)
                 {
                     if (factionModel != null)
                     {
-                        factionModel.UnarmedKit = kit;
+                        factionModel.UnarmedKitId = kit.PrimaryKey;
                         factionDbContext.Update(factionModel);
                     }
 
@@ -467,11 +468,26 @@ public partial class KitManager :
             }
             else
             {
-                _logger.LogWarning("Team {0}'s unarmed kit hasn't been configured, an attempt will be made to auto-generate one.", team.Faction.Name);
                 factionModel = await factionDbContext.Factions.FirstOrDefaultAsync(x => x.Key == team.Faction.PrimaryKey, token).ConfigureAwait(false);
+                Kit? existing = await FindKit(kitName, token).ConfigureAwait(false);
+                if (existing != null)
+                {
+                    if (factionModel != null)
+                    {
+                        factionModel.UnarmedKitId = existing.PrimaryKey;
+                        factionDbContext.Update(factionModel);
+                    }
+
+                    team.Faction.UnarmedKit = existing.PrimaryKey;
+                    _logger.LogWarning("Team {0}'s unarmed kit wasn't configured but a possible match was found with ID: {1}, using that one instead.", team.Faction.Name, existing.InternalName);
+                }
+                else
+                {
+                    _logger.LogWarning("Team {0}'s unarmed kit hasn't been configured, an attempt will be made to auto-generate one.", team.Faction.Name);
+                }
             }
 
-            Kit newKit = await Defaults.CreateDefaultKit(team.Faction, team.Faction.KitPrefix + "unarmed", token).ConfigureAwait(false);
+            Kit newKit = await Defaults.CreateDefaultKit(team.Faction, kitName, token).ConfigureAwait(false);
             team.Faction.UnarmedKit = newKit.PrimaryKey;
             if (factionModel != null)
             {

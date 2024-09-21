@@ -1,12 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Globalization;
 using System.Linq;
-using DanielWillett.ReflectionTools;
-using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Events.Models;
 
 namespace Uncreated.Warfare.Translations.Languages;
 
@@ -14,7 +12,7 @@ namespace Uncreated.Warfare.Translations.Languages;
 /// Handles managing localization and internationalization data.
 /// </summary>
 [Priority(1)]
-public class LanguageService : IAsyncEventListener<PlayerPending>, IHostedService
+public class LanguageService : IHostedService
 {
     private readonly ILanguageDataStore _languageDataStore;
     private readonly ILogger<LanguageService> _logger;
@@ -59,12 +57,6 @@ public class LanguageService : IAsyncEventListener<PlayerPending>, IHostedServic
     UniTask IHostedService.StopAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
-    }
-
-    // get player language data when they join
-    async UniTask IAsyncEventListener<PlayerPending>.HandleEventAsync(PlayerPending e, IServiceProvider serviceProvider, CancellationToken token)
-    {
-        e.AsyncData.LanguagePreferences = await _languageDataStore.GetLanguagePreferences(e.Steam64.m_SteamID, token).ConfigureAwait(false);
     }
 
     /// <summary>

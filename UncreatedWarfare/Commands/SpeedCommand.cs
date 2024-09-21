@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -7,6 +8,8 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class SpeedCommand : IExecutableCommand
 {
+    private readonly SpeedCommandTranslations _translations;
+
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
@@ -49,6 +52,11 @@ public class SpeedCommand : IExecutableCommand
         };
     }
 
+    public SpeedCommand(TranslationInjection<SpeedCommandTranslations> translations)
+    {
+        _translations = translations.Value;
+    }
+
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
@@ -60,7 +68,7 @@ public class SpeedCommand : IExecutableCommand
 
         if (Context.HasArgs(2) && (!Context.TryGet(0, out _, out target) || target == null))
         {
-            throw Context.Reply(T.PlayerNotFound);
+            throw Context.SendPlayerNotFound();
         }
 
         if (target == null) // ran by console
@@ -72,7 +80,7 @@ public class SpeedCommand : IExecutableCommand
         if (!Context.TryGet(multParamIndex, out float multiplier))
         {
             if (!Context.MatchParameter(multParamIndex, "reset", "default"))
-                throw Context.Reply(T.SpeedMultiplierInvalidValue, Context.Get(multParamIndex)!);
+                throw Context.Reply(_translations.SpeedMultiplierInvalidValue, Context.Get(multParamIndex)!);
 
             multiplier = 1f;
         }
@@ -81,11 +89,25 @@ public class SpeedCommand : IExecutableCommand
 
         if (target.UnturnedPlayer.movement.pluginSpeedMultiplier == multiplier)
         {
-            throw Context.Reply(T.SpeedMultiplierAlreadySet, multiplier);
+            throw Context.Reply(_translations.SpeedMultiplierAlreadySet, multiplier);
         }
 
         target.UnturnedPlayer.movement.sendPluginSpeedMultiplier(multiplier);
-        Context.Reply(T.SetSpeedMultiplier, multiplier, target);
+        Context.Reply(_translations.SetSpeedMultiplier, multiplier, target);
         return default;
     }
+}
+
+public class SpeedCommandTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Commands/Speed";
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<string> SpeedMultiplierInvalidValue = new Translation<string>("<#b3a6a2>Speed multiplier <#fff>{0}</color> is invalid.");
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<float> SpeedMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Speed multiplier is already set to <#fff>{0}</color>.");
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<float, IPlayer> SetSpeedMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", arg0Fmt: "0.##", arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
 }

@@ -16,7 +16,7 @@ public interface IExecutableCommand : ICommand
     /// <summary>
     /// The context used to execute the command.
     /// </summary>
-    CommandContext Context { set; }
+    CommandContext Context { get; set; }
 
     /// <summary>
     /// Actually execute the command.

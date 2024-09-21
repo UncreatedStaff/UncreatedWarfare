@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Commands;
 public class CommandInfo
@@ -406,7 +407,7 @@ public class CommandInfo
                 .AddYamlStream(stream)
                 .Build();
 
-            CommandMetadata meta = ActivatorUtilities.CreateInstance<CommandMetadata>(EmptyServiceProvider, [ config ]);
+            CommandMetadata meta = ReflectionUtility.CreateInstanceFixed<CommandMetadata>(EmptyServiceProvider, [ config ]);
             config.Bind(meta);
             meta.Clean(classType);
             logger.LogDebug("Read command metadata for command type {0} from resource \"{1}\" in assembly {2}.", Accessor.Formatter.Format(classType), resource, asm.FullName);

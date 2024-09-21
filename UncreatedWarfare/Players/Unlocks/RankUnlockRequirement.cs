@@ -24,7 +24,7 @@ public class RankUnlockRequirement : UnlockRequirement
     {
         // ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
         // ref Ranks.RankData reqData = ref Ranks.RankManager.GetRank(UnlockRank, out _);
-        return T.NotImplemented.Translate(player); // T.KitRequiredRank.Translate(player, false, reqData, success && data.Order >= reqData.Order ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
+        return "not implemented"; // T.KitRequiredRank.Translate(player, false, reqData, success && data.Order >= reqData.Order ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
     }
 
     /// <inheritdoc />

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 
@@ -9,6 +10,7 @@ namespace Uncreated.Warfare.Players.Management.Legacy;
 /// <summary>
 /// Add properties here that are fetched during pre-join and need to be saved for after the player actually joins.
 /// </summary>
+[Obsolete]
 public sealed class PendingAsyncData
 {
     /// <summary>

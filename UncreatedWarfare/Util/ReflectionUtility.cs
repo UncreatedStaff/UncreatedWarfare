@@ -2,6 +2,7 @@
 using System;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Uncreated.Warfare.Util;
 public static class ReflectionUtility
@@ -32,5 +33,35 @@ public static class ReflectionUtility
         }
 
         return rpc;
+    }
+    
+    /// <summary>
+    /// <see cref="ActivatorUtilities"/> throws an error if none of the parameters in the given object array are used for some reason. This catches that and falls back to just using the service provider.
+    /// </summary>
+    internal static object CreateInstanceFixed(IServiceProvider serviceProvider, Type instanceType, object[] parameters)
+    {
+        try
+        {
+            return ActivatorUtilities.CreateInstance(serviceProvider, instanceType, parameters);
+        }
+        catch (InvalidOperationException)
+        {
+            return ActivatorUtilities.CreateInstance(serviceProvider, instanceType, Array.Empty<object>());
+        }
+    }
+    
+    /// <summary>
+    /// <see cref="ActivatorUtilities"/> throws an error if none of the parameters in the given object array are used for some reason. This catches that and falls back to just using the service provider.
+    /// </summary>
+    internal static TInstanceType CreateInstanceFixed<TInstanceType>(IServiceProvider serviceProvider, object[] parameters)
+    {
+        try
+        {
+            return ActivatorUtilities.CreateInstance<TInstanceType>(serviceProvider, parameters);
+        }
+        catch (InvalidOperationException)
+        {
+            return ActivatorUtilities.CreateInstance<TInstanceType>(serviceProvider, Array.Empty<object>());
+        }
     }
 }

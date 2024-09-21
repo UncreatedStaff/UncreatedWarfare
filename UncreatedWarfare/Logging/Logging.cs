@@ -36,9 +36,6 @@ public static class L
     public static UCLogger Logger { get; } = new UCLogger();
     static L()
     {
-#if DEBUG
-        Logger.DebugLogging = true;
-#endif
         StackCleanerConfiguration config = new StackCleanerConfiguration
         {
             ColorFormatting = StackColorFormatType.ExtendedANSIColor,
@@ -733,7 +730,6 @@ public static class L
 
     public class UCLogger : ILogger
     {
-        public bool DebugLogging { get; set; }
         private readonly string? _categoryName;
         public UCLogger() { }
         public UCLogger(string categoryName)
@@ -752,16 +748,25 @@ public static class L
             if (GameThread.IsCurrent)
             {
                 SendLogIntl(logLevel, str, eventId);
+                if (exception != null)
+                {
+                    WriteExceptionIntl(exception, true, 0, _categoryName);
+                }
             }
             else
             {
                 string str2 = str;
                 LogLevel logLvl2 = logLevel;
                 EventId ev2 = eventId;
+                Exception? ex2 = exception;
                 UniTask.Create(async () =>
                 {
                     await UniTask.SwitchToMainThread();
                     SendLogIntl(logLvl2, str2, ev2);
+                    if (ex2 != null)
+                    {
+                        WriteExceptionIntl(ex2, true, 0, _categoryName);
+                    }
                 });
             }
         }
@@ -785,13 +790,8 @@ public static class L
                     break;
             }
         }
-        public bool IsEnabled(LogLevel logLevel)
-        {
-            if (DebugLogging)
-                return true;
 
-            return logLevel > LogLevel.Debug;
-        }
+        public bool IsEnabled(LogLevel logLevel) => true;
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => default;
     }
@@ -821,12 +821,11 @@ public static class L
         }
     }
 
-    public sealed class UCLoggerFactory : ILoggerFactory, ILoggerProvider
+    public sealed class UCLoggerFactory : ILoggerProvider
     {
         public bool DebugLogging { get; set; }
         public void Dispose() { }
-        public ILogger CreateLogger(string categoryName) => new UCLogger(categoryName) { DebugLogging = DebugLogging };
-        public void AddProvider(ILoggerProvider provider) { }
+        public ILogger CreateLogger(string categoryName) => new UCLogger(categoryName);
     }
     private class UCUnityLogger : UnityEngine.ILogger
     {

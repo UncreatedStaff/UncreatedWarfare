@@ -18,7 +18,7 @@ internal class ItemManagerDespawnItems : IHarmonyPatch
     private static MethodInfo? _target;
     void IHarmonyPatch.Patch(ILogger logger)
     {
-        _target = typeof(ItemManager).GetMethod("despawnItems", BindingFlags.Public | BindingFlags.Instance);
+        _target = typeof(ItemManager).GetMethod("despawnItems", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
         if (_target != null)
         {

@@ -7,7 +7,8 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.PendingTasks;
+using Uncreated.Warfare.Players.Saves;
 using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
@@ -24,7 +25,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Prefix));
+            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for player joining event.", Accessor.Formatter.Format(_target));
             return;
         }
@@ -63,46 +64,51 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
     private static bool Prefix(SteamPending __instance)
     {
         ActionLog.Add(ActionLogType.TryConnect, $"Steam Name: {__instance.playerID.playerName}, Public Name: {__instance.playerID.characterName}, Private Name: {__instance.playerID.nickName}, Character ID: {__instance.playerID.characterID}.", __instance.playerID.steamID.m_SteamID);
-        
+
         // this method could be recalled while the verify event is running if another player gets verified.
         if (PendingPlayers.Contains(__instance.playerID.steamID.m_SteamID))
+        {
+            L.LogError($"Player already pending: {__instance.playerID.steamID}.");
             return false;
+        }
 
         if (_isSendVerifyPacketContinuation)
             return true;
 
         // ulong s64 = __instance.playerID.steamID.m_SteamID;
 
-        PendingAsyncData data = new PendingAsyncData(__instance);
-        CancellationTokenSource? src = null;
+        CancellationTokenSource src = new CancellationTokenSource();
 
-        // todo
-        // for (int i = 0; i < PlayerManager.PlayerConnectCancellationTokenSources.Count; ++i)
-        // {
-        //     KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerManager.PlayerConnectCancellationTokenSources[i];
-        //     if (kvp.Key == s64)
-        //     {
-        //         src = kvp.Value;
-        //         break;
-        //     }
-        // }
+        ILifetimeScope serviceProvider = WarfareModule.Singleton.ServiceProvider;
 
-        //PlayerSave.TryReadSaveFile(s64, out PlayerSave? save);
+        BinaryPlayerSave save = new BinaryPlayerSave(__instance.playerID.steamID, serviceProvider.Resolve<ILogger<BinaryPlayerSave>>());
+        save.Load();
+
         PlayerPending args = new PlayerPending
         {
             PendingPlayer = __instance,
-            AsyncData = data,
-            SaveData = null, // todo
+            SaveData = save,
             RejectReason = "An unknown error has occurred.",
 #if RELEASE
             IsAdmin = __instance.playerID.steamID.m_SteamID == 9472428428462828ul + 67088769839464181ul
 #endif
         };
 
-        CancellationToken token = WarfareModule.Singleton.UnloadToken;
-        CombinedTokenSources tokens = token.CombineTokensIfNeeded(src?.Token ?? CancellationToken.None);
 
-        Task task = InvokePrePlayerConnectAsync(args, tokens);
+        PlayerService.PlayerTaskData data;
+        if (serviceProvider.Resolve<IPlayerService>() is PlayerService playerServiceImpl)
+        {
+            data = playerServiceImpl.StartPendingPlayerTasks(args, src, src.Token);
+        }
+        else
+        {
+            data = new PlayerService.PlayerTaskData(args, src, Array.Empty<IPlayerPendingTask>(), Array.Empty<Task<bool>>());
+        }
+
+        CancellationToken token = WarfareModule.Singleton.UnloadToken;
+        CombinedTokenSources tokens = token.CombineTokensIfNeeded(src.Token);
+
+        Task task = InvokePrePlayerConnectAsync(args, data, tokens);
         if (task.IsCompleted)
         {
             return !args.IsActionCancelled;
@@ -113,35 +119,76 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         return false;
     }
 
-    private static async Task InvokePrePlayerConnectAsync(PlayerPending args, CombinedTokenSources tokens)
+    private static async Task InvokePrePlayerConnectAsync(PlayerPending args, PlayerService.PlayerTaskData taskData, CombinedTokenSources tokens)
     {
-        IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
+        ILifetimeScope serviceProvider = WarfareModule.Singleton.ServiceProvider;
+        IPlayerService playerService = serviceProvider.Resolve<IPlayerService>();
+        ILogger<ProviderPlayerJoiningEvents> logger = serviceProvider.Resolve<ILogger<ProviderPlayerJoiningEvents>>();
 
         if (playerService is not PlayerService impl)
         {
             throw new NotSupportedException("Unsupported PlayerService implementation.");
         }
 
+        bool isCancelled = false;
 
-        await impl.PlayerJoinLock.WaitAsync(tokens.Token).ConfigureAwait(false);
+        // wait for pending player tasks and check return values
         try
         {
-            bool isCancelled = await WarfareModule.EventDispatcher.DispatchEventAsync(args, tokens.Token);
+            logger.LogDebug("Waiting for {0} task(s) for player {1}.", taskData.Tasks.Length, args.Steam64);
+            bool[] results = await Task.WhenAll(taskData.Tasks);
 
-            await UniTask.SwitchToMainThread(tokens.Token);
+            for (int i = 0; i < results.Length; ++i)
+            {
+                if (results[i] || !taskData.Tasks[i].IsCompletedSuccessfully)
+                {
+                    continue;
+                }
+
+                logger.LogInformation("Player {0} rejected by task {1}.", args.Steam64, Accessor.Formatter.Format(taskData.PendingTasks[i].GetType()));
+                isCancelled = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            isCancelled = true;
+            args.RejectReason = "Unexpected error - " + Accessor.Formatter.Format((ex.GetBaseException() ?? ex).GetType()) + ".";
+            logger.LogError(ex, "Error executing player tasks for player {0}.", args.Steam64);
+        }
+
+        CancellationToken newToken = isCancelled ? WarfareModule.Singleton.UnloadToken : tokens.Token;
+        await impl.PlayerJoinLock.WaitAsync(newToken).ConfigureAwait(false);
+        try
+        {
+            if (!isCancelled)
+            {
+                isCancelled = !await WarfareModule.EventDispatcher.DispatchEventAsync(args, newToken);
+            }
+
+            await UniTask.SwitchToMainThread(newToken);
 
             if (isCancelled)
             {
-                PendingPlayers.Remove(args.PendingPlayer.playerID.steamID.m_SteamID);
-                EventDispatcher2.PendingAsyncData.Remove(args.AsyncData);
+                PendingPlayers.RemoveFast(args.PendingPlayer.playerID.steamID.m_SteamID);
 
+                int index = impl.PendingTasks.FindIndex(x => x.Player == args);
+                if (index >= 0)
+                    impl.PendingTasks.RemoveAtFast(index);
+
+                logger.LogDebug("Rejecting player {0}. Rejecting {1} because \"{2}\".", args.Steam64, args.Rejection, args.RejectReason);
                 Provider.reject(args.PendingPlayer.transportConnection, args.Rejection, args.RejectReason);
             }
             else
             {
-                EventDispatcher2.PendingAsyncData.Add(args.AsyncData);
+                impl.PendingTasks.Add(taskData);
                 ContinueSendingVerifyPacket(args.PendingPlayer);
             }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error connecting player {0}.", args.Steam64);
+            await UniTask.SwitchToMainThread();
+            Provider.reject(args.PendingPlayer.transportConnection, ESteamRejection.PLUGIN, "Unexpected error - " + Accessor.Formatter.Format((ex.GetBaseException() ?? ex).GetType()));
         }
         finally
         {
@@ -153,10 +200,6 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
     internal static void ContinueSendingVerifyPacket(SteamPending player)
     {
         PendingPlayers.Remove(player.playerID.steamID.m_SteamID);
-
-        // disconnected
-        if (!player.transportConnection.TryGetIPv4Address(out _))
-            return;
 
         _isSendVerifyPacketContinuation = true;
         try

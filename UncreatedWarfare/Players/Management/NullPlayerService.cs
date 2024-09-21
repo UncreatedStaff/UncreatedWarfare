@@ -40,4 +40,13 @@ public class NullPlayerService : IPlayerService
     {
         return null;
     }
+
+    /// <inheritdoc />
+    Task IPlayerService.TakePlayerConnectionLock(CancellationToken token)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    void IPlayerService.ReleasePlayerConnectionLock() { }
 }

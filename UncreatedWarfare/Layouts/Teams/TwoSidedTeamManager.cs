@@ -35,12 +35,12 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <summary>
     /// Info about all teams, binded from configuration.
     /// </summary>
-    public TwoSidedTeamInfo[] Teams { get; set; }
+    public IReadOnlyList<TwoSidedTeamInfo> Teams { get; set; }
 
     /// <summary>
     /// Team manager extra configuration from config file.
     /// </summary>
-    public IConfigurationSection Configuration { get; set; }
+    public IConfiguration Configuration { get; set; }
 
     /// <summary>
     /// If both Blufor and Opfor teams are specified.
@@ -75,7 +75,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <inheritdoc />
     public async UniTask InitializeAsync(CancellationToken token = default)
     {
-        if (Teams is not { Length: 2 })
+        if (Teams is not { Count: 2 })
             throw new LayoutConfigurationException(this, "Expected exactly 2 team infos in the 'Teams' section.");
 
         FactionInfo? factionInfo1, factionInfo2;
@@ -141,7 +141,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
         if (int.TryParse(teamSearch, NumberStyles.Number, CultureInfo.InvariantCulture, out int teamId))
         {
-            return teamId is not 1 and not 2 ? null : _teams[teamId];
+            return teamId is not 1 and not 2 ? null : _teams[teamId - 1];
         }
 
         int index = CollectionUtility.StringIndexOf(AllTeams, x => x.Faction.Name, teamSearch);

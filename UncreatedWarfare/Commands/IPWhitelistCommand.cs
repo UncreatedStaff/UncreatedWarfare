@@ -104,7 +104,7 @@ public class IPWhitelistCommand : IExecutableCommand
 
 public class IPWhitelistCommandTranslations : PropertiesTranslationCollection
 {
-    protected override string FileName => "IP Whitelist Command";
+    protected override string FileName => "Commands/IP Whitelist";
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<IPlayer, IPv4Range> IPWhitelistSuccess = new Translation<IPlayer, IPv4Range>("<#00ffff>Whitelisted the IP range: <#9cffb3>{1}</color> for {0}.");

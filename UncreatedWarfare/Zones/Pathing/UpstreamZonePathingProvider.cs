@@ -14,65 +14,84 @@ namespace Uncreated.Warfare.Zones.Pathing;
 public class UpstreamZonePathingProvider : IZonePathingProvider
 {
     private readonly ZoneStore _zones;
-    private readonly ILayoutPhase _phase;
     private readonly ILogger<UpstreamZonePathingProvider> _logger;
 
-    public UpstreamZonePathingProvider(ZoneStore zones, ILayoutPhase phase, ILogger<UpstreamZonePathingProvider> logger)
+    public UpstreamZonePathingProvider(ZoneStore zones, ILogger<UpstreamZonePathingProvider> logger)
     {
         _zones = zones;
-        _phase = phase;
         _logger = logger;
     }
 
-    public UniTask<IList<Zone>> CreateZonePathAsync(CancellationToken token = default)
+    public UniTask<IList<Zone>> CreateZonePathAsync(ILayoutPhase forPhase, CancellationToken token = default)
     {
         Zone? seedZone = FindSeedZone();
         if (seedZone == null)
         {
             _logger.LogError("Unable to detect the seed zone from the available zones. One main needs upstream zones defined, which will act as the seed zone.");
-            Fail();
+            Fail(forPhase);
         }
 
-        List<Zone> outputList = new List<Zone>(8) { seedZone! };
-
-        int nextIndex = ChooseUpstreamZone(seedZone!);
-        while (_zones.Zones[nextIndex].Type != ZoneType.MainBase)
+        const int maxZoneCount = 10;
+        const int maxTries = 10;
+        List<Zone> outputList = new List<Zone>(8);
+        for (int i = 0; i < maxTries; ++i)
         {
-            Zone zone = _zones.Zones[nextIndex];
-            if (outputList.Contains(zone))
+            outputList.Clear();
+            outputList.Add(seedZone!);
+
+            int nextIndex = ChooseUpstreamZone(forPhase, seedZone!);
+            bool failed = false;
+            while (_zones.Zones[nextIndex].Type != ZoneType.MainBase)
             {
+                Zone zone = _zones.Zones[nextIndex];
+                if (outputList.Contains(zone))
+                {
+                    outputList.Add(zone);
+                    _logger.LogInformation("Circular reference detected in the following path: {{{0}}}. Retrying {1}/{2}.", string.Join(" -> ", outputList.Select(zone => zone.Name)), i + 1, maxTries);
+                    failed = true;
+                    break;
+                }
+
                 outputList.Add(zone);
-                _logger.LogError("Circular reference detected in the following path: {{{0}}}.", string.Join(" -> ", outputList.Select(zone => zone.Name)));
-                Fail();
+                nextIndex = ChooseUpstreamZone(forPhase, zone);
             }
 
-            outputList.Add(zone);
-            nextIndex = ChooseUpstreamZone(zone);
+            if (failed)
+                continue;
+
+            outputList.Add(_zones.Zones[nextIndex]);
+
+            if (outputList[^1] == outputList[0])
+            {
+                _logger.LogError("Zone path started and ended at the same main base from the following path: {{{0}}}.", string.Join(" -> ", outputList.Select(zone => zone.Name)));
+                Fail(forPhase);
+            }
+
+            if (outputList.Count < 3)
+            {
+                _logger.LogInformation("Zone path started was not able to create a path longer than just the two bases. Retrying {0}/{1}.", i + 1, maxTries);
+                continue;
+            }
+            
+            if (outputList.Count > maxZoneCount + 2) // 10 + start and end bases
+            {
+                _logger.LogInformation("Zone path created a path longer than 10 zones in the following path: {{{0}}}. Retrying {1}/{2}.", string.Join(" -> ", outputList.Select(zone => zone.Name)), i + 1, maxTries);
+                continue;
+            }
+
+            break;
         }
 
-        outputList.Add(_zones.Zones[nextIndex]);
-
-        if (outputList[^1] == outputList[0])
-        {
-            _logger.LogError("Zone path started and ended at the same main base from the following path: {{{0}}}.", string.Join(" -> ", outputList.Select(zone => zone.Name)));
-            Fail();
-        }
-
-        if (outputList.Count < 3)
-        {
-            _logger.LogError("Zone path started was not able to create a path longer than just the two bases.");
-            Fail();
-        }
 
         return new UniTask<IList<Zone>>(outputList);
     }
 
-    private int ChooseUpstreamZone(Zone zone)
+    private int ChooseUpstreamZone(ILayoutPhase forPhase, Zone zone)
     {
         if (zone.UpstreamZones.Count == 0)
         {
             _logger.LogError("Zone {0} doesn't have any upstream zones.", zone.Name);
-            Fail();
+            Fail(forPhase);
         }
 
         int upstreamIndex = RandomUtility.GetIndex(zone.UpstreamZones, upstream => upstream.Weight);
@@ -82,7 +101,7 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
         if (index == -1)
         {
             _logger.LogError("Unknown zone \"{0}\" in upstream list for zone {1}.", zoneName, zone.Name);
-            Fail();
+            Fail(forPhase);
         }
 
         return index;
@@ -123,8 +142,8 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void Fail()
+    private void Fail(ILayoutPhase phase)
     {
-        throw new LayoutConfigurationException(_phase, "Failed to create a path using UpstreamZonePathingProvider.");
+        throw new LayoutConfigurationException(phase, "Failed to create a path using UpstreamZonePathingProvider.");
     }
 }

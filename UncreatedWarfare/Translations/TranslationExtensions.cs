@@ -248,7 +248,7 @@ public static class TranslationExtensions
     #region 0-arg
     private static void AssertNoArgs(Translation translation)
     {
-        if (translation.ArgumentCount < 1)
+        if (translation.ArgumentCount > 0)
             throw new ArgumentException("Translation must have no arguments.", nameof(translation));
     }
 

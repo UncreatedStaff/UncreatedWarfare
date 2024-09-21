@@ -69,14 +69,14 @@ public class LevelUnlockRequirement : UnlockRequirement
     public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
         // LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
-        return ctx.Reply(T.NotImplemented/* T.RequestKitLowLevel, data */);
+        return ctx.Reply(ctx.CommonTranslations.NotImplemented/* T.RequestKitLowLevel, data */);
     }
 
     /// <inheritdoc />
     public override Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
     {
         // LevelData data2 = new LevelData(Points.GetLevelXP(UnlockLevel));
-        return ctx.Reply(T.NotImplemented/* T.RequestVehicleMissingLevels, data2 */);
+        return ctx.Reply(ctx.CommonTranslations.NotImplemented/* T.RequestVehicleMissingLevels, data2 */);
     }
 
 #if false

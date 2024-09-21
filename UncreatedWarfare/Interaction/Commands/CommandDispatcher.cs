@@ -1,5 +1,4 @@
-﻿using Autofac;
-using DanielWillett.ReflectionTools;
+﻿using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -14,6 +13,8 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Collections;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
@@ -435,7 +436,8 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
         if (!await _permissions.HasPermissionAsync(user, new PermissionLeaf(vanillaCommand.command, unturned: true, warfare: false) /* unturned::command */, token))
         {
             await UniTask.SwitchToMainThread();
-            _chatService.Send(user, T.NoPermissions);
+            CommonTranslations translations = _module.ScopedProvider.Resolve<TranslationInjection<CommonTranslations>>().Value;
+            _chatService.Send(user, translations.NoPermissions);
             return;
         }
 
@@ -451,7 +453,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
             vanillaCommand.check(user.Steam64, vanillaCommand.command, string.Join('/', args));
             if (!ctx.Responded)
             {
-                ctx.Reply(T.VanillaCommandDidNotRespond);
+                ctx.Reply(ctx.CommonTranslations.VanillaCommandDidNotRespond);
             }
         }
         catch (Exception ex)
@@ -516,7 +518,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
                 IExecutableCommand cmdInstance;
                 try
                 {
-                    cmdInstance = (IExecutableCommand)ActivatorUtilities.CreateInstance(serviceProvider, command.Type, [ ctx ]);
+                    cmdInstance = (IExecutableCommand)ReflectionUtility.CreateInstanceFixed(serviceProvider, command.Type, [ ctx ]);
                 }
                 catch (InvalidOperationException)
                 {
@@ -524,8 +526,13 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
                         "Failed to run the \"{0}\" command because of a missing service. This could be expected if the command isn't enabled in the current layout.",
                         command.CommandName
                     );
-                    ctx.Reply(T.GamemodeError);
+                    ctx.SendGamemodeError();
                     return;
+                }
+
+                if (cmdInstance.Context != ctx)
+                {
+                    cmdInstance.Context = ctx;
                 }
 
                 ctx.Command = cmdInstance;
@@ -556,7 +563,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
                     src.Cancel();
                     await UniTask.SwitchToMainThread();
 
-                    ctx.Reply(T.ErrorCommandCancelled);
+                    ctx.Reply(ctx.CommonTranslations.ErrorCommandCancelled);
                     CheckCommandShouldStartCooldown(ctx);
 
                     _logger.LogDebug("Execution of {0} was cancelled for {1}.", command.CommandName, ctx.CallerId.m_SteamID);
@@ -705,7 +712,8 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
 
         if (!Parser.TryRunCommand(pl, textSpan, ref shouldList, true) && !shouldList)
         {
-            _chatService.Send(pl, T.UnknownCommand);
+            CommonTranslations translations = _module.ScopedProvider.Resolve<TranslationInjection<CommonTranslations>>().Value;
+            _chatService.Send(pl, translations.UnknownCommand);
         }
     }
     
@@ -739,7 +747,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
                 cooldown.Duration = compounding.MaxCooldown;
         }
 
-        _chatService.Send(context.Player, T.CommandCooldown, cooldown, context.CommandInfo.CommandName);
+        _chatService.Send(context.Player, context.CommonTranslations.CommandCooldown, cooldown, context.CommandInfo.CommandName);
         return false;
 
     }

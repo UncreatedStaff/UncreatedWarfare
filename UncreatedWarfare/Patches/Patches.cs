@@ -42,6 +42,7 @@ public static partial class Patches
             try
             {
                 patch.Patch(loggerFactory.CreateLogger(type));
+                L.LogDebug($"Applied harmony patch: {Accessor.Formatter.Format(type)}.");
             }
             catch (Exception ex)
             {

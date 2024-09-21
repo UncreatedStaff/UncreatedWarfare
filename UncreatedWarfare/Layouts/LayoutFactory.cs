@@ -1,6 +1,5 @@
 ﻿using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,6 +8,7 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
@@ -75,26 +75,50 @@ public class LayoutFactory : IHostedService
         
         LayoutInfo newLayout = SelectRandomLayouts();
 
+        IPlayerService? playerServiceImpl = _warfare.ServiceProvider.ResolveOptional<IPlayerService>();
+
         await UniTask.SwitchToMainThread(token);
 
-        if (_warfare.IsLayoutActive())
+        // stops players from joining both before the first layout starts and between layouts.
+        bool playerJoinLockTaken = false;
+
+        try
         {
-            Layout oldLayout = _warfare.GetActiveLayout();
-            if (oldLayout.IsActive)
+            if (_warfare.IsLayoutActive())
             {
-                await oldLayout.EndLayoutAsync(CancellationToken.None);
+                if (playerServiceImpl != null)
+                {
+                    await playerServiceImpl.TakePlayerConnectionLock(token);
+                    playerJoinLockTaken = true;
+                }
+
+                Layout oldLayout = _warfare.GetActiveLayout();
+                if (oldLayout.IsActive)
+                {
+                    await oldLayout.EndLayoutAsync(CancellationToken.None);
+                }
+
+                oldLayout.Dispose();
+                _warfare.SetActiveLayout(null);
+            }
+            else
+            {
+                // lock is on by default on startup.
+                playerJoinLockTaken = true;
+
+                // invoke ILevelHostedService
+                await _warfare.InvokeLevelLoaded(CancellationToken.None);
             }
 
-            oldLayout.Dispose();
-            _warfare.SetActiveLayout(null);
+            await CreateLayoutAsync(newLayout, CancellationToken.None);
         }
-        else
+        finally
         {
-            // invoke ILevelHostedService
-            await _warfare.InvokeLevelLoaded(CancellationToken.None);
+            if (playerJoinLockTaken && playerServiceImpl != null)
+            {
+                playerServiceImpl.ReleasePlayerConnectionLock();
+            }
         }
-
-        await CreateLayoutAsync(newLayout, CancellationToken.None);
     }
 
     /// <summary>
@@ -110,8 +134,12 @@ public class LayoutFactory : IHostedService
         ILifetimeScope scopedProvider = await _warfare.CreateScopeAsync(null, token);
         await UniTask.SwitchToMainThread(token);
 
+        // active layout is set in Layout default constructor
         Layout layout = (Layout)Activator.CreateInstance(layoutInfo.LayoutType, [ scopedProvider, layoutInfo ]);
-        _warfare.SetActiveLayout(layout);
+        if (_warfare.GetActiveLayout() != layout)
+        {
+            _warfare.SetActiveLayout(layout);
+        }
 
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(layout.UnloadToken);
         await layout.InitializeLayoutAsync(token);

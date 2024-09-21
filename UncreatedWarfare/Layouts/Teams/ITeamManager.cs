@@ -37,5 +37,5 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// <summary>
     /// Team manager extra configuration from config file.
     /// </summary>
-    IConfigurationSection Configuration { get; internal set; }
+    IConfiguration Configuration { get; internal set; }
 }

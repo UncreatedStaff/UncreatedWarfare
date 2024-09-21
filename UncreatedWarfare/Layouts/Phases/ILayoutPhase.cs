@@ -15,7 +15,7 @@ public interface ILayoutPhase
     /// <summary>
     /// The configuration section used to create this phase.
     /// </summary>
-    IConfigurationSection Configuration { get; }
+    IConfiguration Configuration { get; }
 
     /// <summary>
     /// Invoked before the layout starts. Meant to be used for loading extra configuration information.

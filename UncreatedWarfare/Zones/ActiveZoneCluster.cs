@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
@@ -17,7 +18,6 @@ public class ActiveZoneCluster : IDisposable
 {
     private readonly ZoneProximity[] _zones;
     private readonly IPlayerService _playerService;
-    private readonly int _primaryIndex;
     private bool _disposed;
     private readonly TrackingList<WarfarePlayer> _players = new TrackingList<WarfarePlayer>(8);
 
@@ -44,7 +44,13 @@ public class ActiveZoneCluster : IDisposable
     /// <summary>
     /// The zone marked as primary of this group.
     /// </summary>
-    public ref readonly ZoneProximity Primary => ref _zones[_primaryIndex];
+    [JsonIgnore]
+    public ref readonly ZoneProximity Primary => ref _zones[PrimaryIndex];
+
+    /// <summary>
+    /// The index of the primary zone in <see cref="Zones"/>.
+    /// </summary>
+    public int PrimaryIndex { get; }
 
     /// <summary>
     /// Total number of zones in this cluster.
@@ -90,7 +96,7 @@ public class ActiveZoneCluster : IDisposable
             throw new ArgumentException("A zone group must consist of exactly one primary zone.", nameof(zones));
         }
 
-        _primaryIndex = primaryIndex;
+        PrimaryIndex = primaryIndex;
 
         Zone primary = Primary.Zone;
 

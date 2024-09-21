@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -7,6 +8,7 @@ namespace Uncreated.Warfare.Commands;
 [MetadataFile(nameof(GetHelpMetadata))]
 public class JumpCommand : IExecutableCommand
 {
+    private readonly JumpCommandTranslations _translations;
     private const string Syntax = "/jump [player] <multiplier>";
     private const string Help = "Sets a player's jump modifier.";
 
@@ -52,6 +54,11 @@ public class JumpCommand : IExecutableCommand
         };
     }
 
+    public JumpCommand(TranslationInjection<JumpCommandTranslations> translations)
+    {
+        _translations = translations.Value;
+    }
+
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
@@ -63,7 +70,7 @@ public class JumpCommand : IExecutableCommand
         
         if (Context.HasArgs(2) && (!Context.TryGet(0, out _, out target) || target == null))
         {
-            throw Context.Reply(T.PlayerNotFound);
+            throw Context.SendPlayerNotFound();
         }
 
         if (target == null)
@@ -75,7 +82,7 @@ public class JumpCommand : IExecutableCommand
         if (!Context.TryGet(multParamIndex, out float multiplier))
         {
             if (!Context.MatchParameter(multParamIndex, "reset", "default"))
-                throw Context.Reply(T.JumpMultiplierInvalidValue, Context.Get(multParamIndex)!);
+                throw Context.Reply(_translations.JumpMultiplierInvalidValue, Context.Get(multParamIndex)!);
 
             multiplier = 1f;
         }
@@ -84,11 +91,25 @@ public class JumpCommand : IExecutableCommand
 
         if (target.UnturnedPlayer.movement.pluginJumpMultiplier == multiplier)
         {
-            throw Context.Reply(T.JumpMultiplierAlreadySet, multiplier);
+            throw Context.Reply(_translations.JumpMultiplierAlreadySet, multiplier);
         }
 
         target.UnturnedPlayer.movement.sendPluginJumpMultiplier(multiplier);
-        Context.Reply(T.SetJumpMultiplier, multiplier, target);
+        Context.Reply(_translations.SetJumpMultiplier, multiplier, target);
         return default;
     }
-} 
+}
+
+public class JumpCommandTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Commands/Jump";
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<string> JumpMultiplierInvalidValue = new Translation<string>("<#b3a6a2>Jump multiplier <#fff>{0}</color> is invalid.");
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<float> JumpMultiplierAlreadySet = new Translation<float>("<#b3a6a2>Jump multiplier is already set to <#fff>{0}</color>.");
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<float, IPlayer> SetJumpMultiplier = new Translation<float, IPlayer>("<#d1bda7>Set {0}'s speed multiplier to <#fff>{0}</color>.", arg0Fmt: "0.##", arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
+}

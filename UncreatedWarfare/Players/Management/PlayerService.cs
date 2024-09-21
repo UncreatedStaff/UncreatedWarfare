@@ -1,14 +1,15 @@
 ﻿using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players.PendingTasks;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
@@ -42,13 +43,27 @@ public class PlayerService : IPlayerService
         typeof(ZoneVisualizerComponent)
     ];
 
+    /// <summary>
+    /// All types here will be created when a player starts to join (<see cref="PlayerPending"/>).
+    /// They must implement <see cref="IPlayerPendingTask"/> and can not be <see cref="MonoBehaviour"/> components.
+    /// </summary>
+    public static readonly Type[] PlayerTasks =
+    [
+        typeof(LanguagePreferencesPlayerTask)
+    ];
+
     // keep up with a separate array that's replaced every time so the value can be used in multi-threaded operations
     private WarfarePlayer[] _threadsafeList;
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;
     private readonly PlayerDictionary<WarfarePlayer> _onlinePlayersDictionary;
 
     // makes sure only one player is ever joining at once.
-    internal readonly SemaphoreSlim PlayerJoinLock = new SemaphoreSlim(1, 1);
+    internal readonly SemaphoreSlim PlayerJoinLock = new SemaphoreSlim(0, 1);
+
+    /// <summary>
+    /// Keeps track of data that's fetched during the connecting event.
+    /// </summary>
+    internal readonly List<PlayerTaskData> PendingTasks = new List<PlayerTaskData>(4);
 
     /// <inheritdoc />
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers
@@ -85,8 +100,19 @@ public class PlayerService : IPlayerService
         return _threadsafeList;
     }
 
-    // todo add variation of PendingAsyncData
-    internal WarfarePlayer CreateWarfarePlayer(Player player)
+    /// <inheritdoc />
+    public Task TakePlayerConnectionLock(CancellationToken token)
+    {
+        return PlayerJoinLock.WaitAsync(token);
+    }
+
+    /// <inheritdoc />
+    public void ReleasePlayerConnectionLock()
+    {
+        PlayerJoinLock.Release();
+    }
+
+    internal WarfarePlayer CreateWarfarePlayer(Player player, in PlayerTaskData taskData)
     {
         lock (_onlinePlayersDictionary)
         {
@@ -101,7 +127,7 @@ public class PlayerService : IPlayerService
 
             IPlayerComponent[] components = AddComponents(player);
 
-            WarfarePlayer joined = new WarfarePlayer(player, logger, components, _serviceProvider);
+            WarfarePlayer joined = new WarfarePlayer(player, in taskData, logger, components, _serviceProvider);
             _onlinePlayers.Add(joined);
             _onlinePlayersDictionary.Add(joined, joined);
 
@@ -171,8 +197,7 @@ public class PlayerService : IPlayerService
             }
             else
             {
-                component = (IPlayerComponent)ActivatorUtilities.CreateInstance(_serviceProvider, type, player,
-                    player.channel.owner, player.channel.owner.playerID);
+                component = (IPlayerComponent)ReflectionUtility.CreateInstanceFixed(_serviceProvider, type, [ player ]);
             }
 
             components[i] = component;
@@ -195,6 +220,48 @@ public class PlayerService : IPlayerService
                 Object.Destroy(unityComponent);
             }
         }
+    }
+
+    internal PlayerTaskData StartPendingPlayerTasks(PlayerPending args, CancellationTokenSource src, CancellationToken token)
+    {
+        IPlayerPendingTask[] playerTasks = new IPlayerPendingTask[PlayerTasks.Length];
+        Task<bool>[] tasks = new Task<bool>[playerTasks.Length];
+        for (int i = 0; i < PlayerTasks.Length; i++)
+        {
+            Type type = PlayerTasks[i];
+            if (!typeof(IPlayerPendingTask).IsAssignableFrom(type))
+            {
+                throw new InvalidOperationException($"Type {Accessor.ExceptionFormatter.Format(type)} does not " +
+                                                    $"implement {Accessor.ExceptionFormatter.Format<IPlayerPendingTask>()}.");
+            }
+
+            IPlayerPendingTask task = (IPlayerPendingTask)ReflectionUtility.CreateInstanceFixed(_serviceProvider, type, [args]);
+            playerTasks[i] = task;
+            Task<bool> t = task.RunAsync(args, token);
+
+            if (task.CanReject)
+            {
+                tasks[i] = tasks[i].ContinueWith(static (task, src) =>
+                {
+                    if (task.IsCanceled)
+                        return false;
+
+                    if (task.IsFaulted || !task.Result)
+                    {
+                        ((CancellationTokenSource)src).Cancel();
+                    }
+
+                    // forces exceptions to bubble up
+                    return task.GetAwaiter().GetResult();
+                }, src, token);
+            }
+            else
+            {
+                tasks[i] = t;
+            }
+        }
+
+        return new PlayerTaskData(args, src, playerTasks, tasks);
     }
 
     /// <inheritdoc />
@@ -239,6 +306,14 @@ public class PlayerService : IPlayerService
             _onlinePlayersDictionary.TryGetValue(Unsafe.As<ulong, CSteamID>(ref steam64), out WarfarePlayer? player);
             return player;
         }
+    }
+
+    internal struct PlayerTaskData(PlayerPending player, CancellationTokenSource tokenSource, IPlayerPendingTask[] pendingTasks, Task<bool>[] tasks)
+    {
+        public readonly PlayerPending Player = player;
+        public readonly CancellationTokenSource TokenSource = tokenSource;
+        public readonly IPlayerPendingTask[] PendingTasks = pendingTasks;
+        public readonly Task<bool>[] Tasks = tasks;
     }
 }
 

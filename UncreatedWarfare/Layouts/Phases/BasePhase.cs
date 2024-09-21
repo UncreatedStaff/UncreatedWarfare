@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Warfare.Layouts.Teams;
 
@@ -9,7 +10,7 @@ public class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSettings : Phase
 {
     protected ITeamManager<Team> TeamManager;
     public bool IsActive { get; private set; }
-    public TimeSpan? Duration { get; set; }
+    public TimeSpan Duration { get; set; } = TimeSpan.MinValue;
 
     /// <summary>
     /// Display name of the phase on the popup toast for all teams.
@@ -19,12 +20,12 @@ public class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSettings : Phase
     /// <summary>
     /// Per-team behavior of the phase.
     /// </summary>
-    public TTeamSettings[]? Teams { get; set; }
+    public IReadOnlyList<TTeamSettings>? Teams { get; set; }
 
     /// <inheritdoc />
-    public IConfigurationSection Configuration { get; }
+    public IConfiguration Configuration { get; }
 
-    public BasePhase(IServiceProvider serviceProvider, IConfigurationSection config)
+    public BasePhase(IServiceProvider serviceProvider, IConfiguration config)
     {
         Configuration = config;
         TeamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
@@ -32,14 +33,15 @@ public class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSettings : Phase
 
     public virtual UniTask InitializePhaseAsync(CancellationToken token = default)
     {
-        if (Teams is not { Length: > 0 })
+        if (Teams is not { Count: > 0 })
             return UniTask.CompletedTask;
 
-        for (int i = 0; i < Teams.Length; i++)
+        int i = 0;
+        foreach (TTeamSettings settings in Teams)
         {
-            TTeamSettings settings = Teams[i];
             settings.TeamInfo = TeamManager.FindTeam(settings.Team);
             settings.Configuration = Configuration.GetSection($"Teams:{i.ToString(CultureInfo.InvariantCulture)}");
+            ++i;
         }
 
         return UniTask.CompletedTask;

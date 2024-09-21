@@ -6,7 +6,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
@@ -14,6 +13,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Collections;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 
@@ -32,6 +32,7 @@ public class CommandContext : ControlException
     private readonly ChatService _chatService;
     private readonly string[] _parameters;
     private readonly int _argumentCount;
+
     private int _argumentOffset;
 
     internal Type? SwitchCommand;
@@ -181,6 +182,11 @@ public class CommandContext : ControlException
     /// </summary>
     public CommandInfo CommandInfo { get; }
 
+    /// <summary>
+    /// Reference to the common translation set.
+    /// </summary>
+    public CommonTranslations CommonTranslations { get; }
+
     private CommandContext(ICommandUser user, IServiceProvider serviceProvider)
     {
         Caller = user;
@@ -192,6 +198,7 @@ public class CommandContext : ControlException
         _permissionsStore = serviceProvider.GetRequiredService<UserPermissionStore>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetService<CooldownManager>();
+        CommonTranslations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
 
         if (Player == null)
         {
@@ -1739,7 +1746,7 @@ public class CommandContext : ControlException
                 IsolatedCooldown.Duration = compounding.MaxCooldown;
         }
 
-        throw Reply(T.CommandCooldown, IsolatedCooldown!, CommandInfo.CommandName);
+        throw Reply(CommonTranslations.CommandCooldown, IsolatedCooldown!, CommandInfo.CommandName);
     }
 
     /// <exception cref="CommandContext"/>
@@ -1795,7 +1802,7 @@ public class CommandContext : ControlException
     public void AssertOnDuty()
     {
         if (Player != null /* && !Player.OnDuty() */)
-            throw Reply(T.NotOnDuty);
+            throw Reply(CommonTranslations.NotOnDuty);
     }
 
     /// <summary>
@@ -1840,34 +1847,34 @@ public class CommandContext : ControlException
     }
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendNotImplemented() => Reply(T.NotImplemented);
+    public Exception SendNotImplemented() => Reply(CommonTranslations.NotImplemented);
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendNotEnabled() => Reply(T.NotEnabled);
+    public Exception SendNotEnabled() => Reply(CommonTranslations.NotEnabled);
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendGamemodeError() => Reply(T.GamemodeError);
+    public Exception SendGamemodeError() => Reply(CommonTranslations.GamemodeError);
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendPlayerOnlyError() => Reply(T.PlayersOnly);
+    public Exception SendPlayerOnlyError() => Reply(CommonTranslations.PlayersOnly);
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendConsoleOnlyError() => Reply(T.ConsoleOnly);
+    public Exception SendConsoleOnlyError() => Reply(CommonTranslations.ConsoleOnly);
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendUnknownError() => Reply(T.UnknownError);
+    public Exception SendUnknownError() => Reply(CommonTranslations.UnknownError);
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendNoPermission() => Reply(T.NoPermissions);
+    public Exception SendNoPermission() => Reply(CommonTranslations.NoPermissions);
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendNoPermission(PermissionLeaf permission) => Reply(T.NoPermissionsSpecific, permission);
+    public Exception SendNoPermission(PermissionLeaf permission) => Reply(CommonTranslations.NoPermissionsSpecific, permission);
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendPlayerNotFound() => Reply(T.PlayerNotFound);
+    public Exception SendPlayerNotFound() => Reply(CommonTranslations.PlayerNotFound);
 
     /// <remarks>Thread Safe</remarks>
-    public Exception SendCorrectUsage(string usage) => Reply(T.CorrectUsage, usage);
+    public Exception SendCorrectUsage(string usage) => Reply(CommonTranslations.CorrectUsage, usage);
 
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message)

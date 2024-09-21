@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Steam.Models;
@@ -96,9 +97,9 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     /// A <see cref="CancellationToken"/> that cancels after the player leaves.
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
-    internal WarfarePlayer(Player player, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
+    internal WarfarePlayer(Player player, in PlayerService.PlayerTaskData taskData, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
     {
-        _disconnectTokenSource = new CancellationTokenSource();
+        _disconnectTokenSource = taskData.TokenSource;
         _logger = logger;
         _playerNameHelper = new PlayerNames(player);
         UnturnedPlayer = player;
@@ -109,7 +110,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
 
-        Locale = new WarfarePlayerLocale(this, /* todo data.LanguagePreferences */ null!, serviceProvider);
+        Locale = new WarfarePlayerLocale(this, new LanguagePreferences { Steam64 = Steam64.m_SteamID }, serviceProvider);
 
         Components = new ReadOnlyCollection<IPlayerComponent>(components);
 
@@ -117,6 +118,11 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         _logger.LogInformation("Player {0} joined the server", this);
 
         PurchaseSync = new SemaphoreSlim(1, 1);
+
+        for (int i = 0; i < taskData.PendingTasks.Length; ++i)
+        {
+            taskData.PendingTasks[i].Apply(this);
+        }
     }
 
     /// <summary>

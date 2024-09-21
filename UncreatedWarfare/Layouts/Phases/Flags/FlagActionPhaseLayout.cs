@@ -26,7 +26,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
     public FlagPhaseSettings Flags { get; set; } = new FlagPhaseSettings();
 
     /// <inheritdoc />
-    public IConfigurationSection Configuration { get; }
+    public IConfiguration Configuration { get; }
 
     /// <inheritdoc />
     public IReadOnlyList<ActiveZoneCluster> ActiveZones { get; private set; } = Array.Empty<ActiveZoneCluster>();
@@ -37,7 +37,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
     /// <inheritdoc />
     public ActiveZoneCluster EndingTeam { get; private set; }
 
-    public FlagActionPhaseLayout(ILogger<FlagActionPhaseLayout> logger, IServiceProvider serviceProvider, IConfigurationSection config)
+    public FlagActionPhaseLayout(ILogger<FlagActionPhaseLayout> logger, IServiceProvider serviceProvider, IConfiguration config)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
@@ -59,19 +59,21 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
         List<IZoneProvider> zoneProviders = new List<IZoneProvider>(zoneProviderTypes.Count);
         foreach (Type zoneProviderType in zoneProviderTypes)
         {
-            zoneProviders.Add((IZoneProvider)ActivatorUtilities.CreateInstance(_serviceProvider, zoneProviderType, this));
+            zoneProviders.Add((IZoneProvider)ReflectionUtility.CreateInstanceFixed(_serviceProvider, zoneProviderType, [ this ]));
         }
 
         _zoneStore = new ZoneStore(zoneProviders, _serviceProvider.GetRequiredService<ILogger<ZoneStore>>(), isGlobal: false);
 
         // load pathing provider
         IConfigurationSection config = Configuration.GetSection("PathingData");
-        IZonePathingProvider pathingProvider = (IZonePathingProvider)ActivatorUtilities.CreateInstance(_serviceProvider, pathingProviderType, this, _zoneStore, config);
+        IZonePathingProvider pathingProvider = (IZonePathingProvider)ReflectionUtility.CreateInstanceFixed(_serviceProvider, pathingProviderType, [ _zoneStore, this, config ]);
 
         config.Bind(pathingProvider);
 
         // create zone path
-        _pathingResult = await pathingProvider.CreateZonePathAsync(token);
+        _pathingResult = await pathingProvider.CreateZonePathAsync(this, token);
+
+        _logger.LogInformation("Zone path: {{{0}}}.", string.Join(" -> ", _pathingResult.Skip(1).SkipLast(1).Select(zone => zone.Name)));
     }
 
     public virtual async UniTask BeginPhaseAsync(CancellationToken token = default)

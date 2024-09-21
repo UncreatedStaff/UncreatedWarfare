@@ -43,4 +43,15 @@ public interface IPlayerService
     /// Get a player if they're online, otherwise <see langword="null"/>.
     /// </summary>
     WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(ulong steam64);
+
+    /// <summary>
+    /// Temporarily stop players from joining. Note that the lock will already be taken on startup and only has to be released whenever players are first allowed to join.
+    /// </summary>
+    /// <remarks>Call <see cref="ReleasePlayerConnectionLock"/> to allow players to join again.</remarks>
+    Task TakePlayerConnectionLock(CancellationToken token);
+
+    /// <summary>
+    /// Re-allow players to join after calling <see cref="TakePlayerConnectionLock"/>.
+    /// </summary>
+    void ReleasePlayerConnectionLock();
 }

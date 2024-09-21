@@ -586,7 +586,7 @@ public class StructureCommand : IExecutableCommand
 
 public class StructureTranslations : PropertiesTranslationCollection
 {
-    protected override string FileName => "Structure Command";
+    protected override string FileName => "Commands/Structure";
     
     [TranslationData]
     public readonly Translation StructureNoTarget = new Translation("<#ff8c69>You must be looking at a barricade, structure, or vehicle.");

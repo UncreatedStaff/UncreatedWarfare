@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
@@ -66,6 +67,7 @@ public class Team : IEquatable<Team>
     /// </summary>
     public IConfigurationSection Configuration { get; internal set; }
 
+    [System.Text.Json.Serialization.JsonIgnore, JsonIgnore]
     public List<Team> Opponents { get; } = new List<Team>();
 
     public override bool Equals(object? obj)

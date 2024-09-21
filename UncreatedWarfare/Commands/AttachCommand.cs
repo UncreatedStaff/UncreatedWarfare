@@ -182,7 +182,7 @@ public enum AttachmentType : byte
 
 public class AttachTranslations : PropertiesTranslationCollection
 {
-    protected override string FileName => "Attach Command";
+    protected override string FileName => "Commands/Attach";
 
     [TranslationData("Sent when a player tries to use /attach without holding a gun.", IsPriorityTranslation = false)]
     public readonly Translation AttachNoGunHeld = new Translation("<#ff8c69>You must be holding a gun to attach an attachment.");

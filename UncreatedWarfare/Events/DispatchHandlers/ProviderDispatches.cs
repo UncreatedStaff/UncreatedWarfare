@@ -3,16 +3,10 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players.Management.Legacy;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
 {
-    /// <summary>
-    /// Keeps track of data that's fetched during the connecting event.
-    /// </summary>
-    internal static readonly List<PendingAsyncData> PendingAsyncData = new List<PendingAsyncData>(4);
-
     /// <summary>
     /// Invoked by <see cref="Provider.onServerConnected"/> when a player successfully joins the server.
     /// </summary>
@@ -24,6 +18,7 @@ partial class EventDispatcher2
         {
             ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerConnected));
             logger.LogError("Invalid IPlayerService implementation player connecting: {0}.", steam64);
+            Provider.kick(steam64, "Invalid player service setup.");
             return;
         }
         
@@ -31,25 +26,27 @@ partial class EventDispatcher2
         {
             ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerConnected));
             logger.LogError("Unknown player connected: {0}.", steam64);
+            Provider.kick(steam64, "Can't find player.");
             return;
         }
 
         ulong s64 = steam64.m_SteamID;
-        int index = PendingAsyncData.FindIndex(x => x.Steam64.m_SteamID == s64);
+
+        int index = implPlayerService.PendingTasks.FindIndex(x => x.Player.Steam64.m_SteamID == s64);
+
         if (index == -1)
         {
             ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerConnected));
-            logger.LogError("Unable to find async data from player: {0}.", steam64);
-            Provider.kick(steam64, "Unable to find your async data. Contact a director.");
+            logger.LogError("Can't find player's task data: {0}.", steam64);
+            Provider.kick(steam64, "Can't find task data.");
             return;
         }
 
-        // todo PendingAsyncData data = PendingAsyncData[index];
+        PlayerService.PlayerTaskData data = implPlayerService.PendingTasks[index];
+        implPlayerService.PendingTasks.RemoveAt(index);
+        implPlayerService.PendingTasks.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Player.Steam64.m_SteamID));
 
-        PendingAsyncData.RemoveAt(index);
-        PendingAsyncData.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Steam64.m_SteamID));
-
-        WarfarePlayer newPlayer = implPlayerService.CreateWarfarePlayer(steamPlayer.player);
+        WarfarePlayer newPlayer = implPlayerService.CreateWarfarePlayer(steamPlayer.player, in data);
 
         PlayerJoined args = new PlayerJoined
         {

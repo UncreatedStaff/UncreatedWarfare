@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Layouts.Phases;
@@ -130,22 +131,18 @@ public class Layout : IDisposable, IEventListenerProvider
     {
         ILayoutPhase? phase;
         List<PhaseVariationInfo>? variations = ReadPhaseVariations(phaseType, configSection);
-
         if (variations is not { Count: > 0 })
         {
-            phase = (ILayoutPhase?)ActivatorUtilities.CreateInstance(ServiceProvider.Resolve<IServiceProvider>(), phaseType, configSection);
+            phase = (ILayoutPhase?)ReflectionUtility.CreateInstanceFixed(ServiceProvider.Resolve<IServiceProvider>(), phaseType, [ configSection ]);
 
-            if (phase != null)
+            try
             {
-                try
-                {
-                    configSection.Bind(phase);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, Accessor.Formatter.Format(phaseType));
-                    return UniTask.FromResult<ILayoutPhase?>(null);
-                }
+                configSection.Bind(phase);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, Accessor.Formatter.Format(phaseType));
+                return UniTask.FromResult<ILayoutPhase?>(null);
             }
 
             return UniTask.FromResult(phase);
@@ -167,19 +164,16 @@ public class Layout : IDisposable, IEventListenerProvider
 
         try
         {
-            phase = (ILayoutPhase?)ActivatorUtilities.CreateInstance(ServiceProvider.Resolve<IServiceProvider>(), phaseType, root);
+            phase = (ILayoutPhase?)ReflectionUtility.CreateInstanceFixed(ServiceProvider.Resolve<IServiceProvider>(), phaseType, [ root ]);
 
-            if (phase != null)
+            try
             {
-                try
-                {
-                    root.Bind(phase);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, Accessor.Formatter.Format(phaseType));
-                    return UniTask.FromResult<ILayoutPhase?>(null);
-                }
+                root.Bind(phase);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, Accessor.Formatter.Format(phaseType));
+                return UniTask.FromResult<ILayoutPhase?>(null);
             }
 
             return UniTask.FromResult(phase);
@@ -377,14 +371,15 @@ public class Layout : IDisposable, IEventListenerProvider
         }
 
         Type? managerType = Type.GetType(managerTypeName) ?? Assembly.GetExecutingAssembly().GetType(managerTypeName);
-        if (managerType == null || managerType.IsAbstract || !typeof(ILayoutPhase).IsAssignableFrom(managerType))
+        if (managerType == null || managerType.IsAbstract || !typeof(ITeamManager<Team>).IsAssignableFrom(managerType))
         {
-            Logger.LogError("Unknown team manager type in layout \"{0}\".", _layoutInfo.DisplayName);
+            Logger.LogError("Unknown team manager type in layout \"{0}\": \"{1}\".", _layoutInfo.DisplayName, managerTypeName);
             TeamManager = new NullTeamManager();
             return UniTask.CompletedTask;
         }
 
-        ITeamManager<Team> manager = (ITeamManager<Team>)ActivatorUtilities.CreateInstance(ServiceProvider.Resolve<IServiceProvider>(), managerType, teamSection);
+        ITeamManager<Team> manager = (ITeamManager<Team>)ReflectionUtility.CreateInstanceFixed(ServiceProvider.Resolve<IServiceProvider>(), managerType, [ teamSection ]);
+        
         manager.Configuration = teamSection;
         teamSection.Bind(manager);
         TeamManager = manager;
@@ -454,6 +449,7 @@ public class Layout : IDisposable, IEventListenerProvider
         {
             _cancellationTokenSource.Cancel();
         }
+        catch (ObjectDisposedException) { }
         catch (AggregateException ex)
         {
             Logger.LogError(ex, "Error(s) while disposing layout cancellation token source in layout \"{0}\".", _layoutInfo.DisplayName);

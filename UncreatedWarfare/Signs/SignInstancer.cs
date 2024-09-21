@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
@@ -17,7 +18,7 @@ namespace Uncreated.Warfare.Signs;
 /// <summary>
 /// Handles sending specific sign data to specific players.
 /// </summary>
-public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<BarricadeDestroyed>
+public class SignInstancer : ILevelHostedService, IEventListener<BarricadePlaced>, IEventListener<BarricadeDestroyed>
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly SignInstanceData[] _types;
@@ -52,6 +53,17 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
         _types = instances.ToArray();
         _batchBuffer = new string[_types.Length];
+    }
+    UniTask IHostedService.StartAsync(CancellationToken token) => UniTask.CompletedTask;
+    UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
+    UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
+    {
+        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades())
+        {
+            CheckBarricadeForInit(barricade.Drop);
+        }
+
+        return UniTask.CompletedTask;
     }
 
     public bool IsInstanced(BarricadeDrop drop)
@@ -283,7 +295,12 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
 
     void IEventListener<BarricadePlaced>.HandleEvent(BarricadePlaced e, IServiceProvider serviceProvider)
     {
-        if (e.Barricade.interactable is not InteractableSign sign)
+        CheckBarricadeForInit(e.Barricade);
+    }
+
+    private void CheckBarricadeForInit(BarricadeDrop barricade)
+    {
+        if (barricade.interactable is not InteractableSign sign)
             return;
 
         string text = sign.text;
@@ -295,17 +312,17 @@ public class SignInstancer : IEventListener<BarricadePlaced>, IEventListener<Bar
         ref SignInstanceData data = ref _types[dataIndex];
 
         ISignInstanceProvider provider = (ISignInstanceProvider)ActivatorUtilities.CreateInstance(_serviceProvider, data.Type);
-        _signProviders.Add(e.Barricade.instanceID, provider);
-        _signProviderTypeIndexes.Add(e.Barricade.instanceID, dataIndex);
+        _signProviders.Add(barricade.instanceID, provider);
+        _signProviderTypeIndexes.Add(barricade.instanceID, dataIndex);
 
         string extraInfo = text.Length <= data.Prefix.Length + 1 || text[data.Prefix.Length] != '_' ? text.Substring(data.Prefix.Length) : text.Substring(data.Prefix.Length + 1);
         try
         {
-            provider.Initialize(e.Barricade, extraInfo, _serviceProvider);
+            provider.Initialize(barricade, extraInfo, _serviceProvider);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initializing sign provider {0} for barricade {1} #{2}.", Accessor.Formatter.Format(data.Type), e.Barricade.asset.itemName, e.Barricade.instanceID);
+            _logger.LogError(ex, "Error initializing sign provider {0} for barricade {1} #{2}.", Accessor.Formatter.Format(data.Type), barricade.asset.itemName, barricade.instanceID);
         }
     }
 

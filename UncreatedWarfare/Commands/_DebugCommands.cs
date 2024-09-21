@@ -86,24 +86,24 @@ public class DebugCommand : IExecutableCommand
         }
         catch (AmbiguousMatchException)
         {
-            throw Context.Reply(T.DebugMultipleMatches, operation);
+            throw Context.ReplyString($"Multiple methods match <#ff758f>{operation}</color>.", "ff8c69");
         }
 
         if (testFunction == null || testFunction.IsIgnored())
         {
-            throw Context.Reply(T.DebugNoMethod, operation);
+            throw Context.ReplyString($"No method found called <#ff758f>{operation}</color>.", "ff8c69");
         }
 
         ParameterInfo[] parameters = testFunction.GetParameters();
 
         if (parameters.Length != 0 && (parameters.Length != 1 || parameters[0].ParameterType != typeof(CancellationToken)))
-            throw Context.Reply(T.DebugNoMethod, operation);
+            throw Context.ReplyString($"No method found called <#ff758f>{operation}</color>.", "ff8c69");
 
         try
         {
             Context.ArgumentOffset = 1;
 
-            await Context.AssertPermissions(new PermissionLeaf($"commands.test.{testFunction.Name}", unturned: false, warfare: true));
+            await Context.AssertPermissions(new PermissionLeaf($"commands.test.{testFunction.Name}", unturned: false, warfare: true), token);
 
             await UniTask.SwitchToMainThread();
 
@@ -127,7 +127,7 @@ public class DebugCommand : IExecutableCommand
         catch (Exception ex)
         {
             L.LogError(ex.InnerException ?? ex);
-            throw Context.Reply(T.DebugErrorExecuting, testFunction.Name, (ex.InnerException ?? ex).GetType().Name);
+            throw Context.ReplyString($"Ran into an error while executing: <#ff758f>{testFunction.Name}</color> - <#ff758f>{Accessor.Formatter.Format((ex.InnerException ?? ex).GetType())}</color>.", "ff8c69");
         }
     }
 #pragma warning disable IDE1006
