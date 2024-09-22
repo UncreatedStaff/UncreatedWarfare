@@ -5,9 +5,9 @@ using Uncreated.Warfare.Interaction.Commands;
 namespace Uncreated.Warfare.Commands;
 
 [Command("shutdown"), Priority(1)]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class ShutdownCommand : IExecutableCommand
 {
+    private readonly WarfareModule _module;
     private const string Syntax = "/shutdown [instant|after|cancel|*time*] [reason]";
     private const string Help = "Schedule shutdowns for the server.";
     public static Coroutine? Messager;
@@ -66,8 +66,13 @@ public class ShutdownCommand : IExecutableCommand
         };
     }
 
+    public ShutdownCommand(WarfareModule module)
+    {
+        _module = module;
+    }
+
     /// <inheritdoc />
-    public UniTask ExecuteAsync(CancellationToken token)
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
 #if false
         if (Context.ArgumentCount == 0)
@@ -141,9 +146,9 @@ public class ShutdownCommand : IExecutableCommand
         
         throw Context.SendCorrectUsage(Syntax + " - " + Help);
 #else
-        Provider.shutdown();
+        Context.ReplyString("Shutting down...");
+        await _module.ShutdownAsync(Context.HasArgs(1) ? Context.GetRange(0)! : string.Empty, CancellationToken.None);
 #endif
-        return UniTask.CompletedTask;
     }
 #if false
     internal static void ShutdownIn(int seconds, string reason, ulong instigator = 0)

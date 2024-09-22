@@ -6,7 +6,6 @@ using Uncreated.Warfare.Tweaks;
 namespace Uncreated.Warfare.Commands;
 
 [Command("god")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class GodCommand : IExecutableCommand
 {
     private readonly GodCommandTranslations _translations;
@@ -34,8 +33,6 @@ public class GodCommand : IExecutableCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
-
-        Context.AssertOnDuty();
 
         await Context.AssertPermissions(GodPlayerComponent.GodPermission, token);
 

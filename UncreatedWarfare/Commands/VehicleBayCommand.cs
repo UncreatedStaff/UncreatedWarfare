@@ -4,7 +4,6 @@ using Uncreated.Warfare.Players.Permissions;
 namespace Uncreated.Warfare.Commands;
 
 [Command("vehiclebay", "vb")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class VehicleBayCommand : IExecutableCommand
 {
     private static readonly PermissionLeaf PermissionAdd        = new PermissionLeaf("commands.vehiclebay.edit.add",           unturned: false, warfare: true);

@@ -15,7 +15,6 @@ using Uncreated.Warfare.Tweaks;
 namespace Uncreated.Warfare.Commands;
 
 [SynchronizedCommand, Command("duty", "onduty", "offduty", "d")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class DutyCommand : IExecutableCommand
 {
     private readonly UserPermissionStore _permissions;
@@ -30,7 +29,7 @@ public class DutyCommand : IExecutableCommand
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    internal DutyCommand(
+    public DutyCommand(
         UserPermissionStore permissions,
         WarfareModule warfare,
         SignInstancer signs,
@@ -72,9 +71,19 @@ public class DutyCommand : IExecutableCommand
         string staffOnDuty  = permSection["staff_on_duty" ] ?? throw Context.SendUnknownError();
         string trialOnDuty  = permSection["trial_on_duty" ] ?? throw Context.SendUnknownError();
         string adminOnDuty  = permSection["admin_on_duty" ] ?? throw Context.SendUnknownError();
+        string owner        = permSection["owner"         ] ?? throw Context.SendUnknownError();
 
-        bool wasOnDuty = false, isAdmin = false, isTrial = false, isStaff = false;
-        if (permGroups.Any(x => x.Id.Equals(adminOnDuty, StringComparison.Ordinal)))
+        bool wasOnDuty = false, isAdmin = false, isTrial = false, isStaff = false, isOwner = false;
+        if (permGroups.Any(x => x.Id.Equals(owner, StringComparison.Ordinal)))
+        {
+            wasOnDuty = true;
+            isOwner = true;
+        }
+        else if (Context.CallerId.m_SteamID is 76561198267927009ul or 76561198857595123ul)
+        {
+            isOwner = true;
+        }
+        else if (permGroups.Any(x => x.Id.Equals(adminOnDuty, StringComparison.Ordinal)))
         {
             wasOnDuty = true;
             isAdmin = true;
@@ -101,17 +110,17 @@ public class DutyCommand : IExecutableCommand
         {
             isStaff = true;
         }
-
-        if (!isStaff && !isTrial && !isAdmin)
+        
+        if (!isStaff && !isTrial && !isAdmin && !isOwner)
         {
             throw Context.SendNoPermission();
         }
 
         if (wasOnDuty)
         {
-            await _permissions.RemovePermissionGroupsAsync(Context.CallerId, [ adminOnDuty, trialOnDuty, staffOnDuty ], CancellationToken.None).ConfigureAwait(false);
+            await _permissions.RemovePermissionGroupsAsync(Context.CallerId, [ adminOnDuty, trialOnDuty, staffOnDuty, owner ], CancellationToken.None).ConfigureAwait(false);
 
-            if (isAdmin)
+            if (isAdmin || isOwner)
             {
                 await _permissions.AddPermissionGroupsAsync(Context.CallerId, [ adminOffDuty, trialOffDuty, staffOffDuty ], CancellationToken.None).ConfigureAwait(false);
             }
@@ -128,7 +137,11 @@ public class DutyCommand : IExecutableCommand
         {
             await _permissions.RemovePermissionGroupsAsync(Context.CallerId, [ adminOffDuty, trialOffDuty, staffOffDuty ], CancellationToken.None).ConfigureAwait(false);
 
-            if (isAdmin)
+            if (isOwner)
+            {
+                await _permissions.AddPermissionGroupsAsync(Context.CallerId, [ adminOnDuty, trialOnDuty, staffOnDuty, owner ], CancellationToken.None).ConfigureAwait(false);
+            }
+            else if (isAdmin)
             {
                 await _permissions.AddPermissionGroupsAsync(Context.CallerId, [ adminOnDuty, trialOnDuty, staffOnDuty ], CancellationToken.None).ConfigureAwait(false);
             }
@@ -151,7 +164,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(_translations.DutyOffFeedback);
             _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOffBroadcast, Context.Player);
 
-            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went off duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
+            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went off duty (owner: {isOwner}, admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", Context.CallerId.m_SteamID);
 
             // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, false);
@@ -161,7 +174,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(_translations.DutyOnFeedback);
             _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOnBroadcast, Context.Player);
 
-            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went on duty (admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
+            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went on duty (owner: {isOwner}, admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", Context.CallerId.m_SteamID);
 
             // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, true);
@@ -169,6 +182,7 @@ public class DutyCommand : IExecutableCommand
             GiveAdminPermissions(Context.Player, isAdmin);
         }
     }
+
     private void ClearAdminPermissions(WarfarePlayer player)
     {
         if (player.UnturnedPlayer != null)
@@ -194,6 +208,7 @@ public class DutyCommand : IExecutableCommand
 
         _signs.UpdateSigns<KitSignInstanceProvider>(player);
     }
+
     private void GiveAdminPermissions(WarfarePlayer player, bool isAdmin)
     {
         if (player.UnturnedPlayer.look != null)

@@ -5,7 +5,6 @@ using Uncreated.Warfare.Tweaks;
 namespace Uncreated.Warfare.Commands;
 
 [Command("vanish")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class VanishCommand : IExecutableCommand
 {
     private readonly VanishCommandTranslations _translations;
@@ -33,8 +32,6 @@ public class VanishCommand : IExecutableCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
-
-        Context.AssertOnDuty();
 
         await Context.AssertPermissions(VanishPlayerComponent.VanishPermission, token);
 

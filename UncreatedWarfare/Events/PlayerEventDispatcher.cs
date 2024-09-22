@@ -13,9 +13,12 @@ internal class PlayerEventDispatcher : IPlayerComponent, IDisposable
     private DroppedItemTracker _droppedItemTracker = null!;
     public WarfarePlayer Player { get; private set; }
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _droppedItemTracker = serviceProvider.GetRequiredService<DroppedItemTracker>();
+
+        if (!isOnJoin)
+            return;
 
         Player player = Player.UnturnedPlayer;
 

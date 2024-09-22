@@ -7,7 +7,6 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.Commands;
 
 [SynchronizedCommand, Command("savevoice")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class SaveVoiceBufferCommand : IExecutableCommand
 {
     /// <inheritdoc />

@@ -4,7 +4,6 @@ using Uncreated.Warfare.Squads;
 namespace Uncreated.Warfare.Commands;
 
 [Command("rally")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class RallyCommand : IExecutableCommand
 {
     private const string Syntax = "/rally";

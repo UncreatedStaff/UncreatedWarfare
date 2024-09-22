@@ -5,7 +5,6 @@ using Uncreated.Warfare.Players.Permissions;
 namespace Uncreated.Warfare.Commands;
 
 [SynchronizedCommand, Command("request", "req")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class RequestCommand : ICompoundingCooldownCommand
 {
     private static readonly IAssetLink<ItemBarricadeAsset> KitSign = AssetLink.Create<ItemBarricadeAsset>("275dd81d60ae443e91f0655b8b7aa920");

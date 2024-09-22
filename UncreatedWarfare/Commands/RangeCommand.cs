@@ -4,7 +4,6 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("range", "r")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class RangeCommand : IExecutableCommand
 {
     private readonly RangeCommandTranslations _translations;

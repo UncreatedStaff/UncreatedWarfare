@@ -7,7 +7,6 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("holiday")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class HolidayCommand : IExecutableCommand
 {
     private readonly ITranslationValueFormatter _valueFormatter;

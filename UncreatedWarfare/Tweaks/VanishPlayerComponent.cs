@@ -18,8 +18,11 @@ public class VanishPlayerComponent : IPlayerComponent
     }
 
     public WarfarePlayer Player { get; private set; }
-    public void Init(IServiceProvider serviceProvider)
+    public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
+        if (!isOnJoin)
+            return;
+
         IsActive = false;
     }
 

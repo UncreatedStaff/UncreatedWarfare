@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Harmony;
 // ReSharper disable InconsistentNaming
 // ReSharper disable UnusedMember.Local
 // ReSharper disable UnusedParameter.Local
+// todo
 internal static class LoadingQueueBlockerPatches
 {
     public static void Patch()

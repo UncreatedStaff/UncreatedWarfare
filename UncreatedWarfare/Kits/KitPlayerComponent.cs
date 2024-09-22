@@ -54,7 +54,7 @@ internal class KitPlayerComponent : IPlayerComponent
         }
     }
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _kitManager = serviceProvider.GetRequiredService<KitManager>();
     }

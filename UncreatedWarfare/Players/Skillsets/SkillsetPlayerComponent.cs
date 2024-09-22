@@ -11,7 +11,7 @@ public class SkillsetPlayerComponent : IPlayerComponent
     public WarfarePlayer Player { get; private set; }
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _logger = serviceProvider.GetRequiredService<ILogger<SkillsetPlayerComponent>>();
     }

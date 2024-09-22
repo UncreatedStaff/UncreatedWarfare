@@ -4,7 +4,6 @@ using Uncreated.Warfare.Moderation;
 namespace Uncreated.Warfare.Commands;
 
 [Command("moderate", "mod", "m")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public sealed class ModerateCommand : IExecutableCommand
 {
     private readonly ModerationUI _ui;
@@ -31,8 +30,6 @@ public sealed class ModerateCommand : IExecutableCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertOnDuty();
-
         Context.AssertRanByPlayer();
         
         await _ui.Open(Context.Player, token);

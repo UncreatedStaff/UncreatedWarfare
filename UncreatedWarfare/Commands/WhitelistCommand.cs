@@ -8,7 +8,6 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("whitelist", "wh")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class WhitelistCommand : IExecutableCommand
 {
     private readonly WhitelistService _whitelistService;

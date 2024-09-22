@@ -20,9 +20,13 @@ public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerP
     private ChatService _chatService;
     public bool IsActive { get; set; }
     public WarfarePlayer Player { get; private set; }
-    public void Init(IServiceProvider serviceProvider)
+    public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _chatService = serviceProvider.GetRequiredService<ChatService>();
+
+        if (!isOnJoin)
+            return;
+
         IsActive = false;
     }
 

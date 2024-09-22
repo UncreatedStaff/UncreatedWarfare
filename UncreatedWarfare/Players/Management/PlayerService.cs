@@ -1,4 +1,5 @@
 ﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,11 +7,17 @@ using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.PendingTasks;
+using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Tweaks;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
@@ -35,12 +42,21 @@ public class PlayerService : IPlayerService
     /// </remarks>
     public static readonly Type[] PlayerComponents =
     [
+        typeof(KitPlayerComponent),
+        typeof(PlayerKeyComponent),
+        typeof(ItemTrackingPlayerComponent),
+        typeof(HotkeyPlayerComponent),
         typeof(AudioRecordPlayerComponent),
         typeof(PlayerEventDispatcher),
-        typeof(ItemTrackingPlayerComponent),
-        typeof(KitPlayerComponent),
+        typeof(DeploymentComponent),
         typeof(ToastManager),
-        typeof(ZoneVisualizerComponent)
+        typeof(ZoneVisualizerComponent),
+        typeof(PlayerInjureComponent),
+        typeof(SkillsetPlayerComponent),
+        typeof(SquadPlayerComponent),
+        typeof(GodPlayerComponent),
+        typeof(PlayerJumpComponent),
+        typeof(VanishPlayerComponent)
     ];
 
     /// <summary>
@@ -56,6 +72,7 @@ public class PlayerService : IPlayerService
     private WarfarePlayer[] _threadsafeList;
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;
     private readonly PlayerDictionary<WarfarePlayer> _onlinePlayersDictionary;
+    private readonly WarfareModule _warfare;
 
     // makes sure only one player is ever joining at once.
     internal readonly SemaphoreSlim PlayerJoinLock = new SemaphoreSlim(0, 1);
@@ -87,6 +104,8 @@ public class PlayerService : IPlayerService
         _onlinePlayersDictionary = new PlayerDictionary<WarfarePlayer>(Provider.maxPlayers);
         _readOnlyOnlinePlayers = _onlinePlayers.AsReadOnly();
         _loggerFactory = loggerFactory;
+
+        _warfare = serviceProvider.GetRequiredService<WarfareModule>();
     }
 
     /// <inheritdoc />
@@ -112,6 +131,18 @@ public class PlayerService : IPlayerService
         PlayerJoinLock.Release();
     }
 
+    internal void ReinitializeScopedPlayerComponentServices()
+    {
+        IServiceProvider serviceProvider = _warfare.ScopedProvider.Resolve<IServiceProvider>();
+        foreach (WarfarePlayer player in OnlinePlayers)
+        {
+            foreach (IPlayerComponent component in player.Components)
+            {
+                component.Init(serviceProvider, false);
+            }
+        }
+    }
+
     internal WarfarePlayer CreateWarfarePlayer(Player player, in PlayerTaskData taskData)
     {
         lock (_onlinePlayersDictionary)
@@ -135,13 +166,15 @@ public class PlayerService : IPlayerService
             Array.Copy(_threadsafeList, 0, newList, 0, _threadsafeList.Length);
             newList[^1] = joined;
             _threadsafeList = newList;
-            
+
+            IServiceProvider serviceProvider = _warfare.ScopedProvider.Resolve<IServiceProvider>();
+
             for (int i = 0; i < components.Length; ++i)
             {
                 IPlayerComponent component = components[i];
 
                 component.Player = joined;
-                component.Init(_serviceProvider);
+                component.Init(serviceProvider, true);
             }
 
             return joined;

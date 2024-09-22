@@ -4,7 +4,6 @@ using Uncreated.Warfare.Kits;
 namespace Uncreated.Warfare.Commands;
 
 [Command("kits")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public sealed class KitsCommand : IExecutableCommand
 {
     private readonly KitMenuUI _ui;

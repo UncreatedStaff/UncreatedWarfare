@@ -231,7 +231,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent
         }
     }
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _audioListenService = serviceProvider.GetRequiredService<AudioRecordManager>();
     }

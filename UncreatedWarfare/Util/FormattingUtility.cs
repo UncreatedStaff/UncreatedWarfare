@@ -28,6 +28,58 @@ public static class FormattingUtility
     }
 
     /// <summary>
+    /// Compare two strings without worrying non-alphanumeric characters.
+    /// </summary>
+    /// <returns>The number of matching characters in <paramref name="searching"/> found in <paramref name="actual"/>.</returns>
+    public static int CompareStringsFuzzy(ReadOnlySpan<char> searching, ReadOnlySpan<char> actual, bool caseSensitive)
+    {
+        int searchIndex = 0, actualIndex = 0;
+        CultureInfo invariant = CultureInfo.InvariantCulture;
+        int charsMatched = 0;
+        while (searchIndex < searching.Length && actualIndex < actual.Length)
+        {
+            char actualChar = actual[actualIndex];
+            if (ExcludeChar(actualChar))
+            {
+                ++actualIndex;
+                continue;
+            }
+
+            char searchingChar = searching[searchIndex];
+            if (ExcludeChar(searchingChar))
+            {
+                ++searchIndex;
+                continue;
+            }
+
+            int cmp = caseSensitive
+                ? actualChar.CompareTo(searchingChar)
+                : char.ToUpper(actualChar, invariant).CompareTo(char.ToUpper(searchingChar, invariant));
+
+            if (cmp != 0)
+            {
+                ++actualIndex;
+                continue;
+            }
+
+            ++charsMatched;
+            ++searchIndex;
+            ++actualIndex;
+        }
+
+        return charsMatched;
+    }
+
+    private static bool ExcludeChar(char c)
+    {
+        unchecked
+        {
+            // is a-z or A-Z or 0-9
+            return !(c - (uint)'a' <= 'z' - (uint)'a' || c - (uint)'A' <= 'Z' - (uint)'A' || c - (uint)'0' <= '9' - (uint)'0');
+        }
+    }
+
+    /// <summary>
     /// Format a minute/second timer.
     /// </summary>
     /// <remarks><c>[HH:]MM:SS</c></remarks>

@@ -34,16 +34,19 @@ public sealed class ToastManager : IPlayerComponent
     /// </summary>
     public bool Hold { get; set; }
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
-        Channels = new ToastMessageChannel[_channelCount];
-        for (int i = 0; i < Channels.Length; ++i)
-            Channels[i] = new ToastMessageChannel(this, i);
+        if (isOnJoin)
+        {
+            Channels = new ToastMessageChannel[_channelCount];
+            for (int i = 0; i < Channels.Length; ++i)
+                Channels[i] = new ToastMessageChannel(this, i);
+        }
 
-        if (_initialized)
-            return;
-
-        InitToastData(serviceProvider);
+        if (!_initialized)
+        {
+            InitToastData(serviceProvider);
+        }
     }
 
     private static void InitToastData(IServiceProvider serviceProvider)

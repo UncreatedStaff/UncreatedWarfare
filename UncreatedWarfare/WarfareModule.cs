@@ -18,6 +18,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Fobs;
@@ -40,6 +41,7 @@ using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Teams;
@@ -125,6 +127,8 @@ public sealed class WarfareModule : IModuleNexus
 
     void IModuleNexus.initialize()
     {
+        AppDomain.CurrentDomain.AssemblyResolve += HandleAssemblyResolve;
+        
         // will setup the main thread in GameThread before asserting
         GameThread.Setup();
         GameThread.AssertCurrent();
@@ -218,6 +222,8 @@ public sealed class WarfareModule : IModuleNexus
 
     void IModuleNexus.shutdown()
     {
+        AppDomain.CurrentDomain.AssemblyResolve -= HandleAssemblyResolve;
+
         if (Singleton == this)
             Singleton = null;
 
@@ -225,6 +231,12 @@ public sealed class WarfareModule : IModuleNexus
 
         if (Configuration is IDisposable disposableConfig)
             disposableConfig.Dispose();
+
+        if (_gameObjectHost != null)
+        {
+            Object.Destroy(_gameObjectHost);
+            _gameObjectHost = null!;
+        }
 
         try
         {
@@ -281,7 +293,10 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterInstance(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)))
             .ExternallyOwned();
 
-        bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareTimeComponent>());
+        bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareTimeComponent>())
+            .SingleInstance();
+        bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareLifetimeComponent>())
+            .SingleInstance();
 
         bldr.RegisterType<AssetConfiguration>().SingleInstance();
         bldr.RegisterInstance(Configuration).ExternallyOwned();
@@ -380,6 +395,14 @@ public sealed class WarfareModule : IModuleNexus
             .AsImplementedInterfaces()
             .SingleInstance();
 
+        bldr.RegisterType<DeathTracker>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<DeathMessageResolver>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         // Kits
         KitManager.ConfigureServices(bldr);
 
@@ -439,6 +462,10 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterType<FobConfiguration>()
             .SingleInstance();
 
+        bldr.RegisterType<SquadManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
         // Active ITeamManager
         bldr.Register(_ => GetActiveLayout().TeamManager)
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -477,6 +504,10 @@ public sealed class WarfareModule : IModuleNexus
 
         // Database
 
+        bldr.RegisterType<DatabaseInterface>()
+            .AsSelf()
+            .SingleInstance();
+
         bldr.Register(sp => WarfareDbContext.GetOptions(sp.Resolve<IServiceProvider>()))
             .SingleInstance();
 
@@ -503,8 +534,23 @@ public sealed class WarfareModule : IModuleNexus
         });
     }
 
-    public async UniTask ShutdownAsync(CancellationToken token = default)
+    public async UniTask ShutdownAsync(string reason, CancellationToken token = default)
     {
+        await UniTask.SwitchToMainThread(token);
+
+        // prevent players from joining after shutdown start
+        IPlayerService? playerService = ServiceProvider.ResolveOptional<IPlayerService>();
+        playerService?.TakePlayerConnectionLock(token);
+
+        // kick all players
+        for (int i = Provider.clients.Count - 1; i >= 0; --i)
+        {
+            Provider.kick(Provider.clients[i].playerID.steamID, !string.IsNullOrWhiteSpace(reason) ? "Shutting down: \"" + reason + "\"." : "Shutting down.");
+        }
+
+        Object.Destroy(_gameObjectHost);
+        _gameObjectHost = null!;
+
         if (!_unloadedHostedServices)
         {
             await UnhostAsync(token);
@@ -565,12 +611,12 @@ public sealed class WarfareModule : IModuleNexus
             return;
         }
 
+        await UniTask.SwitchToMainThread(token);
+
         List<IHostedService> hostedServices = ServiceProvider
             .Resolve<IEnumerable<IHostedService>>()
             .OrderByDescending(x => x.GetType().GetPriority())
             .ToList();
-
-        await UniTask.SwitchToMainThread(token);
 
         _unloadedHostedServices = false;
         int errIndex = -1;
@@ -785,6 +831,11 @@ public sealed class WarfareModule : IModuleNexus
             : ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Session, builder)
         );
 
+        if (ServiceProvider.Resolve<IPlayerService>() is PlayerService playerServiceImpl)
+        {
+            playerServiceImpl.ReinitializeScopedPlayerComponentServices();
+        }
+
         if (oldScope != null)
         {
             await oldScope.DisposeAsync().ConfigureAwait(false);
@@ -826,5 +877,17 @@ public sealed class WarfareModule : IModuleNexus
     private void UnloadModule()
     {
         ServiceProvider.Resolve<Module>().isEnabled = false;
+    }
+
+    private Assembly? HandleAssemblyResolve(object sender, ResolveEventArgs args)
+    {
+        // UnityEngine.CoreModule includes JetBrains annotations for some reason, may as well use them.
+        const string jetbrains = "JetBrains.Annotations, ";
+        if (args.Name.StartsWith(jetbrains, StringComparison.Ordinal))
+        {
+            return typeof(Vector3).Assembly;
+        }
+
+        return null;
     }
 }

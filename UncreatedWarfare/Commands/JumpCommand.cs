@@ -5,7 +5,6 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("jump", "jmp")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class JumpCommand : IExecutableCommand
 {
     private readonly JumpCommandTranslations _translations;
@@ -63,8 +62,6 @@ public class JumpCommand : IExecutableCommand
     public UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertArgs(1, Syntax);
-
-        Context.AssertOnDuty();
 
         WarfarePlayer? target = Context.Player;
         

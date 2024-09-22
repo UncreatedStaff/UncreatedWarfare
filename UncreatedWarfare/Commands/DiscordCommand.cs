@@ -4,7 +4,6 @@ using Uncreated.Warfare.Interaction.Commands;
 namespace Uncreated.Warfare.Commands;
 
 [Command("discord", "dicsord")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class DiscordCommand : IExecutableCommand
 {
     private readonly string? _discordInviteCode;

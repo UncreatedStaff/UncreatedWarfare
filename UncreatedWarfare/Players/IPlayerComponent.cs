@@ -10,5 +10,10 @@ namespace Uncreated.Warfare.Players;
 public interface IPlayerComponent
 {
     WarfarePlayer Player { get; set; }
-    void Init(IServiceProvider serviceProvider);
+    
+    /// <summary>
+    /// This function is called on player join and after every layout starts (to re-initialize scoped services).
+    /// </summary>
+    /// <param name="isOnJoin">The player just joined and this isn't called as the result of a new layout.</param>
+    void Init(IServiceProvider serviceProvider, bool isOnJoin);
 }

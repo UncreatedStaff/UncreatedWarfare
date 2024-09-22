@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Layouts.Insurgency;
-using Uncreated.Warfare.Logging;
+﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("dev")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class DevCommand : IExecutableCommand
 {
     private const string Syntax = "/dev <caches|addintel|quickbuild|logmeta|checkvehicle|getpos|onfob|aatest> [parameters...]";

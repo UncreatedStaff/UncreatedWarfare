@@ -1,11 +1,8 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("options", "settings", "option", "config")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public sealed class OptionsCommand : IExecutableCommand
 {
     private const string Syntax = "/options <imgui> [value]";

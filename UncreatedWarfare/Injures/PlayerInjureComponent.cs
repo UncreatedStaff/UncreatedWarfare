@@ -2,6 +2,7 @@
 using StackCleaner;
 using System;
 using System.Globalization;
+using System.IO;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
@@ -11,17 +12,14 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
-using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Injures;
 
@@ -131,9 +129,9 @@ public class PlayerInjureComponent : MonoBehaviour,
     /// <summary>
     /// The death info for if the player bleeds out.
     /// </summary>
-    public PlayerDied? PendingDeathInfo { get; private set; }
+    public PlayerDied? PendingDeathInfo { get; internal set; }
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _deathTracker = serviceProvider.GetRequiredService<DeathTracker>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
@@ -142,13 +140,16 @@ public class PlayerInjureComponent : MonoBehaviour,
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
 
+        if (!isOnJoin)
+            return;
+
         PlayerKeys.PressedPluginKey3 += OnPressedGiveUp;
         PlayerKeys.PressedPluginKey2 += OnPressedReviveSelf;
 
         _isInjured = false;
         _injureStart = 0f;
 
-        _deathTracker.RemovePlayerInfo(Player.Steam64);
+        PendingDeathInfo = null;
 
         Player.UnturnedPlayer.stance.onStanceUpdated += OnStanceUpdated;
         Player.UnturnedPlayer.equipment.onEquipRequested += OnEquipRequested;
@@ -159,7 +160,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
     void IDisposable.Dispose()
     {
-        _deathTracker.RemovePlayerInfo(Player.Steam64);
+        PendingDeathInfo = null;
 
         Player.UnturnedPlayer.stance.onStanceUpdated -= OnStanceUpdated;
         Player.UnturnedPlayer.equipment.onEquipRequested -= OnEquipRequested;
@@ -272,7 +273,7 @@ public class PlayerInjureComponent : MonoBehaviour,
             return;
 
         RemoveInjureModifiers();
-        _deathTracker.RemovePlayerInfo(Player.Steam64);
+        PendingDeathInfo = null;
     }
 
     /// <summary>

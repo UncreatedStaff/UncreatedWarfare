@@ -1,14 +1,11 @@
-﻿using System;
-using Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("ipwhitelist", "whitelistip", "whip", "ipwh", "iw")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class IPWhitelistCommand : IExecutableCommand
 {
     private readonly IPWhitelistCommandTranslations _translations;

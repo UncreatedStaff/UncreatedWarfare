@@ -19,7 +19,6 @@ using Uncreated.Warfare.Vehicles;
 namespace Uncreated.Warfare.Commands;
 
 [Command("structure", "struct")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class StructureCommand : IExecutableCommand
 {
     // todo split

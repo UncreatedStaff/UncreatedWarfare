@@ -4,7 +4,6 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.Commands;
 
 [Command("unmute")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class UnmuteCommand : IExecutableCommand
 {
 #if false

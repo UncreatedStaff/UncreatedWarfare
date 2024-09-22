@@ -135,7 +135,12 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
     {
         if (_isSinglePlayer)
         {
-            return _index == -1;
+            if (_index != -1)
+                return false;
+
+            _index = 0;
+            return true;
+
         }
 
         ++_index;

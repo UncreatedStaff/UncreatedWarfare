@@ -17,7 +17,7 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
     // used to trace items back to their original position in the kit
     internal List<HotkeyBinding>? HotkeyBindings;
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _kitManager = serviceProvider.GetRequiredService<KitManager>();
         _module = serviceProvider.GetRequiredService<WarfareModule>();

@@ -15,7 +15,7 @@ namespace Uncreated.Warfare;
 
 public class CooldownManager : IHostedService
 {
-    internal List<Cooldown> Cooldowns;
+    internal List<Cooldown> Cooldowns = new List<Cooldown>(128);
     internal CooldownConfig Config = new CooldownConfig();
 
     private readonly IPlayerService _playerService;

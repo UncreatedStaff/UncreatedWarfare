@@ -9,7 +9,6 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("group")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class GroupCommand : IExecutableCommand
 {
     private const string Syntax = "/group [join <team>]";

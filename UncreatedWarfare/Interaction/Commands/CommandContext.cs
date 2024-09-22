@@ -239,7 +239,7 @@ public class CommandContext : ControlException
         int flags = 0;
         for (int i = 0; i < args.Length; ++i)
         {
-            if (IsFlag(Parameters[i]))
+            if (IsFlag(args[i]))
                 ++flags;
         }
 
@@ -1072,7 +1072,7 @@ public class CommandContext : ControlException
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed (even when the user is offline).</returns>
-    public bool TryGet(int parameter, out CSteamID steam64, out WarfarePlayer? onlinePlayer, bool remainder = false /*, NameSearch searchType = UCPlayer.NameSearch.CharacterName todo */)
+    public bool TryGet(int parameter, out CSteamID steam64, out WarfarePlayer? onlinePlayer, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
     {
         parameter += ArgumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
@@ -1091,14 +1091,7 @@ public class CommandContext : ControlException
         string? s = remainder ? GetRange(parameter - ArgumentOffset) : _parameters[parameter];
         if (s != null)
         {
-            if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
-            {
-                steam64 = steamId;
-                onlinePlayer = _playerService.GetOnlinePlayer(steam64);
-                return true;
-            }
-
-            onlinePlayer = null; // todo _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
+            onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
             if (onlinePlayer is { IsOnline: true })
             {
                 steam64 = onlinePlayer.Steam64;
@@ -1119,7 +1112,7 @@ public class CommandContext : ControlException
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed and that player is in <paramref name="selection"/>.</returns>
-    public bool TryGet(int parameter, out CSteamID steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false /*, NameSearch searchType = NameSearch.CharacterName todo */)
+    public bool TryGet(int parameter, out CSteamID steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
     {
         parameter += ArgumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
@@ -1155,7 +1148,7 @@ public class CommandContext : ControlException
             }
         }
 
-        onlinePlayer = null;//_playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, searchType)!;
+        onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, searchType)!;
         if (onlinePlayer is { IsOnline: true })
         {
             steam64 = onlinePlayer.Steam64;
@@ -1420,7 +1413,7 @@ public class CommandContext : ControlException
 
         if (playerHit is not null)
         {
-            player = _playerService.GetOnlinePlayer(playerHit);
+            player = _playerService.GetOnlinePlayerOrNull(playerHit);
             return player != null;
         }
 
@@ -1798,18 +1791,14 @@ public class CommandContext : ControlException
             throw SendHelp();
     }
 
-    /// <exception cref="CommandContext"/>
-    public void AssertOnDuty()
-    {
-        if (Player != null /* && !Player.OnDuty() */)
-            throw Reply(CommonTranslations.NotOnDuty);
-    }
-
     /// <summary>
     /// Switch the current command context to run in /help.
     /// </summary>
     /// <exception cref="InvalidOperationException">Already in /help.</exception>
-    public Exception SendHelp() => SwitchToCommand<HelpCommand>();
+    public Exception SendHelp()
+    {
+        return SwitchToCommand<HelpCommand>();
+    }
 
     /// <summary>
     /// Switch the current command context to run another command type by throwing on the result of this function.
@@ -1819,12 +1808,13 @@ public class CommandContext : ControlException
     public Exception SwitchToCommand<TCommandType>() where TCommandType : ICommand
     {
         Type type = typeof(TCommandType);
-        if (!type.IsAbstract || !type.IsClass)
+        if (type.IsAbstract || !type.IsClass)
             throw new ArgumentException($"{Accessor.ExceptionFormatter.Format<TCommandType>()} is not a command type.");
 
         if (Command is TCommandType)
             throw new InvalidOperationException("Can not call SwitchToCommand from the same command type.");
 
+        Responded = true;
         SwitchCommand = type;
         return this;
     }
@@ -1842,6 +1832,7 @@ public class CommandContext : ControlException
         if (commandType.IsInstanceOfType(Command))
             throw new InvalidOperationException("Can not call SwitchToCommand from the same command type.");
 
+        Responded = true;
         SwitchCommand = commandType;
         return this;
     }
@@ -1880,6 +1871,7 @@ public class CommandContext : ControlException
     public Exception ReplyString(string message)
     {
         _chatService.Send(Caller, message);
+        Responded = true;
         return this;
     }
 
@@ -1887,6 +1879,7 @@ public class CommandContext : ControlException
     public Exception ReplyString(string message, Color color)
     {
         _chatService.Send(Caller, message, color);
+        Responded = true;
         return this;
     }
 
@@ -1894,6 +1887,7 @@ public class CommandContext : ControlException
     public Exception ReplyString(string message, ConsoleColor color)
     {
         _chatService.Send(Caller, message, color);
+        Responded = true;
         return this;
     }
 
@@ -1902,6 +1896,7 @@ public class CommandContext : ControlException
     {
         HexStringHelper.TryParseColor32(hex, Culture, out Color32 color);
         _chatService.Send(Caller, message, color);
+        Responded = true;
         return this;
     }
 
@@ -1941,6 +1936,7 @@ public class CommandContext : ControlException
     public Exception Reply(Translation translation)
     {
         _chatService.Send(Caller, translation);
+        Responded = true;
         return this;
     }
 
@@ -1948,6 +1944,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0>(Translation<T0> translation, T0 arg0)
     {
         _chatService.Send(Caller, translation, arg0);
+        Responded = true;
         return this;
     }
 
@@ -1955,6 +1952,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
         _chatService.Send(Caller, translation, arg0, arg1);
+        Responded = true;
         return this;
     }
 
@@ -1962,6 +1960,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
         _chatService.Send(Caller, translation, arg0, arg1, arg2);
+        Responded = true;
         return this;
     }
 
@@ -1969,6 +1968,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3);
+        Responded = true;
         return this;
     }
 
@@ -1976,6 +1976,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4);
+        Responded = true;
         return this;
     }
 
@@ -1983,6 +1984,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5);
+        Responded = true;
         return this;
     }
 
@@ -1990,6 +1992,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+        Responded = true;
         return this;
     }
 
@@ -1997,6 +2000,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        Responded = true;
         return this;
     }
 
@@ -2004,6 +2008,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+        Responded = true;
         return this;
     }
 
@@ -2011,6 +2016,7 @@ public class CommandContext : ControlException
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+        Responded = true;
         return this;
     }
 

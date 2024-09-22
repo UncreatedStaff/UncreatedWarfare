@@ -23,11 +23,11 @@ public class TimeSpanConverterWithTimeString : TimeSpanConverter
         return base.ConvertTo(context, culture, value, destinationType);
     }
 
-    public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object? value)
+    public override object? ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object? value)
     {
         try
         {
-            return ConvertFrom(context, culture, value);
+            return base.ConvertFrom(context, culture, value);
         }
         catch
         {

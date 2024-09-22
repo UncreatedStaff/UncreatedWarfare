@@ -17,7 +17,6 @@ using Uncreated.Warfare.Players.Permissions;
 namespace Uncreated.Warfare.Commands;
 
 [SynchronizedCommand, Command("test", aliases: "tests")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class DebugCommand : IExecutableCommand
 {
     private readonly IServiceProvider _serviceProvider;

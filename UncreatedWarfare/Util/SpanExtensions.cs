@@ -119,6 +119,7 @@ public static class SpanExtensions
     /// </summary>
     public static int Split(this ReadOnlySpan<char> span, Span<Range> ranges, char separator, bool trimOuter = false, bool trimEachEntry = false, StringSplitOptions options = StringSplitOptions.None)
     {
+        // todo this has an IndoexOutOfRangeException possibility somewhere. Do "/tp bun" (bunker) to trigger it
         int startIndex = 0;
         int endIndex = span.Length - 1;
         if (trimOuter)

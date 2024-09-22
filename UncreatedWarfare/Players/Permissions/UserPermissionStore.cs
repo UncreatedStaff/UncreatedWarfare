@@ -9,6 +9,8 @@ using System.Linq;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Util;
@@ -16,7 +18,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Players.Permissions;
 
 [RpcClass]
-public class UserPermissionStore : IAsyncDisposable
+public class UserPermissionStore : IAsyncDisposable, IEventListener<PlayerLeft>
 {
     private readonly ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionBranch>> _individualPermissionCache = new ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionBranch>>();
     private readonly ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionGroup>> _permissionGroupCache = new ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionGroup>>();
@@ -32,6 +34,11 @@ public class UserPermissionStore : IAsyncDisposable
     /// List of all permission groups from config.
     /// </summary>
     public IReadOnlyList<PermissionGroup> PermissionGroups { get; private set; }
+
+    /// <summary>
+    /// The group that all players implicitly are a member of. Adding them to this group manually does nothing.
+    /// </summary>
+    public PermissionGroup? DefaultPermissionGroup { get; private set; }
 
     public UserPermissionStore(IUserDataDbContext dbContext, WarfareModule module, ILogger<UserPermissionStore> logger)
     {
@@ -366,8 +373,18 @@ public class UserPermissionStore : IAsyncDisposable
 
         IReadOnlyList<PermissionGroup> permGroups = await GetPermissionGroupsAsync(user.Steam64, token: token).ConfigureAwait(false);
 
+        if (DefaultPermissionGroup != null)
+        {
+            result = CheckPermissionList(valid, permission, DefaultPermissionGroup.Permissions, ref hasRemovedSuperuser, ref hasSubbed, ref hasAdded);
+            if (result.HasValue)
+                return result.Value;
+        }
+
         foreach (PermissionGroup group in permGroups)
         {
+            if (group == DefaultPermissionGroup)
+                continue;
+
             result = CheckPermissionList(valid, permission, group.Permissions, ref hasRemovedSuperuser, ref hasSubbed, ref hasAdded);
             if (result.HasValue)
                 return result.Value;
@@ -421,8 +438,8 @@ public class UserPermissionStore : IAsyncDisposable
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            (_, PermissionBranch[] branches) = await CachePlayerIntl(player, token).ConfigureAwait(false);
-            return branches;
+            await CachePlayerIntl(player, token).ConfigureAwait(false);
+            return _individualPermissionCache[player.m_SteamID];
         }
         finally
         {
@@ -435,8 +452,8 @@ public class UserPermissionStore : IAsyncDisposable
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            (PermissionGroup[] groups, _) = await CachePlayerIntl(player, token).ConfigureAwait(false);
-            return groups;
+            await CachePlayerIntl(player, token).ConfigureAwait(false);
+            return _permissionGroupCache[player.m_SteamID];
         }
         finally
         {
@@ -444,19 +461,50 @@ public class UserPermissionStore : IAsyncDisposable
         }
     }
 
-    private async Task<(PermissionGroup[], PermissionBranch[])> CachePlayerIntl(CSteamID player, CancellationToken token = default)
+    private async Task CachePlayerIntl(CSteamID player, CancellationToken token = default)
     {
+        ulong s64 = player.m_SteamID;
         List<Permission> dbPerms = await _dbContext.Permissions
-            .Where(perm => perm.Steam64 == player.m_SteamID)
+            .Where(perm => perm.Steam64 == s64)
             .ToListAsync(token)
             .ConfigureAwait(false);
 
-        int groupCt = dbPerms.Count(x => x.IsGroup);
+        int groupCt = 0, branchCt = 0;
+        foreach (Permission permission in dbPerms)
+        {
+            if (!permission.IsGroup)
+            {
+                ++branchCt;
+                continue;
+            }
+
+            if ((DefaultPermissionGroup == null || !permission.PermissionOrGroup.Equals(DefaultPermissionGroup.Id, StringComparison.Ordinal))
+                && PermissionGroups.Any(x => x.Id.Equals(permission.PermissionOrGroup, StringComparison.Ordinal)))
+            {
+                ++groupCt;
+            }
+        }
 
         PermissionGroup[] groups = new PermissionGroup[groupCt];
-        PermissionBranch[] branches = new PermissionBranch[dbPerms.Count - groupCt];
+        PermissionBranch[] branches = new PermissionBranch[branchCt];
 
-        return (groups, branches);
+        int groupIndex = -1, branchIndex = -1;
+        foreach (Permission permission in dbPerms)
+        {
+            if (!permission.IsGroup)
+            {
+                branches[++branchIndex] = new PermissionBranch(permission.PermissionOrGroup);
+                continue;
+            }
+
+            if (DefaultPermissionGroup == null || !permission.PermissionOrGroup.Equals(DefaultPermissionGroup.Id, StringComparison.Ordinal))
+            {
+                groups[++groupIndex] = PermissionGroups.First(x => x.Id.Equals(permission.PermissionOrGroup, StringComparison.Ordinal));
+            }
+        }
+
+        _individualPermissionCache[player.m_SteamID] = new ReadOnlyCollection<PermissionBranch>(branches);
+        _permissionGroupCache[player.m_SteamID] = new ReadOnlyCollection<PermissionGroup>(groups);
     }
 
     private void OnConfigUpdated()
@@ -479,15 +527,23 @@ public class UserPermissionStore : IAsyncDisposable
 
         if (!File.Exists(_permissionGroupFilePath))
         {
+            DefaultPermissionGroup = null;
             PermissionGroups = Array.Empty<PermissionGroup>();
             return;
         }
 
-        using Utf8JsonPreProcessingStream stream = new Utf8JsonPreProcessingStream(_permissionGroupFilePath);
+        PermissionGroupConfig? config;
+        using (Utf8JsonPreProcessingStream stream = new Utf8JsonPreProcessingStream(_permissionGroupFilePath))
+        {
+            config = JsonSerializer.Deserialize<PermissionGroupConfig>(stream.ReadAllBytes(), ConfigurationSettings.JsonSerializerSettings);
+        }
 
-        PermissionGroupConfig? config = JsonSerializer.Deserialize<PermissionGroupConfig>(stream.ReadAllBytes(), ConfigurationSettings.JsonSerializerSettings);
-        config ??= new PermissionGroupConfig { Groups = new List<PermissionGroup>(0) };
-        config.Groups.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+        if (config == null)
+            config = new PermissionGroupConfig { Groups = new List<PermissionGroup>(0) };
+        else if (config.Groups == null)
+            config.Groups = new List<PermissionGroup>(0);
+        else
+            config.Groups.Sort((a, b) => b.Priority.CompareTo(a.Priority));
 
         if (PermissionGroups != null)
         {
@@ -505,6 +561,12 @@ public class UserPermissionStore : IAsyncDisposable
         }
 
         PermissionGroups = new ReadOnlyCollection<PermissionGroup>(config.Groups);
+        if (config.DefaultGroup != null)
+        {
+            DefaultPermissionGroup = config.Groups.Find(x => x.Id.Equals(config.DefaultGroup, StringComparison.Ordinal));
+        }
+
+        _permissionGroupCache.Clear();
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
@@ -520,5 +582,10 @@ public class UserPermissionStore : IAsyncDisposable
         {
             _semaphore.Dispose();
         }
+    }
+
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        ClearCachedPermissions(e.Steam64.m_SteamID);
     }
 }

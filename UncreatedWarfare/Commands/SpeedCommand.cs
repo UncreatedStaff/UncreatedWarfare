@@ -5,7 +5,6 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("speed")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class SpeedCommand : IExecutableCommand
 {
     private readonly SpeedCommandTranslations _translations;
@@ -61,8 +60,6 @@ public class SpeedCommand : IExecutableCommand
     public UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertArgs(1);
-
-        Context.AssertOnDuty();
 
         WarfarePlayer? target = Context.Player;
 

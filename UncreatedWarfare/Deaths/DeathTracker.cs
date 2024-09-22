@@ -12,28 +12,23 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Deaths;
 public class DeathTracker : IHostedService
 {
     private readonly ILogger<DeathTracker> _logger;
     private readonly DeathMessageResolver _deathMessageResolver;
-    private readonly WarfareModule _warfare;
     private readonly IPlayerService _playerService;
 
     public const EDeathCause MainCampDeathCauseOffset = (EDeathCause)100;
     public const EDeathCause InEnemyMainDeathCause = (EDeathCause)37;
 
-    private readonly PlayerDictionary<PlayerDied> _injuredPlayers = new PlayerDictionary<PlayerDied>(Provider.maxPlayers);
-
     private static readonly InstanceSetter<PlayerLife, bool>? PVPDeathField = Accessor.GenerateInstancePropertySetter<PlayerLife, bool>("wasPvPDeath");
     private static readonly InstanceGetter<InteractableSentry, Player>? SentryTargetPlayerField = Accessor.GenerateInstanceGetter<InteractableSentry, Player>("targetPlayer");
 
-    public DeathTracker(ILogger<DeathTracker> logger, DeathMessageResolver deathMessageResolver, WarfareModule warfare, IPlayerService playerService)
+    public DeathTracker(ILogger<DeathTracker> logger, DeathMessageResolver deathMessageResolver, IPlayerService playerService)
     {
         _logger = logger;
-        _warfare = warfare;
         _playerService = playerService;
         _deathMessageResolver = deathMessageResolver;
     }
@@ -84,7 +79,9 @@ public class DeathTracker : IHostedService
                 PlayerInjureComponent? injureComp = dead.ComponentOrNull<PlayerInjureComponent>();
                 if (injureComp != null && injureComp is { State: PlayerHealthState.Injured, PendingDeathInfo: not null })
                 {
-                    await _deathMessageResolver.BroadcastDeath(injureComp.PendingDeathInfo);
+                    PlayerDied deathInfo = injureComp.PendingDeathInfo;
+                    injureComp.PendingDeathInfo = null;
+                    await _deathMessageResolver.BroadcastDeath(deathInfo);
                 }
                 else
                 {
@@ -119,13 +116,13 @@ public class DeathTracker : IHostedService
         if (parameters.cause == EDeathCause.BLEEDING && PlayerDeathTrackingComponent.GetOrAdd(pl.UnturnedPlayer) is { BleedOutInfo: { } bleedOutInfo })
         {
             bleedOutInfo.MessageFlags |= DeathFlags.Bleeding;
-            _injuredPlayers.Add(pl.Steam64, bleedOutInfo);
+            pl.Component<PlayerInjureComponent>().PendingDeathInfo = bleedOutInfo;
             return bleedOutInfo;
         }
 
         PlayerDied e = new PlayerDied { Player = pl };
         FillArgs(pl, parameters.cause, parameters.limb, parameters.killer, e);
-        _injuredPlayers.Add(pl.Steam64, e);
+        pl.Component<PlayerInjureComponent>().PendingDeathInfo = e;
         return e;
     }
 
@@ -797,13 +794,5 @@ public class DeathTracker : IHostedService
         e.WasBleedout = true;
 
         comp.BleedOutInfo = e;
-    }
-    internal void ReviveManagerUnloading()
-    {
-        _injuredPlayers.Clear();
-    }
-    internal void RemovePlayerInfo(CSteamID steam64)
-    {
-        _injuredPlayers.Remove(steam64);
     }
 }

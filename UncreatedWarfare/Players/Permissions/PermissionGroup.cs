@@ -192,7 +192,7 @@ public sealed class PermissionGroup : IReadOnlyList<PermissionBranch>
     }
 
     public override string ToString() => $"{{Permission Group | \"{Id}\" ({DisplayName}) | {Permissions.Count} permission(s)}}";
-    public override bool Equals(object? obj) => obj is PermissionGroup g && g.Id.Equals(Id, StringComparison.InvariantCultureIgnoreCase);
+    public override bool Equals(object? obj) => obj is PermissionGroup g && g.Id.Equals(Id, StringComparison.Ordinal);
     // ReSharper disable NonReadonlyMemberInGetHashCode
     public override int GetHashCode() => Id != null ? Id.GetHashCode() : 0;
 
@@ -350,8 +350,11 @@ public class PermissionGroupConfig
     [JsonPropertyName("$schema")]
     public string SchemaURI => "https://raw.githubusercontent.com/DanielWillett/DevkitServer/master/Module/Schemas/permission_groups_schema.json";
 
+    [JsonPropertyName("default_group")]
+    public string? DefaultGroup { get; set; }
+
     [JsonPropertyName("groups")]
-    public List<PermissionGroup> Groups { get; set; } = null!;
+    public List<PermissionGroup>? Groups { get; set; }
 }
 public sealed class PermissionGroupJsonConverter : JsonConverter<PermissionGroup>
 {

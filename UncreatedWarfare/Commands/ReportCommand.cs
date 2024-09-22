@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("report")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class ReportCommand : IExecutableCommand
 {
     private const string Syntax = "/report <\"reasons\" | player> <reason> <custom message...>";

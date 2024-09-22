@@ -10,7 +10,7 @@ internal class SquadPlayerComponent : IPlayerComponent
 
     public Squad? Squad { get; private set; }
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _squadManager = serviceProvider.GetRequiredService<SquadManager>();
     }

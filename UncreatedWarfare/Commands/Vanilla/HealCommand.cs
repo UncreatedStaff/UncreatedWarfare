@@ -7,7 +7,6 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("heal")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class HealCommand : IExecutableCommand
 {
     private readonly ChatService _chatService;
@@ -44,13 +43,12 @@ public class HealCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertOnDuty();
-
         if (!Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer) || onlinePlayer == null)
         {
             if (Context.HasArgs(1))
                 throw Context.SendPlayerNotFound();
 
+            Context.AssertRanByPlayer();
             onlinePlayer = Context.Player;
         }
 

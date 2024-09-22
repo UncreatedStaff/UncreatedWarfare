@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -19,7 +20,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Interaction.Commands;
-public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
+public class CommandDispatcher : IDisposable, IHostedService, IEventListener<PlayerLeft>
 {
     private readonly WarfareModule _module;
     private readonly UserPermissionStore _permissions;
@@ -79,6 +80,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
 
             circularReferenceBuffer.Add(commandType);
             CommandInfo info = new CommandInfo(commandType, _logger, GetParentInfo(commandType, allCommands, _logger, circularReferenceBuffer));
+            circularReferenceBuffer.Clear();
 
             allCommands.Add(info);
             if (!info.IsSubCommand)
@@ -132,7 +134,8 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
                 }
 
                 circularReferenceBuffer.Add(subCommand.ParentType);
-                existingParentInfo = new CommandInfo(subCommand.ParentType, logger, GetParentInfo(subCommand.ParentType, commands, logger, circularReferenceBuffer));
+                CommandInfo? parentInfo = GetParentInfo(subCommand.ParentType, commands, logger, circularReferenceBuffer);
+                existingParentInfo = new CommandInfo(subCommand.ParentType, logger, parentInfo);
                 if (!existingParentInfo.IsSubCommand)
                     commands.Add(existingParentInfo);
             }
@@ -140,6 +143,8 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
             return existingParentInfo;
         }
     }
+    UniTask IHostedService.StartAsync(CancellationToken token) => UniTask.CompletedTask;
+    UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
 
     /// <summary>
     /// Remove all wait tasks for a disconnected player.
@@ -324,6 +329,14 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
     /// </summary>
     public async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, string originalMessage, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
     {
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+        if (command == null)
+            throw new ArgumentNullException(nameof(command));
+
+        args ??= Array.Empty<string>();
+        originalMessage ??= string.Empty;
+
         int offset;
         if (!command.IsSubCommand)
         {
@@ -428,7 +441,7 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
     /// <summary>
     /// Execute a vanilla command.
     /// </summary>
-    public async UniTask ExecuteVanillaCommandAsync(ICommandUser user, CommandInfo commandInfo, string[] args, string originalMessage, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
+    private async UniTask ExecuteVanillaCommandAsync(ICommandUser user, CommandInfo commandInfo, string[] args, string originalMessage, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread();
 
@@ -441,7 +454,16 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
             return;
         }
 
-        await UniTask.SwitchToMainThread();
+        if (GameThread.IsCurrent)
+        {
+            // this has to be done to get out of the CommandWindow.update loop since we're adding IO handlers it throws a collection modified in foreach error.
+            await UniTask.WaitForEndOfFrame(_module.ServiceProvider.Resolve<WarfareLifetimeComponent>(), token);
+        }
+        else
+        {
+            await UniTask.SwitchToMainThread(token);
+        }
+
 
         Type commandType = vanillaCommand.GetType();
 
@@ -508,9 +530,13 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
                 {
                     ctx.SwitchToCommand(command.RedirectCommandInfo.Type);
                 }
-                else
+                else if (command.Type != typeof(HelpCommand))
                 {
                     ctx.SendHelp();
+                }
+                else
+                {
+                    ctx.Reply(ctx.CommonTranslations.NotImplemented);
                 }
             }
             else
@@ -520,12 +546,13 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
                 {
                     cmdInstance = (IExecutableCommand)ReflectionUtility.CreateInstanceFixed(serviceProvider, command.Type, [ ctx ]);
                 }
-                catch (InvalidOperationException)
+                catch (InvalidOperationException ex)
                 {
                     _logger.LogInformation(
                         "Failed to run the \"{0}\" command because of a missing service. This could be expected if the command isn't enabled in the current layout.",
                         command.CommandName
                     );
+                    _logger.LogInformation(ex.Message);
                     ctx.SendGamemodeError();
                     return;
                 }
@@ -542,12 +569,12 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
 
                 ctx.CheckIsolatedCooldown();
 
-                await AssertPermissions(command, ctx, token);
-
-                await UniTask.SwitchToMainThread();
-
                 try
                 {
+                    await AssertPermissions(command, ctx, token);
+
+                    await UniTask.SwitchToMainThread();
+
                     await cmdInstance.ExecuteAsync(token);
                     src.Cancel();
                     await UniTask.SwitchToMainThread();
@@ -710,22 +737,39 @@ public class CommandDispatcher : IDisposable, IEventListener<PlayerLeft>
             textSpan = textSpan[..^1];
         }
 
-        if (!Parser.TryRunCommand(pl, textSpan, ref shouldList, true) && !shouldList)
+        try
+        {
+            if (!Parser.TryRunCommand(pl, textSpan, ref shouldList, true) && !shouldList)
+            {
+                CommonTranslations translations = _module.ScopedProvider.Resolve<TranslationInjection<CommonTranslations>>().Value;
+                _chatService.Send(pl, translations.UnknownCommand);
+            }
+        }
+        catch (Exception ex)
         {
             CommonTranslations translations = _module.ScopedProvider.Resolve<TranslationInjection<CommonTranslations>>().Value;
-            _chatService.Send(pl, translations.UnknownCommand);
+            _chatService.Send(pl, translations.UnknownError);
+            _logger.LogError(ex, "Error executing player command: \"{0}\".", text);
         }
     }
     
     private void OnCommandInput(string text, ref bool shouldExecuteCommand)
     {
-        if (shouldExecuteCommand && Parser.TryRunCommand(null! /* todo make console user */, text, ref shouldExecuteCommand, false))
+        try
+        {
+            if (shouldExecuteCommand && Parser.TryRunCommand(TerminalUser.Instance, text, ref shouldExecuteCommand, false))
+            {
+                shouldExecuteCommand = false;
+            }
+            else if (!shouldExecuteCommand)
+            {
+                _logger.LogError("Unknown command.");
+            }
+        }
+        catch (Exception ex)
         {
             shouldExecuteCommand = false;
-        }
-        else if (!shouldExecuteCommand)
-        {
-            _logger.LogError("Unknown command.");
+            _logger.LogError(ex, "Error executing player command: \"{0}\".", text);
         }
     }
 

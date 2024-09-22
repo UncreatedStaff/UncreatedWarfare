@@ -18,7 +18,7 @@ internal class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<It
     public WarfarePlayer Player { get; private set; }
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider) { }
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin) { }
 
     /// <summary>
     /// Reset tracking items. Should be done when clearing inventory or making clothing changes.

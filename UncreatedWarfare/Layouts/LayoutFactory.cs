@@ -61,7 +61,7 @@ public class LayoutFactory : IHostedService
             {
                 L.LogError("Error starting layout.");
                 L.LogError(ex);
-                _ = _warfare.ShutdownAsync();
+                _ = _warfare.ShutdownAsync(string.Empty);
             }
         });
     }

@@ -6,7 +6,6 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
@@ -31,7 +30,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
     public TimeSpan DeploymentTimeLeft => _deploymentTimeStarted == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(Time.realtimeSinceStartup - _deploymentTimeStarted);
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
-    public void Init(IServiceProvider serviceProvider)
+    public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>().Value;
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();

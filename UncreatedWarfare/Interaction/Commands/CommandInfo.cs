@@ -1,6 +1,5 @@
 ﻿using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
@@ -131,13 +130,15 @@ public class CommandInfo
     /// <summary>
     /// Create a new custom command.
     /// </summary>
-    /// <param name="classType">The type containing the command's code. Must implement <see cref="IExecutableCommand"/>.</param>
+    /// <param name="classType">The type containing the command's code. Must implement <see cref="ICommand"/>.</param>
     internal CommandInfo(Type classType, ILogger logger, CommandInfo? parent)
     {
-        if (!typeof(IExecutableCommand).IsAssignableFrom(classType))
+        if (!typeof(ICommand).IsAssignableFrom(classType))
         {
-            throw new ArgumentException("Must implement IExecutableCommand.", nameof(classType));
+            throw new ArgumentException("Must implement ICommand.", nameof(classType));
         }
+
+        IsExecutable = typeof(IExecutableCommand).IsAssignableFrom(classType);
 
         Type = classType;
 
@@ -389,7 +390,7 @@ public class CommandInfo
 
             string relativePath = path.Substring(index + sectionLength + 1);
 
-            resource = "EmbeddedResource." + relativePath.Replace(Path.DirectorySeparatorChar, '.').Replace(".cs", ".meta.yml");
+            resource = typeof(WarfareModule).Namespace + "." + relativePath.Replace(Path.DirectorySeparatorChar, '.').Replace(".cs", ".meta.yml");
 
             stream = asm.GetManifestResourceStream(resource);
 

@@ -1,5 +1,5 @@
-﻿using System;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -10,15 +10,18 @@ public class PlayerKeyComponent : IPlayerComponent
     private static readonly KeyDown?[] KeyDownListeners = new KeyDown?[PlayerKeys.KeyCount];
     private static readonly KeyUp?[] KeyUpListeners = new KeyUp?[PlayerKeys.KeyCount];
     private static ulong _keyEventMask;
+    private static bool _initialized;
 
-    private bool _initialized;
     private bool _first;
 
     private bool[] _lastKeys;
     private float[] _keyDownTimes;
     public WarfarePlayer Player { get; private set; }
-    void IPlayerComponent.Init(IServiceProvider serviceProvider)
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
+        if (!isOnJoin)
+            return;
+
         _keyDownTimes = new float[PlayerKeys.KeyCount];
         _lastKeys = new bool[PlayerKeys.KeyCount];
         _first = true;

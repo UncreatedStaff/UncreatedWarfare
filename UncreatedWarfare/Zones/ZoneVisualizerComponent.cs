@@ -23,7 +23,7 @@ public class ZoneVisualizerComponent : IPlayerComponent
     private readonly List<SpawnRoundInfo> _spawns = new List<SpawnRoundInfo>(0);
     public WarfarePlayer Player { get; private set; }
 
-    public void Init(IServiceProvider serviceProvider) { }
+    public void Init(IServiceProvider serviceProvider, bool isOnJoin) { }
 
     public int SpawnPoints(Zone zone)
     {

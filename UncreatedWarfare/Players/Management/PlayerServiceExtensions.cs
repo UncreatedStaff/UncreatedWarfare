@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
@@ -195,5 +198,242 @@ public static class PlayerServiceExtensions
     public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, CSteamID steamId)
     {
         return playerService.GetOnlinePlayerOrNullThreadSafe(steamId.m_SteamID);
+    }
+
+    /// <summary>
+    /// Search for a player by their name.
+    /// </summary>
+    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, string searchTerm, IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    {
+        GameThread.AssertCurrent();
+
+        List<WarfarePlayer> players = selection.ToList();
+        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        {
+            return players.Find(x => x.Steam64.m_SteamID == steamId.m_SteamID);
+        }
+
+        return SearchPlayers(players, searchTerm, preferredName);
+    }
+
+    /// <summary>
+    /// Search for a player by their name.
+    /// </summary>
+    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, string searchTerm, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    {
+        GameThread.AssertCurrent();
+
+        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        {
+            return playerService.GetOnlinePlayerOrNull(steamId);
+        }
+
+        ReadOnlyTrackingList<WarfarePlayer> players = playerService.OnlinePlayers;
+        return SearchPlayers(players, searchTerm, preferredName);
+    }
+
+    /// <summary>
+    /// Search for a player by their name.
+    /// </summary>
+    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, string searchTerm, IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    {
+        if (GameThread.IsCurrent)
+        {
+            return playerService.GetOnlinePlayerOrNull(searchTerm, preferredName);
+        }
+
+        List<WarfarePlayer> players = selection.ToList();
+        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        {
+            return players.Find(x => x.Steam64.m_SteamID == steamId.m_SteamID);
+        }
+
+        return SearchPlayers(players, searchTerm, preferredName);
+    }
+
+    /// <summary>
+    /// Search for a player by their name.
+    /// </summary>
+    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, string searchTerm, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    {
+        if (GameThread.IsCurrent)
+        {
+            return playerService.GetOnlinePlayerOrNull(searchTerm, preferredName);
+        }
+
+        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        {
+            return playerService.GetOnlinePlayerOrNullThreadSafe(steamId);
+        }
+
+        IReadOnlyList<WarfarePlayer> players = playerService.GetThreadsafePlayerList();
+        return SearchPlayers(players, searchTerm, preferredName);
+    }
+
+    private static WarfarePlayer? SearchPlayers(IEnumerable<WarfarePlayer> players, ReadOnlySpan<char> searchTerm, PlayerNameType preferredName)
+    {
+        using IEnumerator<WarfarePlayer> enumerator = players.GetEnumerator();
+
+        ReadOnlySpan<PlayerNameType> nameOrder = preferredName switch
+        {
+            PlayerNameType.CharacterName => [ PlayerNameType.CharacterName, PlayerNameType.NickName, PlayerNameType.PlayerName ],
+            PlayerNameType.NickName => [ PlayerNameType.NickName, PlayerNameType.CharacterName, PlayerNameType.PlayerName ],
+            PlayerNameType.PlayerName => [ PlayerNameType.PlayerName, PlayerNameType.CharacterName, PlayerNameType.NickName ],
+            _ => default
+        };
+
+        const int levels = 6;
+        for (int n = 0; n < 3; ++n)
+        {
+            PlayerNameType name = nameOrder[n];
+            for (int i = 0; i < levels; i += 2)
+            {
+                WarfarePlayer? pl = SearchPlayersByNameType(enumerator, searchTerm, i, name);
+                if (pl != null) return pl;
+                pl = SearchPlayersByNameType(enumerator, searchTerm, i + 1, name);
+                if (pl != null) return pl;
+            }
+        }
+
+        return null;
+    }
+
+    private static WarfarePlayer? SearchPlayersByNameType(IEnumerator<WarfarePlayer> enumerator, ReadOnlySpan<char> searchTerm, int level, PlayerNameType nameType)
+    {
+        switch (level)
+        {
+            case 0: // exact
+                while (enumerator.MoveNext())
+                {
+                    WarfarePlayer player = enumerator.Current!;
+                    string name = nameType switch
+                    {
+                        PlayerNameType.CharacterName => player.Names.CharacterName,
+                        PlayerNameType.NickName => player.Names.NickName,
+                        PlayerNameType.PlayerName => player.Names.PlayerName,
+                        _ => null!
+                    };
+                    if (name.AsSpan().Equals(searchTerm, StringComparison.Ordinal))
+                    {
+                        return player;
+                    }
+                }
+
+                break;
+
+            case 1: // exact case insensitive
+                while (enumerator.MoveNext())
+                {
+                    WarfarePlayer player = enumerator.Current!;
+                    string name = nameType switch
+                    {
+                        PlayerNameType.CharacterName => player.Names.CharacterName,
+                        PlayerNameType.NickName => player.Names.NickName,
+                        PlayerNameType.PlayerName => player.Names.PlayerName,
+                        _ => null!
+                    };
+                    if (name.AsSpan().Equals(searchTerm, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        return player;
+                    }
+                }
+
+                break;
+
+            case 2: // contains
+                while (enumerator.MoveNext())
+                {
+                    WarfarePlayer player = enumerator.Current!;
+                    string name = nameType switch
+                    {
+                        PlayerNameType.CharacterName => player.Names.CharacterName,
+                        PlayerNameType.NickName => player.Names.NickName,
+                        PlayerNameType.PlayerName => player.Names.PlayerName,
+                        _ => null!
+                    };
+                    if (name.AsSpan().Contains(searchTerm, StringComparison.Ordinal))
+                    {
+                        return player;
+                    }
+                }
+
+                break;
+
+            case 3: // contains case insensitive
+                while (enumerator.MoveNext())
+                {
+                    WarfarePlayer player = enumerator.Current!;
+                    string name = nameType switch
+                    {
+                        PlayerNameType.CharacterName => player.Names.CharacterName,
+                        PlayerNameType.NickName => player.Names.NickName,
+                        PlayerNameType.PlayerName => player.Names.PlayerName,
+                        _ => null!
+                    };
+                    if (name.AsSpan().Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        return player;
+                    }
+                }
+
+                break;
+
+            case 4: // fuzzy
+                int maxScore = 2; // require 3 letter match at least
+                WarfarePlayer? match = null;
+                while (enumerator.MoveNext())
+                {
+                    WarfarePlayer player = enumerator.Current!;
+                    string name = nameType switch
+                    {
+                        PlayerNameType.CharacterName => player.Names.CharacterName,
+                        PlayerNameType.NickName => player.Names.NickName,
+                        PlayerNameType.PlayerName => player.Names.PlayerName,
+                        _ => null!
+                    };
+                    int score = FormattingUtility.CompareStringsFuzzy(searchTerm, name, true);
+                    
+                    if (maxScore >= score)
+                        continue;
+                    
+                    match = player;
+                    maxScore = score;
+                }
+
+                if (match != null)
+                    return match;
+
+                break;
+
+            case 5: // fuzzy case insensitive
+                maxScore = 2; // require 3 letter match at least
+                match = null;
+                while (enumerator.MoveNext())
+                {
+                    WarfarePlayer player = enumerator.Current!;
+                    string name = nameType switch
+                    {
+                        PlayerNameType.CharacterName => player.Names.CharacterName,
+                        PlayerNameType.NickName => player.Names.NickName,
+                        PlayerNameType.PlayerName => player.Names.PlayerName,
+                        _ => null!
+                    };
+                    int score = FormattingUtility.CompareStringsFuzzy(searchTerm, name, false);
+                    
+                    if (maxScore >= score)
+                        continue;
+
+                    match = player;
+                    maxScore = score;
+                }
+
+                if (match != null)
+                    return match;
+
+                break;
+        }
+
+        enumerator.Reset();
+        return null;
     }
 }

@@ -7,7 +7,6 @@ using Uncreated.Warfare.Translations.Languages;
 namespace Uncreated.Warfare.Commands;
 
 [Command("lang", "language", "foreign")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class LangCommand : IExecutableCommand
 {
     private readonly ICachableLanguageDataStore _languageDataStore;

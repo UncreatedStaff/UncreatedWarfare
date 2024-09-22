@@ -25,6 +25,7 @@ namespace Uncreated.Warfare.Events;
 public partial class EventDispatcher2 : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly WarfareModule _warfare;
     private readonly IPlayerService _playerService;
     private readonly CancellationToken _unloadToken;
     private readonly ILogger<EventDispatcher2> _logger;
@@ -47,6 +48,8 @@ public partial class EventDispatcher2 : IHostedService
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         _timeComponent = serviceProvider.GetRequiredService<WarfareTimeComponent>();
+
+        _warfare = serviceProvider.GetRequiredService<WarfareModule>();
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)
@@ -162,19 +165,21 @@ public partial class EventDispatcher2 : IHostedService
 
         // get all event listeners from the service provider, then get all IEventListenerProviders and get all listeners from them.
 
+        ILifetimeScope scope = _warfare.IsLayoutActive() ? _warfare.ScopedProvider : _warfare.ServiceProvider;
+
         // IServiceProvider
-        foreach (IEventListener<TEventArgs> eventListener in _serviceProvider.GetServices<IEventListener<TEventArgs>>())
+        foreach (IEventListener<TEventArgs> eventListener in scope.Resolve<IEnumerable<IEventListener<TEventArgs>>>())
         {
             eventListeners.Add(new EventListenerResult { Listener = eventListener });
         }
 
-        foreach (IAsyncEventListener<TEventArgs> eventListener in _serviceProvider.GetServices<IAsyncEventListener<TEventArgs>>())
+        foreach (IAsyncEventListener<TEventArgs> eventListener in scope.Resolve<IEnumerable<IAsyncEventListener<TEventArgs>>>())
         {
             eventListeners.Add(new EventListenerResult { Flags = 1, Listener = eventListener });
         }
 
         // IEventListenerProviders
-        foreach (IEventListenerProvider provider in _serviceProvider.GetServices<IEventListenerProvider>())
+        foreach (IEventListenerProvider provider in scope.Resolve<IEnumerable<IEventListenerProvider>>())
         {
             foreach (IEventListener<TEventArgs> eventListener in provider.EnumerateNormalListeners(eventArgs))
             {
@@ -189,6 +194,10 @@ public partial class EventDispatcher2 : IHostedService
 
         int ct = eventListeners.Count;
 
+#if DEBUG
+        _logger.LogDebug("Invoke {0} - Dispatching event for {1} listener(s).", Accessor.Formatter.Format(type), ct);
+#endif
+
         if (ct == 0)
         {
             return true;
@@ -199,10 +208,6 @@ public partial class EventDispatcher2 : IHostedService
         FillResults<TEventArgs>(underlying, ct);
 
         Array.Sort(underlying, 0, ct, PriorityComparer.Instance);
-
-#if DEBUG
-        _logger.LogDebug("Invoke {0} - Dispatching event for {1} listener(s).", Accessor.Formatter.Format(type), ct);
-#endif
 
         List<SynchronizationBucket>? buckets = null;
         List<Task>? tasks = null;
@@ -248,7 +253,7 @@ public partial class EventDispatcher2 : IHostedService
 
                     if ((underlying[i].Flags & 1) != 0)
                     {
-                        if (allowAsync)
+                        if (!allowAsync)
                             throw new InvalidOperationException($"Async event listeners not supported for {Accessor.ExceptionFormatter.Format<TEventArgs>()}.");
                         await ((IAsyncEventListener<TEventArgs>)underlying[i].Listener).HandleEventAsync(eventArgs, _serviceProvider, token);
                     }

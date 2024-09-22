@@ -1,11 +1,9 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("teams", "team")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class TeamsCommand : IExecutableCommand
 {
     private const string Syntax = "/teams ";

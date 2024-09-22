@@ -300,8 +300,6 @@ public class VehicleCommand : IExecutableCommand
 
         Context.AssertArgs(1, AdminSyntax);
 
-        Context.AssertOnDuty();
-
         if (!Context.TryGet(0, out VehicleAsset? asset, out _, true, allowMultipleResults: true))
             throw Context.ReplyString("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + Context.GetRange(0) + "</color>.</color>");
 

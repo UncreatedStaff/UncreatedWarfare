@@ -12,8 +12,11 @@ public class GodPlayerComponent : IPlayerComponent
     public static readonly PermissionLeaf GodPermission = new PermissionLeaf("warfare::features.god");
     public bool IsActive { get; set; }
     public WarfarePlayer Player { get; private set; }
-    public void Init(IServiceProvider serviceProvider)
+    public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
+        if (!isOnJoin)
+            return;
+
         IsActive = false;
     }
 

@@ -4,7 +4,6 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.Commands;
 
 [Command("warn")]
-[MetadataFile(nameof(GetHelpMetadata))]
 public class WarnCommand : IExecutableCommand
 {
 #if false

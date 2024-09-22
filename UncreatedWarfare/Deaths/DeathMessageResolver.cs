@@ -791,6 +791,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
 
         if (causes is null)
             return _valueFormatter.FormatEnum(args.Cause, language) + " Dead: " + args.Player.Names.CharacterName;
+
         rtn:
         int i = FindDeathCause(language, causes, args);
 
@@ -807,6 +808,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             isDefault = true;
             goto rtn;
         }
+
         return val;
     }
 

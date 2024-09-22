@@ -98,6 +98,11 @@ public static partial class Patches
     public static event PlayerTriedStoreItem OnPlayerTriedStoreItem_Global;
     public static event PlayerGesture OnPlayerGesture_Global;
     public static event PlayerMarker OnPlayerMarker_Global;
+
+
+
+    // this was used to delay hiding the loading screen. i dont think we need this now
+
     public static void SendInitialPlayerStateForce(PlayerInventory inventory, SteamPlayer client)
     {
         InternalPatches.ShouldAllowSendInitialPlayerState = true;
@@ -115,13 +120,15 @@ public static partial class Patches
     {
         internal static bool ShouldAllowSendInitialPlayerState;
 
-        [HarmonyPatch(typeof(PlayerInventory), "SendInitialPlayerState")]
-        [HarmonyPrefix]
-        [UsedImplicitly]
-        private static bool SendInitialPlayerState(PlayerInventory __instance, SteamPlayer client)
-        {
-            return __instance.player != client.player || ShouldAllowSendInitialPlayerState;
-        }
+        // this was used to delay hiding the loading screen. i dont think we need this now
+
+        //[HarmonyPatch(typeof(PlayerInventory), "SendInitialPlayerState")]
+        //[HarmonyPrefix]
+        //[UsedImplicitly]
+        //private static bool SendInitialPlayerState(PlayerInventory __instance, SteamPlayer client)
+        //{
+        //    return __instance.player != client.player || ShouldAllowSendInitialPlayerState;
+        //}
 
         /*
         //private static readonly string LOG_MESSAGE_ID_STR = L.NetCalls.SendLogMessage.ID.ToString(Data.Locale);
