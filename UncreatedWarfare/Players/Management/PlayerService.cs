@@ -12,6 +12,7 @@ using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.PendingTasks;
 using Uncreated.Warfare.Players.Skillsets;
@@ -44,6 +45,7 @@ public class PlayerService : IPlayerService
     [
         typeof(KitPlayerComponent),
         typeof(PlayerKeyComponent),
+        typeof(PlayerLobbyComponent),
         typeof(ItemTrackingPlayerComponent),
         typeof(HotkeyPlayerComponent),
         typeof(AudioRecordPlayerComponent),

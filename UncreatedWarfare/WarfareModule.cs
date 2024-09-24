@@ -86,6 +86,7 @@ public sealed class WarfareModule : IModuleNexus
     private CancellationTokenSource _cancellationTokenSource;
     private Layout? _activeLayout;
     private GameObject _gameObjectHost;
+    private ILogger<WarfareModule> _logger;
 
     /// <summary>
     /// A path to the top-level 'Warfare' folder.
@@ -205,6 +206,8 @@ public sealed class WarfareModule : IModuleNexus
 
         ServiceProvider = serviceCollection.Build();
 
+        _logger = ServiceProvider.Resolve<ILogger<WarfareModule>>();
+
         UniTask.Create(async () =>
         {
             try
@@ -245,8 +248,7 @@ public sealed class WarfareModule : IModuleNexus
         }
         catch (AggregateException ex)
         {
-            L.LogError("Error(s) while canceling module cancellation token source.");
-            L.LogError(ex);
+            _logger.LogError(ex, "Error(s) while canceling module cancellation token source.");
         }
 
         _cancellationTokenSource.Dispose();
@@ -256,9 +258,9 @@ public sealed class WarfareModule : IModuleNexus
             Unhost();
         }
 
-        L.Log("Cleaning up container...");
+        _logger.LogInformation("Cleaning up container...");
         ServiceProvider.Dispose();
-        L.Log("Done - Shutting down");
+        CommandWindow.Log("Done - Shutting down");
     }
 
     private void ConfigureServices(ContainerBuilder bldr)
@@ -403,6 +405,9 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterType<FactionDataStore>()
             .AsImplementedInterfaces()
             .SingleInstance();
+
+        bldr.RegisterType<DefaultTeamSelectorBehavior>()
+            .As<ITeamSelectorBehavior>();
 
         bldr.RegisterType<LobbyZoneManager>()
             .AsSelf().AsImplementedInterfaces()
@@ -602,18 +607,18 @@ public sealed class WarfareModule : IModuleNexus
             
             if (!connected)
             {
-                L.LogWarning($"Connection for migration timed out after {timeoutSec} second(s).");
+                _logger.LogWarning($"Connection for migration timed out after {timeoutSec} second(s).");
             }
             else
             {
                 await dbContext.Database.MigrateAsync(token).ConfigureAwait(false);
-                L.Log("Migration completed.");
+                _logger.LogInformation("Migration completed.");
             }
         }
 
         if (!connected)
         {
-            L.LogError("Unable to connect to MySQL database. Please reconfigure and restart.");
+            _logger.LogError("Unable to connect to MySQL database. Please reconfigure and restart.");
             UnloadModule();
             Provider.shutdown();
             return;
@@ -643,8 +648,7 @@ public sealed class WarfareModule : IModuleNexus
             }
             catch (Exception ex)
             {
-                L.LogError($"Error hosting service {Accessor.Formatter.Format(hostedService.GetType())}.");
-                L.LogError(ex);
+                _logger.LogError(ex, $"Error hosting service {Accessor.Formatter.Format(hostedService.GetType())}.");
                 errIndex = i;
                 break;
             }
@@ -674,8 +678,7 @@ public sealed class WarfareModule : IModuleNexus
             }
             catch (Exception ex)
             {
-                L.LogError($"Error stopping service {Accessor.Formatter.Format(hostedService.GetType())}.");
-                L.LogError(ex);
+                _logger.LogError(ex, $"Error stopping service {Accessor.Formatter.Format(hostedService.GetType())}.");
             }
         }
 
@@ -688,8 +691,8 @@ public sealed class WarfareModule : IModuleNexus
         catch
         {
             await UniTask.SwitchToMainThread();
-            L.LogError("Errors encountered while unhosting:");
-            FormattingUtility.PrintTaskErrors(tasks, hostedServices);
+            _logger.LogError("Errors encountered while unhosting:");
+            FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
         }
 
         await UniTask.SwitchToMainThread(CancellationToken.None);
@@ -721,8 +724,7 @@ public sealed class WarfareModule : IModuleNexus
             }
             catch (Exception ex)
             {
-                L.LogError($"Error hosting service {Accessor.Formatter.Format(hostedService.GetType())} on level load.");
-                L.LogError(ex);
+                _logger.LogError(ex, $"Error hosting service {Accessor.Formatter.Format(hostedService.GetType())} on level load.");
                 break;
             }
         }
@@ -762,8 +764,8 @@ public sealed class WarfareModule : IModuleNexus
         catch
         {
             await UniTask.SwitchToMainThread();
-            L.LogError("Errors encountered while unhosting:");
-            FormattingUtility.PrintTaskErrors(tasks, hostedServices);
+            _logger.LogError("Errors encountered while unhosting:");
+            FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
         }
     }
 
@@ -804,8 +806,8 @@ public sealed class WarfareModule : IModuleNexus
         }
         catch
         {
-            L.LogError("Errors encountered while unhosting:");
-            FormattingUtility.PrintTaskErrors(tasks, hostedServices);
+            _logger.LogError("Errors encountered while unhosting:");
+            FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
             Thread.Sleep(500);
             return;
         }
@@ -813,13 +815,13 @@ public sealed class WarfareModule : IModuleNexus
         if (!canceled)
             return;
 
-        L.LogError("Unloading timed out:");
+        _logger.LogError("Unloading timed out:");
         for (int i = 0; i < tasks.Length; ++i)
         {
             if (tasks[i].Status is not UniTaskStatus.Canceled and not UniTaskStatus.Pending)
                 continue;
 
-            L.LogError(Accessor.Formatter.Format(hostedServices[i].GetType()) + $" - {tasks[i].Status}.");
+            _logger.LogError(Accessor.Formatter.Format(hostedServices[i].GetType()) + $" - {tasks[i].Status}.");
         }
         Thread.Sleep(500);
     }
@@ -863,7 +865,7 @@ public sealed class WarfareModule : IModuleNexus
             return;
 
         if (layout != null)
-            L.LogError("A layout was started while one was already active.");
+            _logger.LogError("A layout was started while one was already active.");
 
         oldLayout.Dispose();
     }

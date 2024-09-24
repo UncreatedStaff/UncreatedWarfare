@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -16,9 +15,12 @@ namespace Uncreated.Warfare.Layouts;
 public class LayoutFactory : IHostedService
 {
     private readonly WarfareModule _warfare;
-    public LayoutFactory(WarfareModule warfare)
+    private readonly ILogger<LayoutFactory> _logger;
+
+    public LayoutFactory(WarfareModule warfare, ILogger<LayoutFactory> logger)
     {
         _warfare = warfare;
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -59,9 +61,8 @@ public class LayoutFactory : IHostedService
             }
             catch (Exception ex)
             {
-                L.LogError("Error starting layout.");
-                L.LogError(ex);
-                _ = _warfare.ShutdownAsync(string.Empty);
+                _logger.LogError(ex, "Error starting layout.");
+                _ = _warfare.ShutdownAsync($"Error starting layout - {Accessor.Formatter.Format(ex.GetType())}");
             }
         });
     }
@@ -142,8 +143,27 @@ public class LayoutFactory : IHostedService
         }
 
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(layout.UnloadToken);
-        await layout.InitializeLayoutAsync(token);
-        await layout.BeginLayoutAsync(token);
+        await layout.InitializeLayoutAsync(CancellationToken.None);
+
+        IEnumerable<ILayoutStartingListener> listeners = scopedProvider.Resolve<IEnumerable<ILayoutStartingListener>>()
+            .OrderByDescending(x => x.GetType().GetPriority());
+
+        foreach (ILayoutStartingListener listener in listeners)
+        {
+            try
+            {
+                if (!GameThread.IsCurrent)
+                    await UniTask.SwitchToMainThread(CancellationToken.None);
+
+                await listener.HandleLayoutStartingAsync(layout, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error hosting ILayotuStartingListener {0} for layout {1}.", Accessor.Formatter.Format(listener.GetType()), layout);
+            }
+        }
+
+        await layout.BeginLayoutAsync(CancellationToken.None);
     }
 
     /// <summary>
@@ -183,14 +203,14 @@ public class LayoutFactory : IHostedService
         string? layoutTypeName = root["Type"];
         if (layoutTypeName == null)
         {
-            L.LogDebug($"Layout config file missing \"Type\" config value in \"{file}\".");
+            _logger.LogDebug("Layout config file missing \"Type\" config value in \"{0}\".", file);
             return null;
         }
 
         Type? layoutType = ContextualTypeResolver.ResolveType(layoutTypeName, typeof(Layout));
         if (layoutType == null)
         {
-            L.LogError($"Unknown layout type \"{layoutTypeName}\" in layout config \"{file}\".");
+            _logger.LogError("Unknown layout type \"{0}\" in layout config \"{1}\".", layoutTypeName, file);
             return null;
         }
 
@@ -277,13 +297,13 @@ public class LayoutFactory : IHostedService
             }
             catch (OperationCanceledException ex) when (token.IsCancellationRequested)
             {
-                L.LogWarning($"Layout {layout} canceled.");
+                _logger.LogWarning("Layout {0} canceled.", layout);
                 errIndex = i;
                 thrownException = ex;
             }
             catch (Exception ex)
             {
-                L.LogError($"Error hosting service {Accessor.Formatter.Format(hostedServices[i].GetType())} in layout {layout}.");
+                _logger.LogError(ex, "Error hosting service {0} in layout {1}.", Accessor.Formatter.Format(hostedServices[i].GetType()), layout);
                 errIndex = i;
                 thrownException = ex;
             }
@@ -307,8 +327,7 @@ public class LayoutFactory : IHostedService
                 }
                 catch (Exception ex)
                 {
-                    L.LogError($"Error stopping service {Accessor.Formatter.Format(hostedService.GetType())}.");
-                    L.LogError(ex);
+                    _logger.LogError(ex, "Error stopping service {0} in layout {1}.", Accessor.Formatter.Format(hostedServices[i].GetType()), layout);
                 }
             }
 
@@ -321,8 +340,8 @@ public class LayoutFactory : IHostedService
             catch
             {
                 await UniTask.SwitchToMainThread();
-                L.LogError($"Errors encountered while ending layout {layout}:");
-                FormattingUtility.PrintTaskErrors(tasks, hostedServices);
+                _logger.LogError("Errors encountered while ending layout {0}:", layout);
+                FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
             }
         }
 
@@ -369,8 +388,8 @@ public class LayoutFactory : IHostedService
         }
         catch
         {
-            L.LogError($"Errors encountered while ending layout {layout}:");
-            FormattingUtility.PrintTaskErrors(tasks, hostedServices);
+            _logger.LogError("Errors encountered while ending layout {0}:", layout);
+            FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
         }
     }
 }

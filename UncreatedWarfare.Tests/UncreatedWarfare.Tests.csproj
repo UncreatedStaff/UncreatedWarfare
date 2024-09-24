@@ -14,4 +14,43 @@
     <PackageReference Include="coverlet.collector" Version="3.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\UncreatedWarfare\UncreatedWarfare.csproj" />
+  </ItemGroup>
+
+  <!-- Installation -->
+  <PropertyGroup>
+    <U3DSPath>C:/SteamCMD/steamapps/common/U3DS</U3DSPath>
+  </PropertyGroup>
+
+  <!-- Unturned Files -->
+  <Choose>
+    <When Condition="exists('$(U3DSPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
+      <PropertyGroup>
+        <UnturnedDllPath>$(U3DSPath)/Unturned_Data/Managed</UnturnedDllPath>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <UnturnedDllPath>../Libraries</UnturnedDllPath>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup>
+    <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease10" />
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(UnturnedDllPath)/Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(UnturnedDllPath)/UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(UnturnedDllPath)/UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="com.rlabrecque.steamworks.net">
+      <HintPath>$(UnturnedDllPath)/com.rlabrecque.steamworks.net.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

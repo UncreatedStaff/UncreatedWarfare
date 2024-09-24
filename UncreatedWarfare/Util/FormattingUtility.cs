@@ -885,21 +885,23 @@ public static class FormattingUtility
         for (int i = 0; i < length; ++i)
             arr[i + index] = data[i];
     }
-    internal static void PrintTaskErrors(UniTask[] tasks, IReadOnlyList<object> hostedServices)
+    internal static void PrintTaskErrors(ILogger logger, UniTask[] tasks, IReadOnlyList<object> hostedServices)
     {
         for (int i = 0; i < tasks.Length; ++i)
         {
             if (tasks[i].Status is not UniTaskStatus.Faulted and not UniTaskStatus.Canceled)
                 continue;
 
-            L.LogError(Accessor.Formatter.Format(hostedServices[i].GetType()));
-
             if (tasks[i].AsTask().Exception is { } ex)
             {
-                L.LogError(ex);
+                logger.LogError(ex, Accessor.Formatter.Format(hostedServices[i].GetType()));
+            }
+            else
+            {
+                logger.LogError(Accessor.Formatter.Format(hostedServices[i].GetType()));
             }
 
-            L.LogError(string.Empty);
+            logger.LogError(string.Empty);
         }
     }
     internal static unsafe bool CompareRichTextTag(char* data, int endIndex, int index, RemoveRichTextOptions options)

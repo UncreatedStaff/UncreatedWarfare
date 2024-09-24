@@ -4,8 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
@@ -18,20 +21,31 @@ namespace Uncreated.Warfare.Lobby;
 /// <summary>
 /// Handles visual effects in the lobby.
 /// </summary>
-public class LobbyZoneManager : ILevelHostedService
+public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectInteracted>, ILayoutStartingListener
 {
-    private FlagInfo[] _teamFlags;
+    private const short FlagJoining = -1;
+    private const short FlagFull = 0;
+    private const short FlagOpen = 1;
+
     private readonly ZoneStore _zoneStore;
     private readonly LobbyConfiguration _lobbyConfig;
     private readonly IFactionDataStore _factionDataStore;
     private readonly ILogger<LobbyZoneManager> _logger;
+    private readonly WarfareModule _module;
     private ITrackingProximity<WarfarePlayer> _zoneCollider;
-    public LobbyZoneManager(ZoneStore zoneStore, LobbyConfiguration lobbyConfig, IFactionDataStore factionDataStore, ILogger<LobbyZoneManager> logger)
+
+    private readonly ITeamSelectorBehavior _behavior;
+
+    internal FlagInfo[] TeamFlags;
+    
+    public LobbyZoneManager(ZoneStore zoneStore, LobbyConfiguration lobbyConfig, IFactionDataStore factionDataStore, ILogger<LobbyZoneManager> logger, WarfareModule module, ITeamSelectorBehavior behavior)
     {
         _zoneStore = zoneStore;
         _lobbyConfig = lobbyConfig;
         _factionDataStore = factionDataStore;
         _logger = logger;
+        _module = module;
+        _behavior = behavior;
     }
 
     public UniTask LoadLevelAsync(CancellationToken token)
@@ -47,6 +61,8 @@ public class LobbyZoneManager : ILevelHostedService
             FactionInfo? faction = _factionDataStore.FindFaction(teamStr);
             if (faction == null)
                 throw new GameConfigurationException("Invalid faction \"" + teamStr + "\"", _lobbyConfig.FilePath);
+
+            ITeamManager<Team> teamManager = _module.GetActiveLayout().TeamManager;
 
             ObjectInfo foundObject = default;
             foreach (ObjectInfo obj in LevelObjectUtility.EnumerateObjects())
@@ -67,10 +83,26 @@ public class LobbyZoneManager : ILevelHostedService
                 throw new GameConfigurationException($"No {asset} objects in the map, unable to find a lobby flag", _lobbyConfig.FilePath);
             }
 
-            flags.Add(new FlagInfo(foundObject, flagId, faction));
+            Team? team = teamManager.AllTeams.FirstOrDefault(x => x.Faction.Equals(faction));
+
+            if (team == null)
+            {
+                throw new GameConfigurationException($"No team registered with the faction {faction.Name}", _lobbyConfig.FilePath);
+            }
+
+            flags.Add(new FlagInfo(flags.Count, foundObject, flagId, team));
         }
 
-        _teamFlags = flags.ToArray();
+        TeamFlags = flags.ToArray();
+
+        TeamInfo[] behaviorTeamInfo = new TeamInfo[TeamFlags.Length];
+        for (int i = 0; i < behaviorTeamInfo.Length; ++i)
+        {
+            ref TeamInfo info = ref behaviorTeamInfo[i];
+            info = new TeamInfo(TeamFlags[i].Team);
+        }
+
+        _behavior.Teams = behaviorTeamInfo;
 
         // find zone
         string lobbyZoneName = _lobbyConfig["Zone"];
@@ -90,6 +122,62 @@ public class LobbyZoneManager : ILevelHostedService
         return UniTask.CompletedTask;
     }
 
+    public void StartJoiningTeam(WarfarePlayer player, int teamIndex)
+    {
+        PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
+        if (teamIndex < 0)
+        {
+            if (!component.IsJoining)
+                return;
+
+            // cancel joining team
+            component.StartJoiningTeam(-1);
+            UpdateAllFlags(player);
+            return;
+        }
+
+        if (component.IsJoining)
+            component.StartJoiningTeam(-1);
+
+        ref FlagInfo flag = ref TeamFlags[teamIndex];
+        component.StartJoiningTeam(teamIndex);
+        if (!player.UnturnedPlayer.quests.getFlag(flag.FlagId, out short v) || v != FlagJoining)
+        {
+            player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, FlagJoining);
+        }
+
+        for (int i = 0; i < TeamFlags.Length; ++i)
+        {
+            if (i == teamIndex)
+                continue;
+
+            ref FlagInfo flag2 = ref TeamFlags[i];
+            player.UnturnedPlayer.quests.sendSetFlag(flag2.FlagId, FlagFull);
+        }
+    }
+
+    private void UpdateAllFlags(WarfarePlayer player)
+    {
+        PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
+        if (component.IsJoining)
+        {
+            for (int i = 0; i < TeamFlags.Length; ++i)
+            {
+                ref FlagInfo flag = ref TeamFlags[i];
+                player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, component.JoiningTeam.Index == i ? FlagJoining : FlagFull);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < TeamFlags.Length; ++i)
+            {
+                ref FlagInfo flag = ref TeamFlags[i];
+                player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, _behavior.CanJoinTeam(i, -1) ? FlagOpen : FlagFull);
+                // todo put barricade in front of player for a frame to refresh the highlight color
+            }
+        }
+    }
+
     private void OnFixedUpdate()
     {
         foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
@@ -105,9 +193,9 @@ public class LobbyZoneManager : ILevelHostedService
             Vector3 playerPos = pos.position;
             Vector3 playerLookVector = pos.forward;
 
-            for (int i = 0; i < _teamFlags.Length; ++i)
+            for (int i = 0; i < TeamFlags.Length; ++i)
             {
-                ref FlagInfo flag = ref _teamFlags[i];
+                ref FlagInfo flag = ref TeamFlags[i];
 
                 Vector3 lookVector = flag.Position - playerPos;
                 
@@ -126,27 +214,23 @@ public class LobbyZoneManager : ILevelHostedService
                 }
             }
 
-            // player's position is closest to this flag
-            ref FlagInfo closestFlag = ref _teamFlags[closestPosIndex];
-
-            // player is closest to looking at this flag
-            ref FlagInfo closestLook = ref _teamFlags[closestLookIndex];
-
             // within 35 degrees of looking at sign
             float angle = Mathf.Acos(closestLookDot);
+            if (angle > 35)
+                closestLookIndex = -1;
 
-            _logger.LogDebug("{0} is closest to {1} and looking at {2}: {3:F2} ({4:F2}).", player, closestFlag.Faction.Name, closestLook.Faction.Name, angle * Mathf.Rad2Deg, closestLookDot);
+            player.Component<PlayerLobbyComponent>().UpdatePositionalData(closestLookIndex, closestPosIndex);
         }
     }
 
-    private void OnObjectExitedLobby(WarfarePlayer obj)
+    private void OnObjectExitedLobby(WarfarePlayer player)
     {
-        _logger.LogInformation("Player left lobby: {0}.", obj);
+        player.Component<PlayerLobbyComponent>().EnterLobby();
     }
 
-    private void OnObjectEnteredLobby(WarfarePlayer obj)
+    private void OnObjectEnteredLobby(WarfarePlayer player)
     {
-        _logger.LogInformation("Player entered lobby: {0}.", obj);
+        player.Component<PlayerLobbyComponent>().ExitLobby();
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)
@@ -172,18 +256,54 @@ public class LobbyZoneManager : ILevelHostedService
         return UniTask.CompletedTask;
     }
 
-    private struct FlagInfo
+    void IEventListener<QuestObjectInteracted>.HandleEvent(QuestObjectInteracted e, IServiceProvider serviceProvider)
+    {
+        for (int i = 0; i < TeamFlags.Length; ++i)
+        {
+            ref FlagInfo flag = ref TeamFlags[i];
+            if (flag.Object.Index != e.ObjectIndex || !flag.Object.Coord.Equals(e.RegionPosition))
+                continue;
+
+            StartJoiningTeam(e.Player, i);
+            break;
+        }
+    }
+
+    UniTask ILayoutStartingListener.HandleLayoutStartingAsync(Layout layout, CancellationToken token)
+    {
+        // update 'Team' objects for the new session
+        ITeamManager<Team> teamManager = _module.GetActiveLayout().TeamManager;
+        for (int i = 0; i < TeamFlags.Length; ++i)
+        {
+            ref FlagInfo flag = ref TeamFlags[i];
+            FactionInfo faction = flag.Team.Faction;
+
+            Team team = teamManager.AllTeams.First(x => x.Faction.Equals(faction));
+            flag.Team = team;
+
+            ref TeamInfo behaviorTeam = ref _behavior.Teams[i];
+            behaviorTeam.Team = team;
+        }
+
+        _behavior.UpdateTeams();
+
+        return UniTask.CompletedTask;
+    }
+
+    public struct FlagInfo
     {
         public readonly ObjectInfo Object;
         public readonly ushort FlagId;
-        public readonly FactionInfo Faction;
         public readonly Vector3 Position;
-        public FlagInfo(ObjectInfo obj, ushort flagId, FactionInfo faction)
+        public readonly int Index;
+        public Team Team;
+        public FlagInfo(int index, ObjectInfo obj, ushort flagId, Team team)
         {
+            Index = index;
             Object = obj;
             FlagId = flagId;
-            Faction = faction;
             Position = obj.Object.transform.position;
+            Team = team;
         }
     }
 }

@@ -84,6 +84,9 @@ public partial class EventDispatcher2 : IHostedService
         UseableConsumeable.onPerformingAid += OnPlayerPerformingAid;
         PlayerEquipment.OnPunch_Global += OnPlayerPunch;
 
+        /* Objects */
+        ObjectManager.OnQuestObjectUsed += ObjectManagerOnQuestObjectUsed;
+
         return UniTask.CompletedTask;
     }
 

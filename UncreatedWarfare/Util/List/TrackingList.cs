@@ -26,7 +26,8 @@ public class TrackingList<T> : IList<T>
         _set = new HashSet<T>(capacity);
     }
 
-    public IEnumerator<T> GetEnumerator() => _list.GetEnumerator();
+    public List<T>.Enumerator GetEnumerator() => _list.GetEnumerator();
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => _list.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => _list.GetEnumerator();
 
@@ -119,9 +120,11 @@ public class ReadOnlyTrackingList<T> : IReadOnlyList<T>
         _list = list;
     }
 
-    public IEnumerator<T> GetEnumerator() => _list.GetEnumerator();
+    public List<T>.Enumerator GetEnumerator() => _list.GetEnumerator();
 
-    IEnumerator IEnumerable.GetEnumerator() => _list.GetEnumerator();
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => ((IEnumerable<T>)_list).GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_list).GetEnumerator();
 
     public int IndexOf(T item) => _list.IndexOf(item);
 
