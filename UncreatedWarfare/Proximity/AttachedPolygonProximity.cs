@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Proximity;
 /// <summary>
 /// A polygon attached to a transform. Scale, position, and rotation are applied.
 /// </summary>
-public class AttachedPolygonProximity : IAttachedPolygonProximity
+public class AttachedPolygonProximity : IAttachedPolygonProximity, IFormattable
 {
     private readonly IPolygonProximity _polygon;
     private float _volume;
@@ -179,5 +179,20 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity
     public object Clone()
     {
         return new AttachedPolygonProximity(AttachmentRoot!, _polygon);
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return _polygon.ToString();
+    }
+
+    /// <inheritdoc />
+    public string ToString(string format, IFormatProvider formatProvider)
+    {
+        if (_polygon is IFormattable f)
+            return f.ToString(format, formatProvider);
+
+        return _polygon.ToString();
     }
 }

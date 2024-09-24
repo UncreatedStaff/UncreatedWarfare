@@ -26,6 +26,8 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "C:\SteamCMD\ste
 		IORedirection = Auto
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UncreatedWarfare.Tests", "UncreatedWarfare.Tests\UncreatedWarfare.Tests.csproj", "{980C6C25-AD28-456D-9D8E-9F48E530BC77}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -70,6 +72,26 @@ Global
 		{9701D4BC-4033-469E-B9B6-E00D2B4AF150}.Release|ARM64.ActiveCfg = Release|x64
 		{9701D4BC-4033-469E-B9B6-E00D2B4AF150}.Release|x64.ActiveCfg = Release|x64
 		{9701D4BC-4033-469E-B9B6-E00D2B4AF150}.Release|x86.ActiveCfg = Release|x64
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|ARM.Build.0 = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|x64.Build.0 = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Debug|x86.Build.0 = Debug|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|ARM.ActiveCfg = Release|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|ARM.Build.0 = Release|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|ARM64.Build.0 = Release|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|x64.ActiveCfg = Release|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|x64.Build.0 = Release|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|x86.ActiveCfg = Release|Any CPU
+		{980C6C25-AD28-456D-9D8E-9F48E530BC77}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -2,35 +2,40 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Proximity;
 
-public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, IDisposable
+public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer>, IDisposable, IFormattable
 {
-    private readonly List<Collider> _colliders = new List<Collider>(8);
+    private readonly List<WarfarePlayer> _players = new List<WarfarePlayer>(8);
     private Collider? _collider;
     private bool _initialized;
     private IProximity _proximity;
     private bool _leaveGameObjectAlive;
     private bool _disposed;
-    private Func<Collider, bool>? _validationCheck;
+    private IPlayerService _playerService;
+    private Func<WarfarePlayer, bool>? _validationCheck;
     public IProximity Proximity => _proximity;
 
-    public event Action<Collider>? OnObjectEntered;
-    public event Action<Collider>? OnObjectExited;
+    public event Action<WarfarePlayer>? OnObjectEntered;
+    public event Action<WarfarePlayer>? OnObjectExited;
 
-    public IReadOnlyList<Collider> ActiveObjects { get; }
+    public IReadOnlyList<WarfarePlayer> ActiveObjects { get; }
 
     public ColliderProximity()
     {
-        ActiveObjects = new ReadOnlyCollection<Collider>(_colliders);
+        ActiveObjects = new ReadOnlyCollection<WarfarePlayer>(_players);
     }
 
     public void Initialize(IProximity proximity,
+        IPlayerService playerService,
         bool leaveGameObjectAlive,
         Action<Collider>? colliderSettings = null,
-        Func<Collider, bool>? validationCheck = null
+        Func<WarfarePlayer, bool>? validationCheck = null
     )
     {
         GameThread.AssertCurrent();
@@ -40,6 +45,7 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, ID
 
         _initialized = true;
         _leaveGameObjectAlive = leaveGameObjectAlive;
+        _playerService = playerService;
 
         _proximity = proximity;
         _validationCheck = validationCheck;
@@ -97,19 +103,35 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, ID
     }
 
     [UsedImplicitly]
+    private void FixedUpdate()
+    {
+        for (int i = _players.Count - 1; i >= 0; --i)
+        {
+            WarfarePlayer player = _players[i];
+            if (player.IsOnline && TestPoint(player.Position))
+                continue;
+            
+            RemoveObject(i);
+        }
+    }
+
+    [UsedImplicitly]
     private void OnTriggerStay(Collider collider)
     {
-        Vector3 position = collider.transform.position;
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(DamageTool.getPlayer(collider.transform));
+        if (player == null)
+            return;
+
+        Vector3 position = player.Position;
         bool foundCollider = false;
-        for (int i = 0; i < _colliders.Count; ++i)
+        for (int i = 0; i < _players.Count; ++i)
         {
-            if (collider != _colliders[i])
+            if (!player.Equals(_players[i]))
                 continue;
 
-            if (!TestPoint(position) || _validationCheck != null && !_validationCheck(collider))
+            if (!TestPoint(position))
             {
-                _colliders.RemoveAt(i);
-                OnObjectExited?.Invoke(collider);
+                RemoveObject(i);
                 return;
             }
 
@@ -117,35 +139,52 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, ID
             break;
         }
 
-        if (foundCollider || !TestPoint(position) || _validationCheck != null && !_validationCheck(collider))
+        if (foundCollider || !TestPoint(position) || _validationCheck != null && !_validationCheck(player))
             return;
 
-        _colliders.Add(collider);
-        OnObjectEntered?.Invoke(collider);
+        AddObject(player);
+    }
+
+    private void RemoveObject(int index)
+    {
+        WarfarePlayer player = _players[index];
+        _players.RemoveAt(index);
+        OnObjectExited?.Invoke(player);
+        L.Log($"Player left in collider ({string.Join(", ", ActiveObjects)}).");
+    }
+
+    private void AddObject(WarfarePlayer value)
+    {
+        _players.Add(value);
+        OnObjectEntered?.Invoke(value);
+        L.Log($"Player entered in collider ({string.Join(", ", ActiveObjects)})");
     }
 
     [UsedImplicitly]
     private void OnTriggerExit(Collider collider)
     {
-        for (int i = 0; i < _colliders.Count; ++i)
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(DamageTool.getPlayer(collider.transform));
+        if (player == null)
+            return;
+
+        for (int i = 0; i < _players.Count; ++i)
         {
-            if (collider != _colliders[i])
+            if (player.Equals(_players[i]))
                 continue;
 
-            _colliders.RemoveAt(i);
-            OnObjectExited?.Invoke(collider);
+            RemoveObject(i);
             break;
         }
     }
 
-    public bool Contains(Collider obj)
+    public bool Contains(WarfarePlayer obj)
     {
         if (obj == null)
             return false;
 
-        for (int i = 0; i < _colliders.Count; ++i)
+        for (int i = 0; i < _players.Count; ++i)
         {
-            if (ReferenceEquals(obj, _colliders[i]))
+            if (obj.Equals(_players[i]))
                 return true;
         }
 
@@ -186,6 +225,9 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, ID
         if (_disposed)
             return;
 
+        if (_proximity is IDisposable disp)
+            disp.Dispose();
+
         _disposed = true;
         
         if (_leaveGameObjectAlive)
@@ -218,4 +260,19 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<Collider>, ID
     float IShapeVolume.surfaceArea => _proximity.surfaceArea;
     bool IShapeVolume.containsPoint(Vector3 point) => _proximity.containsPoint(point);
     object ICloneable.Clone() => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return _proximity.ToString();
+    }
+
+    /// <inheritdoc />
+    public string ToString(string format, IFormatProvider formatProvider)
+    {
+        if (_proximity is IFormattable f)
+            return f.ToString(format, formatProvider);
+
+        return _proximity.ToString();
+    }
 }

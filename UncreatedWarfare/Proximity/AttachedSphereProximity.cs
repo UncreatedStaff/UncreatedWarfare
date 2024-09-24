@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Proximity;
 /// <summary>
 /// A sphere attached to a transform. Scale and position are applied.
 /// </summary>
-public class AttachedSphereProximity : IAttachedSphereProximity
+public class AttachedSphereProximity : IAttachedSphereProximity, IFormattable
 {
     private readonly ISphereProximity _sphere;
 
@@ -128,5 +128,20 @@ public class AttachedSphereProximity : IAttachedSphereProximity
     public object Clone()
     {
         return new AttachedSphereProximity(AttachmentRoot!, _sphere);
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return _sphere.ToString();
+    }
+
+    /// <inheritdoc />
+    public string ToString(string format, IFormatProvider formatProvider)
+    {
+        if (_sphere is IFormattable f)
+            return f.ToString(format, formatProvider);
+
+        return _sphere.ToString();
     }
 }

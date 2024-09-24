@@ -6,8 +6,8 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Proximity;
 
-/// <inheritdoc />
-public class PolygonProximity : IPolygonProximity
+/// <inheritdoc cref="IPolygonProximity" />
+public class PolygonProximity : IPolygonProximity, IFormattable
 {
     private readonly Bounds _bounds;
     private readonly float _minHeight, _maxHeight;
@@ -248,5 +248,20 @@ public class PolygonProximity : IPolygonProximity
     public object Clone()
     {
         return new PolygonProximity(_bounds, _minHeight, _maxHeight, _points, Lines, _pointsReadOnly, surfaceArea, internalVolume);
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return ToString(null, null);
+    }
+
+    /// <inheritdoc />
+    public string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        Vector3 center = _bounds.center;
+        Vector3 extents = _bounds.extents;
+
+        return $"n = {_points.Length.ToString(format, formatProvider)}, b = ({(center.x - extents.x).ToString(format, formatProvider)}:{(center.x + extents.x).ToString(format, formatProvider)}, {(center.y - extents.y).ToString(format, formatProvider)}:{(center.y + extents.y).ToString(format, formatProvider)}, {(center.z - extents.z).ToString(format, formatProvider)}:{(center.z + extents.z).ToString(format, formatProvider)})";
     }
 }

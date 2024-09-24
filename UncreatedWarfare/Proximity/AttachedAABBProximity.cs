@@ -1,4 +1,5 @@
-﻿using SDG.Framework.Utilities;
+﻿using System;
+using SDG.Framework.Utilities;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Proximity;
@@ -6,7 +7,7 @@ namespace Uncreated.Warfare.Proximity;
 /// <summary>
 /// An axis-aligned bounding box attached to a transform. Scale, position, and rotation are applied.
 /// </summary>
-public class AttachedAABBProximity : IAttachedAABBProximity
+public class AttachedAABBProximity : IAttachedAABBProximity, IFormattable
 {
     private readonly IAABBProximity _aabb;
 
@@ -149,5 +150,20 @@ public class AttachedAABBProximity : IAttachedAABBProximity
     public object Clone()
     {
         return new AttachedAABBProximity(AttachmentRoot!, _aabb);
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return _aabb.ToString();
+    }
+
+    /// <inheritdoc />
+    public string ToString(string format, IFormatProvider formatProvider)
+    {
+        if (_aabb is IFormattable f)
+            return f.ToString(format, formatProvider);
+
+        return _aabb.ToString();
     }
 }

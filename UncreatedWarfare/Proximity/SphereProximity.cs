@@ -2,8 +2,8 @@
 
 namespace Uncreated.Warfare.Proximity;
 
-/// <inheritdoc />
-public class SphereProximity : ISphereProximity
+/// <inheritdoc cref="ISphereProximity" />
+public class SphereProximity : ISphereProximity, IFormattable
 {
     private readonly BoundingSphere _sphere;
     private readonly Bounds _bounds;
@@ -107,5 +107,20 @@ public class SphereProximity : ISphereProximity
     public object Clone()
     {
         return new SphereProximity(_sphere, _bounds);
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return ToString(null, null);
+    }
+
+    /// <inheritdoc />
+    public string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        ref readonly Vector3 center = ref _sphere.position;
+        float r = _sphere.radius;
+
+        return $"r = {r}, b = ({(center.x - r).ToString(format, formatProvider)}:{(center.x + r).ToString(format, formatProvider)}, {(center.y - r).ToString(format, formatProvider)}:{(center.y + r).ToString(format, formatProvider)}, {(center.z - r).ToString(format, formatProvider)}:{(center.z + r).ToString(format, formatProvider)})";
     }
 }

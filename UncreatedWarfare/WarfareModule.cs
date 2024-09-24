@@ -31,6 +31,7 @@ using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
@@ -391,16 +392,23 @@ public sealed class WarfareModule : IModuleNexus
             .As<IEventListenerProvider>()
             .SingleInstance();
 
-        bldr.RegisterType<FactionDataStore>()
-            .AsImplementedInterfaces()
-            .SingleInstance();
-
         bldr.RegisterType<DeathTracker>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         bldr.RegisterType<DeathMessageResolver>()
             .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<FactionDataStore>()
+            .AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<LobbyZoneManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<LobbyConfiguration>()
             .SingleInstance();
 
         // Kits

@@ -112,6 +112,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
 
         Locale = new WarfarePlayerLocale(this, new LanguagePreferences { Steam64 = Steam64.m_SteamID }, serviceProvider);
 
+        _componentsArray = components;
         Components = new ReadOnlyCollection<IPlayerComponent>(components);
 
         Team = Team.NoTeam;
@@ -133,9 +134,9 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     [Pure]
     public TComponentType Component<TComponentType>() where TComponentType : IPlayerComponent
     {
-        for (int i = 0; i < Components.Count; i++)
+        for (int i = 0; i < _componentsArray.Length; i++)
         {
-            IPlayerComponent component = Components[i];
+            IPlayerComponent component = _componentsArray[i];
             if (component is TComponentType comp)
                 return comp;
         }
@@ -149,9 +150,9 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     [Pure]
     public TComponentType? ComponentOrNull<TComponentType>() where TComponentType : IPlayerComponent
     {
-        for (int i = 0; i < Components.Count; i++)
+        for (int i = 0; i < _componentsArray.Length; i++)
         {
-            IPlayerComponent component = Components[i];
+            IPlayerComponent component = _componentsArray[i];
             if (component is TComponentType comp)
                 return comp;
         }

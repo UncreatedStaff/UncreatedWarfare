@@ -19,7 +19,8 @@ public static class LevelObjectUtility
     {
         GameThread.AssertCurrent();
 
-        return new ObjectIterator();
+        byte pos = (byte)(Regions.WORLD_SIZE / 2);
+        return new ObjectIterator(pos, pos);
     }
 
     /// <summary>

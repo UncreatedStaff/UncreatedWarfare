@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Globalization;
 
 namespace Uncreated.Warfare.Proximity;
 
-/// <inheritdoc />
-public class AACylinderProximity : IAACylinderProximity
+/// <inheritdoc cref="IAACylinderProximity" />
+public class AACylinderProximity : IAACylinderProximity, IFormattable
 {
     private readonly Bounds _bounds;
     private readonly SnapAxis _axis;
@@ -190,5 +191,21 @@ public class AACylinderProximity : IAACylinderProximity
     public object Clone()
     {
         return new AACylinderProximity(_axis, _radius, _height, _center, _bounds);
+    }
+
+    /// <inheritdoc />
+    public override string ToString() => ToString(null, null);
+
+    /// <inheritdoc />
+    public string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        format ??= "F2";
+        formatProvider ??= CultureInfo.InvariantCulture;
+        return _axis switch
+        {
+            SnapAxis.X => $"r = {_radius}, b = ({_center.x.ToString(format, formatProvider)}, {(_center.y - _radius).ToString(format, formatProvider)}:{(_center.y + _radius).ToString(format, formatProvider)}, {(_center.z - _radius).ToString(format, formatProvider)}:{(_center.z + _radius).ToString(format, formatProvider)})",
+            SnapAxis.Y => $"r = {_radius}, b = ({(_center.x - _radius).ToString(format, formatProvider)}:{(_center.x + _radius).ToString(format, formatProvider)}, {_center.y.ToString(format, formatProvider)}, {(_center.z - _radius).ToString(format, formatProvider)}:{(_center.z + _radius).ToString(format, formatProvider)})",
+            _          => $"r = {_radius}, b = ({(_center.x - _radius).ToString(format, formatProvider)}:{(_center.x + _radius).ToString(format, formatProvider)}, {(_center.y - _radius).ToString(format, formatProvider)}:{(_center.y + _radius).ToString(format, formatProvider)}, {_center.z.ToString(format, formatProvider)})"
+        };
     }
 }

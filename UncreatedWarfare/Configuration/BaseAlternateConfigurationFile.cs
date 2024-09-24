@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using DanielWillett.ReflectionTools;
 
 namespace Uncreated.Warfare.Configuration;
 
@@ -33,9 +33,18 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
     /// <summary>
     /// Create a new configuration file reference.
     /// </summary>
-    protected BaseAlternateConfigurationFile(IServiceProvider serviceProvider, string fileName)
+    /// <param name="mapSpecific">Will go in a "Maps/[map name]/" folder.</param>
+    protected BaseAlternateConfigurationFile(IServiceProvider serviceProvider, string fileName, bool mapSpecific = false)
     {
-        FilePath = Path.Combine(serviceProvider.GetRequiredService<WarfareModule>().HomeDirectory, fileName);
+        string homeDir = serviceProvider.GetRequiredService<WarfareModule>().HomeDirectory;
+
+        if (mapSpecific)
+        {
+            string mapName = ConfigurationHelper.CleanFileName(Provider.map);
+            homeDir = Path.Combine(homeDir, "Maps", mapName);
+        }
+
+        FilePath = Path.Combine(homeDir, fileName);
 
         if (!File.Exists(FilePath))
         {

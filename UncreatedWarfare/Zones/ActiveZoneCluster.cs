@@ -105,7 +105,7 @@ public class ActiveZoneCluster : IDisposable
 
         for (int i = 0; i < zones.Length; ++i)
         {
-            if (zones[i].Proximity is not ITrackingProximity<Collider> proximity)
+            if (zones[i].Proximity is not ITrackingProximity<WarfarePlayer> proximity)
                 continue;
 
             proximity.OnObjectEntered += OnObjectEnteredAnyZone;
@@ -113,21 +113,15 @@ public class ActiveZoneCluster : IDisposable
         }
     }
 
-    private void OnObjectExitedAnyZone(Collider obj)
+    private void OnObjectExitedAnyZone(WarfarePlayer player)
     {
-        Player? nativePlayer = DamageTool.getPlayer(obj.transform);
-        if (nativePlayer == null)
-            return;
-
-        WarfarePlayer player = _playerService.GetOnlinePlayer(nativePlayer);
-
         // check to make sure they're not already in another part of the cluster
         if (_zones.Length > 0)
         {
             bool isInAnotherZone = false;
             for (int i = 0; i < _zones.Length; ++i)
             {
-                if (_zones[i].Proximity is not ITrackingProximity<Collider> proximity || !proximity.Contains(obj))
+                if (_zones[i].Proximity is not ITrackingProximity<WarfarePlayer> proximity || !proximity.Contains(player))
                     continue;
 
                 isInAnotherZone = true;
@@ -144,14 +138,8 @@ public class ActiveZoneCluster : IDisposable
         _players.Remove(player);
     }
 
-    private void OnObjectEnteredAnyZone(Collider obj)
+    private void OnObjectEnteredAnyZone(WarfarePlayer player)
     {
-        Player? nativePlayer = DamageTool.getPlayer(obj.transform);
-        if (nativePlayer == null)
-            return;
-
-        WarfarePlayer player = _playerService.GetOnlinePlayer(nativePlayer);
-
         _players.AddIfNotExists(player);
     }
 
@@ -217,7 +205,7 @@ public class ActiveZoneCluster : IDisposable
         _disposed = true;
         for (int i = 0; i < _zones.Length; ++i)
         {
-            if (_zones[i].Proximity is IEventBasedProximity<Collider> proximity)
+            if (_zones[i].Proximity is IEventBasedProximity<WarfarePlayer> proximity)
             {
                 proximity.OnObjectEntered -= OnObjectEnteredAnyZone;
                 proximity.OnObjectExited -= OnObjectExitedAnyZone;

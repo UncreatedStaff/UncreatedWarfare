@@ -1,7 +1,10 @@
-﻿namespace Uncreated.Warfare.Proximity;
+﻿using System;
+using System.Globalization;
 
-/// <inheritdoc />
-public class AABBProximity : IAABBProximity
+namespace Uncreated.Warfare.Proximity;
+
+/// <inheritdoc cref="IAABBProximity" />
+public class AABBProximity : IAABBProximity, IFormattable
 {
     private Bounds _bounds;
 
@@ -49,27 +52,42 @@ public class AABBProximity : IAABBProximity
     /// <inheritdoc />
     public bool TestPoint(Vector3 position)
     {
-        Vector3 size = _bounds.size;
-        Vector3 min = _bounds.min;
+        Vector3 extents = _bounds.extents;
+        Vector3 center = _bounds.center;
 
-        return (float.IsInfinity(size.x) || position.x > min.x && position.x < min.x + size.x)
-            && (float.IsInfinity(size.y) || position.y > min.y && position.y < min.y + size.y)
-            && (float.IsInfinity(size.z) || position.z > min.z && position.z < min.z + size.z);
+        return (!float.IsFinite(extents.x) || position.x >= center.x - extents.x && position.x <= center.x + extents.x)
+            && (!float.IsFinite(extents.y) || position.y >= center.y - extents.y && position.y <= center.y + extents.y)
+            && (!float.IsFinite(extents.z) || position.z >= center.z - extents.z && position.z <= center.z + extents.z);
     }
 
     /// <inheritdoc />
     public bool TestPoint(Vector2 position)
     {
-        Vector3 size = _bounds.size;
-        Vector3 min = _bounds.min;
+        Vector3 extents = _bounds.extents;
+        Vector3 center = _bounds.center;
 
-        return (float.IsInfinity(size.x) || position.x > min.x && position.x < min.x + size.x)
-            && (float.IsInfinity(size.z) || position.y > min.z && position.y < min.z + size.z);
+        return (!float.IsFinite(extents.x) || position.x >= center.x - extents.x && position.x <= center.x + extents.x)
+            && (!float.IsFinite(extents.z) || position.y >= center.z - extents.z && position.y <= center.z + extents.z);
     }
 
     /// <inheritdoc />
     public object Clone()
     {
         return new AABBProximity(_bounds);
+    }
+
+    /// <inheritdoc />
+    public override string ToString() => ToString(null, null);
+
+    /// <inheritdoc />
+    public string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        format ??= "F2";
+        formatProvider ??= CultureInfo.InvariantCulture;
+
+        Vector3 extents = _bounds.extents;
+        Vector3 center = _bounds.center;
+
+        return $"({(center.x - extents.x).ToString(format, formatProvider)}:{(center.x + extents.x).ToString(format, formatProvider)}, {(center.y - extents.y).ToString(format, formatProvider)}:{(center.y + extents.y).ToString(format, formatProvider)}, {(center.z - extents.z).ToString(format, formatProvider)}:{(center.z + extents.z).ToString(format, formatProvider)})";
     }
 }

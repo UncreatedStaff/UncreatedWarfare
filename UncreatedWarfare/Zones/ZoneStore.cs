@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Teams;
@@ -17,6 +19,7 @@ public class ZoneStore : IHostedService
 {
     private readonly List<IZoneProvider> _zoneProviders;
     private int _init;
+    private readonly IPlayerService _playerService;
     private readonly ILogger<ZoneStore> _logger;
     private bool _lvlEventSub;
     private UniTask _loadTask;
@@ -37,9 +40,10 @@ public class ZoneStore : IHostedService
     /// </summary>
     public bool IsGlobal { get; }
 
-    public ZoneStore(IEnumerable<IZoneProvider> zoneProviders, ILogger<ZoneStore> logger, bool isGlobal)
+    public ZoneStore(IEnumerable<IZoneProvider> zoneProviders, IPlayerService playerService, ILogger<ZoneStore> logger, bool isGlobal)
     {
         _zoneProviders = zoneProviders.ToList();
+        _playerService = playerService;
         _logger = logger;
         IsGlobal = isGlobal;
     }
@@ -105,7 +109,7 @@ public class ZoneStore : IHostedService
     /// <returns>The proximity, which has collision events.</returns>
     /// <exception cref="ArgumentException">This zone doesn't have a valid shape or is missing the associated data object.</exception>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public ITrackingProximity<Collider> CreateColliderForZone(Zone zone)
+    public ITrackingProximity<WarfarePlayer> CreateColliderForZone(Zone zone)
     {
         GameThread.AssertCurrent();
 
@@ -126,8 +130,8 @@ public class ZoneStore : IHostedService
         ColliderProximity prox = obj.AddComponent<ColliderProximity>();
         prox.Initialize(
             CreateProximityForZone(zone),
-            leaveGameObjectAlive: false,
-            validationCheck: collider => collider.transform.CompareTag("Player")
+            _playerService,
+            leaveGameObjectAlive: false
         );
 
         return prox;
@@ -141,28 +145,36 @@ public class ZoneStore : IHostedService
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public IProximity CreateProximityForZone(Zone zone)
     {
+        IProximity prox;
         switch (zone.Shape)
         {
             case ZoneShape.AABB when zone.AABBInfo is { } rect:
-                return new AABBProximity(zone.Center, rect.Size);
+                prox = new AABBProximity(zone.Center, rect.Size);
+                break;
 
             case ZoneShape.Cylinder when zone.CircleInfo is { } circle:
                 float minHeight = circle.MinimumHeight ?? -Landscape.TILE_HEIGHT / 2f;
                 float maxHeight = circle.MaximumHeight ?? Landscape.TILE_HEIGHT / 2f;
-                return new AACylinderProximity(zone.Center with { y = minHeight + maxHeight / 2f }, circle.Radius, maxHeight - minHeight);
+                prox = new AACylinderProximity(zone.Center with { y = minHeight + maxHeight / 2f }, circle.Radius, maxHeight - minHeight);
+                break;
 
             case ZoneShape.Sphere when zone.CircleInfo is { } circle:
-                return new SphereProximity(zone.Center, circle.Radius);
+                prox = new SphereProximity(zone.Center, circle.Radius);
+                break;
 
             case ZoneShape.Polygon when zone.PolygonInfo is { } polygon:
                 Vector2[] points = polygon.Points;
                 Vector2[] newPoints = new Vector2[points.Length];
                 Array.Copy(points, newPoints, points.Length);
-                return new PolygonProximity(newPoints, polygon.MinimumHeight, polygon.MaximumHeight);
+                prox = new PolygonProximity(newPoints, polygon.MinimumHeight, polygon.MaximumHeight);
+                break;
 
             default:
                 throw new ArgumentException("This zone doesn't have a valid shape or is missing the associated data object.", nameof(zone));
         }
+
+        _logger.LogInformation("Created {0} for {1}: {2}.", prox.GetType(), zone, prox.ToString());
+        return prox;
     }
 
     /// <summary>

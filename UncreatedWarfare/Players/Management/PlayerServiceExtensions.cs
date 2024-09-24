@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
@@ -100,7 +100,7 @@ public static class PlayerServiceExtensions
     /// Get a player if they're online, otherwise <see langword="null"/>. Not to be invoked from any thread other than the game thread.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, Player? player)
+    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, [NotNullWhen(true)] Player? player)
     {
         return player == null ? null : playerService.GetOnlinePlayerOrNull(player.channel.owner.playerID.steamID.m_SteamID);
     }
@@ -109,7 +109,7 @@ public static class PlayerServiceExtensions
     /// Get a player if they're online, otherwise <see langword="null"/>. Not to be invoked from any thread other than the game thread.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, PlayerCaller? player)
+    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, [NotNullWhen(true)] PlayerCaller? player)
     {
         return player == null ? null : playerService.GetOnlinePlayerOrNull(player.channel.owner.playerID.steamID.m_SteamID);
     }
@@ -118,7 +118,7 @@ public static class PlayerServiceExtensions
     /// Get a player if they're online, otherwise <see langword="null"/>. Not to be invoked from any thread other than the game thread.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, SteamPlayer? steamPlayer)
+    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, [NotNullWhen(true)] SteamPlayer? steamPlayer)
     {
         return steamPlayer == null ? null : playerService.GetOnlinePlayerOrNull(steamPlayer.playerID.steamID.m_SteamID);
     }
@@ -171,7 +171,7 @@ public static class PlayerServiceExtensions
     /// <summary>
     /// Get a player if they're online, otherwise <see langword="null"/>.
     /// </summary>
-    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, Player? player)
+    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, [NotNullWhen(true)] Player? player)
     {
         return player == null ? null : playerService.GetOnlinePlayerOrNullThreadSafe(player.channel.owner.playerID.steamID.m_SteamID);
     }
@@ -179,7 +179,7 @@ public static class PlayerServiceExtensions
     /// <summary>
     /// Get a player if they're online, otherwise <see langword="null"/>.
     /// </summary>
-    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, PlayerCaller? player)
+    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, [NotNullWhen(true)] PlayerCaller? player)
     {
         return player == null ? null : playerService.GetOnlinePlayerOrNullThreadSafe(player.channel.owner.playerID.steamID.m_SteamID);
     }
@@ -187,7 +187,7 @@ public static class PlayerServiceExtensions
     /// <summary>
     /// Get a player if they're online, otherwise <see langword="null"/>.
     /// </summary>
-    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, SteamPlayer? steamPlayer)
+    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, [NotNullWhen(true)] SteamPlayer? steamPlayer)
     {
         return steamPlayer == null ? null : playerService.GetOnlinePlayerOrNullThreadSafe(steamPlayer.playerID.steamID.m_SteamID);
     }
@@ -203,7 +203,7 @@ public static class PlayerServiceExtensions
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, string searchTerm, IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, string searchTerm, [InstantHandle] IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         GameThread.AssertCurrent();
 
@@ -235,7 +235,7 @@ public static class PlayerServiceExtensions
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, string searchTerm, IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, string searchTerm, [InstantHandle] IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         if (GameThread.IsCurrent)
         {
@@ -270,7 +270,7 @@ public static class PlayerServiceExtensions
         return SearchPlayers(players, searchTerm, preferredName);
     }
 
-    private static WarfarePlayer? SearchPlayers(IEnumerable<WarfarePlayer> players, ReadOnlySpan<char> searchTerm, PlayerNameType preferredName)
+    private static WarfarePlayer? SearchPlayers([InstantHandle] IEnumerable<WarfarePlayer> players, ReadOnlySpan<char> searchTerm, PlayerNameType preferredName)
     {
         using IEnumerator<WarfarePlayer> enumerator = players.GetEnumerator();
 
@@ -298,7 +298,7 @@ public static class PlayerServiceExtensions
         return null;
     }
 
-    private static WarfarePlayer? SearchPlayersByNameType(IEnumerator<WarfarePlayer> enumerator, ReadOnlySpan<char> searchTerm, int level, PlayerNameType nameType)
+    private static WarfarePlayer? SearchPlayersByNameType([InstantHandle] IEnumerator<WarfarePlayer> enumerator, ReadOnlySpan<char> searchTerm, int level, PlayerNameType nameType)
     {
         switch (level)
         {

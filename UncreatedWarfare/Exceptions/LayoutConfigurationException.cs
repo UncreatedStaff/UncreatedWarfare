@@ -1,5 +1,4 @@
 ﻿using DanielWillett.ReflectionTools;
-using System;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 
@@ -8,7 +7,7 @@ namespace Uncreated.Warfare.Exceptions;
 /// <summary>
 /// Thrown when a component in a layout has invalid configuration data.
 /// </summary>
-public class LayoutConfigurationException : Exception
+public class LayoutConfigurationException : GameConfigurationException
 {
     public object? Component { get; }
 

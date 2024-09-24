@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Proximity;
 /// <summary>
 /// An axis-aligned cylinder attached to a transform. Scale, position, and rotation are applied.
 /// </summary>
-public class AttachedAACylinderProximity : IAttachedAACylinderProximity
+public class AttachedAACylinderProximity : IAttachedAACylinderProximity, IFormattable
 {
     private readonly IAACylinderProximity _cylinder;
 
@@ -165,5 +165,20 @@ public class AttachedAACylinderProximity : IAttachedAACylinderProximity
     public object Clone()
     {
         return new AttachedAACylinderProximity(AttachmentRoot!, _cylinder);
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return _cylinder.ToString();
+    }
+
+    /// <inheritdoc />
+    public string ToString(string format, IFormatProvider formatProvider)
+    {
+        if (_cylinder is IFormattable f)
+            return f.ToString(format, formatProvider);
+
+        return _cylinder.ToString();
     }
 }

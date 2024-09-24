@@ -6,7 +6,7 @@ namespace Uncreated.Warfare.Exceptions;
 /// <summary>
 /// Thrown when configuration data for a quest is invalid.
 /// </summary>
-public class QuestConfigurationException : Exception
+public class QuestConfigurationException : GameConfigurationException
 {
     public Type? QuestTemplateType { get; }
 

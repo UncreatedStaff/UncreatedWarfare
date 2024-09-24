@@ -60,5 +60,17 @@ public sealed class NullProximity : IAttachableProximity<IAttachedProximity>, IN
 
         /// <inheritdoc />
         float IProximity.Area => 0f;
+
+        /// <inheritdoc />
+        public override string ToString()
+        {
+            return "Null";
+        }
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return "Null";
     }
 }

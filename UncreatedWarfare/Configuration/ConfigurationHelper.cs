@@ -14,6 +14,17 @@ public static class ConfigurationHelper
 {
     private static readonly IFileProvider FileProvider = new PhysicalFileProvider(Environment.CurrentDirectory, ExclusionFilters.Sensitive);
 
+    private static readonly HashSet<string> InvalidFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",                                                 // 1, 2, 3 superscripts
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "COM\u00B9", "COM\u00B2", "COM\u00B3",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "LPT\u00B9", "LPT\u00B2", "LPT\u00B3",
+        ".", ".."
+    };
+
+    private static bool IsInvalidFileName(string name) => InvalidFileNames.Contains(name) || name.EndsWith(' ') || name.EndsWith('.');
+    private static bool IsInvalidFileNameChar(char c) => c <= 31 || c is '/' or '\\' or '<' or '>' or ':' or '"' or '|' or '?' or '*';
+
     /// <summary>
     /// An empty configuration section.
     /// </summary>
@@ -31,7 +42,7 @@ public static class ConfigurationHelper
         AddJsonOrYamlFile(configBuilder, path, optional: false, reloadOnChange: true);
 
         // add map
-        string mapName = CleanMapNameForFileName(Provider.map);
+        string mapName = CleanFileName(Provider.map);
         string rootPath = Path.Join(Path.GetDirectoryName(path.AsSpan()), Path.GetFileNameWithoutExtension(path.AsSpan()));
 
         AddJsonOrYamlFile(configBuilder, $"{rootPath}.{mapName}.{ext}", optional: true, reloadOnChange: true);
@@ -106,20 +117,45 @@ public static class ConfigurationHelper
             throw new ArgumentException("Must provide a valid extension (.yml or .json).", nameof(path));
     }
 
+    /// <summary>
+    /// Fixes a file name (without its extension) to remove invalid characters.
+    /// </summary>
     [return: NotNullIfNotNull(nameof(mapName))]
-    private static string? CleanMapNameForFileName(string? mapName)
+    public static string? CleanFileName(string? mapName)
     {
-        return mapName?
-            .Replace("\0", string.Empty)
-            .Replace(@"\", string.Empty)
-            .Replace("/",  string.Empty)
-            .Replace(":",  string.Empty)
-            .Replace("*",  string.Empty)
-            .Replace("?",  string.Empty)
-            .Replace("|",  string.Empty)
-            .Replace("<",  string.Empty)
-            .Replace(' ', '_')
-            .Replace(">",  string.Empty);
+        if (mapName == null)
+            return null;
+        
+        if (IsInvalidFileName(mapName))
+        {
+            if (mapName[^1] is ' ' or '.')
+            {
+                return mapName.Length == 1 ? "_" : mapName[..^1];
+            }
+
+            return "_" + mapName;
+        }
+
+        bool anyChanges = false;
+        Span<char> newName = stackalloc char[mapName.Length];
+        int index = 0;
+        for (int i = 0; i < mapName.Length; ++i)
+        {
+            char c = mapName[i];
+            if (IsInvalidFileNameChar(c))
+            {
+                anyChanges = true;
+                continue;
+            }
+
+            newName[index] = c;
+            ++index;
+        }
+
+        if (!anyChanges)
+            return mapName;
+
+        return index == 0 ? "_" : new string(newName[..index]);
     }
     private class EmptyConfigurationSection : IConfigurationSection, IChangeToken, IDisposable
     {

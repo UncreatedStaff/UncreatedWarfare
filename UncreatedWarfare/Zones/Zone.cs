@@ -173,6 +173,11 @@ public class Zone : IDeployable
             _ => float.NaN
         };
     }
+
+    public override string ToString()
+    {
+        return $"[{Shape}] {Name}";
+    }
 }
 
 public class ZoneCircleInfo

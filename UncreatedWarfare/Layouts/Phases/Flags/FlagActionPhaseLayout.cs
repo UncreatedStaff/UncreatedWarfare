@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Exceptions;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 using Uncreated.Warfare.Zones.Pathing;
@@ -14,6 +15,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
 {
     private readonly ILogger<FlagActionPhaseLayout> _logger;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IPlayerService _playerService;
     private IList<Zone>? _pathingResult;
     private ZoneStore _zoneStore;
 
@@ -37,10 +39,11 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
     /// <inheritdoc />
     public ActiveZoneCluster EndingTeam { get; private set; }
 
-    public FlagActionPhaseLayout(ILogger<FlagActionPhaseLayout> logger, IServiceProvider serviceProvider, IConfiguration config)
+    public FlagActionPhaseLayout(ILogger<FlagActionPhaseLayout> logger, IServiceProvider serviceProvider, IPlayerService playerService, IConfiguration config)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _playerService = playerService;
         Configuration = config;
     }
 
@@ -62,7 +65,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
             zoneProviders.Add((IZoneProvider)ReflectionUtility.CreateInstanceFixed(_serviceProvider, zoneProviderType, [ this ]));
         }
 
-        _zoneStore = new ZoneStore(zoneProviders, _serviceProvider.GetRequiredService<ILogger<ZoneStore>>(), isGlobal: false);
+        _zoneStore = new ZoneStore(zoneProviders, _playerService, _serviceProvider.GetRequiredService<ILogger<ZoneStore>>(), isGlobal: false);
 
         // load pathing provider
         IConfigurationSection config = Configuration.GetSection("PathingData");

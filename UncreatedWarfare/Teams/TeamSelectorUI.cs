@@ -7,7 +7,6 @@ using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players.Saves;
 
 namespace Uncreated.Warfare.Teams;
 
