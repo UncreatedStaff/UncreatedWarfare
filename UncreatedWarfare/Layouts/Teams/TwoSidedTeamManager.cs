@@ -6,10 +6,14 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Stripe;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 
@@ -23,6 +27,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     private readonly ILogger<TwoSidedTeamManager> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly Team[] _teams = new Team[2];
+    private readonly EventDispatcher2 _eventDispatcher;
     private int _blufor;
     private int _opfor;
 
@@ -64,12 +69,44 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         _logger = logger;
         _serviceProvider = serviceProvider;
         AllTeams = new ReadOnlyCollection<Team>(_teams);
+
+        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
     }
 
     /// <inheritdoc />
     public Team GetTeam(CSteamID groupId)
     {
         return Array.Find(_teams, team => team.GroupId.m_SteamID == groupId.m_SteamID);
+    }
+
+    /// <inheritdoc />
+    public async UniTask JoinTeamAsync(WarfarePlayer player, Team team, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
+        team ??= Team.NoTeam;
+        Team oldTeam = player.Team;
+
+        if (oldTeam == team)
+            return;
+
+        if (!team.IsValid)
+        {
+            player.UnturnedPlayer.quests.leaveGroup(force: true);
+        }
+        else if (!player.UnturnedPlayer.quests.ServerAssignToGroup(team.GroupId, EPlayerGroupRank.MEMBER, bypassMemberLimit: true))
+        {
+            throw new ArgumentException($"Group for team {team.Faction.Name} doesn't exist.", nameof(team));
+        }
+
+        PlayerTeamChanged args = new PlayerTeamChanged
+        {
+            GroupId = team.GroupId,
+            Team = team,
+            Player = player,
+            OldTeam = oldTeam
+        };
+
+        _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
     }
 
     /// <inheritdoc />

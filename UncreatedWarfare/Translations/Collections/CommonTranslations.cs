@@ -58,4 +58,7 @@ public class CommonTranslations : PropertiesTranslationCollection
     
     [TranslationData("A player tried to get help with an unknown command.")]
     public readonly Translation UnknownCommandHelp = new Translation("<#ff8c69>Unknown command. <#b3ffb3>Type <#fff>/help <command name></color> to look up a command.");
+
+    [TranslationData("Sent when a player tries to use a command that requires them to be in main.")]
+    public readonly Translation NotInMain = new Translation("<#b3a6a2>You must be in <#cedcde>MAIN</color> to use this command.");
 }

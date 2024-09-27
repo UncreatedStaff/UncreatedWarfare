@@ -13,7 +13,7 @@ public class SquadMenuUI : UnturnedUI
 
     public readonly OtherSquad[] Squads = ElementPatterns.CreateArray<OtherSquad>("S{0}", 0, to: 7);
     public readonly SquadMember[] Members = ElementPatterns.CreateArray<SquadMember>("M{0}", 0, to: 5);
-    public SquadMenuUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenu")) { }
+    public SquadMenuUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenu")) { }
     public class OtherSquad
     {
         [Pattern(Root = true)]

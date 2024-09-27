@@ -22,7 +22,7 @@ public class AssetConfiguration : IConfiguration, IDisposable
         FilePath = Path.Combine(module.HomeDirectory, "Assets.yml");
 
         ConfigurationBuilder builder = new ConfigurationBuilder();
-        ConfigurationHelper.AddSourceWithMapOverride(builder, FilePath);
+        ConfigurationHelper.AddSourceWithMapOverride(builder, module.FileProvider, FilePath);
         _configuration = builder.Build();
 
         _configuration.GetReloadToken().RegisterChangeCallback(_ =>

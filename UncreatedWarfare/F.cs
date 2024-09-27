@@ -481,9 +481,12 @@ public static class F
         if (!copy && enumerable is T[] array)
             return array;
 
-        if (enumerable is List<T> list && list.Count == list.Capacity && Accessor.TryGetUnderlyingArray(list, out T[] underlying))
+        if (enumerable is List<T> list)
         {
-            return underlying;
+            if (!copy && list.Count == list.Capacity && Accessor.TryGetUnderlyingArray(list, out T[] underlying))
+                return underlying;
+
+            return list.ToArray();
         }
 
         return enumerable.ToArray();

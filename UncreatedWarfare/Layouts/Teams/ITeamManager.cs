@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Layouts.Teams;
 
@@ -38,4 +39,9 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// Team manager extra configuration from config file.
     /// </summary>
     IConfiguration Configuration { get; internal set; }
+
+    /// <summary>
+    /// Joins a player into a team if they're not already.
+    /// </summary>
+    UniTask JoinTeamAsync(WarfarePlayer player, Team team, CancellationToken token = default);
 }

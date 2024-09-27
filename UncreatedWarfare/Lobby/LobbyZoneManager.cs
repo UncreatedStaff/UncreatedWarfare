@@ -33,11 +33,18 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
     private readonly ILogger<LobbyZoneManager> _logger;
     private readonly WarfareModule _module;
     private ITrackingProximity<WarfarePlayer> _zoneCollider;
+    private Zone? _lobbyZone;
+    private Guid _settingsFlagGuid;
 
     private readonly ITeamSelectorBehavior _behavior;
 
     internal FlagInfo[] TeamFlags;
-    
+
+    /// <summary>
+    /// Number of seconds to wait until joining the team.
+    /// </summary>
+    public TimeSpan JoinDelay { get; private set; }
+
     public LobbyZoneManager(ZoneStore zoneStore, LobbyConfiguration lobbyConfig, IFactionDataStore factionDataStore, ILogger<LobbyZoneManager> logger, WarfareModule module, ITeamSelectorBehavior behavior)
     {
         _zoneStore = zoneStore;
@@ -48,10 +55,15 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
         _behavior = behavior;
     }
 
-    public UniTask LoadLevelAsync(CancellationToken token)
+    UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
     {
         // find team flag objects
-        List<FlagInfo> flags = new List<FlagInfo>();
+        List<FlagInfo> flags = new List<FlagInfo>(2);
+
+        JoinDelay = _lobbyConfig.GetValue("JoinDelay", defaultValue: TimeSpan.FromSeconds(3d));
+
+        _settingsFlagGuid = _lobbyConfig.GetValue("Settings:Object", defaultValue: Guid.Empty);
+
         foreach (IConfigurationSection flagInfo in _lobbyConfig.GetSection("Flags").GetChildren())
         {
             string? teamStr = flagInfo["Team"];
@@ -61,9 +73,7 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
             FactionInfo? faction = _factionDataStore.FindFaction(teamStr);
             if (faction == null)
                 throw new GameConfigurationException("Invalid faction \"" + teamStr + "\"", _lobbyConfig.FilePath);
-
-            ITeamManager<Team> teamManager = _module.GetActiveLayout().TeamManager;
-
+            
             ObjectInfo foundObject = default;
             foreach (ObjectInfo obj in LevelObjectUtility.EnumerateObjects())
             {
@@ -83,23 +93,15 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
                 throw new GameConfigurationException($"No {asset} objects in the map, unable to find a lobby flag", _lobbyConfig.FilePath);
             }
 
-            Team? team = teamManager.AllTeams.FirstOrDefault(x => x.Faction.Equals(faction));
-
-            if (team == null)
-            {
-                throw new GameConfigurationException($"No team registered with the faction {faction.Name}", _lobbyConfig.FilePath);
-            }
-
-            flags.Add(new FlagInfo(flags.Count, foundObject, flagId, team));
+            flags.Add(new FlagInfo(flags.Count, foundObject, flagId, faction));
         }
 
-        TeamFlags = flags.ToArray();
+        TeamFlags = flags.ToArrayFast();
 
         TeamInfo[] behaviorTeamInfo = new TeamInfo[TeamFlags.Length];
         for (int i = 0; i < behaviorTeamInfo.Length; ++i)
         {
-            ref TeamInfo info = ref behaviorTeamInfo[i];
-            info = new TeamInfo(TeamFlags[i].Team);
+            behaviorTeamInfo[i].Team = TeamFlags[i].Team;
         }
 
         _behavior.Teams = behaviorTeamInfo;
@@ -107,12 +109,10 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
         // find zone
         string lobbyZoneName = _lobbyConfig["Zone"];
 
-        Zone? zone = _zoneStore.Zones.FirstOrDefault(x => x.Name.Equals(lobbyZoneName, StringComparison.Ordinal));
+        _lobbyZone = _zoneStore.Zones.FirstOrDefault(x => x.Name.Equals(lobbyZoneName, StringComparison.Ordinal))
+                     ?? throw new GameConfigurationException("Lobby zone not found: \"" + lobbyZoneName + "\"", _lobbyConfig.FilePath);
 
-        if (zone == null)
-            throw new GameConfigurationException("Lobby zone not found: \"" + lobbyZoneName + "\"", _lobbyConfig.FilePath);
-
-        _zoneCollider = _zoneStore.CreateColliderForZone(zone);
+        _zoneCollider = _zoneStore.CreateColliderForZone(_lobbyZone);
 
         _zoneCollider.OnObjectEntered += OnObjectEnteredLobby;
         _zoneCollider.OnObjectExited += OnObjectExitedLobby;
@@ -120,6 +120,37 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
         TimeUtility.physicsUpdated += OnFixedUpdate;
 
         return UniTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets a reference to the zone being used as the lobby zone.
+    /// </summary>
+    public Zone? GetLobbyZone()
+    {
+        return _lobbyZone;
+    }
+
+    /// <summary>
+    /// Gets the total cached player count on a single team.
+    /// </summary>
+    /// <remarks>Out of bounds indices just return 0.</remarks>
+    public int GetTeamPlayerCount(int teamIndex)
+    {
+        return teamIndex >= 0 && teamIndex < TeamFlags.Length ? _behavior.Teams[teamIndex].PlayerCount : 0;
+    }
+
+    /// <summary>
+    /// Gets the total of all players on a team.
+    /// </summary>
+    public int GetActivePlayerCount()
+    {
+        int ct = 0;
+        for (int i = 0; i < TeamFlags.Length; ++i)
+        {
+            ct += _behavior.Teams[i].PlayerCount;
+        }
+
+        return ct;
     }
 
     public void StartJoiningTeam(WarfarePlayer player, int teamIndex)
@@ -136,35 +167,49 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
             return;
         }
 
-        if (component.IsJoining)
-            component.StartJoiningTeam(-1);
+        if (component.IsJoining || !_behavior.CanJoinTeam(teamIndex, -1))
+        {
+            _logger.LogWarning("{0} tried to join a team ({1}) they can't.", player, teamIndex);
+            return;
+        }
 
         ref FlagInfo flag = ref TeamFlags[teamIndex];
         component.StartJoiningTeam(teamIndex);
-        if (!player.UnturnedPlayer.quests.getFlag(flag.FlagId, out short v) || v != FlagJoining)
+
+        // this should be done automatically using a reward but just in case its configured wrong we double check
+        PlayerQuests quests = player.UnturnedPlayer.quests;
+        if (!quests.getFlag(flag.FlagId, out short value) || value != FlagJoining)
         {
-            player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, FlagJoining);
+            quests.sendSetFlag(flag.FlagId, FlagJoining);
         }
 
+        // set all other teams as full just to prevent joining another team
         for (int i = 0; i < TeamFlags.Length; ++i)
         {
             if (i == teamIndex)
                 continue;
 
             ref FlagInfo flag2 = ref TeamFlags[i];
-            player.UnturnedPlayer.quests.sendSetFlag(flag2.FlagId, FlagFull);
+
+            if (!quests.getFlag(flag2.FlagId, out value) || value != FlagFull)
+            {
+                quests.sendSetFlag(flag2.FlagId, FlagFull);
+            }
         }
     }
 
     private void UpdateAllFlags(WarfarePlayer player)
     {
+        PlayerQuests quests = player.UnturnedPlayer.quests;
         PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
         if (component.IsJoining)
         {
             for (int i = 0; i < TeamFlags.Length; ++i)
             {
                 ref FlagInfo flag = ref TeamFlags[i];
-                player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, component.JoiningTeam.Index == i ? FlagJoining : FlagFull);
+                short flagValue = component.JoiningTeam.Index == i ? FlagJoining : FlagFull;
+                if (!quests.getFlag(flag.FlagId, out short value) || value != flagValue)
+                    player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, flagValue);
             }
         }
         else
@@ -172,7 +217,9 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
             for (int i = 0; i < TeamFlags.Length; ++i)
             {
                 ref FlagInfo flag = ref TeamFlags[i];
-                player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, _behavior.CanJoinTeam(i, -1) ? FlagOpen : FlagFull);
+                short flagValue = _behavior.CanJoinTeam(i, -1) ? FlagOpen : FlagFull;
+                if (!quests.getFlag(flag.FlagId, out short value) || value != flagValue)
+                    player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, flagValue);
                 // todo put barricade in front of player for a frame to refresh the highlight color
             }
         }
@@ -182,55 +229,136 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
     {
         foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
         {
-            if (!player.IsOnline)
-                continue;
-
-            int closestLookIndex = -1;
-            float closestLookDot = 0;
-            int closestPosIndex = -1;
-            float closestDistSqr = 0;
-            Transform pos = player.UnturnedPlayer.look.aim;
-            Vector3 playerPos = pos.position;
-            Vector3 playerLookVector = pos.forward;
-
-            for (int i = 0; i < TeamFlags.Length; ++i)
-            {
-                ref FlagInfo flag = ref TeamFlags[i];
-
-                Vector3 lookVector = flag.Position - playerPos;
-                
-                float dot = Vector3.Dot(lookVector.normalized, playerLookVector);
-                if (closestLookIndex == -1 || closestLookDot < dot)
-                {
-                    closestLookDot = dot;
-                    closestLookIndex = i;
-                }
-
-                float distSqr = lookVector.sqrMagnitude;
-                if (closestPosIndex == -1 || closestDistSqr > distSqr)
-                {
-                    closestDistSqr = distSqr;
-                    closestPosIndex = i;
-                }
-            }
-
-            // within 35 degrees of looking at sign
-            float angle = Mathf.Acos(closestLookDot);
-            if (angle > 35)
-                closestLookIndex = -1;
-
-            player.Component<PlayerLobbyComponent>().UpdatePositionalData(closestLookIndex, closestPosIndex);
+            UpdatePlayerPositionalData(player);
         }
     }
 
-    private void OnObjectExitedLobby(WarfarePlayer player)
+    private void UpdatePlayerPositionalData(WarfarePlayer player)
     {
-        player.Component<PlayerLobbyComponent>().EnterLobby();
+        if (!player.IsOnline)
+            return;
+
+        int closestLookIndex = -1;
+        float closestLookDot = 0;
+        int closestPosIndex = -1;
+        float closestDistSqr = 0;
+        Transform pos = player.UnturnedPlayer.look.aim;
+        Vector3 playerPos = pos.position;
+        Vector3 playerLookVector = pos.forward;
+
+        // find closest sign and closest sign to being looked at
+        for (int i = 0; i < TeamFlags.Length; ++i)
+        {
+            ref FlagInfo flag = ref TeamFlags[i];
+
+            Vector3 lookVector = flag.Position - playerPos;
+
+            float dot = Vector3.Dot(lookVector.normalized, playerLookVector);
+            if (closestLookIndex == -1 || closestLookDot < dot)
+            {
+                closestLookDot = dot;
+                closestLookIndex = i;
+            }
+
+            float distSqr = lookVector.sqrMagnitude;
+            if (closestPosIndex == -1 || closestDistSqr > distSqr)
+            {
+                closestDistSqr = distSqr;
+                closestPosIndex = i;
+            }
+        }
+
+        // within 35 degrees of looking at sign
+        float angle = Mathf.Acos(closestLookDot);
+        if (angle > 35f * Mathf.Deg2Rad)
+            closestLookIndex = -1;
+
+        player.Component<PlayerLobbyComponent>().UpdatePositionalData(closestLookIndex, closestPosIndex);
     }
 
     private void OnObjectEnteredLobby(WarfarePlayer player)
     {
+        UpdatePlayerPositionalData(player);
+        player.Component<PlayerLobbyComponent>().EnterLobby();
+        UpdateAllFlags(player);
+    }
+
+    private void OnObjectExitedLobby(WarfarePlayer player)
+    {
         player.Component<PlayerLobbyComponent>().ExitLobby();
+    }
+
+    void IEventListener<QuestObjectInteracted>.HandleEvent(QuestObjectInteracted e, IServiceProvider serviceProvider)
+    {
+        if (e.Object.GUID == _settingsFlagGuid)
+        {
+            // todo actually send settings
+            _logger.LogInformation("Sending settings to {0}.", e.Player);
+            return;
+        }
+
+        for (int i = 0; i < TeamFlags.Length; ++i)
+        {
+            ref FlagInfo flag = ref TeamFlags[i];
+            if (flag.Object.Index != e.ObjectIndex || !flag.Object.Coord.Equals(e.RegionPosition))
+                continue;
+
+            StartJoiningTeam(e.Player, i);
+            break;
+        }
+    }
+
+    private void UpdateTeamCounts()
+    {
+        _behavior.UpdateTeams();
+
+        // add joining players to the player counts
+        foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+        {
+            PlayerLobbyComponent comp = player.Component<PlayerLobbyComponent>();
+            if (!comp.IsJoining)
+                continue;
+
+            ++_behavior.Teams[comp.JoiningTeam.Index].PlayerCount;
+        }
+
+        foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+            UpdateAllFlags(player);
+    }
+
+    UniTask ILayoutStartingListener.HandleLayoutStartingAsync(Layout layout, CancellationToken token)
+    {
+        // update 'Team' objects for the new layout, since they may have changed between layouts
+        ITeamManager<Team> teamManager = _module.GetActiveLayout().TeamManager;
+        for (int i = 0; i < TeamFlags.Length; ++i)
+        {
+            ref FlagInfo flag = ref TeamFlags[i];
+            FactionInfo faction = flag.Faction;
+
+            Team? team = teamManager.AllTeams.FirstOrDefault(x => x.Faction.Equals(faction));
+
+            if (team == null)
+            {
+                throw new GameConfigurationException($"No team registered with the faction {faction.Name}", _lobbyConfig.FilePath);
+            }
+
+            flag.Team = team;
+
+            ref TeamInfo behaviorTeam = ref _behavior.Teams[i];
+            behaviorTeam.Team = team;
+        }
+
+        foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+        {
+            PlayerLobbyComponent comp = player.Component<PlayerLobbyComponent>();
+
+            comp.StartJoiningTeam(-1);
+            UpdateAllFlags(player);
+        }
+
+        UpdateTeamCounts();
+
+        return UniTask.CompletedTask;
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)
@@ -256,54 +384,21 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
         return UniTask.CompletedTask;
     }
 
-    void IEventListener<QuestObjectInteracted>.HandleEvent(QuestObjectInteracted e, IServiceProvider serviceProvider)
-    {
-        for (int i = 0; i < TeamFlags.Length; ++i)
-        {
-            ref FlagInfo flag = ref TeamFlags[i];
-            if (flag.Object.Index != e.ObjectIndex || !flag.Object.Coord.Equals(e.RegionPosition))
-                continue;
-
-            StartJoiningTeam(e.Player, i);
-            break;
-        }
-    }
-
-    UniTask ILayoutStartingListener.HandleLayoutStartingAsync(Layout layout, CancellationToken token)
-    {
-        // update 'Team' objects for the new session
-        ITeamManager<Team> teamManager = _module.GetActiveLayout().TeamManager;
-        for (int i = 0; i < TeamFlags.Length; ++i)
-        {
-            ref FlagInfo flag = ref TeamFlags[i];
-            FactionInfo faction = flag.Team.Faction;
-
-            Team team = teamManager.AllTeams.First(x => x.Faction.Equals(faction));
-            flag.Team = team;
-
-            ref TeamInfo behaviorTeam = ref _behavior.Teams[i];
-            behaviorTeam.Team = team;
-        }
-
-        _behavior.UpdateTeams();
-
-        return UniTask.CompletedTask;
-    }
-
     public struct FlagInfo
     {
         public readonly ObjectInfo Object;
         public readonly ushort FlagId;
         public readonly Vector3 Position;
         public readonly int Index;
+        public readonly FactionInfo Faction;
         public Team Team;
-        public FlagInfo(int index, ObjectInfo obj, ushort flagId, Team team)
+        public FlagInfo(int index, ObjectInfo obj, ushort flagId, FactionInfo faction)
         {
             Index = index;
             Object = obj;
             FlagId = flagId;
             Position = obj.Object.transform.position;
-            Team = team;
+            Faction = faction;
         }
     }
 }

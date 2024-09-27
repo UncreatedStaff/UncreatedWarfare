@@ -1,15 +1,21 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("teams", "team")]
 public class TeamsCommand : IExecutableCommand
 {
-    private const string Syntax = "/teams ";
-    private const string Help = "Switch teams without rejoining the server.";
+    private readonly CooldownManager _cooldownManager;
+    private readonly ZoneStore _zoneStore;
+    private readonly LobbyZoneManager _lobbyManager;
+    private readonly TeamsCommandTranslations _translations;
 
     private static readonly PermissionLeaf PermissionShuffle = new PermissionLeaf("commands.teams.shuffle", unturned: false, warfare: true);
+    private static readonly PermissionLeaf PermissionInstantLobby = new PermissionLeaf("features.instant_lobby", unturned: false, warfare: true);
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
@@ -21,7 +27,7 @@ public class TeamsCommand : IExecutableCommand
     {
         return new CommandStructure
         {
-            Description = Help,
+            Description = "Switch teams without rejoining the server.",
             Parameters =
             [
                 new CommandParameter("Shuffle")
@@ -35,43 +41,52 @@ public class TeamsCommand : IExecutableCommand
         };
     }
 
+    public TeamsCommand(CooldownManager cooldownManager, ZoneStore zoneStore, LobbyZoneManager lobbyManager, TranslationInjection<TeamsCommandTranslations> translations)
+    {
+        _cooldownManager = cooldownManager;
+        _zoneStore = zoneStore;
+        _lobbyManager = lobbyManager;
+        _translations = translations.Value;
+    }
+
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-#if false
-        Context.AssertHelpCheck(0, Syntax + " - " + Help);
-
         Context.AssertRanByPlayer();
 
-        Context.AssertGamemode(out ITeams teamgm);
-        if (Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> il) && il.IsScreenUp)
+        //if (Context.MatchParameter(0, "shuffle", "sh"))
+        //{
+        //    await Context.AssertPermissions(PermissionShuffle, token);
+        //    await UniTask.SwitchToMainThread(token);
+
+        //    throw Context.Reply(T.TeamsShuffleQueued);
+        //} todo probably removing this
+
+        if (_cooldownManager.HasCooldown(Context.Player, CooldownType.ChangeTeams, out Cooldown cooldown) && !await Context.HasPermission(PermissionInstantLobby, token))
+        {
+            throw Context.Reply(_translations.TeamsCooldown, cooldown);
+        }
+
+        if (!_zoneStore.IsInMainBase(Context.Player, Context.Player.Team.Faction))
+        {
+            throw Context.Reply(Context.CommonTranslations.NotInMain);
+        }
+
+        Zone? lobbyZone = _lobbyManager.GetLobbyZone();
+
+        if (lobbyZone == null)
             throw Context.SendUnknownError();
 
-        if (!teamgm.UseTeamSelector || teamgm.TeamSelector is null)
-            throw Context.SendGamemodeError();
-
-        if (Context.MatchParameter(0, "shuffle", "sh"))
-        {
-            await Context.AssertPermissions(PermissionShuffle, token);
-            await UniTask.SwitchToMainThread(token);
-
-            TeamSelector.ShuffleTeamsNextGame = true;
-            throw Context.Reply(T.TeamsShuffleQueued);
-        }
-
-        if (!Context.Player.OnDuty() && CooldownManager.HasCooldown(Context.Player, CooldownType.ChangeTeams, out Cooldown cooldown))
-        {
-            throw Context.Reply(T.TeamsCooldown, cooldown);
-        }
-
-        ulong team = Context.Player.GetTeam();
-        if (team is 1 or 2 && !Context.Player.UnturnedPlayer.IsInMain())
-        {
-            throw Context.Reply(T.NotInMain);
-        }
-
-        teamgm.TeamSelector!.JoinSelectionMenu(Context.Player, TeamSelector.JoinTeamBehavior.KeepTeam);
+        _cooldownManager.StartCooldown(Context.Player, CooldownType.ChangeTeams, /* todo */ 2000f);
+        Context.Player.UnturnedPlayer.teleportToLocationUnsafe(lobbyZone.Spawn, lobbyZone.SpawnYaw);
         throw Context.Defer();
-#endif
     }
+}
+
+public class TeamsCommandTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Teams Command";
+
+    [TranslationData("Sent when changing teams is on cooldown", "Amount of time left on cooldown")]
+    public readonly Translation<Cooldown> TeamsCooldown = new Translation<Cooldown>("<#ff8c69>You can't use /teams for another {0}.", arg0Fmt: Cooldown.FormatTimeLong);
 }

@@ -192,9 +192,9 @@ partial class ModerationUI
 
             ModerationActionAddEvidenceButton.Enable(c);
 
-            if (player.CachedSteamProfile != null)
+            if (player.SteamSummary != null)
             {
-                mainActor.ProfilePicture.SetImage(c, player.CachedSteamProfile.AvatarUrlMedium ?? string.Empty);
+                mainActor.ProfilePicture.SetImage(c, player.SteamSummary.AvatarUrlMedium ?? string.Empty);
             }
             else
             {

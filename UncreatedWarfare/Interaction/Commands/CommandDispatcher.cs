@@ -446,7 +446,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         await UniTask.SwitchToMainThread();
 
         Command vanillaCommand = commandInfo.VanillaCommand!;
-        if (!await _permissions.HasPermissionAsync(user, new PermissionLeaf(vanillaCommand.command, unturned: true, warfare: false) /* unturned::command */, token))
+        if (!await _permissions.HasPermissionAsync(user, commandInfo.DefaultPermission /* vanilla commands won't have any special permission rules */, token))
         {
             await UniTask.SwitchToMainThread();
             CommonTranslations translations = _module.ScopedProvider.Resolve<TranslationInjection<CommonTranslations>>().Value;

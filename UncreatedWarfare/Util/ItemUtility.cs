@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Migrations;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
@@ -331,7 +330,7 @@ public static class ItemUtility
     }
 
     /// <summary>
-    /// Destroy the number of items in the given <paramref name="radius"/> matching a <paramref name="itemSelector"/>.
+    /// Destroy the number of items in the given <paramref name="radius"/>.
     /// </summary>
     /// <param name="pickUpPlayer">The player that is picking up the items, if any.</param>
     /// <exception cref="ArgumentNullException"/>
@@ -506,7 +505,7 @@ public static class ItemUtility
         }
         if (addClothes)
         {
-            FactionInfo? playerFaction = player.Team.Faction;;
+            FactionInfo? playerFaction = player.Team.Faction;
             PlayerClothing playerClothes = player.UnturnedPlayer.clothing;
             string variant = null;
             if (playerClothes.shirtAsset != null)
@@ -720,7 +719,7 @@ public static class ItemUtility
         if (clear)
             ClearInventory(player, true);
 
-        FactionInfo? faction = player.Team.Faction;
+        FactionInfo faction = player.Team.Faction;
         Player nativePlayer = player.UnturnedPlayer;
 
         if (Data.UseFastKits)

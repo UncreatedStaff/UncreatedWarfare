@@ -31,7 +31,7 @@ public partial class ModerationUI : UnturnedUI
 
     private readonly string _discordInviteCode;
 
-    private readonly SteamAPIService _steamAPI;
+    private readonly SteamApiService _steamAPI;
 
     public const int ModerationHistoryLength = 30;
     public const string PositiveReputationColor = "00cc00";
@@ -188,11 +188,11 @@ public partial class ModerationUI : UnturnedUI
     }, 1, to: 4);
 
     public ModerationUI(IServiceProvider serviceProvider)
-        : base(serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:ModerationMenu"), debugLogging: false)
+        : base(serviceProvider.GetRequiredService<ILoggerFactory>(), serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:ModerationMenu"), debugLogging: false)
     {
         _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-        _steamAPI = serviceProvider.GetRequiredService<SteamAPIService>();
+        _steamAPI = serviceProvider.GetRequiredService<SteamApiService>();
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
         _itemIconProvider = serviceProvider.GetRequiredService<ItemIconProvider>();
 

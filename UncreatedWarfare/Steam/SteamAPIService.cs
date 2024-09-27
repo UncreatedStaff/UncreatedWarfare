@@ -13,15 +13,15 @@ using Uncreated.Warfare.Util;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Steam;
-public class SteamAPIService
+public class SteamApiService
 {
     private const string BaseUrl = "https://api.steampowered.com/";
-    private readonly ILogger<SteamAPIService> _logger;
+    private readonly ILogger<SteamApiService> _logger;
     private readonly IPlayerService _playerService;
 
     private readonly string? _steamApiKey;
 
-    public SteamAPIService(IConfiguration systemConfig, ILogger<SteamAPIService> logger, IPlayerService playerService)
+    public SteamApiService(IConfiguration systemConfig, ILogger<SteamApiService> logger, IPlayerService playerService)
     {
         _logger = logger;
         _playerService = playerService;
@@ -36,7 +36,7 @@ public class SteamAPIService
         List<ulong>? players = null;
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            if (!allowCache || player.CachedSteamProfile == null)
+            if (!allowCache || player.SteamSummary == null)
                 (players ??= new List<ulong>(_playerService.OnlinePlayers.Count)).Add(player.Steam64.m_SteamID);
         }
 
@@ -49,8 +49,66 @@ public class SteamAPIService
             PlayerSummary summary = summaries[j];
             WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(summary.Steam64);
             if (player != null)
-                player.CachedSteamProfile = summary;
+                player.SteamSummary = summary;
         }
+    }
+
+    public async UniTask<PlayerFriendsList> GetPlayerFriends(ulong player, CancellationToken token = default)
+    {
+        if (string.IsNullOrEmpty(_steamApiKey))
+            throw new InvalidOperationException("Steam API key not present.");
+
+        const int tryCt = 5;
+        const float delay = 1.0f;
+
+        for (int tries = 0; tries < tryCt; ++tries)
+        {
+            await UniTask.SwitchToMainThread(token);
+
+            string responseText;
+
+            try
+            {
+                using UnityWebRequest webRequest = UnityWebRequest.Get(CreateUrl("ISteamUser", 1, "GetFriendList", "&steamid=" + player.ToString(CultureInfo.InvariantCulture)));
+                webRequest.timeout = tries + 1;
+                L.LogDebug($"[GetPlayerFriends] Sending GetFriendList request: {webRequest.url} with timeout {webRequest.timeout}... ({tries + 1}/{tryCt})");
+                await webRequest.SendWebRequest().WithCancellation(token);
+                L.LogDebug($"[GetPlayerFriends]   Done with {webRequest.url}.");
+
+                if (webRequest.result != UnityWebRequest.Result.Success)
+                    throw new Exception($"Error getting player friend list for {player} from {webRequest.url.Replace(_steamApiKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
+
+                responseText = webRequest.downloadHandler.text;
+                if (string.IsNullOrEmpty(responseText))
+                    return new PlayerFriendsList { Friends = new List<PlayerFriend>(0) };
+            }
+            catch (Exception ex)
+            {
+                if (tries == tryCt - 1)
+                    throw new Exception("Error downloading friends list for " + player + ".", ex);
+
+                L.LogError($"[GetPlayerFriends] Error getting steam player summaries. Retrying {(tries + 1).ToString(CultureInfo.InvariantCulture)} / {tryCt.ToString(CultureInfo.InvariantCulture)}.");
+
+                await UniTask.WaitForSeconds(delay, cancellationToken: token);
+                continue;
+            }
+
+            if (tries > 0)
+                L.Log($"[GetPlayerFriends] Try {(tries + 1).ToString(CultureInfo.InvariantCulture)} / {tryCt.ToString(CultureInfo.InvariantCulture)} succeeded.", ConsoleColor.Green);
+
+            try
+            {
+                PlayerFriendsListResponse? responseData = JsonSerializer.Deserialize<PlayerFriendsListResponse>(responseText, ConfigurationSettings.JsonSerializerSettings);
+
+                return responseData?.FriendsList?.Friends == null ? new PlayerFriendsList { Friends = new List<PlayerFriend>(0) } : responseData.FriendsList;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error deserializing response from Steam API: {responseText}.", ex);
+            }
+        }
+
+        return new PlayerFriendsList { Friends = new List<PlayerFriend>(0) }; // this will never be reached
     }
 
     public async UniTask<PlayerSummary?> GetPlayerSummary(ulong player, CancellationToken token = default)

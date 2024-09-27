@@ -10,7 +10,7 @@ public class FlagListUI : UnturnedUI
 {
     public readonly UnturnedLabel Header = new UnturnedLabel("Header");
     public readonly FlagListRow[] Rows = ElementPatterns.CreateArray<FlagListRow>("{0}", 0, to: 9);
-    public FlagListUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:FlagList")) { }
+    public FlagListUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FlagList")) { }
     public class FlagListRow
     {
         [Pattern(Root = true)]

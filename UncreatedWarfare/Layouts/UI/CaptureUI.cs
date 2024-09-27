@@ -17,7 +17,7 @@ public class CaptureUI : UnturnedUI
     public readonly UnturnedLabel T2CountIcon = new UnturnedLabel("BackgroundCircle/ForegroundCircle/T2CountIcon");
     public readonly UnturnedLabel T2Count = new UnturnedLabel("BackgroundCircle/ForegroundCircle/T2CountIcon/T2Count");
     public readonly UnturnedLabel Status = new UnturnedLabel("Status");
-    public CaptureUI(ITranslationValueFormatter valueFormatter, AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:CaptureProgress"), reliable: false)
+    public CaptureUI(ITranslationValueFormatter valueFormatter, AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureProgress"), reliable: false)
     {
         _valueFormatter = valueFormatter;
     }

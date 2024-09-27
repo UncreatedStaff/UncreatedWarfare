@@ -29,10 +29,10 @@ public class Tests
             Id = 2
         };
 
-        _behavior.Teams =
-        [
-            new TeamInfo(t1), new TeamInfo(t2)
-        ];
+        _behavior.Teams = new TeamInfo[2];
+
+        _behavior.Teams[0].Team = t1;
+        _behavior.Teams[1].Team = t2;
     }
 
     [Test]

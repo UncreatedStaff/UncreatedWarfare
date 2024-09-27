@@ -7,7 +7,7 @@ public class FobListUI : UnturnedUI
 {
     public readonly FobListElement[] FOBs = ElementPatterns.CreateArray<FobListElement>("Canvas/{0}", 0, to: 9);
 
-    public FobListUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:FobList")) { }
+    public FobListUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FobList")) { }
 
     public class FobListElement
     {

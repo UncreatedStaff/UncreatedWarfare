@@ -40,7 +40,13 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     public BinaryPlayerSave Save { get; }
     public WarfarePlayerLocale Locale { get; }
     public SemaphoreSlim PurchaseSync { get; }
-    public PlayerSummary CachedSteamProfile { get; internal set; }
+    public PlayerSummary SteamSummary { get; internal set; }
+
+    /// <summary>
+    /// List of steam IDs of this player's friends, if theyre public.
+    /// </summary>
+    /// <remarks>Private profiles will just have an empty array here.</remarks>
+    public ulong[] SteamFriends { get; internal set; }
 
     /// <inheritdoc />
     public Vector3 Position

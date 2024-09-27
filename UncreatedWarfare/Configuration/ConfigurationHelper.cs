@@ -1,7 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.FileProviders.Physical;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
@@ -12,7 +11,6 @@ using Uncreated.Warfare.Logging;
 namespace Uncreated.Warfare.Configuration;
 public static class ConfigurationHelper
 {
-    private static readonly IFileProvider FileProvider = new PhysicalFileProvider(Environment.CurrentDirectory, ExclusionFilters.Sensitive);
 
     private static readonly HashSet<string> InvalidFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -34,18 +32,21 @@ public static class ConfigurationHelper
     /// Adds a new <see cref="FileConfigurationSource"/> at <paramref name="path"/> with an optional file source with the map name appended.
     /// </summary>
     /// <remarks>Example: Config.json and Config.Washington.json.</remarks>
-    public static void AddSourceWithMapOverride(IConfigurationBuilder configBuilder, string path)
+    public static void AddSourceWithMapOverride(IConfigurationBuilder configBuilder, IFileProvider fileProvider, string path)
     {
+        MakeRelativePath(fileProvider, ref path);
+
         string ext = Path.GetExtension(path);
 
         // add default
-        AddJsonOrYamlFile(configBuilder, path, optional: false, reloadOnChange: true);
+        AddJsonOrYamlFile(configBuilder, fileProvider, path, optional: false, reloadOnChange: true);
 
         // add map
         string mapName = CleanFileName(Provider.map);
         string rootPath = Path.Join(Path.GetDirectoryName(path.AsSpan()), Path.GetFileNameWithoutExtension(path.AsSpan()));
 
-        AddJsonOrYamlFile(configBuilder, $"{rootPath}.{mapName}.{ext}", optional: true, reloadOnChange: true);
+        string mapPath = $"{rootPath}.{mapName}{ext}";
+        AddJsonOrYamlFile(configBuilder, fileProvider, mapPath, optional: true, reloadOnChange: true);
     }
 
     /// <summary>
@@ -54,10 +55,12 @@ public static class ConfigurationHelper
     /// <remarks><paramref name="filePath"/> must be in the Warfare folder.</remarks>
     [MustUseReturnValue]
     [Pure]
-    public static IDisposable ListenForFileUpdate(string filePath, Action onUpdated)
+    public static IDisposable ListenForFileUpdate(IFileProvider fileProvider, string filePath, Action onUpdated)
     {
+        MakeRelativePath(fileProvider, ref filePath);
+        
         return ChangeToken.OnChange(
-            () => FileProvider.Watch(filePath),
+            () => fileProvider.Watch(filePath),
             () =>
             {
                 UniTask.Create(async () =>
@@ -75,46 +78,48 @@ public static class ConfigurationHelper
     [Pure]
     public static TConfigData ParseConfigData<TConfigData>(this IConfiguration config) where TConfigData : JSONConfigData, new()
     {
-        TConfigData? data;
+        TConfigData data = new TConfigData();
+        data.SetDefaults();
+
         try
         {
-            data = config.Get<TConfigData>();
-            if (data == null)
-            {
-                L.LogWarning($"Couldn't parse {Accessor.Formatter.Format(typeof(TConfigData))} file.");
-            }
+            config.Bind(data);
         }
         catch (Exception ex)
         {
-            data = null;
             L.LogError(ex);
             L.LogError($"Errored while parsing {Accessor.Formatter.Format(typeof(TConfigData))} file.");
         }
 
-        if (data != null)
-            return data;
-        
-        data = new TConfigData();
-        data.SetDefaults();
         return data;
     }
 
     /// <summary>
     /// Add a file source as either a JSON or YAML file, depending on the file extension.
     /// </summary>
-    public static void AddJsonOrYamlFile(IConfigurationBuilder configBuilder, string path, bool optional = false, bool reloadOnChange = false)
+    public static void AddJsonOrYamlFile(IConfigurationBuilder configBuilder, IFileProvider fileProvider, string path, bool optional = false, bool reloadOnChange = false)
     {
+        MakeRelativePath(fileProvider, ref path);
+
         ReadOnlySpan<char> ext = Path.GetExtension(path.AsSpan());
         if (ext.Equals(".json", StringComparison.OrdinalIgnoreCase))
         {
-            configBuilder.AddJsonFile(null, Path.GetFullPath(path), optional, reloadOnChange);
+            configBuilder.AddJsonFile(fileProvider, path, optional, reloadOnChange);
         }
         else if (ext.Equals(".yml", StringComparison.OrdinalIgnoreCase))
         {
-            configBuilder.AddYamlFile(null, Path.GetFullPath(path), optional, reloadOnChange);
+            configBuilder.AddYamlFile(fileProvider, path, optional, reloadOnChange);
         }
         else
             throw new ArgumentException("Must provide a valid extension (.yml or .json).", nameof(path));
+    }
+
+    private static void MakeRelativePath(IFileProvider fileProvider, ref string path)
+    {
+        if (fileProvider is PhysicalFileProvider physicalFileProvider && Path.IsPathRooted(path))
+        {
+            path = Path.GetRelativePath(physicalFileProvider.Root, path);
+        }
     }
 
     /// <summary>

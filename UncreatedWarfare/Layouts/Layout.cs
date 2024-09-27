@@ -21,7 +21,6 @@ namespace Uncreated.Warfare.Layouts;
 public class Layout : IDisposable, IEventListenerProvider
 {
     private int _activePhase = -1;
-    private readonly LayoutInfo _layoutInfo;
     private readonly IDisposable _configListener;
     private readonly CancellationTokenSource _cancellationTokenSource;
     internal bool UnloadedHostedServices;
@@ -44,7 +43,7 @@ public class Layout : IDisposable, IEventListenerProvider
     /// <summary>
     /// Configuration that defines how the layout of the game is loaded.
     /// </summary>
-    public IConfigurationRoot LayoutConfiguration => _layoutInfo.Layout;
+    public IConfigurationRoot LayoutConfiguration => LayoutInfo.Layout;
 
     /// <summary>
     /// Scoped service provider for this layout.
@@ -55,6 +54,11 @@ public class Layout : IDisposable, IEventListenerProvider
     /// Keeps track of all teams.
     /// </summary>
     public ITeamManager<Team> TeamManager { get; protected set; }
+
+    /// <summary>
+    /// Pre-determined settings for the layout.
+    /// </summary>
+    public LayoutInfo LayoutInfo { get; }
 
     /// <summary>
     /// Token that will cancel when the layout ends.
@@ -92,7 +96,7 @@ public class Layout : IDisposable, IEventListenerProvider
     {
         _cancellationTokenSource = new CancellationTokenSource();
         ServiceProvider = serviceProvider;
-        _layoutInfo = layoutInfo;
+        LayoutInfo = layoutInfo;
         Logger = (ILogger<Layout>)serviceProvider.Resolve(typeof(ILogger<>).MakeGenericType(GetType()));
 
         _disposableVariationConfigurationRoots = new List<IDisposable>();
@@ -195,7 +199,7 @@ public class Layout : IDisposable, IEventListenerProvider
 
         if (!Path.IsPathRooted(variationsPath))
         {
-            string? fileDir = Path.GetDirectoryName(_layoutInfo.FilePath);
+            string? fileDir = Path.GetDirectoryName(LayoutInfo.FilePath);
             if (!string.IsNullOrEmpty(fileDir))
                 variationsPath = Path.Join(fileDir, variationsPath);
         }
@@ -321,7 +325,7 @@ public class Layout : IDisposable, IEventListenerProvider
         if (PhaseList.Count != 0)
             return;
 
-        Logger.LogWarning("No phases available in layout {0}. Adding a null phase that will end the game instantly.", _layoutInfo.DisplayName);
+        Logger.LogWarning("No phases available in layout {0}. Adding a null phase that will end the game instantly.", LayoutInfo.DisplayName);
         PhaseList.Add(new NullPhase(ConfigurationHelper.EmptySection));
     }
 
@@ -340,7 +344,7 @@ public class Layout : IDisposable, IEventListenerProvider
         }
         catch (AggregateException ex)
         {
-            Logger.LogError(ex, "Error(s) while canceling layout cancellation token source in layout {0}.", _layoutInfo.DisplayName);
+            Logger.LogError(ex, "Error(s) while canceling layout cancellation token source in layout {0}.", LayoutInfo.DisplayName);
         }
 
         return _factory.UnhostLayoutAsync(this, token);
@@ -354,7 +358,7 @@ public class Layout : IDisposable, IEventListenerProvider
         IConfigurationSection teamSection = LayoutConfiguration.GetSection("Teams");
         if (!teamSection.GetChildren().Any())
         {
-            Logger.LogInformation("Team section is not present in layout \"{0}\", assuming no teams should be loaded.", _layoutInfo.DisplayName);
+            Logger.LogInformation("Team section is not present in layout \"{0}\", assuming no teams should be loaded.", LayoutInfo.DisplayName);
             TeamManager = new NullTeamManager();
             return UniTask.CompletedTask;
         }
@@ -363,7 +367,7 @@ public class Layout : IDisposable, IEventListenerProvider
         string? managerTypeName = teamSection["ManagerType"];
         if (managerTypeName == null)
         {
-            Logger.LogError("Team section is missing the \"ManagerType\" config value in layout \"{0}\".", _layoutInfo.DisplayName);
+            Logger.LogError("Team section is missing the \"ManagerType\" config value in layout \"{0}\".", LayoutInfo.DisplayName);
             TeamManager = new NullTeamManager();
             return UniTask.CompletedTask;
         }
@@ -371,7 +375,7 @@ public class Layout : IDisposable, IEventListenerProvider
         Type? managerType = Type.GetType(managerTypeName) ?? Assembly.GetExecutingAssembly().GetType(managerTypeName);
         if (managerType == null || managerType.IsAbstract || !typeof(ITeamManager<Team>).IsAssignableFrom(managerType))
         {
-            Logger.LogError("Unknown team manager type in layout \"{0}\": \"{1}\".", _layoutInfo.DisplayName, managerTypeName);
+            Logger.LogError("Unknown team manager type in layout \"{0}\": \"{1}\".", LayoutInfo.DisplayName, managerTypeName);
             TeamManager = new NullTeamManager();
             return UniTask.CompletedTask;
         }
@@ -402,14 +406,14 @@ public class Layout : IDisposable, IEventListenerProvider
             string? phaseTypeName = phaseConfig["Type"];
             if (phaseTypeName == null)
             {
-                Logger.LogError("Phase at index {0} is missing the \"Type\" config value in layout \"{1}\" and will be skipped.", index, _layoutInfo.DisplayName);
+                Logger.LogError("Phase at index {0} is missing the \"Type\" config value in layout \"{1}\" and will be skipped.", index, LayoutInfo.DisplayName);
                 continue;
             }
 
             Type? phaseType = Type.GetType(phaseTypeName) ?? thisAsm.GetType(phaseTypeName);
             if (phaseType == null || phaseType.IsAbstract || !typeof(ILayoutPhase).IsAssignableFrom(phaseType))
             {
-                Logger.LogError("Unknown type in phase at index {0} in layout \"{1}\" and will be skipped.", index, _layoutInfo.DisplayName);
+                Logger.LogError("Unknown type in phase at index {0} in layout \"{1}\" and will be skipped.", index, LayoutInfo.DisplayName);
                 continue;
             }
 
@@ -421,7 +425,7 @@ public class Layout : IDisposable, IEventListenerProvider
             }
             else
             {
-                Logger.LogWarning("Failed to read phase at index {0} in layout \"{1}\".", index, _layoutInfo.DisplayName);
+                Logger.LogWarning("Failed to read phase at index {0} in layout \"{1}\".", index, LayoutInfo.DisplayName);
             }
         }
     }
@@ -429,7 +433,7 @@ public class Layout : IDisposable, IEventListenerProvider
     /// <inheritdoc />
     public override string ToString()
     {
-        return _layoutInfo.DisplayName;
+        return LayoutInfo.DisplayName;
     }
 
     /// <inheritdoc />
@@ -440,7 +444,7 @@ public class Layout : IDisposable, IEventListenerProvider
             disposable.Dispose();
         }
 
-        _layoutInfo.Dispose();
+        LayoutInfo.Dispose();
         _configListener.Dispose();
 
         try
@@ -450,7 +454,7 @@ public class Layout : IDisposable, IEventListenerProvider
         catch (ObjectDisposedException) { }
         catch (AggregateException ex)
         {
-            Logger.LogError(ex, "Error(s) while disposing layout cancellation token source in layout \"{0}\".", _layoutInfo.DisplayName);
+            Logger.LogError(ex, "Error(s) while disposing layout cancellation token source in layout \"{0}\".", LayoutInfo.DisplayName);
         }
 
         _cancellationTokenSource.Dispose();

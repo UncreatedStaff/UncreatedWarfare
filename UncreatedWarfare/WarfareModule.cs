@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.FileProviders.Physical;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -99,6 +101,11 @@ public sealed class WarfareModule : IModuleNexus
     public IConfiguration Configuration { get; private set; }
 
     /// <summary>
+    /// Handles tracking file changing and configuration.
+    /// </summary>
+    public PhysicalFileProvider FileProvider { get; private set; }
+
+    /// <summary>
     /// Global service provider. Gamemodes have their own scoped service providers and should be used instead.
     /// </summary>
     public IContainer ServiceProvider { get; private set; }
@@ -180,9 +187,10 @@ public sealed class WarfareModule : IModuleNexus
 
         string systemConfigLocation = Path.Join(HomeDirectory, "System Config.yml");
 
+        FileProvider = new PhysicalFileProvider(HomeDirectory, ExclusionFilters.Sensitive);
         CommandWindow.Log("Configuration location: " + systemConfigLocation);
 
-        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, systemConfigLocation);
+        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, FileProvider, systemConfigLocation);
         Configuration = configBuilder.Build();
 
         ContainerBuilder serviceCollection = new ContainerBuilder();
@@ -253,6 +261,9 @@ public sealed class WarfareModule : IModuleNexus
 
         _cancellationTokenSource.Dispose();
 
+        if (FileProvider is IDisposable disp)
+            disp.Dispose();
+
         if (!_unloadedHostedServices)
         {
             Unhost();
@@ -301,6 +312,11 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareLifetimeComponent>())
             .SingleInstance();
 
+        bldr.RegisterInstance(FileProvider)
+            .As<IFileProvider>().As<PhysicalFileProvider>()
+            .SingleInstance()
+            .ExternallyOwned();
+
         bldr.RegisterType<AssetConfiguration>().SingleInstance();
         bldr.RegisterInstance(Configuration).ExternallyOwned();
 
@@ -332,7 +348,7 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterType<VehicleSpawnedHandler>()
             .AsImplementedInterfaces().AsSelf();
 
-        bldr.RegisterType<SteamAPIService>()
+        bldr.RegisterType<SteamApiService>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
@@ -414,6 +430,9 @@ public sealed class WarfareModule : IModuleNexus
             .SingleInstance();
 
         bldr.RegisterType<LobbyConfiguration>()
+            .SingleInstance();
+
+        bldr.RegisterType<LobbyHudUI>()
             .SingleInstance();
 
         // Kits

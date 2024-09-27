@@ -13,12 +13,13 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.Permissions;
 
 [RpcClass]
-public class UserPermissionStore : IAsyncDisposable, IEventListener<PlayerLeft>
+public class UserPermissionStore : IAsyncDisposable, IHostedService, IEventListener<PlayerLeft>
 {
     private readonly ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionBranch>> _individualPermissionCache = new ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionBranch>>();
     private readonly ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionGroup>> _permissionGroupCache = new ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionGroup>>();
@@ -49,8 +50,12 @@ public class UserPermissionStore : IAsyncDisposable, IEventListener<PlayerLeft>
         PermissionGroups = null!;
         _permissionGroupFilePath = Path.Combine(module.HomeDirectory, "Permission Groups.json");
         ReadPermissionGroups(true);
-        _permissionGroupFileWatcher = ConfigurationHelper.ListenForFileUpdate(_permissionGroupFilePath, OnConfigUpdated);
+        _permissionGroupFileWatcher = ConfigurationHelper.ListenForFileUpdate(module.FileProvider, _permissionGroupFilePath, OnConfigUpdated);
     }
+
+    UniTask IHostedService.StartAsync(CancellationToken token) => UniTask.CompletedTask;
+
+    UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
 
     /// <summary>
     /// Clear all cached permissions for a player. If <paramref name="steam64"/> is 0, all cached permissions will be cleared.

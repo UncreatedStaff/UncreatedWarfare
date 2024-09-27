@@ -15,6 +15,7 @@ public class PlayerSummariesResponseData
     [JsonPropertyName("players")]
     public PlayerSummary[] Results { get; set; }
 }
+
 public class PlayerSummary
 {
     [JsonPropertyName("steamid")]

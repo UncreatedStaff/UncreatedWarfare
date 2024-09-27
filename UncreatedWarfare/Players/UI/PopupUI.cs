@@ -28,7 +28,7 @@ public class PopupUI : UnturnedUI
     ];
 
     public UnturnedImage Image { get; } = new UnturnedImage("Image");
-    public PopupUI(AssetConfiguration assetConfig, IPlayerService playerService) : base(assetConfig.GetAssetLink<EffectAsset>("UI:Toasts:Popup"))
+    public PopupUI(AssetConfiguration assetConfig, IPlayerService playerService, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Toasts:Popup"))
     {
         _playerService = playerService;
         for (int i = 0; i < Buttons.Length; ++i)

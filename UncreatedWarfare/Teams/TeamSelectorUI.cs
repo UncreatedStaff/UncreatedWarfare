@@ -64,7 +64,7 @@ public class TeamSelectorUI : UnturnedUI
     public event Action<WarfarePlayer, string>? OnCultureSearch;
     public event Action<WarfarePlayer, int>? OnLanguageApply;
     public event Action<WarfarePlayer, int>? OnCultureApply;
-    public TeamSelectorUI(AssetConfiguration assetConfig, IPlayerService playerService) : base(assetConfig.GetAssetLink<EffectAsset>("UI:TeamSelector"))
+    public TeamSelectorUI(AssetConfiguration assetConfig, IPlayerService playerService, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:TeamSelector"))
     {
         _playerService = playerService;
         TeamPlayers =

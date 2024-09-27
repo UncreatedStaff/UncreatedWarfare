@@ -150,14 +150,12 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
         WarfarePlayer player = _players[index];
         _players.RemoveAt(index);
         OnObjectExited?.Invoke(player);
-        L.Log($"Player left in collider ({string.Join(", ", ActiveObjects)}).");
     }
 
     private void AddObject(WarfarePlayer value)
     {
         _players.Add(value);
         OnObjectEntered?.Invoke(value);
-        L.Log($"Player entered in collider ({string.Join(", ", ActiveObjects)})");
     }
 
     [UsedImplicitly]

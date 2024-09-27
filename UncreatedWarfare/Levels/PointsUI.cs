@@ -13,7 +13,7 @@ public class XPUI : UnturnedUI
     public readonly UnturnedLabel Next = new UnturnedLabel("Image/Next");
     public readonly UnturnedLabel Progress = new UnturnedLabel("Image/Progress");
 
-    public XPUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:XP"), reliable: false) { }
+    public XPUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:XP"), reliable: false) { }
 //    public void SendTo(WarfarePlayer player)
 //    {
 //        GameThread.AssertCurrent();
@@ -75,7 +75,7 @@ public class CreditsUI : UnturnedUI
     public readonly UnturnedUIElement Parent = new UnturnedUIElement("Canvas/Image");
     private static string? _creditsColor;
     public string CreditsColor => _creditsColor ??= "ffffff"; // todo use credit color
-    public CreditsUI(AssetConfiguration assetConfig) : base(assetConfig.GetAssetLink<EffectAsset>("UI:Credits")) { }
+    public CreditsUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Credits")) { }
     //public void SendTo(UCPlayer player)
     //{
     //    L.LogDebug("Sending creds ui to " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");

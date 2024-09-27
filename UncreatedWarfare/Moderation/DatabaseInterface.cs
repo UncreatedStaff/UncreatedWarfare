@@ -71,8 +71,8 @@ public class DatabaseInterface
     public event Action<ModerationEntry>? OnNewModerationEntryAdded;
     public event Action<ModerationEntry>? OnModerationEntryUpdated;
     public ModerationCache Cache { get; } = new ModerationCache(64);
-    internal SteamAPIService SteamAPI { get; }
-    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, SteamAPIService steamApi)
+    internal SteamApiService SteamAPI { get; }
+    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, SteamApiService steamApi)
     {
         SteamAPI = steamApi;
         Sql = mySqlProvider;

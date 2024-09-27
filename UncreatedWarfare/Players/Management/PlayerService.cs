@@ -67,7 +67,8 @@ public class PlayerService : IPlayerService
     /// </summary>
     public static readonly Type[] PlayerTasks =
     [
-        typeof(LanguagePreferencesPlayerTask)
+        typeof(LanguagePreferencesPlayerTask),
+        typeof(SteamApiSummaryTask)
     ];
 
     // keep up with a separate array that's replaced every time so the value can be used in multi-threaded operations
@@ -276,7 +277,7 @@ public class PlayerService : IPlayerService
 
             if (task.CanReject)
             {
-                tasks[i] = tasks[i].ContinueWith(static (task, src) =>
+                tasks[i] = t.ContinueWith(static (task, src) =>
                 {
                     if (task.IsCanceled)
                         return false;

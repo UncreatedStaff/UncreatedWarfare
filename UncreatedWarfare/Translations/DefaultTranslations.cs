@@ -237,9 +237,6 @@ internal static class T
     [TranslationData(SectionPlayers, "Sent when an unauthorized player attempts to edit a sign.")]
     public static readonly Translation ProhibitedSignEditing = new Translation("<#ff8c69>You are not allowed to edit that sign.");
     
-    [TranslationData(SectionPlayers, "Sent when a player tries to use a command while not in main.")]
-    public static readonly Translation NotInMain = new Translation("<#b3a6a2>You must be in <#cedcde>MAIN</color> to use this command.");
-    
     [TranslationData(SectionPlayers, "Sent when a player tries to craft a blacklisted blueprint.")]
     public static readonly Translation NoCraftingBlueprint = new Translation("<#b3a6a2>Crafting is disabled for this item.");
 
@@ -1577,8 +1574,6 @@ internal static class T
     public static readonly Translation<FactionInfo, IPlayer> TeamJoinAnnounce = new Translation<FactionInfo, IPlayer>("<#a0ad8e>{1} joined {0}!", arg0Fmt: FactionInfo.FormatColorDisplayName, arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
     [TranslationData(SectionTeams, "Gets broadcasted when the game is over.")]
     public static readonly Translation<FactionInfo> TeamWin = new Translation<FactionInfo>("<#a0ad8e>{0} has won the battle!", arg0Fmt: FactionInfo.FormatColorDisplayName);
-    [TranslationData(SectionTeams)]
-    public static readonly Translation<Cooldown> TeamsCooldown = new Translation<Cooldown>("<#ff8c69>You can't use /teams for another {0}.", arg0Fmt: Cooldown.FormatTimeLong);
     [TranslationData(SectionTeams)]
     public static readonly Translation TeamsUIHeader = new Translation("Choose a Team", TranslationOptions.TMProUI);
     [TranslationData(SectionTeams)]

@@ -173,7 +173,6 @@ public class ZoneStore : IHostedService
                 throw new ArgumentException("This zone doesn't have a valid shape or is missing the associated data object.", nameof(zone));
         }
 
-        _logger.LogInformation("Created {0} for {1}: {2}.", prox.GetType(), zone, prox.ToString());
         return prox;
     }
 

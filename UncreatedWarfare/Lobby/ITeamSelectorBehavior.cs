@@ -23,8 +23,4 @@ public struct TeamInfo
 {
     public int PlayerCount { get; set; }
     public Team Team { get; internal set; }
-    public TeamInfo(Team team)
-    {
-        Team = team;
-    }
 }

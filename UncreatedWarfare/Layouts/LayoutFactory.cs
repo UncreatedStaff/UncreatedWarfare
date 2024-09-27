@@ -196,7 +196,7 @@ public class LayoutFactory : IHostedService
             return null;
 
         ConfigurationBuilder configBuilder = new ConfigurationBuilder();
-        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, file);
+        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, _warfare.FileProvider, file);
         IConfigurationRoot root = configBuilder.Build();
 
         // read the full type name from the config file
