@@ -39,7 +39,7 @@ public class SignInstancer : ILevelHostedService, IEventListener<BarricadePlaced
         foreach (Type signProviderType in Accessor.GetTypesSafe().Where(typeof(ISignInstanceProvider).IsAssignableFrom))
         {
             if (signProviderType.IsAbstract || !signProviderType.IsClass)
-                return;
+                continue;
 
             foreach (SignPrefixAttribute prefix in signProviderType.GetAttributesSafe<SignPrefixAttribute>())
             {
@@ -303,8 +303,8 @@ public class SignInstancer : ILevelHostedService, IEventListener<BarricadePlaced
         if (barricade.interactable is not InteractableSign sign)
             return;
 
-        string text = sign.text;
-        if (!TryGetProviderType(text, out int dataIndex))
+        string? text = sign.text;
+        if (text == null || !TryGetProviderType(text, out int dataIndex))
         {
             return;
         }

@@ -25,6 +25,11 @@ public sealed class EventListenerAttribute : Attribute
     public int Priority { get; set; }
 
     /// <summary>
+    /// Requires that a session has started before invoking this event.
+    /// </summary>
+    public bool RequireActiveLayout { get; set; }
+
+    /// <summary>
     /// If this listener must be invoked on the main thread.
     /// </summary>
     /// <remarks>Defaults to <see langword="true"/> for <see cref="IEventListener{TEventArgs}"/>'s and <see langword="false"/> for <see cref="IAsyncEventListener{TEventArgs}"/>'s.</remarks>

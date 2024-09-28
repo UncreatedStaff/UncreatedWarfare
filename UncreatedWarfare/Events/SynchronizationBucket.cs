@@ -1,4 +1,5 @@
 ﻿using System;
+using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events;
@@ -27,5 +28,21 @@ internal class SynchronizationBucket : IDisposable
     public void Dispose()
     {
         Semaphore.Dispose();
+    }
+
+    public override string ToString()
+    {
+        if (TypeOwner != null)
+        {
+            if (Player != null)
+                return $"Sync {Accessor.Formatter.Format(TypeOwner)} for {Player}";
+
+            return $"Sync {Accessor.Formatter.Format(TypeOwner)} for all players";
+        }
+
+        if (Player != null)
+            return $"Sync tag \"{Tag}\" for {Player}";
+
+        return $"Sync tag \"{Tag}\" for all players";
     }
 }

@@ -73,7 +73,7 @@ public sealed class WarfareModule : IModuleNexus
     /// Static instance of the event dispatcher singleton for harmony patches to access it.
     /// </summary>
     /// <remarks>Do not use unless in a patch.</remarks>
-    public static EventDispatcher2 EventDispatcher => _dispatcher ??= Singleton?.ScopedProvider.Resolve<EventDispatcher2>();
+    public static EventDispatcher2 EventDispatcher => _dispatcher ??= Singleton?.ServiceProvider.Resolve<EventDispatcher2>();
 
     /// <summary>
     /// Static instance of this module singleton for harmony patches to access it.
@@ -339,6 +339,7 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterType<XPUI>().SingleInstance();
         bldr.RegisterType<CreditsUI>().SingleInstance();
         bldr.RegisterType<TeamSelectorUI>().SingleInstance();
+        bldr.RegisterType<VehicleHUD>().SingleInstance();
 
         bldr.RegisterType<TipService>()
             .AsImplementedInterfaces().AsSelf()
@@ -476,8 +477,12 @@ public sealed class WarfareModule : IModuleNexus
 
         // Layouts
         bldr.Register(_ => GetActiveLayout())
-            .AsSelf().As<IEventListenerProvider>()
+            .AsSelf()
             .ExternallyOwned();
+
+        bldr.RegisterType<LayoutPhaseEventListenerProvider>()
+            .As<IEventListenerProvider>()
+            .SingleInstance();
 
         // Active ILayoutPhase
         bldr.Register(_ => GetActiveLayout().ActivePhase ?? throw new InvalidOperationException("There is not a phase currently loaded."));
@@ -599,6 +604,9 @@ public sealed class WarfareModule : IModuleNexus
     private async UniTask HostAsync()
     {
         GameThread.AssertCurrent();
+
+        // set up level measurements as early as possible
+        Level.onPrePreLevelLoaded += CartographyUtility.Init;
 
         CancellationToken token = UnloadToken;
 
@@ -854,11 +862,13 @@ public sealed class WarfareModule : IModuleNexus
         await UniTask.SwitchToMainThread(token);
 
         _activeLayout = null;
-        
-        ILifetimeScope? oldScope = Interlocked.Exchange(ref _activeScope, builder == null
+
+        ILifetimeScope newScope = builder == null
             ? ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Session)
-            : ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Session, builder)
-        );
+            : ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Session, builder);
+
+
+        ILifetimeScope? oldScope = Interlocked.Exchange(ref _activeScope, newScope);
 
         if (ServiceProvider.Resolve<IPlayerService>() is PlayerService playerServiceImpl)
         {
@@ -871,7 +881,7 @@ public sealed class WarfareModule : IModuleNexus
             await UniTask.SwitchToMainThread();
         }
 
-        return _activeScope!;
+        return newScope;
     }
 
     /// <summary>

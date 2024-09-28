@@ -170,6 +170,8 @@ public partial class EventDispatcher2 : IHostedService
 
         ILifetimeScope scope = _warfare.IsLayoutActive() ? _warfare.ScopedProvider : _warfare.ServiceProvider;
 
+        IServiceProvider serviceProvider = scope.Resolve<IServiceProvider>();
+
         // IServiceProvider
         foreach (IEventListener<TEventArgs> eventListener in scope.Resolve<IEnumerable<IEventListener<TEventArgs>>>())
         {
@@ -201,17 +203,6 @@ public partial class EventDispatcher2 : IHostedService
         _logger.LogDebug("Invoke {0} - Dispatching event for {1} listener(s).", Accessor.Formatter.Format(type), ct);
 #endif
 
-        if (ct == 0)
-        {
-            return true;
-        }
-
-        EventListenerResult[] underlying = eventListeners.GetUnderlyingArray();
-
-        FillResults<TEventArgs>(underlying, ct);
-
-        Array.Sort(underlying, 0, ct, PriorityComparer.Instance);
-
         List<SynchronizationBucket>? buckets = null;
         List<Task>? tasks = null;
 
@@ -242,10 +233,28 @@ public partial class EventDispatcher2 : IHostedService
 
         try
         {
+            if (ct == 0)
+            {
+                return true;
+            }
+
+            EventListenerResult[] underlying = eventListeners.GetUnderlyingArray();
+
+            FillResults<TEventArgs>(underlying, ct);
+
+            Array.Sort(underlying, 0, ct, PriorityComparer.Instance);
+
+            bool layoutActive = _warfare.IsLayoutActive();
+
             for (int i = 0; i < ct; i++)
             {
                 try
                 {
+                    if (!layoutActive && (underlying[i].Flags & 8) != 0)
+                    {
+                        continue;
+                    }
+
                     if ((underlying[i].Flags & 4) != 0 && !GameThread.IsCurrent)
                     {
                         await UniTask.SwitchToMainThread(token);
@@ -258,11 +267,11 @@ public partial class EventDispatcher2 : IHostedService
                     {
                         if (!allowAsync)
                             throw new InvalidOperationException($"Async event listeners not supported for {Accessor.ExceptionFormatter.Format<TEventArgs>()}.");
-                        await ((IAsyncEventListener<TEventArgs>)underlying[i].Listener).HandleEventAsync(eventArgs, _serviceProvider, token);
+                        await ((IAsyncEventListener<TEventArgs>)underlying[i].Listener).HandleEventAsync(eventArgs, serviceProvider, token);
                     }
                     else
                     {
-                        ((IEventListener<TEventArgs>)underlying[i].Listener).HandleEvent(eventArgs, _serviceProvider);
+                        ((IEventListener<TEventArgs>)underlying[i].Listener).HandleEvent(eventArgs, serviceProvider);
                     }
                 }
                 catch (ControlException) { }
@@ -277,7 +286,7 @@ public partial class EventDispatcher2 : IHostedService
 
                     GetInfo<TEventArgs>((underlying[i].Flags & 1) != 0 ? typeof(IAsyncEventListener<TEventArgs>) : typeof(IEventListener<TEventArgs>), listenerType, out EventListenerInfo info);
 
-                    ILogger logger = (ILogger)_serviceProvider.GetService(typeof(ILogger<>).MakeGenericType(listenerType));
+                    ILogger logger = (ILogger)scope.Resolve(typeof(ILogger<>).MakeGenericType(listenerType));
                     if (ex is OperationCanceledException && token.IsCancellationRequested)
                     {
                         logger.LogInformation(ex, "Execution of event handler {0} cancelled by CancellationToken.", Accessor.Formatter.Format(info.Method));
@@ -304,8 +313,14 @@ public partial class EventDispatcher2 : IHostedService
 
             if (buckets != null)
             {
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Releasing {1} bucket(s).", Accessor.Formatter.Format(type), buckets.Count);
+#endif
                 foreach (SynchronizationBucket bucket in buckets)
                 {
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Releasing bucket: \"{1}\".", Accessor.Formatter.Format(type), bucket);
+#endif
                     bucket.Semaphore.Release();
                 }
             }
@@ -325,7 +340,7 @@ public partial class EventDispatcher2 : IHostedService
             // global sync buckets + all players
             if (!_typeSynchronizations.TryGetValue(type, out SynchronizationBucket bucket))
             {
-                bucket = new SynchronizationBucket(type, true);
+                bucket = new SynchronizationBucket(type, false);
                 _typeSynchronizations.Add(type, bucket);
             }
 
@@ -354,7 +369,7 @@ public partial class EventDispatcher2 : IHostedService
             {
                 if (!_typeSynchronizations.TryGetValue(modelInfo.RequestModel, out bucket))
                 {
-                    bucket = new SynchronizationBucket(modelInfo.RequestModel, true);
+                    bucket = new SynchronizationBucket(modelInfo.RequestModel, false);
                     _typeSynchronizations.Add(modelInfo.RequestModel, bucket);
                 }
 
@@ -388,7 +403,7 @@ public partial class EventDispatcher2 : IHostedService
                 string tag = modelInfo.SynchronizedModelTags[i];
                 if (!_tagSynchronizations.TryGetValue(tag, out bucket))
                 {
-                    bucket = new SynchronizationBucket(type, true);
+                    bucket = new SynchronizationBucket(type, false);
                     _tagSynchronizations.Add(tag, bucket);
                 }
 
@@ -430,14 +445,14 @@ public partial class EventDispatcher2 : IHostedService
             {
                 if (!dict.TryGetValue(playerArgs.Steam64, out bucket))
                 {
-                    bucket = new SynchronizationBucket(type, true, playerArgs.Player);
+                    bucket = new SynchronizationBucket(type, false, playerArgs.Player);
                     dict.Add(playerArgs.Steam64, bucket);
                 }
             }
             else
             {
                 dict = new PlayerDictionary<SynchronizationBucket>();
-                bucket = new SynchronizationBucket(type, true, playerArgs.Player);
+                bucket = new SynchronizationBucket(type, false, playerArgs.Player);
                 dict.Add(playerArgs.Steam64, bucket);
                 _typePlayerSynchronizations.Add(type, dict);
             }
@@ -463,14 +478,14 @@ public partial class EventDispatcher2 : IHostedService
                 {
                     if (!dict.TryGetValue(playerArgs.Steam64, out bucket))
                     {
-                        bucket = new SynchronizationBucket(modelInfo.RequestModel, true, playerArgs.Player);
+                        bucket = new SynchronizationBucket(modelInfo.RequestModel, false, playerArgs.Player);
                         dict.Add(playerArgs.Steam64, bucket);
                     }
                 }
                 else
                 {
                     dict = new PlayerDictionary<SynchronizationBucket>();
-                    bucket = new SynchronizationBucket(modelInfo.RequestModel, true, playerArgs.Player);
+                    bucket = new SynchronizationBucket(modelInfo.RequestModel, false, playerArgs.Player);
                     dict.Add(playerArgs.Steam64, bucket);
                     _typePlayerSynchronizations.Add(modelInfo.RequestModel, dict);
                 }
@@ -502,14 +517,14 @@ public partial class EventDispatcher2 : IHostedService
                 {
                     if (!dict.TryGetValue(playerArgs.Steam64, out bucket))
                     {
-                        bucket = new SynchronizationBucket(type, true, playerArgs.Player);
+                        bucket = new SynchronizationBucket(type, false, playerArgs.Player);
                         dict.Add(playerArgs.Steam64, bucket);
                     }
                 }
                 else
                 {
                     dict = new PlayerDictionary<SynchronizationBucket>();
-                    bucket = new SynchronizationBucket(type, true, playerArgs.Player);
+                    bucket = new SynchronizationBucket(type, false, playerArgs.Player);
                     dict.Add(playerArgs.Steam64, bucket);
                     _tagPlayerSynchronizations.Add(tag, dict);
                 }
@@ -554,6 +569,7 @@ public partial class EventDispatcher2 : IHostedService
             // ReSharper disable RedundantCast
             result.Flags |= info.MustRunInstantly & !isAsync ? (byte)2 : (byte)0;
             result.Flags |= info.EnsureMainThread ? (byte)4 : (byte)0;
+            result.Flags |= info.RequireActiveLayout ? (byte)8 : (byte)0;
             // ReSharper restore RedundantCast
         }
     }
@@ -579,6 +595,7 @@ public partial class EventDispatcher2 : IHostedService
         info.Priority = attribute?.Priority ?? 0;
         info.EnsureMainThread = attribute is not { HasRequiredMainThread: true } ? !isAsync : attribute.RequiresMainThread;
         info.MustRunInstantly = attribute?.MustRunInstantly ?? false;
+        info.RequireActiveLayout = attribute?.RequireActiveLayout ?? false;
 
         if (isAsync && info.MustRunInstantly)
         {
@@ -614,6 +631,7 @@ public partial class EventDispatcher2 : IHostedService
     private struct EventListenerInfo
     {
         public int Priority;
+        public bool RequireActiveLayout;
         public bool EnsureMainThread;
         public bool MustRunInstantly;
         public MethodInfo Method;
@@ -623,9 +641,10 @@ public partial class EventDispatcher2 : IHostedService
     {
         public object Listener;
         // to save struct size, trying to keep performance good for these
-        // bits: 0: IsAsyncListener
-        //       1: MustRunInstantly
-        //       2: EnsureMainThread
+        // bits: 0 (1): IsAsyncListener
+        //       1 (2): MustRunInstantly
+        //       2 (4): EnsureMainThread
+        //       3 (8): RequireActiveLayout
         public byte Flags;
         public int Priority;
     }

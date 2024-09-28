@@ -7,10 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts;
@@ -18,7 +16,7 @@ namespace Uncreated.Warfare.Layouts;
 /// <summary>
 /// Lasts for one game. Responsible for loading layouts.
 /// </summary>
-public class Layout : IDisposable, IEventListenerProvider
+public class Layout : IDisposable
 {
     private int _activePhase = -1;
     private readonly IDisposable _configListener;
@@ -458,20 +456,5 @@ public class Layout : IDisposable, IEventListenerProvider
         }
 
         _cancellationTokenSource.Dispose();
-    }
-
-    // allows the current phase to handle events
-    IEnumerable<IEventListener<TEventArgs>> IEventListenerProvider.EnumerateNormalListeners<TEventArgs>(TEventArgs args)
-    {
-        return ActivePhase is IEventListener<TEventArgs> phase
-            ? Enumerable.Repeat(phase, 1)
-            : Enumerable.Empty<IEventListener<TEventArgs>>();
-    }
-
-    IEnumerable<IAsyncEventListener<TEventArgs>> IEventListenerProvider.EnumerateAsyncListeners<TEventArgs>(TEventArgs args)
-    {
-        return ActivePhase is IAsyncEventListener<TEventArgs> phase
-            ? Enumerable.Repeat(phase, 1)
-            : Enumerable.Empty<IAsyncEventListener<TEventArgs>>();
     }
 }

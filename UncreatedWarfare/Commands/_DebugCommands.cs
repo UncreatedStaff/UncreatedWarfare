@@ -7,6 +7,7 @@ using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Util;
 
 #if DEBUG
 #endif
@@ -129,8 +130,78 @@ public class DebugCommand : IExecutableCommand
             throw Context.ReplyString($"Ran into an error while executing: <#ff758f>{testFunction.Name}</color> - <#ff758f>{Accessor.Formatter.Format((ex.InnerException ?? ex).GetType())}</color>.", "ff8c69");
         }
     }
+
 #pragma warning disable IDE1006
 #pragma warning disable IDE0051
+    private void barricadecarto()
+    {
+        Context.AssertRanByPlayer();
+
+        if (!Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
+        {
+            throw Context.ReplyString("Look at barricade.");
+        }
+
+        if (!Context.TryGet(0, out float xOffset) || !Context.TryGet(1, out float yOffset) || !Context.TryGet(2, out float zOffset) || !Context.TryGet(3, out float xSize) || !Context.TryGet(4, out float ySize))
+        {
+            throw Context.SendCorrectUsage("/test barricadecarto <<look at barricade>> <offset: x y z> <size: x y>");
+        }
+
+        Vector3 offset = new Vector3(xOffset, yOffset, zOffset);
+        Vector2 size = new Vector2(xSize, ySize);
+
+        Matrix4x4 transformationMatrix = CartographyUtility.ProjectWorldToMapBarricade(barricade, offset, size);
+
+        EffectAsset? squadLeaderEmpty = Assets.find<EffectAsset>(new Guid("dc95d06e787e4a069518e0487645ed6b"));
+        EffectAsset? squadLeaderUnrmd = Assets.find<EffectAsset>(new Guid("fc661ae0d8eb4fb3a2dcdee3b8fb6070"));
+        if (squadLeaderEmpty == null || squadLeaderUnrmd == null)
+            throw Context.SendUnknownError();
+
+        Vector3 position = Context.Player.UnturnedPlayer.quests.isMarkerPlaced
+            ? Context.Player.UnturnedPlayer.quests.markerPosition
+            : Context.Player.Position;
+
+        Context.ReplyString($"Position: {position:F3}.");
+
+        Vector3 pt = transformationMatrix.MultiplyPoint3x4(position);
+
+        EffectUtility.TriggerEffect(squadLeaderEmpty, Context.Player.Connection, pt, true);
+
+        Context.ReplyString($"Found point: {pt:F3} and spawned effect from pos {position:F3}.");
+
+
+        // pt = transformationMatrix.inverse.MultiplyPoint3x4(position);
+        // 
+        // EffectUtility.TriggerEffect(squadLeaderUnrmd, Context.Player.Connection, pt, true);
+        // 
+        // Context.ReplyString($"Found inverse point: {pt:F3} and spawned effect from pos {position:F3}.");
+    }
+
+    private void carto()
+    {
+        Context.AssertRanByPlayer();
+
+        Vector3 pos = Context.Player.Position;
+        Context.ReplyString($"Location: {pos}.");
+
+        Vector3 worldToMap = CartographyUtility.WorldToMap.MultiplyPoint3x4(pos);
+        Vector2 denormalized = CartographyUtility.DenormalizeMapCoordinates(worldToMap);
+
+        Context.ReplyString($"Normalized: {worldToMap}, denormalized: {denormalized}, renormalized: {CartographyUtility.NormalizeMapCoordinates(denormalized)}.");
+
+        Context.ReplyString($"Converted back: {CartographyUtility.MapToWorld.MultiplyPoint3x4(worldToMap)}.");
+
+        L.Log("m2w: " + Environment.NewLine + CartographyUtility.WorldToMap.ToString("F3"));
+        L.Log("m2wt: " + CartographyUtility.WorldToMap.GetPosition().ToString("F3"));
+        L.Log("m2wr: " + CartographyUtility.WorldToMap.GetRotation().eulerAngles.ToString("F3"));
+        L.Log("m2ws: " + CartographyUtility.WorldToMap.lossyScale.ToString("F3"));
+        L.Log("w2m: " + Environment.NewLine + CartographyUtility.MapToWorld.ToString("F3"));
+        L.Log("w2mt: " + CartographyUtility.MapToWorld.GetPosition().ToString("F3"));
+        L.Log("w2mr: " + CartographyUtility.MapToWorld.GetRotation().eulerAngles.ToString("F3"));
+        L.Log("w2ms: " + CartographyUtility.MapToWorld.lossyScale.ToString("F3"));
+        L.Log("Img size: " + CartographyUtility.MapImageSize);
+        L.Log("Cpt size: " + CartographyUtility.CaptureAreaSize.ToString("F3"));
+    }
 #if false
     private const string UsageGiveXp = "/test givexp <player> <amount> [team - required if offline]";
     private async UniTask givexp(CancellationToken token)

@@ -113,6 +113,7 @@ public class VehicleComponent : MonoBehaviour
     public bool IsInVehiclebay => VehicleData != null;
     public bool CanTransport => VehicleData != null && VehicleData.CanTransport(Vehicle);
 
+    // note that this is called at the beginning of every session to replace the scoped services
     public void Initialize(InteractableVehicle vehicle, IServiceProvider serviceProvider)
     {
         Vehicle = vehicle;
@@ -122,6 +123,8 @@ public class VehicleComponent : MonoBehaviour
         _timeRewardedTable = new PlayerDictionary<DateTime>();
         DamageTable = new Dictionary<ulong, KeyValuePair<ushort, DateTime>>();
         _isResupplied = true;
+
+        OwnerHistory.Clear();
         if (vehicle.lockedOwner.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
             OwnerHistory.Push(vehicle.lockedOwner.m_SteamID);
 
@@ -138,7 +141,7 @@ public class VehicleComponent : MonoBehaviour
             VehicleData = vehicleInfoStore.GetVehicleInfo(Vehicle.asset);
             if (VehicleData != null)
             {
-                vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(VehicleData.Type, vehicle, serviceProvider);
+                vehicle.transform.gameObject.GetOrAddComponent<SpottedComponent>().Initialize(VehicleData.Type, vehicle, serviceProvider);
             }
         }
         _lastPosInterval = transform.position;
@@ -147,9 +150,9 @@ public class VehicleComponent : MonoBehaviour
         foreach (var passenger in Vehicle.turrets)
         {
             if (VehicleBay.Config.GroundAAWeapons.ContainsId(passenger.turret.itemID))
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(700, 1500, Gamemode.Config.EffectLockOn1, 0.7f, 14.6f);
+                passenger.turretAim.gameObject.GetOrAddComponent<HeatSeekingController>().Initialize(700, 1500, Gamemode.Config.EffectLockOn1, 0.7f, 14.6f);
             if (VehicleBay.Config.AirAAWeapons.ContainsId(passenger.turret.itemID))
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2, 1, 11);
+                passenger.turretAim.gameObject.GetOrAddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2, 1, 11);
         }
 #endif
 

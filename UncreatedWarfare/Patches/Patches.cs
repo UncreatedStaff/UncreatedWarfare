@@ -425,9 +425,14 @@ public static partial class Patches
         [UsedImplicitly]
         static bool OnPlayerMarked(ref bool newIsMarkerPlaced, ref Vector3 newMarkerPosition, ref string newMarkerTextOverride, PlayerQuests __instance)
         {
-            bool isAllowed = true;
-            OnPlayerMarker_Global.Invoke(__instance.player, ref newMarkerPosition, ref newMarkerTextOverride, ref newIsMarkerPlaced, ref isAllowed);
-            return isAllowed;
+            if (OnPlayerMarker_Global != null)
+            {
+                bool isAllowed = true;
+                OnPlayerMarker_Global.Invoke(__instance.player, ref newMarkerPosition, ref newMarkerTextOverride, ref newIsMarkerPlaced, ref isAllowed);
+                return isAllowed;
+            }
+
+            return true;
         }
         // SDG.Unturned.PlayerInventory
         ///<summary>

@@ -79,7 +79,7 @@ public class WhitelistService :
             string idLookup = item.Id.ToString();
 
             ItemWhitelist? whitelist = await _dbContext.Whitelists.FirstOrDefaultAsync(
-                whitelist => whitelist.Item.ToString() == guidLookup || idLookup != "0" && whitelist.Item.ToString() == idLookup,
+                whitelist => Convert.ToString(whitelist.Item) == guidLookup || idLookup != "0" && Convert.ToString(whitelist.Item) == idLookup,
                 token
             ).ConfigureAwait(false);
 
@@ -126,7 +126,7 @@ public class WhitelistService :
             string idLookup = item.Id.ToString();
 
             ItemWhitelist? whitelist = await _dbContext.Whitelists.FirstOrDefaultAsync(
-                whitelist => whitelist.Item.ToString() == guidLookup || idLookup != "0" && whitelist.Item.ToString() == idLookup,
+                whitelist => Convert.ToString(whitelist.Item) == guidLookup || idLookup != "0" && Convert.ToString(whitelist.Item) == idLookup,
                 token
             ).ConfigureAwait(false);
 
@@ -194,7 +194,7 @@ public class WhitelistService :
             string idLookup = assetContainer.Id.ToString();
 
             return await _dbContext.Whitelists.FirstOrDefaultAsync(
-                whitelist => whitelist.Item.ToString() == guidLookup || idLookup != "0" && whitelist.Item.ToString() == idLookup,
+                whitelist => Convert.ToString(whitelist.Item) == guidLookup || idLookup != "0" && Convert.ToString(whitelist.Item) == idLookup,
                 token
             ).ConfigureAwait(false);
         }
@@ -216,7 +216,7 @@ public class WhitelistService :
             string idLookup = asset.id.ToString();
 
             return await _dbContext.Whitelists.FirstOrDefaultAsync(
-                whitelist => whitelist.Item.ToString() == guidLookup || idLookup != "0" && whitelist.Item.ToString() == idLookup,
+                whitelist => Convert.ToString(whitelist.Item) == guidLookup || idLookup != "0" && Convert.ToString(whitelist.Item) == idLookup,
                 token
             ).ConfigureAwait(false);
         }
@@ -241,7 +241,7 @@ public class WhitelistService :
             string idLookup = asset?.id.ToString(CultureInfo.InvariantCulture) ?? "0";
 
             return await _dbContext.Whitelists.FirstOrDefaultAsync(
-                whitelist => whitelist.Item.ToString() == guidLookup || idLookup != "0" && whitelist.Item.ToString() == idLookup,
+                whitelist => Convert.ToString(whitelist.Item) == guidLookup || idLookup != "0" && Convert.ToString(whitelist.Item) == idLookup,
                 token
             ).ConfigureAwait(false);
         }
@@ -296,10 +296,8 @@ public class WhitelistService :
             return;
 
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
-        if (!await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
+        if (await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
         {
-            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
-            _chatService.Send(e.OriginalPlacer, translations.NoPermissionsSpecific, PermissionPlaceBuildable);
             return;
         }
 
@@ -324,6 +322,7 @@ public class WhitelistService :
 
         if (equippedKit == null && whitelistAmount == 0)
         {
+            _chatService.Send(e.OriginalPlacer, _translations.WhitelistProhibitedPlace, e.Asset);
             e.Cancel();
             return;
         }
@@ -383,10 +382,8 @@ public class WhitelistService :
             return;
 
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
-        if (!await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
+        if (await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
         {
-            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
-            _chatService.Send(e.OriginalPlacer, translations.NoPermissionsSpecific, PermissionPlaceBuildable);
             return;
         }
 
@@ -467,10 +464,8 @@ public class WhitelistService :
     async UniTask IAsyncEventListener<ItemPickupRequested>.HandleEventAsync(ItemPickupRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
-        if (!await permissions.HasPermissionAsync(e.Player, PermissionPickUpAnyItem, token))
+        if (await permissions.HasPermissionAsync(e.Player, PermissionPickUpAnyItem, token))
         {
-            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
-            _chatService.Send(e.Player, translations.NoPermissionsSpecific, PermissionPickUpAnyItem);
             return;
         }
 
@@ -522,10 +517,8 @@ public class WhitelistService :
     private async Task HandleSalvageRequest(SalvageRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
-        if (!await permissions.HasPermissionAsync(e.Player, PermissionDestroyBuildable, token))
+        if (await permissions.HasPermissionAsync(e.Player, PermissionDestroyBuildable, token))
         {
-            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
-            _chatService.Send(e.Player, translations.NoPermissionsSpecific, PermissionDestroyBuildable);
             return;
         }
 
@@ -541,6 +534,7 @@ public class WhitelistService :
 
         if (whitelist is not { Amount: not 0 })
         {
+            _chatService.Send(e.Player, _translations.WhitelistProhibitedSalvage, e.Buildable.Asset);
             e.Cancel();
         }
     }

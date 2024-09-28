@@ -36,6 +36,12 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
     private Zone? _lobbyZone;
     private Guid _settingsFlagGuid;
 
+    /// <summary>
+    /// If the lobby is disabled.
+    /// </summary>
+    /// <remarks>Added this so older maps can be loaded in the mean time before their lobby is upgraded.</remarks>
+    public bool Disabled { get; private set; }
+
     private readonly ITeamSelectorBehavior _behavior;
 
     internal FlagInfo[] TeamFlags;
@@ -59,6 +65,13 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
     {
         // find team flag objects
         List<FlagInfo> flags = new List<FlagInfo>(2);
+
+        if (_lobbyConfig.GetValue("Disabled", false))
+        {
+            Disabled = true;
+            _logger.LogInformation("Lobby disabled by Lobby config.");
+            return UniTask.CompletedTask;
+        }
 
         JoinDelay = _lobbyConfig.GetValue("JoinDelay", defaultValue: TimeSpan.FromSeconds(3d));
 
@@ -136,7 +149,7 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
     /// <remarks>Out of bounds indices just return 0.</remarks>
     public int GetTeamPlayerCount(int teamIndex)
     {
-        return teamIndex >= 0 && teamIndex < TeamFlags.Length ? _behavior.Teams[teamIndex].PlayerCount : 0;
+        return !Disabled ? teamIndex >= 0 && teamIndex < TeamFlags.Length ? _behavior.Teams[teamIndex].PlayerCount : 0 : 0;
     }
 
     /// <summary>
@@ -144,6 +157,9 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
     /// </summary>
     public int GetActivePlayerCount()
     {
+        if (Disabled)
+            return 0;
+
         int ct = 0;
         for (int i = 0; i < TeamFlags.Length; ++i)
         {
@@ -155,6 +171,9 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
 
     public void StartJoiningTeam(WarfarePlayer player, int teamIndex)
     {
+        if (Disabled)
+            throw new InvalidOperationException("Lobby is disabled.");
+
         PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
         if (teamIndex < 0)
         {
@@ -290,6 +309,9 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
 
     void IEventListener<QuestObjectInteracted>.HandleEvent(QuestObjectInteracted e, IServiceProvider serviceProvider)
     {
+        if (Disabled)
+            return;
+
         if (e.Object.GUID == _settingsFlagGuid)
         {
             // todo actually send settings
@@ -328,6 +350,9 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
 
     UniTask ILayoutStartingListener.HandleLayoutStartingAsync(Layout layout, CancellationToken token)
     {
+        if (Disabled)
+            return UniTask.CompletedTask;
+
         // update 'Team' objects for the new layout, since they may have changed between layouts
         ITeamManager<Team> teamManager = _module.GetActiveLayout().TeamManager;
         for (int i = 0; i < TeamFlags.Length; ++i)

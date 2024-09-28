@@ -53,6 +53,7 @@ public class MapScheduler
             throw new InvalidOperationException("Map not configured or doesn't match an existing map.");
         }
 
+                                     // this is so map names can be hidden from source code
         _configuredMapNameOverride = systemConfiguration["map_name_override"];
         _configuredMap = map;
     }
