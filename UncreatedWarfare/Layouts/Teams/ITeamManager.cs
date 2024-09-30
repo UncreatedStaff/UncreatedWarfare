@@ -21,7 +21,7 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     TTeam? FindTeam(string teamSearch);
 
     /// <summary>
-    /// Will return the default team if <paramref name="groupId"/> doesn't correspond to a team.
+    /// Will return the default team if <paramref name="groupId"/> doesn't correspond to a team, otherwise an invalid team.
     /// </summary>
     TTeam GetTeam(CSteamID groupId);
 

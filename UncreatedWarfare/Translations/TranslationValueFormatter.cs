@@ -37,6 +37,7 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     // types with one open generic argument are filled by the type being formatted
     private readonly object[] _valueFormatterTypes =
     {
+        new ColorValueFormatter(),
         typeof(FormattableValueFormatter<>),
         new ToStringValueFormatter()
     };
@@ -112,7 +113,7 @@ public class TranslationValueFormatter : ITranslationValueFormatter
 
         IValueFormatter<T> valueFormatter = GetValueFormatter<T>();
 
-        return valueFormatter.Format(value, in parameters);
+        return valueFormatter.Format(this, value, in parameters);
     }
     
     private string FormatIntl(object? value, in ValueFormatParameters parameters, Type? formatType)
@@ -130,7 +131,7 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         formatType ??= value.GetType() ?? typeof(object);
         IValueFormatter valueFormatter = GetValueFormatter(formatType);
 
-        return valueFormatter.Format(value, in parameters);
+        return valueFormatter.Format(this, value, in parameters);
     }
 
     private IValueFormatter<T> GetValueFormatter<T>() => (IValueFormatter<T>)GetValueFormatter(typeof(T));

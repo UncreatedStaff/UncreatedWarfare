@@ -21,12 +21,12 @@ public interface IProximity : IShapeVolume, ICloneable
     /// <summary>
     /// Check if a position is within the proximity.
     /// </summary>
-    bool TestPoint(Vector3 position);
+    bool TestPoint(in Vector3 position);
 
     /// <summary>
     /// Check if a position is within the proximity while ignoring Y position.
     /// </summary>
-    bool TestPoint(Vector2 position);
+    bool TestPoint(in Vector2 position);
 
     bool IShapeVolume.containsPoint(Vector3 point) => TestPoint(point);
 }
@@ -75,7 +75,7 @@ public interface INearestPointProximity : IProximity
     /// <summary>
     /// Get the nearest point on the border of this proximity to <paramref name="fromLocation"/>.
     /// </summary>
-    Vector3 GetNearestPointOnBorder(Vector3 fromLocation);
+    Vector3 GetNearestPointOnBorder(in Vector3 fromLocation);
 }
 
 /// <summary>
@@ -150,7 +150,7 @@ public interface IAABBProximity : INearestPointProximity, IAttachableProximity<I
         }
     }
 
-    Vector3 INearestPointProximity.GetNearestPointOnBorder(Vector3 fromLocation) => ProximityExtensions.GetNearestPointOnBorder(this, fromLocation);
+    Vector3 INearestPointProximity.GetNearestPointOnBorder(in Vector3 fromLocation) => ProximityExtensions.GetNearestPointOnBorder(this, fromLocation);
     IAttachedAABBProximity IAttachableProximity<IAttachedAABBProximity>.CreateAttachedProximity(Transform attachmentRoot) => new AttachedAABBProximity(attachmentRoot, this);
 }
 
@@ -195,7 +195,7 @@ public interface ISphereProximity : INearestPointProximity, IAttachableProximity
         }
     }
 
-    Vector3 INearestPointProximity.GetNearestPointOnBorder(Vector3 fromLocation) => ProximityExtensions.GetNearestPointOnBorder(this, fromLocation);
+    Vector3 INearestPointProximity.GetNearestPointOnBorder(in Vector3 fromLocation) => ProximityExtensions.GetNearestPointOnBorder(this, fromLocation);
     IAttachedSphereProximity IAttachableProximity<IAttachedSphereProximity>.CreateAttachedProximity(Transform attachmentRoot) => new AttachedSphereProximity(attachmentRoot, this);
 }
 
@@ -268,7 +268,7 @@ public interface IAACylinderProximity : INearestPointProximity, IAttachableProxi
         }
     }
 
-    Vector3 INearestPointProximity.GetNearestPointOnBorder(Vector3 fromLocation) => ProximityExtensions.GetNearestPointOnBorder(this, fromLocation);
+    Vector3 INearestPointProximity.GetNearestPointOnBorder(in Vector3 fromLocation) => ProximityExtensions.GetNearestPointOnBorder(this, fromLocation);
     IAttachedAACylinderProximity IAttachableProximity<IAttachedAACylinderProximity>.CreateAttachedProximity(Transform attachmentRoot) => new AttachedAACylinderProximity(attachmentRoot, this);
 }
 
@@ -297,6 +297,6 @@ public interface IPolygonProximity : INearestPointProximity, IAttachableProximit
     /// </summary>
     float? MinHeight { get; }
 
-    Vector3 INearestPointProximity.GetNearestPointOnBorder(Vector3 fromLocation) => ProximityExtensions.GetNearestPointOnBorder(this, fromLocation);
+    Vector3 INearestPointProximity.GetNearestPointOnBorder(in Vector3 fromLocation) => ProximityExtensions.GetNearestPointOnBorder(this, fromLocation);
     IAttachedPolygonProximity IAttachableProximity<IAttachedPolygonProximity>.CreateAttachedProximity(Transform attachmentRoot) => new AttachedPolygonProximity(attachmentRoot, this);
 }

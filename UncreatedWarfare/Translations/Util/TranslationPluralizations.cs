@@ -38,7 +38,7 @@ internal static class TranslationPluralizations
             return string.Empty;
 
         // split input into words
-        int size = word.Count(' ');
+        int size = word.Count(' ') + 1;
 
         Span<Range> ranges = stackalloc Range[size];
 

@@ -90,7 +90,7 @@ public class Translation<T0, T1> : Translation
         string f0 = TranslationService.ValueFormatter.Format(arg0, in p0);
         string f1 = TranslationService.ValueFormatter.Format(arg1, in p1);
 
-        Span<int> indices = stackalloc int[2];
+        Span<int> indices = stackalloc int[1];
         indices[0] = f0.Length;
 
         Span<char> collectionSpan = stackalloc char[indices[0] + f1.Length];

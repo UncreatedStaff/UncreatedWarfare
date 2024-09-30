@@ -63,20 +63,30 @@ public class PolygonProximity : IPolygonProximity, IFormattable
 
         Lines = new PolygonLineInfo[_points.Length];
 
-        float height;
+        float height, centerY;
         if (float.IsNaN(_minHeight))
         {
             if (float.IsNaN(_maxHeight))
+            {
+                centerY = 0;
                 height = Level.HEIGHT * 2;
+            }
             else
+            {
+                centerY = (_maxHeight - Level.HEIGHT) / 2f;
                 height = Level.HEIGHT + _maxHeight;
+            }
         }
         else if (float.IsNaN(_maxHeight))
         {
+            centerY = (_minHeight + Level.HEIGHT) / 2f;
             height = Level.HEIGHT - _minHeight;
         }
         else
+        {
+            centerY = (_minHeight + _maxHeight) / 2f;
             height = _maxHeight - _minHeight;
+        }
 
         // Area of a polygon: https://web.archive.org/web/20100405070507/http://valis.cs.uiuc.edu/~sariel/research/CG/compgeom/msg00831.html
         float ttlArea = 0;
@@ -114,10 +124,12 @@ public class PolygonProximity : IPolygonProximity, IFormattable
         surfaceArea = ttlArea * 2 + sideSurfaceArea;
         Area = ttlArea;
 
-        _bounds.SetMinMax(min, max);
+        Vector3 extents = new Vector3((max.x - min.x) / 2f, height / 2f, (max.y - min.y) / 2f);
+        _bounds.extents = extents;
+        _bounds.center = new Vector3(min.x + extents.x, centerY, min.y + extents.y);
     }
 
-    private PolygonProximity(Bounds bounds, float minHeight, float maxHeight, Vector2[] points, PolygonLineInfo[] lines, ReadOnlyCollection<Vector2>? pointsReadOnly, float area, float volume)
+    private PolygonProximity(in Bounds bounds, float minHeight, float maxHeight, Vector2[] points, PolygonLineInfo[] lines, ReadOnlyCollection<Vector2>? pointsReadOnly, float area, float volume)
     {
         _bounds = bounds;
         _minHeight = minHeight;
@@ -130,7 +142,7 @@ public class PolygonProximity : IPolygonProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector3 position)
+    public bool TestPoint(in Vector3 position)
     {
         Vector3 size = _bounds.size;
         Vector3 min = _bounds.min;
@@ -148,12 +160,12 @@ public class PolygonProximity : IPolygonProximity, IFormattable
         {
             return false;
         }
-
+        
         return IsInsidePolygon(position.x, position.z);
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector2 position)
+    public bool TestPoint(in Vector2 position)
     {
         Vector3 size = _bounds.size;
         Vector3 min = _bounds.min;
@@ -247,7 +259,7 @@ public class PolygonProximity : IPolygonProximity, IFormattable
     /// <inheritdoc />
     public object Clone()
     {
-        return new PolygonProximity(_bounds, _minHeight, _maxHeight, _points, Lines, _pointsReadOnly, surfaceArea, internalVolume);
+        return new PolygonProximity(in _bounds, _minHeight, _maxHeight, _points, Lines, _pointsReadOnly, surfaceArea, internalVolume);
     }
 
     /// <inheritdoc />

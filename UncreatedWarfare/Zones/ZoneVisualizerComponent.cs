@@ -172,7 +172,8 @@ public class ZoneVisualizerComponent : IPlayerComponent
 
     public void GetParticleSpawnPoints(Zone zone, out Vector2[] sidePoints, out Vector2[] corners, out Vector2 center)
     {
-        center = zone.Center;
+        Vector3 center3d = zone.Center;
+        center = new Vector2(center3d.x, center3d.z);
         switch (zone.Shape)
         {
             case ZoneShape.Cylinder or ZoneShape.Sphere when zone.CircleInfo != null:

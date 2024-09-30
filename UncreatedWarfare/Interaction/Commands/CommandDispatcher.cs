@@ -430,6 +430,9 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
             if (!found)
                 return;
+
+            if (command.SubCommands.Length == 0)
+                break;
         }
 
         while (command.RedirectCommandInfo != null)

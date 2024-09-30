@@ -20,7 +20,7 @@ public static class ProximityExtensions
     /// Get the nearest point on a proximity's border. Some proximities may throw <see cref="NotSupportedException"/>.
     /// </summary>
     /// <exception cref="NotSupportedException">Can not caluclate the nearest point for <paramref name="proximity"/>.</exception>
-    public static Vector3 GetNearestPointOnBorder(this IProximity proximity, Vector3 fromLocation)
+    public static Vector3 GetNearestPointOnBorder(this IProximity proximity, in Vector3 fromLocation)
     {
         if (proximity is not INearestPointProximity proxNearestPointImpl)
             throw new NotSupportedException($"Can not calculate the nearest point for a {Accessor.ExceptionFormatter.Format(proximity.GetType())}, it must implement {Accessor.ExceptionFormatter.Format(typeof(INearestPointProximity))}.");
@@ -31,7 +31,7 @@ public static class ProximityExtensions
     /// <summary>
     /// Get the nearest point on the surface of a sphere to <paramref name="fromLocation"/>.
     /// </summary>
-    public static Vector3 GetNearestPointOnBorder(ISphereProximity proximity, Vector3 fromLocation)
+    public static Vector3 GetNearestPointOnBorder(ISphereProximity proximity, in Vector3 fromLocation)
     {
         BoundingSphere sphere = proximity.Sphere;
         Vector3 diff = sphere.position - fromLocation;
@@ -43,7 +43,7 @@ public static class ProximityExtensions
     /// <summary>
     /// Get the nearest point on the surface of an axis-aligned bounding box to <paramref name="fromLocation"/>.
     /// </summary>
-    public static Vector3 GetNearestPointOnBorder(IAABBProximity proximity, Vector3 fromLocation)
+    public static Vector3 GetNearestPointOnBorder(IAABBProximity proximity, in Vector3 fromLocation)
     {
         Bounds bounds = proximity.Dimensions;
         Vector3 min = bounds.min;
@@ -121,24 +121,25 @@ public static class ProximityExtensions
     /// <summary>
     /// Get the nearest point on the surface of a 2D polygon to <paramref name="fromLocation"/>.
     /// </summary>
-    public static Vector3 GetNearestPointOnBorder(IPolygonProximity proximity, Vector3 fromLocation)
+    public static Vector3 GetNearestPointOnBorder(IPolygonProximity proximity, in Vector3 fromLocation)
     {
         float? minHeight = proximity.MinHeight, maxHeight = proximity.MaxHeight;
+        Vector3 fromLoc = fromLocation;
         if (minHeight.HasValue && fromLocation.y < minHeight.Value)
-            fromLocation.y = minHeight.Value;
+            fromLoc.y = minHeight.Value;
         else if (maxHeight.HasValue && fromLocation.y > maxHeight.Value)
-            fromLocation.y = maxHeight.Value;
+            fromLoc.y = maxHeight.Value;
 
         // Closest Point on a Polygon by Javed Ali: https://javedali-iitkgp.medium.com/get-closest-point-on-a-polygon-23b68e26a33
         IReadOnlyList<Vector2> pts = proximity.Points;
         int len = pts.Count;
         if (len == 0)
-            return fromLocation;
+            return fromLoc;
 
         if (len == 1)
             return pts[0];
 
-        Vector2 from2d = new Vector2(fromLocation.x, fromLocation.z);
+        Vector2 from2d = new Vector2(fromLoc.x, fromLoc.z);
         float minSqrDist = float.NaN;
         Vector2 closestPoint = default;
         for (int i = 0; i < len; ++i)
@@ -169,14 +170,14 @@ public static class ProximityExtensions
             closestPoint = point;
         }
 
-        return new Vector3(closestPoint.x, fromLocation.y, closestPoint.y);
+        return new Vector3(closestPoint.x, fromLoc.y, closestPoint.y);
     }
 
     /// <summary>
     /// Get the nearest point on the surface of an axis-aligned cylinder to <paramref name="fromLocation"/>.
     /// </summary>
     /// <exception cref="ArgumentException">Axis is not X, Y, or Z in <paramref name="proximity"/>.</exception>
-    public static Vector3 GetNearestPointOnBorder(IAACylinderProximity proximity, Vector3 fromLocation)
+    public static Vector3 GetNearestPointOnBorder(IAACylinderProximity proximity, in Vector3 fromLocation)
     {
         Vector3 center = proximity.Center;
         SnapAxis axis = proximity.Axis;
@@ -209,35 +210,36 @@ public static class ProximityExtensions
 
         bool inCircle = sqrDistance <= sqrRadius;
 
+        Vector3 fromLoc = fromLocation;
         if (!inHeightRange)
         {
             switch (axis)
             {
                 case SnapAxis.X:
-                    fromLocation.x = Mathf.Clamp(fromLocation.x, center.x - height, center.x + height);
+                    fromLoc.x = Mathf.Clamp(fromLocation.x, center.x - height, center.x + height);
                     break;
 
                 case SnapAxis.Y:
-                    fromLocation.y = Mathf.Clamp(fromLocation.y, center.y - height, center.y + height);
+                    fromLoc.y = Mathf.Clamp(fromLocation.y, center.y - height, center.y + height);
                     break;
 
                 case SnapAxis.Z:
-                    fromLocation.z = Mathf.Clamp(fromLocation.z, center.z - height, center.z + height);
+                    fromLoc.z = Mathf.Clamp(fromLocation.z, center.z - height, center.z + height);
                     break;
             }
         }
 
         if (!inCircle && !inHeightRange)
-            return fromLocation;
+            return fromLoc;
 
         float distance = Math.Max(MathF.Sqrt(sqrDistance), float.Epsilon);
         
         // scale by unit vector
         return axis switch
         {
-            SnapAxis.X => new Vector3(fromLocation.x, relY / distance * radius, relZ / distance * radius),
-            SnapAxis.Y => new Vector3(relX / distance * radius, fromLocation.y, relZ / distance * radius),
-            _  /* Z */ => new Vector3(relX / distance * radius, relY / distance * radius, fromLocation.z)
+            SnapAxis.X => new Vector3(fromLoc.x, relY / distance * radius, relZ / distance * radius),
+            SnapAxis.Y => new Vector3(relX / distance * radius, fromLoc.y, relZ / distance * radius),
+            _  /* Z */ => new Vector3(relX / distance * radius, relY / distance * radius, fromLoc.z)
         };
     }
 

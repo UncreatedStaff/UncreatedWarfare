@@ -5,12 +5,12 @@ namespace Uncreated.Warfare.Translations;
 
 public interface IValueFormatter<in TFormattable> : IValueFormatter
 {
-    string Format(TFormattable value, in ValueFormatParameters parameters);
+    string Format(ITranslationValueFormatter formatter, TFormattable value, in ValueFormatParameters parameters);
 }
 
 public interface IValueFormatter
 {
-    string Format(object value, in ValueFormatParameters parameters);
+    string Format(ITranslationValueFormatter formatter, object value, in ValueFormatParameters parameters);
 }
 
 public interface IEnumFormatter<in TEnum> : IEnumFormatter, IValueFormatter<TEnum> where TEnum : unmanaged, Enum

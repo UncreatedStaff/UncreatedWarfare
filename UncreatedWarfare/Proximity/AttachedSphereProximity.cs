@@ -81,20 +81,20 @@ public class AttachedSphereProximity : IAttachedSphereProximity, IFormattable
     /// Create a sphere from a <see cref="BoundingSphere"/>.
     /// </summary>
     /// <exception cref="ArgumentException">Position or radius isn't finite (not NaN or Infinity).</exception>
-    public AttachedSphereProximity(Transform attachmentRoot, BoundingSphere sphere)
+    public AttachedSphereProximity(Transform attachmentRoot, in BoundingSphere sphere)
     {
         AttachmentRoot = attachmentRoot;
-        _sphere = new SphereProximity(sphere);
+        _sphere = new SphereProximity(in sphere);
     }
 
     /// <summary>
     /// Create a sphere from a position and radius.
     /// </summary>
     /// <exception cref="ArgumentException">Position or radius isn't finite (not NaN or Infinity).</exception>
-    public AttachedSphereProximity(Transform attachmentRoot, Vector3 position, float radius)
+    public AttachedSphereProximity(Transform attachmentRoot, in Vector3 position, float radius)
     {
         AttachmentRoot = attachmentRoot;
-        _sphere = new SphereProximity(position, radius);
+        _sphere = new SphereProximity(in position, radius);
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public class AttachedSphereProximity : IAttachedSphereProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector3 position)
+    public bool TestPoint(in Vector3 position)
     {
         GameThread.AssertCurrent();
 
@@ -116,7 +116,7 @@ public class AttachedSphereProximity : IAttachedSphereProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector2 position)
+    public bool TestPoint(in Vector2 position)
     {
         GameThread.AssertCurrent();
 

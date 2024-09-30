@@ -117,11 +117,17 @@ public static class SpanExtensions
     /// <summary>
     /// Span implementation of <see cref="string.Split(char,StringSplitOptions)"/>. (this exists but only in .net 8+)
     /// </summary>
+    /// <param name="trimOuter">Trim white-space off the input string before splitting.</param>
+    /// <param name="trimEachEntry">Trim white-space off each split entry.</param>
+    /// <remarks>Will return as many ranges as <paramref name="ranges"/> can fit. To get a maximum, use <c>span.Count(<paramref name="separator"/>) + 1</c>.</remarks>
     public static int Split(this ReadOnlySpan<char> span, Span<Range> ranges, char separator, bool trimOuter = false, bool trimEachEntry = false, StringSplitOptions options = StringSplitOptions.None)
     {
-        // todo this has an IndoexOutOfRangeException possibility somewhere. Do "/tp bun" (bunker) to trigger it
         int startIndex = 0;
         int endIndex = span.Length - 1;
+
+        // higher .NET versions have a StringSplitOptions.TrimEntries = 2 value.
+        trimEachEntry |= (options & (StringSplitOptions)2) != 0;
+
         if (trimOuter)
         {
             for (int i = 0; i < span.Length; ++i)
@@ -145,19 +151,27 @@ public static class SpanExtensions
 
         int rangeInd = -1;
         int startInd, endInd;
+        int lastEndInd = startIndex - 1;
         for (int i = startIndex; i <= endIndex; ++i)
         {
             if (span[i] != separator)
                 continue;
 
-            startInd = rangeInd < 0 ? startIndex : ranges[rangeInd].End.Value + 1;
+            startInd = lastEndInd + 1;
             endInd = i - 1;
+            lastEndInd = i;
 
             if (startInd > endInd && (startInd != endInd + 1 || (options & StringSplitOptions.RemoveEmptyEntries) != 0))
                 continue;
 
             if (!trimEachEntry)
             {
+                if ((options & StringSplitOptions.RemoveEmptyEntries) != 0 && startInd == endInd + 1)
+                    continue;
+
+                if (ranges.Length <= rangeInd + 1)
+                    return ranges.Length;
+
                 ranges[++rangeInd] = new Range(new Index(startInd), new Index(endInd + 1));
                 continue;
             }
@@ -180,12 +194,30 @@ public static class SpanExtensions
                 break;
             }
 
-            if (startInd <= endInd || startInd == endInd + 1 && (options & StringSplitOptions.RemoveEmptyEntries) == 0)
-                ranges[++rangeInd] = new Range(new Index(startInd), new Index(endInd + 1));
+            if (startInd > endInd && (startInd != endInd + 1 || (options & StringSplitOptions.RemoveEmptyEntries) != 0))
+                continue;
+
+            if (ranges.Length <= rangeInd + 1)
+                return ranges.Length;
+
+            ranges[++rangeInd] = new Range(new Index(startInd), new Index(endInd + 1));
         }
 
-        startInd = rangeInd < 0 ? startIndex : ranges[rangeInd].End.Value + 1;
+        startInd = lastEndInd + 1;
         endInd = endIndex;
+
+        if (!trimEachEntry)
+        {
+            if ((options & StringSplitOptions.RemoveEmptyEntries) != 0 && startInd == endInd + 1)
+                return rangeInd + 1;
+
+            if (ranges.Length <= rangeInd + 1)
+                return ranges.Length;
+
+            ranges[++rangeInd] = new Range(new Index(startInd), new Index(endInd + 1));
+            return rangeInd + 1;
+        }
+
         for (int j = startInd; j <= endInd; ++j)
         {
             if (char.IsWhiteSpace(span[j]))
@@ -204,9 +236,13 @@ public static class SpanExtensions
             break;
         }
 
-        if (startInd <= endInd || startInd == endInd + 1 && (options & StringSplitOptions.RemoveEmptyEntries) == 0)
-            ranges[++rangeInd] = new Range(new Index(startInd), new Index(endInd + 1));
+        if (startInd > endInd && (startInd != endInd + 1 || (options & StringSplitOptions.RemoveEmptyEntries) != 0))
+            return rangeInd + 1;
 
+        if (ranges.Length <= rangeInd + 1)
+            return ranges.Length;
+
+        ranges[++rangeInd] = new Range(new Index(startInd), new Index(endInd + 1));
         return rangeInd + 1;
     }
 }

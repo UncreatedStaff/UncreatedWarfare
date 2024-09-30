@@ -72,12 +72,12 @@ public class PropertiesEnumValueFormatter<TEnum> : IEnumFormatter<TEnum> where T
         return dict != null && dict.TryGetValue(value, out string t) ? t : value.ToString();
     }
 
-    public string Format(object value, in ValueFormatParameters parameters)
+    public string Format(ITranslationValueFormatter formatter, object value, in ValueFormatParameters parameters)
     {
         return GetValue((TEnum)value, parameters.Language);
     }
 
-    public string Format(TEnum value, in ValueFormatParameters parameters)
+    public string Format(ITranslationValueFormatter formatter, TEnum value, in ValueFormatParameters parameters)
     {
         return GetValue(value, parameters.Language);
     }

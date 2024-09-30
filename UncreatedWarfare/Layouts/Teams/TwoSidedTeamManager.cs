@@ -76,7 +76,13 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <inheritdoc />
     public Team GetTeam(CSteamID groupId)
     {
-        return Array.Find(_teams, team => team.GroupId.m_SteamID == groupId.m_SteamID);
+        if (_teams[0].GroupId.m_SteamID == groupId.m_SteamID)
+            return _teams[0];
+
+        if (_teams[1].GroupId.m_SteamID == groupId.m_SteamID)
+            return _teams[1];
+
+        return Team.NoTeam;
     }
 
     /// <inheritdoc />

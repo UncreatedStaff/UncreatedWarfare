@@ -93,10 +93,10 @@ public class AttachedAACylinderProximity : IAttachedAACylinderProximity, IFormat
     /// <param name="axis">Axis to align to. Defaults to the Y axis. Must either be <see cref="SnapAxis.X"/>, <see cref="SnapAxis.Y"/>, or <see cref="SnapAxis.Z"/>.</param>
     /// <exception cref="ArgumentOutOfRangeException">Axis is not X, Y, or Z.</exception>
     /// <exception cref="ArgumentException">Radius or center is not finite.</exception>
-    public AttachedAACylinderProximity(Transform attachmentRoot, Vector3 center, float radius, float height, SnapAxis axis = SnapAxis.Y)
+    public AttachedAACylinderProximity(Transform attachmentRoot, in Vector3 center, float radius, float height, SnapAxis axis = SnapAxis.Y)
     {
         AttachmentRoot = attachmentRoot;
-        _cylinder = new AACylinderProximity(center, radius, height, axis);
+        _cylinder = new AACylinderProximity(in center, radius, height, axis);
     }
 
     /// <summary>
@@ -107,10 +107,10 @@ public class AttachedAACylinderProximity : IAttachedAACylinderProximity, IFormat
     /// <param name="height">Height of the cylinder. Can be infinity or NaN (converts to infinity).</param>
     /// <exception cref="ArgumentOutOfRangeException">Axis is not X, Y, or Z.</exception>
     /// <exception cref="ArgumentException">Radius or center is not finite.</exception>
-    public AttachedAACylinderProximity(Transform attachmentRoot, Vector2 center, float radius, float height = float.PositiveInfinity)
+    public AttachedAACylinderProximity(Transform attachmentRoot, in Vector2 center, float radius, float height = float.PositiveInfinity)
     {
         AttachmentRoot = attachmentRoot;
-        _cylinder = new AACylinderProximity(center, radius, height);
+        _cylinder = new AACylinderProximity(in center, radius, height);
     }
 
     /// <summary>
@@ -144,7 +144,7 @@ public class AttachedAACylinderProximity : IAttachedAACylinderProximity, IFormat
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector3 position)
+    public bool TestPoint(in Vector3 position)
     {
         GameThread.AssertCurrent();
 
@@ -153,7 +153,7 @@ public class AttachedAACylinderProximity : IAttachedAACylinderProximity, IFormat
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector2 position)
+    public bool TestPoint(in Vector2 position)
     {
         GameThread.AssertCurrent();
 

@@ -77,12 +77,13 @@ public partial class EventDispatcher2 : IHostedService
         VehicleManager.OnToggledVehicleLock += VehicleManagerOnToggledVehicleLock;
 
         /* Items */
-        ItemManager.onTakeItemRequested += OnTakeItemRequested;
+        ItemManager.onTakeItemRequested += ItemManagerOnTakeItemRequested;
 
         /* Players */
-        DamageTool.damagePlayerRequested += OnPlayerDamageRequested;
-        UseableConsumeable.onPerformingAid += OnPlayerPerformingAid;
-        PlayerEquipment.OnPunch_Global += OnPlayerPunch;
+        DamageTool.damagePlayerRequested += DamageToolOnPlayerDamageRequested;
+        UseableConsumeable.onPerformingAid += UseableConsumeableOnPlayerPerformingAid;
+        PlayerEquipment.OnPunch_Global += PlayerEquipmentOnPlayerPunch;
+        PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
 
         /* Objects */
         ObjectManager.OnQuestObjectUsed += ObjectManagerOnQuestObjectUsed;
@@ -115,12 +116,13 @@ public partial class EventDispatcher2 : IHostedService
         VehicleManager.OnToggledVehicleLock -= VehicleManagerOnToggledVehicleLock;
 
         /* Items */
-        ItemManager.onTakeItemRequested -= OnTakeItemRequested;
+        ItemManager.onTakeItemRequested -= ItemManagerOnTakeItemRequested;
 
         /* Players */
-        DamageTool.damagePlayerRequested -= OnPlayerDamageRequested;
-        UseableConsumeable.onPerformingAid -= OnPlayerPerformingAid;
-        PlayerEquipment.OnPunch_Global -= OnPlayerPunch;
+        DamageTool.damagePlayerRequested -= DamageToolOnPlayerDamageRequested;
+        UseableConsumeable.onPerformingAid -= UseableConsumeableOnPlayerPerformingAid;
+        PlayerEquipment.OnPunch_Global -= PlayerEquipmentOnPlayerPunch;
+        PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
 
         _timeComponent = null!;
         return UniTask.CompletedTask;

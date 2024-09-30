@@ -49,7 +49,7 @@ public class CommandContext : ControlException
             if (value == _argumentOffset)
                 return;
 
-            _argumentOffset = Math.Clamp(value, 0, _argumentCount - 1);
+            _argumentOffset = value;
             if (_parameters.Length - _argumentOffset <= 0)
             {
                 ArgumentCount = 0;
@@ -311,7 +311,7 @@ public class CommandContext : ControlException
     /// <param name="position">Zero-based argument index not including the command name.</param>
     public bool HasArgument(int position)
     {
-        position -= ArgumentOffset;
+        position -= _argumentOffset;
         return position > -1 && position < _argumentCount;
     }
 
@@ -321,7 +321,7 @@ public class CommandContext : ControlException
     /// <param name="count">One-based argument index not including the command name.</param>
     public bool HasArgs(int count)
     {
-        count -= ArgumentOffset;
+        count -= _argumentOffset;
         return count > -1 && count <= _argumentCount;
     }
 
@@ -331,7 +331,7 @@ public class CommandContext : ControlException
     /// <param name="count">One-based argument index not including the command name.</param>
     public bool HasArgsExact(int count)
     {
-        count -= ArgumentOffset;
+        count -= _argumentOffset;
         return count == _argumentCount;
     }
 
@@ -342,7 +342,7 @@ public class CommandContext : ControlException
     /// <returns><see langword="true"/> if <paramref name="parameter"/> matches <paramref name="value"/>.</returns>
     public bool MatchParameter(int parameter, string value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
@@ -356,7 +356,7 @@ public class CommandContext : ControlException
     /// <returns><see langword="true"/> if <paramref name="parameter"/> matches <paramref name="value"/> or <paramref name="alternate"/>.</returns>
     public bool MatchParameter(int parameter, string value, string alternate)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
@@ -371,7 +371,7 @@ public class CommandContext : ControlException
     /// <returns><see langword="true"/> if <paramref name="parameter"/> matches <paramref name="value"/>, <paramref name="alternate1"/>, or <paramref name="alternate2"/>.</returns>
     public bool MatchParameter(int parameter, string value, string alternate1, string alternate2)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
@@ -386,7 +386,7 @@ public class CommandContext : ControlException
     /// <returns><see langword="true"/> if <paramref name="parameter"/> matches one of the values in <paramref name="alternates"/>.</returns>
     public bool MatchParameter(int parameter, params string[] alternates)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
@@ -526,7 +526,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public string? Get(int parameter)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
             return null;
         return _parameters[parameter];
@@ -539,7 +539,7 @@ public class CommandContext : ControlException
     public string? GetRange(int start, int length = -1)
     {
         if (length == 1) return Get(start);
-        start += ArgumentOffset;
+        start += _argumentOffset;
         if (start < 0 || start >= _argumentCount)
             return null;
         if (start == _argumentCount - 1)
@@ -568,7 +568,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, [MaybeNullWhen(false)] out string value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = null;
@@ -584,7 +584,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet<TEnum>(int parameter, out TEnum value) where TEnum : unmanaged, Enum
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = default;
@@ -600,7 +600,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out Color value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = Color.white;
@@ -616,7 +616,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out Color32 value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = Color.white;
@@ -632,7 +632,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out int value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -647,7 +647,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out byte value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -662,7 +662,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out short value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -677,7 +677,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out sbyte value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -692,7 +692,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out Guid value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = default;
@@ -707,7 +707,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out uint value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -722,7 +722,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out ushort value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -737,7 +737,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use <see cref="TryGet(int,out ulong,out EditorUser?, bool)"/> instead for Steam64 IDs.</remarks>
     public bool TryGet(int parameter, out ulong value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -752,7 +752,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use <see cref="TryGet(int,out ulong,out EditorUser?, bool)"/> instead for Steam64 IDs.</remarks>
     public bool TryGet(int parameter, out CSteamID value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = CSteamID.Nil;
@@ -767,7 +767,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out bool value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = false;
@@ -805,7 +805,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out float value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -820,7 +820,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out double value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -835,7 +835,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing.</remarks>
     public bool TryGet(int parameter, out decimal value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -850,7 +850,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = default;
@@ -870,7 +870,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref int value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -890,7 +890,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref byte value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -910,7 +910,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref sbyte value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -930,7 +930,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref Guid value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = default;
@@ -950,7 +950,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref uint value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -970,7 +970,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref ushort value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -990,7 +990,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref ulong value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -1010,7 +1010,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref float value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -1030,7 +1030,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref double value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -1050,7 +1050,7 @@ public class CommandContext : ControlException
     /// <remarks>Zero based indexing. Use the 'ref' set of TryGet methods to ensure the original <paramref name="value"/> isn't overwritten.</remarks>
     public bool TryGetRef(int parameter, ref decimal value)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             value = 0;
@@ -1074,7 +1074,7 @@ public class CommandContext : ControlException
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed (even when the user is offline).</returns>
     public bool TryGet(int parameter, out CSteamID steam64, out WarfarePlayer? onlinePlayer, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Player;
@@ -1088,7 +1088,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        string? s = remainder ? GetRange(parameter - ArgumentOffset) : _parameters[parameter];
+        string? s = remainder ? GetRange(parameter - _argumentOffset) : _parameters[parameter];
         if (s != null)
         {
             onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
@@ -1114,7 +1114,7 @@ public class CommandContext : ControlException
     /// <returns><see langword="true"/> if a valid Steam64 id is parsed and that player is in <paramref name="selection"/>.</returns>
     public bool TryGet(int parameter, out CSteamID steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
     {
-        parameter += ArgumentOffset;
+        parameter += _argumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Player;
@@ -1128,7 +1128,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        string? s = remainder ? GetRange(parameter - ArgumentOffset) : _parameters[parameter];
+        string? s = remainder ? GetRange(parameter - _argumentOffset) : _parameters[parameter];
         if (s == null)
         {
             steam64 = default;

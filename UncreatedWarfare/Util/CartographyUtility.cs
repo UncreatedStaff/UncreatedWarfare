@@ -33,6 +33,11 @@ public static class CartographyUtility
     public static Vector2 CaptureAreaSize { get; private set; }
 
     /// <summary>
+    /// If this level is using the legacy mapping boundaries instead of a <see cref="CartographyVolume"/>.
+    /// </summary>
+    public static bool UsesLegacyCartography { get; private set; }
+
+    /// <summary>
     /// Converts normalized map coordinates [-1 to 1] to pixel map coodinates [0 to <see cref="MapImageSize"/>], where (0, 0) is lower left of the image.
     /// </summary>
     public static Vector2 DenormalizeMapCoordinates(Vector2 mapCoordinates)
@@ -117,6 +122,7 @@ public static class CartographyUtility
             _mapImageSize = new Vector2Int(levelSize, levelSize);
 
             CaptureAreaSize = new Vector2(captureSize, captureSize);
+            UsesLegacyCartography = true;
         }
         else
         {
@@ -146,6 +152,7 @@ public static class CartographyUtility
             _mapImageSize = new Vector2Int(Mathf.CeilToInt(boundsSize.x), Mathf.CeilToInt(boundsSize.z));
 
             CaptureAreaSize = new Vector2(boundsSize.x, boundsSize.z);
+            UsesLegacyCartography = false;
         }
     }
 }

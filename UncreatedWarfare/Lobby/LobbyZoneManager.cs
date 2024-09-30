@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Objects;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
@@ -21,7 +23,7 @@ namespace Uncreated.Warfare.Lobby;
 /// <summary>
 /// Handles visual effects in the lobby.
 /// </summary>
-public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectInteracted>, ILayoutStartingListener
+public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectInteracted>, ILayoutStartingListener, IEventListener<PlayerGroupChanged>, IEventListener<PlayerLeft>
 {
     private const short FlagJoining = -1;
     private const short FlagFull = 0;
@@ -228,7 +230,7 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
                 ref FlagInfo flag = ref TeamFlags[i];
                 short flagValue = component.JoiningTeam.Index == i ? FlagJoining : FlagFull;
                 if (!quests.getFlag(flag.FlagId, out short value) || value != flagValue)
-                    player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, flagValue);
+                    quests.sendSetFlag(flag.FlagId, flagValue);
             }
         }
         else
@@ -238,9 +240,50 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
                 ref FlagInfo flag = ref TeamFlags[i];
                 short flagValue = _behavior.CanJoinTeam(i, -1) ? FlagOpen : FlagFull;
                 if (!quests.getFlag(flag.FlagId, out short value) || value != flagValue)
-                    player.UnturnedPlayer.quests.sendSetFlag(flag.FlagId, flagValue);
+                    quests.sendSetFlag(flag.FlagId, flagValue);
                 // todo put barricade in front of player for a frame to refresh the highlight color
             }
+        }
+    }
+
+    private void UpdateAllFlags(int teamIndex)
+    {
+        ref FlagInfo flag = ref TeamFlags[teamIndex];
+        bool canJoinTeam = _behavior.CanJoinTeam(teamIndex, -1);
+
+        foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+        {
+            PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
+            
+            short flagValue;
+            if (component.IsJoining)
+            {
+                flagValue = component.JoiningTeam.Index == teamIndex ? FlagJoining : FlagFull;
+            }
+            else
+            {
+                flagValue = canJoinTeam ? FlagOpen : FlagFull;
+            }
+
+            PlayerQuests quests = player.UnturnedPlayer.quests;
+            if (!quests.getFlag(flag.FlagId, out short value) || value != flagValue)
+                quests.sendSetFlag(flag.FlagId, flagValue);
+        }
+    }
+
+    internal void UpdateTeamCount(Team team, int change)
+    {
+        if (Disabled || team is null || !team.IsValid)
+            return;
+
+        for (int i = 0; i < TeamFlags.Length; ++i)
+        {
+            if (TeamFlags[i].Team != team)
+                continue;
+
+            _behavior.Teams[i].PlayerCount += change;
+            UpdateAllFlags(i);
+            break;
         }
     }
 
@@ -256,6 +299,13 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
     {
         if (!player.IsOnline)
             return;
+
+        PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
+        if (component.IsJoining)
+        {
+            component.UpdatePositionalData(component.JoiningTeam.Index, component.JoiningTeam.Index);
+            return;
+        }
 
         int closestLookIndex = -1;
         float closestLookDot = 0;
@@ -305,6 +355,27 @@ public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectI
     private void OnObjectExitedLobby(WarfarePlayer player)
     {
         player.Component<PlayerLobbyComponent>().ExitLobby();
+    }
+
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        if (e.Team != null && e.Team.IsValid)
+            UpdateTeamCount(e.Team, -1);
+    }
+
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<PlayerGroupChanged>.HandleEvent(PlayerGroupChanged e, IServiceProvider serviceProvider)
+    {
+        // update lobby counts
+        if (Disabled)
+            return;
+
+        if (e.NewTeam is not null && e.NewTeam.IsValid)
+            UpdateTeamCount(e.NewTeam, +1);
+
+        if (e.OldTeam.IsValid)
+            UpdateTeamCount(e.OldTeam, -1);
     }
 
     void IEventListener<QuestObjectInteracted>.HandleEvent(QuestObjectInteracted e, IServiceProvider serviceProvider)

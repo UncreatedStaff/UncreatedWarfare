@@ -20,7 +20,7 @@ public class AABBProximity : IAABBProximity, IFormattable
     /// <summary>
     /// Create a 3D bounding box.
     /// </summary>
-    public AABBProximity(Bounds bounds)
+    public AABBProximity(in Bounds bounds)
     {
         _bounds = bounds;
     }
@@ -28,7 +28,7 @@ public class AABBProximity : IAABBProximity, IFormattable
     /// <summary>
     /// Create a 3D bounding box.
     /// </summary>
-    public AABBProximity(Vector3 center, Vector3 size)
+    public AABBProximity(in Vector3 center, in Vector3 size)
     {
         _bounds = new Bounds(center, size);
     }
@@ -36,7 +36,7 @@ public class AABBProximity : IAABBProximity, IFormattable
     /// <summary>
     /// Create a 2D bounding box with an infinite height.
     /// </summary>
-    public AABBProximity(Vector2 center, Vector2 size)
+    public AABBProximity(in Vector2 center, in Vector2 size)
     {
         _bounds = new Bounds(new Vector3(center.x, 0f, center.y), new Vector3(size.x, float.PositiveInfinity, size.y));
     }
@@ -50,7 +50,7 @@ public class AABBProximity : IAABBProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector3 position)
+    public bool TestPoint(in Vector3 position)
     {
         Vector3 extents = _bounds.extents;
         Vector3 center = _bounds.center;
@@ -61,7 +61,7 @@ public class AABBProximity : IAABBProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector2 position)
+    public bool TestPoint(in Vector2 position)
     {
         Vector3 extents = _bounds.extents;
         Vector3 center = _bounds.center;

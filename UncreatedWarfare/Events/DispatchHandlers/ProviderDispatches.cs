@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 
@@ -30,6 +30,22 @@ partial class EventDispatcher2
             return;
         }
 
+        // update team
+        Team team = Team.NoTeam;
+        if (steamPlayer.player.quests.isMemberOfAGroup)
+        {
+            if (!_warfare.IsLayoutActive())
+            {
+                steamPlayer.player.quests.leaveGroup(true);
+            }
+            else
+            {
+                team = _warfare.GetActiveLayout().TeamManager.GetTeam(steamPlayer.player.quests.groupID);
+                if (team == Team.NoTeam)
+                    steamPlayer.player.quests.leaveGroup(true);
+            }
+        }
+
         ulong s64 = steam64.m_SteamID;
 
         int index = implPlayerService.PendingTasks.FindIndex(x => x.Player.Steam64.m_SteamID == s64);
@@ -47,6 +63,7 @@ partial class EventDispatcher2
         implPlayerService.PendingTasks.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Player.Steam64.m_SteamID));
 
         WarfarePlayer newPlayer = implPlayerService.CreateWarfarePlayer(steamPlayer.player, in data);
+        newPlayer.UpdateTeam(team);
 
         PlayerJoined args = new PlayerJoined
         {

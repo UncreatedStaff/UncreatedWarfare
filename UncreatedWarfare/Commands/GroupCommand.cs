@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Teams;
@@ -17,16 +19,18 @@ public class GroupCommand : IExecutableCommand
     private readonly GroupCommandTranslations _translations;
     private readonly ITeamManager<Team> _teamManager;
     private readonly IFactionDataStore _factionDataStore;
+    private readonly LobbyZoneManager _lobbyManager;
 
     private static readonly PermissionLeaf PermissionJoin = new PermissionLeaf("commands.group.join", unturned: false, warfare: true);
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public GroupCommand(TranslationInjection<GroupCommandTranslations> translations, ITeamManager<Team> teamManager, IFactionDataStore factionDataStore)
+    public GroupCommand(TranslationInjection<GroupCommandTranslations> translations, ITeamManager<Team> teamManager, IFactionDataStore factionDataStore, LobbyZoneManager lobbyManager)
     {
         _teamManager = teamManager;
         _factionDataStore = factionDataStore;
+        _lobbyManager = lobbyManager;
         _translations = translations.Value;
     }
 
@@ -62,11 +66,12 @@ public class GroupCommand : IExecutableCommand
             await Context.AssertPermissions(PermissionJoin, token);
             await UniTask.SwitchToMainThread(token);
 
+            Team? newTeam = null;
             if (!Context.TryGet(1, out ulong groupId))
             {
                 string groupInput = Context.Get(1)!;
 
-                Team? newTeam = _teamManager.FindTeam(groupInput);
+                newTeam = _teamManager.FindTeam(groupInput);
                 if (newTeam == null)
                 {
                     FactionInfo? faction = _factionDataStore.FindFaction(groupInput);
@@ -74,18 +79,13 @@ public class GroupCommand : IExecutableCommand
                     if (faction == null)
                         throw Context.Reply(_translations.GroupNotFound, groupInput);
 
-                    _teamManager.FindTeam(faction.Name);
+                    newTeam = _teamManager.AllTeams.FirstOrDefault(x => x.Faction.PrimaryKey == faction.PrimaryKey);
                     if (newTeam == null)
                         throw Context.Reply(_translations.GroupNotFound, groupInput);
                 }
 
                 groupId = newTeam.GroupId.m_SteamID;
             }
-
-            // if (groupId is > 0 and < 4)
-            // {
-            //     groupId = TeamManager.GetGroupID(groupId);
-            // }
 
             if (Context.Player.UnturnedPlayer.quests.groupID.m_SteamID == groupId)
             {
@@ -104,16 +104,11 @@ public class GroupCommand : IExecutableCommand
                 throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
             }
 
-            GroupManager.save();
-
-            Team team = Context.Player.Team;
-            // todo update team selector
-
-            if (team.IsValid)
+            if (newTeam != null && newTeam.IsValid)
             {
-                Context.Reply(_translations.JoinedGroup, team.GroupId.m_SteamID, team.Faction.Name, team.Faction.Color);
-                L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID}) joined group \"{team.Faction.Name}\": {team} (ID {groupInfo.groupID}).", ConsoleColor.Cyan);
-                Context.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + team.Faction.Name.ToUpper());
+                Context.Reply(_translations.JoinedGroup, newTeam.GroupId.m_SteamID, newTeam.Faction.Name, newTeam.Faction.Color);
+                L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID}) joined group \"{newTeam.Faction.Name}\": {newTeam} (ID {groupInfo.groupID}).", ConsoleColor.Cyan);
+                Context.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + newTeam.Faction.Name.ToUpper());
             }
             else
             {
@@ -125,7 +120,8 @@ public class GroupCommand : IExecutableCommand
             GroupInfo info = GroupManager.getGroupInfo(Context.Player.UnturnedPlayer.quests.groupID);
             if (info == null)
                 throw Context.Reply(_translations.NotInGroup);
-            Context.Reply(_translations.CurrentGroup, Context.CallerId.m_SteamID, info.name, Color.white);
+            Team team = _teamManager.GetTeam(info.groupID);
+            Context.Reply(_translations.CurrentGroup, info.groupID.m_SteamID, info.name, team.Faction.Color);
         }
         else throw Context.SendCorrectUsage(Syntax + " - " + Help);
     }
@@ -136,10 +132,10 @@ public class GroupCommandTranslations : PropertiesTranslationCollection
     protected override string FileName => "Commands/Group";
 
     [TranslationData("Output from /group, tells the player their current group.", "Group ID", "Group Name", "Team Color (if applicable)")]
-    public readonly Translation<ulong, string, Color> CurrentGroup = new Translation<ulong, string, Color>("<#e6e3d5>Group <#{2}>{0}</color>: <#{2}>{1}</color>");
+    public readonly Translation<ulong, string, Color> CurrentGroup = new Translation<ulong, string, Color>("<#e6e3d5>You are a member of group #<#{2}>{0}</color>: <#{2}>{1}</color>.");
 
     [TranslationData("Output from /group join <id>.", "Group ID", "Group Name", "Team Color (if applicable)", IsPriorityTranslation = false)]
-    public readonly Translation<ulong, string, Color> JoinedGroup = new Translation<ulong, string, Color>("<#e6e3d5>You have joined group <#{2}>{0}</color>: <#{2}>{1}</color>.");
+    public readonly Translation<ulong, string, Color> JoinedGroup = new Translation<ulong, string, Color>("<#e6e3d5>You have joined group #<#{2}>{0}</color>: <#{2}>{1}</color>.");
 
     [TranslationData("Output from /group when the player is not in a group.", IsPriorityTranslation = false)]
     public readonly Translation NotInGroup = new Translation("<#ff8c69>You aren't in a group.");

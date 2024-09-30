@@ -9,13 +9,13 @@ namespace Uncreated.Warfare.Proximity;
 public sealed class NullProximity : IAttachableProximity<IAttachedProximity>, INearestPointProximity
 {
     /// <inheritdoc />
-    bool IProximity.TestPoint(Vector3 position) => false;
+    bool IProximity.TestPoint(in Vector3 position) => false;
 
     /// <inheritdoc />
-    bool IProximity.TestPoint(Vector2 position) => false;
+    bool IProximity.TestPoint(in Vector2 position) => false;
 
     /// <inheritdoc />
-    public Vector3 GetNearestPointOnBorder(Vector3 fromLocation) => fromLocation;
+    public Vector3 GetNearestPointOnBorder(in Vector3 fromLocation) => fromLocation;
 
     /// <inheritdoc />
     object ICloneable.Clone() => new NullProximity();
@@ -41,10 +41,10 @@ public sealed class NullProximity : IAttachableProximity<IAttachedProximity>, IN
         public Transform? AttachmentRoot { get; } = attachmentRoot;
 
         /// <inheritdoc />
-        bool IProximity.TestPoint(Vector3 position) => false;
+        bool IProximity.TestPoint(in Vector3 position) => false;
 
         /// <inheritdoc />
-        bool IProximity.TestPoint(Vector2 position) => false;
+        bool IProximity.TestPoint(in Vector2 position) => false;
 
         /// <inheritdoc />
         object ICloneable.Clone() => new NullProximity();

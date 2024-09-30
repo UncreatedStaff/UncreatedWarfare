@@ -146,6 +146,8 @@ public class TeleportCommand : IExecutableCommand
             throw Context.Reply(_translations.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
         }
 
+        const float heightOffset = 0.75f;
+
         Vector3 pos;
         switch (Context.ArgumentCount)
         {
@@ -158,7 +160,7 @@ public class TeleportCommand : IExecutableCommand
                         throw Context.Reply(_translations.TeleportWaypointNotFound);
                     Vector3 waypoint = Context.Player.UnturnedPlayer.quests.markerPosition;
                     GridLocation loc = new GridLocation(in waypoint);
-                    waypoint.y = TerrainUtility.GetHighestPoint(in waypoint, float.NaN);
+                    waypoint.y = TerrainUtility.GetHighestPoint(in waypoint, float.NaN) + heightOffset;
                     if (Context.Player.UnturnedPlayer.teleportToLocation(waypoint, Context.Player.Yaw))
                         throw Context.Reply(_translations.TeleportSelfWaypointSuccess, loc);
                     throw Context.Reply(_translations.TeleportSelfWaypointObstructed, loc);
@@ -182,9 +184,9 @@ public class TeleportCommand : IExecutableCommand
                 }
                 if (GridLocation.TryParse(Context.Get(0)!, out GridLocation location))
                 {
-                    Vector3 center = location.Center;
-                    center.y = TerrainUtility.GetHighestPoint(in center, float.NaN);
-                    if (Context.Player.UnturnedPlayer.teleportToLocation(center, Context.Player.Yaw))
+                    Vector2 center = location.Center;
+                    float height = TerrainUtility.GetHighestPoint(in center, float.NaN) + heightOffset;
+                    if (Context.Player.UnturnedPlayer.teleportToLocation(new Vector3(center.x, height, center.y), Context.Player.Yaw))
                         throw Context.Reply(_translations.TeleportSelfWaypointSuccess, location);
                     throw Context.Reply(_translations.TeleportSelfWaypointObstructed, location);
                 }
@@ -194,78 +196,81 @@ public class TeleportCommand : IExecutableCommand
                 if (n is null)
                     throw Context.Reply(_translations.TeleportLocationNotFound, input);
                 pos = n.transform.position;
-                if (Context.Player.UnturnedPlayer.teleportToLocation(new Vector3(pos.x, LevelGround.getHeight(pos), pos.z), Context.Player.Yaw))
+                if (Context.Player.UnturnedPlayer.teleportToLocation(new Vector3(pos.x, TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset, pos.z), Context.Player.Yaw))
                     throw Context.Reply(_translations.TeleportSelfLocationSuccess, n.locationName);
                 throw Context.Reply(_translations.TeleportSelfLocationObstructed, n.locationName);
 
             case 2:
-                if (Context.TryGet(0, out _, out WarfarePlayer? target) && target is not null)
+                if (!Context.TryGet(0, out _, out WarfarePlayer? target) || target is null)
+                    throw Context.Reply(_translations.TeleportTargetNotFound, Context.Get(0)!);
+
+                if (target.UnturnedPlayer.life.isDead)
+                    throw Context.Reply(_translations.TeleportTargetDead, target);
+
+                if (Context.MatchParameter(1, "wp", "wayport", "marker"))
                 {
-                    if (target.UnturnedPlayer.life.isDead)
-                        throw Context.Reply(_translations.TeleportTargetDead, target);
-
-                    if (Context.MatchParameter(1, "wp", "wayport", "marker"))
+                    if (!Context.Player.UnturnedPlayer.quests.isMarkerPlaced)
+                        throw Context.Reply(_translations.TeleportWaypointNotFound);
+                    Vector3 waypoint = Context.Player.UnturnedPlayer.quests.markerPosition;
+                    GridLocation loc = new GridLocation(in waypoint);
+                    waypoint.y = TerrainUtility.GetHighestPoint(in waypoint, float.NaN) + heightOffset;
+                    if (target.UnturnedPlayer.teleportToLocation(waypoint, target.Yaw))
                     {
-                        if (!Context.Player.UnturnedPlayer.quests.isMarkerPlaced)
-                            throw Context.Reply(_translations.TeleportWaypointNotFound);
-                        Vector3 waypoint = Context.Player.UnturnedPlayer.quests.markerPosition;
-                        GridLocation loc = new GridLocation(in waypoint);
-                        waypoint.y = TerrainUtility.GetHighestPoint(in waypoint, float.NaN);
-                        if (target.UnturnedPlayer.teleportToLocation(waypoint, target.Yaw))
-                        {
-                            _chatService.Send(target, _translations.TeleportSelfWaypointSuccess, loc);
-                            throw Context.Reply(_translations.TeleportOtherWaypointSuccess, target, loc);
-                        }
-                        throw Context.Reply(_translations.TeleportOtherWaypointObstructed, target, loc);
+                        _chatService.Send(target, _translations.TeleportSelfWaypointSuccess, loc);
+                        throw Context.Reply(_translations.TeleportOtherWaypointSuccess, target, loc);
                     }
-                    if (Context.TryGet(1, out _, out onlinePlayer) && onlinePlayer is not null)
+                    throw Context.Reply(_translations.TeleportOtherWaypointObstructed, target, loc);
+                }
+                if (Context.TryGet(1, out _, out onlinePlayer) && onlinePlayer is not null)
+                {
+                    if (onlinePlayer.UnturnedPlayer.life.isDead)
+                        throw Context.Reply(_translations.TeleportTargetDead, onlinePlayer);
+                    InteractableVehicle? veh = onlinePlayer.UnturnedPlayer.movement.getVehicle();
+                    pos = onlinePlayer.Position;
+                    if (veh != null && !veh.isExploded && !veh.isDead)
                     {
-                        if (onlinePlayer.UnturnedPlayer.life.isDead)
-                            throw Context.Reply(_translations.TeleportTargetDead, onlinePlayer);
-                        InteractableVehicle? veh = onlinePlayer.UnturnedPlayer.movement.getVehicle();
-                        pos = onlinePlayer.Position;
-                        if (veh != null && !veh.isExploded && !veh.isDead)
+                        if (VehicleManager.ServerForcePassengerIntoVehicle(target.UnturnedPlayer, veh))
                         {
-                            if (VehicleManager.ServerForcePassengerIntoVehicle(target.UnturnedPlayer, veh))
-                            {
-                                _chatService.Send(target, _translations.TeleportSelfSuccessVehicle, onlinePlayer, veh);
-                                throw Context.Reply(_translations.TeleportOtherSuccessVehicle, target, onlinePlayer, veh);
-                            }
-                            pos.y += 5f;
+                            _chatService.Send(target, _translations.TeleportSelfSuccessVehicle, onlinePlayer, veh);
+                            throw Context.Reply(_translations.TeleportOtherSuccessVehicle, target, onlinePlayer, veh);
                         }
-
-                        if (target.UnturnedPlayer.teleportToLocation(pos, onlinePlayer.Yaw))
-                        {
-                            _chatService.Send(target,  _translations.TeleportSelfSuccessPlayer, onlinePlayer);
-                            throw Context.Reply(_translations.TeleportOtherSuccessPlayer, target, onlinePlayer);
-                        }
-                        throw Context.Reply(_translations.TeleportOtherObstructedPlayer, target, onlinePlayer);
+                        pos.y += 5f;
                     }
-                    if (GridLocation.TryParse(Context.Get(1)!, out location))
+
+                    if (target.UnturnedPlayer.teleportToLocation(pos, onlinePlayer.Yaw))
                     {
-                        Vector3 center = location.Center;
-                        center.y = TerrainUtility.GetHighestPoint(in center, float.NaN);
-                        if (target.UnturnedPlayer.teleportToLocation(center, target.Yaw))
-                        {
-                            _chatService.Send(target, _translations.TeleportSelfWaypointSuccess, location);
-                            throw Context.Reply(_translations.TeleportOtherWaypointSuccess, target, location);
-                        }
+                        _chatService.Send(target,  _translations.TeleportSelfSuccessPlayer, onlinePlayer);
+                        throw Context.Reply(_translations.TeleportOtherSuccessPlayer, target, onlinePlayer);
+                    }
+                    throw Context.Reply(_translations.TeleportOtherObstructedPlayer, target, onlinePlayer);
+                }
+
+                if (GridLocation.TryParse(Context.Get(1)!, out location))
+                {
+                    Vector2 center = location.Center;
+                    float height = TerrainUtility.GetHighestPoint(in center, float.NaN) + heightOffset;
+                    if (!target.UnturnedPlayer.teleportToLocation(new Vector3(center.x, height, center.y), target.Yaw))
                         throw Context.Reply(_translations.TeleportOtherWaypointObstructed, target, location);
-                    }
-                    input = Context.GetRange(1)!;
-                    n = CollectionUtility.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes().OrderBy(loc => loc.locationName.Length), loc => loc.locationName, input);
 
-                    if (n is null)
-                        throw Context.Reply(_translations.TeleportLocationNotFound, input);
-                    pos = n.transform.position;
-                    if (target.UnturnedPlayer.teleportToLocation(new Vector3(pos.x, LevelGround.getHeight(pos), pos.z), target.Yaw))
-                    {
-                        _chatService.Send(target, _translations.TeleportSelfLocationSuccess, n.locationName);
-                        throw Context.Reply(_translations.TeleportOtherSuccessLocation, target, n.locationName);
-                    }
+                    _chatService.Send(target, _translations.TeleportSelfWaypointSuccess, location);
+                    throw Context.Reply(_translations.TeleportOtherWaypointSuccess, target, location);
+                }
+
+                input = Context.GetRange(1)!;
+                n = CollectionUtility.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes().OrderBy(loc => loc.locationName.Length), loc => loc.locationName, input);
+
+                if (n is null)
+                    throw Context.Reply(_translations.TeleportLocationNotFound, input);
+
+                pos = n.transform.position;
+
+                if (!target.UnturnedPlayer.teleportToLocation(new Vector3(pos.x, TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset, pos.z), target.Yaw))
+                {
                     throw Context.Reply(_translations.TeleportOtherObstructedLocation, target, n.locationName);
                 }
-                throw Context.Reply(_translations.TeleportTargetNotFound, Context.Get(0)!);
+
+                _chatService.Send(target, _translations.TeleportSelfLocationSuccess, n.locationName);
+                throw Context.Reply(_translations.TeleportOtherSuccessLocation, target, n.locationName);
 
             case 3:
                 Context.AssertRanByPlayer();
@@ -278,16 +283,18 @@ public class TeleportCommand : IExecutableCommand
                     else
                         throw Context.Reply(_translations.TeleportInvalidCoordinates);
                 }
+
                 if (!Context.TryGet(1, out float y))
                 {
                     string p = Context.Get(1)!;
                     if (p.StartsWith("~", StringComparison.Ordinal))
                         y = pos.y + GetOffset(p);
-                    else if (p.Length > 0 && p[0] == '-')
+                    else if (p is [ '-' ])
                         y = float.NaN;
                     else
                         throw Context.Reply(_translations.TeleportInvalidCoordinates);
                 }
+
                 if (!Context.TryGet(0, out float x))
                 {
                     string p = Context.Get(0)!;
@@ -299,7 +306,7 @@ public class TeleportCommand : IExecutableCommand
 
                 pos = new Vector3(x, y, z);
                 if (float.IsNaN(y))
-                    pos.y = LevelGround.getHeight(pos with { y = 0f });
+                    pos.y = TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset;
 
                 throw Context.Reply(Context.Player.UnturnedPlayer.teleportToLocation(pos, Context.Player.Yaw)
                         ? _translations.TeleportSelfLocationSuccess
@@ -307,63 +314,64 @@ public class TeleportCommand : IExecutableCommand
                     $"({pos.x.ToString("0.##", Data.LocalLocale)}, {pos.y.ToString("0.##", Data.LocalLocale)}, {pos.z.ToString("0.##", Data.LocalLocale)})");
 
             case 4:
-                if (Context.TryGet(0, out _, out target) && target is not null)
+                if (!Context.TryGet(0, out _, out target) || target is null)
+                    throw Context.Reply(_translations.TeleportTargetNotFound, Context.Get(0)!);
+
+                if (target.UnturnedPlayer.life.isDead)
+                    throw Context.Reply(_translations.TeleportTargetDead, target);
+
+                pos = Context.Player.Position;
+                if (!Context.TryGet(3, out z))
                 {
-                    if (target.UnturnedPlayer.life.isDead)
-                        throw Context.Reply(_translations.TeleportTargetDead, target);
-
-                    pos = Context.Player.Position;
-                    if (!Context.TryGet(3, out z))
-                    {
-                        string p = Context.Get(3)!;
-                        if (p.StartsWith("~", StringComparison.Ordinal))
-                            z = pos.z + GetOffset(p);
-                        else
-                            throw Context.Reply(_translations.TeleportInvalidCoordinates);
-                    }
-                    if (!Context.TryGet(2, out y))
-                    {
-                        string p = Context.Get(2)!;
-                        if (p.StartsWith("~", StringComparison.Ordinal))
-                            y = pos.y + GetOffset(p);
-                        else if (p.Length > 0 && p[0] == '-')
-                            y = float.NaN;
-                        else
-                            throw Context.Reply(_translations.TeleportInvalidCoordinates);
-                    }
-                    if (!Context.TryGet(1, out x))
-                    {
-                        string p = Context.Get(1)!;
-                        if (p.StartsWith("~", StringComparison.Ordinal))
-                            x = pos.x + GetOffset(p);
-                        else
-                            throw Context.Reply(_translations.TeleportInvalidCoordinates);
-                    }
-
-                    pos = new Vector3(x, y, z);
-                    if (float.IsNaN(y))
-                        pos.y = LevelGround.getHeight(pos with { y = 0f });
-
-                    string loc = $"({pos.x.ToString("0.##", Data.LocalLocale)}, {pos.y.ToString("0.##", Data.LocalLocale)}, {pos.z.ToString("0.##", Data.LocalLocale)})";
-                    if (target.UnturnedPlayer.teleportToLocation(pos, target.Yaw))
-                    {
-                        _chatService.Send(target, _translations.TeleportSelfLocationSuccess, loc);
-                        throw Context.Reply(_translations.TeleportOtherSuccessLocation, target, loc);
-                    }
-                    throw Context.Reply(_translations.TeleportOtherObstructedLocation, target, loc);
+                    string p = Context.Get(3)!;
+                    if (p.StartsWith("~", StringComparison.Ordinal))
+                        z = pos.z + GetOffset(p);
+                    else
+                        throw Context.Reply(_translations.TeleportInvalidCoordinates);
                 }
-                throw Context.Reply(_translations.TeleportTargetNotFound, Context.Get(0)!);
+                if (!Context.TryGet(2, out y))
+                {
+                    string p = Context.Get(2)!;
+                    if (p.StartsWith("~", StringComparison.Ordinal))
+                        y = pos.y + GetOffset(p);
+                    else if (p is [ '-' ])
+                        y = float.NaN;
+                    else
+                        throw Context.Reply(_translations.TeleportInvalidCoordinates);
+                }
+                if (!Context.TryGet(1, out x))
+                {
+                    string p = Context.Get(1)!;
+                    if (p.StartsWith("~", StringComparison.Ordinal))
+                        x = pos.x + GetOffset(p);
+                    else
+                        throw Context.Reply(_translations.TeleportInvalidCoordinates);
+                }
+
+                pos = new Vector3(x, y, z);
+                if (float.IsNaN(y))
+                    pos.y = TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset;
+
+                string locName = $"({pos.x.ToString("0.##", Data.LocalLocale)}, {pos.y.ToString("0.##", Data.LocalLocale)}, {pos.z.ToString("0.##", Data.LocalLocale)})";
+
+                if (!target.UnturnedPlayer.teleportToLocation(pos, target.Yaw))
+                    throw Context.Reply(_translations.TeleportOtherObstructedLocation, target, locName);
+                    
+                _chatService.Send(target, _translations.TeleportSelfLocationSuccess, locName);
+                throw Context.Reply(_translations.TeleportOtherSuccessLocation, target, locName);
 
             default:
                 throw Context.SendCorrectUsage(Syntax);
         }
     }
-    private static float GetOffset(string arg)
+    private float GetOffset(string arg)
     {
-        if (arg.Length < 2) return 0f;
-        if (float.TryParse(arg.Substring(1), NumberStyles.Number, CultureInfo.InvariantCulture, out float offset) || float.TryParse(arg.Substring(1), NumberStyles.Number, Data.LocalLocale, out offset))
-            return offset;
-        return 0;
+        if (arg.Length < 2 || !float.TryParse(arg.AsSpan(1), NumberStyles.Number, Context.ParseFormat, out float offset))
+        {
+            return 0f;
+        }
+
+        return offset;
     }
     public static void StartJumping(WarfarePlayer player)
     {

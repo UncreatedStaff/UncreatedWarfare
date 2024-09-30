@@ -30,7 +30,8 @@ public class AmmoBagComponent : MonoBehaviour
         if (assetConfig.GetAssetLink<EffectAsset>("Effects:Ammo").TryGetAsset(out EffectAsset? asset))
         {
             Team team = teamManager.GetTeam(new CSteamID(drop.GetServersideData().group));
-            serviceProvider.GetRequiredService<IconManager>().AttachIcon(asset.GUID, drop.model, team, 1f);
+            if (team.IsValid)
+                serviceProvider.GetRequiredService<IconManager>().AttachIcon(asset.GUID, drop.model, team, 1f);
         }
 
         //ResuppliedPlayers = new Dictionary<ulong, int>();

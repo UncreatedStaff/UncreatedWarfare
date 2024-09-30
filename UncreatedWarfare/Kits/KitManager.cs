@@ -36,7 +36,7 @@ public partial class KitManager :
     IEventListener<QuestCompleted>,
     IEventListener<PlayerJoined>,
     IEventListener<PlayerLeft>,
-    IEventListener<GroupChanged>,
+    IEventListener<PlayerGroupChanged>,
     IEventListener<SwapClothingRequested>,
     IDisposable
 {
@@ -1411,7 +1411,7 @@ public partial class KitManager :
         });
     }
 
-    void IEventListener<GroupChanged>.HandleEvent(GroupChanged e, IServiceProvider serviceProvider)
+    void IEventListener<PlayerGroupChanged>.HandleEvent(PlayerGroupChanged e, IServiceProvider serviceProvider)
     {
         OnTeamPlayerCountChanged(e.Player);
     }

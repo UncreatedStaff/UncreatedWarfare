@@ -47,7 +47,7 @@ public static class CollectionUtility
                 return i;
         }
 
-        int amt = input.Count(' ');
+        int amt = input.Count(' ') + 1;
         Span<Range> splitAlloc = stackalloc Range[amt];
 
         splitAlloc = splitAlloc[input.Split(splitAlloc, ' ', trimEachEntry: true, options: StringSplitOptions.RemoveEmptyEntries)..];
@@ -120,7 +120,7 @@ public static class CollectionUtility
                 results.Add(obj);
         }
 
-        int amt = input.Count(' ');
+        int amt = input.Count(' ') + 1;
         Span<Range> splitAlloc = stackalloc Range[amt];
 
         splitAlloc = splitAlloc[input.Split(splitAlloc, ' ', trimEachEntry: true, options: StringSplitOptions.RemoveEmptyEntries)..];

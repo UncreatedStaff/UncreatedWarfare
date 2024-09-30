@@ -2,7 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
+using Uncreated.Warfare.Layouts.Phases;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
@@ -21,6 +24,7 @@ public class ZoneStore : IHostedService
     private int _init;
     private readonly IPlayerService _playerService;
     private readonly ILogger<ZoneStore> _logger;
+    private readonly WarfareModule _warfare;
     private bool _lvlEventSub;
     private UniTask _loadTask;
 
@@ -40,11 +44,12 @@ public class ZoneStore : IHostedService
     /// </summary>
     public bool IsGlobal { get; }
 
-    public ZoneStore(IEnumerable<IZoneProvider> zoneProviders, IPlayerService playerService, ILogger<ZoneStore> logger, bool isGlobal)
+    public ZoneStore(IEnumerable<IZoneProvider> zoneProviders, IPlayerService playerService, ILogger<ZoneStore> logger, bool isGlobal, WarfareModule warfare)
     {
         _zoneProviders = zoneProviders.ToList();
         _playerService = playerService;
         _logger = logger;
+        _warfare = warfare;
         IsGlobal = isGlobal;
     }
 
@@ -65,7 +70,10 @@ public class ZoneStore : IHostedService
     UniTask IHostedService.StopAsync(CancellationToken token)
     {
         if (_lvlEventSub)
+        {
             Level.loadingSteps -= OnLevelLoading;
+            Level.onPrePreLevelLoaded -= OnLevelLoaded;
+        }
         return UniTask.CompletedTask;
     }
 
@@ -119,7 +127,7 @@ public class ZoneStore : IHostedService
             || zone is { Shape: ZoneShape.Cylinder or ZoneShape.Sphere, CircleInfo: null }
             || zone is { Shape: ZoneShape.Polygon, PolygonInfo: null })
         {
-            throw new ArgumentException("This zone doesn't have a valid shape or is missing the associated data object.", nameof(zone));
+            throw new ArgumentException($"This zone ({zone.Name}) doesn't have a valid shape or is missing the associated data object.", nameof(zone));
         }
 
         GameObject obj = new GameObject(zone.Name)
@@ -146,33 +154,39 @@ public class ZoneStore : IHostedService
     public IProximity CreateProximityForZone(Zone zone)
     {
         IProximity prox;
+        Vector3 center = zone.Center;
         switch (zone.Shape)
         {
             case ZoneShape.AABB when zone.AABBInfo is { } rect:
-                prox = new AABBProximity(zone.Center, rect.Size);
+                prox = new AABBProximity(center, rect.Size);
                 break;
 
             case ZoneShape.Cylinder when zone.CircleInfo is { } circle:
                 float minHeight = circle.MinimumHeight ?? -Landscape.TILE_HEIGHT / 2f;
                 float maxHeight = circle.MaximumHeight ?? Landscape.TILE_HEIGHT / 2f;
-                prox = new AACylinderProximity(zone.Center with { y = minHeight + maxHeight / 2f }, circle.Radius, maxHeight - minHeight);
+                prox = new AACylinderProximity(center with { y = minHeight + maxHeight / 2f }, circle.Radius, maxHeight - minHeight);
                 break;
 
             case ZoneShape.Sphere when zone.CircleInfo is { } circle:
-                prox = new SphereProximity(zone.Center, circle.Radius);
+                prox = new SphereProximity(center, circle.Radius);
                 break;
 
             case ZoneShape.Polygon when zone.PolygonInfo is { } polygon:
-                Vector2[] points = polygon.Points;
-                Vector2[] newPoints = new Vector2[points.Length];
-                Array.Copy(points, newPoints, points.Length);
-                prox = new PolygonProximity(newPoints, polygon.MinimumHeight, polygon.MaximumHeight);
+                Vector2[] relativePoints = polygon.Points;
+                Vector2[] absolutePoints = new Vector2[relativePoints.Length];
+                for (int i = 0; i < relativePoints.Length; ++i)
+                {
+                    ref Vector2 relativePt = ref relativePoints[i];
+                    absolutePoints[i] = new Vector2(relativePt.x + center.x, relativePt.y + center.z);
+                }
+                prox = new PolygonProximity(absolutePoints, polygon.MinimumHeight, polygon.MaximumHeight);
                 break;
 
             default:
-                throw new ArgumentException("This zone doesn't have a valid shape or is missing the associated data object.", nameof(zone));
+                throw new ArgumentException($"This zone ({zone.Name}) doesn't have a valid shape or is missing the associated data object.", nameof(zone));
         }
 
+        _logger.LogInformation("Created proxy {0}: {{{1}}}.", zone.ShortName ?? zone.Name, prox.ToString());
         return prox;
     }
 
@@ -213,7 +227,7 @@ public class ZoneStore : IHostedService
     {
         return faction == null
             ? Zones.FirstOrDefault(zone => zone.Type == type)
-            : Zones.FirstOrDefault(zone => zone.Type == type && string.Equals(zone.Faction, faction.Name));
+            : Zones.FirstOrDefault(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -223,7 +237,7 @@ public class ZoneStore : IHostedService
     {
         return faction == null
             ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
-            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.Name));
+            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -233,13 +247,13 @@ public class ZoneStore : IHostedService
     {
         return faction == null
             ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
-            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.Name));
+            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
     }
 
     /// <summary>
     /// Find a zone matching the given name, or <see langword="null"/>.
     /// </summary>
-    public Zone? SearchZone(string term)
+    public Zone? SearchZone(string term, FactionInfo? relevantFaction = null)
     {
         int index = CollectionUtility.StringIndexOf(Zones, x => x.Name, term, false);
         if (index < 0)
@@ -250,50 +264,49 @@ public class ZoneStore : IHostedService
         if (index >= 0)
             return Zones[index];
 
-        if (term.Equals("lobby", StringComparison.OrdinalIgnoreCase) || term.Equals("spawn", StringComparison.OrdinalIgnoreCase))
-            return Zones.FirstOrDefault(x => x.Type == ZoneType.Lobby);
-        //if (term.Equals("t1main", StringComparison.OrdinalIgnoreCase) || term.Equals("t1", StringComparison.OrdinalIgnoreCase))
-        //    return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, TeamManager.Team1Faction));
-        //if (term.Equals("t2main", StringComparison.OrdinalIgnoreCase) || term.Equals("t2", StringComparison.OrdinalIgnoreCase))
-        //    return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, TeamManager.Team2Faction));
-        //if (term.Equals("t1amc", StringComparison.OrdinalIgnoreCase))
-        //    return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, TeamManager.Team1Faction));
-        //if (term.Equals("t2amc", StringComparison.OrdinalIgnoreCase))
-        //    return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, TeamManager.Team2Faction));
+        if (term.Equals("lobby", StringComparison.InvariantCultureIgnoreCase) || term.Equals("spawn", StringComparison.InvariantCultureIgnoreCase))
+            return Zones.FirstOrDefault(x => x.Type == ZoneType.Lobby) ?? Zones.FirstOrDefault(x => x.Name.Equals("Lobby", StringComparison.OrdinalIgnoreCase));
 
-        // todo lookup obj1, obj2, and obj
-        //Flag? fl = null;
-        //if (term.Equals("obj1", StringComparison.OrdinalIgnoreCase))
-        //{
-        //    if (Data.Is(out IFlagTeamObjectiveGamemode gm))
-        //    {
-        //        fl = gm.ObjectiveTeam1;
-        //    }
-        //}
-        //else if (term.Equals("obj2", StringComparison.OrdinalIgnoreCase))
-        //{
-        //    if (Data.Is(out IFlagTeamObjectiveGamemode gm))
-        //    {
-        //        fl = gm.ObjectiveTeam2;
-        //    }
-        //}
-        //else if (term.Equals("obj", StringComparison.OrdinalIgnoreCase))
-        //{
-        //    if (Data.Is(out IFlagTeamObjectiveGamemode rot))
-        //    {
-        //        if (Data.Is(out IAttackDefense atdef))
-        //        {
-        //            ulong t = atdef.DefendingTeam;
-        //            fl = t == 1 ? rot.ObjectiveTeam1 : rot.ObjectiveTeam2;
-        //        }
-        //    }
-        //    else if (Data.Is(out IFlagObjectiveGamemode obj))
-        //    {
-        //        fl = obj.Objective;
-        //    }
-        //}
-        //if (fl != null)
-        //    return fl.ZoneData;
+        if (term.Equals("main", StringComparison.InvariantCultureIgnoreCase) && relevantFaction != null)
+        {
+            return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, relevantFaction.FactionId, StringComparison.OrdinalIgnoreCase));
+        }
+        if (term.Equals("amc", StringComparison.InvariantCultureIgnoreCase) && relevantFaction != null)
+        {
+            return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, relevantFaction.FactionId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // tXmain
+        if (term.Length > 5
+            && term[0] is 't' or 'T'
+            && char.IsDigit(term[1])
+            && term.EndsWith("main", StringComparison.InvariantCultureIgnoreCase)
+            && ulong.TryParse(term.AsSpan(1, term.Length - 5), NumberStyles.Number, CultureInfo.InvariantCulture, out ulong teamGroupId)
+            && _warfare.IsLayoutActive())
+        {
+            Team team = _warfare.GetActiveLayout().TeamManager.GetTeam(new CSteamID(teamGroupId));
+            if (team.IsValid)
+                return Zones.FirstOrDefault(x => x.Type == ZoneType.MainBase && string.Equals(x.Faction, team.Faction.FactionId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // tXamc
+        if (term.Length > 4
+            && term[0] is 't' or 'T'
+            && char.IsDigit(term[1])
+            && term.EndsWith("amc", StringComparison.InvariantCultureIgnoreCase)
+            && ulong.TryParse(term.AsSpan(1, term.Length - 4), NumberStyles.Number, CultureInfo.InvariantCulture, out teamGroupId)
+            && _warfare.IsLayoutActive())
+        {
+            Team team = _warfare.GetActiveLayout().TeamManager.GetTeam(new CSteamID(teamGroupId));
+            if (team.IsValid)
+                return Zones.FirstOrDefault(x => x.Type == ZoneType.AntiMainCampArea && string.Equals(x.Faction, team.Faction.FactionId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!_warfare.IsLayoutActive())
+            return null;
+
+        // todo lookup obj1, obj2, and obj for active objectives
+        // ILayoutPhase? phase = _warfare.GetActiveLayout().ActivePhase;
         return null;
     }
 
@@ -302,7 +315,7 @@ public class ZoneStore : IHostedService
     /// </summary>
     /// <param name="pos">The position to search for.</param>
     /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
-    public Zone? FindInsizeZone(Vector3 pos, bool noOverlap)
+    public Zone? FindInsideZone(Vector3 pos, bool noOverlap)
     {
         if (ProximityZones == null)
             return null;
@@ -314,7 +327,7 @@ public class ZoneStore : IHostedService
             ZoneProximity proximity = ProximityZones[i];
             if (!proximity.Proximity.TestPoint(pos))
                 continue;
-            
+
             float a = proximity.Proximity.Area;
             if (current is null)
             {
@@ -322,7 +335,9 @@ public class ZoneStore : IHostedService
                 area = a;
             }
             else if (noOverlap)
+            {
                 return null;
+            }
             else if (a < area)
             {
                 current = proximity.Zone;
@@ -338,7 +353,7 @@ public class ZoneStore : IHostedService
     /// </summary>
     /// <param name="pos">The position to search for.</param>
     /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
-    public Zone? FindInsizeZone(Vector2 pos, bool noOverlap)
+    public Zone? FindInsideZone(Vector2 pos, bool noOverlap)
     {
         if (ProximityZones == null)
             return null;
@@ -386,6 +401,13 @@ public class ZoneStore : IHostedService
         {
             _loadTask = default;
         }
+
+        if (!_lvlEventSub)
+            return;
+
+        Level.loadingSteps -= OnLevelLoading;
+        Level.onPrePreLevelLoaded -= OnLevelLoaded;
+        _lvlEventSub = false;
     }
 
     /// <summary>

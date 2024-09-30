@@ -158,7 +158,7 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector3 position)
+    public bool TestPoint(in Vector3 position)
     {
         GameThread.AssertCurrent();
 
@@ -167,7 +167,7 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector2 position)
+    public bool TestPoint(in Vector2 position)
     {
         GameThread.AssertCurrent();
 

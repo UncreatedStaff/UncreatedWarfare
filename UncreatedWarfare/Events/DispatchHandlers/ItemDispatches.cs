@@ -10,7 +10,7 @@ partial class EventDispatcher2
     /// <summary>
     /// Invoked by <see cref="ItemManager.onTakeItemRequested"/> when a player tries to pick up an item. Can be cancelled.
     /// </summary>
-    private void OnTakeItemRequested(Player player, byte x, byte y, uint instanceId, byte toX, byte toY, byte toRotation, byte toPage, ItemData itemData, ref bool shouldAllow)
+    private void ItemManagerOnTakeItemRequested(Player player, byte x, byte y, uint instanceId, byte toX, byte toY, byte toRotation, byte toPage, ItemData itemData, ref bool shouldAllow)
     {
         if (!shouldAllow)
             return;

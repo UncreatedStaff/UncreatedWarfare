@@ -77,7 +77,7 @@ public class TeamsCommand : IExecutableCommand
         if (lobbyZone == null)
             throw Context.SendUnknownError();
 
-        _cooldownManager.StartCooldown(Context.Player, CooldownType.ChangeTeams, /* todo */ 2000f);
+        _cooldownManager.StartCooldown(Context.Player, CooldownType.ChangeTeams, /* todo config */ 2000f);
         Context.Player.UnturnedPlayer.teleportToLocationUnsafe(lobbyZone.Spawn, lobbyZone.SpawnYaw);
         throw Context.Defer();
     }

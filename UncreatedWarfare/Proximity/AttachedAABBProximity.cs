@@ -95,28 +95,28 @@ public class AttachedAABBProximity : IAttachedAABBProximity, IFormattable
     /// <summary>
     /// Create a 3D bounding box attached to <paramref name="attachmentRoot"/>.
     /// </summary>
-    public AttachedAABBProximity(Transform attachmentRoot, Bounds bounds)
+    public AttachedAABBProximity(Transform attachmentRoot, in Bounds bounds)
     {
         AttachmentRoot = attachmentRoot;
-        _aabb = new AABBProximity(bounds);
+        _aabb = new AABBProximity(in bounds);
     }
 
     /// <summary>
     /// Create an axis-aligned bounding box attached to <paramref name="attachmentRoot"/>.
     /// </summary>
-    public AttachedAABBProximity(Transform attachmentRoot, Vector3 center, Vector3 size)
+    public AttachedAABBProximity(Transform attachmentRoot, in Vector3 center, in Vector3 size)
     {
         AttachmentRoot = attachmentRoot;
-        _aabb = new AABBProximity(center, size);
+        _aabb = new AABBProximity(in center, in size);
     }
 
     /// <summary>
     /// Create a 2D bounding box with an infinite height attached to <paramref name="attachmentRoot"/>.
     /// </summary>
-    public AttachedAABBProximity(Transform attachmentRoot, Vector2 center, Vector2 size)
+    public AttachedAABBProximity(Transform attachmentRoot, in Vector2 center, in Vector2 size)
     {
         AttachmentRoot = attachmentRoot;
-        _aabb = new AABBProximity(center, size);
+        _aabb = new AABBProximity(in center, in size);
     }
 
     /// <summary>
@@ -129,7 +129,7 @@ public class AttachedAABBProximity : IAttachedAABBProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector3 position)
+    public bool TestPoint(in Vector3 position)
     {
         GameThread.AssertCurrent();
 
@@ -138,7 +138,7 @@ public class AttachedAABBProximity : IAttachedAABBProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector2 position)
+    public bool TestPoint(in Vector2 position)
     {
         GameThread.AssertCurrent();
 

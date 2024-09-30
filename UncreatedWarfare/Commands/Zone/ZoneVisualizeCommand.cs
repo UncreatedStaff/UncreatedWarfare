@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+﻿using System;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Zones;
 
@@ -27,7 +28,7 @@ public class ZoneVisualizeCommand : IExecutableCommand
 
         Zone? zone = Context.TryGetRange(0, out string? zname)
             ? _zoneStore.SearchZone(zname)
-            : _zoneStore.FindInsizeZone(Context.Player.Position, false);
+            : _zoneStore.FindInsideZone(Context.Player.Position, false);
 
         if (zone == null)
         {

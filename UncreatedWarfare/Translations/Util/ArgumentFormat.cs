@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Translations.Addons;
 
 namespace Uncreated.Warfare.Translations.Util;
@@ -88,6 +89,7 @@ public readonly struct SpecialFormat
     /// <summary>
     /// Check if a format matches this format.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Match(string? fmt)
     {
         return fmt != null && fmt.Equals(Format, StringComparison.Ordinal);
@@ -96,8 +98,10 @@ public readonly struct SpecialFormat
     /// <summary>
     /// Check if a format matches this format.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Match(in ValueFormatParameters args)
     {
-        return Match(args.Format.Format);
+        string? fmt = args.Format.Format;
+        return fmt is not null && fmt.Equals(Format, StringComparison.Ordinal);
     }
 }

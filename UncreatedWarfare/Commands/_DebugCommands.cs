@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
@@ -75,7 +76,7 @@ public class DebugCommand : IExecutableCommand
     [Ignore]
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(0, out string operation))
+        if (!Context.TryGet(0, out string? operation))
             throw Context.SendCorrectUsage("/test <operation> [parameters...]");
 
         MethodInfo? testFunction;
@@ -133,6 +134,35 @@ public class DebugCommand : IExecutableCommand
 
 #pragma warning disable IDE1006
 #pragma warning disable IDE0051
+    private void glfromloc()
+    {
+        Context.AssertRanByPlayer();
+
+        Vector3 position = Context.Player.UnturnedPlayer.quests.isMarkerPlaced
+            ? Context.Player.UnturnedPlayer.quests.markerPosition
+            : Context.Player.Position;
+
+        Context.ReplyString($"Found gl: {new GridLocation(in position)} from pos {position:F3}.");
+    }
+
+    private void gltoloc()
+    {
+        Context.AssertRanByPlayer();
+
+        if (!Context.TryGet(0, out string? str) || !GridLocation.TryParse(str, out GridLocation gl))
+        {
+            throw Context.SendCorrectUsage("/test gltoloc <grid location>");
+        }
+
+        Context.ReplyString($"Found center: {gl.Center:F3} from gl {gl}.");
+
+        EffectAsset? squadLeaderEmpty = Assets.find<EffectAsset>(new Guid("dc95d06e787e4a069518e0487645ed6b"));
+
+        if (squadLeaderEmpty == null)
+            throw Context.SendUnknownError();
+        EffectUtility.TriggerEffect(squadLeaderEmpty, Context.Player.Connection, gl.Center, true);
+    }
+
     private void barricadecarto()
     {
         Context.AssertRanByPlayer();
@@ -153,8 +183,8 @@ public class DebugCommand : IExecutableCommand
         Matrix4x4 transformationMatrix = CartographyUtility.ProjectWorldToMapBarricade(barricade, offset, size);
 
         EffectAsset? squadLeaderEmpty = Assets.find<EffectAsset>(new Guid("dc95d06e787e4a069518e0487645ed6b"));
-        EffectAsset? squadLeaderUnrmd = Assets.find<EffectAsset>(new Guid("fc661ae0d8eb4fb3a2dcdee3b8fb6070"));
-        if (squadLeaderEmpty == null || squadLeaderUnrmd == null)
+
+        if (squadLeaderEmpty == null)
             throw Context.SendUnknownError();
 
         Vector3 position = Context.Player.UnturnedPlayer.quests.isMarkerPlaced
@@ -168,13 +198,6 @@ public class DebugCommand : IExecutableCommand
         EffectUtility.TriggerEffect(squadLeaderEmpty, Context.Player.Connection, pt, true);
 
         Context.ReplyString($"Found point: {pt:F3} and spawned effect from pos {position:F3}.");
-
-
-        // pt = transformationMatrix.inverse.MultiplyPoint3x4(position);
-        // 
-        // EffectUtility.TriggerEffect(squadLeaderUnrmd, Context.Player.Connection, pt, true);
-        // 
-        // Context.ReplyString($"Found inverse point: {pt:F3} and spawned effect from pos {position:F3}.");
     }
 
     private void carto()

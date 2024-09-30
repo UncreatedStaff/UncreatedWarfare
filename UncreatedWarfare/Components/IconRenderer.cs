@@ -3,11 +3,8 @@ using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
@@ -17,7 +14,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Components;
 
-public class IconManager : ILayoutHostedService, IEventListener<PlayerLeft>
+public class IconManager : ILayoutHostedService, IEventListener<PlayerLeft>, IEventListener<PlayerGroupChanged>
 {
     private readonly IPlayerService _playerService;
     private const float FullTickLoopTime = 0.25f;
@@ -27,7 +24,6 @@ public class IconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     public IconManager(IPlayerService playerService)
     {
         _playerService = playerService;
-        EventDispatcher.GroupChanged += OnGroupChanged;
         TimeUtility.updated += OnUpdate;
     }
 
@@ -97,7 +93,7 @@ public class IconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         // }
     }
     
-    private void OnGroupChanged(GroupChanged e)
+    void IEventListener<PlayerGroupChanged>.HandleEvent(PlayerGroupChanged e, IServiceProvider serviceProvider)
     {
         DrawNewMarkers(e.Player, true);
     }

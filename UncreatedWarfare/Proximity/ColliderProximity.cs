@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -189,12 +188,12 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
         return false;
     }
 
-    public bool TestPoint(Vector3 position)
+    public bool TestPoint(in Vector3 position)
     {
         return _proximity.TestPoint(position);
     }
 
-    public bool TestPoint(Vector2 position)
+    public bool TestPoint(in Vector2 position)
     {
         return _proximity.TestPoint(position);
     }

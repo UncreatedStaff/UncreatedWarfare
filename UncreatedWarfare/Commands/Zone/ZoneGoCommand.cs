@@ -3,6 +3,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
@@ -35,7 +36,7 @@ public class ZoneGoCommand : IExecutableCommand
     }
 
     /// <inheritdoc />
-    public async UniTask ExecuteAsync(CancellationToken token)
+    public UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
 
@@ -45,12 +46,12 @@ public class ZoneGoCommand : IExecutableCommand
         else
         {
             Vector3 plpos = Context.Player.Position;
-            if (!Context.Player.IsOnline) return; // player got kicked
-            zone = _zoneStore.FindInsizeZone(plpos, false);
+            if (!Context.Player.IsOnline) return UniTask.CompletedTask; // player got kicked
+            zone = _zoneStore.FindInsideZone(plpos, false);
             zname = zone?.Name;
         }
 
-        Vector2 pos;
+        Vector3 pos;
         float yaw = Context.Player.UnturnedPlayer.transform.rotation.eulerAngles.y;
         GridLocation location = default;
         IDeployable? deployable = null;
@@ -59,7 +60,10 @@ public class ZoneGoCommand : IExecutableCommand
         {
             if (GridLocation.TryParse(zname, out location))
             {
-                pos = location.Center;
+                Vector2 center2d = location.Center;
+                pos = new Vector3(center2d.x, 0f, center2d.y);
+
+                pos.y = TerrainUtility.GetHighestPoint(in pos, 0f) + 0.75f;
             }
             //else if (Data.Singletons.GetSingleton<FOBManager>() != null && FOBManager.TryFindFOB(zname!, Context.Player.GetTeam(), out deployable))
             //{
@@ -76,13 +80,9 @@ public class ZoneGoCommand : IExecutableCommand
         }
         else
         {
-            pos = zone.Center;
-            //if (zone == TeamManager.Team1Main)
-            //    yaw = TeamManager.Team1SpawnAngle;
-            //else if (zone == TeamManager.Team2Main)
-            //    yaw = TeamManager.Team2SpawnAngle;
-            //else if (zone == TeamManager.LobbyZone)
-            //    yaw = TeamManager.LobbySpawnAngle;
+            yaw = zone.SpawnYaw;
+            pos = zone.Spawn;
+            pos.y += 0.5f;
         }
 
         if (deployable != null)
@@ -92,9 +92,9 @@ public class ZoneGoCommand : IExecutableCommand
             Context.Reply(_deployTranslations.DeploySuccess, deployable);
             Context.LogAction(ActionLogType.Teleport, deployable.Translate(_translationService));
         }
-        else if (Physics.Raycast(new Ray(new Vector3(pos.x, Level.HEIGHT, pos.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+        else
         {
-            Context.Player.UnturnedPlayer.teleportToLocationUnsafe(hit.point, yaw);
+            Context.Player.UnturnedPlayer.teleportToLocationUnsafe(pos, yaw);
             if (zone != null)
                 Context.Reply(_translations.ZoneGoSuccess, zone);
             else if (loc != null)
@@ -103,10 +103,7 @@ public class ZoneGoCommand : IExecutableCommand
                 Context.Reply(_translations.ZoneGoSuccessGridLocation, location);
             Context.LogAction(ActionLogType.Teleport, loc == null ? zone == null ? location.ToString() : zone.Name.ToUpper() : loc.locationName);
         }
-        else
-        {
-            Context.SendUnknownError();
-            L.LogWarning("Tried to teleport to " + (zone == null ? location.ToString() : zone.Name.ToUpper()) + " and there was no terrain to teleport to at " + pos + ".");
-        }
+
+        return UniTask.CompletedTask;
     }
 }

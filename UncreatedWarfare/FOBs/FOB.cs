@@ -153,12 +153,12 @@ public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
         return -1; // todo
     }
 
-    public bool TestPoint(Vector3 position)
+    public bool TestPoint(in Vector3 position)
     {
         return (transform.position - position).sqrMagnitude <= _sqrRadius;
     }
 
-    public bool TestPoint(Vector2 position)
+    public bool TestPoint(in Vector2 position)
     {
         Vector3 pos = transform.position;
         Vector2 pos2d = new Vector2(pos.x, pos.z);

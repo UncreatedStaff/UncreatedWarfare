@@ -21,21 +21,21 @@ public class SphereProximity : ISphereProximity, IFormattable
     /// Create a sphere from a <see cref="BoundingSphere"/>.
     /// </summary>
     /// <exception cref="ArgumentException">Position or radius isn't finite (not NaN or Infinity).</exception>
-    public SphereProximity(BoundingSphere sphere)
+    public SphereProximity(in BoundingSphere sphere)
     {
         if (!float.IsFinite(sphere.radius) || !sphere.position.IsFinite())
             throw new ArgumentException("Not finite.", nameof(sphere));
 
         _sphere = sphere;
         _radSqr = sphere.radius * sphere.radius;
-        CalculateBounds(ref _bounds, ref sphere);
+        CalculateBounds(ref _bounds, in sphere);
     }
 
     /// <summary>
     /// Create a sphere from a position and radius.
     /// </summary>
     /// <exception cref="ArgumentException">Position or radius isn't finite (not NaN or Infinity).</exception>
-    public SphereProximity(Vector3 position, float radius)
+    public SphereProximity(in Vector3 position, float radius)
     {
         if (!float.IsFinite(radius))
             throw new ArgumentException("Not finite.", nameof(radius));
@@ -46,7 +46,7 @@ public class SphereProximity : ISphereProximity, IFormattable
         _sphere.position = position;
         _sphere.radius = radius;
         _radSqr = radius * radius;
-        CalculateBounds(ref _bounds, ref _sphere);
+        CalculateBounds(ref _bounds, in _sphere);
     }
 
     /// <summary>
@@ -65,14 +65,14 @@ public class SphereProximity : ISphereProximity, IFormattable
         _bounds = other.worldBounds;
     }
 
-    private SphereProximity(BoundingSphere sphere, Bounds bounds)
+    private SphereProximity(in BoundingSphere sphere, in Bounds bounds)
     {
         _sphere = sphere;
         _radSqr = sphere.radius * sphere.radius;
         _bounds = bounds;
     }
 
-    private static void CalculateBounds(ref Bounds bounds, ref BoundingSphere sphere)
+    private static void CalculateBounds(ref Bounds bounds, in BoundingSphere sphere)
     {
         Vector3 extents = default;
         float bound = sphere.radius * 2;
@@ -83,7 +83,7 @@ public class SphereProximity : ISphereProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector3 position)
+    public bool TestPoint(in Vector3 position)
     {
         Vector3 pos = _sphere.position;
         float x = pos.x - position.x,
@@ -94,7 +94,7 @@ public class SphereProximity : ISphereProximity, IFormattable
     }
 
     /// <inheritdoc />
-    public bool TestPoint(Vector2 position)
+    public bool TestPoint(in Vector2 position)
     {
         Vector3 pos = _sphere.position;
         float x = pos.x - position.x,
@@ -106,7 +106,7 @@ public class SphereProximity : ISphereProximity, IFormattable
     /// <inheritdoc />
     public object Clone()
     {
-        return new SphereProximity(_sphere, _bounds);
+        return new SphereProximity(in _sphere, in _bounds);
     }
 
     /// <inheritdoc />
