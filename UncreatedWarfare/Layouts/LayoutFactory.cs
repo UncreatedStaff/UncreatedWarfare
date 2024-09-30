@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
@@ -132,7 +133,16 @@ public class LayoutFactory : IHostedService
             throw new ArgumentException($"Type {Accessor.ExceptionFormatter.Format(layoutInfo.LayoutType)} is not assignable to Layout.", nameof(layoutInfo));
         }
 
-        ILifetimeScope scopedProvider = await _warfare.CreateScopeAsync(null, token);
+        Action<ContainerBuilder>? lifetimeAction = null;
+
+        // load plugin services
+        IConfigurationSection serviceInfo = layoutInfo.Layout.GetSection("Services");
+        if (serviceInfo.GetChildren().Any())
+        {
+            lifetimeAction = TryLoadServicesFromServiceList(layoutInfo, serviceInfo);
+        }
+
+        ILifetimeScope scopedProvider = await _warfare.CreateScopeAsync(lifetimeAction, token);
         await UniTask.SwitchToMainThread(token);
 
         // active layout is set in Layout default constructor
@@ -159,11 +169,82 @@ public class LayoutFactory : IHostedService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error hosting ILayotuStartingListener {0} for layout {1}.", Accessor.Formatter.Format(listener.GetType()), layout);
+                _logger.LogError(ex, "Error hosting ILayoutStartingListener {0} for layout {1}.", Accessor.Formatter.Format(listener.GetType()), layout);
             }
         }
 
         await layout.BeginLayoutAsync(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Loads all instances of <see cref="ILayoutServiceConfigurer"/> from the 'Services' list in the config and creates a lifetime scope builder using them.
+    /// </summary>
+    private Action<ContainerBuilder> TryLoadServicesFromServiceList(LayoutInfo layoutInfo, IConfiguration serviceInfo)
+    {
+        List<(string, Type?)> types = serviceInfo.GetChildren()
+            .Select(x => (x.Value, ContextualTypeResolver.ResolveType(x.Value, typeof(ILayoutServiceConfigurer))))
+            .ToList();
+
+        List<Exception>? missingTypeExceptions = null;
+        foreach ((string typeName, Type? configurerType) in types)
+        {
+            if (configurerType == null)
+            {
+                (missingTypeExceptions ??= new List<Exception>(1)).Add(new TypeLoadException($"Failed to find a type by the name \"{typeName}\" in \"{layoutInfo.FilePath}\"."));
+            }
+        }
+
+        if (missingTypeExceptions is { Count: > 0 })
+        {
+            throw new AggregateException(missingTypeExceptions);
+        }
+
+        object[] parameters = [ layoutInfo, serviceInfo ];
+        return bldr =>
+        {
+            IServiceProvider serviceProvider = _warfare.ServiceProvider.Resolve<IServiceProvider>();
+            foreach ((_, Type? configurerType) in types)
+            {
+                ILayoutServiceConfigurer configurer =
+                    (ILayoutServiceConfigurer)ReflectionUtility.CreateInstanceFixed(serviceProvider,
+                        configurerType!, parameters);
+
+                try
+                {
+                    configurer.ConfigureServices(bldr);
+
+                    _logger.LogInformation(
+                        "Registered services using configurer {0} from assembly {1}.",
+                        Accessor.Formatter.Format(configurerType!),
+                        configurerType!.Assembly.GetName().Name
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to configure services using type {0} from assembly {1}.",
+                        Accessor.Formatter.Format(configurerType!),
+                        configurerType!.Assembly.GetName().Name
+                    );
+                }
+
+                if (configurer is not IDisposable disposable)
+                    continue;
+
+                try
+                {
+                    disposable.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to dispose configurer {0} from assembly {1}.",
+                        Accessor.Formatter.Format(configurerType!),
+                        configurerType!.Assembly.GetName().Name
+                    );
+                }
+            }
+        };
     }
 
     /// <summary>

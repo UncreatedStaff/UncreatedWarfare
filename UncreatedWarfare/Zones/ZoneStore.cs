@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
-using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -108,7 +107,6 @@ public class ZoneStore : IHostedService
         }
 
         ProximityZones = proxZones.AsReadOnly();
-        _logger.LogInformation("Initialized proximities for {0} zone(s).", proxZones.Count);
     }
 
     /// <summary>
@@ -186,7 +184,6 @@ public class ZoneStore : IHostedService
                 throw new ArgumentException($"This zone ({zone.Name}) doesn't have a valid shape or is missing the associated data object.", nameof(zone));
         }
 
-        _logger.LogInformation("Created proxy {0}: {{{1}}}.", zone.ShortName ?? zone.Name, prox.ToString());
         return prox;
     }
 

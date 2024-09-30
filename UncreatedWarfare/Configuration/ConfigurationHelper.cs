@@ -32,14 +32,14 @@ public static class ConfigurationHelper
     /// Adds a new <see cref="FileConfigurationSource"/> at <paramref name="path"/> with an optional file source with the map name appended.
     /// </summary>
     /// <remarks>Example: Config.json and Config.Washington.json.</remarks>
-    public static void AddSourceWithMapOverride(IConfigurationBuilder configBuilder, IFileProvider fileProvider, string path)
+    public static void AddSourceWithMapOverride(IConfigurationBuilder configBuilder, IFileProvider fileProvider, string path, bool optional = false)
     {
         MakeRelativePath(fileProvider, ref path);
 
         string ext = Path.GetExtension(path);
 
         // add default
-        AddJsonOrYamlFile(configBuilder, fileProvider, path, optional: false, reloadOnChange: true);
+        AddJsonOrYamlFile(configBuilder, fileProvider, path, optional: optional, reloadOnChange: true);
 
         // add map
         string mapName = CleanFileName(Provider.map);

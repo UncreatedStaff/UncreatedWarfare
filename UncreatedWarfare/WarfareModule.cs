@@ -3,7 +3,8 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.FileProviders.Physical;
 using SDG.Framework.Modules;
 using Stripe;
 using System;
@@ -11,8 +12,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.FileProviders.Physical;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -39,9 +39,11 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Networking.Purchasing;
+using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Squads;
@@ -89,6 +91,7 @@ public sealed class WarfareModule : IModuleNexus
     private Layout? _activeLayout;
     private GameObject _gameObjectHost;
     private ILogger<WarfareModule> _logger;
+    private WarfarePluginLoader _pluginLoader;
 
     /// <summary>
     /// A path to the top-level 'Warfare' folder.
@@ -101,7 +104,7 @@ public sealed class WarfareModule : IModuleNexus
     public IConfiguration Configuration { get; private set; }
 
     /// <summary>
-    /// Handles tracking file changing and configuration.
+    /// Handles tracking file changing and configuration for any files in <c>Servers/[Server ID]/Warfare/</c>.
     /// </summary>
     public PhysicalFileProvider FileProvider { get; private set; }
 
@@ -143,7 +146,8 @@ public sealed class WarfareModule : IModuleNexus
         GameThread.AssertCurrent();
 
         // setup UniTask
-        PlayerLoopHelper.Init();
+        if (!PlayerLoopHelper.HasBeenInitialized)
+            PlayerLoopHelper.Init();
 
         // this needs to be separated to give the above events time to be subscribed before loading types
         Init();
@@ -152,6 +156,27 @@ public sealed class WarfareModule : IModuleNexus
     private void Init()
     {
         Singleton = this;
+
+        // register logging factory manually to use before container is built.
+        L.Init();
+        ILoggerProvider[] loggingProviders = [ new L.UCLoggerFactory() ];
+
+        ILoggerFactory loggerFactory = new LoggerFactory(loggingProviders, new LoggerFilterOptions
+        {
+            MinLevel = LogLevel.Trace,
+            Rules =
+            {
+                new LoggerFilterRule(null, "Microsoft", LogLevel.Information, null),
+                new LoggerFilterRule(null, "Uncreated.Warfare.Database", LogLevel.Information, null),
+                new LoggerFilterRule(null, "Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning, null),
+                new LoggerFilterRule(null, "Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning, null),
+            }
+        });
+
+        _logger = loggerFactory.CreateLogger<WarfareModule>();
+
+        _logger.LogInformation("Loading Uncreated.Warfare core module...");
+
         _gameObjectHost = new GameObject("Uncreated.Warfare");
         Object.DontDestroyOnLoad(_gameObjectHost);
 
@@ -178,7 +203,6 @@ public sealed class WarfareModule : IModuleNexus
         Provider.modeConfigData.Barricades.Decay_Time = 0;
         Provider.modeConfigData.Structures.Decay_Time = 0;
 
-        // Set the environment directory to the folder now at U3DS/Servers/ServerId/Warfare/
         HomeDirectory = Path.Combine(UnturnedPaths.RootDirectory.FullName, "Servers", Provider.serverID, "Warfare");
         Directory.CreateDirectory(HomeDirectory);
 
@@ -188,33 +212,34 @@ public sealed class WarfareModule : IModuleNexus
         string systemConfigLocation = Path.Join(HomeDirectory, "System Config.yml");
 
         FileProvider = new PhysicalFileProvider(HomeDirectory, ExclusionFilters.Sensitive);
-        CommandWindow.Log("Configuration location: " + systemConfigLocation);
 
         ConfigurationHelper.AddSourceWithMapOverride(configBuilder, FileProvider, systemConfigLocation);
         Configuration = configBuilder.Build();
 
-        ContainerBuilder serviceCollection = new ContainerBuilder();
+        ContainerBuilder bldr = new ContainerBuilder();
 
-        // todo rewrite logging
-        // register logging
-        L.Init();
-        serviceCollection.RegisterFromCollection(collection =>
-        {
-            collection.AddLogging(l => l
-                .SetMinimumLevel(LogLevel.Trace)
-                .AddFilter("Microsoft", LogLevel.Information)
-                .AddFilter("Uncreated.Warfare.Database", LogLevel.Information)
-                .AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning)
-                .AddFilter("Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning)
-                .AddProvider(new L.UCLoggerFactory())
-            );
-        });
+        _pluginLoader = new WarfarePluginLoader(this, loggerFactory);
 
-        ConfigureServices(serviceCollection);
+        _pluginLoader.LoadPlugins();
 
-        ServiceProvider = serviceCollection.Build();
+        bldr.RegisterInstance(loggingProviders[0])
+            .As<ILoggerProvider>()
+            .OwnedByLifetimeScope();
 
-        _logger = ServiceProvider.Resolve<ILogger<WarfareModule>>();
+        bldr.RegisterInstance(loggerFactory)
+            .OwnedByLifetimeScope();
+
+        bldr.RegisterGeneric(typeof(Logger<>))
+            .As(typeof(ILogger<>))
+            .SingleInstance();
+
+        ConfigureServices(bldr);
+
+        _pluginLoader.ConfigureServices(bldr);
+
+        ServiceProvider = bldr.Build();
+
+        _logger.LogInformation("Using {0} services from core and {1} plugin(s).", ServiceProvider.ComponentRegistry.Registrations.Count(), _pluginLoader.Plugins.Count);
 
         UniTask.Create(async () =>
         {
@@ -269,6 +294,15 @@ public sealed class WarfareModule : IModuleNexus
             Unhost();
         }
 
+        try
+        {
+            ServiceProvider.ResolveOptional<HarmonyPatchService>()?.RemoveAllPatches();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while removing patches.");
+        }
+
         _logger.LogInformation("Cleaning up container...");
         ServiceProvider.Dispose();
         CommandWindow.Log("Done - Shutting down");
@@ -303,9 +337,19 @@ public sealed class WarfareModule : IModuleNexus
         });
 
         bldr.RegisterInstance(this)
+            .As<WarfareModule>()
             .ExternallyOwned();
-        bldr.RegisterInstance(ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm)))
+
+        Module thisModule = ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm));
+        bldr.RegisterInstance(thisModule)
+            .As<Module>()
             .ExternallyOwned();
+
+        bldr.RegisterType<HarmonyPatchService>()
+            .SingleInstance();
+
+        bldr.Register<HarmonyPatchService, HarmonyLib.Harmony>((_, p) => p.Patcher)
+            .SingleInstance();
 
         bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareTimeComponent>())
             .SingleInstance();
@@ -614,11 +658,14 @@ public sealed class WarfareModule : IModuleNexus
         ServiceProvider.Resolve<MapScheduler>().ApplyMapSetting();
 
         // this too
-        Harmony.Patches.DoPatching(ServiceProvider.Resolve<Module>(), ServiceProvider.Resolve<IServiceProvider>());
+        HarmonyPatchService patchService = ServiceProvider.Resolve<HarmonyPatchService>();
+
+        patchService.ApplyAllPatches();
 
         bool connected = false;
 
         // migrate database before loading services
+        _logger.LogDebug("Migrating database...");
         await using (ILifetimeScope scope = ServiceProvider.BeginLifetimeScope())
         await using (IDbContext dbContext = scope.Resolve<IDbContext>())
         {
@@ -658,6 +705,7 @@ public sealed class WarfareModule : IModuleNexus
             .OrderByDescending(x => x.GetType().GetPriority())
             .ToList();
 
+        _logger.LogDebug("Hosting {0} services.", hostedServices.Count);
         _unloadedHostedServices = false;
         int errIndex = -1;
         for (int i = 0; i < hostedServices.Count; i++)
@@ -692,6 +740,7 @@ public sealed class WarfareModule : IModuleNexus
 
         _unloadedHostedServices = true;
         UniTask[] tasks = new UniTask[errIndex];
+        _logger.LogDebug("Unhosting {0} services and shutting down.", tasks.Length);
         for (int i = errIndex - 1; i >= 0; --i)
         {
             IHostedService hostedService = hostedServices[i];
@@ -736,6 +785,7 @@ public sealed class WarfareModule : IModuleNexus
 
         await UniTask.SwitchToMainThread(token);
 
+        _logger.LogDebug("Hosting {0} services on level load.", hostedServices.Count);
         for (int i = 0; i < hostedServices.Count; i++)
         {
             ILevelHostedService hostedService = hostedServices[i];
@@ -769,6 +819,7 @@ public sealed class WarfareModule : IModuleNexus
             .OrderByDescending(x => x.GetType().GetPriority())
             .ToList();
 
+        _logger.LogDebug("Unhosting {0} services.", hostedServices.Count);
         UniTask[] tasks = new UniTask[hostedServices.Count];
         for (int i = 0; i < hostedServices.Count; ++i)
         {
@@ -809,6 +860,7 @@ public sealed class WarfareModule : IModuleNexus
             .OrderByDescending(x => x.GetType().GetPriority())
             .ToList();
 
+        _logger.LogDebug("Unhosting {0} services synchronously.", hostedServices.Count);
         UniTask[] tasks = new UniTask[hostedServices.Count];
         for (int i = 0; i < hostedServices.Count; ++i)
         {
@@ -918,7 +970,7 @@ public sealed class WarfareModule : IModuleNexus
         ServiceProvider.Resolve<Module>().isEnabled = false;
     }
 
-    private Assembly? HandleAssemblyResolve(object sender, ResolveEventArgs args)
+    private static Assembly? HandleAssemblyResolve(object sender, ResolveEventArgs args)
     {
         // UnityEngine.CoreModule includes JetBrains annotations for some reason, may as well use them.
         const string jetbrains = "JetBrains.Annotations, ";
