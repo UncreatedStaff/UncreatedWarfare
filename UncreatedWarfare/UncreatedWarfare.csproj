@@ -184,16 +184,10 @@
   <ItemGroup>
 
     <EmbeddedResource Include="$(SolutionDir)Translation README.md" />
-
     <EmbeddedResource Include="Commands\DeployCommand.meta.yml" />
-
     <EmbeddedResource Include="Commands\BuyCommand.meta.yml" />
-
     <EmbeddedResource Include="Commands\AttachCommand.meta.yml" />
-
     <EmbeddedResource Include="Commands\AmmoCommand.meta.yml" />
-
-    <!-- Commands -->
     <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
     <EmbeddedResource Include="Commands\AbandonCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
