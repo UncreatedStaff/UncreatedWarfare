@@ -6,47 +6,67 @@
   </PropertyGroup>
 
   <PropertyGroup>
+
+    <VersionPrefix>4.0.0</VersionPrefix>
+    <VersionBuild>001</VersionBuild>
+    <VersionSuffix>prerelease$(VersionBuild)</VersionSuffix>
+
+  </PropertyGroup>
+
+  <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyTitle>Uncreated.Warfare</AssemblyTitle>
     <AssemblyName>Uncreated.Warfare</AssemblyName>
     <Title>Uncreated.Warfare</Title>
     <Product>Uncreated.Warfare</Product>
-    <VersionPrefix>4.0.0</VersionPrefix>
-    <VersionBuild>001</VersionBuild>
-    <VersionSuffix>prerelease$(VersionBuild)</VersionSuffix>
-    <Authors>Daniel Willett;Ben Valkin</Authors>
-    <Company>Uncreated Network</Company>
+
+    <Authors>DanielWillett;benvalkin</Authors>
+    <Company>Uncreated</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
-    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-    <NoWarn>NU1701</NoWarn>
+
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnablePreviewFeatures>true</EnablePreviewFeatures>
     <DoNotCopyLocalIfInGac>true</DoNotCopyLocalIfInGac>
+
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <RepositoryUrl>https://github.com/UncreatedStaff/UncreatedWarfare</RepositoryUrl>
-    <RepositoryType>GitHub</RepositoryType>
-    <PackageTags>Plugin</PackageTags>
+
+    <PackageProjectUrl>https://github.com/UncreatedStaff/UncreatedWarfare</PackageProjectUrl>
+    <RepositoryUrl>$(PackageProjectUrl).git</RepositoryUrl>
+
+    <PackageTags>Unturned;Uncreated;Warfare;Uncreated Warfare</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
     <RootNamespace>Uncreated.Warfare</RootNamespace>
+
     <AssemblyVersion>$(VersionPrefix).$(VersionBuild)</AssemblyVersion>
     <FileVersion>$(VersionPrefix).$(VersionBuild)</FileVersion>
+
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
     <GenerateRuntimeConfigurationFiles>True</GenerateRuntimeConfigurationFiles>
+
     <NoWarn>NU1701;NU1803;NU1903;NU1904;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
   </PropertyGroup>
+
   <PropertyGroup>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+
     <Title>Uncreated Warfare</Title>
     <IsPublishable>False</IsPublishable>
     <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
+
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>portable</DebugType>
     <WarningLevel>5</WarningLevel>
@@ -119,9 +139,11 @@
     <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease02, 2)" />
     <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease02, 2)" />
     <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease02, 2)" />
-    <PackageReference Include="Uncreated.UI" Version="1.0.0-prerelease10" />
+    <PackageReference Include="Uncreated.UI" Version="[1.0.0,)" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
     <PackageReference Include="JetBrains.Annotations" Version="[2018.2.1,)" Aliases="JetBrains" />
+
+    <PackageReference Include="UniTask" Version="2.5.0" IncludeAssets="none" />
 
     <PackageReference Include="Autofac" Version="7.1.0" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.2.0" />
@@ -145,6 +167,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="3.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.0" Private="true" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="3.1.2" />
+
+    <PackageReference Update="OpenMod.UnityEngine.Redist" ExcludedAssets="all"  />
+    <PackageReference Update="OpenMod.Unturned.Redist" ExcludedAssets="all"  />
     <!--<PackageReference Remove="System.ComponentModel.Annotations" />-->
   </ItemGroup>
 

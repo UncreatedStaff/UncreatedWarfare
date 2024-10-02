@@ -1507,7 +1507,7 @@ partial class ModerationUI
 
         L.LogDebug($"Message updated: {text}.");
     }
-    private void OnMuteTypeUpdated(UnturnedEnumButtonTracker<MuteType> button, Player player, MuteType value)
+    private void OnMuteTypeUpdated(UnturnedEnumButton<MuteType> button, Player player, MuteType value)
     {
         WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
         ModerationData data = GetOrAddModerationData(ucp);

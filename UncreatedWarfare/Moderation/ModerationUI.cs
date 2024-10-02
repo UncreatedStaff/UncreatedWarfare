@@ -174,7 +174,7 @@ public partial class ModerationUI : UnturnedUI
     public ModerationSelectedEvidence[] ModerationActionEvidence { get; } = ElementPatterns.CreateArray<ModerationSelectedEvidence>("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationInfoSelectedEvidenceBox/ModerationSelectedEvidence_{0}", 1, to: 10);
     public LabeledStateButton ModerationActionAddActorButton { get; } = new LabeledStateButton("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationSelectedActorsHeader/ModerationSelectedActorsHeaderAdd", "./ModerationSelectedActorsHeaderAddLabel", "./ModerationSelectedActorsHeaderAddState");
     public LabeledStateButton ModerationActionAddEvidenceButton { get; } = new LabeledStateButton("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationSelectedEvidenceHeader/ModerationSelectedEvidenceHeaderAdd", "./ModerationSelectedActorsHeaderAddLabel", "./ModerationSelectedActorsHeaderAddState");
-    public UnturnedEnumButtonTracker<MuteType> MuteTypeTracker { get; }
+    public UnturnedEnumButton<MuteType> MuteTypeTracker { get; }
     public UnturnedUIElement LogicModerationActionsUpdateScrollVisual { get; } = new UnturnedUIElement("ActionsPane/LogicModerationActionsUpdateScrollVisual");
 
     /* ACTION CONTROLS */
@@ -205,22 +205,30 @@ public partial class ModerationUI : UnturnedUI
             TextFormatter = (v, player) => "Search - " + _valueFormatter.FormatEnum(v, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
         };
 
+        LateRegisterElement(ModerationHistorySearchTypeButton);
+
         ModerationHistorySortModeButton = new UnturnedEnumButton<ModerationHistorySortMode>(ModerationHistorySortMode.Latest, "ModerationButtonToggleSortType",
             "./ModerationButtonToggleSortTypeLabel", null, "./ModerationButtonToggleSortTypeRightClickListener")
         {
             TextFormatter = (v, player) => "Sort - " + _valueFormatter.FormatEnum(v, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
         };
 
+        LateRegisterElement(ModerationHistorySortModeButton);
+
         ModerationPlayerSearchModeButton = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "ModerationButtonToggleOnline", "./ModerationButtonToggleOnlineLabel")
         {
             TextFormatter = (v, player) => "View - " + _valueFormatter.FormatEnum(v, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
         };
 
-        MuteTypeTracker = new UnturnedEnumButtonTracker<MuteType>(MuteType.Both, ModerationActionToggleButton1)
+        LateRegisterElement(ModerationPlayerSearchModeButton);
+
+        MuteTypeTracker = new UnturnedEnumButton<MuteType>(MuteType.Both, ModerationActionToggleButton1)
         {
             Ignored = MuteType.None,
             TextFormatter = (type, player) => "Mute Type - " + _valueFormatter.FormatEnum(type, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
         };
+
+        LateRegisterElement(MuteTypeTracker);
 
         ButtonClose.OnClicked += OnButtonCloseClicked;
         ModerationPlayerSearchModeButton.OnValueUpdated += OnModerationPlayerSearchModeUpdated;
@@ -395,7 +403,7 @@ public partial class ModerationUI : UnturnedUI
         
         SelectEntry(ucp, data.HistoryView[index]);
     }
-    private void OnModerationPlayerSearchModeUpdated(UnturnedEnumButtonTracker<PlayerSearchMode> button, Player player, PlayerSearchMode value)
+    private void OnModerationPlayerSearchModeUpdated(UnturnedEnumButton<PlayerSearchMode> button, Player player, PlayerSearchMode value)
     {
         WarfarePlayer ucp = _playerService.GetOnlinePlayer(Player.player);
         SendModerationPlayerList(ucp);
@@ -429,11 +437,11 @@ public partial class ModerationUI : UnturnedUI
             await RefreshModerationHistory(ucp, ucp.DisconnectToken);
         });
     }
-    private void OnModerationHistorySortModeUpdated(UnturnedEnumButtonTracker<ModerationHistorySortMode> button, Player player, ModerationHistorySortMode value)
+    private void OnModerationHistorySortModeUpdated(UnturnedEnumButton<ModerationHistorySortMode> button, Player player, ModerationHistorySortMode value)
     {
         TryQueueHistoryUpdate(player);
     }
-    private void OnModerationHistorySearchTypeUpdated(UnturnedEnumButtonTracker<ModerationHistorySearchMode> button, Player player, ModerationHistorySearchMode value)
+    private void OnModerationHistorySearchTypeUpdated(UnturnedEnumButton<ModerationHistorySearchMode> button, Player player, ModerationHistorySearchMode value)
     {
         UnturnedTextBoxData data = ModerationHistorySearch.GetOrAddData(player);
 
@@ -441,7 +449,7 @@ public partial class ModerationUI : UnturnedUI
             return;
         TryQueueHistoryUpdate(player);
     }
-    private void OnModerationHistoryTypeUpdated(UnturnedEnumButtonTracker<ModerationEntryType> button, Player player, ModerationEntryType value)
+    private void OnModerationHistoryTypeUpdated(UnturnedEnumButton<ModerationEntryType> button, Player player, ModerationEntryType value)
     {
         TryQueueHistoryUpdate(player);
     }

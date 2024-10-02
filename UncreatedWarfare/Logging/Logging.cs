@@ -91,7 +91,6 @@ public static class L
         Cleaner = new StackTraceCleaner(config);
 
         Accessor.Logger = new UCLoggerReflectionTools();
-        GlobalLogger.Instance = Logger;
     }
     public static bool IsBufferingLogs { get; set; }
     public static void FlushBadLogs()
