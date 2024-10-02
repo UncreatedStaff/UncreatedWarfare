@@ -1,0 +1,25 @@
+name: Latest
+
+on:
+  pull_request:
+    types: [opened, reopened]
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: 'master'
+        
+    - name: SetupDotNet
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '5.0.x'
+        
+    - name: Build
+      run: dotnet build "./UncreatedWarfare/UncreatedWarfare.csproj" --configuration Release "/p:IsInGitHubActions=True"
