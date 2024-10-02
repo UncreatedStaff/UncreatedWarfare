@@ -143,7 +143,7 @@
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
     <PackageReference Include="JetBrains.Annotations" Version="[2018.2.1,)" Aliases="JetBrains" />
 
-    <PackageReference Include="UniTask" Version="2.5.0" IncludeAssets="none" />
+    <PackageReference Include="UniTask" Version="2.5.0" ExcludeAssets="compile" />
 
     <PackageReference Include="Autofac" Version="7.1.0" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.2.0" />
@@ -167,9 +167,6 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="3.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.0" Private="true" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="3.1.2" />
-
-    <PackageReference Update="OpenMod.UnityEngine.Redist" ExcludedAssets="all"  />
-    <PackageReference Update="OpenMod.Unturned.Redist" ExcludedAssets="all"  />
     <!--<PackageReference Remove="System.ComponentModel.Annotations" />-->
   </ItemGroup>
 
