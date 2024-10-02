@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, reopened]
   push:
-    branches: [ "master" ]
+    branches: [ "uncreated-networking-cleanup" ]
 
 jobs:
   build:
@@ -14,7 +14,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        ref: 'master'
+        ref: 'uncreated-networking-cleanup'
         
     - name: SetupDotNet
       uses: actions/setup-dotnet@v4
