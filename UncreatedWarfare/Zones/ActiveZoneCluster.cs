@@ -1,10 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
@@ -17,7 +15,6 @@ namespace Uncreated.Warfare.Zones;
 public class ActiveZoneCluster : IDisposable
 {
     private readonly ZoneProximity[] _zones;
-    private readonly IPlayerService _playerService;
     private bool _disposed;
     private readonly TrackingList<WarfarePlayer> _players = new TrackingList<WarfarePlayer>(8);
 
@@ -63,8 +60,6 @@ public class ActiveZoneCluster : IDisposable
             throw new ArgumentException("A zone group must consist of at least one zone.", nameof(zones));
 
         Players = new ReadOnlyTrackingList<WarfarePlayer>(_players);
-
-        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         // move primary to the front of the array
         for (int i = 1; i < zones.Length; ++i)

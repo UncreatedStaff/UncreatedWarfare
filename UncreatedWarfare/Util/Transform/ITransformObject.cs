@@ -30,16 +30,6 @@ public interface ITransformObject
     Vector3 Scale { get; set; }
 
     /// <summary>
-    /// A matrix transforming from world space to local space.
-    /// </summary>
-    Matrix4x4 WorldToLocal { get; }
-
-    /// <summary>
-    /// A matrix transforming from local space to world space.
-    /// </summary>
-    Matrix4x4 LocalToWorld { get; }
-
-    /// <summary>
     /// Set the position and rotation at the same time.
     /// </summary>
     /// <exception cref="GameThreadException">Not on main thread.</exception>

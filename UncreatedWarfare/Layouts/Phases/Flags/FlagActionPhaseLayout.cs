@@ -15,7 +15,6 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
 {
     private readonly ILogger<FlagActionPhaseLayout> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IPlayerService _playerService;
     private IList<Zone>? _pathingResult;
     private ZoneStore _zoneStore;
 
@@ -39,11 +38,10 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
     /// <inheritdoc />
     public ActiveZoneCluster EndingTeam { get; private set; }
 
-    public FlagActionPhaseLayout(ILogger<FlagActionPhaseLayout> logger, IServiceProvider serviceProvider, IPlayerService playerService, IConfiguration config)
+    public FlagActionPhaseLayout(ILogger<FlagActionPhaseLayout> logger, IServiceProvider serviceProvider, IConfiguration config)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
-        _playerService = playerService;
         Configuration = config;
     }
 

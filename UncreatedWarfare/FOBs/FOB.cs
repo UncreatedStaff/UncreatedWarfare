@@ -255,8 +255,6 @@ public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
 
     IReadOnlyList<InteractableVehicle> ITrackingProximity<InteractableVehicle>.ActiveObjects => Vehicles;
 
-    Matrix4x4 ITransformObject.WorldToLocal => transform.worldToLocalMatrix;
-
     public Matrix4x4 LocalToWorld => throw new NotImplementedException();
 
     public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
@@ -266,7 +264,6 @@ public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
 
     public Matrix4x4 WorldToLocal => throw new NotImplementedException();
 
-    Matrix4x4 ITransformObject.LocalToWorld => transform.localToWorldMatrix;
     BoundingSphere ISphereProximity.Sphere
     {
         get
