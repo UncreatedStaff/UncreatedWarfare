@@ -88,6 +88,7 @@
     <None Remove="Commands\BuyCommand.meta.yml" />
     <None Remove="Commands\DeployCommand.meta.yml" />
     <None Remove="Commands\Kit\KitCommand.meta.yml" />
+    <None Remove="Commands\WarfareDev\WarfareDevCommand.meta.yml" />
     <None Remove="Commands\Zone\ZoneCommand.meta.yml" />
   </ItemGroup>
 
@@ -188,6 +189,7 @@
     <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
     <EmbeddedResource Include="Commands\AbandonCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\WarfareDev\WarfareDevCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Zone\ZoneCommand.meta.yml" />
 
   </ItemGroup>
@@ -308,6 +310,7 @@
 
   <ItemGroup>
     <Folder Include="Commands\VehicleBay\" />
+    <Folder Include="NewFolder\" />
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(U3DSPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">

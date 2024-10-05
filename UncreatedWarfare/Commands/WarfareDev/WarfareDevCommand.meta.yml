@@ -1,0 +1,24 @@
+﻿# KitCommand
+Description: "Test and debug Uncreated Warfare plugin features."
+Aliases: [ warfaredev, wdev ]
+Parameters:
+    # /warfaredev strategymaps
+  - Name: strategymaps
+    Alias: strt
+    Type: Verbatim
+    Description: "Debug Strategy Map features."
+    Parameters:
+      - Name: addtack
+        Type: Uncreated.Warfare.Models.Kits.Kit
+        Optional: true
+        Description: "Adds a map tack to the Strategy Map Table you looking at."
+        Parameters:
+          - Name: guid
+            Type: System.Guid
+            Description: "The GUID of the map tack barricade/structure asset."
+          - Name: worldx
+            Type: float
+            Description: "The real world X-coordinate to mark on the map."
+          - Name: worldz
+            Type: float
+            Description: "The real world Z-coordinate to mark on the map."

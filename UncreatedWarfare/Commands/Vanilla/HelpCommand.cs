@@ -108,6 +108,8 @@ public sealed class HelpCommand : IExecutableCommand
 
         if (rtn != null)
             throw Context.ReplyString(rtn);
+
+        throw Context.ReplyString("Help command terminated without any useful information.");
     }
 
     private void SendDefaultHelp()

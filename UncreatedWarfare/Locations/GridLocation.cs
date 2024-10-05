@@ -125,7 +125,7 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
                 GetMapMetrics(mapImageSize.x, mapImageSize.y, out int gridSizeX, out int gridSizeY, out _, out _, out double borderSize);
 
                 Vector3 mapLocalPos = default;
-                Vector2 areaSize = CartographyUtility.CaptureAreaSize;
+                Vector2 areaSize = CartographyUtility.WorldCaptureAreaDimensions;
 
                 // add half of subgrid offset and scale to grid relative coords [0,1]
                 mapLocalPos.x = (subgridPosX + 0.5f) / (gridSizeX * SubgridAmount);
@@ -226,7 +226,7 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
             Vector2Int mapImageSize = CartographyUtility.MapImageSize;
             GetMapMetrics(mapImageSize.x, mapImageSize.y, out int gridSizeX, out int gridSizeY, out _, out _, out double borderSize);
 
-            Vector2 areaSize = CartographyUtility.CaptureAreaSize;
+            Vector2 areaSize = CartographyUtility.WorldCaptureAreaDimensions;
             Vector2 mapLocalPos = CartographyUtility.WorldToMap.MultiplyPoint3x4(pos);
 
             // rescale to inside border and flip vertical axis
