@@ -87,7 +87,7 @@ public static class CollectionUtility
     {
         IReadOnlyList<T> list = (set as IReadOnlyList<T>) ?? set.ToList();
         int index = StringIndexOf(list, selector, input, equalsOnly);
-        return list[index];
+        return index < 0 ? default : list[index];
     }
 
     /// <summary>

@@ -98,7 +98,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
                 .Select(z => new ZoneProximity(_zoneStore.CreateColliderForZone(z), z))
                 .ToArray();
 
-            zoneList.Add(new ActiveZoneCluster(zones, _serviceProvider));
+            zoneList.Add(new ActiveZoneCluster(zones));
         }
 
         _zones = zoneList.ToArrayFast();

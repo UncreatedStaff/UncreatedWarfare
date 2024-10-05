@@ -54,7 +54,7 @@ public class ActiveZoneCluster : IDisposable
     /// </summary>
     public int Count => _zones.Length;
 
-    internal ActiveZoneCluster(ZoneProximity[] zones, IServiceProvider serviceProvider)
+    internal ActiveZoneCluster(ZoneProximity[] zones)
     {
         if (zones.Length == 0)
             throw new ArgumentException("A zone group must consist of at least one zone.", nameof(zones));
