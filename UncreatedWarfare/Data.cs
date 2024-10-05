@@ -110,7 +110,6 @@ public static class Data
 #if NETSTANDARD || NETFRAMEWORK
     public static IStripeService WarfareStripeService;
 #endif
-    internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearPants;
@@ -178,8 +177,6 @@ public static class Data
         SendChangeText = ReflectionUtility.FindRequiredRpc<InteractableSign, ClientInstanceMethod<string>>("SendChangeText");
         SendMultipleBarricades = ReflectionUtility.FindRequiredRpc<BarricadeManager, ClientStaticMethod>("SendMultipleBarricades");
         SendChatIndividual = ReflectionUtility.FindRequiredRpc<ChatManager, ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>>("SendChatEntry");
-        SendDestroyItem = ReflectionUtility.FindRequiredRpc<ItemManager, ClientStaticMethod<byte, byte, uint, bool>>("SendDestroyItem");
-
         SendUpdateBarricadeState = ReflectionUtility.FindRpc<BarricadeDrop, ClientInstanceMethod<byte[]>>("SendUpdateState");
         SendInventory = ReflectionUtility.FindRpc<PlayerInventory, ClientInstanceMethod>("SendInventory");
         SendWearShirt = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearShirt");

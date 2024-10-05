@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -697,10 +698,4 @@ public class VehicleComponent : MonoBehaviour
         UpdateHUDFlares();
 #endif
     }
-}
-
-public enum SupplyType
-{
-    Build,
-    Ammo
 }

@@ -129,7 +129,7 @@ public class WarfarePluginLoader
 
             bldr.RegisterInstance(plugin)
                 .As<WarfarePlugin>()
-                .Named<WarfarePluginConfiguration>(plugin.AssemblyName.Name)
+                .Named<WarfarePlugin>(plugin.AssemblyName.Name)
                 .OwnedByLifetimeScope();
         }
     }
@@ -209,7 +209,7 @@ public class WarfarePluginLoader
 
         int index = Array.FindIndex(ctors, x => x.IsDefinedSafe<ActivatorUtilitiesConstructorAttribute>());
 
-        if (index < 0)
+        if (index >= 0)
         {
             ConstructorInfo expectedCtor = ctors[index];
             expectedParameters = expectedCtor.GetParameters();

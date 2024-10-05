@@ -20,6 +20,8 @@ public static class ItemUtility
     internal static event ItemDestroyed? OnItemDestroyed;
     internal delegate void ItemDestroyed(in ItemInfo item, bool despawned, bool pickedUp, CSteamID pickUpPlayer, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot);
 
+    internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem = ReflectionUtility.FindRequiredRpc<ItemManager, ClientStaticMethod<byte, byte, uint, bool>>("SendDestroyItem");
+
     /// <summary>
     /// Enumerate items along the grid instead of the order they were added.
     /// </summary>
@@ -455,7 +457,7 @@ public static class ItemUtility
         ItemRegion region = ItemManager.regions[x, y];
         ItemData item = region.items[index];
 
-        Data.SendDestroyItem.Invoke(ENetReliability.Reliable, Regions.GatherRemoteClientConnections(x, y, ItemManager.ITEM_REGIONS), x, y, item.instanceID, playTakeItemSound);
+        SendDestroyItem.Invoke(ENetReliability.Reliable, Regions.GatherRemoteClientConnections(x, y, ItemManager.ITEM_REGIONS), x, y, item.instanceID, playTakeItemSound);
 
         region.items.RemoveAt(index);
 

@@ -2,10 +2,12 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
 
@@ -15,10 +17,12 @@ public class CommandInfo
     private static readonly ServiceContainer EmptyServiceProvider = new ServiceContainer();
 
     internal List<CommandWaitTask> WaitTasks = new List<CommandWaitTask>(0);
+    private readonly List<CommandInfo> _subCommands;
 
     /// <summary>
     /// Type that contains the code for the command.
     /// </summary>
+    [JsonIgnore]
     public Type Type { get; }
 
     /// <summary>
@@ -50,11 +54,13 @@ public class CommandInfo
     /// <summary>
     /// Optional reference to the vanilla <see cref="Command"/>.
     /// </summary>
+    [JsonIgnore]
     public Command? VanillaCommand { get; }
 
     /// <summary>
     /// Information about how to display the command in /help.
     /// </summary>
+    [JsonIgnore]
     public CommandMetadata Metadata { get; }
 
     /// <summary>
@@ -72,6 +78,7 @@ public class CommandInfo
     /// Commands marked as synchronized with the <see cref="SynchronizedCommandAttribute"/> all use this semaphore to synchronize their execution.
     /// </summary>
     /// <remarks>Sub-commands share this with their parents but not with their siblings unless the parent defines it.</remarks>
+    [JsonIgnore]
     public SemaphoreSlim? SynchronizedSemaphore { get; }
 
     /// <summary>
@@ -93,11 +100,12 @@ public class CommandInfo
     /// <summary>
     /// List of all sub-commands for a command. These commands may also have sub-commands.
     /// </summary>
-    public CommandInfo[] SubCommands { get; private set; }
+    public IReadOnlyList<CommandInfo> SubCommands { get; private set; }
 
     /// <summary>
     /// If this command is a sub-command, this is the info for the parent command.
     /// </summary>
+    [JsonIgnore]
     public CommandInfo? ParentCommand { get; }
 
     /// <summary>
@@ -142,7 +150,8 @@ public class CommandInfo
 
         Type = classType;
 
-        SubCommands = Array.Empty<CommandInfo>();
+        _subCommands = new List<CommandInfo>();
+        SubCommands = new ReadOnlyCollection<CommandInfo>(_subCommands);
         string? permission;
         if (classType.TryGetAttributeSafe(out CommandAttribute metadata))
         {
@@ -162,12 +171,10 @@ public class CommandInfo
         {
             ParentCommand = parent;
 
-            CommandInfo[] parentSubs = parent.SubCommands;
-            Array.Resize(ref parentSubs, parentSubs.Length + 1);
-            parentSubs[^1] = this;
-            parent.SubCommands = parentSubs;
+            parent._subCommands.Add(this);
 
             permission ??= parent.DefaultPermission.Path + "." + CommandName;
+            logger.LogDebug("Found parent {0} for command {1}, added to subcommands. Now equal to {2}.", parent.CommandName, CommandName, string.Join(',', parent.SubCommands.Select(x => x.CommandName)));
         }
         else
         {

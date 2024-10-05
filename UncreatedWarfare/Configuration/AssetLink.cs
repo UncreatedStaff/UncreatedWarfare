@@ -317,6 +317,16 @@ public static class AssetLink
     }
 
     /// <summary>
+    /// Throw an error only if this asset link is invalid. 
+    /// </summary>
+    /// <exception cref="AssetNotFoundException"/>
+    public static void AssertValid<TAsset>([System.Diagnostics.CodeAnalysis.NotNull] this IAssetLink<TAsset>? link) where TAsset : Asset
+    {
+        if (link == null)
+            throw new AssetNotFoundException();
+    }
+
+    /// <summary>
     /// Resolve an asset from an asset link, or throw an error
     /// </summary>
     /// <exception cref="AssetNotFoundException"/>

@@ -6,4 +6,4 @@ namespace Uncreated.Warfare.Fobs;
 /// <summary>
 /// Home for storing FOB and buildable data.
 /// </summary>
-public class FobConfiguration(IServiceProvider serviceProvider) : BaseAlternateConfigurationFile(serviceProvider, "Buildables.yml");
+public class FobConfiguration(IServiceProvider serviceProvider) : BaseAlternateConfigurationFile(serviceProvider, "Fobs.yml");

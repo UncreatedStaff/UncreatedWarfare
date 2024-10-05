@@ -57,7 +57,7 @@ public class VehicleService
 
         Vector3 spawnPosition = spawner.Position + Vector3.up * VehicleSpawnOffset;
 
-        InteractableVehicle vehicle = await SpawnVehicleAsync(spawn.Vehicle, spawnPosition, spawnRotation, group: new CSteamID(spawner.Group), token: token);
+        InteractableVehicle vehicle = await SpawnVehicleAsync(spawn.Vehicle, spawnPosition, spawnRotation, group: spawner.Group, token: token);
         await UniTask.SwitchToMainThread(token);
 
         spawn.LinkVehicle(vehicle);

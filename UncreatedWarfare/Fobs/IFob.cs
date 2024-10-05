@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Fobs;
 /// <summary>
 /// A FOB that can show up on the FOB list.
 /// </summary>
-public interface IFob : IDeployable, ITransformObject, IComparable<IFob>
+public interface IFob : IDeployable, IComparable<IFob>
 {
     /// <summary>
     /// The display name of the FOB on the FOB list.
@@ -51,23 +51,7 @@ public interface IFob : IDeployable, ITransformObject, IComparable<IFob>
 public interface IResourceFob : IFob
 {
     /// <summary>
-    /// Number of Ammo Supplies on the FOB.
-    /// </summary>
-    int AmmoCount { get; }
-
-    /// <summary>
-    /// Number of Build Supplies on the FOB.
+    /// Number of Supplies on the FOB.
     /// </summary>
     int BuildCount { get; }
-}
-
-/// <summary>
-/// A FOB which has an effective radius.
-/// </summary>
-public interface IRadiusFob : IFob, ISphereProximity, ITrackingProximity<WarfarePlayer>, ITrackingProximity<IFobItem>, ITrackingProximity<InteractableVehicle>
-{
-    /// <summary>
-    /// Radius around which objects are considered inside the FOB.
-    /// </summary>
-    float EffectiveRadius { get; }
 }

@@ -3,8 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.StrategyMaps;
+using Uncreated.Warfare.StrategyMaps.MapTacks;
 
 namespace Uncreated.Warfare.Commands.WarfareDev.StrategyMaps;
 
@@ -25,7 +27,7 @@ internal class DebugAddTack : IExecutableCommand
     public UniTask ExecuteAsync(CancellationToken token)
     {
         _logger.LogInformation("sss");
-        if (!Context.TryGet(0, out ItemBarricadeAsset? assetGuid, out bool multipleFound))
+        if (!Context.TryGet(0, out ItemBarricadeAsset? markerAsset, out bool multipleFound))
         {
             throw Context.ReplyString("Could not find the specified Map Tack barricade asset.");
         }
@@ -52,7 +54,7 @@ internal class DebugAddTack : IExecutableCommand
             throw Context.ReplyString("That barricade is not a registered Strategy Map.");
         }
 
-        strategyMap.AddMapTack(assetGuid, new Vector3(featureWorldX, 0, featureWorldZ));
+        strategyMap.AddMapTack(new MapTack(AssetLink.Create(markerAsset), new Vector3(featureWorldX, 0, featureWorldZ)));
         
         return UniTask.CompletedTask;
     }

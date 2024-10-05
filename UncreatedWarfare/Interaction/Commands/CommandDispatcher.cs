@@ -65,26 +65,46 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             .Where(typeof(ICommand).IsAssignableFrom)
             .ToList();
 
+        List<Type> rootCommandTypes = types.Where(x => !x.IsAbstract && !x.IsDefinedSafe<SubCommandOfAttribute>()).ToList();
+
         List<CommandInfo> allCommands = new List<CommandInfo>(types.Count);
         List<CommandInfo> parentCommands = new List<CommandInfo>(types.Count + Commander.commands.Count);
 
-        List<Type> circularReferenceBuffer = new List<Type>();
+        foreach (Type commandType in rootCommandTypes)
+        {
+            CommandInfo info = new CommandInfo(commandType, _logger, null);
+            allCommands.Add(info);
+            parentCommands.Add(info);
+
+            ReigsterSubCommands(commandType, info);
+            continue;
+
+            void ReigsterSubCommands(Type parentType, CommandInfo parentInfo)
+            {
+                foreach (Type commandType in types)
+                {
+                    if (!commandType.TryGetAttributeSafe(out SubCommandOfAttribute attribute) || attribute.ParentType != parentType)
+                        continue;
+
+                    if (allCommands.Exists(x => x.Type == commandType))
+                        throw new InvalidOperationException($"Circular reference detected in parent commands. {Accessor.ExceptionFormatter.Format(parentType)} <- ... -> {Accessor.ExceptionFormatter.Format(commandType)}.");
+                    
+                    CommandInfo info = new CommandInfo(commandType, _logger, parentInfo);
+                    allCommands.Add(info);
+                    ReigsterSubCommands(commandType, info);
+                }
+            }
+        }
 
         foreach (Type commandType in types)
         {
-            if (commandType.IsAbstract)
+            if (allCommands.Exists(x => x.Type == commandType))
                 continue;
 
-            if (parentCommands.Any(x => x.Type == commandType))
-                continue;
-
-            circularReferenceBuffer.Add(commandType);
-            CommandInfo info = new CommandInfo(commandType, _logger, GetParentInfo(commandType, allCommands, _logger, circularReferenceBuffer));
-            circularReferenceBuffer.Clear();
-
-            allCommands.Add(info);
-            if (!info.IsSubCommand)
-                parentCommands.Add(info);
+            _logger.LogWarning("Sub command type {0} does not exist for command {1}.",
+                commandType.TryGetAttributeSafe(out SubCommandOfAttribute attribute) ? Accessor.Formatter.Format(attribute.ParentType) : "null",
+                Accessor.Formatter.Format(commandType)
+            );
         }
 
         parentCommands.Sort((a, b) => b.Priority.CompareTo(a.Priority));
@@ -107,7 +127,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             }
 
             command.IsExecutable = command.VanillaCommand != null || (command.RedirectCommandInfo == null && typeof(IExecutableCommand).IsAssignableFrom(command.Type));
-            if (command is { IsExecutable: false, SubCommands.Length: 0, RedirectCommandInfo: null })
+            if (command is { IsExecutable: false, SubCommands.Count: 0, RedirectCommandInfo: null })
             {
                 _logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", Accessor.Formatter.Format(command.Type));
             }
@@ -117,31 +137,6 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
         ChatManager.onCheckPermissions += OnChatProcessing;
         CommandWindow.onCommandWindowInputted += OnCommandInput;
-        return;
-
-        // recursively create parent info's if they don't already exist for this command
-        static CommandInfo? GetParentInfo(Type commandType, List<CommandInfo> commands, ILogger logger, List<Type> circularReferenceBuffer)
-        {
-            if (!commandType.TryGetAttributeSafe(out SubCommandOfAttribute subCommand) || subCommand.ParentType == null || !typeof(ICommand).IsAssignableFrom(subCommand.ParentType))
-                return null;
-
-            CommandInfo? existingParentInfo = commands.FirstOrDefault(x => x.Type == subCommand.ParentType);
-            if (existingParentInfo == null)
-            {
-                if (circularReferenceBuffer.Contains(subCommand.ParentType))
-                {
-                    throw new InvalidOperationException($"Circular reference detected in parent commands. {Accessor.ExceptionFormatter.Format(subCommand.ParentType)} <- ... -> {Accessor.ExceptionFormatter.Format(commandType)}.");
-                }
-
-                circularReferenceBuffer.Add(subCommand.ParentType);
-                CommandInfo? parentInfo = GetParentInfo(subCommand.ParentType, commands, logger, circularReferenceBuffer);
-                existingParentInfo = new CommandInfo(subCommand.ParentType, logger, parentInfo);
-                if (!existingParentInfo.IsSubCommand)
-                    commands.Add(existingParentInfo);
-            }
-
-            return existingParentInfo;
-        }
     }
     UniTask IHostedService.StartAsync(CancellationToken token) => UniTask.CompletedTask;
     UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
@@ -387,7 +382,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     private static void ResolveSubCommand(ref CommandInfo command, IReadOnlyList<string> args, out int offset)
     {
         offset = 0;
-        if (command.SubCommands.Length == 0)
+        if (command.SubCommands.Count == 0)
             return;
 
         for (int i = 0; i < args.Count; ++i)
@@ -395,7 +390,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             string arg = args[i];
             bool found = false;
 
-            for (int j = 0; j < command.SubCommands.Length; ++j)
+            for (int j = 0; j < command.SubCommands.Count; ++j)
             {
                 CommandInfo parameter = command.SubCommands[j];
                 if (!arg.Equals(parameter.CommandName, StringComparison.InvariantCultureIgnoreCase))
@@ -408,9 +403,11 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             }
 
             if (found)
+            {
                 continue;
+            }
 
-            for (int j = 0; j < command.SubCommands.Length; ++j)
+            for (int j = 0; j < command.SubCommands.Count; ++j)
             {
                 CommandInfo parameter = command.SubCommands[j];
                 for (int k = 0; k < parameter.Aliases.Length; ++k)
@@ -425,13 +422,12 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                 }
 
                 if (found)
+                {
                     break;
+                }
             }
 
-            if (!found)
-                return;
-
-            if (command.SubCommands.Length == 0)
+            if (!found || command.SubCommands.Count == 0)
                 break;
         }
 

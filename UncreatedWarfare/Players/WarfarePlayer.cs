@@ -59,12 +59,6 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
         }
     }
 
-    /// <inheritdoc />
-    public Matrix4x4 WorldToLocal => Transform.worldToLocalMatrix;
-
-    /// <inheritdoc />
-    public Matrix4x4 LocalToWorld => Transform.localToWorldMatrix;
-
     /// <summary>
     /// If the player this object represents is currently online. Set to <see langword="false"/> *after* the leave event is fired.
     /// </summary>

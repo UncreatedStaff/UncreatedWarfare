@@ -1,4 +1,7 @@
-﻿using SDG.Unturned;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using SDG.Provider.Services.Translation;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +10,13 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.StrategyMaps;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.StrategyMaps.MapTacks;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using UnityEngine;
@@ -16,43 +25,38 @@ namespace Uncreated.Warfare.StrategyMaps;
 internal class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 {
     private readonly MapTableInfo _tableInfo;
-
+    private readonly TrackingList<MapTack> _activeMapTacks;
     public IBuildable MapTable { get; set; }
-    public TrackingList<MapTack> _activeMapTacks { get; set; }
-
     public StrategyMap(IBuildable buildable, MapTableInfo tableInfo)
     {
         _tableInfo = tableInfo;
         MapTable = buildable;
         _activeMapTacks = new TrackingList<MapTack>();
     }
-    public void RepopulateMapTacks(Dictionary<Vector3, ItemBarricadeAsset> newMapTacks)
+    public void RepopulateMapTacks(IEnumerable<MapTack> newMapTacks)
     {
-        _activeMapTacks.Clear();
-        foreach (var pair in newMapTacks)
+        ClearMapTacks();
+        foreach (MapTack mapTack in newMapTacks)
         {
-            AddMapTack(pair.Value, pair.Key);
+            AddMapTack(mapTack);
         }
     }
     public void ClearMapTacks()
     {
-        foreach (var tack in _activeMapTacks)
+        foreach (MapTack tack in _activeMapTacks)
         {
             tack.Dispose();
         }
+        _activeMapTacks.Clear();
     }
     public void Dispose() => ClearMapTacks();
-    public void AddMapTack(ItemBarricadeAsset asset, Vector3 featureWorldPosition)
+
+    public void AddMapTack(MapTack newMapTack)
     {
-        Vector3 worldCoordsOnMapTable = TranslateWorldPointOntoMap(featureWorldPosition);
+        Vector3 worldCoordsOnMapTable = TranslateWorldPointOntoMap(newMapTack.FeatureWorldPosition);
 
-        Transform mapTackTransform = BarricadeManager.dropNonPlantedBarricade(
-            new Barricade(asset), worldCoordsOnMapTable, MapTable.Rotation, 0, 0
-            );
+        newMapTack.DropMarker(worldCoordsOnMapTable, MapTable.Rotation);
 
-        BarricadeDrop mapTackDrop = BarricadeManager.FindBarricadeByRootTransform(mapTackTransform);
-
-        MapTack newMapTack = new MapTack(new BuildableBarricade(mapTackDrop), featureWorldPosition);
         _activeMapTacks.Add(newMapTack);
     }
     public void RemoveMapTack(MapTack newMapTack)
@@ -60,10 +64,19 @@ internal class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         _activeMapTacks.Remove(newMapTack);
         newMapTack.Dispose();
     }
-    public void ReplaceMapTack(ItemBarricadeAsset newMapTackAsset, MapTack oldMapTack)
+    public void RemoveMapTacks(Func<MapTack, bool> filter)
+    {
+        foreach (MapTack mapTack in _activeMapTacks.Where(filter))
+        {
+            mapTack.Dispose();
+        }
+
+        _activeMapTacks.RemoveAll(new Predicate<MapTack>(filter));
+    }
+    public void ReplaceMapTack(MapTack oldMapTack, MapTack newMapTack)
     {
         RemoveMapTack(oldMapTack);
-        AddMapTack(newMapTackAsset, oldMapTack.FeatureWorldPosition);
+        AddMapTack(newMapTack);
     }
     public Vector3 TranslateWorldPointOntoMap(Vector3 featureWorldPosition)
     {
@@ -106,13 +119,32 @@ internal class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
     {
         MapTack mapTack = _activeMapTacks.FirstOrDefault(t => t.Marker.InstanceId == e.Barricade.instanceID);
 
-        e.Player.UnturnedPlayer.teleportToLocation(
-            new Vector3(
-                mapTack.FeatureWorldPosition.x,
-                TerrainUtility.GetHighestPoint(mapTack.FeatureWorldPosition, 0),
-                mapTack.FeatureWorldPosition.z),
-            0
-            );
+        if (mapTack is not DeployableMapTack d)
+            return;
+
+        FobConfiguration fobConfig = serviceProvider.GetRequiredService<FobConfiguration>();
+        DeploymentService deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
+        ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
+        DeploymentTranslations translations = new DeploymentTranslations();
+
+        //Context.LogAction(ActionLogType.Teleport, deployable.Translate(_translationService));
+
+        if (e.Player.Component<DeploymentComponent>().CurrentDeployment != null)
+        {
+            return;
+        }
+
+        int delay = fobConfig.GetValue("FobDeployDelay", 5);
+
+        chatService.Send(e.Player, new DeploymentTranslations().DeployStandby, d.Deployable, delay);
+        deploymentService.TryStartDeployment(e.Player, d.Deployable,
+            new DeploySettings
+            {
+                Delay = TimeSpan.FromSeconds(delay),
+                AllowNearbyEnemies = false
+            }
+        );
+        chatService.Send(e.Player, new DeploymentTranslations().DeploySuccess, d.Deployable);
 
         e.Cancel();
     }
