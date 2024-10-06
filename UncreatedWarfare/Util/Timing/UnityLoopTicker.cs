@@ -141,6 +141,8 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
         finally
         {
             _lastInvokedAt = utcNow;
+            if (PeriodicDelay > TimeSpan.Zero)
+                _coroutine = TimeUtility.InvokeAfterDelay(InvokeTimer, (float)PeriodicDelay.TotalSeconds);
         }
     }
 
