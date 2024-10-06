@@ -21,17 +21,15 @@ public abstract class LoopTickerCollector<T>
         _collection = new TrackingList<T>();
         ticker.OnTick += (ticker, timeSinceStart, deltaTime) =>
         {
-            Console.WriteLine("Collector count: " + ItemsToAdd().Count());
             foreach (T item in ItemsToAdd())
             {
-                _collection.AddIfNotExists(item);
-                onItemAdded?.Invoke(item);
-                Console.WriteLine("Added to collector: " + item);
+                if (_collection.AddIfNotExists(item))
+                    onItemAdded?.Invoke(item);
             }
             foreach (T item in ItemsToRemove())
             {
-                _collection.Remove(item);
-                onItemRemove?.Invoke(item);
+                if (_collection.Remove(item));
+                    onItemRemove?.Invoke(item);
             }
         };
     }

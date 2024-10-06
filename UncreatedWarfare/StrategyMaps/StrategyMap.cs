@@ -125,7 +125,7 @@ internal class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         FobConfiguration fobConfig = serviceProvider.GetRequiredService<FobConfiguration>();
         DeploymentService deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
-        DeploymentTranslations translations = new DeploymentTranslations();
+        DeploymentTranslations translations = serviceProvider.GetRequiredService<DeploymentTranslations>();
 
         //Context.LogAction(ActionLogType.Teleport, deployable.Translate(_translationService));
 

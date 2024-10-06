@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using SDG.Framework.Utilities;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -27,16 +28,15 @@ internal class FallingBuildable
         _placementYaw = placementYaw;
         _onConvertedToBuildable = onConvertedToBuildable;
         float distanceFallen = (originalDropPosition - _itemData.point).magnitude;
-        float timeUntilConversion = Mathf.Sqrt(2 * 9.8f * distanceFallen) / 9.8f; // calculated using an equation of motion
-        timeUntilConversion += 1; // add 1 second for good vibes
+        float secondsUntilConversion = Mathf.Sqrt(2 * 9.8f * distanceFallen) / 9.8f; // calculated using an equation of motion
+        secondsUntilConversion += 0.1f; // add 0.1 second for good vibes
 
-        ILoopTicker ticker = new UnityLoopTickerFactory().CreateTicker(TimeSpan.FromSeconds(timeUntilConversion), false, true);
+        ILoopTicker ticker = new UnityLoopTickerFactory().CreateTicker(TimeSpan.FromSeconds(secondsUntilConversion), false, true);
 
-        ticker.OnTick += (ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime) =>
+        TimeUtility.InvokeAfterDelay(() =>
         {
             ConvertToBuildable();
-            ticker.Dispose();
-        };
+        }, secondsUntilConversion);
     }
     private void ConvertToBuildable()
     {
