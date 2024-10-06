@@ -16,20 +16,6 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
-    public static string FilterRarityToHex(string color)
-    {
-        if (color == null)
-            return "ffffff";
-        string f1 = "color=" + color;
-        string f2 = ItemTool.filterRarityRichText(f1);
-        string rtn;
-        if (f2.Equals(f1) || f2.Length <= 7)
-            rtn = color;
-        else
-            rtn = f2.Substring(7); // 7 is "color=#" length
-        return !int.TryParse(rtn, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out _) ? "ffffff" : rtn;
-    }
-
     public static string RemoveMany(this string source, bool caseSensitive, params char[] replacables)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
@@ -60,22 +46,6 @@ public static class F
             if (!found) sb.Append(chars[i]);
         }
         return sb.ToString();
-    }
-    public static bool ArrayContains(this byte[] array, byte value)
-    {
-        for (int i = 0; i < array.Length; ++i)
-        {
-            if (array[i] == value)
-                return true;
-        }
-
-        return false;
-    }
-
-    public static void TryTriggerSupplyEffect(SupplyType type, Vector3 position)
-    {
-        //if ((type is SupplyType.Build ? Gamemode.Config.EffectUnloadBuild : Gamemode.Config.EffectUnloadAmmo).TryGetAsset(out EffectAsset? effect))
-        //    TriggerEffectReliable(effect, EffectManager.MEDIUM, position);
     }
     public static bool TryGetPlayerData(this Player player, out UCPlayerData component)
     {
@@ -198,134 +168,6 @@ public static class F
         //LocationDevkitNode? node = GetClosestLocation(point);
         //return node == null ? new GridLocation(in point).ToString() : node.locationName;
     }
-    public static LocationDevkitNode? GetClosestLocation(Vector3 point)
-    {
-        IReadOnlyList<LocationDevkitNode> list = LocationDevkitNodeSystem.Get().GetAllNodes();
-        int index = -1;
-        float smallest = -1f;
-        for (int i = 0; i < list.Count; ++i)
-        {
-            float amt = (point - list[i].transform.position).sqrMagnitude;
-            if (smallest < 0f || amt < smallest)
-            {
-                index = i;
-                smallest = amt;
-            }
-        }
-
-        if (index == -1)
-            return null;
-        return list[index];
-    }
-    public static bool FilterName(string original, out string final)
-    {
-        final = original;
-        return true;
-        //if (UCWarfare.Config.DisableNameFilter || UCWarfare.Config.MinAlphanumericStringLength <= 0)
-        //{
-        //    final = original;
-        //    return false;
-        //}
-        //IEnumerator<char> charenum = original.GetEnumerator();
-        //int alphanumcount = 0;
-        //while (charenum.MoveNext())
-        //{
-        //    char ch = charenum.Current;
-        //    int c = ch;
-        //    if (c is > 31 and < 127)
-        //    {
-        //        if (alphanumcount - 1 >= UCWarfare.Config.MinAlphanumericStringLength)
-        //        {
-        //            final = original;
-        //            charenum.Dispose();
-        //            return false;
-        //        }
-        //        alphanumcount++;
-        //    }
-        //    else
-        //    {
-        //        alphanumcount = 0;
-        //    }
-        //}
-        //charenum.Dispose();
-        //final = original;
-        //return alphanumcount != original.Length;
-    }
-    //public static ItemJarData[] GetItemsFromStorageState(ItemStorageAsset storage, byte[] state, out ItemDisplayData? displayData, PrimaryKey parent, bool clientState = false)
-    //{
-    //    if (!Level.isLoaded)
-    //        throw new Exception("Level not loaded.");
-    //    GameThread.AssertCurrent();
-    //    if (state.Length < 17)
-    //    {
-    //        displayData = null;
-    //        return Array.Empty<ItemJarData>();
-    //    }
-    //    Block block = new Block(state);
-    //    block.step += sizeof(ulong) * 2;
-    //    ItemJarData[] rtn;
-    //    if (!clientState)
-    //    {
-    //        int ct = block.readByte();
-    //        rtn = new ItemJarData[ct];
-    //        for (int i = 0; i < ct; ++i)
-    //        {
-    //            if (BarricadeManager.version > 7)
-    //            {
-    //                object[] objArray = block.read(Types.BYTE_TYPE, Types.BYTE_TYPE, Types.BYTE_TYPE, Types.UINT16_TYPE, Types.BYTE_TYPE, Types.BYTE_TYPE, Types.BYTE_ARRAY_TYPE);
-    //                Guid guid = Assets.find(EAssetType.ITEM, (ushort)objArray[3]) is ItemAsset asset ? asset.GUID : new Guid((ushort)objArray[3], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    //                rtn[i] = new ItemJarData(PrimaryKey.NotAssigned, parent, guid,
-    //                    (byte)objArray[0], (byte)objArray[1], (byte)objArray[2], (byte)objArray[4], (byte)objArray[5],
-    //                    (byte[])objArray[6]);
-    //            }
-    //            else
-    //            {
-    //                object[] objArray = block.read(Types.BYTE_TYPE, Types.BYTE_TYPE, Types.UINT16_TYPE, Types.BYTE_TYPE, Types.BYTE_TYPE, Types.BYTE_ARRAY_TYPE);
-    //                Guid guid = Assets.find(EAssetType.ITEM, (ushort)objArray[2]) is ItemAsset asset ? asset.GUID : new Guid((ushort)objArray[2], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    //                rtn[i] = new ItemJarData(PrimaryKey.NotAssigned, parent, guid,
-    //                    (byte)objArray[0], (byte)objArray[1], 0, (byte)objArray[3], (byte)objArray[4],
-    //                    (byte[])objArray[5]);
-    //            }
-    //        }
-    //    }
-    //    else rtn = Array.Empty<ItemJarData>();
-    //
-    //    if (storage.isDisplay)
-    //    {
-    //        if (clientState)
-    //        {
-    //            object[] objArray = block.read(Types.UINT16_TYPE, Types.BYTE_TYPE, Types.BYTE_ARRAY_TYPE, Types.UINT16_TYPE, Types.UINT16_TYPE, Types.STRING_TYPE, Types.STRING_TYPE, Types.BYTE_TYPE);
-    //            displayData = new ItemDisplayData(parent, (ushort)objArray[3], (ushort)objArray[4], (byte)objArray[7], (string)objArray[5], (string)objArray[6]);
-    //        }
-    //        else
-    //        {
-    //            ushort skin = block.readUInt16();
-    //            ushort mythic = block.readUInt16();
-    //            string? tags;
-    //            string? dynProps;
-    //            if (BarricadeManager.version > 12)
-    //            {
-    //                tags = block.readString();
-    //                if (tags.Length == 0)
-    //                    tags = null;
-    //                dynProps = block.readString();
-    //                if (dynProps.Length == 0)
-    //                    dynProps = null;
-    //            }
-    //            else
-    //            {
-    //                tags = null;
-    //                dynProps = null;
-    //            }
-    //            byte rot = BarricadeManager.version > 8 ? block.readByte() : (byte)0;
-    //            displayData = new ItemDisplayData(parent, skin, mythic, rot, tags, dynProps);
-    //        }
-    //    }
-    //    else displayData = null;
-    //
-    //    return rtn;
-    //}
-    
 
     public static bool RoughlyEquals(string? a, string? b) => string.Compare(a, b, CultureInfo.InvariantCulture,
         CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType | CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreSymbols) == 0;
@@ -443,8 +285,6 @@ public static class F
 
     }
 
-    public static bool IsDefault(this string str) => str.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
-    
     public static T[] AsArrayFast<T>(this IEnumerable<T> enumerable, bool copy = false)
     {
         if (enumerable == null)

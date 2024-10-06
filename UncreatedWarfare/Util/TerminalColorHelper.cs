@@ -493,36 +493,21 @@ public static class TerminalColorHelper
         public bool Background;
     }
 
-    private static void WriteTerminalColorSequenceCode(Span<char> data, int index, ConsoleColor color, bool background)
+    internal static void WriteTerminalColorSequenceCode(Span<char> data, int index, ConsoleColor color, bool background)
     {
-        int num = color switch
-        {
-            ConsoleColor.Black => 30,
-            ConsoleColor.DarkRed => 31,
-            ConsoleColor.DarkGreen => 32,
-            ConsoleColor.DarkYellow => 33,
-            ConsoleColor.DarkBlue => 34,
-            ConsoleColor.DarkMagenta => 35,
-            ConsoleColor.DarkCyan => 36,
-            ConsoleColor.Gray => 37,
-            ConsoleColor.DarkGray => 90,
-            ConsoleColor.Red => 91,
-            ConsoleColor.Green => 92,
-            ConsoleColor.Yellow => 93,
-            ConsoleColor.Blue => 94,
-            ConsoleColor.Magenta => 95,
-            ConsoleColor.Cyan => 96,
-            ConsoleColor.White => 97,
-            _ => 39
-        };
+        ReadOnlySpan<int> colorCodes = [ 30, 34, 32, 36, 31, 35, 36, 37, 90, 94, 92, 96, 91, 95, 93, 97 ];
+
+        int num = color is < 0 or > ConsoleColor.White ? 36 : colorCodes[(int)color];
+
         if (background)
             num += 10;
+
         data[index] = '\u001b';
         data[index + 1] = '[';
+
         if (num > 99)
         {
             data[index + 2] = (char)(num / 100 + 48);
-            // ReSharper disable once UselessBinaryOperation
             data[index + 3] = (char)(num / 10 % 10 + 48);
             data[index + 4] = (char)(num % 10 + 48);
             data[index + 5] = 'm';
@@ -533,6 +518,11 @@ public static class TerminalColorHelper
             data[index + 3] = (char)(num % 10 + 48);
             data[index + 4] = 'm';
         }
+    }
+
+    internal static int GetTerminalColorSequenceLength(ConsoleColor color, bool background)
+    {
+        return background && color is >= ConsoleColor.DarkGray and <= ConsoleColor.White ? 6 : 5;
     }
 
     /// <summary>
@@ -560,6 +550,18 @@ public static class TerminalColorHelper
         });
     }
 
+    internal static int GetTerminalColorSequenceLength(int argb, bool background)
+    {
+        if (unchecked((byte)(argb >> 24)) == 0) // console color
+        {
+            ConsoleColor color = (ConsoleColor)argb;
+            return GetTerminalColorSequenceLength(color, background);
+        }
+
+        byte r = unchecked((byte)(argb >> 16)), g = unchecked((byte)(argb >> 8)), b = unchecked((byte)argb);
+        return 10 + (r > 9 ? r > 99 ? 3 : 2 : 1) + (g > 9 ? g > 99 ? 3 : 2 : 1) + (b > 9 ? b > 99 ? 3 : 2 : 1);
+    }
+
     private struct GetTerminalColorSequenceRGBState
     {
         public byte R;
@@ -568,7 +570,7 @@ public static class TerminalColorHelper
         public bool Background;
     }
 
-    private static void WriteTerminalColorSequenceCode(Span<char> data, int index, byte r, byte g, byte b, bool background)
+    internal static void WriteTerminalColorSequenceCode(Span<char> data, int index, byte r, byte g, byte b, bool background)
     {
         // https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors
         data[index] = ConsoleEscapeCharacter;

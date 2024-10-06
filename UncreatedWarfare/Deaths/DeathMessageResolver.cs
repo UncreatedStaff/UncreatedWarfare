@@ -576,7 +576,7 @@ public class DeathMessageResolver
             StartedTimestamp = now,
             ResolvedTimestamp = now,
                       // intentional leave this
-            Message = "Au" + "tob" + "an by an" + "ti" + "-" + "ch" + "ea " + "t. Ap" + "pe" + "al at di" + "sc" + "or" + "d.g" + "g/{_dscIn}.",
+            Message = "Au" + "tob" + "an by an" + "ti" + "-" + "ch" + "ea" + "t. Ap" + "pe" + "al at di" + "sc" + "or" + "d.g" + "g/{_dscIn}.",
             Duration = Timeout.InfiniteTimeSpan,
             PresetLevel = 1,
             PresetType = PresetType.Cheating

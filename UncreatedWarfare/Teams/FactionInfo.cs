@@ -1,12 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database.Abstractions;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Localization;
@@ -617,6 +614,7 @@ public class FactionInfo : ICloneable, ITranslationArgument
         return val;
     }
 
+    /// <inheritdoc />
     public object Clone()
     {
         return new FactionInfo(FactionId, Name, Abbreviation, ShortName, Color, UnarmedKit, KitPrefix, FlagImageURL)
@@ -639,72 +637,5 @@ public class FactionInfo : ICloneable, ITranslationArgument
     public FactionInfo? NullIfDefault()
     {
         return IsDefaultFaction ? null : this;
-    }
-
-    public static async Task DownloadFactions(IFactionDbContext db, List<FactionInfo> list, bool uploadDefaultIfMissing, CancellationToken token = default)
-    {
-        // if (Provider.isInitialized)
-        //     Localization.ClearSection(TranslationSection.Factions);
-        // 
-        List<Faction> factions = await db.Factions
-            .Include(x => x.Assets)
-            .Include(x => x.Translations)
-                .ThenInclude(x => x.Language)
-            .ToListAsync(token).ConfigureAwait(false);
-
-        if (factions.Count == 0)
-        {
-            // todo for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
-            // todo {
-            // todo     Faction faction = TeamManager.DefaultFactions[i].CreateModel();
-            // todo     faction.Key = default;
-            // todo     factions.Add(faction);
-            // todo }
-
-            if (uploadDefaultIfMissing)
-            {
-                L.LogDebug($"Adding {factions.Count} factions...");
-                await db.Factions.AddRangeAsync(factions, token).ConfigureAwait(false);
-                await db.SaveChangesAsync(token).ConfigureAwait(false);
-            }
-        }
-
-        for (int i = list.Count - 1; i >= 0; --i)
-        {
-            FactionInfo existing = list[i];
-            if (!factions.Any(x => x.InternalName.Equals(existing.FactionId, StringComparison.Ordinal)))
-                list.RemoveAt(i);
-        }
-
-        foreach (Faction faction in factions)
-        {
-            FactionInfo newFaction = new FactionInfo(faction);
-            FactionInfo? existing = list.Find(x => x._factionId.Equals(faction.InternalName, StringComparison.Ordinal));
-            if (existing != null)
-                existing.CloneFrom(newFaction);
-            else
-                list.Add(newFaction);
-
-            if (Provider.isInitialized && faction.Translations != null)
-            {
-                foreach (FactionLocalization local in faction.Translations)
-                {
-                    if (local.Language.Code.IsDefault())
-                        continue;
-
-                    // if (languageDataStore.GetInfoCached(local.Language.Code) is { } language)
-                    //     language.IncrementSection(TranslationSection.Factions, (local.Name != null ? 1 : 0) + (local.ShortName != null ? 1 : 0) + (local.Abbreviation != null ? 1 : 0));
-                }
-            }
-        }
-
-        list.Sort((a, b) => a.PrimaryKey.CompareTo(b.PrimaryKey));
-
-        // if (Provider.isInitialized)
-        // {
-        //     Localization.IncrementSection(TranslationSection.Factions, list.Count * 3);
-        // }
-
-        L.LogDebug($"Loaded {list.Count} faction(s).");
     }
 }
