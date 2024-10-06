@@ -3,12 +3,14 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts;
@@ -259,7 +261,7 @@ public class Layout : IDisposable
         await MoveToNextPhase(token);
     }
 
-    public virtual async UniTask<bool> MoveToNextPhase(CancellationToken token = default)
+    public virtual async UniTask MoveToNextPhase(CancellationToken token = default)
     {
         // keep moving to the next phase until one is activated by BeginPhase.
         ILayoutPhase newPhase;
@@ -283,11 +285,27 @@ public class Layout : IDisposable
             {
                 string phaseTypeFormat = Accessor.Formatter.Format(oldPhase.GetType());
                 Logger.LogDebug("Ending phase: {0}.", phaseTypeFormat);
-                await oldPhase.EndPhaseAsync(token);
+                try
+                {
+                    await oldPhase.EndPhaseAsync(token);
+                }
+                catch (Exception ex)
+                {
+                    if (oldPhase.IsActive)
+                    {
+                        Logger.LogError(ex, "Error ending phase {0}.", phaseTypeFormat);
+                        await _factory.StartNextLayout(CancellationToken.None);
+                        throw new OperationCanceledException();
+                    }
+
+                    Logger.LogWarning(ex, "Error ending phase {0}.", phaseTypeFormat);
+                }
+
                 if (oldPhase.IsActive)
                 {
                     Logger.LogError("Failed to end phase {0}.", phaseTypeFormat);
-                    return false;
+                    await _factory.StartNextLayout(CancellationToken.None);
+                    throw new OperationCanceledException();
                 }
 
                 await UniTask.SwitchToMainThread(token);
@@ -311,11 +329,24 @@ public class Layout : IDisposable
             }
 
             Logger.LogDebug("Starting next phase: {0}.", Accessor.Formatter.Format(newPhase.GetType()));
-            await newPhase.BeginPhaseAsync(CancellationToken.None);
+
+            try
+            {
+                await newPhase.BeginPhaseAsync(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                if (!newPhase.IsActive)
+                {
+                    Logger.LogError(ex, "Error beginning phase {0}.", Accessor.Formatter.Format(newPhase.GetType()));
+                    await _factory.StartNextLayout(CancellationToken.None);
+                    throw new OperationCanceledException();
+                }
+
+                Logger.LogWarning(ex, "Error beginning phase {0}.", Accessor.Formatter.Format(newPhase.GetType()));
+            }
         }
         while (!newPhase.IsActive);
-
-        return true;
     }
 
     private void CheckEmptyPhases()

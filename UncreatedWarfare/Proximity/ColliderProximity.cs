@@ -70,6 +70,17 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
                 _collider = boxCollider;
                 break;
 
+            case IAACylinderProximity cylinder:
+                transform.position = cylinder.Center;
+
+                CapsuleCollider capsuleCollider = gameObject.AddComponent<CapsuleCollider>();
+                capsuleCollider.center = Vector3.zero;
+                capsuleCollider.radius = cylinder.Radius;
+                capsuleCollider.height = cylinder.Height;
+                capsuleCollider.isTrigger = true;
+
+                break;
+
             case ISphereProximity sphere:
                 BoundingSphere sphereInfo = sphere.Sphere;
 
@@ -90,8 +101,8 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
 
                 MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
                 meshCollider.sharedMesh = mesh;
-                meshCollider.isTrigger = true;
                 meshCollider.convex = true;
+                meshCollider.isTrigger = true;
 
                 _collider = meshCollider;
                 break;

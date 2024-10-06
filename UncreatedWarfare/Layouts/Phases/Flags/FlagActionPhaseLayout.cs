@@ -65,6 +65,8 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
 
         _zoneStore = ActivatorUtilities.CreateInstance<ZoneStore>(_serviceProvider, [ zoneProviders, false ]);
 
+        await _zoneStore.Initialize(token);
+
         // load pathing provider
         IConfigurationSection config = Configuration.GetSection("PathingData");
         IZonePathingProvider pathingProvider = (IZonePathingProvider)ReflectionUtility.CreateInstanceFixed(_serviceProvider, pathingProviderType, [ _zoneStore, this, config ]);
@@ -77,16 +79,12 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
         _logger.LogInformation("Zone path: {{{0}}}.", string.Join(" -> ", _pathingResult.Skip(1).SkipLast(1).Select(zone => zone.Name)));
     }
 
-    public virtual async UniTask BeginPhaseAsync(CancellationToken token = default)
+    public virtual UniTask BeginPhaseAsync(CancellationToken token = default)
     {
-        IsActive = true;
-
         if (_pathingResult == null || _zoneStore == null)
         {
             throw new LayoutConfigurationException(this, "Unable to create zone path.");
         }
-
-        await UniTask.SwitchToMainThread(token);
 
         // create zones as objects with colliders
 
@@ -110,12 +108,13 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
         ActiveZones = new ReadOnlyCollection<ActiveZoneCluster>(new ArraySegment<ActiveZoneCluster>(_zones, 1, _zones.Length - 2));
         StartingTeam = _zones[0];
         EndingTeam = _zones[^1];
+        IsActive = true;
+
+        return UniTask.CompletedTask;
     }
 
-    public virtual async UniTask EndPhaseAsync(CancellationToken token = default)
+    public virtual UniTask EndPhaseAsync(CancellationToken token = default)
     {
-        await UniTask.SwitchToMainThread(token);
-
         // destroy collider objects
         foreach (ActiveZoneCluster cluster in ActiveZones)
         {
@@ -125,5 +124,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
         _zones = null;
         ActiveZones = Array.Empty<ActiveZoneCluster>();
         IsActive = false;
+
+        return UniTask.CompletedTask;
     }
 }

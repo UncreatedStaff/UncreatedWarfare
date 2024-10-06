@@ -31,9 +31,9 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable
         // todo show leaderboard and count-down timer
         _ticker = _tickerFactory.CreateTicker(Duration, invokeImmediately: false, queueOnGameThread: true, (_, _, _) =>
         {
-            UniTask.Create(() => _session.MoveToNextPhase(CancellationToken.None));
             _ticker?.Dispose();
             _ticker = null;
+            UniTask.Create(() => _session.MoveToNextPhase(CancellationToken.None));
         });
 
         await base.BeginPhaseAsync(token);

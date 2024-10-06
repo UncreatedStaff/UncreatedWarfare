@@ -3,7 +3,7 @@ using Uncreated.Warfare.Logging.Formatting;
 
 // ReSharper disable once CheckNamespace
 namespace Uncreated.Warfare;
-
+#if false
 // this class is mostly copied from https://github.com/dotnet/extensions/blob/v3.1.0/src/Logging/Logging.Abstractions/src/LoggerExtensions.cs
 public static class WarfareLoggingExtensions
 {
@@ -422,3 +422,4 @@ public static class WarfareLoggingExtensions
         return state.ToString();
     }
 }
+#endif

@@ -50,6 +50,8 @@ public class ZoneStore : IHostedService
         _logger = logger;
         _warfare = warfare;
         IsGlobal = isGlobal;
+
+        Zones = Array.Empty<Zone>();
     }
 
     async UniTask IHostedService.StartAsync(CancellationToken token)
