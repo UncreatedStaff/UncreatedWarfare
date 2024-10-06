@@ -26,16 +26,15 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
-            logger.LogDebug("Patched {0} for player joining event.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for player joining event.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition("sendVerifyPacket")
+            new MethodDefinition("sendVerifyPacket")
                 .DeclaredIn<SteamPending>(isStatic: false)
                 .WithNoParameters()
                 .ReturningVoid()
-            )
         );
     }
 
@@ -45,7 +44,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
             return;
 
         Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
-        logger.LogDebug("Unpatched {0} for player joining event.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for player joining event.", _target);
         _target = null;
     }
 
@@ -68,7 +67,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         // this method could be recalled while the verify event is running if another player gets verified.
         if (PendingPlayers.Contains(__instance.playerID.steamID.m_SteamID))
         {
-            L.LogError($"Player already pending: {__instance.playerID.steamID}.");
+            WarfareModule.Singleton.GlobalLogger.LogError("Player already pending: {0}.", __instance.playerID.steamID);
             return false;
         }
 
@@ -145,7 +144,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
                     continue;
                 }
 
-                logger.LogInformation("Player {0} rejected by task {1}.", args.Steam64, Accessor.Formatter.Format(taskData.PendingTasks[i].GetType()));
+                logger.LogInformation("Player {0} rejected by task {1}.", args.Steam64, taskData.PendingTasks[i].GetType());
                 isCancelled = true;
             }
         }

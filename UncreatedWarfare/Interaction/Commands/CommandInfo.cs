@@ -164,7 +164,7 @@ public class CommandInfo
             CommandName = classType.Name;
             Aliases = Array.Empty<string>();
             permission = null;
-            logger.LogWarning("Command {0} is missing a CommandAttribute.", Accessor.Formatter.Format(classType));
+            logger.LogWarning("Command {0} is missing a CommandAttribute.", classType);
         }
 
         if (parent != null)
@@ -174,7 +174,6 @@ public class CommandInfo
             parent._subCommands.Add(this);
 
             permission ??= parent.DefaultPermission.Path + "." + CommandName;
-            logger.LogDebug("Found parent {0} for command {1}, added to subcommands. Now equal to {2}.", parent.CommandName, CommandName, string.Join(',', parent.SubCommands.Select(x => x.CommandName)));
         }
         else
         {
@@ -238,7 +237,7 @@ public class CommandInfo
 
             if (Metadata == null)
             {
-                logger.LogWarning("Missing help metadata for command type {0}.", Accessor.Formatter.Format(classType));
+                logger.LogWarning("Missing help metadata for command type {0}.", classType);
             }
         }
 
@@ -343,11 +342,11 @@ public class CommandInfo
         {
             if (logNoAttrAsError)
             {
-                logger.LogWarning("Command type {0} is missing a MetadataFileAttribute.", Accessor.Formatter.Format(classType));
+                logger.LogWarning("Command type {0} is missing a MetadataFileAttribute.", classType);
             }
             else
             {
-                logger.LogDebug("Command type {0} is missing a MetadataFileAttribute.", Accessor.Formatter.Format(classType));
+                logger.LogDebug("Command type {0} is missing a MetadataFileAttribute.", classType);
             }
 
             return null;
@@ -364,13 +363,13 @@ public class CommandInfo
 
             if (stream == null)
             {
-                logger.LogWarning("No embedded resource available with the specified ID: \"{0}\" for command type {1}.", fileAttr.ResourcePathOverride, Accessor.Formatter.Format(classType));
+                logger.LogWarning("No embedded resource available with the specified ID: \"{0}\" for command type {1}.", fileAttr.ResourcePathOverride, classType);
                 return null;
             }
         }
         else if (string.IsNullOrWhiteSpace(fileAttr.FileName))
         {
-            logger.LogWarning("Command type {0} is missing a file name in MetadataFileAttribute.", Accessor.Formatter.Format(classType));
+            logger.LogWarning("Command type {0} is missing a file name in MetadataFileAttribute.", classType);
             return null;
         }
         else
@@ -391,7 +390,7 @@ public class CommandInfo
 
             if (index == -1 || index + sectionLength + 1 >= path.Length)
             {
-                logger.LogWarning("Unable to identify relative path of command file: \"{0}\" for command type {1}. Expected \"{2}\" or \"{3}\" folder.", path, Accessor.Formatter.Format(classType), asmName, asmNameWithNoDots);
+                logger.LogWarning("Unable to identify relative path of command file: \"{0}\" for command type {1}. Expected \"{2}\" or \"{3}\" folder.", path, classType, asmName, asmNameWithNoDots);
                 return null;
             }
 
@@ -403,7 +402,7 @@ public class CommandInfo
 
             if (stream == null)
             {
-                logger.LogWarning("No embedded resource available with the ID: \"{0}\" for command type {1}.", resource, Accessor.Formatter.Format(classType));
+                logger.LogWarning("No embedded resource available with the ID: \"{0}\" for command type {1}.", resource, classType);
                 return null;
             }
         }
@@ -418,12 +417,12 @@ public class CommandInfo
             CommandMetadata meta = ReflectionUtility.CreateInstanceFixed<CommandMetadata>(EmptyServiceProvider, [ config ]);
             config.Bind(meta);
             meta.Clean(classType);
-            logger.LogDebug("Read command metadata for command type {0} from resource \"{1}\" in assembly {2}.", Accessor.Formatter.Format(classType), resource, asm.FullName);
+            logger.LogDebug("Read command metadata for command type {0} from resource \"{1}\" in assembly {2}.", classType, resource, asm.FullName);
             return meta;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to read command metadata for command type {0} from resource \"{1}\" in assembly {2}.", Accessor.Formatter.Format(classType), resource, asm.FullName);
+            logger.LogError(ex, "Failed to read command metadata for command type {0} from resource \"{1}\" in assembly {2}.", classType, resource, asm.FullName);
             return null;
         }
         finally

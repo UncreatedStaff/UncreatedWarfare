@@ -82,7 +82,7 @@ public abstract class TranslationCollection
         {
             if (!_translations.TryGetValue(translation.Key.TranslationKey, out Translation translationMember))
             {
-                _logger.LogWarning("Unknown translation in collection {0}.", Accessor.Formatter.Format(GetType()));
+                _logger.LogWarning("Unknown translation in collection {0}.", GetType());
                 continue;
             }
 
@@ -90,10 +90,10 @@ public abstract class TranslationCollection
 
             if (language is null)
             {
-                _logger.LogWarning("Unknown language {0} in collection {1}.", translation.Key.LanguageCode, Accessor.Formatter.Format(GetType()));
+                _logger.LogWarning("Unknown language {0} in collection {1}.", translation.Key.LanguageCode, GetType());
             }
 
-            translationMember.UpdateValue(translation.Value, language ?? new LanguageInfo(translation.Key.LanguageCode));
+            translationMember.UpdateValue(translation.Value, language ?? new LanguageInfo(translation.Key.LanguageCode, LanguageService));
         }
     }
 

@@ -1,5 +1,4 @@
-﻿using Autofac;
-using DanielWillett.ReflectionTools;
+﻿using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using System;
@@ -13,7 +12,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits.Bundles;
@@ -550,7 +548,6 @@ public class Kit : ITranslationArgument, ICloneable
             return;
         }
 
-        L.LogDebug($"Buidling item array for {InternalName}...");
         bool pooled = Provider.isInitialized && GameThread.IsCurrent;
         List<IKitItem> tempList = pooled ? ListPool<IKitItem>.claim() : new List<IKitItem>(models.Length);
         try
@@ -563,8 +560,7 @@ public class Kit : ITranslationArgument, ICloneable
                 }
                 catch (FormatException ex)
                 {
-                    L.LogWarning($"Skipped item {model.Id} in kit {model.Kit.InternalName}:");
-                    L.LogWarning(ex.Message);
+                    WarfareModule.Singleton.GlobalLogger.LogWarning(ex, "Skipped item {0} in kit {1}:", model.Id, model.Kit.InternalName);
                 }
             }
 
@@ -660,8 +656,7 @@ public class Kit : ITranslationArgument, ICloneable
                 }
                 catch (Exception ex)
                 {
-                    L.LogWarning($"Skipped unlock requirement {model.Id} in kit {model.Kit.InternalName}:");
-                    L.LogWarning(ex.GetType().Name + " - " + ex.Message);
+                    WarfareModule.Singleton.GlobalLogger.LogWarning(ex, "Skipped unlock requirement {0} in kit {1}:", model.Id, model.Kit.InternalName);
                 }
             }
 

@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using System.Reflection.Emit;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.NewQuests.Parameters;
 
@@ -19,11 +18,12 @@ public class RewardExpression
     private readonly EvaluateDelegate _method;
     private static MethodInfo[]? _mathMethods;
     private readonly ConstructorInfo _createCtor;
+    private readonly ILogger _logger;
     private const bool DebugLogging = false;
     public Type QuestType { get; }
     public Type StateType { get; }
     public Type RewardType { get; }
-    public RewardExpression(Type rewardType, Type questType, string expression)
+    public RewardExpression(Type rewardType, Type questType, string expression, ILogger logger)
     {
         if (!typeof(IQuestReward).IsAssignableFrom(rewardType) || rewardType.IsInterface || rewardType.IsAbstract)
         {
@@ -35,6 +35,7 @@ public class RewardExpression
             throw new ArgumentException("Quest type must be a non-abstract class that inherits QuestTemplate.");
         }
 
+        _logger = logger;
         Type? returnType = null;
         foreach (ConstructorInfo ctor in rewardType.GetConstructors())
         {
@@ -271,7 +272,7 @@ public class RewardExpression
                 {
                     if (!m2.ReturnType.IsPrimitive || m2.ReturnType == typeof(char) || m2.ReturnType == typeof(bool))
                     {
-                        L.LogError("Invalid variable type: " + tokens[i] + ", " + m2.ReturnType.Name);
+                        _logger.LogError("Invalid variable type: {0}, {1}", tokens[i], m2.ReturnType);
                         goto error;
                     }
 
@@ -447,7 +448,7 @@ public class RewardExpression
             {
                 if (tokens.Count < i + 2 && tokens[i + 1][0] != '(' || !LoadMethod(ref i, il, tokens, vars, ref stackSize))
                 {
-                    L.LogWarning("Unknown token: '" + tokens[i] + "'.");
+                    _logger.LogWarning("Unknown token: '{0}'.", tokens[i]);
                     return false;
                 }
             }
@@ -486,7 +487,7 @@ public class RewardExpression
         MethodInfo? pow = GetMethod("Pow", 2, _mathMethods ??= typeof(Math).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public));
         if (pow == null)
         {
-            L.LogError("Unable to find Math.Pow method!");
+            _logger.LogError("Unable to find Math.Pow method!");
             return false;
         }
         if (Load(ref l, il, tokens, vars, ref stackSize))
@@ -733,7 +734,7 @@ public class RewardExpression
     {
         if (_method == null)
         {
-            L.LogError("Tried to evaluate an invalid RewardExpression.");
+            _logger.LogError("Tried to evaluate an invalid RewardExpression.");
             return null;
         }
 
@@ -741,10 +742,9 @@ public class RewardExpression
         {
             return _method(state);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            L.LogError("Failed to execute expression: " + (_expression2 ?? _expression));
-            L.LogError(e);
+            _logger.LogError(ex, "Failed to execute expression: {0}.", _expression2 ?? _expression);
             return null;
         }
     }

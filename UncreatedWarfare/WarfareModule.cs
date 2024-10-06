@@ -3,6 +3,7 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Physical;
 using SDG.Framework.Modules;
@@ -12,8 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
-using Uncreated.Framework.UI;
+using StackCleaner;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -95,6 +95,11 @@ public sealed class WarfareModule : IModuleNexus
     private WarfarePluginLoader _pluginLoader;
 
     /// <summary>
+    /// A global logger that can be used from patches mainly.
+    /// </summary>
+    public ILogger GlobalLogger { get; private set; }
+
+    /// <summary>
     /// A path to the top-level 'Warfare' folder.
     /// </summary>
     public string HomeDirectory { get; private set; }
@@ -158,26 +163,6 @@ public sealed class WarfareModule : IModuleNexus
     {
         Singleton = this;
 
-        // register logging factory manually to use before container is built.
-        L.Init();
-        ILoggerProvider[] loggingProviders = [ new L.UCLoggerFactory() ];
-
-        ILoggerFactory loggerFactory = new LoggerFactory(loggingProviders, new LoggerFilterOptions
-        {
-            MinLevel = LogLevel.Trace,
-            Rules =
-            {
-                new LoggerFilterRule(null, "Microsoft", LogLevel.Information, null),
-                new LoggerFilterRule(null, "Uncreated.Warfare.Database", LogLevel.Information, null),
-                new LoggerFilterRule(null, "Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning, null),
-                new LoggerFilterRule(null, "Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning, null),
-            }
-        });
-
-        _logger = loggerFactory.CreateLogger<WarfareModule>();
-
-        _logger.LogInformation("Loading Uncreated.Warfare core module...");
-
         _gameObjectHost = new GameObject("Uncreated.Warfare");
         Object.DontDestroyOnLoad(_gameObjectHost);
 
@@ -187,7 +172,16 @@ public sealed class WarfareModule : IModuleNexus
 
         // todo rewrite action log
         _gameObjectHost.AddComponent<ActionLog>();
-        
+
+        // cant create the real logger factory until the service provider is built, but we need a logger to load plugins
+        using ILoggerFactory tempLoggerFactory =
+            new LoggerFactory(
+            [
+                new WarfareLoggerProvider(null)
+            ],
+            new LoggerFilterOptions { MinLevel = LogLevel.Trace }
+        );
+
         // adds the plugin to the server lobby screen and sets the plugin framework type to 'Unknown'.
         IPluginAdvertising pluginAdvService = PluginAdvertising.Get();
         pluginAdvService.AddPlugin("Uncreated Warfare");
@@ -219,26 +213,37 @@ public sealed class WarfareModule : IModuleNexus
 
         ContainerBuilder bldr = new ContainerBuilder();
 
-        _pluginLoader = new WarfarePluginLoader(this, loggerFactory);
-
+        _pluginLoader = new WarfarePluginLoader(this, tempLoggerFactory);
         _pluginLoader.LoadPlugins();
 
-        bldr.RegisterInstance(loggingProviders[0])
-            .As<ILoggerProvider>()
+        bldr.RegisterType<WarfareLoggerProvider>()
+            .As<ILoggerProvider>().AsSelf()
             .OwnedByLifetimeScope();
 
-        bldr.RegisterInstance(loggerFactory)
-            .OwnedByLifetimeScope();
-
-        bldr.RegisterGeneric(typeof(Logger<>))
-            .As(typeof(ILogger<>))
+        bldr.Register(x => x.Resolve<WarfareLoggerProvider>().StackCleaner)
             .SingleInstance();
+
+        bldr.RegisterFromCollection(collection =>
+        {
+            collection.AddLogging(bldr =>
+            {
+                bldr.SetMinimumLevel(LogLevel.Trace)
+                    .AddFilter("Microsoft", LogLevel.Information)
+                    .AddFilter("Uncreated.Warfare.Database", LogLevel.Information)
+                    .AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning)
+                    .AddFilter("Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning);
+            });
+        });
 
         ConfigureServices(bldr);
 
         _pluginLoader.ConfigureServices(bldr);
 
         ServiceProvider = bldr.Build();
+
+        _logger = ServiceProvider.Resolve<ILogger<WarfareModule>>();
+
+        GlobalLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger("Global");
 
         _logger.LogInformation("Using {0} services from core and {1} plugin(s).", ServiceProvider.ComponentRegistry.Registrations.Count(), _pluginLoader.Plugins.Count);
 
@@ -251,7 +256,7 @@ public sealed class WarfareModule : IModuleNexus
             }
             catch (Exception ex)
             {
-                CommandWindow.LogError(ExceptionFormatter.FormatException(ex, L.Cleaner));
+                CommandWindow.LogError(ExceptionFormatter.FormatException(ex, ServiceProvider.Resolve<StackTraceCleaner>()));
                 UnloadModule();
                 Provider.shutdown();
             }
@@ -717,6 +722,7 @@ public sealed class WarfareModule : IModuleNexus
             {
                 if (!GameThread.IsCurrent)
                     await UniTask.SwitchToMainThread(token);
+                _logger.LogDebug("Hosting {0}.", hostedService.GetType());
                 await hostedService.StartAsync(token);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -725,7 +731,7 @@ public sealed class WarfareModule : IModuleNexus
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error hosting service {Accessor.Formatter.Format(hostedService.GetType())}.");
+                _logger.LogError(ex, $"Error hosting service {hostedService.GetType()}.");
                 errIndex = i;
                 break;
             }
@@ -748,6 +754,7 @@ public sealed class WarfareModule : IModuleNexus
             IHostedService hostedService = hostedServices[i];
             try
             {
+                _logger.LogDebug("Unhosting {0}.", hostedService.GetType());
                 tasks[i] = hostedService.StopAsync(token);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -756,7 +763,7 @@ public sealed class WarfareModule : IModuleNexus
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error stopping service {Accessor.Formatter.Format(hostedService.GetType())}.");
+                _logger.LogError(ex, $"Error stopping service {hostedService.GetType()}.");
             }
         }
 
@@ -795,6 +802,7 @@ public sealed class WarfareModule : IModuleNexus
             {
                 if (!GameThread.IsCurrent)
                     await UniTask.SwitchToMainThread(token);
+                _logger.LogDebug("Hosting {0} on level load.", hostedService.GetType());
                 await hostedService.LoadLevelAsync(token);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -803,7 +811,7 @@ public sealed class WarfareModule : IModuleNexus
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error hosting service {Accessor.Formatter.Format(hostedService.GetType())} on level load.");
+                _logger.LogError(ex, $"Error hosting service {hostedService.GetType()} on level load.");
                 break;
             }
         }
@@ -827,7 +835,9 @@ public sealed class WarfareModule : IModuleNexus
         {
             try
             {
-                tasks[i] = hostedServices[i].StopAsync(CancellationToken.None);
+                IHostedService hostedService = hostedServices[i];
+                _logger.LogDebug("Unhosting {0}.", hostedService.GetType());
+                tasks[i] = hostedService.StopAsync(CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -868,7 +878,9 @@ public sealed class WarfareModule : IModuleNexus
         {
             try
             {
-                tasks[i] = hostedServices[i].StopAsync(timeoutSource.Token);
+                IHostedService hostedService = hostedServices[i];
+                _logger.LogDebug("Unhosting {0}.", hostedService.GetType());
+                tasks[i] = hostedService.StopAsync(timeoutSource.Token);
             }
             catch (Exception ex)
             {
@@ -902,7 +914,7 @@ public sealed class WarfareModule : IModuleNexus
             if (tasks[i].Status is not UniTaskStatus.Canceled and not UniTaskStatus.Pending)
                 continue;
 
-            _logger.LogError(Accessor.Formatter.Format(hostedServices[i].GetType()) + $" - {tasks[i].Status}.");
+            _logger.LogError(hostedServices[i].GetType() + $" - {tasks[i].Status}.");
         }
         Thread.Sleep(500);
     }

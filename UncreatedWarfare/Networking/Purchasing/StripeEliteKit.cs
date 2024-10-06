@@ -1,14 +1,12 @@
-﻿using Stripe;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
-using Microsoft.Extensions.DependencyInjection;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations;
@@ -35,6 +33,7 @@ public class StripeEliteKit
         IStripeService stripeService = serviceProvider.GetRequiredService<IStripeService>();
         IPurchaseRecordsInterface purchaseRecord = serviceProvider.GetRequiredService<IPurchaseRecordsInterface>();
         KitManager? manager = serviceProvider.GetService<KitManager>();
+        ILogger<StripeEliteKit> logger = serviceProvider.GetRequiredService<ILogger<StripeEliteKit>>();
 
         List<(string id, Kit kit)> needsStripeKits = new List<(string, Kit)>();
 
@@ -82,7 +81,7 @@ public class StripeEliteKit
                 {
                     if (product.Metadata == null || !product.Metadata.TryGetValue(PurchaseRecordsInterface.BundleIdMetadataKey, out string? kitId))
                     {
-                        L.LogWarning($"Unknown product id key from searched product: {product.Name}.");
+                        logger.LogWarning("Unknown product id key from searched product: {0}.", product.Name);
                         continue;
                     }
 

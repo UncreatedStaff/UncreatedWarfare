@@ -52,7 +52,7 @@ public abstract class UnlockCost : ICloneable
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Unable to create UnlockCost of type {0}.", Accessor.Formatter.Format(unlockType));
+            logger?.LogError(ex, "Unable to create UnlockCost of type {0}.", unlockType);
             return null;
         }
     }

@@ -22,19 +22,21 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
     private readonly bool _useCustomSerializer;
     private readonly bool _regReload;
     private readonly string? _reloadKey;
+    private readonly ILogger _logger;
     private readonly bool _isFirst = true;
     public string Directory => _dir;
     public string? ReloadKey => _reloadKey;
     public TData Data { get; private set; }
-    public Config(string directory, string filename, string reloadKey) : this(directory, filename)
+    public Config(string directory, string filename, string reloadKey, ILogger logger) : this(directory, filename, logger)
     {
         if (reloadKey == null)
             return;
 
         _reloadKey = reloadKey;
     }
-    public Config(string directory, string filename)
+    public Config(string directory, string filename, ILogger logger)
     {
+        _logger = logger;
         _dir = Path.Combine(directory, filename);
         _customDeserializer = null;
         _useCustomDeserializer = false;
@@ -48,7 +50,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             }
             catch (Exception ex)
             {
-                L.LogError("Unable to create data directory " + directory + ". Check permissions: " + ex.Message);
+                _logger.LogError(ex, "Unable to create data directory " + directory + ". Check permissions: " + ex.Message);
                 return;
             }
         }
@@ -59,8 +61,9 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             Reload();
         _isFirst = false;
     }
-    public Config(string directory, string filename, CustomDeserializer deserializer, CustomSerializer serializer)
+    public Config(string directory, string filename, CustomDeserializer deserializer, CustomSerializer serializer, ILogger logger)
     {
+        _logger = logger;
         _dir = directory + filename;
         _customDeserializer = deserializer;
         _useCustomDeserializer = deserializer != null;
@@ -74,7 +77,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             }
             catch (Exception ex)
             {
-                L.LogError("Unable to create data directory " + directory + ". Check permissions: " + ex.Message);
+                _logger.LogError(ex, "Unable to create data directory " + directory + ". Check permissions: " + ex.Message);
                 return;
             }
         }
@@ -99,8 +102,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
                 }
                 catch (Exception ex)
                 {
-                    L.LogError($"Failed to run {Type.Name} custom serializer, running auto-serialzier...");
-                    L.LogError(ex);
+                    _logger.LogError(ex, $"Failed to run {Type.Name} custom serializer, running auto-serialzier...");
                     goto other;
                 }
                 finally
@@ -117,8 +119,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
             }
             catch (Exception ex)
             {
-                L.LogError($"Failed to run {Type.Name} auto-serializer.");
-                L.LogError(ex);
+                _logger.LogError(ex, $"Failed to run {Type.Name} auto-serializer.");
             }
         }
     }
@@ -139,7 +140,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
                 long len = stream.Length;
                 if (len > int.MaxValue)
                 {
-                    L.LogError($"Config file for {Type.Name} config.");
+                    _logger.LogError($"Config file for {Type.Name} config.");
                     return;
                 }
                 if (stream.Length == 0) goto loadDefaults;
@@ -168,8 +169,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
                 }
                 catch (Exception ex)
                 {
-                    L.LogError($"Failed to run auto-deserializer for {Type.Name}.");
-                    L.LogError(ex);
+                    _logger.LogError(ex, $"Failed to run auto-deserializer for {Type.Name}.");
                 }
             }
 
@@ -205,8 +205,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
                 }
                 catch (Exception ex)
                 {
-                    L.LogError($"Error upgrading config for field {fields[i].FieldType.Name}::{fields[i].Name} in {Type.Name} config.");
-                    L.LogError(ex);
+                    _logger.LogError(ex, $"Error upgrading config for field {fields[i].FieldType.Name}::{fields[i].Name} in {Type.Name} config.");
                 }
             }
             if (needsSaving)
@@ -218,8 +217,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
         }
         catch (Exception ex)
         {
-            L.LogError("Error upgrading config: " + Type.Name);
-            L.LogError(ex);
+            _logger.LogError(ex, "Error upgrading config: " + Type.Name);
         }
     }
     public void LoadDefaults()
@@ -238,8 +236,7 @@ public class Config<TData> : IConfigurationHolder<TData> where TData : JSONConfi
                 }
                 catch (Exception ex)
                 {
-                    L.LogError("Failed to run custom serializer, running auto-serialzier...");
-                    L.LogError(ex);
+                    _logger.LogError(ex, "Failed to run custom serializer, running auto-serialzier...");
                     goto other;
                 }
                 finally

@@ -6,7 +6,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 using Unity.Collections;
@@ -241,20 +240,18 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     {
         if (_voiceBuffer == null || _byteCount == 0 || _packets == null || _packets.Count == 0)
         {
-            L.LogDebug($"Player {Player} voice buffer... no packets.");
+            WarfareModule.Singleton.GlobalLogger.LogDebug($"Player {Player} voice buffer... no packets.");
             return;
         }
 
-        L.LogDebug($"Player {Player} voice buffer @ {Time.realtimeSinceStartup}...");
-        using IDisposable logIndent = L.IndentLog(1);
-        L.LogDebug($"Packets: {PacketCount}, size: {_byteCount}, index: {_startIndex}.");
+        WarfareModule.Singleton.GlobalLogger.LogDebug($"Player {Player} voice buffer @ {Time.realtimeSinceStartup}...");
+        WarfareModule.Singleton.GlobalLogger.LogDebug($"  Packets: {PacketCount}, size: {_byteCount}, index: {_startIndex}.");
         for (int i = 0; i < _packets.Count; ++i)
         {
-            using IDisposable logIndent2 = L.IndentLog(1);
             int stInd = _packets[i].StartIndex;
             int endInd = i == _packets.Count - 1 ? (_startIndex + _byteCount) % _voiceBuffer.Length : _packets[i + 1].StartIndex;
             int packetSize = endInd < stInd ? _voiceBuffer!.Length - stInd + endInd : endInd - stInd;
-            L.LogDebug($"Packet {i} starts at {_packets[i].StartIndex} and ends at {endInd}, size: {packetSize}. Wraps around? {stInd > endInd}");
+            WarfareModule.Singleton.GlobalLogger.LogDebug($"    Packet {i} starts at {_packets[i].StartIndex} and ends at {endInd}, size: {packetSize}. Wraps around? {stInd > endInd}");
         }
     }
 }

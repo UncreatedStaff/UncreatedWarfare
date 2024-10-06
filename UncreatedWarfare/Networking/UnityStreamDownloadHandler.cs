@@ -19,8 +19,7 @@ public class UnityStreamDownloadHandler(Stream stream, bool leaveOpen = false, i
         }
         catch (Exception ex)
         {
-            L.LogError($"Error in UnityStreamDownloadHandler when writing to {stream.GetType().Name}. Aborting download.");
-            L.LogError(ex);
+            WarfareModule.Singleton.GlobalLogger.LogError(ex, "Error in UnityStreamDownloadHandler when writing to {0}. Aborting download.", stream.GetType());
             return false;
         }
     }

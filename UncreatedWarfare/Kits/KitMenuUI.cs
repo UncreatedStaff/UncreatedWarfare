@@ -11,7 +11,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
@@ -241,7 +240,7 @@ public class KitMenuUI : UnturnedUI
             DefaultClassCache[i] = (Class)i == Class.APRifleman ? "AP Rifleman" /* too long */ : _valueFormatter.FormatEnum((Class)i, null);
             ClassIconCache[i] = ((Class)i).GetIcon().ToString();
             if (DropdownButtons[i] is not { } btn)
-                L.LogWarning("DropdownButtons[" + i + "] was not initialized (class: " + (Class)i + ").", method: "KIT MENU UI");
+                Logger!.LogWarning("DropdownButtons[{0}] was not initialized (class: {1}).", i, (Class)i);
             else
             {
                 btn.OnClicked += OnClassButtonClicked;
@@ -446,7 +445,7 @@ public class KitMenuUI : UnturnedUI
 
     private void SwitchToTab(WarfarePlayer player, byte tab)
     {
-        L.LogDebug("Switching to tab " + tab);
+        Logger!.LogDebug("Switching to tab {0}.", tab);
         if (tab >= TabCount) return;
 
         KitMenuUIData data = GetData(player);
@@ -497,7 +496,7 @@ public class KitMenuUI : UnturnedUI
     {
         if (DefaultLanguageCache == null)
             CacheLanguages();
-        L.LogDebug("Opening kit: " + kit.InternalName);
+        Logger!.LogDebug("Opening kit: {0}.", kit.InternalName);
         ITransportConnection c = player.Connection;
         LblInfoTitle.SetText(c, kit.GetDisplayName(_languageService, player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
 
@@ -766,7 +765,7 @@ public class KitMenuUI : UnturnedUI
         bool fav = data.Favorited[kitIndex] = !data.Favorited[kitIndex];
         Kits[kitIndex].FavoriteIcon.SetText(player.Connection, fav ? "<#fd0>¼" : "¼");
         data.FavoritesDirty = true;
-        L.LogDebug((fav ? "Favorited " : "Unfavorited ") + kit.InternalName);
+        Logger!.LogDebug((fav ? "Favorited " : "Unfavorited ") + kit.InternalName);
         if (fav)
             (data.FavoriteKits ??= new List<uint>(8)).Add(kit.PrimaryKey);
         else
@@ -802,7 +801,7 @@ public class KitMenuUI : UnturnedUI
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error requesting kit {0} ({1}).", selectedKitPk, kit?.InternalName ?? "unknown kit");
+                Logger!.LogError(ex, "Error requesting kit {0} ({1}).", selectedKitPk, kit?.InternalName ?? "unknown kit");
             }
         });
     }
@@ -930,11 +929,11 @@ public sealed class KitMenuUIData : IUnturnedUIData
             3 => KitListSpecialPredicate,
             _ => _ => true
         };
-#if DEBUG
-        using IDisposable disp = L.IndentLog(1);
-#endif
+//#if DEBUG
+//        using IDisposable disp = L.IndentLog(1);
+//#endif
 
-        L.LogDebug(manager.Cache.KitDataByKey.Count + " searched... ");
+        //L.LogDebug(manager.Cache.KitDataByKey.Count + " searched... ");
         Kits = manager.Cache.KitDataByKey.Values.Where(predicate)
             .OrderByDescending(x => FavoriteKits?.Contains(x.PrimaryKey))
             .ThenBy(x =>
@@ -945,7 +944,7 @@ public sealed class KitMenuUIData : IUnturnedUIData
                 return dn;
             }).ToArray();
 
-        L.LogDebug(Kits.Length + " selected for tab " + Tab + "... ");
+        //L.LogDebug(Kits.Length + " selected for tab " + Tab + "... ");
 
         if (Kits.Length > KitMenuUI.KitListCount)
         {

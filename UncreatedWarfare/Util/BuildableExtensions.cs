@@ -1,16 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Text;
-using Microsoft.Extensions.DependencyInjection;
-using SDG.NetTransport;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Signs;
 
 namespace Uncreated.Warfare.Util;
 public static class BuildableExtensions
@@ -27,36 +19,28 @@ public static class BuildableExtensions
 
         GameThread.AssertCurrent();
 
-        try
+        if (buildable.Model != null)
         {
-            if (buildable.Model != null)
+            if (!buildable.IsStructure)
             {
-                if (!buildable.IsStructure)
+                if (buildable.Drop is BarricadeDrop barricadeDrop
+                    && !barricadeDrop.GetServersideData().barricade.isDead
+                    && BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _))
                 {
-                    if (buildable.Drop is BarricadeDrop barricadeDrop
-                        && !barricadeDrop.GetServersideData().barricade.isDead
-                        && BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _))
-                    {
-                        BarricadeManager.destroyBarricade(barricadeDrop, x, y, plant);
-                        return true;
-                    }
-                }
-                else
-                {
-                    if (buildable.Drop is StructureDrop structureDrop
-                        && !structureDrop.GetServersideData().structure.isDead
-                        && StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _))
-                    {
-                        StructureManager.destroyStructure(structureDrop, x, y, Vector3.zero);
-                        return true;
-                    }
+                    BarricadeManager.destroyBarricade(barricadeDrop, x, y, plant);
+                    return true;
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            L.LogError($"Error destroying buildable: {buildable.Asset.itemName} (#{buildable.InstanceId}).");
-            L.LogError(ex);
+            else
+            {
+                if (buildable.Drop is StructureDrop structureDrop
+                    && !structureDrop.GetServersideData().structure.isDead
+                    && StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _))
+                {
+                    StructureManager.destroyStructure(structureDrop, x, y, Vector3.zero);
+                    return true;
+                }
+            }
         }
 
         return false;

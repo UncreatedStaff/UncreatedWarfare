@@ -17,13 +17,15 @@ namespace Uncreated.Warfare.Components;
 public class IconManager : ILayoutHostedService, IEventListener<PlayerLeft>, IEventListener<PlayerGroupChanged>
 {
     private readonly IPlayerService _playerService;
+    private readonly ILogger<IconManager> _logger;
     private const float FullTickLoopTime = 0.25f;
     private readonly List<IconRenderer> _icons = new List<IconRenderer>();
     private int _tickIndex;
     private float _tickIndexProgress;
-    public IconManager(IPlayerService playerService)
+    public IconManager(IPlayerService playerService, ILogger<IconManager> logger)
     {
         _playerService = playerService;
+        _logger = logger;
         TimeUtility.updated += OnUpdate;
     }
 
@@ -128,12 +130,12 @@ public class IconManager : ILayoutHostedService, IEventListener<PlayerLeft>, IEv
             DeleteIcon(icon);
         
         icon = transform.gameObject.AddComponent<IconRenderer>();
-        icon.Initialize(effectGUID, offset, team, this, player);
+        icon.Initialize(effectGUID, offset, team, this, _logger, player);
 
         SpawnIcons(icon);
 
         _icons.Add(icon);
-        L.LogDebug($"[ICONS] [{icon.Effect?.name}] Icon attached.");
+        _logger.LogConditional("[{0}] Icon attached.", icon.Effect?.name);
     }
     public void DeleteIcon(IconRenderer icon, bool destroy = true)
     {
@@ -145,7 +147,7 @@ public class IconManager : ILayoutHostedService, IEventListener<PlayerLeft>, IEv
             icon.Destroy();
 
         SpawnNewIconsOfType(icon.EffectGUID);
-        L.LogDebug($"[ICONS] [{icon.Effect?.name}] Icon deleted.");
+        _logger.LogConditional("[{0}] Icon deleted.", icon.Effect?.name);
     }
     public void DrawNewIconsOfType(Guid effectGUID)
     {
@@ -209,6 +211,7 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
 {
     private IconManager _iconManager;
     private float _lastBroadcast;
+    private ILogger _logger;
     private Vector3 _lastPosition;
     public Guid EffectGUID { get; private set; }
     public EffectAsset Effect { get; private set; }
@@ -218,8 +221,9 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
     public Vector3 Offset { get; private set; }
     public float Lifetime { get; private set; }
     public bool LifetimeCheck { get; private set; }
-    public void Initialize(Guid effectGUID, Vector3 offset, Team? team, IconManager iconManager, ulong player = 0)
+    public void Initialize(Guid effectGUID, Vector3 offset, Team? team, IconManager iconManager, ILogger logger, ulong player = 0)
     {
+        _logger = logger;
         _iconManager = iconManager;
 
         EffectGUID = effectGUID;
@@ -234,20 +238,20 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
             Effect = effect;
             Lifetime = effect.lifetime;
             if (effect.lifetimeSpread != 0)
-                L.LogWarning($"[{effect.name}] Effect " + ActionLog.AsAsset(effect) + " has a non-zero lifetime spread.", method: "ICONS");
+                _logger.LogWarning("[{0}] Effect {1} has a non-zero lifetime spread.", effect.name, ActionLog.AsAsset(effect));
             LifetimeCheck = Lifetime != 0;
             if (!LifetimeCheck)
-                L.LogWarning($"[{effect.name}] Effect " + ActionLog.AsAsset(effect) + " has a zero lifetime.", method: "ICONS");
+                _logger.LogWarning("[{0}] Effect {1} has a zero lifetime.", effect.name, ActionLog.AsAsset(effect));
         }
         else
-            L.LogWarning($"IconSpawner could not start: Effect asset not found: " + effectGUID.ToString("N") + ".", method: "ICONS");
+            _logger.LogWarning("IconSpawner could not start: Effect asset not found: {0}.", effectGUID);
     }
 
     [UsedImplicitly]
-   void OnDestroy()
+    void OnDestroy()
     {
         _iconManager.DeleteIcon(this, false);
-        L.LogDebug($"[ICONS] [{Effect?.name}] Icon destroyed: {Effect?.FriendlyName ?? EffectGUID.ToString("N")}");
+        _logger.LogConditional("[{0}] Icon destroyed: {1}.", Effect?.name, ActionLog.AsAsset(Effect));
     }
     public void Tick()
     {
@@ -282,7 +286,7 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
         _lastPosition = transform.position;
         EffectUtility.TriggerEffect(Effect, player, _lastPosition + Offset, false);
         _lastBroadcast = Time.realtimeSinceStartup;
-        L.LogDebug($"[ICONS] [{Effect.name}] Spawning icon for {player.GetAddressString(true)}.");
+        _logger.LogConditional("[{0}] Spawning icon for {1}.", Effect.name, player.GetAddressString(true));
     }
     public void SpawnNewIcon(PooledTransportConnectionList players)
     {
@@ -291,7 +295,7 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
         _lastPosition = transform.position;
         EffectUtility.TriggerEffect(Effect, players, _lastPosition + Offset, false);
         _lastBroadcast = Time.realtimeSinceStartup;
-        L.LogDebug($"[ICONS] [{Effect.name}] Spawning icon for {players.Count} player(s).");
+        _logger.LogConditional("[{0}] Spawning icon for {1} player(s).", Effect.name, players.Count);
     }
 
    void IManualOnDestroy.ManualOnDestroy()

@@ -1,5 +1,4 @@
 ﻿using System;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Util.Timing;
 
@@ -9,6 +8,7 @@ namespace Uncreated.Warfare.Util.Timing;
 /// <remarks>For tests mainly as it works without Unity.</remarks>
 public class TimerLoopTicker<TState> : ILoopTicker<TState>
 {
+    private readonly ILogger _logger;
     private readonly DateTime _createdAt;
     private DateTime _lastInvokedAt;
     private Timer? _timer;
@@ -37,8 +37,9 @@ public class TimerLoopTicker<TState> : ILoopTicker<TState>
     /// <param name="invokeImmediately">If the timer should be invoked now or wait a period.</param>
     /// <param name="queueOnGameThread">Callback will always be fired on the game thread (if it exists).</param>
     /// <param name="onTick">Callback since the timer being invoked now would mean you couldn't subscribe to the event first.</param>
-    public TimerLoopTicker(TimeSpan periodicDelay, bool invokeImmediately, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick)
+    public TimerLoopTicker(TimeSpan periodicDelay, ILogger logger, bool invokeImmediately, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick)
     {
+        _logger = logger;
         InitialDelay = invokeImmediately ? TimeSpan.Zero : periodicDelay;
         PeriodicDelay = periodicDelay <= TimeSpan.Zero ? Timeout.InfiniteTimeSpan : periodicDelay;
         State = state;
@@ -69,8 +70,9 @@ public class TimerLoopTicker<TState> : ILoopTicker<TState>
     /// <param name="periodicDelay">How often to invoke the timer.</param>
     /// <param name="queueOnGameThread">Callback will always be fired on the game thread (if it exists).</param>
     /// <param name="onTick">Callback since the timer being invoked now would mean you couldn't subscribe to the event first.</param>
-    public TimerLoopTicker(TimeSpan initialDelay, TimeSpan periodicDelay, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick)
+    public TimerLoopTicker(TimeSpan initialDelay, ILogger logger, TimeSpan periodicDelay, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick)
     {
+        _logger = logger;
         if (periodicDelay <= TimeSpan.Zero)
             periodicDelay = Timeout.InfiniteTimeSpan;
 
@@ -141,8 +143,7 @@ public class TimerLoopTicker<TState> : ILoopTicker<TState>
         }
         catch (Exception ex)
         {
-            L.LogError("Error invoking ticker.");
-            L.LogError(ex);
+            _logger.LogError(ex, "Error invoking ticker.");
         }
         finally
         {
@@ -175,27 +176,33 @@ public class TimerLoopTicker<TState> : ILoopTicker<TState>
 /// </summary>
 public class TimerLoopTickerFactory : ILoopTickerFactory
 {
+    private readonly ILogger _logger;
+    public TimerLoopTickerFactory(ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateLogger(typeof(TimerLoopTicker<>));
+    }
+
     /// <inheritdoc />
     public ILoopTicker CreateTicker(TimeSpan periodicDelay, bool invokeImmediately, bool queueOnGameThread, TickerCallback<ILoopTicker>? onTick = null)
     {
-        return new TimerLoopTicker<object>(periodicDelay, invokeImmediately, null, queueOnGameThread, onTick);
+        return new TimerLoopTicker<object>(periodicDelay, _logger, invokeImmediately, null, queueOnGameThread, onTick);
     }
 
     /// <inheritdoc />
     public ILoopTicker CreateTicker(TimeSpan initialDelay, TimeSpan periodicDelay, bool queueOnGameThread, TickerCallback<ILoopTicker>? onTick = null)
     {
-        return new TimerLoopTicker<object>(periodicDelay, periodicDelay, null, queueOnGameThread, onTick);
+        return new TimerLoopTicker<object>(periodicDelay, _logger, periodicDelay, null, queueOnGameThread, onTick);
     }
 
     /// <inheritdoc />
     public ILoopTicker<TState> CreateTicker<TState>(TimeSpan periodicDelay, bool invokeImmediately, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick = null)
     {
-        return new TimerLoopTicker<TState>(periodicDelay, invokeImmediately, state, queueOnGameThread, onTick);
+        return new TimerLoopTicker<TState>(periodicDelay, _logger, invokeImmediately, state, queueOnGameThread, onTick);
     }
 
     /// <inheritdoc />
     public ILoopTicker<TState> CreateTicker<TState>(TimeSpan initialDelay, TimeSpan periodicDelay, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick = null)
     {
-        return new TimerLoopTicker<TState>(periodicDelay, periodicDelay, state, queueOnGameThread, onTick);
+        return new TimerLoopTicker<TState>(periodicDelay, _logger, periodicDelay, state, queueOnGameThread, onTick);
     }
 }

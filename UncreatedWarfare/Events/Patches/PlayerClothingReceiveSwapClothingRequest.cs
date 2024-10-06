@@ -46,18 +46,17 @@ internal class PlayerClothingReceiveSwapClothingRequest : IHarmonyPatch
             if (target != null)
             {
                 Patcher.Patch(target, prefix: _patches[i]);
-                logger.LogDebug("Patched {0} for swap clothing event.", Accessor.Formatter.Format(target));
+                logger.LogDebug("Patched {0} for swap clothing event.", target);
                 continue;
             }
 
             logger.LogError("Failed to find method: {0}.",
-                Accessor.Formatter.Format(new MethodDefinition("ReceiveSwap" + (ClothingType)i + "Request")
+                new MethodDefinition("ReceiveSwap" + (ClothingType)i + "Request")
                     .DeclaredIn<PlayerClothing>(isStatic: false)
                     .WithParameter<byte>("page")
                     .WithParameter<byte>("x")
                     .WithParameter<byte>("y")
                     .ReturningVoid()
-                )
             );
         }
     }
@@ -74,7 +73,7 @@ internal class PlayerClothingReceiveSwapClothingRequest : IHarmonyPatch
                 continue;
 
             Patcher.Unpatch(target, _patches![i]);
-            logger.LogDebug("Unpatched {0} for swap clothing event.", Accessor.Formatter.Format(target));
+            logger.LogDebug("Unpatched {0} for swap clothing event.", target);
         }
 
         _targets = null;

@@ -8,7 +8,6 @@ using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -36,12 +35,11 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
         if (_removeItemMtd == null)
         {
             logger.LogError("Unable to find {0} to transpile drop item event.",
-                Accessor.Formatter.Format(new MethodDefinition(nameof(PlayerInventory.removeItem))
+                new MethodDefinition(nameof(PlayerInventory.removeItem))
                     .DeclaredIn<PlayerInventory>(isStatic: false)
                     .WithParameter<byte>("page")
                     .WithParameter<byte>("index")
                     .ReturningVoid()
-                )
             );
             return;
         }
@@ -51,18 +49,17 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
-            logger.LogDebug("Patched {0} for drop item event.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for drop item event.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition(nameof(PlayerInventory.ReceiveDropItem))
+            new MethodDefinition(nameof(PlayerInventory.ReceiveDropItem))
                 .DeclaredIn<PlayerInventory>(isStatic: false)
                 .WithParameter<byte>("page")
                 .WithParameter<byte>("x")
                 .WithParameter<byte>("y")
                 .ReturningVoid()
-            )
         );
     }
 
@@ -72,7 +69,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
             return;
 
         Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
-        logger.LogDebug("Unpatched {0} for drop item event.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for drop item event.", _target);
         _target = null;
     }
 
@@ -84,15 +81,15 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
     {
         int lcl2 = method.FindLocalOfType<ItemJar>();
         if (lcl2 < 0)
-            L.LogWarning("Unable to find local for ItemJar while transpiling ReceiveDropItem.");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find local for ItemJar while transpiling ReceiveDropItem.");
 
         MethodInfo? itemGetter = typeof(ItemJar).GetProperty(nameof(ItemJar.item), BindingFlags.Public | BindingFlags.Instance)?.GetMethod;
         if (itemGetter == null)
-            L.LogWarning("Unable to find 'get ItemJar.item' while transpiling ReceiveDropItem.");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find 'get ItemJar.item' while transpiling ReceiveDropItem.");
 
         FieldInfo? rotField = typeof(ItemJar).GetField(nameof(ItemJar.rot), BindingFlags.Public | BindingFlags.Instance);
         if (rotField == null)
-            L.LogWarning("Unable to find 'ItemJar.rot' while transpiling ReceiveDropItem.");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find 'ItemJar.rot' while transpiling ReceiveDropItem.");
 
         yield return new CodeInstruction(OpCodes.Ldc_I4_1);
         yield return new CodeInstruction(OpCodes.Stsfld, LastPlayEffectField);
@@ -139,7 +136,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
                 }
 
                 yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(DroppedItemInvoker));
-                L.LogDebug("Patched ReceiveDropItem.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("Patched ReceiveDropItem.");
             }
         }
     }

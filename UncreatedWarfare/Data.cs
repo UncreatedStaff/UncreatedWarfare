@@ -156,8 +156,10 @@ public static class Data
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Is<TGamemode>() => false;
     
-    internal static async Task LoadVariables(CancellationToken token)
+    internal static Task LoadVariables(CancellationToken token)
     {
+        return Task.CompletedTask;
+#if false
         OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
         PlaytimeComponents = new Dictionary<ulong, UCPlayerData>(Provider.maxPlayers);
 
@@ -175,22 +177,36 @@ public static class Data
         L.Log("Getting RPCs...", ConsoleColor.Magenta);
         IDisposable indent = L.IndentLog(1);
 
-        SendChangeText = ReflectionUtility.FindRequiredRpc<InteractableSign, ClientInstanceMethod<string>>("SendChangeText");
-        SendMultipleBarricades = ReflectionUtility.FindRequiredRpc<BarricadeManager, ClientStaticMethod>("SendMultipleBarricades");
-        SendChatIndividual = ReflectionUtility.FindRequiredRpc<ChatManager, ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>>("SendChatEntry");
-        SendDestroyItem = ReflectionUtility.FindRequiredRpc<ItemManager, ClientStaticMethod<byte, byte, uint, bool>>("SendDestroyItem");
+        SendChangeText =
+ ReflectionUtility.FindRequiredRpc<InteractableSign, ClientInstanceMethod<string>>("SendChangeText");
+        SendMultipleBarricades =
+ ReflectionUtility.FindRequiredRpc<BarricadeManager, ClientStaticMethod>("SendMultipleBarricades");
+        SendChatIndividual =
+ ReflectionUtility.FindRequiredRpc<ChatManager, ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>>("SendChatEntry");
+        SendDestroyItem =
+ ReflectionUtility.FindRequiredRpc<ItemManager, ClientStaticMethod<byte, byte, uint, bool>>("SendDestroyItem");
 
-        SendUpdateBarricadeState = ReflectionUtility.FindRpc<BarricadeDrop, ClientInstanceMethod<byte[]>>("SendUpdateState");
+        SendUpdateBarricadeState =
+ ReflectionUtility.FindRpc<BarricadeDrop, ClientInstanceMethod<byte[]>>("SendUpdateState");
         SendInventory = ReflectionUtility.FindRpc<PlayerInventory, ClientInstanceMethod>("SendInventory");
-        SendWearShirt = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearShirt");
-        SendWearPants = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearPants");
-        SendWearHat = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearHat");
-        SendWearBackpack = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearBackpack");
-        SendWearVest = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearVest");
-        SendWearMask = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearMask");
-        SendWearGlasses = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearGlasses");
-        SendSwapVehicleSeats = ReflectionUtility.FindRpc<VehicleManager, ClientStaticMethod<uint, byte, byte>>("SendSwapVehicleSeats");
-        SendEnterVehicle = ReflectionUtility.FindRpc<VehicleManager, ClientStaticMethod<uint, byte, CSteamID>>("SendEnterVehicle");
+        SendWearShirt =
+ ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearShirt");
+        SendWearPants =
+ ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearPants");
+        SendWearHat =
+ ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearHat");
+        SendWearBackpack =
+ ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearBackpack");
+        SendWearVest =
+ ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearVest");
+        SendWearMask =
+ ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearMask");
+        SendWearGlasses =
+ ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearGlasses");
+        SendSwapVehicleSeats =
+ ReflectionUtility.FindRpc<VehicleManager, ClientStaticMethod<uint, byte, byte>>("SendSwapVehicleSeats");
+        SendEnterVehicle =
+ ReflectionUtility.FindRpc<VehicleManager, ClientStaticMethod<uint, byte, CSteamID>>("SendEnterVehicle");
         // SendScreenshotDestination = ReflectionUtility.FindRpc<ClientInstanceMethod, Player>("SendScreenshotDestination");
 
         UseFastKits = true;
@@ -202,15 +218,19 @@ public static class Data
 
         SetPrivateStance = Accessor.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance");
         SetStorageInventory = Accessor.GenerateInstanceSetter<InteractableStorage, Items>("_items");
-        RefreshIsConnectedToPower = (Action<InteractablePower>?)Accessor.GenerateInstanceCaller<InteractablePower>("RefreshIsConnectedToPower");
+        RefreshIsConnectedToPower =
+ (Action<InteractablePower>?)Accessor.GenerateInstanceCaller<InteractablePower>("RefreshIsConnectedToPower");
         GetUseableGunReloading = Accessor.GenerateInstanceGetter<UseableGun, bool>("isReloading");
 
-        SendInitialInventoryState = Accessor.GenerateInstanceCaller<PlayerInventory, Action<PlayerInventory, SteamPlayer>>("SendInitialPlayerState", throwOnError: true)!;
+        SendInitialInventoryState =
+ Accessor.GenerateInstanceCaller<PlayerInventory, Action<PlayerInventory, SteamPlayer>>("SendInitialPlayerState", throwOnError: true)!;
         try
         {
             GetItemsSlots = Accessor.GenerateInstanceGetter<Items, bool[,]>("slots", throwOnError: true)!;
-            SetOwnerHasInventory = Accessor.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: true)!;
-            GetOwnerHasInventory = Accessor.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: true)!;
+            SetOwnerHasInventory =
+ Accessor.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: true)!;
+            GetOwnerHasInventory =
+ Accessor.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: true)!;
         }
         catch (Exception ex)
         {
@@ -220,7 +240,8 @@ public static class Data
         }
         try
         {
-            ReplicateStance = typeof(PlayerStance).GetMethod("replicateStance", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            ReplicateStance =
+ typeof(PlayerStance).GetMethod("replicateStance", BindingFlags.Instance | BindingFlags.NonPublic)!;
         }
         catch (Exception ex)
         {
@@ -255,7 +276,8 @@ public static class Data
                     BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             if (method != null)
             {
-                PullFromTransportConnectionListPool = (Func<PooledTransportConnectionList>)method.CreateDelegate(typeof(Func<PooledTransportConnectionList>));
+                PullFromTransportConnectionListPool =
+ (Func<PooledTransportConnectionList>)method.CreateDelegate(typeof(Func<PooledTransportConnectionList>));
             }
             else
             {
@@ -288,6 +310,7 @@ public static class Data
         }
 
         Object.Destroy(obj);
+#endif
     }
     public static PooledTransportConnectionList GetPooledTransportConnectionList(int capacity = -1)
     {
@@ -302,7 +325,7 @@ public static class Data
             catch (Exception ex)
             {
                 ex2 = ex;
-                L.LogError(ex);
+                CommandWindow.LogError(ex);
             }
         }
         if (rtn == null)
@@ -316,7 +339,7 @@ public static class Data
             }
             catch (Exception ex)
             {
-                L.LogError(ex);
+                CommandWindow.LogError(ex);
                 if (ex2 != null)
                     throw new AggregateException("Unable to create pooled transport connection!", ex2, ex);
 

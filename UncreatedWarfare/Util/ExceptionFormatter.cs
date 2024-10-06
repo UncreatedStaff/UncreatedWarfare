@@ -21,9 +21,12 @@ public static class ExceptionFormatter
 
     private static void FormatSingleExceptionIntl(Exception ex, StringBuilder builder, StackTraceCleaner stackCleaner)
     {
-        builder.Append(Accessor.Formatter.Format(ex.GetType())).Append(" - ").AppendLine(ex.Message ?? "[ no message ]");
+        builder.Append(stackCleaner.GetString(ex.GetType())).Append(" - ").AppendLine(ex.Message ?? "[ no message ]");
 
-        builder.AppendLine(stackCleaner.GetString(ex));
+        if (ex.StackTrace != null)
+            builder.AppendLine(stackCleaner.GetString(ex));
+        else
+            builder.AppendLine("[ no stack trace ]");
 
         int ct = GetInnerExceptionCount(ex);
         if (ct == 0)

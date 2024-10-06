@@ -14,6 +14,8 @@ namespace Uncreated.Warfare.Translations;
 public class TranslationValueFormatter : ITranslationValueFormatter
 {
     private readonly IServiceProvider _serviceProvider;
+    private LanguageService? _langService;
+    private ITranslationService? _translationService;
     private readonly Type _enumFormatter;
 
     private const string NullNoColor = "null";
@@ -21,8 +23,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     private const string NullColorTMPro = "<#569cd6><b>null</b></color>";
     private const string NullANSI = "\u001b[94mnull\u001b[39m";
     private const string NullExtendedANSI = "\u001b[38;2;86;156;214mnull\u001b[39m";
-    public LanguageService LanguageService => _serviceProvider.GetRequiredService<LanguageService>();
-    public ITranslationService TranslationService => _serviceProvider.GetRequiredService<ITranslationService>();
+    public LanguageService LanguageService => _langService ??= _serviceProvider.GetRequiredService<LanguageService>();
+    public ITranslationService TranslationService => _translationService ??= _serviceProvider.GetRequiredService<ITranslationService>();
 
     private readonly ConcurrentDictionary<Type, object> _valueFormatters = new ConcurrentDictionary<Type, object>();
     public TranslationValueFormatter(IServiceProvider serviceProvider, IConfiguration systemConfig)
@@ -38,6 +40,7 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     private readonly object[] _valueFormatterTypes =
     {
         new ColorValueFormatter(),
+        new ReflectionMemberFormatter(),
         typeof(FormattableValueFormatter<>),
         new ToStringValueFormatter()
     };

@@ -310,7 +310,7 @@ public static class BarricadeUtility
         byte[] bytes = Encoding.UTF8.GetBytes(text);
         if (17 + bytes.Length > byte.MaxValue)
         {
-            L.LogWarning(text + " is too long to go on a sign! (SetServersideSignText)");
+            WarfareModule.Singleton.GlobalLogger.LogWarning(text + " is too long to go on a sign! (SetServersideSignText)");
             return;
         }
         byte[] newState = new byte[17 + bytes.Length];

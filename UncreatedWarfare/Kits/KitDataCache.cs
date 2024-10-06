@@ -9,7 +9,6 @@ using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.Players;
@@ -24,6 +23,7 @@ namespace Uncreated.Warfare.Kits;
 public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) : IAsyncEventListener<PlayerJoined>, IEventListener<PlayerLeft>, IEventListener<QuestCompleted>
 {
     private readonly IPlayerService _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+    private readonly ILogger<KitDataCache> _logger = serviceProvider.GetRequiredService<ILogger<KitDataCache>>();
     public KitManager Manager { get; } = manager;
     internal ConcurrentDictionary<string, Kit> KitDataById { get; } = new ConcurrentDictionary<string, Kit>(StringComparer.OrdinalIgnoreCase);
     internal ConcurrentDictionary<uint, Kit> KitDataByKey { get; } = [];
@@ -134,13 +134,13 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
                     // todo QuestManager.TryAddQuest(e.Player, quest);
                 }
                 else
-                    L.LogWarning("Unknown quest id " + req.QuestId + " in kit requirement for " + kit.InternalName);
+                    _logger.LogWarning("Unknown quest id {0} in kit requirement for {1}.", req.QuestId, kit.InternalName);
 
                 for (int r = 0; r < req.UnlockPresets.Length; r++)
                 {
                     QuestTemplate? tracker = null;// todo QuestManager.CreateTracker(e.Player, req.UnlockPresets[r]);
                     if (tracker == null)
-                        L.LogWarning("Failed to create tracker for kit " + kit.InternalName + ", player " + e.Player.Names.PlayerName);
+                        _logger.LogWarning("Failed to create tracker for kit {0}, player {1}.", kit.InternalName, e.Player.Names.PlayerName);
                 }
             }
         }
@@ -172,8 +172,7 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
         }
         catch (Exception ex)
         {
-            L.LogError("Error updating kit cache.");
-            L.LogError(ex);
+            _logger.LogError(ex, "Error updating kit cache.");
         }
     }
 

@@ -156,6 +156,7 @@ public class LanguageService : IHostedService
         Key = 0,
         Code = DefaultLanguageCode,
         DisplayName = "English",
+        IsDefault = true,
         Aliases =
         [
             new LanguageAlias { Alias = "English" },

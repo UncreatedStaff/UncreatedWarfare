@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
@@ -51,7 +50,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         }
     }
 
-    public void Initialize(float horizontalRange, float verticalRange, IAssetLink<EffectAsset>? lockOnEffect, float aquisitionTime, float timeOutTime)
+    public void Initialize(float horizontalRange, float verticalRange, IAssetLink<EffectAsset>? lockOnEffect, float aquisitionTime, float timeOutTime, ILogger logger)
     {
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = horizontalRange;
@@ -71,10 +70,10 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         if (!lockOnEffect.TryGetAsset(out _effect))
         {
-            L.LogWarning($"HEATSEAKER ERROR: Lock on sound effect not found: {lockOnEffect?.Guid.ToString() ?? "unknown"}.");
+            logger.LogWarning("HEATSEAKER ERROR: Lock on sound effect not found: {0}.", lockOnEffect?.Guid ?? Guid.Empty);
         }
     }
-    public void Initialize(float range, IAssetLink<EffectAsset> lockOnEffect, float aquisitionTime, float timeOutTime)
+    public void Initialize(float range, IAssetLink<EffectAsset> lockOnEffect, float aquisitionTime, float timeOutTime, ILogger logger)
     {
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = range;
@@ -102,7 +101,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         if (!lockOnEffect.TryGetAsset(out _effect))
         {
-            L.LogWarning($"HEATSEAKER ERROR: Lock on sound effect not found: {lockOnEffect?.Guid.ToString() ?? "unknown"}.");
+            logger.LogWarning("HEATSEAKER ERROR: Lock on sound effect not found: {0}.", lockOnEffect?.Guid ?? Guid.Empty);
         }
     }
 
@@ -226,8 +225,6 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             _timeOfAquisition = Time.time;
             Status = ELockOnMode.ACQUIRING;
 
-            L.LogDebug($"     AA: acquriing...");
-
             if (gunner != null)
                 PlayLockOnSound(gunner);
         }
@@ -237,9 +234,6 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
             if (timeSinceAquisition >= _aquisitionTime)
             {
-                if (Status != ELockOnMode.LOCKED_ON)
-                    L.LogDebug($"     AA: LOCKED");
-
                 Status = ELockOnMode.LOCKED_ON;
 
                 if (LockOnTarget.TryGetComponent(out VehicleComponent v) && gunner != null)
@@ -259,8 +253,6 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         if (_effect == null || gunner == null)
             return;
 
-        L.LogDebug($"            tone: playing...");
-
         EffectManager.sendUIEffect(_effect.id, LockOnEffectKey, gunner.channel.owner.transportConnection, true);
     }
     private void CancelLockOnSound(Player gunner)
@@ -269,7 +261,6 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             return;
 
         EffectManager.ClearEffectByGuid(_effect.GUID, gunner.channel.owner.transportConnection);
-        L.LogDebug($"            tone: cancelled");
     }
 
     public bool IsInRange(Vector3 target)

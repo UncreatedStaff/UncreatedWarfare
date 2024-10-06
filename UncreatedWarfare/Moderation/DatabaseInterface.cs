@@ -1614,10 +1614,9 @@ public class DatabaseInterface
         if (Provider.isInitialized)
         {
             ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.m_SteamID.ToString(CultureInfo.InvariantCulture)} FOR {range}.", callerId);
-
-            L.Log($"{targetId} was ip {(add ? "whitelisted" : "blacklisted")} by {callerId} on {range}.", ConsoleColor.Cyan);
         }
 
+        _logger.LogInformation("{0} was ip {1} by {2} on {3}.", targetId, add ? "whitelisted" : "blacklisted", callerId, range);
         return true;
     }
 

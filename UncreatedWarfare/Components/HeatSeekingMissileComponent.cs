@@ -1,9 +1,8 @@
 ﻿#if DEBUG
 #endif
-using System;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Logging;
 using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
@@ -72,12 +71,12 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
         _controller.MissilesInFlight.Add(this);
 
-        L.LogDebug($"    AA:     Missile launched - {_controller.Status}");
+        //L.LogDebug($"    AA:     Missile launched - {_controller.Status}");
     }
 
     private void OnDestroy()
     {
-        L.LogDebug("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
+        //L.LogDebug("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
         _controller.MissilesInFlight.Remove(this);
     }
     
@@ -94,7 +93,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         {
             if (_previousTarget == null)
             {
-                L.LogDebug($"Missile {gameObject.GetInstanceID()} initial target set");
+                //L.LogDebug($"Missile {gameObject.GetInstanceID()} initial target set");
                 _previousTarget = _controller.LockOnTarget;
             }
                 
@@ -102,12 +101,12 @@ public class HeatSeekingMissileComponent : MonoBehaviour
             {
                 _allowedPathAlterations--;
                 _previousTarget = _lastKnownTarget;
-                L.LogDebug($"Missile {gameObject.GetInstanceID()} detected path change. Alterations left: " + _allowedPathAlterations);
+                //L.LogDebug($"Missile {gameObject.GetInstanceID()} detected path change. Alterations left: " + _allowedPathAlterations);
             }
 
             if (_allowedPathAlterations > 0)
             {
-                L.LogDebug($"Missile {gameObject.GetInstanceID()} successfully tracking target");
+                //L.LogDebug($"Missile {gameObject.GetInstanceID()} successfully tracking target");
                 _lastKnownTarget = _controller.LockOnTarget;
             }
         }
@@ -118,10 +117,10 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
         if (_lastKnownTarget != null && Vector3.Angle(_projectile.transform.forward, _lastKnownTarget.position - _projectile.transform.position) > 40)
         {
-            L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
+            //L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
             _lost = true;
-            L.LogDebug($"Missile {gameObject.GetInstanceID()} lost its target");
-            L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
+            //L.LogDebug($"Missile {gameObject.GetInstanceID()} lost its target");
+            //L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
         }
 
         Vector3 idealDirection;
@@ -143,10 +142,10 @@ public class HeatSeekingMissileComponent : MonoBehaviour
             if (!_rigidbody.useGravity)
             {
                 _rigidbody.useGravity = true;
-                L.LogDebug($"Missile {gameObject.GetInstanceID()} timed out");
-                L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
+                //L.LogDebug($"Missile {gameObject.GetInstanceID()} timed out");
+                //L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
                 _controller.MissilesInFlight.Remove(this);
-                L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
+                //L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
                 
             }
         }

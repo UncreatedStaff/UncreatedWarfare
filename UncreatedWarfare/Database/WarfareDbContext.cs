@@ -6,7 +6,6 @@ using Pomelo.EntityFrameworkCore.MySql.Storage;
 using System;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Authentication;
 using Uncreated.Warfare.Models.Buildables;
@@ -64,13 +63,13 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         DbContextOptionsBuilder<WarfareDbContext> builder = new DbContextOptionsBuilder<WarfareDbContext>();
 
         builder.UseApplicationServiceProvider(serviceProvider);
-        Configure(builder, serviceProvider.GetRequiredService<IConfiguration>());
+        Configure(builder, serviceProvider.GetRequiredService<ILogger<WarfareDbContext>>(), serviceProvider.GetRequiredService<IConfiguration>());
 
         return builder.Options;
     }
 
     /* configure database settings */
-    private static void Configure(DbContextOptionsBuilder optionsBuilder, IConfiguration sysConfig)
+    private static void Configure(DbContextOptionsBuilder optionsBuilder, ILogger logger, IConfiguration sysConfig)
     {
         IConfiguration databaseSection = sysConfig.GetSection("database");
 
@@ -88,7 +87,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         if (databaseSection.GetValue<bool>("sensitive_data_logging"))
         {
             sensitiveDataLogging = true;
-            L.Log("Sensitive data logging is enabled.");
+            logger.LogInformation("Sensitive data logging is enabled.");
         }
 
         optionsBuilder.UseMySql(connectionString, x => x

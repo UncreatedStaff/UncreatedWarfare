@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare;
@@ -427,17 +426,9 @@ public static class UCAssetManager
     }
 #endif
     public static void SyncAssetsFromOrigin(AssetOrigin origin) => SyncAssetsFromOriginMethod?.Invoke(origin);
-    public static void TryLoadAsset(string filePath, AssetOrigin origin)
+    public static void LoadAsset(string filePath, AssetOrigin origin)
     {
-        try
-        {
-            LoadFile(filePath, origin);
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Error loading asset from \"" + filePath + "\".");
-            L.LogError(ex);
-        }
+        LoadFile(filePath, origin);
     }
 
     private static readonly DatParser _parser = new DatParser();
@@ -484,7 +475,7 @@ public static class UCAssetManager
             .CreateDelegate(typeof(Action<AssetOrigin>))!;
         if (SyncAssetsFromOriginMethod == null)
         {
-            L.LogError("Assets.AddAssetsFromOriginToCurrentMapping not found or arguments changed.");
+            WarfareModule.Singleton.GlobalLogger.LogError("Assets.AddAssetsFromOriginToCurrentMapping not found or arguments changed.");
             return;
         }
 
@@ -492,14 +483,14 @@ public static class UCAssetManager
         Type? assetInfo = typeof(Assets).Assembly.GetType("SDG.Unturned.AssetsWorker+AssetDefinition", false, false);
         if (assetInfo == null)
         {
-            L.LogError("AssetsWorker.AssetDefinition not found.");
+            WarfareModule.Singleton.GlobalLogger.LogError("AssetsWorker.AssetDefinition not found.");
             return;
         }
 
         MethodInfo? loadFileMethod = typeof(Assets).GetMethod("LoadFile", BindingFlags.NonPublic | BindingFlags.Static);
         if (loadFileMethod == null)
         {
-            L.LogError("Assets.LoadFile not found.");
+            WarfareModule.Singleton.GlobalLogger.LogError("Assets.LoadFile not found.");
             return;
         }
 
@@ -512,7 +503,7 @@ public static class UCAssetManager
         FieldInfo? originField = assetInfo.GetField("origin", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         if (pathField == null || hashField == null || assetDataField == null || translationDataField == null || fallbackTranslationDataField == null || assetErrorField == null || originField == null)
         {
-            L.LogError("Missing field in AssetsWorker.AssetDefinition.");
+            WarfareModule.Singleton.GlobalLogger.LogError("Missing field in AssetsWorker.AssetDefinition.");
             return;
         }
 

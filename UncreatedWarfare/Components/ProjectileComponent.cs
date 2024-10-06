@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Reflection;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Components;
 
@@ -37,7 +36,7 @@ internal class ProjectileComponent : MonoBehaviour
 
         EventDispatcher.InvokeOnProjectileExploded(this, other);
 
-        L.LogDebug("Collided with " + other.gameObject.name + " at " + gameObject.transform.position.ToString("F1") + " after " + (Time.realtimeSinceStartup - LaunchTime) + " seconds. (Predicted: " + (PredictedImpactTime - LaunchTime) + " seconds)");
+        //L.LogDebug("Collided with " + other.gameObject.name + " at " + gameObject.transform.position.ToString("F1") + " after " + (Time.realtimeSinceStartup - LaunchTime) + " seconds. (Predicted: " + (PredictedImpactTime - LaunchTime) + " seconds)");
     }
 
     internal float PredictedImpactTime;
@@ -59,7 +58,7 @@ internal class ProjectileComponent : MonoBehaviour
                 ExplodeMethod.Invoke(rocket, [ other ]);
 #if DEBUG
                 string gun = Assets.find(GunId)?.FriendlyName ?? GunId.ToString("N");
-                L.LogWarning("Ghost rocket prevented: " + gun);
+                //L.LogWarning("Ghost rocket prevented: " + gun);
                 //foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 //    player.SteamPlayer.SendString("Ghost Rocket Prevented for " + gun + "!", Color.green);
 #endif

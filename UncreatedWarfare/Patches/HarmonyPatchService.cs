@@ -84,11 +84,11 @@ public class HarmonyPatchService
                     patch.Patch(_loggerFactory.CreateLogger(type));
                     _appliedPatches.Add(patch);
 
-                    _logger.LogDebug("Applied harmony patch: {0}.", Accessor.Formatter.Format(type));
+                    _logger.LogDebug("Applied harmony patch: {0}.", type);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to patch {0}.", Accessor.Formatter.Format(type));
+                    _logger.LogError(ex, "Failed to patch {0}.", type);
                     try
                     {
                         if (patch is IDisposable disposable)
@@ -96,7 +96,7 @@ public class HarmonyPatchService
                     }
                     catch (Exception ex2)
                     {
-                        _logger.LogError(ex2, "Failed to dispose {0}.", Accessor.Formatter.Format(type));
+                        _logger.LogError(ex2, "Failed to dispose {0}.", type);
                     }
                 }
             }
@@ -122,7 +122,7 @@ public class HarmonyPatchService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to dispose {0}.", Accessor.Formatter.Format(patchType));
+                _logger.LogError(ex, "Failed to dispose {0}.", patchType);
             }
         }
         
@@ -137,7 +137,7 @@ public class HarmonyPatchService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to dispose {0}.", Accessor.Formatter.Format(patch.GetType()));
+                _logger.LogError(ex, "Failed to dispose {0}.", patch.GetType());
             }
         }
 

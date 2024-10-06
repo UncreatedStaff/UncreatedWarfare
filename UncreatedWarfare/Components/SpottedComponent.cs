@@ -1,20 +1,15 @@
 ﻿//#define ENABLE_SPOTTED_BUFF
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Traits.Buffs;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Players.Management.Legacy;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles;
 
 
 #if ENABLE_SPOTTED_BUFF
@@ -56,6 +51,7 @@ public class SpottedComponent : MonoBehaviour
 
     public static readonly HashSet<SpottedComponent> ActiveMarkers = new HashSet<SpottedComponent>();
     public static readonly List<SpottedComponent> AllMarkers = new List<SpottedComponent>(128);
+    private ILogger<SpottedComponent> _logger;
 #if ENABLE_SPOTTED_BUFF
     private static bool _statInit;
 #endif
@@ -63,6 +59,8 @@ public class SpottedComponent : MonoBehaviour
     {
         _serviceProvider = serviceProvider;
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+
+        _logger = serviceProvider.GetRequiredService<ILogger<SpottedComponent>>();
 
         _ownerTeam = ownerTeam;
         _vehicle = null;
@@ -100,7 +98,7 @@ public class SpottedComponent : MonoBehaviour
 
             default:
                 _vehicle = null;
-                L.LogWarning("Unknown spotted type: " + type + " in SpottedComponent.");
+                _logger.LogWarning("Unknown spotted type: {0} in SpottedComponent.", type);
                 Destroy(this);
                 return;
         }
@@ -111,13 +109,13 @@ public class SpottedComponent : MonoBehaviour
         }
         else
         {
-            L.LogWarning($"SpottedComponent could not initialize: Effect asset not found: {type}.");
+            _logger.LogWarning("SpottedComponent could not initialize: Effect asset not found: {0}.", type);
         }
 
         if (!AllMarkers.Contains(this))
             AllMarkers.Add(this);
 
-        L.LogDebug("Spotter initialized: " + ToString() + ".");
+        _logger.LogConditional("Spotter initialized: {0}.", this);
     }
     public void Initialize(VehicleType type, InteractableVehicle vehicle, IServiceProvider serviceProvider)
     {
@@ -235,7 +233,7 @@ public class SpottedComponent : MonoBehaviour
                 VehicleType = null;
                 _vehicle = null;
                 Type = null;
-                L.LogWarning("Unknown vehicle type: " + type + " in SpottedComponent.");
+                _logger.LogWarning("Unknown vehicle type: {0} in SpottedComponent.", type);
                 Destroy(this);
                 return;
         }
@@ -246,13 +244,13 @@ public class SpottedComponent : MonoBehaviour
         }
         else
         {
-            L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + type + ".");
+            _logger.LogWarning("SpottedComponent could not initialize: Effect asset not found: {0}.", type);
         }
 
         if (!AllMarkers.Contains(this))
             AllMarkers.Add(this);
 
-        L.LogDebug("Spotter initialized: " + ToString() + ".");
+        _logger.LogConditional("Spotter initialized: {0}.", this);
     }
 #if ENABLE_SPOTTED_BUFF
     private static void OnExitVehicle(ExitVehicle e)
@@ -274,7 +272,7 @@ public class SpottedComponent : MonoBehaviour
         StartOrUpdateBuff(e.Player, true);
     }
 #endif
-    public static void MarkTarget(Transform transform, WarfarePlayer spotter, IServiceProvider serviceProvider, bool isUav = false)
+    public void MarkTarget(Transform transform, WarfarePlayer spotter, IServiceProvider serviceProvider, bool isUav = false)
     {
         if (!transform.gameObject.TryGetComponent(out SpottedComponent spotted))
             return;
@@ -290,20 +288,20 @@ public class SpottedComponent : MonoBehaviour
             else
                 spotted.TryAnnounce(spotter, vehicle.asset.vehicleName);
 
-            L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
+            _logger.LogConditional("Spotting vehicle {0}.", vehicle.asset.vehicleName);
             spotted.Activate(spotter, isUav);
         }
         else if (transform.TryGetComponent(out Player player) && (warfarePlayer = playerService.GetOnlinePlayer(player)).Team != spotter.Team /* todo && !Ghost.IsHidden(warfarePlayer) */)
         {
             spotted.TryAnnounce(spotter, T.SpottedTargetPlayer.Translate(formatter.LanguageService.GetDefaultLanguage()));
-            L.LogDebug("Spotting player " + player.name);
+            _logger.LogConditional("Spotting player {0}", player.name);
 
             spotted.Activate(spotter, isUav);
         }
         //else if (transform.TryGetComponent(out Cache cache) && cache.Team != spotter.GetTeam())
         //{
         //    spotted.TryAnnounce(spotter, T.SpottedTargetCache.Translate(formatter.LanguageService.GetDefaultLanguage()));
-        //    L.LogDebug("Spotting cache " + cache.Name);
+        //    _logger.LogConditional("Spotting cache {0}.", cache.Name);
         //
         //    spotted.Activate(spotter, isUav);
         //}
@@ -314,7 +312,7 @@ public class SpottedComponent : MonoBehaviour
                 return;
 
             spotted.TryAnnounce(spotter, T.SpottedTargetFOB.Translate(formatter.LanguageService.GetDefaultLanguage()));
-            L.LogDebug("Spotting barricade " + drop.asset.itemName);
+            _logger.LogConditional("Spotting barricade {0}.", drop.asset.itemName);
             spotted.Activate(spotter, isUav);
         }
     }
@@ -378,7 +376,7 @@ public class SpottedComponent : MonoBehaviour
             }
         }
 #endif
-        L.LogDebug("New Spotter activated: " + this);
+        _logger.LogConditional("New Spotter activated: " + this);
     }
     internal void OnUAVLeft()
     {
@@ -432,7 +430,7 @@ public class SpottedComponent : MonoBehaviour
 
     public void Deactivate()
     {
-        L.LogDebug("New Spotter deactivated: " + this);
+        _logger.LogDebug("New Spotter deactivated: {0}.", this);
         // todo if (CurrentSpotter != null && CurrentSpotter.IsOnline)
         //     CurrentSpotter.DeactivateMarker(this);
 

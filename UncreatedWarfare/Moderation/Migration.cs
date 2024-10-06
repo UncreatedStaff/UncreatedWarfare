@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Records;
@@ -28,12 +27,12 @@ internal static class Migration
             catch (TimeZoneNotFoundException)
             {
                 RollbackWarfareTimezone = TimeZoneInfo.CreateCustomTimeZone("EST", TimeSpan.FromHours(-5d), "Eastern Standard Time", "Eastern Standard Time");
-                L.LogWarning("Couldn't find rollback timezone.");
+                WarfareModule.Singleton.GlobalLogger.LogWarning("Couldn't find rollback timezone.");
                 return;
             }
         }
 
-        L.Log($"Found rollback timezone: {RollbackWarfareTimezone.DisplayName} (Offset: {RollbackWarfareTimezone.BaseUtcOffset.TotalHours} HRS), {RollbackWarfareTimezone.Id}.");
+        WarfareModule.Singleton.GlobalLogger.LogInformation("Found rollback timezone: {0} (Offset: {1} HRS), {2}.", RollbackWarfareTimezone.DisplayName, RollbackWarfareTimezone.BaseUtcOffset.TotalHours, RollbackWarfareTimezone.Id);
     }
     private static DateTimeOffset ConvertTime(DateTime dt)
     {
@@ -88,7 +87,7 @@ internal static class Migration
             await db.AddOrUpdate(kick, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == kicks.Count - 1)
-                L.LogDebug($"Kicks: {i + 1}/{kicks.Count}.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("Kicks: {0}/{1}.", i + 1, kicks.Count);
         }
     }
     public static async Task MigrateWarnings(DatabaseInterface db, CancellationToken token = default)
@@ -135,7 +134,7 @@ internal static class Migration
             await db.AddOrUpdate(warning, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == warnings.Count - 1)
-                L.LogDebug($"Warnings: {i + 1}/{warnings.Count}.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("Warnings: {0}/{1}.", i + 1, warnings.Count);
         }
     }
     public static async Task MigrateBattlEyeKicks(DatabaseInterface db, CancellationToken token = default)
@@ -177,7 +176,7 @@ internal static class Migration
             await db.AddOrUpdate(kick, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == kicks.Count - 1)
-                L.LogDebug($"BattlEye Kicks: {i + 1}/{kicks.Count}.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("BattlEye Kicks: {0}/{1}.", i + 1, kicks.Count);
         }
     }
     public static async Task MigrateMutes(DatabaseInterface db, CancellationToken token = default)
@@ -238,7 +237,7 @@ internal static class Migration
             await db.AddOrUpdate(mute, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == mutes.Count - 1)
-                L.LogDebug($"Mutes: {i + 1}/{mutes.Count}.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("Mutes: {0}/{1}.", i + 1, mutes.Count);
         }
     }
     public static async Task MigrateBans(DatabaseInterface db, CancellationToken token = default)
@@ -313,7 +312,7 @@ internal static class Migration
             await db.AddOrUpdate(ban, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == bans.Count - 1)
-                L.LogDebug($"Bans: {i + 1}/{bans.Count}.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("Bans: {0}/{1}.", i + 1, bans.Count);
         }
     }
     public static async Task MigrateTeamkills(DatabaseInterface db, CancellationToken token = default)
@@ -369,7 +368,7 @@ internal static class Migration
             await db.AddOrUpdate(teamkill, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == teamkills.Count - 1)
-                L.LogDebug($"Teamkills: {i + 1}/{teamkills.Count}.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("Teamkills: {0}/{1}.", i + 1, teamkills.Count);
         }
     }
 }

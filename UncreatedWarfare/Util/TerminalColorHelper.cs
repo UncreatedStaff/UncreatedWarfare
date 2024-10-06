@@ -25,17 +25,20 @@ public static class TerminalColorHelper
     private const int DefaultBackground = -15987700; // black
 
 #pragma warning disable CS8500
-    internal static unsafe string WrapMessageWithColor(ConsoleColor color, ReadOnlySpan<char> message)
+    internal static unsafe string WrapMessageWithColor(ConsoleColor color, ReadOnlySpan<char> message, bool background = false)
     {
         WrapMessageWithColor8BitState state = default;
         state.Message = &message;
         state.Color = color;
+        state.Background = background;
+        state.ColorLength = GetTerminalColorSequenceLength(color, background);
 
-        return string.Create(5 + message.Length + ForegroundResetSequence.Length, state, (span, state) =>
+        return string.Create(state.ColorLength + message.Length + ForegroundResetSequence.Length, state, (span, state) =>
         {
-            WriteTerminalColorSequenceCode(span, 0, state.Color, false);
-            ForegroundResetSequence.AsSpan().CopyTo(span.Slice(span.Length - ForegroundResetSequence.Length, ForegroundResetSequence.Length));
-            state.Message->CopyTo(span[5..]);
+            WriteTerminalColorSequenceCode(span, 0, state.Color, state.Background);
+            ReadOnlySpan<char> reset = state.Background ? BackgroundResetSequence : ForegroundResetSequence;
+            reset.CopyTo(span.Slice(span.Length - reset.Length, reset.Length));
+            state.Message->CopyTo(span[state.ColorLength..]);
         });
     }
 
@@ -43,14 +46,16 @@ public static class TerminalColorHelper
     {
         public ReadOnlySpan<char>* Message;
         public ConsoleColor Color;
+        public bool Background;
+        public int ColorLength;
     }
 
-    internal static unsafe string WrapMessageWithColor(int argb, ReadOnlySpan<char> message)
+    internal static unsafe string WrapMessageWithColor(int argb, ReadOnlySpan<char> message, bool background = false)
     {
         if (unchecked((byte)(argb >> 24)) == 0) // console color
         {
             ConsoleColor color = (ConsoleColor)argb;
-            return WrapMessageWithColor(color, message);
+            return WrapMessageWithColor(color, message, background);
         }
 
         WrapMessageWithColorRGBState state = default;
@@ -58,12 +63,14 @@ public static class TerminalColorHelper
         state.R = unchecked((byte)(argb >> 16));
         state.G = unchecked((byte)(argb >> 8));
         state.B = unchecked((byte)argb);
-        state.ColorLength = 10 + (state.R > 9 ? state.R > 99 ? 3 : 2 : 1) + (state.G > 9 ? state.G > 99 ? 3 : 2 : 1) + (state.B > 9 ? state.B > 99 ? 3 : 2 : 1);
+        state.ColorLength = GetTerminalColorSequenceLength(argb, background);
+        state.Background = background;
 
         return string.Create(state.ColorLength + message.Length + ForegroundResetSequence.Length, state, (span, state) =>
         {
-            WriteTerminalColorSequenceCode(span, 0, state.R, state.G, state.B, false);
-            ForegroundResetSequence.AsSpan().CopyTo(span.Slice(span.Length - ForegroundResetSequence.Length, ForegroundResetSequence.Length));
+            WriteTerminalColorSequenceCode(span, 0, state.R, state.G, state.B, state.Background);
+            ReadOnlySpan<char> reset = state.Background ? BackgroundResetSequence : ForegroundResetSequence;
+            reset.CopyTo(span.Slice(span.Length - reset.Length, reset.Length));
             state.Message->CopyTo(span[state.ColorLength..]);
         });
     }
@@ -75,6 +82,7 @@ public static class TerminalColorHelper
         public byte G;
         public byte B;
         public int ColorLength;
+        public bool Background;
     }
 #pragma warning restore CS8500
 
@@ -495,9 +503,9 @@ public static class TerminalColorHelper
 
     internal static void WriteTerminalColorSequenceCode(Span<char> data, int index, ConsoleColor color, bool background)
     {
-        ReadOnlySpan<int> colorCodes = [ 30, 34, 32, 36, 31, 35, 36, 37, 90, 94, 92, 96, 91, 95, 93, 97 ];
+        ReadOnlySpan<int> colorCodes = [ 30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97 ];
 
-        int num = color is < 0 or > ConsoleColor.White ? 36 : colorCodes[(int)color];
+        int num = color is < 0 or > ConsoleColor.White ? 39 : colorCodes[(int)color];
 
         if (background)
             num += 10;
@@ -546,7 +554,7 @@ public static class TerminalColorHelper
 
         return string.Create(l, state, (span, state) =>
         {
-            WriteTerminalColorSequenceCode(span, 0, state.R, state.B, state.G, state.Background);
+            WriteTerminalColorSequenceCode(span, 0, state.R, state.G, state.B, state.Background);
         });
     }
 

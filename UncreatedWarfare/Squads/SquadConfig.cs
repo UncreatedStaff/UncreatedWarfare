@@ -3,19 +3,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Squads;
-public sealed class SquadsConfig : Config<SquadConfigData>
-{
-    public SquadsConfig() : base(Warfare.Data.Paths.SquadStorage, "config.json")
-    {
-    }
-    protected override void OnReload()
-    {
-        // SquadManager.MenuUI.LoadFromConfig(Data.SquadMenuUI);
-        // SquadManager.ListUI.LoadFromConfig(Data.SquadListUI);
-        // SquadManager.RallyUI.LoadFromConfig(Data.SquadRallyUI);
-    }
-}
-
 public class SquadConfigData : JSONConfigData
 {
     public ushort RallyTimer { get; set; }

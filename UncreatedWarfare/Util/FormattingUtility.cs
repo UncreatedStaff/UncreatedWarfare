@@ -28,6 +28,22 @@ public static class FormattingUtility
     }
 
     /// <summary>
+    /// Truncates a string if it's over a certain <paramref name="length"/>.
+    /// </summary>
+    [return: NotNullIfNotNull(nameof(str))]
+    public static string? TruncateWithEllipses(this string? str, int length)
+    {
+        if (str is null || str.Length <= length)
+            return str;
+
+        return string.Create(length + 3, str, (span, state) =>
+        {
+            state.AsSpan(0, span.Length - 3).CopyTo(span);
+            span.Slice(span.Length - 3, 3).Fill('.');
+        });
+    }
+
+    /// <summary>
     /// Compare two strings without worrying non-alphanumeric characters.
     /// </summary>
     /// <returns>The number of matching characters in <paramref name="searching"/> found in <paramref name="actual"/>.</returns>

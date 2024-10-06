@@ -1,7 +1,6 @@
 ﻿using System;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Players.UI;
 public enum ToastMessageStyle
@@ -157,7 +156,7 @@ public sealed class ToastMessageInfo
         }
         else
         {
-            L.LogError($"Unknown asset for toast message: {Style}, {Asset?.ToString() ?? "Not Defined"}.");
+            WarfareModule.Singleton.GlobalLogger.LogError($"Unknown asset for toast message: {Style}, {Asset?.ToString() ?? "Not Defined"}.");
         }
 
         Level.onLevelLoaded -= OnLevelLoaded;

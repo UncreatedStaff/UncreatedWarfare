@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Lobby;
@@ -19,18 +18,18 @@ public class GroupCommand : IExecutableCommand
     private readonly GroupCommandTranslations _translations;
     private readonly ITeamManager<Team> _teamManager;
     private readonly IFactionDataStore _factionDataStore;
-    private readonly LobbyZoneManager _lobbyManager;
+    private readonly ILogger<GroupCommand> _logger;
 
     private static readonly PermissionLeaf PermissionJoin = new PermissionLeaf("commands.group.join", unturned: false, warfare: true);
 
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public GroupCommand(TranslationInjection<GroupCommandTranslations> translations, ITeamManager<Team> teamManager, IFactionDataStore factionDataStore, LobbyZoneManager lobbyManager)
+    public GroupCommand(TranslationInjection<GroupCommandTranslations> translations, ITeamManager<Team> teamManager, IFactionDataStore factionDataStore, ILogger<GroupCommand> logger)
     {
         _teamManager = teamManager;
         _factionDataStore = factionDataStore;
-        _lobbyManager = lobbyManager;
+        _logger = logger;
         _translations = translations.Value;
     }
 
@@ -107,7 +106,7 @@ public class GroupCommand : IExecutableCommand
             if (newTeam != null && newTeam.IsValid)
             {
                 Context.Reply(_translations.JoinedGroup, newTeam.GroupId.m_SteamID, newTeam.Faction.Name, newTeam.Faction.Color);
-                L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID}) joined group \"{newTeam.Faction.Name}\": {newTeam} (ID {groupInfo.groupID}).", ConsoleColor.Cyan);
+                _logger.LogInformation("{0} ({1}) joined group \"{2}\": {3} (ID {4}).", Context.Player.Names.PlayerName, Context.CallerId, newTeam.Faction, newTeam, groupInfo.groupID);
                 Context.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + newTeam.Faction.Name.ToUpper());
             }
             else

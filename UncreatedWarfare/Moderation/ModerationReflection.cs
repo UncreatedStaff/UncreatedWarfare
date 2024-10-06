@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Moderation;
@@ -58,7 +57,7 @@ public static class ModerationReflection
             {
                 if (Types.Contains(attr.Type))
                 {
-                    L.LogWarning($"Multiple moderation types defined with {attr.Type}.");
+                    WarfareModule.Singleton.GlobalLogger.LogWarning($"Multiple moderation types defined with {attr.Type}.");
                     continue;
                 }
 

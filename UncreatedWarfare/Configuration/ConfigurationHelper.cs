@@ -76,7 +76,7 @@ public static class ConfigurationHelper
     /// Bind config data to a <see cref="IConfiguration"/> instance.
     /// </summary>
     [Pure]
-    public static TConfigData ParseConfigData<TConfigData>(this IConfiguration config) where TConfigData : JSONConfigData, new()
+    public static TConfigData ParseConfigData<TConfigData>(this IConfiguration config, ILogger logger) where TConfigData : JSONConfigData, new()
     {
         TConfigData data = new TConfigData();
         data.SetDefaults();
@@ -87,8 +87,7 @@ public static class ConfigurationHelper
         }
         catch (Exception ex)
         {
-            L.LogError(ex);
-            L.LogError($"Errored while parsing {Accessor.Formatter.Format(typeof(TConfigData))} file.");
+            logger.LogError(ex, "Error parsing {0}.", typeof(TConfigData));
         }
 
         return data;
