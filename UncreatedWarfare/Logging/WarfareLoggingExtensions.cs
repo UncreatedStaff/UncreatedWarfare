@@ -1,13 +1,13 @@
 ﻿//using System;
 //using Uncreated.Warfare.Logging.Formatting;
 
-//// ReSharper disable once CheckNamespace
-//namespace Uncreated.Warfare;
-
-//// this class is mostly copied from https://github.com/dotnet/extensions/blob/v3.1.0/src/Logging/Logging.Abstractions/src/LoggerExtensions.cs
-//public static class WarfareLoggingExtensions
-//{
-//    //------------------------------------------DEBUG------------------------------------------//
+// ReSharper disable once CheckNamespace
+namespace Uncreated.Warfare;
+#if false
+// this class is mostly copied from https://github.com/dotnet/extensions/blob/v3.1.0/src/Logging/Logging.Abstractions/src/LoggerExtensions.cs
+public static class WarfareLoggingExtensions
+{
+    //------------------------------------------DEBUG------------------------------------------//
 
 //    /// <summary>
 //    /// Formats and writes a debug log message.
@@ -416,9 +416,10 @@
 //        logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, args ?? Array.Empty<object?>()), exception, MessageFormatter);
 //    }
 
-//    private static readonly Func<WarfareFormattedLogValues, Exception, string> MessageFormatter = MessageFormatterMtd;
-//    private static string MessageFormatterMtd(WarfareFormattedLogValues state, Exception error)
-//    {
-//        return state.ToString();
-//    }
-//}
+    private static readonly Func<WarfareFormattedLogValues, Exception, string> MessageFormatter = MessageFormatterMtd;
+    private static string MessageFormatterMtd(WarfareFormattedLogValues state, Exception error)
+    {
+        return state.ToString();
+    }
+}
+#endif

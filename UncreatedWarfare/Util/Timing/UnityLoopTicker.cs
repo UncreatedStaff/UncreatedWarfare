@@ -1,5 +1,6 @@
 ﻿using SDG.Framework.Utilities;
 using System;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Util.Timing;
@@ -9,9 +10,12 @@ namespace Uncreated.Warfare.Util.Timing;
 /// </summary>
 public class UnityLoopTicker<TState> : ILoopTicker<TState>
 {
+    private readonly ILogger<UnityLoopTickerFactory> _logger;
     private readonly DateTime _createdAt;
     private DateTime _lastInvokedAt;
     private Coroutine? _coroutine;
+    private MonoBehaviour? _component;
+    private bool _isDisposed;
 
     /// <inheritdoc />
     public TimeSpan InitialDelay { get; }
@@ -31,8 +35,8 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
     /// <param name="periodicDelay">How often to invoke the timer.</param>
     /// <param name="invokeImmediately">If the timer should be invoked now or wait a period.</param>
     /// <param name="onTick">Callback since the timer being invoked now would mean you couldn't subscribe to the event first.</param>
-    public UnityLoopTicker(TimeSpan periodicDelay, bool invokeImmediately, TState? state, TickerCallback<ILoopTicker<TState>>? onTick = null)
-        : this(invokeImmediately ? TimeSpan.Zero : periodicDelay, periodicDelay <= TimeSpan.Zero ? Timeout.InfiniteTimeSpan : periodicDelay, state, onTick) { }
+    public UnityLoopTicker(MonoBehaviour component, ILogger<UnityLoopTickerFactory> logger, TimeSpan periodicDelay, bool invokeImmediately, TState? state, TickerCallback<ILoopTicker<TState>>? onTick = null)
+        : this(component, logger, invokeImmediately ? TimeSpan.Zero : periodicDelay, periodicDelay <= TimeSpan.Zero ? Timeout.InfiniteTimeSpan : periodicDelay, state, onTick) { }
 
     /// <summary>
     /// Create a new timer.
@@ -40,8 +44,9 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
     /// <param name="initialDelay">How long to wait to initially invoke the timer.</param>
     /// <param name="periodicDelay">How often to invoke the timer.</param>
     /// <param name="onTick">Callback since the timer being invoked now would mean you couldn't subscribe to the event first.</param>
-    public UnityLoopTicker(TimeSpan initialDelay, TimeSpan periodicDelay, TState? state, TickerCallback<ILoopTicker<TState>>? onTick = null)
+    public UnityLoopTicker(MonoBehaviour component, ILogger<UnityLoopTickerFactory> logger, TimeSpan initialDelay, TimeSpan periodicDelay, TState? state, TickerCallback<ILoopTicker<TState>>? onTick = null)
     {
+        _logger = logger;
         if (periodicDelay <= TimeSpan.Zero)
             periodicDelay = Timeout.InfiniteTimeSpan;
 
@@ -68,11 +73,13 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
                     return;
             }
 
-            _coroutine = TimeUtility.InvokeAfterDelay(InvokeTimer, (float)(initialDelay == TimeSpan.Zero ? periodicDelay : initialDelay).TotalSeconds);
+            _component = component;
+            _coroutine = _component.StartCoroutine(Coroutine(initialDelay));
         }
         else
         {
             DateTime st = DateTime.UtcNow;
+            _component = component;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
@@ -87,8 +94,29 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
                         return;
                 }
 
-                _coroutine = TimeUtility.InvokeAfterDelay(InvokeTimer, (float)(invokedAlready ? PeriodicDelay : newInitialDelay).TotalSeconds);
+                _coroutine = _component.StartCoroutine(Coroutine(invokedAlready ? TimeSpan.Zero : newInitialDelay));
             });
+        }
+    }
+
+    private IEnumerator Coroutine(TimeSpan initialDelay)
+    {
+        if (_isDisposed)
+            yield break;
+
+        if (initialDelay > TimeSpan.Zero)
+        {
+            yield return new WaitForSecondsRealtime((float)initialDelay.TotalSeconds);
+            InvokeTimer();
+        }
+
+        if (PeriodicDelay <= TimeSpan.Zero)
+            yield break;
+
+        while (!_isDisposed)
+        {
+            yield return new WaitForSecondsRealtime((float)PeriodicDelay.TotalSeconds);
+            InvokeTimer();
         }
     }
 
@@ -105,20 +133,27 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
 
     private void Dispose(bool disposing)
     {
-        Coroutine? coroutine = Interlocked.Exchange(ref _coroutine, null);
-        if (coroutine == null)
-            return;
+        _isDisposed = true;
 
         if (GameThread.IsCurrent)
         {
-            TimeUtility.StaticStopCoroutine(coroutine);
+            if (_coroutine != null && _component != null)
+                _component.StopCoroutine(_coroutine);
+
+            _coroutine = null;
+            _component = null;
         }
         else
         {
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
-                TimeUtility.StaticStopCoroutine(coroutine);
+
+                if (_coroutine != null && _component != null)
+                    _component.StopCoroutine(_coroutine);
+
+                _coroutine = null;
+                _component = null;
             });
         }
 
@@ -135,14 +170,11 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
         }
         catch (Exception ex)
         {
-            L.LogError("Error invoking ticker.");
-            L.LogError(ex);
+            _logger.LogError(ex, "Error invoking loop ticker.");
         }
         finally
         {
             _lastInvokedAt = utcNow;
-            if (PeriodicDelay > TimeSpan.Zero)
-                _coroutine = TimeUtility.InvokeAfterDelay(InvokeTimer, (float)PeriodicDelay.TotalSeconds);
         }
     }
 
@@ -162,27 +194,36 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
 /// </summary>
 public class UnityLoopTickerFactory : ILoopTickerFactory
 {
+    private readonly WarfareLifetimeComponent _component;
+    private readonly ILogger<UnityLoopTickerFactory> _logger;
+
+    public UnityLoopTickerFactory(WarfareLifetimeComponent component, ILogger<UnityLoopTickerFactory> logger)
+    {
+        _component = component;
+        _logger = logger;
+    }
+
     /// <inheritdoc />
     public ILoopTicker CreateTicker(TimeSpan periodicDelay, bool invokeImmediately, bool queueOnGameThread, TickerCallback<ILoopTicker>? onTick = null)
     {
-        return new UnityLoopTicker<object>(periodicDelay, invokeImmediately, null, onTick);
+        return new UnityLoopTicker<object>(_component, _logger, periodicDelay, invokeImmediately, null, onTick);
     }
 
     /// <inheritdoc />
     public ILoopTicker CreateTicker(TimeSpan initialDelay, TimeSpan periodicDelay, bool queueOnGameThread, TickerCallback<ILoopTicker>? onTick = null)
     {
-        return new UnityLoopTicker<object>(periodicDelay, periodicDelay, null, onTick);
+        return new UnityLoopTicker<object>(_component, _logger, periodicDelay, periodicDelay, null, onTick);
     }
 
     /// <inheritdoc />
     public ILoopTicker<TState> CreateTicker<TState>(TimeSpan periodicDelay, bool invokeImmediately, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick = null)
     {
-        return new UnityLoopTicker<TState>(periodicDelay, invokeImmediately, state, onTick);
+        return new UnityLoopTicker<TState>(_component, _logger, periodicDelay, invokeImmediately, state, onTick);
     }
 
     /// <inheritdoc />
     public ILoopTicker<TState> CreateTicker<TState>(TimeSpan initialDelay, TimeSpan periodicDelay, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick = null)
     {
-        return new UnityLoopTicker<TState>(periodicDelay, periodicDelay, state, onTick);
+        return new UnityLoopTicker<TState>(_component, _logger, periodicDelay, periodicDelay, state, onTick);
     }
 }

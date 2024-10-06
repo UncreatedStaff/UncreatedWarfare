@@ -629,6 +629,7 @@ public sealed class WarfareModule : IModuleNexus
     {
         await UniTask.SwitchToMainThread(token);
 
+
         // prevent players from joining after shutdown start
         IPlayerService? playerService = ServiceProvider.ResolveOptional<IPlayerService>();
         playerService?.TakePlayerConnectionLock(token);

@@ -27,24 +27,20 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
     }
 
     /// <inheritdoc />
-    public override async UniTask BeginPhaseAsync(CancellationToken token = default)
+    public override UniTask BeginPhaseAsync(CancellationToken token = default)
     {
-        await UniTask.SwitchToMainThread(token);
-
         StartBroadcastingStagingUI();
 
-        await base.BeginPhaseAsync(token);
+        return base.BeginPhaseAsync(token);
     }
 
     /// <inheritdoc />
-    public override async UniTask EndPhaseAsync(CancellationToken token = default)
+    public override UniTask EndPhaseAsync(CancellationToken token = default)
     {
-        await UniTask.SwitchToMainThread(token);
-
         _stagingUi.ClearFromAllPlayers();
         _ticker?.Dispose();
 
-        await base.EndPhaseAsync(token);
+        return base.EndPhaseAsync(token);
     }
 
     /// <summary>
@@ -78,16 +74,20 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
             return;
 
         // tick down the UI timer
-        _ticker = _tickerFactory.CreateTicker(TimeSpan.FromSeconds(1d), invokeImmediately: false, queueOnGameThread: true, (_, timeSinceStart, _) =>
+        _ticker = _tickerFactory.CreateTicker(TimeSpan.FromSeconds(1d), invokeImmediately: false, state: this, queueOnGameThread: true, static (ticker, timeSinceStart, _) =>
         {
-            if (timeSinceStart >= Duration)
+            PreparationPhase phase = ticker.State!;
+            if (timeSinceStart >= phase.Duration)
             {
-                _stagingUi.UpdateForAll(_translationService.SetOf.AllPlayers(), TimeSpan.Zero);
-                UniTask.Create(() => _session.MoveToNextPhase(CancellationToken.None));
+                phase._stagingUi.UpdateForAll(phase._translationService.SetOf.AllPlayers(), TimeSpan.Zero);
+                phase._ticker?.Dispose();
+                phase._ticker = null;
+                PreparationPhase phase2 = phase;
+                UniTask.Create(() => phase2._session.MoveToNextPhase(CancellationToken.None));
             }
             else
             {
-                _stagingUi.UpdateForAll(_translationService.SetOf.AllPlayers(), Duration - timeSinceStart);
+                phase._stagingUi.UpdateForAll(phase._translationService.SetOf.AllPlayers(), phase.Duration - timeSinceStart);
             }
         });
     }
