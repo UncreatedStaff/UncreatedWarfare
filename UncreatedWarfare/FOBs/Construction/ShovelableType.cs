@@ -1,19 +1,21 @@
 ﻿using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
-namespace Uncreated.Warfare.Fobs;
+namespace Uncreated.Warfare.FOBs.Construction;
 
 /// <summary>
 /// Represents various types of buildables.
 /// </summary>
 [Translatable("Buildable Type", Description = "Buildable types for FOB buildings.")]
-public enum BuildableType
+public enum ShovelableType
 {
+    // todo: rename
+
     /// <summary>
-    /// A bunker that players can deploy to.
+    /// A FOB bunker that players can deploy to.
     /// </summary>
     [Translatable(Languages.ChineseSimplified, "地堡")]
-    Bunker,
+    Fob,
 
     /// <summary>
     /// A crate where players can refill their ammo and use Ammo Supplies.
@@ -26,7 +28,7 @@ public enum BuildableType
     /// </summary>
     [Translatable(Languages.ChineseSimplified, "维修站")]
     RepairStation,
-    
+
     /// <summary>
     /// A buildable that acts purely as fortification and has no other function.
     /// </summary>
@@ -41,9 +43,10 @@ public enum BuildableType
     [Translatable("Emplacement", Description = "Vehicle buildables.")]
     Emplacement,
 
-    /// <summary>
-    /// A radio that acts as the 'center' of the FOB.
-    /// </summary>
-    [Translatable(Languages.ChineseSimplified, "电台")]
-    Radio
+    // todo: remove
+    ///// <summary>
+    ///// A radio that acts as the 'center' of the FOB.
+    ///// </summary>
+    //[Translatable(Languages.ChineseSimplified, "电台")]
+    //Radio
 }

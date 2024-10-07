@@ -1222,13 +1222,6 @@ public class RepairStationComponent : ShovelableComponent
 }
 #endif
 
-public interface IShovelable
-{
-    TickResponsibilityCollection Builders { get; }
-    bool Shovel(WarfarePlayer shoveler, Vector3 point);
-    void QuickShovel(WarfarePlayer shoveler);
-}
-
 #if false
 public interface IFOBItem
 {

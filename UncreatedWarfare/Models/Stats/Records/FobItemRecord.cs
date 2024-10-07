@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
-using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Stats.Base;
 
@@ -21,8 +21,8 @@ public class FobItemRecord : InstigatedPlayerRecord
 
     public FobRecord Fob { get; set; }
 
-    [ExcludedEnum(BuildableType.Radio)]
-    public BuildableType Type { get; set; }
+    //[ExcludedEnum(ShovelableType.Radio)] todo: what's this?
+    public ShovelableType Type { get; set; }
 
     [DefaultValue(0)]
     public int PlayerKills { get; set; }

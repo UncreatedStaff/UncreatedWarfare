@@ -43,7 +43,6 @@ internal class DebugAddTack : IExecutableCommand
             throw Context.SendHelp();
         }
 
-
         if (!Context.TryGetBarricadeTarget(out BarricadeDrop? drop))
         {
             throw Context.ReplyString("You must be looking at a registered Strategy Map barricade.");

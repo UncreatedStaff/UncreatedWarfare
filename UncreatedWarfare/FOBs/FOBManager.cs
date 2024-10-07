@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -11,17 +10,22 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Items;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Projectiles;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.StrategyMaps;
-using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Util.List;
+using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Fobs;
 
-public class FobManager : ILayoutHostedService, IEventListener<BarricadePlaced>, IEventListener<BarricadeDestroyed>, IEventListener<ItemDropped>
+public class FobManager : 
+    ILayoutHostedService,
+    IEventListener<BarricadePlaced>,
+    IEventListener<BarricadeDestroyed>,
+    IEventListener<ItemDropped>,
+    IEventListener<PlayerPunched>
 {
     private readonly FobConfiguration _configuration;
     private readonly AssetConfiguration _assetConfiguration;
@@ -117,6 +121,7 @@ public class FobManager : ILayoutHostedService, IEventListener<BarricadePlaced>,
             supplyCrateInfo.PlacementEffect.GetAssetOrFail(),
             e.Player.Position,
             e.Player.Yaw,
+            new UnityLoopTickerFactory(serviceProvider.GetRequiredService<WarfareLifetimeComponent>(), _logger),
             (buildable) =>
             {
                 SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable);
@@ -125,5 +130,25 @@ public class FobManager : ILayoutHostedService, IEventListener<BarricadePlaced>,
             }
         );
 
+    }
+
+    public void HandleEvent(PlayerPunched e, IServiceProvider serviceProvider)
+    {
+        IAssetLink<ItemAsset>? meleeWeaponAsset = _assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool");
+
+        if (meleeWeaponAsset.GetAssetOrFail().GUID != e.Equipment.asset.GUID)
+            return;
+
+        RaycastInfo info = DamageTool.raycast(new Ray(e.Look.aim.position, e.Look.aim.forward), 2, RayMasks.BARRICADE, e.Player.UnturnedPlayer);
+        if (info.transform == null)
+            return;
+
+        if (!info.transform.TryGetComponent(out BuildableContainer container))
+            return;
+
+        if (!container.TryGetFromContainer(out IShovelable? shovelable))
+            return;
+
+        shovelable.Shovel(e.Player, info.point);
     }
 }

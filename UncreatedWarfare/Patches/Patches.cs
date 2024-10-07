@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using Module = SDG.Framework.Modules.Module;

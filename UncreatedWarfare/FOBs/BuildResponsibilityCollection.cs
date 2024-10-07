@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Players;
 
@@ -249,7 +250,7 @@ public class TickResponsibilityCollection : IEnumerable<TickResponsibility>
                     if (res.Steam64 != res2.Steam64)
                         continue;
 
-                    res2 = new TickResponsibility(res.Steam64, 0ul, res2.Ticks + res.Ticks, Mathf.Max(res.LastUpdated, res2.LastUpdated));
+                    res2 = new TickResponsibility(res.Steam64, 0, res2.Ticks + res.Ticks, Mathf.Max(res.LastUpdated, res2.LastUpdated));
                     found = true;
                     break;
                 }

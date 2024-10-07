@@ -1,11 +1,11 @@
 ﻿using Uncreated.Warfare.Configuration;
 
-namespace Uncreated.Warfare.Fobs;
+namespace Uncreated.Warfare.FOBs.Construction;
 
 /// <summary>
-/// Stores extra data required for <see cref="BuildableType.Emplacement"/> buildables.
+/// Stores extra data required for <see cref="ShovelableType.Emplacement"/> buildables.
 /// </summary>
-public class EmplacementData
+public class EmplacementInfo
 {
     /// <summary>
     /// The vehicle to be spawned on build.

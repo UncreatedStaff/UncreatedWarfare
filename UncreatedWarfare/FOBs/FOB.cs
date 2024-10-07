@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts.Teams;
@@ -82,10 +83,11 @@ public class BasePlayableFob : IResourceFob, IDisposable
         _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType().Name + " | " + Name);
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
+        WarfareLifetimeComponent warfareLifetime = serviceProvider.GetRequiredService<WarfareLifetimeComponent>();
 
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
 
-        _loopTicker = new UnityLoopTickerFactory().CreateTicker(TimeSpan.FromSeconds(0.5f), true, true);
+        _loopTicker = new UnityLoopTickerFactory(warfareLifetime, _logger).CreateTicker(TimeSpan.FromSeconds(0.5f), true, true);
 
         NearbyFriendlies = new ProximityCollector<WarfarePlayer>(
             new ProximityCollector<WarfarePlayer>.ProximityCollectorOptions

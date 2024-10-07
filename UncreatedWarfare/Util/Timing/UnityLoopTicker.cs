@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Util.Timing;
 /// </summary>
 public class UnityLoopTicker<TState> : ILoopTicker<TState>
 {
-    private readonly ILogger<UnityLoopTickerFactory> _logger;
+    private readonly ILogger _logger;
     private readonly DateTime _createdAt;
     private DateTime _lastInvokedAt;
     private Coroutine? _coroutine;
@@ -35,7 +35,7 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
     /// <param name="periodicDelay">How often to invoke the timer.</param>
     /// <param name="invokeImmediately">If the timer should be invoked now or wait a period.</param>
     /// <param name="onTick">Callback since the timer being invoked now would mean you couldn't subscribe to the event first.</param>
-    public UnityLoopTicker(MonoBehaviour component, ILogger<UnityLoopTickerFactory> logger, TimeSpan periodicDelay, bool invokeImmediately, TState? state, TickerCallback<ILoopTicker<TState>>? onTick = null)
+    public UnityLoopTicker(MonoBehaviour component, ILogger logger, TimeSpan periodicDelay, bool invokeImmediately, TState? state, TickerCallback<ILoopTicker<TState>>? onTick = null)
         : this(component, logger, invokeImmediately ? TimeSpan.Zero : periodicDelay, periodicDelay <= TimeSpan.Zero ? Timeout.InfiniteTimeSpan : periodicDelay, state, onTick) { }
 
     /// <summary>
@@ -44,7 +44,7 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
     /// <param name="initialDelay">How long to wait to initially invoke the timer.</param>
     /// <param name="periodicDelay">How often to invoke the timer.</param>
     /// <param name="onTick">Callback since the timer being invoked now would mean you couldn't subscribe to the event first.</param>
-    public UnityLoopTicker(MonoBehaviour component, ILogger<UnityLoopTickerFactory> logger, TimeSpan initialDelay, TimeSpan periodicDelay, TState? state, TickerCallback<ILoopTicker<TState>>? onTick = null)
+    public UnityLoopTicker(MonoBehaviour component, ILogger logger, TimeSpan initialDelay, TimeSpan periodicDelay, TState? state, TickerCallback<ILoopTicker<TState>>? onTick = null)
     {
         _logger = logger;
         if (periodicDelay <= TimeSpan.Zero)
@@ -195,9 +195,9 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
 public class UnityLoopTickerFactory : ILoopTickerFactory
 {
     private readonly WarfareLifetimeComponent _component;
-    private readonly ILogger<UnityLoopTickerFactory> _logger;
+    private readonly ILogger _logger;
 
-    public UnityLoopTickerFactory(WarfareLifetimeComponent component, ILogger<UnityLoopTickerFactory> logger)
+    public UnityLoopTickerFactory(WarfareLifetimeComponent component, ILogger logger)
     {
         _component = component;
         _logger = logger;
