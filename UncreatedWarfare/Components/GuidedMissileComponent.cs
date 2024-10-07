@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Components;
 
@@ -64,13 +63,13 @@ internal class GuidedMissileComponent : MonoBehaviour
                         return;
                     }
                 }
-                L.LogDebug("GUIDED MISSILE ERROR: player firing not found");
+                //L.LogDebug("GUIDED MISSILE ERROR: player firing not found");
             }
-            else
-                L.LogDebug("GUIDED MISSILE ERROR: player was not in a vehicle");
+            //else
+                //L.LogDebug("GUIDED MISSILE ERROR: player was not in a vehicle");
         }
-        else
-            L.LogDebug("GUIDED MISSILE ERROR: could not find rigidbody");
+        //else
+            //L.LogDebug("GUIDED MISSILE ERROR: could not find rigidbody");
     }
     [UsedImplicitly]
     private void FixedUpdate()

@@ -27,6 +27,7 @@ public class KitRequests
     private readonly LanguageService _languageService;
     private readonly IServiceProvider _serviceProvider;
     private readonly IPlayerService _playerService;
+    private readonly ILogger<KitRequests> _logger;
     private readonly CooldownManager _cooldownManager;
     public KitManager Manager { get; }
     public KitRequests(KitManager manager, IServiceProvider serviceProvider)
@@ -37,6 +38,7 @@ public class KitRequests
         _languageService = serviceProvider.GetRequiredService<LanguageService>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
+        _logger = serviceProvider.GetRequiredService<ILogger<KitRequests>>();
         _serviceProvider = serviceProvider;
         Manager = manager;
     }
@@ -319,7 +321,7 @@ public class KitRequests
             return;
         }
 
-        Manager.Distribution.DistributeKitItems(player, kit, true, tip, false);
+        Manager.Distribution.DistributeKitItems(player, kit, _logger, true, tip, false);
 
         // bind hotkeys
         ItemTrackingPlayerComponent itemTracking = player.Component<ItemTrackingPlayerComponent>();
@@ -495,7 +497,7 @@ public class KitRequests
             }
         }
 
-        Manager.Distribution.DistributeKitItems(player, kit, true, ignoreAmmoBags);
+        Manager.Distribution.DistributeKitItems(player, kit, _logger, true, ignoreAmmoBags);
         bool playEffectEquip = true;
         bool playEffectDrop = true;
         foreach (KeyValuePair<ItemJar, Page> jar in nonKitItems)

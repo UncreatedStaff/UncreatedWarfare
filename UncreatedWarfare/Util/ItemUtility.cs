@@ -487,9 +487,9 @@ public static class ItemUtility
             {
                 Items it = ia[page];
                 byte ct = it.getItemCount();
+                // check to make sure only one item in gun slot
                 if (ct > 1 && page < PlayerInventory.SLOTS)
                 {
-                    L.LogWarning("More than one item detected in gun slot: " + (Page)page + ".");
                     ct = 1;
                 }
                 for (int index = ct - 1; index >= 0; --index)
@@ -712,7 +712,7 @@ public static class ItemUtility
     /// <summary>
     /// Replace a player's inventory with the given kit item abstractions.
     /// </summary>
-    public static void GiveItems(WarfarePlayer player, IKitItem[] items, bool clear)
+    public static void GiveItems(WarfarePlayer player, IKitItem[] items, ILogger logger, bool clear)
     {
         GameThread.AssertCurrent();
         if (!player.IsOnline)
@@ -806,15 +806,15 @@ public static class ItemUtility
                     {
                         if (page.getItemCount() > 0)
                         {
-                            L.LogWarning("Duplicate " + jar.Page.ToString().ToLowerInvariant() + " defined: " + item + ".");
-                            L.Log("[GIVEITEMS] Removing " + (page.items[0].GetAsset().itemName) + " in place of duplicate.");
+                            logger.LogWarning("[GIVE ITEMS] Duplicate {0} defined: {1}.", jar.Page.ToString().ToLowerInvariant(), item);
+                            logger.LogInformation("[GIVE ITEMS] Removing {0} in place of duplicate.", page.items[0].GetAsset().itemName);
                             (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((page.items[0].item, jar));
                             page.removeItem(0);
                         }
                     }
                     else if (IsOutOfBounds(page, jar.X, jar.Y, asset.size_x, asset.size_y, jar.Rotation))
                     {
-                        L.LogWarning("Out of bounds item in " + jar.Page + " defined: " + item + ".");
+                        logger.LogWarning("Out of bounds item in {0} defined: {1}.", jar.Page, item);
                         (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((itm, jar));
                         continue;
                     }
@@ -826,8 +826,8 @@ public static class ItemUtility
                         if (jar2 == null || !IsOverlapping(jar.X, jar.Y, asset.size_x, asset.size_y, jar2.x, jar2.y, jar2.size_x, jar2.size_y, jar.Rotation, jar2.rot))
                             continue;
 
-                        L.LogWarning("Overlapping item in " + jar.Page + " defined: " + item + ".");
-                        L.Log("[GIVEITEMS] Removing " + (jar2.GetAsset().itemName) + " (" + jar2.x + ", " + jar2.y + " @ " + jar2.rot + "), in place of duplicate.");
+                        logger.LogWarning("[GIVE ITEMS] Overlapping item in {0} defined: {1}.", jar.Page, item);
+                        logger.LogInformation("[GIVE ITEMS] Removing {0} ({1}, {2} @ {3}), in place of duplicate.", jar2.GetAsset().itemName, jar2.x, jar2.y, jar2.rot);
                         page.removeItem((byte)j--);
                         (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((jar2.item, jar));
                     }
@@ -836,7 +836,7 @@ public static class ItemUtility
                 }
                 else
                 {
-                    L.LogWarning("Unknown asset: " + (jar is ISpecificKitItem i2 ? i2.Item.ToString() : (jar is IAssetRedirectKitItem a2 ? a2.RedirectType.ToString() : jar.ToString()) + "."));
+                    logger.LogWarning("[GIVE ITEMS] Unknown asset: {0}", (jar is ISpecificKitItem i2 ? i2.Item.ToString() : (jar is IAssetRedirectKitItem a2 ? a2.RedirectType.ToString() : jar.ToString()) + "."));
                 }
             }
 
@@ -846,7 +846,7 @@ public static class ItemUtility
                 for (int i = 0; i < toAddLater.Count; ++i)
                 {
                     (Item item, _) = toAddLater[i];
-                    L.LogWarning("Had to re-add item: " + item.GetAsset()?.itemName + ".");
+                    logger.LogWarning("[GIVE ITEMS] Had to re-add item: {0}.", item.GetAsset()?.itemName);
                     if (!nativePlayer.inventory.tryAddItemAuto(item, false, false, false, !hasPlayedEffect))
                     {
                         ItemManager.dropItem(item, player.Position, !hasPlayedEffect, true, false);
@@ -874,7 +874,7 @@ public static class ItemUtility
                 ItemAsset? asset = item.GetItem(null, faction, out byte amt, out byte[] state);
                 if (asset is null)
                 {
-                    L.LogWarning("Unknown asset: " + clothing + ".");
+                    logger.LogWarning("[GIVE ITEMS] Unknown asset: {0}.", clothing);
                     return;
                 }
                 if (clothing.Type == ClothingType.Shirt)
@@ -925,7 +925,7 @@ public static class ItemUtility
                 continue;
 
                 error:
-                L.LogWarning("Invalid or mismatched clothing type: " + clothing + ".");
+                logger.LogWarning("[GIVE ITEMS] Invalid or mismatched clothing type: {0}.", clothing);
                 Item uitem = new Item(asset.id, amt, 100, state);
                 if (!nativePlayer.inventory.tryAddItem(uitem, true))
                 {
@@ -940,7 +940,7 @@ public static class ItemUtility
                 ItemAsset? asset = item.GetItem(null, faction, out byte amt, out byte[] state);
                 if (asset is null)
                 {
-                    L.LogWarning("Unknown asset: " + item + ".");
+                    logger.LogWarning("[GIVE ITEMS] Unknown asset: {0}.", item);
                     return;
                 }
                 Item uitem = new Item(asset.id, amt, 100, state);

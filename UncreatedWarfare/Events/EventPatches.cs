@@ -14,48 +14,48 @@ namespace Uncreated.Warfare.Events;
 internal static class EventPatches
 {
     private static bool _fail;
-    internal static void TryPatchAll()
+    internal static void TryPatchAll(ILogger logger)
     {
         _fail = false;
-        PatchUtil.PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public), ref _fail,
+        PatchUtil.PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public), ref _fail, logger,
             prefix: Accessor.GetMethod(PreDetonate), postfix: Accessor.GetMethod(PostDetonate));
 
-        PatchUtil.PatchMethod(typeof(InteractableVehicle).GetMethod("explode", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
+        PatchUtil.PatchMethod(typeof(InteractableVehicle).GetMethod("explode", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail, logger,
             prefix: Accessor.GetMethod(ExplodeVehicle));
 
-        PatchUtil.PatchMethod(typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
+        PatchUtil.PatchMethod(typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail, logger,
             prefix: Accessor.GetMethod(RocketOnTriggerEnter));
 
-        PatchUtil.PatchMethod(typeof(PlayerLife).GetMethod("doDamage", BindingFlags.NonPublic | BindingFlags.Instance), ref _fail,
+        PatchUtil.PatchMethod(typeof(PlayerLife).GetMethod("doDamage", BindingFlags.NonPublic | BindingFlags.Instance), ref _fail, logger,
             prefix: Accessor.GetMethod(PlayerDamageRequested));
 
         if (MthdRemoveItem != null)
         {
             if (MthdAddItem != null)
             {
-                PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveDragItem), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+                PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveDragItem), BindingFlags.Public | BindingFlags.Instance), ref _fail, logger,
                     transpiler: Accessor.GetMethod(TranspileReceiveDragItem));
 
-                PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveSwapItem), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+                PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveSwapItem), BindingFlags.Public | BindingFlags.Instance), ref _fail, logger,
                     transpiler: Accessor.GetMethod(TranspileReceiveSwapItem));
             }
             else
             {
-                L.LogError("Unable to find Items.addItem to transpile player inventory events.");
+                logger.LogError("Unable to find Items.addItem to transpile player inventory events.");
             }
         }
         else
         {
-            L.LogError("Unable to find PlayerInventory.removeItem to transpile player inventory events.");
+            logger.LogError("Unable to find PlayerInventory.removeItem to transpile player inventory events.");
         }
 
-        PatchUtil.PatchMethod(typeof(ItemManager).GetMethod(nameof(ItemManager.ReceiveTakeItemRequest), BindingFlags.Public | BindingFlags.Static), ref _fail,
+        PatchUtil.PatchMethod(typeof(ItemManager).GetMethod(nameof(ItemManager.ReceiveTakeItemRequest), BindingFlags.Public | BindingFlags.Static), ref _fail, logger,
             transpiler: Accessor.GetMethod(TranspileReceiveTakeItemRequest));
 
-        if (!PatchUtil.PatchMethod(typeof(InteractablePower).GetMethod("CalculateIsConnectedToPower", BindingFlags.NonPublic | BindingFlags.Instance), prefix: Accessor.GetMethod(OnCalculatingPower)))
+        if (!PatchUtil.PatchMethod(typeof(InteractablePower).GetMethod("CalculateIsConnectedToPower", BindingFlags.NonPublic | BindingFlags.Instance), logger, prefix: Accessor.GetMethod(OnCalculatingPower)))
             Data.UseElectricalGrid = false;
 
-        PatchUtil.PatchMethod(typeof(ObjectManager).GetMethod(nameof(ObjectManager.ReceiveToggleObjectBinaryStateRequest), BindingFlags.Public | BindingFlags.Static), ref _fail,
+        PatchUtil.PatchMethod(typeof(ObjectManager).GetMethod(nameof(ObjectManager.ReceiveToggleObjectBinaryStateRequest), BindingFlags.Public | BindingFlags.Static), ref _fail, logger,
             prefix: Accessor.GetMethod(OnReceiveToggleObjectBinaryStateRequest));
     }
 
@@ -153,7 +153,7 @@ internal static class EventPatches
         {
             //data.ExplodingVehicle = vehicleData;
         }
-        L.LogDebug("Decided explosion instigator: " + instigator2.ToString());
+        WarfareModule.Singleton.GlobalLogger.LogDebug("Decided explosion instigator: " + instigator2.ToString());
         Vector3 force = new Vector3(
             Random.Range(__instance.asset.minExplosionForce.x, __instance.asset.maxExplosionForce.x),
             Random.Range(__instance.asset.minExplosionForce.y, __instance.asset.maxExplosionForce.y),
@@ -259,7 +259,7 @@ internal static class EventPatches
         if (player == null || player.life.isDead || index >= levelObjects.Count)
             return false;
         LevelObject obj = levelObjects[index];
-        L.LogDebug($"Received request from {player} for obj {obj.asset.FriendlyName} @ {obj.transform.position} to state: {isUsed}.");
+        WarfareModule.Singleton.GlobalLogger.LogDebug($"Received request from {player} for obj {obj.asset.FriendlyName} @ {obj.transform.position} to state: {isUsed}.");
         //if (Data.Gamemode is not FlagGamemode fg || fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.Disabled)
         //    return true;
 
@@ -298,7 +298,7 @@ internal static class EventPatches
                     yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 8 : 7));  // rot_1
                     yield return new CodeInstruction(swap ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                     yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(EventDispatcher.OnDraggedOrSwappedItem));
-                    L.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " post event.");
+                    WarfareModule.Singleton.GlobalLogger.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " post event.");
                     continue;
                 }
             }
@@ -319,7 +319,7 @@ internal static class EventPatches
                     yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(EventDispatcher.OnDraggingOrSwappingItem));
                     yield return new CodeInstruction(OpCodes.Brtrue, lbl);       // return if cancelled
                     yield return new CodeInstruction(OpCodes.Ret);
-                    L.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " requested event.");
+                    WarfareModule.Singleton.GlobalLogger.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " requested event.");
                     generator.MarkLabel(lbl);
                 }
             }
@@ -335,15 +335,15 @@ internal static class EventPatches
     {
         FieldInfo? rpcField = typeof(ItemManager).GetField("SendDestroyItem", BindingFlags.NonPublic | BindingFlags.Static);
         if (rpcField == null)
-            L.LogWarning("Unable to find 'ItemManager.SendDestroyItem' while transpiling ReceiveTakeItemRequest.");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find 'ItemManager.SendDestroyItem' while transpiling ReceiveTakeItemRequest.");
 
         int lcl = method.FindLocalOfType<ItemData>();
         if (lcl < 0)
-            L.LogWarning("Unable to find local for ItemData while transpiling ReceiveTakeItemRequest.");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find local for ItemData while transpiling ReceiveTakeItemRequest.");
 
         int lcl2 = method.FindLocalOfType<Player>();
         if (lcl2 < 0)
-            L.LogWarning("Unable to find local for Player while transpiling ReceiveTakeItemRequest.");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find local for Player while transpiling ReceiveTakeItemRequest.");
 
         List<CodeInstruction> insts = instructions.ToList();
         bool foundOne = false;
@@ -372,7 +372,7 @@ internal static class EventPatches
                 else
                     yield return new CodeInstruction(OpCodes.Ldnull);
                 yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(EventDispatcher.OnPickedUpItem));
-                L.LogDebug("Patched ReceiveTakeItemRequest.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("Patched ReceiveTakeItemRequest.");
             }
 
             yield return instruction;

@@ -143,7 +143,7 @@ public class Layout : IDisposable
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, Accessor.Formatter.Format(phaseType));
+                Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, phaseType);
                 return UniTask.FromResult<ILayoutPhase?>(null);
             }
 
@@ -174,7 +174,7 @@ public class Layout : IDisposable
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, Accessor.Formatter.Format(phaseType));
+                Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, phaseType);
                 return UniTask.FromResult<ILayoutPhase?>(null);
             }
 
@@ -206,7 +206,7 @@ public class Layout : IDisposable
 
         if (!Directory.Exists(variationsPath))
         {
-            Logger.LogWarning("Variation directory {0} does not exist for phase {1}.", variationsPath, Accessor.Formatter.Format(phaseType));
+            Logger.LogWarning("Variation directory {0} does not exist for phase {1}.", variationsPath, phaseType);
             return null;
         }
 
@@ -283,8 +283,8 @@ public class Layout : IDisposable
 
             if (oldPhase != null)
             {
-                string phaseTypeFormat = Accessor.Formatter.Format(oldPhase.GetType());
-                Logger.LogDebug("Ending phase: {0}.", phaseTypeFormat);
+                Type oldPhaseType = oldPhase.GetType();
+                Logger.LogDebug("Ending phase: {0}.", oldPhaseType);
                 try
                 {
                     await oldPhase.EndPhaseAsync(token);
@@ -293,17 +293,17 @@ public class Layout : IDisposable
                 {
                     if (oldPhase.IsActive)
                     {
-                        Logger.LogError(ex, "Error ending phase {0}.", phaseTypeFormat);
+                        Logger.LogError(ex, "Error ending phase {0}.", oldPhaseType);
                         await _factory.StartNextLayout(CancellationToken.None);
                         throw new OperationCanceledException();
                     }
 
-                    Logger.LogWarning(ex, "Error ending phase {0}.", phaseTypeFormat);
+                    Logger.LogWarning(ex, "Error ending phase {0}.", oldPhaseType);
                 }
 
                 if (oldPhase.IsActive)
                 {
-                    Logger.LogError("Failed to end phase {0}.", phaseTypeFormat);
+                    Logger.LogError("Failed to end phase {0}.", oldPhaseType);
                     await _factory.StartNextLayout(CancellationToken.None);
                     throw new OperationCanceledException();
                 }
@@ -324,11 +324,11 @@ public class Layout : IDisposable
                 catch (Exception ex)
                 {
                     await UniTask.SwitchToMainThread(token);
-                    Logger.LogError(ex, "Error disposing phase {0}.", phaseTypeFormat);
+                    Logger.LogError(ex, "Error disposing phase {0}.", oldPhase);
                 }
             }
 
-            Logger.LogDebug("Starting next phase: {0}.", Accessor.Formatter.Format(newPhase.GetType()));
+            Logger.LogDebug("Starting next phase: {0}.", newPhase.GetType());
 
             try
             {
@@ -338,12 +338,12 @@ public class Layout : IDisposable
             {
                 if (!newPhase.IsActive)
                 {
-                    Logger.LogError(ex, "Error beginning phase {0}.", Accessor.Formatter.Format(newPhase.GetType()));
+                    Logger.LogError(ex, "Error beginning phase {0}.", newPhase.GetType());
                     await _factory.StartNextLayout(CancellationToken.None);
                     throw new OperationCanceledException();
                 }
 
-                Logger.LogWarning(ex, "Error beginning phase {0}.", Accessor.Formatter.Format(newPhase.GetType()));
+                Logger.LogWarning(ex, "Error beginning phase {0}.", newPhase.GetType());
             }
         }
         while (!newPhase.IsActive);

@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
@@ -23,6 +22,7 @@ public class DutyCommand : IExecutableCommand
     private readonly DutyCommandTranslations _translations;
     private readonly ITranslationService _translationService;
     private readonly ChatService _chatService;
+    private readonly ILogger<DutyCommand> _logger;
 
     private const string Help = "Swap your duty status between on and off. For admins and trial admins.";
 
@@ -35,7 +35,8 @@ public class DutyCommand : IExecutableCommand
         SignInstancer signs,
         TranslationInjection<DutyCommandTranslations> translations,
         ITranslationService translationService,
-        ChatService chatService)
+        ChatService chatService,
+        ILogger<DutyCommand> logger)
     {
         _translations = translations.Value;
         _permissions = permissions;
@@ -43,6 +44,7 @@ public class DutyCommand : IExecutableCommand
         _signs = signs;
         _translationService = translationService;
         _chatService = chatService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -164,7 +166,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(_translations.DutyOffFeedback);
             _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOffBroadcast, Context.Player);
 
-            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went off duty (owner: {isOwner}, admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
+            _logger.LogInformation("{0} ({1}) went off duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).", Context.Player.Names.PlayerName, Context.CallerId, isOwner, isAdmin, isTrial, isStaff);
             ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", Context.CallerId.m_SteamID);
 
             // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, false);
@@ -174,7 +176,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(_translations.DutyOnFeedback);
             _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOnBroadcast, Context.Player);
 
-            L.Log($"{Context.Player.Names.PlayerName} ({Context.CallerId.m_SteamID.ToString(CultureInfo.InvariantCulture)}) went on duty (owner: {isOwner}, admin: {isAdmin}, trial admin: {isTrial}, staff: {isStaff}).", ConsoleColor.Cyan);
+            _logger.LogInformation("{0} ({1}) went on duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).", Context.Player.Names.PlayerName, Context.CallerId, isOwner, isAdmin, isTrial, isStaff);
             ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", Context.CallerId.m_SteamID);
 
             // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, true);

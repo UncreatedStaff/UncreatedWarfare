@@ -1,8 +1,7 @@
 ﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.Logging;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Uncreated.Warfare.Util;
 public static class ReflectionUtility
@@ -29,7 +28,7 @@ public static class ReflectionUtility
         TRpcType? rpc = Variables.FindStatic<TDeclaringType, TRpcType>(name)?.GetValue();
         if (rpc == null)
         {
-            L.Logger.LogWarning("RPC not found in {0}: \"{1}\" of type {2}.", Accessor.ExceptionFormatter.Format(typeof(TDeclaringType)), name, Accessor.ExceptionFormatter.Format(typeof(TRpcType)));
+            WarfareModule.Singleton.GlobalLogger.LogWarning("RPC not found in {0}: \"{1}\" of type {2}.", Accessor.ExceptionFormatter.Format(typeof(TDeclaringType)), name, Accessor.ExceptionFormatter.Format(typeof(TRpcType)));
         }
 
         return rpc;

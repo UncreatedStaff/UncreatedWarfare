@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Structures;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -28,12 +27,12 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
-            logger.LogDebug("Patched {0} for destroy structure event.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for destroy structure event.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition(nameof(StructureManager.destroyStructure))
+            new MethodDefinition(nameof(StructureManager.destroyStructure))
                 .DeclaredIn<StructureManager>(isStatic: true)
                 .WithParameter<StructureDrop>("structure")
                 .WithParameter<byte>("x")
@@ -41,7 +40,6 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
                 .WithParameter<Vector3>("ragdoll")
                 .WithParameter<bool>("wasPickedUp")
                 .ReturningVoid()
-            )
         );
     }
 
@@ -51,7 +49,7 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
             return;
 
         Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
-        logger.LogDebug("Unpatched {0} for destroy structure event.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for destroy structure event.", _target);
         _target = null;
     }
 
@@ -64,7 +62,7 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
         FieldInfo? rpc = typeof(StructureManager).GetField("SendDestroyStructure", BindingFlags.NonPublic | BindingFlags.Static);
         if (rpc == null)
         {
-            L.LogWarning("Unable to find field: StructureManager.SendDestroyStructure");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find field: StructureManager.SendDestroyStructure");
         }
 
         bool one = false;
@@ -80,7 +78,7 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
                 yield return new CodeInstruction(OpCodes.Ldarg_3);
                 yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4);
                 yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(DestroyStructureInvoker));
-                L.LogDebug("Inserted DestroyStructureInvoker call to StructureManager.destroyStructure.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("Inserted DestroyStructureInvoker call to StructureManager.destroyStructure.");
                 CodeInstruction old = new CodeInstruction(instruction);
                 old.labels.Clear();
                 yield return old;

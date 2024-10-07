@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam.Models;
@@ -71,9 +70,9 @@ public class SteamApiService
             {
                 using UnityWebRequest webRequest = UnityWebRequest.Get(CreateUrl("ISteamUser", 1, "GetFriendList", "&steamid=" + player.ToString(CultureInfo.InvariantCulture)));
                 webRequest.timeout = tries + 1;
-                L.LogDebug($"[GetPlayerFriends] Sending GetFriendList request: {webRequest.url} with timeout {webRequest.timeout}... ({tries + 1}/{tryCt})");
+                _logger.LogConditional("[GetPlayerFriends] Sending GetFriendList request: {0} with timeout {1}... ({2}/{3})", webRequest.url, webRequest.timeout, tries + 1, tryCt);
                 await webRequest.SendWebRequest().WithCancellation(token);
-                L.LogDebug($"[GetPlayerFriends]   Done with {webRequest.url}.");
+                _logger.LogConditional("[GetPlayerFriends]   Done with {0}.", webRequest.url);
 
                 if (webRequest.result != UnityWebRequest.Result.Success)
                     throw new Exception($"Error getting player friend list for {player} from {webRequest.url.Replace(_steamApiKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
@@ -87,14 +86,14 @@ public class SteamApiService
                 if (tries == tryCt - 1)
                     throw new Exception("Error downloading friends list for " + player + ".", ex);
 
-                L.LogError($"[GetPlayerFriends] Error getting steam player summaries. Retrying {(tries + 1).ToString(CultureInfo.InvariantCulture)} / {tryCt.ToString(CultureInfo.InvariantCulture)}.");
+                _logger.LogError("[GetPlayerFriends] Error getting steam player summaries. Retrying {0} / {1}.", (tries + 1).ToString(CultureInfo.InvariantCulture), tryCt.ToString(CultureInfo.InvariantCulture));
 
                 await UniTask.WaitForSeconds(delay, cancellationToken: token);
                 continue;
             }
 
             if (tries > 0)
-                L.Log($"[GetPlayerFriends] Try {(tries + 1).ToString(CultureInfo.InvariantCulture)} / {tryCt.ToString(CultureInfo.InvariantCulture)} succeeded.", ConsoleColor.Green);
+                _logger.LogInformation("[GetPlayerFriends] Try {0} / {1} succeeded.", (tries + 1).ToString(CultureInfo.InvariantCulture), tryCt.ToString(CultureInfo.InvariantCulture));
 
             try
             {
@@ -124,7 +123,7 @@ public class SteamApiService
         }
         catch (Exception ex)
         {
-            L.LogError(ex);
+            _logger.LogError(ex, "Error getting player summary: {0}.", new CSteamID(player));
         }
         return null;
     }
@@ -190,9 +189,9 @@ public class SteamApiService
             {
                 using UnityWebRequest webRequest = UnityWebRequest.Get(CreateUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + str));
                 webRequest.timeout = tries + 1;
-                L.LogDebug($"Sending PlayerSummary request: {webRequest.url} with timeout {webRequest.timeout}... ({tries + 1}/{tryCt})");
+                _logger.LogConditional("Sending PlayerSummary request: {0} with timeout {1}... ({2}/{3})", webRequest.url, webRequest.timeout, tries + 1, tryCt);
                 await webRequest.SendWebRequest().WithCancellation(token);
-                L.LogDebug($"  Done with {webRequest.url}.");
+                _logger.LogConditional("  Done with {0}.", webRequest.url);
 
                 if (webRequest.result != UnityWebRequest.Result.Success)
                     throw new Exception($"Error getting player summaries from {webRequest.url.Replace(_steamApiKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
@@ -207,14 +206,14 @@ public class SteamApiService
                 if (tries == tryCt - 1)
                     throw new Exception("Error downloading " + players.Count + " player summary(ies).", ex);
 
-                L.LogError($"Error getting steam player summaries. Retrying {(tries + 1).ToString(CultureInfo.InvariantCulture)} / {tryCt.ToString(CultureInfo.InvariantCulture)}.");
+                _logger.LogError("Error getting steam player summaries. Retrying {0} / {1}.", (tries + 1).ToString(CultureInfo.InvariantCulture), tryCt.ToString(CultureInfo.InvariantCulture));
 
                 await UniTask.WaitForSeconds(delay, cancellationToken: token);
                 continue;
             }
 
             if (tries > 0)
-                L.Log($"[GETPLAYERSUMMARIES] Try {(tries + 1).ToString(CultureInfo.InvariantCulture)} / {tryCt.ToString(CultureInfo.InvariantCulture)} succeeded.", ConsoleColor.Green);
+                _logger.LogInformation("[GETPLAYERSUMMARIES] Try {0} / {1} succeeded.", (tries + 1).ToString(CultureInfo.InvariantCulture), tryCt.ToString(CultureInfo.InvariantCulture));
 
             try
             {

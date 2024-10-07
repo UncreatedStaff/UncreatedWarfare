@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Stats;
 
@@ -11,7 +10,7 @@ public static class ServerHeartbeatTimer
 {
     private static DateTimeOffset? _lastBeat;
     private static readonly SemaphoreSlim Semaphore = new SemaphoreSlim(1, 1);
-    public static void Beat()
+    public static void Beat(ILogger logger)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         _lastBeat = now;
@@ -34,8 +33,7 @@ public static class ServerHeartbeatTimer
                 }
                 catch (Exception ex)
                 {
-                    L.LogError("Failed to copy backup heartbeat.");
-                    L.LogError(ex);
+                    logger.LogError(ex, "Failed to copy backup heartbeat.");
                 }
             }
 
@@ -46,8 +44,7 @@ public static class ServerHeartbeatTimer
         }
         catch (Exception ex)
         {
-            L.LogError("Error writing heartbeat.");
-            L.LogError(ex);
+            logger.LogError(ex, "Error writing heartbeat.");
         }
         finally
         {
@@ -55,7 +52,7 @@ public static class ServerHeartbeatTimer
             Thread.EndCriticalRegion();
         }
     }
-    public static DateTimeOffset? GetLastBeat()
+    public static DateTimeOffset? GetLastBeat(ILogger logger)
     {
         if (_lastBeat.HasValue)
             return _lastBeat;
@@ -72,10 +69,10 @@ public static class ServerHeartbeatTimer
                 if (bytes >= sizeof(long))
                     return DateTimeOffset.FromUnixTimeSeconds(BitConverter.ToInt64(dtInfo));
                 else
-                    L.LogWarning("Heartbeat file not valid.");
+                    logger.LogWarning("Heartbeat file not valid.");
             }
             else
-                L.Log("Heartbeat file not present.");
+                logger.LogInformation("Heartbeat file not present.");
 
             if (File.Exists(Data.Paths.HeartbeatBackup))
             {
@@ -84,18 +81,16 @@ public static class ServerHeartbeatTimer
                 if (bytes >= sizeof(long))
                     return DateTimeOffset.FromUnixTimeSeconds(BitConverter.ToInt64(dtInfo));
                 else
-                    L.LogWarning("Heartbeat backup file not valid.");
+                    logger.LogWarning("Heartbeat backup file not valid.");
             }
             else
-                L.Log("Heartbeat backup file not present.");
+                logger.LogInformation("Heartbeat backup file not present.");
 
             return null;
         }
         catch (Exception ex)
         {
-            L.LogError("Error reading last heartbeat.");
-            L.LogError(ex);
-
+            logger.LogError(ex, "Error reading last heartbeat.");
             return null;
         }
         finally

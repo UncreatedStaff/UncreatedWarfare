@@ -69,12 +69,12 @@ public abstract class UnlockRequirement : ICloneable
     // todo this is not a good way to handle this
     public virtual Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
-        L.LogWarning("Unhandled kit requirement type: " + GetType().Name);
+        WarfareModule.Singleton.GlobalLogger.LogWarning("Unhandled kit requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
     public virtual Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
     {
-        L.LogWarning("Unhandled vehicle requirement type: " + GetType().Name);
+        WarfareModule.Singleton.GlobalLogger.LogWarning("Unhandled vehicle requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
 
@@ -155,7 +155,7 @@ public abstract class UnlockRequirement : ICloneable
                     }
                     catch (InvalidOperationException ex)
                     {
-                        logger?.LogError(ex, "Unable to create an instance of {0}.", Accessor.Formatter.Format(propertyList.Key));
+                        logger?.LogError(ex, "Unable to create an instance of {0}.", propertyList.Key);
                         return null;
                     }
 
@@ -200,14 +200,14 @@ public abstract class UnlockRequirement : ICloneable
             }
             catch (Exception ex)
             {
-                logger?.LogInformation(ex, "Failed to dispose of {0} after failed reading.", Accessor.Formatter.Format(type));
+                logger?.LogInformation(ex, "Failed to dispose of {0} after failed reading.", type);
             }
 
             return null;
         }
         catch (InvalidOperationException ex)
         {
-            logger?.LogError(ex, "Unable to create an instance of {0}.", Accessor.Formatter.Format(type));
+            logger?.LogError(ex, "Unable to create an instance of {0}.", type);
             return null;
         }
     }

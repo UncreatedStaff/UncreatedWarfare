@@ -86,7 +86,7 @@ public class ActionLog : MonoBehaviour
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     // the brackets are separated on purpose
-    public static string AsAsset(Asset asset) => "{" + $"{asset.FriendlyName} / {asset.id} / {asset.GUID:N}" + "}";
+    public static string AsAsset(Asset? asset) => asset == null ? "{null asset}" : ("{" + $"{asset.FriendlyName} / {asset.id} / {asset.GUID:N}" + "}");
     public static void Add(ActionLogType type, string? data, WarfarePlayer? player) => Add(type, data, player == null ? 0ul : player.Steam64.m_SteamID);
     public static void Add(ActionLogType type, string? data = null, ulong player = 0)
     {

@@ -7,7 +7,6 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare;
@@ -61,7 +60,7 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
     public string? Translate(LanguageInfo? language, string? @default) => Translate(language) ?? @default;
     public string? Translate(LanguageInfo? language)
     {
-        string code = language == null || language.IsDefault ? String.Empty : language.Code;
+        string code = language == null || language.IsDefault ? string.Empty : language.Code;
         if (TryGetValue(code, out string value))
             return value;
         
@@ -73,7 +72,7 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
             if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value))
                 return value;
 
-            if (!language.IsDefault && TryGetValue(L.Default, out value))
+            if (!language.IsDefault && TryGetValue(string.Empty, out value))
                 return value;
         }
 
@@ -142,7 +141,7 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
         {
             writer.WriteNullValue();
         }
-        else if (value.Count == 1 && value.TryGetValue(L.Default, out string v))
+        else if (value.Count == 1 && value.TryGetValue(string.Empty, out string v))
         {
             writer.WriteStringValue(v.Replace("\n", "\\n"));
         }

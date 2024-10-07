@@ -3,10 +3,8 @@ using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
@@ -92,7 +90,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
     /// <summary>
     /// Add the items to a player's inventory.
     /// </summary>
-    public void DistributeKitItems(WarfarePlayer player, Kit? kit, bool clearInventory = true, bool sendActionTip = true, bool ignoreAmmobags = false)
+    public void DistributeKitItems(WarfarePlayer player, Kit? kit, ILogger logger, bool clearInventory = true, bool sendActionTip = true, bool ignoreAmmobags = false)
     {
         GameThread.AssertCurrent();
         if (clearInventory)
@@ -133,7 +131,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                 ItemAsset? asset = item.GetItem(kit, faction, out _, out byte[] state);
                 if (asset == null || asset.type != clothingJar.Type.GetItemType())
                 {
-                    ReportItemError(kit, item, asset);
+                    ReportItemError(kit, item, logger, asset);
                     continue;
                 }
 
@@ -161,7 +159,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                 }
                 else
                 {
-                    L.LogWarning("Duplicate " + clothingJar.Type + " defined for " + kit.InternalName + ", " + item + ".");
+                    logger.LogWarning("Duplicate {0} defined for {1}, {2}.", clothingJar.Type, kit.InternalName, item);
                 }
             }
 
@@ -236,7 +234,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                     giveX = l.NewX;
                     giveY = l.NewY;
                     giveRot = l.NewRotation;
-                    L.LogDebug("[GIVE KIT] Found layout for item " + item + " (to: " + givePage + ", (" + giveX + ", " + giveY + ") rot: " + giveRot + ".)");
+                    logger.LogDebug("[GIVE KIT] Found layout for item {0} (to: {1}, ({2}, {3}) rot: {4}.)", item, givePage, giveX, giveY, giveRot);
                     break;
                 }
 
@@ -251,8 +249,8 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                     {
                         if (page.getItemCount() > 0)
                         {
-                            L.LogWarning("[GIVE KIT] Duplicate " + givePage.ToString().ToLowerInvariant() + " defined for " + kit.InternalName + ", " + item + ".");
-                            L.Log("[GIVE KIT] Removing " + (page.items[0].GetAsset().itemName) + " in place of duplicate.");
+                            logger.LogWarning("[GIVE KIT] Duplicate {0} defined for {1}, {2}.", givePage.ToString().ToLowerInvariant(), kit.InternalName, item);
+                            logger.LogInformation("[GIVE KIT] Removing {0} in place of duplicate.", (page.items[0].GetAsset().itemName));
                             (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((page.items[0].item, jar));
                             page.removeItem(0);
                         }
@@ -266,8 +264,8 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                         // if an item is out of range of it's container with a layout override, remove it and try again
                         if (layoutAffected)
                         {
-                            L.LogDebug("[GIVE KIT] Out of bounds layout item in " + givePage + " defined for " + kit.InternalName + ", " + item + ".");
-                            L.LogDebug("[GIVE KIT] Retrying at original position.");
+                            logger.LogDebug("[GIVE KIT] Out of bounds layout item in {0} defined for {1}, {2}.", givePage, kit.InternalName, item);
+                            logger.LogDebug("[GIVE KIT] Retrying at original position.");
                             layoutAffected = false;
                             giveX = jar.X;
                             giveY = jar.Y;
@@ -275,7 +273,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                             givePage = jar.Page;
                             goto retry;
                         }
-                        L.LogWarning("[GIVE KIT] Out of bounds item in " + givePage + " defined for " + kit.InternalName + ", " + item + ".");
+                        logger.LogWarning("[GIVE KIT] Out of bounds item in {0} defined for {1}, {2}.", givePage, kit.InternalName, item);
                         (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((itm, jar));
                     }
 
@@ -288,8 +286,8 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                             // if an overlap is detected with a layout override, remove it and try again
                             if (layoutAffected)
                             {
-                                L.LogDebug("[GIVE KIT] Overlapping layout item in " + givePage + " defined for " + kit.InternalName + ", " + item + ".");
-                                L.LogDebug("[GIVE KIT] Retrying at original position.");
+                                logger.LogDebug("[GIVE KIT] Overlapping layout item in {0} defined for {1}, {2}.", givePage, kit.InternalName, item);
+                                logger.LogDebug("[GIVE KIT] Retrying at original position.");
                                 layoutAffected = false;
                                 giveX = jar.X;
                                 giveY = jar.Y;
@@ -297,8 +295,8 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                                 givePage = jar.Page;
                                 goto retry;
                             }
-                            L.LogWarning("[GIVE KIT] Overlapping item in " + givePage + " defined for " + kit.InternalName + ", " + item + ".");
-                            L.Log("[GIVE KIT] Removing " + (jar2.GetAsset().itemName) + " (" + jar2.x + ", " + jar2.y + " @ " + jar2.rot + "), in place of duplicate.");
+                            logger.LogWarning("[GIVE KIT] Overlapping item in {0} defined for {1}, {2}.", givePage, kit.InternalName, item);
+                            logger.LogInformation("[GIVE KIT] Removing {0} ({1}, {2} @ {3}), in place of duplicate.", jar2.GetAsset().itemName, jar2.x, jar2.y, jar2.rot);
                             page.removeItem((byte)j--);
                             (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((jar2.item, jar));
                         }
@@ -312,7 +310,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                 }
                 // if a clothing item asset redirect is missing it's likely a kit being requested on a faction without those clothes.
                 else if (item is not (IAssetRedirectKitItem and IClothingKitItem))
-                    ReportItemError(kit, item, asset);
+                    ReportItemError(kit, item, logger, asset);
             }
 
             // try to add removed items later
@@ -363,7 +361,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                 ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
                 if (asset is null)
                 {
-                    ReportItemError(kit, item, null);
+                    ReportItemError(kit, item, logger, null);
                     return;
                 }
 
@@ -398,7 +396,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                         continue;
                 }
 
-                ReportItemError(kit, item, asset);
+                ReportItemError(kit, item, logger, asset);
                 Item uitem = new Item(asset.id, amt, 100, state);
                 if (!inventory.tryAddItem(uitem, true))
                 {
@@ -414,7 +412,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                 ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
                 if (asset is null)
                 {
-                    ReportItemError(kit, item, null);
+                    ReportItemError(kit, item, logger, null);
                     return;
                 }
 
@@ -445,28 +443,23 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
             player.UnturnedPlayer.equipment.ServerEquip((byte)Page.Secondary, 0, 0);
     }
 
-    private static void ReportItemError(Kit kit, IKitItem item, ItemAsset? asset)
+    private static void ReportItemError(Kit kit, IKitItem item, ILogger logger, ItemAsset? asset)
     {
         if (asset == null)
         {
-            L.LogWarning("Unknown item in kit \"" + kit.InternalName + "\": {" +
-                         item switch
-                         {
-                             ISpecificKitItem i2 => i2.Item.ToString(),
-                             _ => item.ToString()
-                         } + "}.", method: "GIVE KIT");
+            logger.LogWarning("[GIVE KIT] Unknown item in kit \"{0}\": {{{1}}}.", kit.InternalName, item switch
+            {
+                ISpecificKitItem i2 => i2.Item.ToString(),
+                _ => item.ToString()
+            });
         }
         else if (item is IClothingKitItem clothing)
         {
-            L.LogWarning("Invalid " + clothing.Type.ToString().ToLowerInvariant() +
-                         " in kit \"" + kit.InternalName + "\" for item " + asset.itemName +
-                         " {" + asset.GUID.ToString("N") + "}.", method: "GIVE KIT");
+            logger.LogWarning("[GIVE KIT] Invalid {0} in kit \"{1}\" for item {2} {{{3}}}.", clothing.Type.ToString().ToLowerInvariant(), kit.InternalName, asset.itemName, asset.GUID.ToString("N"));
         }
         else
         {
-            L.LogWarning("Invalid item" +
-                         " in kit \"" + kit.InternalName + "\" for item " + asset.itemName +
-                         " {" + asset.GUID.ToString("N") + "}.", method: "GIVE KIT");
+            logger.LogWarning("[GIVE KIT] Invalid item" + " in kit \"{0}\" for item {1} {{{2}}}.", kit.InternalName, asset.itemName, asset.GUID.ToString("N"));
         }
     }
 }

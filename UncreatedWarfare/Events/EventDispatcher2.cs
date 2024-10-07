@@ -202,7 +202,7 @@ public partial class EventDispatcher2 : IHostedService
         int ct = eventListeners.Count;
 
 #if DEBUG
-        _logger.LogDebug("Invoke {0} - Dispatching event for {1} listener(s).", Accessor.Formatter.Format(type), ct);
+        _logger.LogDebug("Invoke {0} - Dispatching event for {1} listener(s).", type, ct);
 #endif
 
         List<SynchronizationBucket>? buckets = null;
@@ -216,18 +216,18 @@ public partial class EventDispatcher2 : IHostedService
                 tasks = ListPool<Task>.claim();
                 EnterSynchronizationBuckets(eventArgs, modelInfo, type, buckets, tasks, token);
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Synchronizing with {1} bucket(s).", Accessor.Formatter.Format(type), buckets.Count);
+                _logger.LogDebug("Invoke {0} - Synchronizing with {1} bucket(s).", type, buckets.Count);
 #endif
                 tasks.RemoveAll(x => x.IsCompleted);
 
                 if (tasks.Count > 0)
                 {
 #if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Awaiting {1} bucket(s).", Accessor.Formatter.Format(type), buckets.Count);
+                    _logger.LogDebug("Invoke {0} - Awaiting {1} bucket(s).", type, buckets.Count);
 #endif
                     await Task.WhenAll(tasks).ConfigureAwait(false);
 #if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Done awaiting buckets.", Accessor.Formatter.Format(type));
+                    _logger.LogDebug("Invoke {0} - Done awaiting buckets.", type);
 #endif
                 }
             }
@@ -291,18 +291,18 @@ public partial class EventDispatcher2 : IHostedService
                     ILogger logger = (ILogger)scope.Resolve(typeof(ILogger<>).MakeGenericType(listenerType));
                     if (ex is OperationCanceledException && token.IsCancellationRequested)
                     {
-                        logger.LogInformation(ex, "Execution of event handler {0} cancelled by CancellationToken.", Accessor.Formatter.Format(info.Method));
+                        logger.LogInformation(ex, "Execution of event handler {0} cancelled by CancellationToken.", info.Method);
                     }
                     else
                     {
-                        logger.LogError(ex, "Error executing event handler: {0}.", Accessor.Formatter.Format(info.Method));
+                        logger.LogError(ex, "Error executing event handler: {0}.", info.Method);
                     }
 
                     if (eventArgs is not ICancellable c)
                         continue;
 
                     c.Cancel();
-                    logger.LogInformation("Cancelling event handler {0} due to exception described above.", Accessor.Formatter.Format(info.Method));
+                    logger.LogInformation("Cancelling event handler {0} due to exception described above.", info.Method);
                     break;
                 }
             }
@@ -316,12 +316,12 @@ public partial class EventDispatcher2 : IHostedService
             if (buckets != null)
             {
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Releasing {1} bucket(s).", Accessor.Formatter.Format(type), buckets.Count);
+                _logger.LogDebug("Invoke {0} - Releasing {1} bucket(s).", type, buckets.Count);
 #endif
                 foreach (SynchronizationBucket bucket in buckets)
                 {
 #if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Releasing bucket: \"{1}\".", Accessor.Formatter.Format(type), bucket);
+                    _logger.LogDebug("Invoke {0} - Releasing bucket: \"{1}\".", type, bucket);
 #endif
                     bucket.Semaphore.Release();
                 }
@@ -349,20 +349,20 @@ public partial class EventDispatcher2 : IHostedService
             buckets.Add(bucket);
             tasks.Add(bucket.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-            _logger.LogDebug("Invoke {0} - Locking on type {1}.", Accessor.Formatter.Format(type), Accessor.Formatter.Format(type));
+            _logger.LogDebug("Invoke {0} - Locking on type {0}.", type);
 #endif
 
             if (_typePlayerSynchronizations.TryGetValue(type, out PlayerDictionary<SynchronizationBucket> dict))
             {
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on type {1} for all players:", Accessor.Formatter.Format(type), Accessor.Formatter.Format(type));
+                _logger.LogDebug("Invoke {0} - Locking on type {0} for all players:", type);
 #endif
                 foreach (SynchronizationBucket b in dict.Values)
                 {
                     buckets.Add(b);
                     tasks.Add(b.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on type {1} for player {2}.", Accessor.Formatter.Format(type), Accessor.Formatter.Format(type), b.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
+                    _logger.LogDebug("Invoke {0} - Locking on type {0} for player {1}.", type, b.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
 #endif
                 }
             }
@@ -378,20 +378,20 @@ public partial class EventDispatcher2 : IHostedService
                 buckets.Add(bucket);
                 tasks.Add(bucket.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on request type {1}.", Accessor.Formatter.Format(type), Accessor.Formatter.Format(modelInfo.RequestModel));
+                _logger.LogDebug("Invoke {0} - Locking on request type {1}.", type, modelInfo.RequestModel);
 #endif
 
                 if (_typePlayerSynchronizations.TryGetValue(modelInfo.RequestModel, out dict))
                 {
 #if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on request type {1} for all players:", Accessor.Formatter.Format(type), Accessor.Formatter.Format(modelInfo.RequestModel));
+                    _logger.LogDebug("Invoke {0} - Locking on request type {1} for all players:", type, modelInfo.RequestModel);
 #endif
                     foreach (SynchronizationBucket b in dict.Values)
                     {
                         buckets.Add(b);
                         tasks.Add(b.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                        _logger.LogDebug("Invoke {0} - Locking on request type {1} for player {2}.", Accessor.Formatter.Format(type), Accessor.Formatter.Format(modelInfo.RequestModel), b.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
+                        _logger.LogDebug("Invoke {0} - Locking on request type {1} for player {2}.", type, modelInfo.RequestModel, b.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
 #endif
                     }
                 }
@@ -412,21 +412,21 @@ public partial class EventDispatcher2 : IHostedService
                 buckets.Add(bucket);
                 tasks.Add(bucket.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\".", Accessor.Formatter.Format(type), tag);
+                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\".", type, tag);
 #endif
 
                 if (!_tagPlayerSynchronizations.TryGetValue(tag, out dict))
                     continue;
 
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for all players.", Accessor.Formatter.Format(type), tag);
+                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for all players.", type, tag);
 #endif
                 foreach (SynchronizationBucket b in dict.Values)
                 {
                     buckets.Add(b);
                     tasks.Add(b.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for player {2}.", Accessor.Formatter.Format(type), tag, b.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
+                    _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for player {2}.", type, tag, b.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
 #endif
                 }
             }
@@ -439,7 +439,7 @@ public partial class EventDispatcher2 : IHostedService
                 buckets.Add(bucket);
                 tasks.Add(bucket.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on type {1} (already locked).", Accessor.Formatter.Format(type), Accessor.Formatter.Format(type));
+                _logger.LogDebug("Invoke {0} - Locking on type {0} (already locked).", type);
 #endif
             }
 
@@ -462,7 +462,7 @@ public partial class EventDispatcher2 : IHostedService
             buckets.Add(bucket);
             tasks.Add(bucket.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-            _logger.LogDebug("Invoke {0} - Locking on type {1} for player {2}.", Accessor.Formatter.Format(type), Accessor.Formatter.Format(type), bucket.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
+            _logger.LogDebug("Invoke {0} - Locking on type {0} for player {1}.", type, bucket.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
 #endif
 
             if (modelInfo.RequestModel != null)
@@ -472,7 +472,7 @@ public partial class EventDispatcher2 : IHostedService
                     buckets.Add(bucket);
                     tasks.Add(bucket.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on request type {1} (already locked).", Accessor.Formatter.Format(type), Accessor.Formatter.Format(modelInfo.RequestModel));
+                    _logger.LogDebug("Invoke {0} - Locking on request type {1} (already locked).", type, modelInfo.RequestModel);
 #endif
                 }
 
@@ -495,7 +495,7 @@ public partial class EventDispatcher2 : IHostedService
                 buckets.Add(bucket);
                 tasks.Add(bucket.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on request type {1} for player {2}.", Accessor.Formatter.Format(type), Accessor.Formatter.Format(modelInfo.RequestModel), bucket.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
+                _logger.LogDebug("Invoke {0} - Locking on request type {1} for player {2}.", type, modelInfo.RequestModel, bucket.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
 #endif
             }
 
@@ -511,7 +511,7 @@ public partial class EventDispatcher2 : IHostedService
                     buckets.Add(bucket);
                     tasks.Add(bucket.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" (already locked).", Accessor.Formatter.Format(type), tag);
+                    _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" (already locked).", type, tag);
 #endif
                 }
 
@@ -534,13 +534,13 @@ public partial class EventDispatcher2 : IHostedService
                 buckets.Add(bucket);
                 tasks.Add(bucket.Semaphore.WaitAsync(token));
 #if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for player {2}.", Accessor.Formatter.Format(type), tag, bucket.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
+                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for player {2}.", type, tag, bucket.Player?.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) ?? "null");
 #endif
             }
         }
         else
         {
-            _logger.LogWarning("Event arg {0} has Per-Player synchronization setting but doesn't implement {1}.", Accessor.Formatter.Format(type), Accessor.Formatter.Format<IPlayerEvent>());
+            _logger.LogWarning("Event arg {0} has Per-Player synchronization setting but doesn't implement {1}.", type, typeof(IPlayerEvent));
         }
     }
 

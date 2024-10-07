@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Saves;
 
 namespace Uncreated.Warfare.Events.Models.Players;
@@ -124,7 +123,7 @@ public sealed class PlayerPending : CancellableEvent
             _faceInfo ??= typeof(SteamPending).GetField("_face", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_faceInfo == null)
             {
-                L.LogError("Face field (SteamPending._face) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Face field (SteamPending._face) not found.");
                 return;
             }
 
@@ -144,7 +143,7 @@ public sealed class PlayerPending : CancellableEvent
             _hairInfo ??= typeof(SteamPending).GetField("_hair", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_hairInfo == null)
             {
-                L.LogError("Hair field (SteamPending._hair) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Hair field (SteamPending._hair) not found.");
                 return;
             }
 
@@ -164,7 +163,7 @@ public sealed class PlayerPending : CancellableEvent
             _beardInfo ??= typeof(SteamPending).GetField("_beard", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_beardInfo == null)
             {
-                L.LogError("Beard field (SteamPending._beard) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Beard field (SteamPending._beard) not found.");
                 return;
             }
 
@@ -184,7 +183,7 @@ public sealed class PlayerPending : CancellableEvent
             _skinColorInfo ??= typeof(SteamPending).GetField("_skin", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_skinColorInfo == null)
             {
-                L.LogError("Skin color field (SteamPending._skin) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Skin color field (SteamPending._skin) not found.");
                 return;
             }
 
@@ -204,7 +203,7 @@ public sealed class PlayerPending : CancellableEvent
             _hairColorInfo ??= typeof(SteamPending).GetField("_color", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_hairColorInfo == null)
             {
-                L.LogError("Hair color field (SteamPending._color) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Hair color field (SteamPending._color) not found.");
                 return;
             }
 
@@ -224,7 +223,7 @@ public sealed class PlayerPending : CancellableEvent
             _markerColorInfo ??= typeof(SteamPending).GetField("_markerColor", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_markerColorInfo == null)
             {
-                L.LogError("Marker color field (SteamPending._markerColor) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Marker color field (SteamPending._markerColor) not found.");
                 return;
             }
 
@@ -244,7 +243,7 @@ public sealed class PlayerPending : CancellableEvent
             _handInfo ??= typeof(SteamPending).GetField("_hand", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_handInfo == null)
             {
-                L.LogError("Left-handed field (SteamPending._hand) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Left-handed field (SteamPending._hand) not found.");
                 return;
             }
 
@@ -264,7 +263,7 @@ public sealed class PlayerPending : CancellableEvent
             _isProInfo ??= typeof(SteamPending).GetField("_isPro", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_isProInfo == null)
             {
-                L.LogError("Pro field (SteamPending._isPro) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Pro field (SteamPending._isPro) not found.");
                 return;
             }
 
@@ -284,7 +283,7 @@ public sealed class PlayerPending : CancellableEvent
             _skillsetInfo ??= typeof(SteamPending).GetField("_skillset", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_skillsetInfo == null)
             {
-                L.LogError("Skillset field (SteamPending._skillset) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Skillset field (SteamPending._skillset) not found.");
                 return;
             }
 
@@ -304,7 +303,7 @@ public sealed class PlayerPending : CancellableEvent
             _languageInfo ??= typeof(SteamPending).GetField("_language", BindingFlags.NonPublic | BindingFlags.Instance);
             if (_languageInfo == null)
             {
-                L.LogError("Language field (SteamPending._language) not found.");
+                WarfareModule.Singleton.GlobalLogger.LogError("Language field (SteamPending._language) not found.");
                 return;
             }
 

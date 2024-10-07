@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using System;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 
@@ -7,7 +8,7 @@ public static class EventDispatcher
 {
     internal static void SubscribeToAll()
     {
-        EventPatches.TryPatchAll();
+        EventPatches.TryPatchAll(NullLogger.Instance);
     }
     internal static void InvokeVehicleManagerOnSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
     {

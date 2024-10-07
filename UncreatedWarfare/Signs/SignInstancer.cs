@@ -322,7 +322,7 @@ public class SignInstancer : ILevelHostedService, IEventListener<BarricadePlaced
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initializing sign provider {0} for barricade {1} #{2}.", Accessor.Formatter.Format(data.Type), barricade.asset.itemName, barricade.instanceID);
+            _logger.LogError(ex, "Error initializing sign provider {0} for barricade {1} #{2}.", data.Type, barricade.asset.itemName, barricade.instanceID);
         }
     }
 

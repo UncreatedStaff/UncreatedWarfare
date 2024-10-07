@@ -369,6 +369,6 @@ public class PlayerOfflineException : Exception
 public class PlayerComponentNotFoundException : Exception
 {
     public PlayerComponentNotFoundException(Type type, WarfarePlayer player)
-        : base($"The component {Accessor.Formatter.Format(type)} could not be found on player {player.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture)}.")
+        : base($"The component {Accessor.ExceptionFormatter.Format(type)} could not be found on player {player.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture)}.")
     { }
 }

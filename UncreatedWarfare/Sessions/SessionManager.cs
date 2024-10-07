@@ -4,20 +4,16 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
@@ -39,6 +35,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
         _serviceProvider = serviceProvider;
         _mapScheduler = serviceProvider.GetRequiredService<MapScheduler>();
         _logger = serviceProvider.GetRequiredService<ILogger<SessionManager>>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
     }
 
     async UniTask IHostedService.StartAsync(CancellationToken token)
@@ -75,7 +72,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
         foreach (KeyValuePair<ulong, SessionRecord> session in sessions)
             EndSession(dbContext, session.Value, true);
 
-        L.Log($"[SESSIONS] Finalizing session(s): {sessions.Length}.", ConsoleColor.Magenta);
+        _logger.LogInformation("Finalizing session(s): {0}.", sessions.Length);
         await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
     }
 
@@ -104,7 +101,8 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                     dbContext.Update(previousSession);
                     await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
                 }
-                L.LogDebug($"[SESSIONS] Created session {record.SessionId} for: {player}.");
+
+                _logger.LogDebug("Created session {0} for: {1}.", record.SessionId, player);
                 return record;
             }
             finally
@@ -161,10 +159,10 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                     {
                         await task.ConfigureAwait(false);
                         waitMask[index] = true;
-                        L.LogDebug($"[SESSIONS]   Done waiting for purchase sync for player {player.Steam64}.");
+                        _logger.LogDebug("  Done waiting for purchase sync for player {0}.", player.Steam64);
                     }, token));
 
-                    L.LogDebug($"[SESSIONS] Waiting for purchase sync for player {player.Steam64}.");
+                    _logger.LogDebug("Waiting for purchase sync for player {0}.", player.Steam64);
                 }
 
                 if (tasks.Count > 0 && lockpSync)
@@ -201,7 +199,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                 }
             }
 
-            L.LogDebug("[SESSIONS] Created sessions for all players.");
+            _logger.LogDebug("Created sessions for all players.");
         }
         finally
         {
@@ -246,7 +244,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
 
         return record;
     }
-    private static void EndSession(IGameDataDbContext dbContext, SessionRecord record, bool endGame, bool update = true)
+    private void EndSession(IGameDataDbContext dbContext, SessionRecord record, bool endGame, bool update = true)
     {
         record.EndedTimestamp = DateTimeOffset.UtcNow;
         record.FinishedGame = endGame;
@@ -258,7 +256,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
         dbContext.Update(record);
         FixupSession(dbContext, record);
 
-        L.LogDebug($"[SESSIONS] Ended session {record.SessionId} for {record.Steam64}.");
+        _logger.LogDebug("Ended session {0} for {1}.", record.SessionId, record.Steam64);
     }
     // private void OnSquadChanged(WarfarePlayer player, Squad? oldsquad, Squad? newsquad, bool oldisleader, bool newisleader)
     // {
@@ -426,10 +424,12 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
     /// </summary>
     public async Task CheckForTerminatedSessions(CancellationToken token = default)
     {
-        DateTimeOffset? lastHeartbeat = ServerHeartbeatTimer.GetLastBeat();
+        DateTimeOffset? lastHeartbeat = ServerHeartbeatTimer.GetLastBeat(_logger);
         if (lastHeartbeat.HasValue)
         {
-            L.Log($"Server last online: {lastHeartbeat.Value} ({(DateTime.UtcNow - lastHeartbeat.Value.UtcDateTime):g} ago). Checking for sessions that were terminated unexpectedly.", ConsoleColor.Magenta);
+            _logger.LogInformation(
+                    "Server last online: {0} ({1} ago). Checking for sessions that were terminated unexpectedly.",
+                    lastHeartbeat.Value, (DateTime.UtcNow - lastHeartbeat.Value.UtcDateTime).ToString("g"));
 
             int ct;
             using (IServiceScope scope = _serviceProvider.CreateScope())
@@ -450,9 +450,9 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                 await dbContext.SaveChangesAsync(CancellationToken.None);
             }
 
-            L.Log($"Migrated {ct} session(s) after server didn't shut down cleanly.", ConsoleColor.Magenta);
+            _logger.LogInformation("Migrated {0} session(s) after server didn't shut down cleanly.", ct);
         }
         else
-            L.Log("Unknown last server heartbeat.", ConsoleColor.Magenta);
+            _logger.LogInformation("Unknown last server heartbeat.");
     }
 }

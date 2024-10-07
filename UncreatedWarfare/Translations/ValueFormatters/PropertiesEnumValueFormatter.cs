@@ -145,18 +145,18 @@ public class PropertiesEnumValueFormatter<TEnum> : IEnumFormatter<TEnum> where T
                 {
                     if (!(translationTable ??= new Dictionary<TEnum, string>(16)).TryAdd(enumKeyValue, value))
                     {
-                        _logger.LogWarning("Duplicate enum key for type {0}: \"{1}\".", Accessor.Formatter.Format<TEnum>(), enumKeyValue.ToString());
+                        _logger.LogWarning("Duplicate enum key for type {0}: \"{1}\".", typeof(TEnum), enumKeyValue.ToString());
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("Unknown enum key for type {0}: \"{1}\".", Accessor.Formatter.Format<TEnum>(), value);
+                    _logger.LogWarning("Unknown enum key for type {0}: \"{1}\".", typeof(TEnum), value);
                 }
             }
 
             if (nameTranslation == null)
             {
-                _logger.LogWarning("Missing %NAME% translation for enum type {0}.", Accessor.Formatter.Format<TEnum>());
+                _logger.LogWarning("Missing %NAME% translation for enum type {0}.", typeof(TEnum));
             }
         }
 

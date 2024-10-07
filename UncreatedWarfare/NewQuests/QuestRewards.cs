@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 
@@ -141,7 +140,7 @@ public class KitAccessReward : IQuestReward
 
         if (!await kitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token).ConfigureAwait(false))
         {
-            L.LogWarning($"Unknown kit {KitId} when giving access reward to player {player}.");
+            serviceProvider.GetRequiredService<ILogger<KitAccessReward>>().LogWarning($"Unknown kit {KitId} when giving access reward to player {player}.");
             return;
         }
 

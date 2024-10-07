@@ -532,25 +532,25 @@ partial class KitManager
                 }
                 if (items.Contains(original))
                 {
-                    L.LogWarning("Duplicate layout transformation for item " + original + ", skipping.");
+                    _logger.LogWarning("Duplicate layout transformation for item {0}, skipping.", original);
                     active.RemoveAtFast(i--);
                     continue;
                 }
                 if (original.X == t.NewX && original.Y == t.NewY && original.Page == t.NewPage && original.Rotation == t.NewRotation)
                 {
-                    L.LogWarning("Identity layout transformation for item " + original + ", skipping.");
+                    _logger.LogWarning("Identity layout transformation for item {0}, skipping.", original);
                     active.RemoveAtFast(i--);
                     continue;
                 }
                 items.Add(original);
-                L.LogDebug($"Found active: {t.OldPage} -> {t.NewPage}, ({t.OldX} -> {t.NewX}, {t.OldY} -> {t.NewY}) new rot: {t.NewRotation}.");
+                _logger.LogDebug("Found active: {0} -> {1}, ({2} -> {3}, {4} -> {5}) new rot: {6}.", t.OldPage, t.NewPage, t.OldX, t.NewX, t.OldY, t.NewY, t.NewRotation);
             }
 
             // check for missing items
             ulong steam64 = player.Steam64.m_SteamID;
             foreach (IPageKitItem jar in kitItems.OfType<IPageKitItem>().Where(x => !items.Contains(x)))
             {
-                L.LogDebug("Missing item " + jar + ", trying to fit somewhere.");
+                _logger.LogDebug("Missing item {0}, trying to fit somewhere.", jar);
                 byte sizeX1, sizeY1;
                 ItemAsset? asset;
                 if (jar is ISpecificKitItem itemSpec)
@@ -576,7 +576,7 @@ partial class KitManager
                     if (item.Page != jar.Page) continue;
                     if (ItemUtility.IsOverlapping(jar.X, jar.Y, sizeX1, sizeY1, item.X, item.Y, item.SizeX, item.SizeY, jar.Rotation, item.Rotation))
                     {
-                        L.LogDebug("Found colliding item: " + item.Page + ", (" + item.X + ", " + item.Y + ").");
+                        _logger.LogDebug("Found colliding item: {0}, ({1}, {2}).", item.Page, item.X, item.Y);
                         colliding = item;
                         break;
                     }
@@ -585,7 +585,7 @@ partial class KitManager
                 if (!colliding.HasValue || colliding.Value.X == jar.X && colliding.Value.Y == jar.Y && colliding.Value.Rotation == jar.Rotation
                     && colliding.Value.Item.GetAsset() is { } ia2 && ia2.GUID == asset.GUID)
                 {
-                    L.LogDebug("Found no collisions (or the collision was the same item).");
+                    _logger.LogConditional("Found no collisions (or the collision was the same item).");
                     continue;
                 }
                 byte origx, origy;
@@ -597,7 +597,7 @@ partial class KitManager
                     ItemDropTransformation t2 = comp.ItemDropTransformations.FirstOrDefault(x => x.Item == colliding.Value.Item);
                     if (t.Item == null)
                     {
-                        L.LogDebug("Unable to find transformations for original item blocking " + jar + ".");
+                        _logger.LogDebug("Unable to find transformations for original item blocking " + jar + ".");
                         continue;
                     }
                     origx = t2.OldX;
@@ -613,7 +613,7 @@ partial class KitManager
                 IPageKitItem? orig = (IPageKitItem?)kitItems.FirstOrDefault(x => x is IPageKitItem jar && jar.X == origx && jar.Y == origy && jar.Page == origPage);
                 if (orig == null)
                 {
-                    L.LogDebug("Unable to find original item blocking " + jar + ".");
+                    _logger.LogDebug("Unable to find original item blocking {0}.", jar);
                     continue;
                 }
                 if (colliding.Value.SizeX == sizeX1 && colliding.Value.SizeY == sizeY1)
@@ -630,7 +630,7 @@ partial class KitManager
                         NewPage = orig.Page,
                         NewRotation = orig.Rotation
                     }));
-                    L.LogDebug("Moved item to original position of other item: " + jar + " -> " + orig + ".");
+                    _logger.LogConditional("Moved item to original position of other item: {0} -> {1}.", jar, orig);
                 }
                 else if (colliding.Value.SizeX == sizeY1 && colliding.Value.SizeY == sizeX1)
                 {
@@ -646,7 +646,7 @@ partial class KitManager
                         NewPage = orig.Page,
                         NewRotation = (byte)(orig.Rotation + 1 % 4)
                     }));
-                    L.LogDebug("Moved item to original position of other item (rotated 90 degrees): " + jar + " -> " + orig + ".");
+                    _logger.LogConditional("Moved item to original position of other item (rotated 90 degrees): {0} -> {1}.", jar, orig);
                 }
             }
 

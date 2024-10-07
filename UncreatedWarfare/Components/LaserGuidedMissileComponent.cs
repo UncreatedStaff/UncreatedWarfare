@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Components;
 
@@ -62,7 +61,6 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
         if (!projectile.TryGetComponent(out _rigidbody))
         {
-            L.LogDebug("LASER GUIDED MISSILE ERROR: could not find rigidbody");
             return;
         }
 
@@ -88,8 +86,6 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
                 return;
             }
-
-            L.LogDebug("LASER GUIDED MISSILE ERROR: player firing not found");
         }
         else
         {
@@ -99,7 +95,6 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
             _rigidbody.velocity = projectile.transform.forward * projectileSpeed;
             _colliders = projectile.GetComponents<BoxCollider>().ToList();
             _colliders.ForEach(c => c.enabled = false);
-            L.LogDebug("LASER GUIDED MISSILE ERROR: player was not in a vehicle");
         }
     }
 

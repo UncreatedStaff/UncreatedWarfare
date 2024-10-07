@@ -23,16 +23,15 @@ internal class ItemManagerDespawnItems : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
-            logger.LogDebug("Patched {0} for item despawned event.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for item despawned event.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition("despawnItems")
+            new MethodDefinition("despawnItems")
                 .DeclaredIn<ItemManager>(isStatic: false)
                 .WithNoParameters()
                 .ReturningVoid()
-            )
         );
     }
 
@@ -42,7 +41,7 @@ internal class ItemManagerDespawnItems : IHarmonyPatch
             return;
 
         Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
-        logger.LogDebug("Unpatched {0} for item despawned event.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for item despawned event.", _target);
         _target = null;
     }
 

@@ -15,6 +15,7 @@ namespace Uncreated.Warfare.Kits;
 public class KitDefaults(KitManager manager, IServiceProvider serviceProvider)
 {
     private readonly LanguageService _languageService = serviceProvider.GetRequiredService<LanguageService>();
+    private readonly ILogger<KitDefaults> _logger = serviceProvider.GetRequiredService<ILogger<KitDefaults>>();
     public KitManager Manager { get; } = manager;
 
     /// <returns>The number of ammo boxes required to refill the kit based on it's <see cref="Class"/>.</returns>
@@ -76,7 +77,7 @@ public class KitDefaults(KitManager manager, IServiceProvider serviceProvider)
         Kit? existing = await dbContext.Kits.FirstOrDefaultAsync(x => x.InternalName == name, token).ConfigureAwait(false);
         if (existing != null)
         {
-            L.LogDebug($"Found existing default kit: {existing.InternalName}.");
+            _logger.LogDebug("Found existing default kit: {0}.", existing.InternalName);
             return existing;
         }
         if (faction != null)

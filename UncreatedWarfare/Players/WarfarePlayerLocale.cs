@@ -28,9 +28,10 @@ public class WarfarePlayerLocale
         {
             LanguageService langService = _serviceProvider.GetRequiredService<LanguageService>();
             LanguageInfo info = value.Language ?? langService.GetDefaultLanguage();
+            ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
             bool updated = false;
 
-            IsDefaultLanguage = info.Code.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+            IsDefaultLanguage = info.Equals(langService.GetDefaultLanguage());
 
             if (!(value.Culture != null && langService.TryGetCultureInfo(value.Culture, out CultureInfo culture)) &&
                 !(info is { DefaultCultureCode: { } defaultCultureName } && langService.TryGetCultureInfo(defaultCultureName, out culture)))
@@ -40,7 +41,7 @@ public class WarfarePlayerLocale
 
             if (_init && (CultureInfo == null || !CultureInfo.Name.Equals(culture.Name, StringComparison.Ordinal)))
             {
-                L.Log($"Updated culture for {Player}: {CultureInfo?.DisplayName ?? "null"} -> {culture.DisplayName}.");
+                logger.LogInformation("Updated culture for {0}: {1} -> {2}.", Player, CultureInfo?.DisplayName ?? "null", culture.DisplayName);
                 updated = true;
             }
 
@@ -49,7 +50,7 @@ public class WarfarePlayerLocale
 
             if (_init && LanguageInfo != info)
             {
-                L.Log($"Updated language for {Player}: {LanguageInfo?.DisplayName ?? "null"} -> {info.DisplayName}.");
+                logger.LogInformation("Updated language for {0}: {1} -> {2}.", Player, LanguageInfo?.DisplayName ?? "null", info.DisplayName);
                 updated = true;
             }
 
@@ -83,10 +84,11 @@ public class WarfarePlayerLocale
     }
     internal Task Update(string? language, CultureInfo? culture, bool holdSave = false, CancellationToken token = default)
     {
+        ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
         bool save = false;
         if (culture != null && !culture.Name.Equals(CultureInfo.Name, StringComparison.Ordinal))
         {
-            L.Log($"Updated culture for {Player}: {CultureInfo.DisplayName} -> {culture.DisplayName}.");
+            logger.LogInformation("Updated culture for {0}: {1} -> {2}.", Player, CultureInfo.DisplayName, culture.DisplayName);
             ActionLog.Add(ActionLogType.ChangeCulture, CultureInfo.Name + " >> " + culture.Name, Player.Steam64.m_SteamID);
             CultureInfo = culture;
             Preferences.Culture = culture.Name;
@@ -98,11 +100,11 @@ public class WarfarePlayerLocale
         ICachableLanguageDataStore dataStore = _serviceProvider.GetRequiredService<ICachableLanguageDataStore>();
         if (language != null && dataStore.GetInfoCached(language) is { } languageInfo && !languageInfo.Code.Equals(LanguageInfo.Code, StringComparison.Ordinal))
         {
-            L.Log($"Updated language for {Player}: {LanguageInfo.DisplayName} -> {languageInfo.DisplayName}.");
+            logger.LogInformation("Updated language for {0}: {1} -> {2}.", Player, LanguageInfo.DisplayName, languageInfo.DisplayName);
             ActionLog.Add(ActionLogType.ChangeLanguage, LanguageInfo.Code + " >> " + languageInfo.Code, Player.Steam64.m_SteamID);
             Preferences.Language = languageInfo;
             Preferences.LanguageId = languageInfo.Key;
-            IsDefaultLanguage = languageInfo.Code.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+            IsDefaultLanguage = languageInfo.Equals(_serviceProvider.GetRequiredService<LanguageService>().GetDefaultLanguage());
             LanguageInfo = languageInfo;
             save = true;
         }
@@ -127,10 +129,11 @@ public class WarfarePlayerLocale
         return Task.CompletedTask;
     }
 
-    private static void InvokeOnLocaleUpdated(WarfarePlayer player)
+    private void InvokeOnLocaleUpdated(WarfarePlayer player)
     {
-        if (OnLocaleUpdated == null)
+        if (OnLocaleUpdated == null || !player.IsOnline)
             return;
+
         // ReSharper disable once ConstantConditionalAccessQualifier
         if (GameThread.IsCurrent)
         {
@@ -140,8 +143,8 @@ public class WarfarePlayerLocale
             }
             catch (Exception ex)
             {
-                L.LogError($"Error updating locale for {player}.");
-                L.LogError(ex);
+                ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
+                logger.LogError(ex, "Error updating locale for {0}.", player);
             }
         }
         else
@@ -149,14 +152,17 @@ public class WarfarePlayerLocale
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread(CancellationToken.None);
+                if (!player.IsOnline)
+                    return;
+
                 try
                 {
                     OnLocaleUpdated?.Invoke(player);
                 }
                 catch (Exception ex)
                 {
-                    L.LogError($"Error updating locale for {player}.");
-                    L.LogError(ex);
+                    ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
+                    logger.LogError(ex, "Error updating locale for {0}.", player);
                 }
             });
         }

@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
@@ -52,13 +52,12 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
     public IList<LanguageContributor> Contributors { get; set; } = null!;
     public IList<LanguageCulture> SupportedCultures { get; set; } = null!;
 
-    // todo don't use constant here
-    [JsonIgnore]
-    public bool IsDefault => L.Default.Equals(Code, StringComparison.OrdinalIgnoreCase);
+    [JsonIgnore, NotMapped]
+    public bool IsDefault { get; internal set; }
 
     public LanguageInfo() { }
 
-    public LanguageInfo(string tempCode)
+    public LanguageInfo(string tempCode, LanguageService langService)
     {
         Code = tempCode;
         DisplayName = tempCode;
@@ -66,6 +65,12 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
         Aliases = new List<LanguageAlias>(0);
         Contributors = new List<LanguageContributor>(0);
         SupportedCultures = new List<LanguageCulture>(0);
+        UpdateIsDefault(langService);
+    }
+
+    internal void UpdateIsDefault(LanguageService langService)
+    {
+        IsDefault = langService.DefaultLanguageCode.Equals(Code, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />

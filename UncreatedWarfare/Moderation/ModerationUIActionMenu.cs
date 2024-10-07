@@ -108,7 +108,7 @@ partial class ModerationUI
         {
             if (data.PrimaryEditingEntry == null)
             {
-                L.LogWarning("Missing moderation entry.");
+                Logger!.LogWarning("Missing moderation entry.");
                 return;
             }
             if (data.SecondaryEditingEntry == null)
@@ -130,7 +130,7 @@ partial class ModerationUI
 
             if (data.PendingType == ModerationEntryType.None && data.PendingPreset == PresetType.None)
             {
-                L.LogWarning("Invalid moderation types.");
+                Logger!.LogWarning("Invalid moderation types.");
                 return;
             }
             SendActorsAndEvidence(player);
@@ -347,7 +347,7 @@ partial class ModerationUI
             hasSecondaryDuration = data.SecondaryEditingEntry is IDurationModerationEntry;
         }
 
-        L.LogDebug($"hasMute: {hasMute}, hasAssetBan: {hasAssetBan}, isNote: {isNote}, hasPrimaryDuration: {hasPrimaryDuration}, hasSecondaryDuration: {hasSecondaryDuration}.");
+        Logger!.LogDebug("hasMute: {0}, hasAssetBan: {1}, isNote: {2}, hasPrimaryDuration: {3}, hasSecondaryDuration: {4}.", hasMute, hasAssetBan, isNote, hasPrimaryDuration, hasSecondaryDuration);
 
         if (editingExisting)
             ModerationActionMessage.SetText(player, (data.PrimaryEditingEntry?.Message ?? data.SecondaryEditingEntry?.Message) ?? string.Empty);
@@ -726,7 +726,7 @@ partial class ModerationUI
             {
                 if (ModerationReflection.GetType(data.PendingType) is not { } type)
                 {
-                    L.LogWarning($"Unknown pending type: {data.PendingType}.");
+                    Logger!.LogWarning("Unknown pending type: {0}.", data.PendingType);
                     return;
                 }
 
@@ -742,7 +742,7 @@ partial class ModerationUI
             {
                 if (ModerationReflection.GetType(data.PendingPresetValue.PrimaryModerationType) is not { } primaryType)
                 {
-                    L.LogWarning($"Unknown preset primary type: {data.PendingPresetValue.PrimaryModerationType}.");
+                    Logger!.LogWarning("Unknown preset primary type: {0}.", data.PendingPresetValue.PrimaryModerationType);
                     return;
                 }
 
@@ -815,7 +815,7 @@ partial class ModerationUI
                 ModerationActionInputBox3.SetText(player, assetBan.GetCommaList(true));
             else if (ModerationActionInputBox3.TextBox.GetOrAddData(player.UnturnedPlayer).Text is { Length: > 0 } text)
             {
-                L.LogDebug($"Filled from save of text: \"{text}\".");
+                Logger!.LogDebug("Filled from save of text: \"{0}\".", text);
                 assetBan.FillFromText(text);
             }
             else
@@ -938,11 +938,11 @@ partial class ModerationUI
             ModerationEntry? m2 = data.SecondaryEditingEntry;
             if (m1 != null)
             {
-                m1 = await SaveEntry(m1, this, player, CancellationToken.None);
+                m1 = await SaveEntry(m1, Logger!, this, player, CancellationToken.None);
             }
             if (m2 != null)
             {
-                m2 = await SaveEntry(m2, this, player, CancellationToken.None);
+                m2 = await SaveEntry(m2, Logger!, this, player, CancellationToken.None);
             }
 
             // add to related entries
@@ -1001,7 +1001,7 @@ partial class ModerationUI
             SelectEntry(player, select);
             await RefreshModerationHistory(player, token);
 
-            static async UniTask<ModerationEntry> SaveEntry(ModerationEntry entry, ModerationUI ui, WarfarePlayer player, CancellationToken token)
+            static async UniTask<ModerationEntry> SaveEntry(ModerationEntry entry, ILogger logger, ModerationUI ui, WarfarePlayer player, CancellationToken token)
             {
                 ModerationEntry? current = entry.Id != 0u ? await ui._moderationSql.ReadOne<ModerationEntry>(entry.Id, false, token: token) : null;
                 if (current == null)
@@ -1009,7 +1009,7 @@ partial class ModerationUI
                     entry.Id = 0u;
                     current = entry;
                     if (current is AssetBan b)
-                        L.LogDebug($"Entries: '{string.Join(", ", b.VehicleTypeFilter)}'.");
+                        logger.LogDebug("Entries: '{0}'.", b.VehicleTypeFilter);
                     ActionLog.Add(ActionLogType.CreateModerationEntry, $"Entry Id {entry.Id}. {entry.GetType().Name}, \"{entry.Message ?? "No Message"}\".", player.Steam64);
                 }
                 else
@@ -1079,8 +1079,8 @@ partial class ModerationUI
                                 Append(changes, "-filter", currentAssetBan.VehicleTypeFilter[i].ToString());
                         }
 
-                        L.LogDebug($"Current entries: '{string.Join(", ", currentAssetBan.VehicleTypeFilter)}'.");
-                        L.LogDebug($"Entry entries:   '{string.Join(", ", entryAssetBan.VehicleTypeFilter)}'.");
+                        logger.LogDebug("Current entries: '{0}'.", currentAssetBan.VehicleTypeFilter);
+                        logger.LogDebug("Entry entries:   '{0}'.", entryAssetBan.VehicleTypeFilter);
                         currentAssetBan.VehicleTypeFilter = entryAssetBan.VehicleTypeFilter;
                     }
 
@@ -1093,7 +1093,7 @@ partial class ModerationUI
                     bool anyChanges = changes.Length > 0;
                     if (!anyChanges)
                     {
-                        L.Log("No changes were made.");
+                        logger.LogConditional("No changes were made.");
                         return current;
                     }
 
@@ -1150,7 +1150,7 @@ partial class ModerationUI
     {
         if (data.PrimaryEditingEntry == null)
         {
-            L.LogWarning("Tried to remove an in-progress entry.");
+            Logger!.LogWarning("Tried to remove an in-progress entry.");
             return;
         }
 
@@ -1162,7 +1162,7 @@ partial class ModerationUI
             m2 = null;
         if (m1 == null && m2 == null)
         {
-            L.LogWarning("Tried to remove unremoveable entries.");
+            Logger!.LogWarning("Tried to remove unremoveable entries.");
             return;
         }
 
@@ -1225,7 +1225,7 @@ partial class ModerationUI
             f2 = null;
         if (f1 == null && f2 == null)
         {
-            L.LogWarning("Tried to forgive unforgivable entries.");
+            Logger!.LogWarning("Tried to forgive unforgivable entries.");
             return;
         }
 
@@ -1300,7 +1300,7 @@ partial class ModerationUI
         int ct = data.Actors.Count;
         if (ct >= ModerationActionActors.Length)
         {
-            L.LogWarning("Too many actors.");
+            Logger!.LogWarning("Too many actors.");
             ModerationActionAddActorButton.Disable(player);
             return;
         }
@@ -1330,7 +1330,7 @@ partial class ModerationUI
         if (index >= data.Actors.Count)
         {
             actorUi.Root.Hide(player);
-            L.LogWarning("Actor not supposed to be added.");
+            Logger!.LogWarning("Actor not supposed to be added.");
             return;
         }
 
@@ -1350,7 +1350,7 @@ partial class ModerationUI
         int ct = data.Evidence.Count;
         if (ct >= ModerationActionEvidence.Length)
         {
-            L.LogWarning("Too many evidence entries.");
+            Logger!.LogWarning("Too many evidence entries.");
             ModerationActionAddEvidenceButton.Disable(player);
             return;
         }
@@ -1385,7 +1385,7 @@ partial class ModerationUI
         if (index >= data.Evidence.Count)
         {
             evidenceUi.Root.Hide(player);
-            L.LogWarning("Evidence not supposed to be added.");
+            Logger!.LogWarning("Evidence not supposed to be added.");
             return;
         }
 
@@ -1404,11 +1404,11 @@ partial class ModerationUI
         Type? sysType = ModerationReflection.GetType(type);
         if (sysType == null || !typeof(ModerationEntry).IsAssignableFrom(sysType))
         {
-            L.LogWarning($"Unknown moderation type: {type}.");
+            Logger!.LogWarning("Unknown moderation type: {0}.", type);
             return;
         }
 
-        L.LogDebug($"Pressed action: {type}.");
+        Logger!.LogDebug("Pressed action: {0}.", type);
 
         ModerationData data = GetOrAddModerationData(ucp);
         bool isDeselecting = new CSteamID(data.SelectedPlayer).GetEAccountType() != EAccountType.k_EAccountTypeIndividual;
@@ -1448,7 +1448,7 @@ partial class ModerationUI
         int index = Array.FindIndex(Presets, x => x.Button == button);
         if (index == -1 || PunishmentPresets.Presets.Count <= index)
         {
-            L.LogWarning($"Unknown preset type: {button.Name}.");
+            Logger!.LogWarning("Unknown preset type: {0}.", button.Name);
             return;
         }
 
@@ -1456,11 +1456,11 @@ partial class ModerationUI
         PresetType preset = (PresetType)(index + 1);
         if (!PunishmentPresets.TryGetPreset(preset, out _))
         {
-            L.LogWarning($"Preset not found: {preset}.");
+            Logger!.LogWarning("Preset not found: {0}.", preset);
             return;
         }
 
-        L.LogDebug($"Pressed preset: {preset}.");
+        Logger!.LogDebug("Pressed preset: {0}.", preset);
 
         ModerationData data = GetOrAddModerationData(ucp);
         if (data.PendingPreset != PresetType.None && data.PendingPreset != preset)
@@ -1505,7 +1505,7 @@ partial class ModerationUI
         if (data.SecondaryEditingEntry != null)
             data.SecondaryEditingEntry.Message = text;
 
-        L.LogDebug($"Message updated: {text}.");
+        Logger!.LogDebug("Message updated: {0}.", text);
     }
     private void OnMuteTypeUpdated(UnturnedEnumButton<MuteType> button, Player player, MuteType value)
     {
@@ -1520,7 +1520,7 @@ partial class ModerationUI
         if (data.SecondaryEditingEntry is Mute mute2)
             mute2.Type = value;
 
-        L.LogDebug($"Mute type updated: {value}.");
+        Logger!.LogDebug("Mute type updated: {0}.", value);
     }
     private void OnVehicleListUpdated(UnturnedTextBox textbox, Player player, string text)
     {
@@ -1535,7 +1535,7 @@ partial class ModerationUI
         string commaList = ban.GetCommaList(true);
         textbox.SetText(ucp.Connection, commaList);
 
-        L.LogDebug($"Vehicle filter updated: {commaList} ({string.Join(", ", ban.VehicleTypeFilter)}).");
+        Logger!.LogDebug("Vehicle filter updated: {0} ({1}).", commaList, ban.VehicleTypeFilter);
     }
     private void OnDurationUpdated(UnturnedTextBox textbox, Player player, string text)
     {
@@ -1551,7 +1551,7 @@ partial class ModerationUI
         else if (!primary && data.SecondaryEditingEntry is IDurationModerationEntry durEntry2)
             durEntry2.Duration = duration;
 
-        L.LogDebug($"Duration updated: {timeString} (primary: {primary}).");
+        Logger!.LogDebug("Duration updated: {0} (primary: {1}).", timeString, primary);
     }
     private void OnReputationUpdated(UnturnedTextBox textbox, Player player, string text)
     {
@@ -1575,7 +1575,7 @@ partial class ModerationUI
         if (data.SecondaryEditingEntry != null)
             data.SecondaryEditingEntry.Reputation = rep;
 
-        L.LogDebug($"Reputation updated: {rep.ToString("0.#", CultureInfo.InvariantCulture)}.");
+        Logger!.LogDebug("Reputation updated: {0}.", rep.ToString("0.#", CultureInfo.InvariantCulture));
     }
 
     private bool GetEvidenceDetails(Player player, Predicate<ModerationSelectedEvidence> selector, out int index, out WarfarePlayer ucp, out ModerationData data)
@@ -1584,7 +1584,7 @@ partial class ModerationUI
         index = Array.FindIndex(ModerationActionEvidence, selector);
         if (index == -1 || ModerationActionEvidence.Length <= index)
         {
-            L.LogWarning("Unknown evidence.");
+            Logger!.LogWarning("Unknown evidence.");
             data = null!;
             return false;
         }
@@ -1597,7 +1597,7 @@ partial class ModerationUI
                 return true;
             }
 
-            L.LogWarning("Evidence out of bounds.");
+            Logger!.LogWarning("Evidence out of bounds.");
             return false;
         }
 
@@ -1610,7 +1610,7 @@ partial class ModerationUI
         index = Array.FindIndex(ModerationActionActors, selector);
         if (index == -1 || ModerationActionActors.Length <= index)
         {
-            L.LogWarning("Unknown actor.");
+            Logger!.LogWarning("Unknown actor.");
             data = null!;
             return false;
         }
@@ -1622,7 +1622,7 @@ partial class ModerationUI
                 return true;
             }
 
-            L.LogWarning("Actor out of bounds.");
+            Logger!.LogWarning("Actor out of bounds.");
             return false;
 
         }
@@ -1713,12 +1713,12 @@ partial class ModerationUI
         UniTask.Create(async () =>
         {
             UnityWebRequest req = new UnityWebRequest(evidence.URL, "HEAD", null, null);
-            L.LogDebug($"HEAD -> {evidence.URL}.");
+            Logger!.LogConditional("HEAD -> {0}.", evidence.URL);
             ModerationSelectedEvidence ui = ModerationActionEvidence[index];
             try
             {
                 await req.SendWebRequest();
-                L.LogDebug("  Done");
+                Logger!.LogConditional("  Done");
                 if (!data.Evidence[index].URL.Equals(evidence.URL, StringComparison.Ordinal))
                     return;
                 string name;
@@ -1733,10 +1733,10 @@ partial class ModerationUI
                 else name = evidence.URL;
 
                 ui.LinkInput.SetText(player, req.uri.ToString());
-                L.LogDebug($"  Responded: {req.redirectLimit}");
+                Logger!.LogConditional("  Responded: {0}", req.redirectLimit);
                 if (req.GetResponseHeader("Content-Type") is { } contentType && contentType.StartsWith("image/"))
                 {
-                    L.LogDebug("  Image");
+                    Logger!.LogConditional("  Image");
                     data.Evidence[index] = new Evidence(text, evidence.URL, null, true, evidence.Actor, evidence.Timestamp);
                     ui.PreviewName.SetVisibility(player, true);
                     ui.NoPreviewName.SetVisibility(player, false);
@@ -1746,7 +1746,7 @@ partial class ModerationUI
                 }
                 else
                 {
-                    L.LogDebug("  Not image");
+                    Logger!.LogConditional("  Not image");
                     ui.NoPreviewName.SetVisibility(player, true);
                     ui.PreviewName.SetVisibility(player, false);
                     ui.NoPreviewName.SetText(player, name);

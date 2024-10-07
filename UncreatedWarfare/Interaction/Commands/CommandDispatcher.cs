@@ -98,12 +98,12 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
         foreach (Type commandType in types)
         {
-            if (allCommands.Exists(x => x.Type == commandType))
+            if (commandType.IsAbstract || allCommands.Exists(x => x.Type == commandType))
                 continue;
 
             _logger.LogWarning("Sub command type {0} does not exist for command {1}.",
-                commandType.TryGetAttributeSafe(out SubCommandOfAttribute attribute) ? Accessor.Formatter.Format(attribute.ParentType) : "null",
-                Accessor.Formatter.Format(commandType)
+                commandType.TryGetAttributeSafe(out SubCommandOfAttribute attribute) ? attribute.ParentType : "null",
+                commandType
             );
         }
 
@@ -123,13 +123,13 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             command.RedirectCommandInfo = allCommands.Find(x => x.Type == redirAttribute.CommandType);
             if (command.RedirectCommandInfo == null)
             {
-                _logger.LogWarning("Redirect command {0} not registered.", Accessor.Formatter.Format(redirAttribute.CommandType));
+                _logger.LogWarning("Redirect command {0} not registered.", redirAttribute.CommandType);
             }
 
             command.IsExecutable = command.VanillaCommand != null || (command.RedirectCommandInfo == null && typeof(IExecutableCommand).IsAssignableFrom(command.Type));
             if (command is { IsExecutable: false, SubCommands.Count: 0, RedirectCommandInfo: null })
             {
-                _logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", Accessor.Formatter.Format(command.Type));
+                _logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", command.Type);
             }
         }
 
@@ -479,7 +479,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error executing vanilla command {0}.", Accessor.Formatter.Format(commandType));
+            _logger.LogError(ex, "Error executing vanilla command {0}.", commandType);
         }
         finally
         {
@@ -511,7 +511,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
         CancellationTokenSource src = new CancellationTokenSource();
         CancellationTokenSource linkedSrc = CancellationTokenSource.CreateLinkedTokenSource(token, src.Token);
-        ILifetimeScope scope = _module.ScopedProvider.BeginLifetimeScope(LifetimeScopeTags.Command);
+        ILifetimeScope scope = (_module.IsLayoutActive() ? _module.ScopedProvider : _module.ServiceProvider).BeginLifetimeScope(LifetimeScopeTags.Command);
         try
         {
             IServiceProvider serviceProvider = scope.Resolve<IServiceProvider>();
@@ -629,7 +629,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                 switchInfo = FindCommand(switchCommand);
                 if (switchInfo == null)
                 {
-                    _logger.LogError("Invalid switch command type: {0} in command {1}.", Accessor.Formatter.Format(switchCommand), Accessor.Formatter.Format(command.Type));
+                    _logger.LogError("Invalid switch command type: {0} in command {1}.", switchCommand, command.Type);
                     return;
                 }
 
@@ -664,10 +664,10 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
 #if DEBUG
                 _logger.LogDebug("Switching to command type {0} with args [ /{1} {2} ] from command type {3}.",
-                    Accessor.Formatter.Format(switchInfo.Type),
+                    switchInfo.Type,
                     switchInfo.CommandName,
                     args.Length != 0 ? "\"" + string.Join("\" \"", args) + "\"" : 0,
-                    Accessor.Formatter.Format(command.Type)
+                    command.Type
                 );
 #endif
             }

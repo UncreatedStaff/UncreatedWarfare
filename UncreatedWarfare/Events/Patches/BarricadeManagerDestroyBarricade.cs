@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -28,19 +27,18 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
-            logger.LogDebug("Patched {0} for destroy barricade event.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for destroy barricade event.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition(nameof(BarricadeManager.destroyBarricade))
+            new MethodDefinition(nameof(BarricadeManager.destroyBarricade))
                 .DeclaredIn<BarricadeManager>(isStatic: true)
                 .WithParameter<BarricadeDrop>("barricade")
                 .WithParameter<byte>("x")
                 .WithParameter<byte>("y")
                 .WithParameter<ushort>("plant")
                 .ReturningVoid()
-            )
         );
     }
 
@@ -50,7 +48,7 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
             return;
 
         Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
-        logger.LogDebug("Unpatched {0} for destroy barricade event.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for destroy barricade event.", _target);
         _target = null;
     }
 
@@ -63,7 +61,7 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
         FieldInfo? rpc = typeof(BarricadeManager).GetField("SendDestroyBarricade", BindingFlags.NonPublic | BindingFlags.Static);
         if (rpc == null)
         {
-            L.LogWarning("Unable to find field: BarricadeManager.SendDestroyBarricade");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find field: BarricadeManager.SendDestroyBarricade");
         }
 
         bool one = false;
@@ -78,7 +76,7 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
                 yield return new CodeInstruction(OpCodes.Ldarg_2);
                 yield return new CodeInstruction(OpCodes.Ldarg_3);
                 yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(DestroyBarricadeInvoker));
-                L.LogDebug("Inserted DestroyBarricadeInvoker call to BarricadeManager.destroyBarricade.");
+                WarfareModule.Singleton.GlobalLogger.LogDebug("Inserted DestroyBarricadeInvoker call to BarricadeManager.destroyBarricade.");
                 CodeInstruction old = new CodeInstruction(instruction);
                 old.labels.Clear();
                 yield return old;

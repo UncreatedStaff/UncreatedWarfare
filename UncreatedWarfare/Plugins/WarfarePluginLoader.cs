@@ -76,7 +76,7 @@ public class WarfarePluginLoader
                 {
                     _logger.LogWarning(
                         "Service configurer type {0} in plugin {1} does not have a valid public constructor.",
-                        Accessor.Formatter.Format(type),
+                        type,
                         plugin.AssemblyName.Name
                     );
                     continue;
@@ -96,7 +96,7 @@ public class WarfarePluginLoader
                     _logger.LogError(
                         ex,
                         "Service configurer type {0} in plugin {1} threw an error.",
-                        Accessor.Formatter.Format(type),
+                        type,
                         plugin.AssemblyName.Name
                     );
                 }
@@ -113,7 +113,7 @@ public class WarfarePluginLoader
                     _logger.LogError(
                         ex,
                         "Service configurer type {0} in plugin {1} threw an error when disposing.",
-                        Accessor.Formatter.Format(type),
+                        type,
                         plugin.AssemblyName.Name
                     );
                 }
@@ -145,7 +145,7 @@ public class WarfarePluginLoader
             if (parameterType == typeof(object))
             {
                 throw new InvalidOperationException(
-                    $"Unable to inject service {Accessor.Formatter.Format(parameterType)} for IServiceConfigurer type {Accessor.Formatter.Format(type)}."
+                    $"Unable to inject service {Accessor.ExceptionFormatter.Format(parameterType)} for IServiceConfigurer type {Accessor.ExceptionFormatter.Format(type)}."
                 );
             }
 
@@ -195,7 +195,7 @@ public class WarfarePluginLoader
             else
             {
                 throw new InvalidOperationException(
-                    $"Unable to inject service {Accessor.Formatter.Format(parameterType)} for IServiceConfigurer type {Accessor.Formatter.Format(type)}."
+                    $"Unable to inject service {Accessor.ExceptionFormatter.Format(parameterType)} for IServiceConfigurer type {Accessor.ExceptionFormatter.Format(type)}."
                 );
             }
         }

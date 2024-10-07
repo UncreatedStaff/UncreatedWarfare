@@ -1,9 +1,9 @@
 ﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Configuration;
@@ -103,8 +103,8 @@ public static class SettableUtil<TItem> where TItem : class
             }
             catch (Exception ex)
             {
-                L.LogError($"Failed to set value of \"{instance}.{custom2.Aliases[0]}\" (custom settable).");
-                L.LogError(ex);
+                ILogger logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(SettableUtil<TItem>));
+                logger.LogError(ex, "Failed to set value of \"{0}.{1}\" (custom settable).", instance, custom2.Aliases[0]);
                 return SetPropertyResult.TypeNotSettable;
             }
         }
@@ -118,8 +118,8 @@ public static class SettableUtil<TItem> where TItem : class
         }
         catch (Exception ex)
         {
-            L.LogError($"Failed to set value of \"{variable.Format(Accessor.Formatter, includeDefinitionKeywords: true)}\".");
-            L.LogError(ex);
+            ILogger logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(SettableUtil<TItem>));
+            logger.LogError(ex, "Failed to set value of \"{0}\".", variable);
             return SetPropertyResult.TypeNotSettable;
         }
     }

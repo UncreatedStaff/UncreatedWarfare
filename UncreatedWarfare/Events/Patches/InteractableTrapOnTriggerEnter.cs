@@ -28,16 +28,15 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
-            logger.LogDebug("Patched {0} for trap trigger events.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for trap trigger events.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition("OnTriggerEnter")
+            new MethodDefinition("OnTriggerEnter")
                 .DeclaredIn<InteractableTrap>(isStatic: false)
                 .WithParameter<Collider>("other")
                 .ReturningVoid()
-            )
         );
     }
 
@@ -47,7 +46,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
             return;
         
         Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
-        logger.LogDebug("Unpatched {0} for trap trigger events.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for trap trigger events.", _target);
         _target = null;
     }
 

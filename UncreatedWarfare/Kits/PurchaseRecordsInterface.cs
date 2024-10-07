@@ -458,11 +458,11 @@ public class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDisposable
             if (bundle.Kits != null)
             {
                 StringBuilder sb = new StringBuilder("Included Kits:");
-                LanguageService? languageService = _serviceProvider.GetService<LanguageService>();
+                LanguageService languageService = _serviceProvider.GetRequiredService<LanguageService>();
                 foreach (Kit includedKit in bundle.Kits.Select(x => x.Kit))
                 {
                     sb.Append(Environment.NewLine);
-                    sb.Append(includedKit.GetDisplayName(languageService, languageService?.GetDefaultLanguage() ?? new LanguageInfo("en-us")));
+                    sb.Append(includedKit.GetDisplayName(languageService, languageService.GetDefaultLanguage()));
                     if (includedKit.EliteKitInfo is { Product.DefaultPrice.UnitAmountDecimal: { } price })
                         sb.Append($" (Individual price: {price.ToString("C", stripeService.PriceFormatting)})");
                 }

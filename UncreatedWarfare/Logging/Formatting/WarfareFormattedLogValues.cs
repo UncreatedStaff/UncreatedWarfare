@@ -1,7 +1,11 @@
-﻿using StackCleaner;
+﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.Formatting;
+using StackCleaner;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Reflection;
+using System.Text;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
@@ -18,34 +22,41 @@ internal struct WarfareFormattedLogValues
     [ThreadStatic]
     private static char[] _formatBuffer;
 
+    private static readonly ColorSetting NumberDefault = (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow);
+    private static readonly ColorSetting StructDefault = (TerminalColorHelper.ToArgb(new Color32(134, 198, 145, 255)), ConsoleColor.DarkGreen);
+    private static readonly ColorSetting EnumDefault = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
+    private static readonly ColorSetting InterfaceDefault = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
+    private static readonly ColorSetting ObjectDefault = (TerminalColorHelper.ToArgb(new Color32(78, 201, 176, 255)), ConsoleColor.DarkCyan);
+    private static readonly ColorSetting SymbolsDefault = (TerminalColorHelper.ToArgb(new Color32(220, 220, 220, 255)), ConsoleColor.Gray);
+
     private static readonly Dictionary<Type, ColorSetting> Colors = new Dictionary<Type, (int, ConsoleColor)>(36)
     {
         // number types
-        { typeof(byte),     (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(sbyte),    (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(short),    (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(ushort),   (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(int),      (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(uint),     (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(long),     (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(ulong),    (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(float),    (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(double),   (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(decimal),  (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(nint),     (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
-        { typeof(nuint),    (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow) },
+        { typeof(byte),     NumberDefault },
+        { typeof(sbyte),    NumberDefault },
+        { typeof(short),    NumberDefault },
+        { typeof(ushort),   NumberDefault },
+        { typeof(int),      NumberDefault },
+        { typeof(uint),     NumberDefault },
+        { typeof(long),     NumberDefault },
+        { typeof(ulong),    NumberDefault },
+        { typeof(float),    NumberDefault },
+        { typeof(double),   NumberDefault },
+        { typeof(decimal),  NumberDefault },
+        { typeof(nint),     NumberDefault },
+        { typeof(nuint),    NumberDefault },
+
+        { typeof(MemberInfo), SymbolsDefault },
+        { typeof(IMemberDefinition), SymbolsDefault },
+        { typeof(IVariable), SymbolsDefault },
+        { typeof(ParameterInfo), SymbolsDefault },
         
         { typeof(string),   (TerminalColorHelper.ToArgb(new Color32(214, 157, 133, 255)), ConsoleColor.DarkRed) },
         { typeof(char),     (TerminalColorHelper.ToArgb(new Color32(214, 157, 133, 255)), ConsoleColor.DarkRed) },
 
-        { typeof(bool),     (TerminalColorHelper.ToArgb(new Color32(86, 156, 214, 255)), ConsoleColor.Blue) }
+        { typeof(bool),     (TerminalColorHelper.ToArgb(new Color32(86, 156, 214, 255)), ConsoleColor.Blue) },
+        { typeof(CSteamID), (TerminalColorHelper.ToArgb(new Color32(255, 153, 204, 255)), ConsoleColor.DarkMagenta) }
     };
-
-    private static readonly ColorSetting StructDefault    = (TerminalColorHelper.ToArgb(new Color32(134, 198, 145, 255)), ConsoleColor.DarkGreen);
-    private static readonly ColorSetting EnumDefault      = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
-    private static readonly ColorSetting InterfaceDefault = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
-    private static readonly ColorSetting ObjectDefault    = (TerminalColorHelper.ToArgb(new Color32(78, 201, 176, 255)), ConsoleColor.DarkCyan);
-    private static readonly ColorSetting SymbolsDefault   = (TerminalColorHelper.ToArgb(new Color32(220, 220, 220, 255)), ConsoleColor.Gray);
 
     public readonly StringParameterList Parameters;
     public readonly string Message;
@@ -103,19 +114,78 @@ internal struct WarfareFormattedLogValues
             Parameters.Count
         );
 
+        StackColorFormatType color = !useColor || ValueFormatter == null
+            ? StackColorFormatType.None
+            : ValueFormatter.TranslationService.TerminalColoring;
+
+        bool extended = color == StackColorFormatType.ExtendedANSIColor;
+
         int index = 0;
         for (int i = 0; i < Parameters.Count; ++i)
         {
-            ReadOnlySpan<char> formatted = ValueFormatter?.Format(Parameters[i], in parameters) ?? Parameters[i]?.ToString() ?? default;
-
+            object? value = Parameters[i];
             int prefixSize, suffixSize, argb;
-            if (useColor && ValueFormatter != null)
-                TryDecideColor(Parameters[i], out argb, out prefixSize, out suffixSize);
-            else
+            scoped ReadOnlySpan<char> formatted;
+
+            // lists
+            if (value is IEnumerable enumerable and not string)
             {
+                StringBuilder sb = new StringBuilder();
+                string punctuationColor = TerminalColorHelper.GetTerminalColorSequence(GetArgb(extended, in SymbolsDefault), false);
+                if (enumerable is ICollection col)
+                {
+                    if (useColor)
+                        sb.Append(TerminalColorHelper.GetTerminalColorSequence(GetArgb(extended, in NumberDefault), false));
+                    sb.Append(col.Count);
+                }
+                if (useColor)
+                    sb.Append(punctuationColor);
+                sb.Append("[ ");
+                bool first = true;
+                foreach (object? subValue in enumerable)
+                {
+                    if (first)
+                        first = false;
+                    else
+                    {
+                        if (useColor)
+                            sb.Append(punctuationColor);
+
+                        sb.Append(", ");
+                    }
+
+                    formatted = ValueFormatter?.Format(subValue, in parameters, null) ?? subValue?.ToString() ?? default;
+                    if (useColor && ValueFormatter != null)
+                    {
+                        TryDecideColor(subValue, out argb, out _, out _, color);
+                        sb.Append(TerminalColorHelper.GetTerminalColorSequence(argb, false));
+                    }
+                    
+                    sb.Append(formatted);
+                }
+                if (useColor)
+                    sb.Append(punctuationColor);
+                sb.Append(" ]");
+                if (useColor)
+                    sb.Append(TerminalColorHelper.ForegroundResetSequence);
+
+                formatted = sb.ToString();
                 prefixSize = 0;
                 suffixSize = 0;
                 argb = 0;
+            }
+            else
+            {
+                formatted = ValueFormatter?.Format(value, in parameters, null) ?? value?.ToString() ?? default;
+
+                if (useColor && ValueFormatter != null)
+                    TryDecideColor(value, out argb, out prefixSize, out suffixSize, color);
+                else
+                {
+                    prefixSize = 0;
+                    suffixSize = 0;
+                    argb = 0;
+                }
             }
 
             int ttlSize = formatted.Length + prefixSize + suffixSize;
@@ -135,7 +205,10 @@ internal struct WarfareFormattedLogValues
             formatted.CopyTo(format[prefixSize..]);
 
             if (prefixSize > 0)
-                FormatColor(argb, format[..prefixSize], format.Slice(prefixSize + formatted.Length, suffixSize));
+            {
+                TerminalColorHelper.WriteTerminalColorSequence(format[..prefixSize], argb, false);
+                TerminalColorHelper.ForegroundResetSequence.AsSpan().CopyTo(format.Slice(prefixSize + formatted.Length, suffixSize));
+            }
 
             if (index != 0)
                 indexBuffer[i - 1] = index;
@@ -146,9 +219,8 @@ internal struct WarfareFormattedLogValues
         return TranslationFormattingUtility.FormatString(Message, _formatBuffer.AsSpan(0, index), indexBuffer);
     }
 
-    private readonly void TryDecideColor(object parameter, out int argb, out int prefixSize, out int suffixSize)
+    internal static void TryDecideColor(object? parameter, out int argb, out int prefixSize, out int suffixSize, StackColorFormatType coloring)
     {
-        StackColorFormatType coloring = ValueFormatter!.TranslationService.TerminalColoring;
         bool extended = coloring == StackColorFormatType.ExtendedANSIColor;
                                                                        
         if (!extended && coloring != StackColorFormatType.ANSIColor
@@ -163,52 +235,56 @@ internal struct WarfareFormattedLogValues
 
         suffixSize = TerminalColorHelper.ForegroundResetSequence.Length;
 
+        argb = 0;
         Type type = parameter.GetType();
+
+        if (parameter is Type type2)
+        {
+            type = type2;
+        }
+
         Type? nullableType = Nullable.GetUnderlyingType(type);
+        bool found = false;
         if (Colors.TryGetValue(nullableType ?? type, out ColorSetting setting))
         {
+            found = true;
             argb = GetArgb(extended, in setting);
         }
-        else if (type.IsEnum)
+        else if (!type.IsValueType)
         {
-            argb = GetArgb(extended, in EnumDefault);
-        }
-        else if (type.IsValueType)
-        {
-            argb = GetArgb(extended, in StructDefault);
-        }
-        else if (type.IsInterface)
-        {
-            argb = GetArgb(extended, in InterfaceDefault);
-        }
-        else if (parameter is IEnumerable)
-        {
-            argb = GetArgb(extended, in SymbolsDefault);
-        }
-        else
-        {
-            argb = GetArgb(extended, in ObjectDefault);
-        }
-
-        prefixSize = TerminalColorHelper.GetTerminalColorSequenceLength(argb, false);
-    }
-
-    private static void FormatColor(int argb, Span<char> prefix, Span<char> suffix)
-    {
-        unchecked
-        {
-            if ((byte)(argb >> 24) == 0) // console color
+            foreach (KeyValuePair<Type, ColorSetting> settingRow in Colors)
             {
-                ConsoleColor color = (ConsoleColor)argb;
-                TerminalColorHelper.WriteTerminalColorSequenceCode(prefix, 0, color, false);
+                if (!settingRow.Key.IsAssignableFrom(type))
+                    continue;
+
+                setting = settingRow.Value;
+                argb = GetArgb(extended, in setting);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            if (type.IsEnum)
+            {
+                argb = GetArgb(extended, in EnumDefault);
+            }
+            else if (type.IsValueType)
+            {
+                argb = GetArgb(extended, in StructDefault);
+            }
+            else if (type.IsInterface)
+            {
+                argb = GetArgb(extended, in InterfaceDefault);
             }
             else
             {
-                TerminalColorHelper.WriteTerminalColorSequenceCode(prefix, 0, (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb, false);
+                argb = GetArgb(extended, in ObjectDefault);
             }
         }
 
-        TerminalColorHelper.ForegroundResetSequence.AsSpan().CopyTo(suffix);
+        prefixSize = TerminalColorHelper.GetTerminalColorSequenceLength(argb, false);
     }
 
     private static int GetArgb(bool extended, in ColorSetting setting)

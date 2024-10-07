@@ -17,12 +17,12 @@ internal class StructureManagerSaveDirecction : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
-            logger.LogDebug("Patched {0} for structure damage (get direction) event.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for structure damage (get direction) event.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition(nameof(StructureManager.damage))
+            new MethodDefinition(nameof(StructureManager.damage))
                 .DeclaredIn<StructureManager>(isStatic: true)
                 .WithParameter<Transform>("transform")
                 .WithParameter<Vector3>("direction")
@@ -32,7 +32,6 @@ internal class StructureManagerSaveDirecction : IHarmonyPatch
                 .WithParameter<CSteamID>("instigatorSteamID")
                 .WithParameter<EDamageOrigin>("damageOrigin")
                 .ReturningVoid()
-            )
         );
     }
 
@@ -42,7 +41,7 @@ internal class StructureManagerSaveDirecction : IHarmonyPatch
             return;
 
         Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
-        logger.LogDebug("Unpatched {0} for structure damage (get direction) event.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for structure damage (get direction) event.", _target);
         _target = null;
     }
 

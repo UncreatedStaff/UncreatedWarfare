@@ -169,7 +169,7 @@ public class LayoutFactory : IHostedService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error hosting ILayoutStartingListener {0} for layout {1}.", Accessor.Formatter.Format(listener.GetType()), layout);
+                _logger.LogError(ex, "Error hosting ILayoutStartingListener {0} for layout {1}.", listener.GetType(), layout);
             }
         }
 
@@ -215,7 +215,7 @@ public class LayoutFactory : IHostedService
 
                     _logger.LogInformation(
                         "Registered services using configurer {0} from assembly {1}.",
-                        Accessor.Formatter.Format(configurerType!),
+                        configurerType,
                         configurerType!.Assembly.GetName().Name
                     );
                 }
@@ -223,7 +223,7 @@ public class LayoutFactory : IHostedService
                 {
                     _logger.LogError(ex,
                         "Failed to configure services using type {0} from assembly {1}.",
-                        Accessor.Formatter.Format(configurerType!),
+                        configurerType,
                         configurerType!.Assembly.GetName().Name
                     );
                 }
@@ -239,7 +239,7 @@ public class LayoutFactory : IHostedService
                 {
                     _logger.LogError(ex,
                         "Failed to dispose configurer {0} from assembly {1}.",
-                        Accessor.Formatter.Format(configurerType!),
+                        configurerType,
                         configurerType!.Assembly.GetName().Name
                     );
                 }
@@ -384,7 +384,7 @@ public class LayoutFactory : IHostedService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error hosting service {0} in layout {1}.", Accessor.Formatter.Format(hostedServices[i].GetType()), layout);
+                _logger.LogError(ex, "Error hosting service {0} in layout {1}.", hostedServices[i].GetType(), layout);
                 errIndex = i;
                 thrownException = ex;
             }
@@ -408,7 +408,7 @@ public class LayoutFactory : IHostedService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error stopping service {0} in layout {1}.", Accessor.Formatter.Format(hostedServices[i].GetType()), layout);
+                    _logger.LogError(ex, "Error stopping service {0} in layout {1}.", hostedServices[i].GetType(), layout);
                 }
             }
 

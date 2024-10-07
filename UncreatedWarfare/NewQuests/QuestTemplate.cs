@@ -209,25 +209,25 @@ public abstract class QuestTemplate : ITranslationArgument
 
         if (type == null)
         {
-            _logger.LogError("Unknown reward type \"{0}\" in configuration for quest {1}.", typeStr, Accessor.Formatter.Format(GetType()));
+            _logger.LogError("Unknown reward type \"{0}\" in configuration for quest {1}.", typeStr, GetType());
             return UniTask.FromResult<RewardExpression?>(null);
         }
 
         if (configuration["Expression"] is not { Length: > 0 } expression)
         {
-            _logger.LogError("Missing or empty expression in configuration for reward {0} in quest {1}.", Accessor.Formatter.Format(type), Accessor.Formatter.Format(GetType()));
+            _logger.LogError("Missing or empty expression in configuration for reward {0} in quest {1}.", type, GetType());
             return UniTask.FromResult<RewardExpression?>(null);
         }
 
         try
         {
-            RewardExpression rewardExpression = new RewardExpression(type, GetType(), expression);
+            RewardExpression rewardExpression = new RewardExpression(type, GetType(), expression, _logger);
 
             return UniTask.FromResult<RewardExpression?>(rewardExpression);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unable to create quest reward {0} in quest {1}.", Accessor.Formatter.Format(type), Accessor.Formatter.Format(GetType()));
+            _logger.LogError(ex, "Unable to create quest reward {0} in quest {1}.", type, GetType());
             return UniTask.FromResult<RewardExpression?>(null);
         }
     }

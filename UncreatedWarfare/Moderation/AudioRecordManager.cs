@@ -8,9 +8,6 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
-using Autofac;
-using Microsoft.Extensions.DependencyInjection;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -26,6 +23,7 @@ namespace Uncreated.Warfare.Moderation;
 [HarmonyPatch]
 public class AudioRecordManager
 {
+    private readonly ILogger<AudioRecordManager> _logger;
     private DateTime _lastAuthenticate = DateTime.MinValue;
     private string? _tokenStr;
 
@@ -35,8 +33,9 @@ public class AudioRecordManager
 
     public int VoiceBufferSize { get; }
 
-    public AudioRecordManager(IConfiguration systemConfiguration)
+    public AudioRecordManager(IConfiguration systemConfiguration, ILogger<AudioRecordManager> logger)
     {
+        _logger = logger;
         IConfigurationSection section = systemConfiguration.GetSection("audio_recording");
         string? baseUriStr = section["base_uri"];
         string? username = section["username"];
@@ -92,8 +91,8 @@ public class AudioRecordManager
 
                 webRequest.downloadHandler = new UnityStreamDownloadHandler(writeTo, leaveOpen: true);
 
-                L.Log(webRequest.url);
-                L.Log("Authorization: " + _tokenStr!);
+                _logger.LogInformation(webRequest.url);
+                _logger.LogInformation("Authorization: " + _tokenStr!);
 
                 try
                 {
@@ -124,7 +123,7 @@ public class AudioRecordManager
                         return AudioConvertResult.Success;
 
                     default:
-                        L.LogError($"Unrecognized API response: {webRequest.responseCode}, {webRequest.result}, \"{webRequest.error}\".");
+                        _logger.LogError("Unrecognized API response: {0}, {1}, \"{2}\".", webRequest.responseCode, webRequest.result, webRequest.error);
                         return AudioConvertResult.UnknownError;
                 }
             }
@@ -180,7 +179,7 @@ public class AudioRecordManager
 
             _tokenStr = null;
 
-            L.Log(authWebReq.url);
+            _logger.LogConditional(authWebReq.url);
 
             try
             {
@@ -196,7 +195,7 @@ public class AudioRecordManager
                 case UnityWebRequest.Result.Success:
                     string jwt;
 
-                    L.Log(authWebReq.downloadHandler.text);
+                    _logger.LogConditional(authWebReq.downloadHandler.text);
 
                     try
                     {
@@ -204,14 +203,12 @@ public class AudioRecordManager
                     }
                     catch (JsonException ex)
                     {
-                        L.LogError($"Invalid JWT json{Environment.NewLine}{authWebReq.downloadHandler.text}");
-                        L.LogError(ex);
+                        _logger.LogError(ex, "Invalid JWT json{0}{1}", Environment.NewLine, authWebReq.downloadHandler.text);
                         return AudioConvertResult.Unauthorized;
                     }
                     catch (ArgumentException ex) // includes SecurityTokenMalformedException
                     {
-                        L.LogError($"Invalid JWT{Environment.NewLine}{authWebReq.downloadHandler.text}");
-                        L.LogError(ex);
+                        _logger.LogError(ex, "Invalid JWT{0}{1}", Environment.NewLine, authWebReq.downloadHandler.text);
                         return AudioConvertResult.Unauthorized;
                     }
 
@@ -220,12 +217,12 @@ public class AudioRecordManager
                     return AudioConvertResult.Success;
 
                 case UnityWebRequest.Result.ConnectionError:
-                    L.LogWarning($"Failed to get auth token for audio conversion API. Try {i + 1}/{tries}.");
+                    _logger.LogWarning("Failed to get auth token for audio conversion API. Try {0}/{1}.", i + 1, tries);
                     await UniTask.Delay(1000, cancellationToken: token);
                     break;
 
                 default:
-                    L.LogWarning($"Failed to get auth token for audio conversion API. Result: {authWebReq.result}, {authWebReq.responseCode}, \"{authWebReq.error}\".");
+                    _logger.LogWarning("Failed to get auth token for audio conversion API. Result: {0}, {1}, \"{2}\".", authWebReq.result, authWebReq.responseCode, authWebReq.error);
                     return AudioConvertResult.Unauthorized;
             }
         }
@@ -366,14 +363,14 @@ public class AudioRecordManager
         doubleDash.CopyTo(result.Slice(pos));
 #if DEBUG
         if (pos + doubleDash.Length != resArr.Length)
-            L.LogWarning($"Multipart data not equal lengths: {pos} instead of {resArr.Length}.");
+            _logger.LogWarning("Multipart data not equal lengths: {0} instead of {1}.", pos, resArr.Length);
 #endif
         return resArr;
     }
 
     private static void OnVoiceActivity(PlayerVoice voice, ArraySegment<byte> data)
     {
-        L.LogDebug(data.Count + " B received.");
+        WarfareModule.Singleton.GlobalLogger.LogConditional("{0} B received.", data.Count);
 
         IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
         WarfarePlayer? player = playerService.GetOnlinePlayerOrNull(voice.player);
@@ -389,7 +386,7 @@ public class AudioRecordManager
                                    .GetMethod(nameof(NetPakReader.ReadBytesPtr), BindingFlags.Instance | BindingFlags.Public);
         if (readbytesPtr == null)
         {
-            L.LogWarning($"{method.FullDescription()} - Failed to find NetPakReader.ReadBytesPtr(int, out byte[], out int).");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to find NetPakReader.ReadBytesPtr(int, out byte[], out int).", method);
             return instructions;
         }
 
@@ -397,14 +394,14 @@ public class AudioRecordManager
                                          .GetConstructor(BindingFlags.Instance | BindingFlags.Public, null, [typeof(byte[]), typeof(int), typeof(int)], null);
         if (arrSegmentCtor == null)
         {
-            L.LogWarning($"{method.FullDescription()} - Failed to find ArraySegment<byte>(byte[], int, int).");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to find ArraySegment<byte>(byte[], int, int).", method);
             return instructions;
         }
 
         FieldInfo? rpcField = typeof(PlayerVoice).GetField("SendPlayVoiceChat", BindingFlags.NonPublic | BindingFlags.Static);
         if (readbytesPtr == null)
         {
-            L.LogWarning($"{method.FullDescription()} - Failed to find PlayerVoice.SendPlayVoiceChat.");
+            WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to find PlayerVoice.SendPlayVoiceChat.", method);
             return instructions;
         }
 
@@ -467,9 +464,8 @@ public class AudioRecordManager
 
                 if (displayClassLocal == null || byteArrLocal == null || offsetLocal == null || lengthLocal == null)
                 {
-                    L.LogWarning($"{method.FullDescription()} - Failed to discover local fields or display class local." +
-                                                   $"disp class: {displayClassLocal != null}, byte arr: {byteArrLocal != null}," +
-                                                   $"offset: {offsetLocal != null}, length: {lengthLocal != null}.");
+                    WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to discover local fields or display class local. disp class: {1}, byte arr: {2}, offset: {3}, length: {4}.",
+                        method, displayClassLocal != null, byteArrLocal != null, offsetLocal != null, lengthLocal != null);
                     break;
                 }
 
@@ -500,12 +496,12 @@ public class AudioRecordManager
             }
         }
 
-        L.Log($"{method.FullDescription()} - Patched incoming voice data.");
+        WarfareModule.Singleton.GlobalLogger.LogInformation("{0} - Patched incoming voice data.", method);
 
         if (success)
             return ins;
 
-        L.LogWarning($"{method.FullDescription()} - Failed to patch voice to copy voice data for recording.");
+        WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to patch voice to copy voice data for recording.", method);
         return instructions;
     }
 

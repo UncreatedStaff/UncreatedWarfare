@@ -29,22 +29,22 @@ internal class ProjectileSolver : MonoBehaviour
         Physics.autoSimulation = false;
         if (typeof(Landscape).GetField("tiles", BindingFlags.Static | BindingFlags.NonPublic)?.GetValue(null) is Dictionary<LandscapeCoord, LandscapeTile> d)
         {
-            L.LogDebug("Found " + d.Count + " tiles to add to scene.");
+            //L.LogDebug("Found " + d.Count + " tiles to add to scene.");
             foreach (LandscapeTile tile in d.Values)
             {
                 GameObject obj = Instantiate(tile.gameObject, tile.gameObject.transform.position, tile.gameObject.transform.rotation);
                 SceneManager.MoveGameObjectToScene(obj, _simScene);
-                L.LogDebug("Adding (" + tile.coord.x + ", " + tile.coord.y + ") tile to scene.");
+                //L.LogDebug("Adding (" + tile.coord.x + ", " + tile.coord.y + ") tile to scene.");
             }
         }
-        else
-            L.LogWarning("Failed to add tiles to sim scene.");
+        //else
+        //    L.LogWarning("Failed to add tiles to sim scene.");
         for (int i = 0; i < Level.level.childCount; ++i)
         {
             Transform t = Level.level.GetChild(i);
             GameObject obj = Instantiate(t.gameObject, t.position, t.rotation);
             SceneManager.MoveGameObjectToScene(obj, _simScene);
-            L.LogDebug("Adding " + t.name + " clip to scene.");
+            //L.LogDebug("Adding " + t.name + " clip to scene.");
         }
 
 #if DEBUG
@@ -68,20 +68,20 @@ internal class ProjectileSolver : MonoBehaviour
 
             SceneManager.MoveGameObjectToScene(newObject, _simScene);
 #if DEBUG
-            newObject.GetComponentsInChildren(bcs);
-            for (int i = 0; i < bcs.Count; ++i)
-            {
-                BoxCollider c = bcs[i];
-                if (c.transform.localScale.x < 0 || c.transform.localScale.y < 0 || c.transform.localScale.z < 0 ||
-                    c.size.x < 0 || c.size.y < 0 || c.size.z < 0)
-                {
-                    L.LogWarning(objInfo.Object.asset.objectName + " (" + objInfo.Object.asset.id + ", " +
-                                 objInfo.Object.asset.GUID.ToString("N") +
-                                 "): Negative scale or size detected, recommended to fix.");
-                }
-            }
-
-            bcs.Clear();
+            //newObject.GetComponentsInChildren(bcs);
+            //for (int i = 0; i < bcs.Count; ++i)
+            //{
+            //    BoxCollider c = bcs[i];
+            //    if (c.transform.localScale.x < 0 || c.transform.localScale.y < 0 || c.transform.localScale.z < 0 ||
+            //        c.size.x < 0 || c.size.y < 0 || c.size.z < 0)
+            //    {
+            //        L.LogWarning(objInfo.Object.asset.objectName + " (" + objInfo.Object.asset.id + ", " +
+            //                     objInfo.Object.asset.GUID.ToString("N") +
+            //                     "): Negative scale or size detected, recommended to fix.");
+            //    }
+            //}
+            //
+            //bcs.Clear();
 #endif
         }
     }
@@ -227,13 +227,13 @@ internal class ProjectileSolver : MonoBehaviour
         [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
         private void Start()
         {
-            L.LogDebug("Added component to " + gameObject.name + ".");
+            //L.LogDebug("Added component to " + gameObject.name + ".");
         }
         [UsedImplicitly]
         [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
         private void OnTriggerEnter(Collider other)
         {
-            L.LogDebug("hit " + other.name);
+            //L.LogDebug("hit " + other.name);
 
             if (IsExploded || other.isTrigger || IgnoreTransform != null && (other.transform == IgnoreTransform || other.transform.IsChildOf(IgnoreTransform)))
                 return;

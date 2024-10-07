@@ -30,12 +30,15 @@ public interface ICachableLanguageDataStore : ILanguageDataStore
 
 public class MySqlLanguageDataStore : ICachableLanguageDataStore
 {
+    private LanguageService? _languageService;
     private static readonly char[] SpaceSplit = [ ' ' ];
 
     private readonly IServiceProvider _serviceProvider;
     private List<LanguageInfo>? _langs;
     private Dictionary<string, LanguageInfo>? _codes;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
+    private LanguageService LanguageService => _languageService ??= _serviceProvider.GetRequiredService<LanguageService>();
 
     public MySqlLanguageDataStore(IServiceProvider serviceProvider)
     {
@@ -227,6 +230,13 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
     {
         await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
         List<LanguageInfo> info = await Include(dbContext.Languages).ToListAsync(token).ConfigureAwait(false);
+        
+        LanguageService languageService = LanguageService;
+        foreach (LanguageInfo infos in info)
+        {
+            infos.UpdateIsDefault(languageService);
+        }
+
         if (outputList is List<LanguageInfo> list)
             list.AddRange(info);
         else

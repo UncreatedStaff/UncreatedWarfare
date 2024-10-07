@@ -10,11 +10,13 @@ namespace Uncreated.Warfare.Commands;
 [Command("loadout", "l"), SubCommandOf(typeof(KitGiveCommand))]
 internal class KitGiveLoadoutCommand : IExecutableCommand
 {
+    private readonly ILogger<KitGiveLoadoutCommand> _logger;
     private readonly KitCommandTranslations _translations;
     public CommandContext Context { get; set; }
 
-    public KitGiveLoadoutCommand(TranslationInjection<KitCommandTranslations> translations)
+    public KitGiveLoadoutCommand(TranslationInjection<KitCommandTranslations> translations, ILogger<KitGiveLoadoutCommand> logger)
     {
+        _logger = logger;
         _translations = translations.Value;
     }
 
@@ -37,7 +39,7 @@ internal class KitGiveLoadoutCommand : IExecutableCommand
 
         Context.Player.Component<KitPlayerComponent>().UpdateKit(null);
 
-        ItemUtility.GiveItems(player, items, true);
+        ItemUtility.GiveItems(player, items, _logger, true);
 
         Context.Reply(_translations.RequestDefaultLoadoutGiven, @class);
         return UniTask.CompletedTask;

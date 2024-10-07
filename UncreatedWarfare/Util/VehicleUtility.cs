@@ -71,16 +71,16 @@ public static class VehicleUtility
 
         int freeSeat = -1;
         Passenger currentSeat = vehicle.passengers[fromSeat];
-        currentSeat.player = Data.NilSteamPlayer;
+        currentSeat.player = Data.NilSteamPlayer; // todo
         try
         {
             if (vehicle.tryAddPlayer(out byte freeSeat2, player))
             {
-                L.LogDebug($"Found free seat: {freeSeat2}.");
+                //L.LogDebug($"Found free seat: {freeSeat2}.");
                 freeSeat = freeSeat2;
             }
-            else
-                L.LogDebug("Couldn't find free seat.");
+            //else
+                //L.LogDebug("Couldn't find free seat.");
         }
         finally
         {
@@ -104,17 +104,17 @@ public static class VehicleUtility
 
             if (!shouldAllow || freeSeat >= vehicle.passengers.Length)
             {
-                L.LogDebug($"Not allowed to swap ({freeSeat}, {freeSeat2}).");
+                //L.LogDebug($"Not allowed to swap ({freeSeat}, {freeSeat2}).");
                 return false;
             }
-            L.LogDebug($"Adjusted free seat: {freeSeat} -> {freeSeat2}.");
+            //L.LogDebug($"Adjusted free seat: {freeSeat} -> {freeSeat2}.");
 
             Data.SendSwapVehicleSeats.InvokeAndLoopback(ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), vehicle.instanceID, fromSeat, freeSeat2);
-            L.LogDebug($"Swapped {fromSeat} -> {freeSeat2}.");
+            //L.LogDebug($"Swapped {fromSeat} -> {freeSeat2}.");
             return player.channel.owner.Equals(vehicle.passengers[freeSeat2].player);
         }
 
-        L.LogDebug("Free seat out of range.");
+        //L.LogDebug("Free seat out of range.");
         return false;
     }
 }

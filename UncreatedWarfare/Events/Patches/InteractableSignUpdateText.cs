@@ -23,16 +23,15 @@ internal class InteractableSignUpdateText : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, postfix: Accessor.GetMethod(Postfix));
-            logger.LogDebug("Patched {0} for sign text updated event.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for sign text updated event.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition(nameof(InteractableSign.updateText))
+            new MethodDefinition(nameof(InteractableSign.updateText))
                 .DeclaredIn<InteractableSign>(isStatic: false)
                 .WithParameter<string>("newText")
                 .ReturningVoid()
-            )
         );
     }
 
@@ -42,7 +41,7 @@ internal class InteractableSignUpdateText : IHarmonyPatch
             return;
 
         Patcher.Unpatch(_target, Accessor.GetMethod(Postfix));
-        logger.LogDebug("Unpatched {0} for sign text updated event.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for sign text updated event.", _target);
         _target = null;
     }
 

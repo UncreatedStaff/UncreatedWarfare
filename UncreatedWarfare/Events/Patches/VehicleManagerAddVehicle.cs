@@ -28,12 +28,12 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, postfix: Accessor.GetMethod(Postfix));
-            logger.LogDebug("Patched {0} for vehicle spawned event.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for vehicle spawned event.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition("addVehicle")
+            new MethodDefinition("addVehicle")
                 .DeclaredIn<VehicleManager>(isStatic: false)
                 .WithParameter<Guid>("assetGuid")
                 .WithParameter<ushort>("skinID")
@@ -59,7 +59,6 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
                 .WithParameter<NetId>("netId")
                 .WithParameter<Color32>("paintColor")
                 .Returning<InteractableVehicle>()
-            )
         );
     }
 
@@ -69,7 +68,7 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
             return;
 
         Patcher.Unpatch(_target, Accessor.GetMethod(Postfix));
-        logger.LogDebug("Unpatched {0} for destroy structure event.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for destroy structure event.", _target);
         _target = null;
     }
 

@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Microsoft.Extensions.Configuration;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
@@ -11,7 +11,6 @@ using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -397,7 +396,7 @@ public partial class ModerationUI : UnturnedUI
         index += data.HistoryPage * ModerationHistory.Length;
         if (data.HistoryView == null || index >= data.HistoryView.Length)
         {
-            L.LogWarning($"Invalid history index: {index} (p. {data.HistoryPage} / {data.PageCount}).");
+            Logger!.LogWarning("Invalid history index: {0} (p. {1} / {2}).", index, data.HistoryPage, data.PageCount);
             return;
         }
         

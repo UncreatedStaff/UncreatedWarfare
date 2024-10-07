@@ -561,7 +561,7 @@ public class DeathMessageResolver
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         // make it harder to search for the source code causing it
-        L.Log("Aut" + "o " + "ban " + "by a" + "nti" + "che" + "at: " + steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + ".", ConsoleColor.Cyan);
+        _logger.LogInformation("Aut" + "o " + "ban " + "by a" + "nti" + "che" + "at: " + steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + ".", ConsoleColor.Cyan);
         yield return new WaitForSecondsRealtime(UnityEngine.Random.Range(50f, 80f));
 
         Ban ban = new Ban
@@ -587,10 +587,10 @@ public class DeathMessageResolver
             await _moderationDb.AddOrUpdate(ban, CancellationToken.None);
         });
     }
-    private static void Log(bool tk, string msg, PlayerDied e)
+    private void Log(bool tk, string msg, PlayerDied e)
     {
         // todo string log = Util.RemoveRichText(msg);
-        L.Log(msg, tk ? ConsoleColor.Cyan : ConsoleColor.DarkCyan);
+        _logger.LogInformation(msg);
         if (OffenseManager.IsValidSteam64Id(e.Instigator))
         {
             ActionLog.Add(ActionLogType.Death, msg + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
@@ -651,16 +651,17 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
 ";
     public void Write(string? path, LanguageInfo language, bool writeMissing)
     {
+        string defaultLang = _languageService.GetDefaultLanguage().Code;
         if (path == null)
         {
-            path = Path.Combine(Data.Paths.LangStorage, L.Default);
+            path = Path.Combine(Data.Paths.LangStorage, defaultLang);
             // todo F.CheckDir(path, out bool folderIsThere);
             // if (!folderIsThere)
             //     return;
             path = Path.Combine(path, "deaths.json");
         }
 
-        if (!_translationList.TryGetValue(language.Code, out CauseGroup[] causes) && (language.IsDefault || !_translationList.TryGetValue(L.Default, out causes)))
+        if (!_translationList.TryGetValue(language.Code, out CauseGroup[] causes) && (language.IsDefault || !_translationList.TryGetValue(defaultLang, out causes)))
             causes = _defaultTranslations;
         List<CauseGroup> causesFull = new List<CauseGroup>(causes);
         if (causes != _defaultTranslations && writeMissing)
@@ -728,7 +729,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         // if (!folderIsThere)
         //     return;
 
-        string directory = Path.Combine(Data.Paths.LangStorage, L.Default, "deaths.json");
+        string directory = Path.Combine(Data.Paths.LangStorage, _languageService.GetDefaultLanguage().Code, "deaths.json");
         if (!File.Exists(directory))
         {
             using FileStream stream = File.Create(directory);
@@ -783,7 +784,8 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     public async UniTask<string> TranslateMessage(LanguageInfo language, CultureInfo culture, PlayerDied args, bool useSteamNames, CancellationToken token = default)
     {
         bool isDefault = false;
-        if (_translationList.Count == 0 || (!_translationList.TryGetValue(language.Code, out CauseGroup[] causes) && (L.Default.Equals(language) || !_translationList.TryGetValue(L.Default, out causes))))
+        LanguageInfo defaultLanguage = _languageService.GetDefaultLanguage();
+        if (_translationList.Count == 0 || (!_translationList.TryGetValue(language.Code, out CauseGroup[] causes) && (defaultLanguage.Equals(language) || !_translationList.TryGetValue(defaultLanguage.Code, out causes))))
         {
             isDefault = true;
             causes = _defaultTranslations;
@@ -854,7 +856,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 CauseGroup cause = causes[i];
                 if (cause.Cause.HasValue && cause.Cause == cause2) return i;
             }
-            if (!language.IsDefault && _translationList.TryGetValue(L.Default, out causes))
+            if (!language.IsDefault && _translationList.TryGetValue(_languageService.GetDefaultLanguage().Code, out causes))
             {
                 language = _languageService.GetDefaultLanguage();
                 continue;

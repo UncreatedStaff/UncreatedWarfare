@@ -11,6 +11,7 @@ using Uncreated.Warfare.Logging.Formatting;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Tests;
 public class LoggingFormattingTests
@@ -63,6 +64,22 @@ public class LoggingFormattingTests
         _container = bldr.Build();
 
         _formatter = _container.Resolve<ITranslationValueFormatter>();
+    }
+
+    [Test]
+    public void TempTextConverter()
+    {
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Red, "CRT", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.DarkRed, "ERR", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.DarkYellow, "WRN", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.DarkCyan, "INF", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Gray, "DBG", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Gray, "TRC", true));
+
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Yellow, "TRC", false));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Red, "TRC", false));
+
+        Console.WriteLine(TerminalColorHelper.GetTerminalColorSequence(-2712187, false));
     }
 
     [Test]

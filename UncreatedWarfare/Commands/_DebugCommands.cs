@@ -1,12 +1,11 @@
 ﻿using DanielWillett.ReflectionTools;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.Util;
@@ -128,7 +127,7 @@ public class DebugCommand : IExecutableCommand
         }
         catch (Exception ex)
         {
-            L.LogError(ex.InnerException ?? ex);
+            _serviceProvider.GetRequiredService<ILogger<DebugCommand>>().LogError(ex.InnerException ?? ex, "Error executing test command.");
             throw Context.ReplyString($"Ran into an error while executing: <#ff758f>{testFunction.Name}</color> - <#ff758f>{Accessor.Formatter.Format((ex.InnerException ?? ex).GetType())}</color>.", "ff8c69");
         }
     }
@@ -215,16 +214,18 @@ public class DebugCommand : IExecutableCommand
 
         Context.ReplyString($"Converted back: {CartographyUtility.MapToWorld.MultiplyPoint3x4(worldToMap)}.");
 
-        L.Log("m2w: " + Environment.NewLine + CartographyUtility.WorldToMap.ToString("F3"));
-        L.Log("m2wt: " + CartographyUtility.WorldToMap.GetPosition().ToString("F3"));
-        L.Log("m2wr: " + CartographyUtility.WorldToMap.GetRotation().eulerAngles.ToString("F3"));
-        L.Log("m2ws: " + CartographyUtility.WorldToMap.lossyScale.ToString("F3"));
-        L.Log("w2m: " + Environment.NewLine + CartographyUtility.MapToWorld.ToString("F3"));
-        L.Log("w2mt: " + CartographyUtility.MapToWorld.GetPosition().ToString("F3"));
-        L.Log("w2mr: " + CartographyUtility.MapToWorld.GetRotation().eulerAngles.ToString("F3"));
-        L.Log("w2ms: " + CartographyUtility.MapToWorld.lossyScale.ToString("F3"));
-        L.Log("Img size: " + CartographyUtility.MapImageSize);
-        L.Log("Cpt size: " + CartographyUtility.WorldCaptureAreaDimensions.ToString("F3"));
+        ILogger<DebugCommand> logger = _serviceProvider.GetRequiredService<ILogger<DebugCommand>>();
+
+        logger.LogInformation("m2w: " + Environment.NewLine + CartographyUtility.WorldToMap.ToString("F3"));
+        logger.LogInformation("m2wt: " + CartographyUtility.WorldToMap.GetPosition().ToString("F3"));
+        logger.LogInformation("m2wr: " + CartographyUtility.WorldToMap.GetRotation().eulerAngles.ToString("F3"));
+        logger.LogInformation("m2ws: " + CartographyUtility.WorldToMap.lossyScale.ToString("F3"));
+        logger.LogInformation("w2m: " + Environment.NewLine + CartographyUtility.MapToWorld.ToString("F3"));
+        logger.LogInformation("w2mt: " + CartographyUtility.MapToWorld.GetPosition().ToString("F3"));
+        logger.LogInformation("w2mr: " + CartographyUtility.MapToWorld.GetRotation().eulerAngles.ToString("F3"));
+        logger.LogInformation("w2ms: " + CartographyUtility.MapToWorld.lossyScale.ToString("F3"));
+        logger.LogInformation("Img size: " + CartographyUtility.MapImageSize);
+        logger.LogInformation("Cpt size: " + CartographyUtility.CaptureAreaSize.ToString("F3"));
     }
 #if false
     private const string UsageGiveXp = "/test givexp <player> <amount> [team - required if offline]";

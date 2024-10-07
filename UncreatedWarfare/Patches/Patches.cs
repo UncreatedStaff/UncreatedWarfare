@@ -8,8 +8,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.FOBs.Construction;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Patches;
 using Module = SDG.Framework.Modules.Module;
 
@@ -32,23 +30,24 @@ public static partial class Patches
             if (type.IsAbstract)
                 continue;
 
+            ILogger logger = loggerFactory.CreateLogger(type);
+
             ConstructorInfo? ctor = type.GetConstructor(Type.EmptyTypes);
             if (ctor == null)
             {
-                L.LogWarning($"IHarmonyPatch {Accessor.Formatter.Format(type)} does not have a parameter-less constructor.");
+                logger.LogWarning("IHarmonyPatch {0} does not have a parameter-less constructor.", type);
                 continue;
             }
 
             IHarmonyPatch patch = (IHarmonyPatch)ctor.Invoke(Array.Empty<object>());
             try
             {
-                patch.Patch(loggerFactory.CreateLogger(type));
-                L.LogDebug($"Applied harmony patch: {Accessor.Formatter.Format(type)}.");
+                patch.Patch(logger);
+                logger.LogDebug("Applied harmony patch: {0}.", type);
             }
             catch (Exception ex)
             {
-                L.LogError($"Failed to patch {Accessor.Formatter.Format(type)}.");
-                L.LogError(ex);
+                logger.LogError(ex, "Failed to patch {0}.", type);
             }
         }
 
@@ -68,16 +67,17 @@ public static partial class Patches
             ConstructorInfo? ctor = type.GetConstructor(Type.EmptyTypes);
             if (ctor == null)
                 continue;
-            
+
+            ILogger logger = loggerFactory.CreateLogger(type);
+
             IHarmonyPatch patch = (IHarmonyPatch)ctor.Invoke(Array.Empty<object>());
             try
             {
-                patch.Unpatch(loggerFactory.CreateLogger(type));
+                patch.Unpatch(logger);
             }
             catch (Exception ex)
             {
-                L.LogError($"Failed to unpatch {Accessor.Formatter.Format(type)}.");
-                L.LogError(ex);
+                logger.LogError(ex, "Failed to unpatch {0}.", type);
             }
         }
 
@@ -590,6 +590,12 @@ public static partial class Patches
                 projectile.OnCollided(other);
             }
         }
+
+        private static void LogIntl(string msg)
+        {
+            WarfareModule.Singleton.GlobalLogger.LogWarning(msg);
+        }
+
         public static class ServerMessageHandler_ValidateAssets_Patch
         {
             private const string READ_MESSSAGE_NAME = "ReadMessage";
@@ -597,7 +603,7 @@ public static partial class Patches
             private const string SEND_KICK_NETCALL_NAME = "SendKickForInvalidGuid";
             private static readonly Type? ValidateAssetsHandlerType = typeof(Provider).Assembly.GetType("SDG.Unturned." + VALIDATE_ASSETS_HANDLER_NAME);
             private static readonly FieldInfo? SendKickForInvalidGuidField = typeof(Assets).GetField(SEND_KICK_NETCALL_NAME, BindingFlags.NonPublic | BindingFlags.Static);
-            private static readonly MethodInfo? LogMethod = typeof(L).GetMethod(nameof(L.LogWarning), BindingFlags.Public | BindingFlags.Static);
+            private static readonly MethodInfo? LogMethod = Accessor.GetMethod(LogIntl);
             private static readonly MethodInfo? GuidToStringMethod = typeof(Guid).GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(x => x.Name.Equals(nameof(Guid.ToString), StringComparison.Ordinal) && x.GetParameters().Length == 2);
             private static readonly MethodInfo? Concat2Method = typeof(string).GetMethods(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(x => x.Name.Equals(nameof(string.Concat)) && x.GetParameters().Length == 2 && x.GetParameters()[0].ParameterType == typeof(string));
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -613,7 +619,6 @@ public static partial class Patches
                         yield return new CodeInstruction(OpCodes.Ldnull);
                         yield return new CodeInstruction(OpCodes.Callvirt, GuidToStringMethod);
                         yield return new CodeInstruction(OpCodes.Call, Concat2Method); // message + guid
-                        yield return new CodeInstruction(OpCodes.Ldc_I4, (int)ConsoleColor.Yellow);
                         yield return new CodeInstruction(OpCodes.Ldstr, "VALIDATE ASSETS");
                         yield return new CodeInstruction(OpCodes.Call, LogMethod);
                         yield return new CodeInstruction(OpCodes.Ret);
@@ -623,7 +628,7 @@ public static partial class Patches
                 }
                 if (!found)
                 {
-                    L.LogWarning("Patch on " + VALIDATE_ASSETS_HANDLER_NAME + "." + READ_MESSSAGE_NAME + " failed to find an injection point.");
+                    WarfareModule.Singleton.GlobalLogger.LogWarning("Patch on " + VALIDATE_ASSETS_HANDLER_NAME + "." + READ_MESSSAGE_NAME + " failed to find an injection point.");
                 }
             }
 
@@ -631,7 +636,7 @@ public static partial class Patches
             {
                 if (SendKickForInvalidGuidField == null)
                 {
-                    L.LogWarning("Failed to find field: " + nameof(Assets) + "." + SEND_KICK_NETCALL_NAME + ".");
+                    WarfareModule.Singleton.GlobalLogger.LogWarning("Failed to find field: " + nameof(Assets) + "." + SEND_KICK_NETCALL_NAME + ".");
                     return;
                 }
                 if (ValidateAssetsHandlerType != null)
@@ -639,14 +644,14 @@ public static partial class Patches
                     MethodInfo? original = ValidateAssetsHandlerType.GetMethod(READ_MESSSAGE_NAME, BindingFlags.NonPublic | BindingFlags.Static);
                     if (original == null)
                     {
-                        L.LogWarning("Failed to find method " + VALIDATE_ASSETS_HANDLER_NAME + "." + READ_MESSSAGE_NAME + ".");
+                        WarfareModule.Singleton.GlobalLogger.LogWarning("Failed to find method " + VALIDATE_ASSETS_HANDLER_NAME + "." + READ_MESSSAGE_NAME + ".");
                         return;
                     }
                     patcher.Patch(original, transpiler: new HarmonyMethod(typeof(ServerMessageHandler_ValidateAssets_Patch).GetMethod(nameof(Transpiler), BindingFlags.NonPublic | BindingFlags.Static)));
                 }
                 else
                 {
-                    L.LogWarning("Failed to find method " + VALIDATE_ASSETS_HANDLER_NAME + ".");
+                    WarfareModule.Singleton.GlobalLogger.LogWarning("Failed to find method " + VALIDATE_ASSETS_HANDLER_NAME + ".");
                 }
             }
         }

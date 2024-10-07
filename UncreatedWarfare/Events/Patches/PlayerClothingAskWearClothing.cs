@@ -1,5 +1,4 @@
-﻿using Autofac;
-using DanielWillett.ReflectionTools;
+﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Items;
@@ -47,18 +46,17 @@ internal class PlayerClothingAskWearClothing : IHarmonyPatch
             if (target != null)
             {
                 Patcher.Patch(target, postfix: _patches[i]);
-                logger.LogDebug("Patched {0} for clothing swapped event.", Accessor.Formatter.Format(target));
+                logger.LogDebug("Patched {0} for clothing swapped event.", target);
                 continue;
             }
 
             logger.LogError("Failed to find method: {0}.",
-                Accessor.Formatter.Format(new MethodDefinition("askWear" + (ClothingType)i)
+                new MethodDefinition("askWear" + (ClothingType)i)
                     .DeclaredIn<PlayerClothing>(isStatic: false)
                     .WithParameter<byte>("page")
                     .WithParameter<byte>("x")
                     .WithParameter<byte>("y")
                     .ReturningVoid()
-                )
             );
         }
     }
@@ -75,7 +73,7 @@ internal class PlayerClothingAskWearClothing : IHarmonyPatch
                 continue;
 
             Patcher.Unpatch(target, _patches![i]);
-            logger.LogDebug("Unpatched {0} for clothing swapped event.", Accessor.Formatter.Format(target));
+            logger.LogDebug("Unpatched {0} for clothing swapped event.", target);
         }
 
         _targets = null;
