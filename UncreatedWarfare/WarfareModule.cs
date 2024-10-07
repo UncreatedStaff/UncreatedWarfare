@@ -243,6 +243,16 @@ public sealed class WarfareModule : IModuleNexus
 
         _logger = ServiceProvider.Resolve<ILogger<WarfareModule>>();
 
+        using (_logger.BeginScope("Check players"))
+        {
+            using (_logger.BeginScope(new CSteamID(76500000000000000)))
+            {
+                _logger.LogInformation("test 1");
+                _logger.LogInformation("test 2");
+                _logger.LogInformation("test 3");
+            }
+        }
+
         GlobalLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger("Global");
 
         _logger.LogInformation("Using {0} services from core and {1} plugin(s).", ServiceProvider.ComponentRegistry.Registrations.Count(), _pluginLoader.Plugins.Count);

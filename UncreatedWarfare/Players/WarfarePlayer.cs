@@ -12,6 +12,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Players;
 
@@ -30,7 +31,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     private readonly ILogger _logger;
     private readonly PlayerNames _playerNameHelper;
     private readonly uint _acctId;
-    private readonly IPlayerComponent[] _componentsArray;
+    private readonly SingleUseTypeDictionary<IPlayerComponent> _components;
 
     public CSteamID Steam64 { get; }
     public Player UnturnedPlayer { get; }
@@ -112,8 +113,8 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
 
         Locale = new WarfarePlayerLocale(this, new LanguagePreferences { Steam64 = Steam64.m_SteamID }, serviceProvider);
 
-        _componentsArray = components;
-        Components = new ReadOnlyCollection<IPlayerComponent>(components);
+        _components = new SingleUseTypeDictionary<IPlayerComponent>(PlayerService.PlayerComponents, components);
+        Components = new ReadOnlyCollection<IPlayerComponent>(_components.Values);
 
         Team = Team.NoTeam;
         _logger.LogInformation("Player {0} joined the server", this);
@@ -134,14 +135,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     [Pure]
     public TComponentType Component<TComponentType>() where TComponentType : IPlayerComponent
     {
-        for (int i = 0; i < _componentsArray.Length; i++)
-        {
-            IPlayerComponent component = _componentsArray[i];
-            if (component is TComponentType comp)
-                return comp;
-        }
-
-        throw new PlayerComponentNotFoundException(typeof(TComponentType), this);
+        return _components.Get<TComponentType, WarfarePlayer>(this);
     }
 
     /// <summary>
@@ -150,14 +144,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     [Pure]
     public TComponentType? ComponentOrNull<TComponentType>() where TComponentType : IPlayerComponent
     {
-        for (int i = 0; i < _componentsArray.Length; i++)
-        {
-            IPlayerComponent component = _componentsArray[i];
-            if (component is TComponentType comp)
-                return comp;
-        }
-
-        return default;
+        return _components.TryGet(out TComponentType? comp) ? comp : default;
     }
 
     public void UpdateTeam(Team team)

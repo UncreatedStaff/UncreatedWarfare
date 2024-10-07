@@ -24,8 +24,8 @@ public static class TranslationFormattingUtility
         {
             return terminalColoring switch
             {
-                StackColorFormatType.ExtendedANSIColor => TerminalColorHelper.WrapMessageWithColor(TerminalColorHelper.ToArgb(color), text),
-                StackColorFormatType.ANSIColor => TerminalColorHelper.WrapMessageWithColor(TerminalColorHelper.ToConsoleColor(TerminalColorHelper.ToArgb(color)), text),
+                StackColorFormatType.ExtendedANSIColor => TerminalColorHelper.WrapMessageWithTerminalColorSequence(TerminalColorHelper.ToArgb(color), text),
+                StackColorFormatType.ANSIColor => TerminalColorHelper.WrapMessageWithTerminalColorSequence(TerminalColorHelper.ToConsoleColor(TerminalColorHelper.ToArgb(color)), text),
                 _ => new string(text)
             };
         }

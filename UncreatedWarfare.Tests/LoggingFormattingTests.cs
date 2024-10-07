@@ -69,17 +69,17 @@ public class LoggingFormattingTests
     [Test]
     public void TempTextConverter()
     {
-        Console.WriteLine(TerminalColorHelper.WrapMessageWithColor(ConsoleColor.Red, "CRT", true));
-        Console.WriteLine(TerminalColorHelper.WrapMessageWithColor(ConsoleColor.DarkRed, "ERR", true));
-        Console.WriteLine(TerminalColorHelper.WrapMessageWithColor(ConsoleColor.DarkYellow, "WRN", true));
-        Console.WriteLine(TerminalColorHelper.WrapMessageWithColor(ConsoleColor.DarkCyan, "INF", true));
-        Console.WriteLine(TerminalColorHelper.WrapMessageWithColor(ConsoleColor.Gray, "DBG", true));
-        Console.WriteLine(TerminalColorHelper.WrapMessageWithColor(ConsoleColor.Gray, "TRC", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Red, "CRT", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.DarkRed, "ERR", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.DarkYellow, "WRN", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.DarkCyan, "INF", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Gray, "DBG", true));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Gray, "TRC", true));
 
-        Console.WriteLine(TerminalColorHelper.WrapMessageWithColor(ConsoleColor.Yellow, "TRC", false));
-        Console.WriteLine(TerminalColorHelper.WrapMessageWithColor(ConsoleColor.Red, "TRC", false));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Yellow, "TRC", false));
+        Console.WriteLine(TerminalColorHelper.WrapMessageWithTerminalColorSequence(ConsoleColor.Red, "TRC", false));
 
-        Console.WriteLine(TerminalColorHelper.GetTerminalColorSequenceString(-2712187, false));
+        Console.WriteLine(TerminalColorHelper.GetTerminalColorSequence(-2712187, false));
     }
 
     [Test]

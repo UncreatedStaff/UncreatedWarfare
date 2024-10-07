@@ -25,7 +25,13 @@ public static class TerminalColorHelper
     private const int DefaultBackground = -15987700; // black
 
 #pragma warning disable CS8500
-    internal static unsafe string WrapMessageWithColor(ConsoleColor color, ReadOnlySpan<char> message, bool background = false)
+
+    /// <summary>
+    /// Wraps text in an 8-bit color virtual terminal sequence.
+    /// </summary>
+    /// <param name="background">If <paramref name="color"/> should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
+    public static unsafe string WrapMessageWithTerminalColorSequence(ConsoleColor color, ReadOnlySpan<char> message, bool background = false)
     {
         WrapMessageWithColor8BitState state = default;
         state.Message = &message;
@@ -33,9 +39,9 @@ public static class TerminalColorHelper
         state.Background = background;
         state.ColorLength = GetTerminalColorSequenceLength(color, background);
 
-        return string.Create(state.ColorLength + message.Length + ForegroundResetSequence.Length, state, (span, state) =>
+        return string.Create(state.ColorLength + message.Length + ForegroundResetSequence.Length, state, static (span, state) =>
         {
-            WriteTerminalColorSequenceCode(span, 0, state.Color, state.Background);
+            WriteTerminalColorSequence(span, state.Color, state.Background);
             ReadOnlySpan<char> reset = state.Background ? BackgroundResetSequence : ForegroundResetSequence;
             reset.CopyTo(span.Slice(span.Length - reset.Length, reset.Length));
             state.Message->CopyTo(span[state.ColorLength..]);
@@ -50,25 +56,44 @@ public static class TerminalColorHelper
         public int ColorLength;
     }
 
-    internal static unsafe string WrapMessageWithColor(int argb, ReadOnlySpan<char> message, bool background = false)
+    /// <summary>
+    /// Wraps text in an extended color virtual terminal sequence.
+    /// <para>If the alpha bits (high 8 bits) are zero, the color will be interpreted as a <see cref="ConsoleColor"/>.</para>
+    /// </summary>
+    /// <param name="background">If <paramref name="argb"/> should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
+    public static string WrapMessageWithTerminalColorSequence(int argb, ReadOnlySpan<char> message, bool background = false)
     {
-        if (unchecked((byte)(argb >> 24)) == 0) // console color
+        unchecked
         {
-            ConsoleColor color = (ConsoleColor)argb;
-            return WrapMessageWithColor(color, message, background);
-        }
+            if ((byte)(argb >> 24) == 0) // console color
+            {
+                ConsoleColor color = (ConsoleColor)argb;
+                return WrapMessageWithTerminalColorSequence(color, message, background);
+            }
 
+            return WrapMessageWithTerminalColorSequence((byte)(argb >> 16), (byte)(argb >> 8), (byte)argb, message, background);
+        }
+    }
+
+    /// <summary>
+    /// Wraps text in an extended color virtual terminal sequence.
+    /// </summary>
+    /// <param name="background">If the color should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
+    public static unsafe string WrapMessageWithTerminalColorSequence(byte r, byte g, byte b, ReadOnlySpan<char> message, bool background = false)
+    {
         WrapMessageWithColorRGBState state = default;
         state.Message = &message;
-        state.R = unchecked((byte)(argb >> 16));
-        state.G = unchecked((byte)(argb >> 8));
-        state.B = unchecked((byte)argb);
-        state.ColorLength = GetTerminalColorSequenceLength(argb, background);
+        state.R = r;
+        state.G = g;
+        state.B = b;
+        state.ColorLength = GetTerminalColorSequenceLength(r, g, b, background);
         state.Background = background;
 
-        return string.Create(state.ColorLength + message.Length + ForegroundResetSequence.Length, state, (span, state) =>
+        return string.Create(state.ColorLength + message.Length + ForegroundResetSequence.Length, state, static (span, state) =>
         {
-            WriteTerminalColorSequenceCode(span, 0, state.R, state.G, state.B, state.Background);
+            WriteTerminalColorSequence(span, state.R, state.G, state.B, state.Background);
             ReadOnlySpan<char> reset = state.Background ? BackgroundResetSequence : ForegroundResetSequence;
             reset.CopyTo(span.Slice(span.Length - reset.Length, reset.Length));
             state.Message->CopyTo(span[state.ColorLength..]);
@@ -83,6 +108,212 @@ public static class TerminalColorHelper
         public byte B;
         public int ColorLength;
         public bool Background;
+    }
+
+    /// <summary>
+    /// Converts a <see cref="ConsoleColor"/> value to an 8-bit color virtual terminal sequence.
+    /// </summary>
+    /// <param name="background">If <paramref name="color"/> should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
+    public static string GetTerminalColorSequence(ConsoleColor color, bool background = false)
+    {
+        GetTerminalColorSequence8BitState state = default;
+        state.Color = color;
+        state.Background = background;
+        return string.Create(GetTerminalColorSequenceLength(color, background), state, static (span, state) =>
+        {
+            WriteTerminalColorSequence(span, state.Color, state.Background);
+        });
+    }
+
+    private struct GetTerminalColorSequence8BitState
+    {
+        public ConsoleColor Color;
+        public bool Background;
+    }
+
+    /// <summary>
+    /// Converts an ARGB value to an extended color virtual terminal sequence.
+    /// <para>If the alpha bits (high 8 bits) are zero, the color will be interpreted as a <see cref="ConsoleColor"/>.</para>
+    /// </summary>
+    /// <param name="background">If <paramref name="argb"/> should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
+    public static string GetTerminalColorSequence(int argb, bool background = false)
+    {
+        unchecked
+        {
+            if ((byte)(argb >> 24) == 0) // console color
+            {
+                ConsoleColor color = (ConsoleColor)argb;
+                return GetTerminalColorSequence(color, background);
+            }
+
+            return GetTerminalColorSequence((byte)(argb >> 16), (byte)(argb >> 8), (byte)argb, background);
+        }
+    }
+
+    /// <summary>
+    /// Converts an RGB value to an extended color virtual terminal sequence.
+    /// </summary>
+    /// <param name="background">If the color should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
+    public static string GetTerminalColorSequence(byte r, byte g, byte b, bool background = false)
+    {
+        GetTerminalColorSequenceRGBState state = default;
+        state.Background = background;
+        state.R = r;
+        state.G = g;
+        state.B = b;
+        return string.Create(GetTerminalColorSequenceLength(r, g, b, background), state, static (span, state) =>
+        {
+            WriteTerminalColorSequence(span, state.R, state.G, state.B, state.Background);
+        });
+    }
+
+    private struct GetTerminalColorSequenceRGBState
+    {
+        public byte R;
+        public byte G;
+        public byte B;
+        public bool Background;
+    }
+
+    /// <summary>
+    /// Gets the length of a <see cref="ConsoleColor"/> value as an 8-bit color virtual terminal sequence.
+    /// </summary>
+    /// <param name="background">If <paramref name="color"/> should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
+    public static int GetTerminalColorSequenceLength(ConsoleColor color, bool background = false)
+    {
+        return background && color is >= ConsoleColor.DarkGray and <= ConsoleColor.White ? 6 : 5;
+    }
+
+    /// <summary>
+    /// Gets the length of an ARGB value as an extended color virtual terminal sequence.
+    /// <para>If the alpha bits (high 8 bits) are zero, the color will be interpreted as a <see cref="ConsoleColor"/>.</para>
+    /// </summary>
+    /// <param name="background">If <paramref name="argb"/> should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
+    public static int GetTerminalColorSequenceLength(int argb, bool background = false)
+    {
+        unchecked
+        {
+            if ((byte)(argb >> 24) == 0) // console color
+            {
+                ConsoleColor color = (ConsoleColor)argb;
+                return GetTerminalColorSequenceLength(color, background);
+            }
+
+            byte r = (byte)(argb >> 16), g = (byte)(argb >> 8), b = (byte)argb;
+            return GetTerminalColorSequenceLength(r, g, b, background);
+        }
+    }
+
+    /// <summary>
+    /// Gets the length of an RGB value as an extended color virtual terminal sequence.
+    /// </summary>
+    /// <param name="background">If the color should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
+    public static int GetTerminalColorSequenceLength(byte r, byte g, byte b, bool background = false)
+    {
+        return 10 + (r > 9 ? r > 99 ? 3 : 2 : 1) + (g > 9 ? g > 99 ? 3 : 2 : 1) + (b > 9 ? b > 99 ? 3 : 2 : 1);
+    }
+
+    /// <summary>
+    /// Gets the number used to start a foreground or background color in an 8-bit color virtual terminal sequence.
+    /// </summary>
+    /// <param name="background">If <paramref name="color"/> should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
+    public static int GetTerminalColorSequenceCode(ConsoleColor color, bool background = false)
+    {
+        ReadOnlySpan<int> colorCodes = [ 30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97 ];
+        int num = color is < 0 or > ConsoleColor.White ? 39 : colorCodes[(int)color];
+        return background ? num + 10 : num;
+    }
+
+    /// <summary>
+    /// Converts a <see cref="ConsoleColor"/> value to an 8-bit color virtual terminal sequence.
+    /// </summary>
+    /// <param name="background">If <paramref name="color"/> should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
+    public static int WriteTerminalColorSequence(Span<char> data, ConsoleColor color, bool background = false)
+    {
+        int num = GetTerminalColorSequenceCode(color, background);
+
+        data[0] = '\u001b';
+        data[1] = '[';
+
+        if (num <= 99)
+        {
+            data[2] = (char)(num / 10 + 48);
+            data[3] = (char)(num % 10 + 48);
+            data[4] = 'm';
+            return 5;
+        }
+
+        data[2] = (char)(num / 100 + 48);
+        data[3] = (char)(num / 10 % 10 + 48);
+        data[4] = (char)(num % 10 + 48);
+        data[5] = 'm';
+        return 6;
+    }
+
+    /// <summary>
+    /// Converts an ARGB value to an extended color virtual terminal sequence.
+    /// <para>If the alpha bits (high 8 bits) are zero, the color will be interpreted as a <see cref="ConsoleColor"/>.</para>
+    /// </summary>
+    /// <param name="background">If <paramref name="argb"/> should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
+    public static int WriteTerminalColorSequence(Span<char> data, int argb, bool background = false)
+    {
+        unchecked
+        {
+            if ((byte)(argb >> 24) == 0) // console color
+            {
+                ConsoleColor color = (ConsoleColor)argb;
+                return WriteTerminalColorSequence(data, color, background);
+            }
+
+            byte r = (byte)(argb >> 16), g = (byte)(argb >> 8), b = (byte)argb;
+            return WriteTerminalColorSequence(data, r, g, b, background);
+        }
+    }
+
+    /// <summary>
+    /// Converts an ARGB value to an extended color virtual terminal sequence.
+    /// </summary>
+    /// <param name="background">If the color should apply to the background of the text instead of the foreground.</param>
+    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
+    public static int WriteTerminalColorSequence(Span<char> data, byte r, byte g, byte b, bool background = false)
+    {
+        // https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors
+        data[0] = ConsoleEscapeCharacter;
+        data[1] = '[';
+        data[2] = background ? '4' : '3';
+        data[3] = '8';
+        data[4] = ';';
+        data[5] = '2';
+        data[6] = ';';
+        int index = 6;
+        if (r > 99)
+            data[++index] = (char)(r / 100 + 48);
+        if (r > 9)
+            data[++index] = (char)((r % 100) / 10 + 48);
+        data[++index] = (char)(r % 10 + 48);
+        data[++index] = ';';
+        if (g > 99)
+            data[++index] = (char)(g / 100 + 48);
+        if (g > 9)
+            data[++index] = (char)((g % 100) / 10 + 48);
+        data[++index] = (char)(g % 10 + 48);
+        data[++index] = ';';
+        if (b > 99)
+            data[++index] = (char)(b / 100 + 48);
+        if (b > 9)
+            data[++index] = (char)((b % 100) / 10 + 48);
+        data[++index] = (char)(b % 10 + 48);
+        data[++index] = 'm';
+        return index + 1;
     }
 #pragma warning restore CS8500
 
@@ -462,150 +693,22 @@ public static class TerminalColorHelper
 
         data.CopyTo(arr.AsSpan(index));
     }
+
     private static int AppendANSIForegroundCode(ref char[] data, int index, ConsoleColor color, bool background)
     {
         int len = background && (int)color >> 2 != 0 ? 6 : 5;
         Span<char> ptr = stackalloc char[len];
-        WriteTerminalColorSequenceCode(ptr, 0, color, background);
+        WriteTerminalColorSequence(ptr, color, background);
         Append(ref data, ptr, index);
         return len;
     }
+
     private static int AppendExtANSIForegroundCode(ref char[] data, int index, byte r, byte g, byte b, bool background)
     {
-        int l = 10 + (r > 9 ? r > 99 ? 3 : 2 : 1) + (g > 9 ? g > 99 ? 3 : 2 : 1) + (b > 9 ? b > 99 ? 3 : 2 : 1);
+        int l = 10 + GetTerminalColorSequenceLength(r, g, b, background);
         Span<char> ptr = stackalloc char[l];
-        WriteTerminalColorSequenceCode(ptr, 0, r, g, b, background);
+        WriteTerminalColorSequence(ptr, r, g, b, background);
         Append(ref data, ptr, index);
         return l;
-    }
-
-
-    /// <summary>
-    /// Converts a <see cref="ConsoleColor"/> value to a 8-bit color virtual terminal sequence.
-    /// </summary>
-    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
-    public static string GetTerminalColorSequenceString(ConsoleColor color, bool background)
-    {
-        GetTerminalColorSequence8BitState state = default;
-        state.Color = color;
-        state.Background = background;
-        return string.Create(background && (int)color >> 2 != 0 ? 6 : 5, state, (span, state) =>
-        {
-            WriteTerminalColorSequenceCode(span, 0, state.Color, state.Background);
-        });
-    }
-
-    private struct GetTerminalColorSequence8BitState
-    {
-        public ConsoleColor Color;
-        public bool Background;
-    }
-
-    internal static void WriteTerminalColorSequenceCode(Span<char> data, int index, ConsoleColor color, bool background)
-    {
-        ReadOnlySpan<int> colorCodes = [ 30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97 ];
-
-        int num = color is < 0 or > ConsoleColor.White ? 39 : colorCodes[(int)color];
-
-        if (background)
-            num += 10;
-
-        data[index] = '\u001b';
-        data[index + 1] = '[';
-
-        if (num > 99)
-        {
-            data[index + 2] = (char)(num / 100 + 48);
-            data[index + 3] = (char)(num / 10 % 10 + 48);
-            data[index + 4] = (char)(num % 10 + 48);
-            data[index + 5] = 'm';
-        }
-        else
-        {
-            data[index + 2] = (char)(num / 10 + 48);
-            data[index + 3] = (char)(num % 10 + 48);
-            data[index + 4] = 'm';
-        }
-    }
-
-    internal static int GetTerminalColorSequenceLength(ConsoleColor color, bool background)
-    {
-        return background && color is >= ConsoleColor.DarkGray and <= ConsoleColor.White ? 6 : 5;
-    }
-
-    /// <summary>
-    /// Converts an ARGB value to an extended color virtual terminal sequence.
-    /// </summary>
-    /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
-    public static string GetTerminalColorSequenceString(int argb, bool background)
-    {
-        if (unchecked((byte)(argb >> 24)) == 0) // console color
-        {
-            ConsoleColor color = (ConsoleColor)argb;
-            return GetTerminalColorSequenceString(color, background);
-        }
-
-        GetTerminalColorSequenceRGBState state = default;
-        state.Background = background;
-        state.R = unchecked((byte)(argb >> 16));
-        state.G = unchecked((byte)(argb >> 8));
-        state.B = unchecked((byte)argb);
-        int l = 10 + (state.R > 9 ? state.R > 99 ? 3 : 2 : 1) + (state.G > 9 ? state.G > 99 ? 3 : 2 : 1) + (state.B > 9 ? state.B > 99 ? 3 : 2 : 1);
-
-        return string.Create(l, state, (span, state) =>
-        {
-            WriteTerminalColorSequenceCode(span, 0, state.R, state.G, state.B, state.Background);
-        });
-    }
-
-    internal static int GetTerminalColorSequenceLength(int argb, bool background)
-    {
-        if (unchecked((byte)(argb >> 24)) == 0) // console color
-        {
-            ConsoleColor color = (ConsoleColor)argb;
-            return GetTerminalColorSequenceLength(color, background);
-        }
-
-        byte r = unchecked((byte)(argb >> 16)), g = unchecked((byte)(argb >> 8)), b = unchecked((byte)argb);
-        return 10 + (r > 9 ? r > 99 ? 3 : 2 : 1) + (g > 9 ? g > 99 ? 3 : 2 : 1) + (b > 9 ? b > 99 ? 3 : 2 : 1);
-    }
-
-    private struct GetTerminalColorSequenceRGBState
-    {
-        public byte R;
-        public byte G;
-        public byte B;
-        public bool Background;
-    }
-
-    internal static void WriteTerminalColorSequenceCode(Span<char> data, int index, byte r, byte g, byte b, bool background)
-    {
-        // https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors
-        data[index] = ConsoleEscapeCharacter;
-        data[index + 1] = '[';
-        data[index + 2] = background ? '4' : '3';
-        data[index + 3] = '8';
-        data[index + 4] = ';';
-        data[index + 5] = '2';
-        data[index + 6] = ';';
-        index += 6;
-        if (r > 99)
-            data[++index] = (char)(r / 100 + 48);
-        if (r > 9)
-            data[++index] = (char)((r % 100) / 10 + 48);
-        data[++index] = (char)(r % 10 + 48);
-        data[++index] = ';';
-        if (g > 99)
-            data[++index] = (char)(g / 100 + 48);
-        if (g > 9)
-            data[++index] = (char)((g % 100) / 10 + 48);
-        data[++index] = (char)(g % 10 + 48);
-        data[++index] = ';';
-        if (b > 99)
-            data[++index] = (char)(b / 100 + 48);
-        if (b > 9)
-            data[++index] = (char)((b % 100) / 10 + 48);
-        data[++index] = (char)(b % 10 + 48);
-        data[index + 1] = 'm';
     }
 }

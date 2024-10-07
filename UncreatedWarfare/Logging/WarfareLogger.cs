@@ -1,8 +1,11 @@
 ﻿using StackCleaner;
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Warfare.Logging.Formatting;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Logging;
@@ -10,11 +13,14 @@ public class WarfareLogger : ILogger
 {
     private static readonly string[] LogLevelsRaw = [ "TRC", "DBG", "INF", "WRN", "ERR", "CRT" ];
     private static readonly string[] LogLevelsANSI = [ "\u001b[47mTRC\u001b[49m", "\u001b[47mDBG\u001b[49m", "\u001b[46mINF\u001b[49m", "\u001b[43mWRN\u001b[49m", "\u001b[41mERR\u001b[49m", "\u001b[101mCRT\u001b[49m" ];
-    private static readonly string[] LogLevelsExtendedANSI = LogLevelsANSI; // todo maybe add full rgb colors idk
+    private static readonly string[] LogLevelsExtendedANSI = LogLevelsANSI;
 
     private readonly string _categoryName;
     private readonly WarfareLoggerProvider _loggerProvider;
     private readonly ITranslationValueFormatter? _formatter;
+    private readonly SpanAction<char, CreateLogStringState> _createLogAction;
+
+    private List<Scope>? _scopeHierarchy;
 
     public WarfareLogger(string categoryName, WarfareLoggerProvider loggerProvider, ITranslationValueFormatter? formatter)
     {
@@ -30,9 +36,15 @@ public class WarfareLogger : ILogger
                 _categoryName = categorySection.Slice(0, firstDot).Concat(categorySection.Slice(lastDot, categorySection.Length - lastDot));
             }
         }
+        else
+        {
+            _categoryName = categoryName;
+        }
 
         _loggerProvider = loggerProvider;
         _formatter = formatter;
+
+        _createLogAction = CreateLog;
     }
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
@@ -51,51 +63,11 @@ public class WarfareLogger : ILogger
             formattedText = unformattedText = formatter(state, exception);
         }
 
-        StackColorFormatType coloring = _formatter == null ? StackColorFormatType.None : _formatter.TranslationService.TerminalColoring;
+        if (logLevel is < LogLevel.Trace or > LogLevel.Critical)
+            logLevel = LogLevel.Information;
 
-        string[] array = coloring switch
-        {
-            StackColorFormatType.ExtendedANSIColor => LogLevelsExtendedANSI,
-            StackColorFormatType.ANSIColor => LogLevelsANSI,
-            _ => LogLevelsRaw
-        };
-
-        string timestampFmt = timeStamp.ToString("mm:ss.ff", CultureInfo.InvariantCulture);
-
-        string logLevelText = array[logLevel is >= 0 and <= LogLevel.Critical ? (int)logLevel : (int)LogLevel.Information];
-
-        if (coloring is StackColorFormatType.ExtendedANSIColor or StackColorFormatType.ANSIColor)
-        {
-            switch (logLevel)
-            {
-                case LogLevel.Information:
-                    formattedText = "\u001b[36m" + formattedText.Replace(TerminalColorHelper.ForegroundResetSequence, "\u001b[36m");
-                    break;
-
-                case LogLevel.Warning:
-                    formattedText = "\u001b[93m" + formattedText.Replace(TerminalColorHelper.ForegroundResetSequence, "\u001b[93m");
-                    break;
-
-                case LogLevel.Critical:
-                case LogLevel.Error:
-                    formattedText = "\u001b[91m" + formattedText.Replace(TerminalColorHelper.ForegroundResetSequence, "\u001b[91m");
-                    break;
-
-                case LogLevel.Trace:
-                case LogLevel.Debug:
-                    formattedText = formattedText.Replace(TerminalColorHelper.ForegroundResetSequence, "\u001b[90m");
-                    break;
-            }
-        }
-
-        formattedText = coloring switch
-        {
-            StackColorFormatType.ANSIColor or StackColorFormatType.ExtendedANSIColor => $"\u001b[90m\u001b[30m{logLevelText}\u001b[90m [{timestampFmt}] [{_categoryName}\u001b[90m] {formattedText}",
-            _ => $"{logLevelText} [{timestampFmt}] [{_categoryName}] {formattedText}"
-        };
-
-        logLevelText = LogLevelsRaw[logLevel is >= 0 and <= LogLevel.Critical ? (int)logLevel : (int)LogLevel.Information];
-        unformattedText = $"[{timeStamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)}] [{logLevelText}] [{_categoryName}] {unformattedText}";
+        formattedText = CreateString(formattedText, timeStamp, logLevel, false);
+        unformattedText = CreateString(unformattedText, timeStamp, logLevel, true);
 
         if (exception != null)
         {
@@ -106,13 +78,287 @@ public class WarfareLogger : ILogger
         _loggerProvider.QueueOutput(logLevel, formattedText, unformattedText);
     }
 
+    [Pure]
     public bool IsEnabled(LogLevel logLevel)
     {
         return true;
     }
 
+    [MustUseReturnValue("Must be disposed after use to cancel the scope.")]
     public IDisposable BeginScope<TState>(TState state)
     {
-        throw new NotSupportedException();
+        return new Scope<TState>(state, this);
+    }
+
+    private string CreateString(string message, DateTime timestamp, LogLevel logLevel, bool forFileLog)
+    {
+        message ??= string.Empty;
+
+        StackColorFormatType coloring = forFileLog || _formatter == null ? StackColorFormatType.None : _formatter.TranslationService.TerminalColoring;
+
+        string[] array = coloring switch
+        {
+            StackColorFormatType.ExtendedANSIColor => LogLevelsExtendedANSI,
+            StackColorFormatType.ANSIColor => LogLevelsANSI,
+            _ => LogLevelsRaw
+        };
+
+        string logLevelText = array[(int)logLevel];
+
+        int dateTimeLength = forFileLog ? 19 : 8;
+        int logLevelLength = logLevelText.Length;
+        if (forFileLog)
+            logLevelLength += 2;
+
+        int length = 7 + _categoryName.Length + message.Length + dateTimeLength + logLevelLength;
+
+        if (!forFileLog && coloring != StackColorFormatType.None)
+        {
+            length += TerminalColorHelper.GetTerminalColorSequenceLength(ConsoleColor.Black, false);
+            length += TerminalColorHelper.GetTerminalColorSequenceLength(ConsoleColor.DarkGray, false);
+            if (logLevel is not LogLevel.Debug and not LogLevel.Trace)
+                length += TerminalColorHelper.GetTerminalColorSequenceLength(ConsoleColor.DarkCyan, false);
+        }
+
+        bool lockTaken = false;
+        if (_scopeHierarchy != null)
+        {
+            Monitor.Enter(this, ref lockTaken);
+            if (_scopeHierarchy is { Count: > 0 })
+            {
+                length += 5;
+
+                foreach (Scope scope in _scopeHierarchy)
+                    length += scope.Format(forFileLog).Length;
+
+                length += (_scopeHierarchy.Count - 1) * 3 /* ", " */;
+
+                if (coloring != StackColorFormatType.None) length += _scopeHierarchy.Count * 5;
+            }
+        }
+
+        try
+        {
+            CreateLogStringState state = default;
+            state.LogLevelText = logLevelText;
+            state.ColorType = coloring;
+            state.ForFileLog = forFileLog;
+            state.LogLevel = logLevel;
+            state.Timestamp = timestamp;
+            state.Message = message;
+
+            return string.Create(length, state, _createLogAction);
+        }
+        finally
+        {
+            if (lockTaken)
+                Monitor.Exit(this);
+        }
+    }
+
+    private void CreateLog(Span<char> span, CreateLogStringState state)
+    {
+        int index;
+        if (state.ForFileLog)
+        {
+            span[0] = '['; // length = 19
+            state.Timestamp.TryFormat(span[1..], out _, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            span[20] = ']';
+            span[21] = ' ';
+            span[22] = '[';
+            state.LogLevelText.AsSpan().CopyTo(span[23..]);
+            index = 23 + state.LogLevelText.Length;
+            span[index++] = ']';
+            span[index++] = ' ';
+        }
+        else
+        {
+            index = 0;
+            if (state.ColorType != StackColorFormatType.None) index = TerminalColorHelper.WriteTerminalColorSequence(span, ConsoleColor.Black, false);
+
+            state.LogLevelText.AsSpan().CopyTo(span[index..]);
+            index += state.LogLevelText.Length;
+
+            if (state.ColorType != StackColorFormatType.None) index += TerminalColorHelper.WriteTerminalColorSequence(span[index..], ConsoleColor.DarkGray, false);
+
+            span[index++] = ' ';
+            span[index++] = '['; // length = 8
+            state.Timestamp.TryFormat(span[index..], out _, "mm:ss.ff", CultureInfo.InvariantCulture);
+            index += 8;
+            span[index++] = ']';
+            span[index++] = ' ';
+        }
+
+        span[index++] = '[';
+        _categoryName.AsSpan().CopyTo(span[index..]);
+        index += _categoryName.Length;
+        span[index++] = ']';
+        span[index++] = ' ';
+
+        if (_scopeHierarchy is { Count: > 0 })
+        {
+            span[index++] = '|';
+            span[index++] = ' ';
+
+            bool any = false;
+            foreach (Scope scope in _scopeHierarchy)
+            {
+                if (!any)
+                    any = true;
+                else
+                {
+                    if (state.ColorType != StackColorFormatType.None)
+                        index += TerminalColorHelper.WriteTerminalColorSequence(span[index..], ConsoleColor.DarkGray, false);
+                    span[index++] = ' ';
+                    span[index++] = '/';
+                    span[index++] = ' ';
+                }
+                string fmt = scope.Format(state.ForFileLog);
+                fmt.AsSpan().CopyTo(span[index..]);
+                index += fmt.Length;
+            }
+
+            if (state.ColorType != StackColorFormatType.None)
+                index += TerminalColorHelper.WriteTerminalColorSequence(span[index..], ConsoleColor.DarkGray, false);
+            span[index++] = ' ';
+            span[index++] = '|';
+
+            span[index++] = ' ';
+        }
+
+        if (state.ColorType != StackColorFormatType.None)
+        {
+            ConsoleColor textColor = state.LogLevel switch
+            {
+                LogLevel.Information => ConsoleColor.DarkCyan,
+                LogLevel.Warning => ConsoleColor.Yellow,
+                LogLevel.Critical or LogLevel.Error => ConsoleColor.Red,
+                _ => ConsoleColor.DarkGray
+            };
+
+            if (textColor != ConsoleColor.DarkGray)
+            {
+                index += TerminalColorHelper.WriteTerminalColorSequence(span[index..], textColor);
+            }
+
+            Span<char> message = span[index..];
+            state.Message.AsSpan().CopyTo(message);
+
+            // replace resets with the correct color
+            while (true)
+            {
+                int nextIndex = ((ReadOnlySpan<char>)message).IndexOf(TerminalColorHelper.ForegroundResetSequence, StringComparison.Ordinal);
+                if (nextIndex == -1) break;
+
+                TerminalColorHelper.WriteTerminalColorSequence(message[nextIndex..], textColor);
+                message = message.Slice(nextIndex + 5);
+            }
+        }
+        else
+        {
+            state.Message.AsSpan().CopyTo(span[index..]);
+        }
+    }
+
+    private struct CreateLogStringState
+    {
+        public string LogLevelText;
+        public DateTime Timestamp;
+        public StackColorFormatType ColorType;
+        public LogLevel LogLevel;
+        public bool ForFileLog;
+        public string Message;
+    }
+
+    private abstract class Scope : IDisposable
+    {
+        protected readonly WarfareLogger Logger;
+        protected Scope(WarfareLogger logger)
+        {
+            Logger = logger;
+
+            lock (Logger)
+                (Logger._scopeHierarchy ??= new List<Scope>(1)).Add(this);
+        }
+
+        public abstract string Format(bool forFileLog);
+
+        public void Dispose()
+        {
+            lock (Logger)
+            {
+                List<Scope>? hierarchy = Logger._scopeHierarchy;
+                if (hierarchy == null)
+                    return;
+
+                hierarchy.Remove(this);
+                if (hierarchy.Count == 0)
+                    Logger._scopeHierarchy = null;
+            }
+        }
+    }
+
+    private class Scope<TState> : Scope
+    {
+        // ReSharper disable InconsistentlySynchronizedField
+        private string? _stateCacheColored;
+        private string? _stateCacheUncolored;
+        private StackColorFormatType _cacheColorType;
+        public TState State { get; }
+        public Scope(TState state, WarfareLogger logger) : base(logger)
+        {
+            State = state;
+        }
+
+        public override string Format(bool forFileLog)
+        {
+            ITranslationValueFormatter? formatter = Logger._formatter;
+            if (formatter == null)
+                return State?.ToString() ?? string.Empty;
+
+            if (forFileLog && _stateCacheUncolored != null)
+                return _stateCacheUncolored;
+
+            StackColorFormatType color = forFileLog
+                ? StackColorFormatType.None
+                : formatter.TranslationService.TerminalColoring;
+
+            if (!forFileLog && _stateCacheColored != null && _cacheColorType == color)
+                return _stateCacheColored;
+
+            ArgumentFormat fmt = default;
+            ValueFormatParameters parameters = new ValueFormatParameters(
+                -1,
+                CultureInfo.InvariantCulture,
+                formatter.LanguageService.GetDefaultLanguage(),
+                color is StackColorFormatType.ExtendedANSIColor or StackColorFormatType.ANSIColor
+                    ? TranslationOptions.ForTerminal
+                    : TranslationOptions.NoRichText,
+                in fmt,
+                null,
+                null,
+                null,
+                1
+            );
+
+            if (forFileLog)
+                return _stateCacheUncolored ??= formatter.Format(State, in parameters);
+
+            string format = formatter.Format(State, in parameters);
+
+            if (color != StackColorFormatType.None)
+            {
+                WarfareFormattedLogValues.TryDecideColor(State, out int argb, out int prefixSize, out _, color);
+                if (prefixSize != 0)
+                {
+                    _cacheColorType = color;
+                    return _stateCacheColored = TerminalColorHelper.WrapMessageWithTerminalColorSequence(argb, format, false);
+                }
+            }
+
+            _cacheColorType = color;
+            return _stateCacheColored = format;
+        }
+        // ReSharper restore InconsistentlySynchronizedField
     }
 }

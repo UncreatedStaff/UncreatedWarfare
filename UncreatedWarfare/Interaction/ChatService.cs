@@ -244,7 +244,7 @@ public class ChatService
             text = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(text, _translationService.TerminalColoring);
             if (_translationService.TerminalColoring is StackColorFormatType.ANSIColor or StackColorFormatType.ExtendedANSIColor)
             {
-                text = TerminalColorHelper.WrapMessageWithColor(textColor, text);
+                text = TerminalColorHelper.WrapMessageWithTerminalColorSequence(textColor, text);
             }
         }
         else
@@ -281,8 +281,8 @@ public class ChatService
             text = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(text, _translationService.TerminalColoring);
             text = _translationService.TerminalColoring switch
             {
-                StackColorFormatType.ExtendedANSIColor => TerminalColorHelper.WrapMessageWithColor(TerminalColorHelper.ToArgb(textColor), text),
-                StackColorFormatType.ANSIColor => TerminalColorHelper.WrapMessageWithColor(TerminalColorHelper.ToConsoleColor(TerminalColorHelper.ToArgb(textColor)), text),
+                StackColorFormatType.ExtendedANSIColor => TerminalColorHelper.WrapMessageWithTerminalColorSequence(TerminalColorHelper.ToArgb(textColor), text),
+                StackColorFormatType.ANSIColor => TerminalColorHelper.WrapMessageWithTerminalColorSequence(TerminalColorHelper.ToConsoleColor(TerminalColorHelper.ToArgb(textColor)), text),
                 _ => text
             };
         }

@@ -114,7 +114,10 @@ public class TranslationValueFormatter : ITranslationValueFormatter
             return preDefined.Translate(this, in parameters);
         }
 
-        IValueFormatter<T> valueFormatter = GetValueFormatter<T>();
+        IValueFormatter valueFormatter = GetValueFormatter<T>();
+
+        if (valueFormatter is IValueFormatter<T> v)
+            return v.Format(this, value, in parameters);
 
         return valueFormatter.Format(this, value, in parameters);
     }
@@ -137,7 +140,7 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         return valueFormatter.Format(this, value, in parameters);
     }
 
-    private IValueFormatter<T> GetValueFormatter<T>() => (IValueFormatter<T>)GetValueFormatter(typeof(T));
+    private IValueFormatter GetValueFormatter<T>() => GetValueFormatter(typeof(T));
     private IValueFormatter GetValueFormatter(Type type)
     {
         return (IValueFormatter)_valueFormatters.GetOrAdd(type, static (type, vf) =>

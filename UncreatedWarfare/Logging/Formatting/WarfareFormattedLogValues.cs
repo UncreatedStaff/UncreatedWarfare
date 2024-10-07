@@ -114,8 +114,11 @@ internal struct WarfareFormattedLogValues
             Parameters.Count
         );
 
-        bool extended = useColor && ValueFormatter is { TranslationService.TerminalColoring: StackColorFormatType.ExtendedANSIColor };
+        StackColorFormatType color = !useColor || ValueFormatter == null
+            ? StackColorFormatType.None
+            : ValueFormatter.TranslationService.TerminalColoring;
 
+        bool extended = color == StackColorFormatType.ExtendedANSIColor;
 
         int index = 0;
         for (int i = 0; i < Parameters.Count; ++i)
@@ -123,15 +126,16 @@ internal struct WarfareFormattedLogValues
             object? value = Parameters[i];
             int prefixSize, suffixSize, argb;
             scoped ReadOnlySpan<char> formatted;
+
             // lists
             if (value is IEnumerable enumerable and not string)
             {
                 StringBuilder sb = new StringBuilder();
-                string punctuationColor = TerminalColorHelper.GetTerminalColorSequenceString(GetArgb(extended, in SymbolsDefault), false);
+                string punctuationColor = TerminalColorHelper.GetTerminalColorSequence(GetArgb(extended, in SymbolsDefault), false);
                 if (enumerable is ICollection col)
                 {
                     if (useColor)
-                        sb.Append(TerminalColorHelper.GetTerminalColorSequenceString(GetArgb(extended, in NumberDefault), false));
+                        sb.Append(TerminalColorHelper.GetTerminalColorSequence(GetArgb(extended, in NumberDefault), false));
                     sb.Append(col.Count);
                 }
                 if (useColor)
@@ -153,8 +157,8 @@ internal struct WarfareFormattedLogValues
                     formatted = ValueFormatter?.Format(subValue, in parameters, null) ?? subValue?.ToString() ?? default;
                     if (useColor && ValueFormatter != null)
                     {
-                        TryDecideColor(subValue, out argb, out _, out _);
-                        sb.Append(TerminalColorHelper.GetTerminalColorSequenceString(argb, false));
+                        TryDecideColor(subValue, out argb, out _, out _, color);
+                        sb.Append(TerminalColorHelper.GetTerminalColorSequence(argb, false));
                     }
                     
                     sb.Append(formatted);
@@ -175,7 +179,7 @@ internal struct WarfareFormattedLogValues
                 formatted = ValueFormatter?.Format(value, in parameters, null) ?? value?.ToString() ?? default;
 
                 if (useColor && ValueFormatter != null)
-                    TryDecideColor(value, out argb, out prefixSize, out suffixSize);
+                    TryDecideColor(value, out argb, out prefixSize, out suffixSize, color);
                 else
                 {
                     prefixSize = 0;
@@ -183,7 +187,6 @@ internal struct WarfareFormattedLogValues
                     argb = 0;
                 }
             }
-
 
             int ttlSize = formatted.Length + prefixSize + suffixSize;
 
@@ -202,7 +205,10 @@ internal struct WarfareFormattedLogValues
             formatted.CopyTo(format[prefixSize..]);
 
             if (prefixSize > 0)
-                FormatColor(argb, format[..prefixSize], format.Slice(prefixSize + formatted.Length, suffixSize));
+            {
+                TerminalColorHelper.WriteTerminalColorSequence(format[..prefixSize], argb, false);
+                TerminalColorHelper.ForegroundResetSequence.AsSpan().CopyTo(format.Slice(prefixSize + formatted.Length, suffixSize));
+            }
 
             if (index != 0)
                 indexBuffer[i - 1] = index;
@@ -213,9 +219,8 @@ internal struct WarfareFormattedLogValues
         return TranslationFormattingUtility.FormatString(Message, _formatBuffer.AsSpan(0, index), indexBuffer);
     }
 
-    private readonly void TryDecideColor(object? parameter, out int argb, out int prefixSize, out int suffixSize)
+    internal static void TryDecideColor(object? parameter, out int argb, out int prefixSize, out int suffixSize, StackColorFormatType coloring)
     {
-        StackColorFormatType coloring = ValueFormatter!.TranslationService.TerminalColoring;
         bool extended = coloring == StackColorFormatType.ExtendedANSIColor;
                                                                        
         if (!extended && coloring != StackColorFormatType.ANSIColor
@@ -280,24 +285,6 @@ internal struct WarfareFormattedLogValues
         }
 
         prefixSize = TerminalColorHelper.GetTerminalColorSequenceLength(argb, false);
-    }
-
-    private static void FormatColor(int argb, Span<char> prefix, Span<char> suffix)
-    {
-        unchecked
-        {
-            if ((byte)(argb >> 24) == 0) // console color
-            {
-                ConsoleColor color = (ConsoleColor)argb;
-                TerminalColorHelper.WriteTerminalColorSequenceCode(prefix, 0, color, false);
-            }
-            else
-            {
-                TerminalColorHelper.WriteTerminalColorSequenceCode(prefix, 0, (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb, false);
-            }
-        }
-
-        TerminalColorHelper.ForegroundResetSequence.AsSpan().CopyTo(suffix);
     }
 
     private static int GetArgb(bool extended, in ColorSetting setting)
