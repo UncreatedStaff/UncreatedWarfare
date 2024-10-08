@@ -7,13 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Physical;
 using SDG.Framework.Modules;
+using StackCleaner;
 using Stripe;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using StackCleaner;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -242,16 +242,6 @@ public sealed class WarfareModule : IModuleNexus
         ServiceProvider = bldr.Build();
 
         _logger = ServiceProvider.Resolve<ILogger<WarfareModule>>();
-
-        using (_logger.BeginScope("Check players"))
-        {
-            using (_logger.BeginScope(new CSteamID(76500000000000000)))
-            {
-                _logger.LogInformation("test 1");
-                _logger.LogInformation("test 2");
-                _logger.LogInformation("test 3");
-            }
-        }
 
         GlobalLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger("Global");
 

@@ -19,10 +19,12 @@ public class SingleUseTypeDictionary<TType> where TType : notnull
     public SingleUseTypeDictionary(Type[] types, TType[] values)
     {
         _values = values;
+        Type[] typeArgs = [ typeof(TType), null! ];
         for (int i = 0; i < types.Length; ++i)
         {
+            typeArgs[1] = types[i];
             typeof(IndexCache<>)
-                .MakeGenericType(types[i])
+                .MakeGenericType(typeArgs)
                 .GetField(nameof(IndexCache<object>.Index), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)!
                 .SetValue(null, i);
         }

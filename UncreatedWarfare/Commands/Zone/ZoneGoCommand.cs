@@ -1,5 +1,9 @@
-﻿using Uncreated.Warfare.FOBs.Deployment;
+﻿using System;
+using System.Globalization;
+using Microsoft.Extensions.DependencyInjection;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
@@ -40,15 +44,36 @@ public class ZoneGoCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        Zone? zone;
-        if (Context.TryGetRange(0, out string? zname))
-            zone = _zoneStore.SearchZone(zname);
-        else
+        string teamNumberStr;
+        Zone? zone = null;
+        string? zname = null;
+
+        // t1, t2, etc
+        if (Context.HasArgs(1)
+            && (teamNumberStr = Context.Get(0) ?? string.Empty).StartsWith("t", StringComparison.OrdinalIgnoreCase)
+            && uint.TryParse(teamNumberStr.AsSpan(1), NumberStyles.Number, CultureInfo.InvariantCulture, out uint teamNumber))
         {
-            Vector3 plpos = Context.Player.Position;
-            if (!Context.Player.IsOnline) return UniTask.CompletedTask; // player got kicked
-            zone = _zoneStore.FindInsideZone(plpos, false);
-            zname = zone?.Name;
+            ITeamManager<Team> teamManager = Context.ServiceProvider.GetRequiredService<ITeamManager<Team>>();
+
+            Team team = teamManager.GetTeam(new CSteamID(teamNumber));
+            if (team.IsValid)
+            {
+                zone = _zoneStore.SearchZone(ZoneType.MainBase, team.Faction);
+                zname = zone?.Name;
+            }
+        }
+
+        if (zone == null)
+        {
+            if (Context.TryGetRange(0, out zname))
+            {
+                zone = _zoneStore.SearchZone(zname);
+            }
+            else
+            {
+                zone = _zoneStore.FindInsideZone(Context.Player.Position, false);
+                zname = zone?.Name;
+            }
         }
 
         Vector3 pos;
