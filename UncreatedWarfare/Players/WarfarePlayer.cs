@@ -1,9 +1,11 @@
 ﻿using SDG.NetTransport;
+using Stripe.BillingPortal;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Saves;
@@ -12,6 +14,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Containers;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Players;
@@ -25,7 +28,7 @@ public interface IPlayer : ITranslationArgument
 }
 
 [CannotApplyEqualityOperator]
-public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquatable<WarfarePlayer>, ITransformObject
+public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerComponent>, IEquatable<IPlayer>, IEquatable<WarfarePlayer>, ITransformObject
 {
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
@@ -42,6 +45,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IEquatable<IPlayer>, IEquata
     public WarfarePlayerLocale Locale { get; }
     public SemaphoreSlim PurchaseSync { get; }
     public PlayerSummary SteamSummary { get; internal set; }
+    public SessionRecord CurrentSession { get; internal set; }
 
     /// <summary>
     /// List of steam IDs of this player's friends, if theyre public.

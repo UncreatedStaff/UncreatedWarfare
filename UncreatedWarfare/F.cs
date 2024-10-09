@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Logging;

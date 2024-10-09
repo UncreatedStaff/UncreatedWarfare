@@ -1,5 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
@@ -24,7 +25,7 @@ public class BuildableData : ITranslationArgument
     /// <summary>
     /// Type of buildable.
     /// </summary>
-    public BuildableType Type { get; set; }
+    public ShovelableType Type { get; set; }
 
     /// <summary>
     /// Number of shovels required to build.
@@ -59,7 +60,7 @@ public class BuildableData : ITranslationArgument
     /// <summary>
     /// Vehicle spawning data for this buildable.
     /// </summary>
-    public EmplacementData? Emplacement { get; set; }
+    public EmplacementInfo? Emplacement { get; set; }
 
     /// <summary>
     /// If this buildable shouldn't be auto-whitelisted.

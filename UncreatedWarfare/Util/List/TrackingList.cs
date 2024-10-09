@@ -93,6 +93,17 @@ public class TrackingList<T> : IList<T>
         _list.RemoveAll(predicate);
         _set.RemoveWhere(predicate);
     }
+    public T? FindAndRemove(Predicate<T> predicate)
+    {
+        int index = _list.FindIndex(predicate);
+
+        if (index == -1)
+            return default;
+
+        T result = _list[index];
+        RemoveAt(index);
+        return result;
+    }
 
     public bool TryGet(int index, [MaybeNullWhen(false)] out T item)
     {

@@ -101,7 +101,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
             return false;
         }
 
-        if (!location.CheckDeployableTo(Player, _translations, in settings))
+        if (!location.CheckDeployableTo(Player, _chatService, _translations, in settings))
         {
             return false;
         }
@@ -121,7 +121,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
             //}
         }
 
-        if (deployFrom != null && !deployFrom.CheckDeployableFrom(Player, _translations, in settings, location))
+        if (deployFrom != null && !deployFrom.CheckDeployableFrom(Player, _chatService, _translations, in settings, location))
         {
             return false;
         }
@@ -147,6 +147,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         }
         else
         {
+            _chatService.Send(Player, _translations.DeployStandby, location, delay.Seconds);
             _deploymentCoroutine = StartCoroutine(DeployCoroutine(location, settings, deployFrom));
         }
 
@@ -158,6 +159,8 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
         Player.UnturnedPlayer.teleportToLocationUnsafe(deployable.SpawnPosition, deployable.Yaw);
         deployFrom?.OnDeployFrom(Player, in settings);
         deployable.OnDeployTo(Player, in settings);
+        if (!settings.DisableInitialChatUpdates)
+            _chatService.Send(Player, _translations.DeploySuccess, deployable);
         if (!settings.DisableStartingCooldown && _cooldownManager != null)
         {
             _cooldownManager.StartCooldown(Player, settings.CooldownType ?? CooldownType.Deploy, 30f /* todo RapidDeployment.GetDeployTime(Player) */);
@@ -261,7 +264,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
             return false;
         }
 
-        if (!deployable.CheckDeployableToTick(Player, _translations, in settings))
+        if (!deployable.CheckDeployableToTick(Player, _chatService, _translations, in settings))
         {
             return false;
         }

@@ -89,7 +89,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                 using IServiceScope scope = _serviceProvider.CreateScope();
                 await using IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IGameDataDbContext>();
                 SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
-                // player.CurrentSession = record;
+                player.CurrentSession = record;
 
                 await dbContext.AddAsync(record, token).ConfigureAwait(false);
                 FixupSession(dbContext, record);
@@ -140,7 +140,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
                     WarfarePlayer player = onlinePlayers[i];
 
                     SessionRecord record = StartCreatingSession(dbContext, player, startedGame, out SessionRecord? previousSession);
-                    // todo player.CurrentSession = record;
+                    player.CurrentSession = record;
                     records.Add((record, previousSession));
                     anyPrev |= previousSession != null;
 
@@ -328,7 +328,7 @@ public class SessionManager : IHostedService, IEventListener<PlayerLeft>
     // }
     private static bool IsSessionExpired(WarfarePlayer player)
     {
-        SessionRecord? currentSession = null;// todo player.CurrentSession;
+        SessionRecord? currentSession = player.CurrentSession;
         if (currentSession == null)
             return player.IsOnline;
 

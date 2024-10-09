@@ -59,6 +59,7 @@ using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events;
 using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
+using Uncreated.Warfare.StrategyMaps;
 
 namespace Uncreated.Warfare;
 public sealed class WarfareModule : IModuleNexus
@@ -552,6 +553,14 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterType<SquadManager>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        // Strategy Tables
+        bldr.RegisterType<StrategyMapManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<StrategyMapsConfiguration>()
+            .SingleInstance();
 
         // Active ITeamManager
         bldr.Register(_ => GetActiveLayout().TeamManager)

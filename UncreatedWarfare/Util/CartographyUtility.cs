@@ -30,7 +30,7 @@ public static class CartographyUtility
     /// The size of the rectangular area that gets captured in world coordiantes.
     /// </summary>
     /// <remarks>This shouldn't be assumed to be axis-aligned.</remarks>
-    public static Vector2 CaptureAreaSize { get; private set; }
+    public static Vector2 WorldCaptureAreaDimensions { get; private set; }
 
     /// <summary>
     /// If this level is using the legacy mapping boundaries instead of a <see cref="CartographyVolume"/>.
@@ -63,35 +63,6 @@ public static class CartographyUtility
         return mapPixelCoodinates;
     }
 
-    /// <summary>
-    /// Projects a world coodinate to the world coordiate of a point on a flat 'war table' type barricade, given the x and y size and 3D offset of the table.
-    /// </summary>
-    public static Matrix4x4 ProjectWorldToMapBarricade(BarricadeDrop drop, Vector3 platformOffset, Vector2 platformSize)
-    {
-        Vector3 scale = default;
-        scale.x = platformSize.x / 2f;
-        scale.y = platformSize.y / -2f;
-
-        // fit map into platform
-        Vector2 captureSize = CaptureAreaSize;
-
-        float xRatio = platformSize.x / captureSize.x,
-              yRatio = platformSize.y / captureSize.y;
-
-        if (xRatio > yRatio)
-            scale.x *= yRatio / xRatio;
-        else
-            scale.y *= xRatio / yRatio;
-
-        Matrix4x4 normalizedToBarricade = Matrix4x4.TRS(
-            drop.model.position + platformOffset,
-            drop.model.rotation,
-            scale
-        );
-
-        return normalizedToBarricade * _worldToMap;
-    }
-
     internal static void Init(int level)
     {
         Level.onPrePreLevelLoaded -= Init;
@@ -121,7 +92,7 @@ public static class CartographyUtility
 
             _mapImageSize = new Vector2Int(levelSize, levelSize);
 
-            CaptureAreaSize = new Vector2(captureSize, captureSize);
+            WorldCaptureAreaDimensions = new Vector2(captureSize, captureSize);
             UsesLegacyCartography = true;
         }
         else
@@ -151,7 +122,7 @@ public static class CartographyUtility
 
             _mapImageSize = new Vector2Int(Mathf.CeilToInt(boundsSize.x), Mathf.CeilToInt(boundsSize.z));
 
-            CaptureAreaSize = new Vector2(boundsSize.x, boundsSize.z);
+            WorldCaptureAreaDimensions = new Vector2(boundsSize.x, boundsSize.z);
             UsesLegacyCartography = false;
         }
     }

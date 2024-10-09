@@ -3,53 +3,55 @@ using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Timing;
+using Uncreated.Warfare.Util.Timing.Collectors;
 
 namespace Uncreated.Warfare.Fobs;
 
 /// <summary>
 /// Base class for standard FOBs, caches, and any other FOBs that support items.
 /// </summary>
-public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
+public class BasePlayableFob : IResourceFob, IDisposable
 {
-    private ILogger _logger;
-    private float _sqrRadius;
-    private float _radius;
-    private List<WarfarePlayer> _players;
-    private List<InteractableVehicle> _vehicles;
-    private List<IFobItem> _items;
+    
+    private readonly IPlayerService _playerService;
+    private readonly FobManager _fobManager;
+    private readonly ILogger _logger;
+    private readonly ILoopTicker _loopTicker;
 
-    /// <summary>
-    /// List of all players within the radius of the FOB.
-    /// </summary>
-    public IReadOnlyList<WarfarePlayer> Players { get; private set; }
-
-    /// <summary>
-    /// List of all vehicles within the radius of the FOB.
-    /// </summary>
-    public IReadOnlyList<InteractableVehicle> Vehicles { get; private set; }
-
-    /// <summary>
-    /// List of all items owned by this FOB.
-    /// </summary>
-    public IReadOnlyList<IFobItem> Items { get; private set; }
+    public IBuildable Buildable { get; private set; }
 
     /// <inheritdoc />
-    public int AmmoCount { get; set; }
-
+    public int BuildCount { get; private set; }
     /// <inheritdoc />
-    public int BuildCount { get; set; }
+    public int AmmoCount { get; private set; }
 
     /// <inheritdoc />
     public string Name { get; private set; }
 
     /// <inheritdoc />
-    public Color32 Color { get; private set; }
+    public Color32 Color
+    {
+        get
+        {
+            if (NearbyEnemies.Collection.Count > 0)
+                return UnityEngine.Color.red;
+
+            return UnityEngine.Color.cyan;
+        }
+    }
 
     /// <inheritdoc />
     public Team Team { get; private set; }
@@ -57,20 +59,15 @@ public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
     /// <inheritdoc />
     public Vector3 Position
     {
-        get => transform.position;
-        set => transform.position = value;
+        get => Buildable.Position;
+        set => throw new NotSupportedException();
     }
-
-    /// <inheritdoc />
-    public float EffectiveRadius
-    {
-        get => _radius;
-        private set
-        {
-            _radius = value;
-            _sqrRadius = value * value;
-        }
-    }
+    public float EffectiveRadius => 50f;
+    public ISphereProximity FriendlyProximity { get; private set; }
+    public ISphereProximity EnemyProximity { get; private set; }
+    public ProximityCollector<WarfarePlayer> NearbyFriendlies { get; private set; }
+    public ProximityCollector<WarfarePlayer> NearbyEnemies { get; private set; }
+    public ProximityCollector<IFobItem> Items { get; private set; }
 
     /// <summary>
     /// Invoked when a player enters the radius of the FOB.
@@ -88,32 +85,97 @@ public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
     public event Action<IFobItem>? OnItemAdded;
     public event Action<IFobItem>? OnItemRemoved;
 
-    protected virtual void Awake()
-    {
-        _players = new List<WarfarePlayer>(24);
-        Players = new ReadOnlyCollection<WarfarePlayer>(_players);
-
-        _vehicles = new List<InteractableVehicle>(4);
-        Vehicles = new ReadOnlyCollection<InteractableVehicle>(_vehicles);
-
-        _items = new List<IFobItem>(32);
-        Items = new ReadOnlyCollection<IFobItem>(_items);
-    }
-
-    internal virtual void Init(IServiceProvider serviceProvider, string name, BarricadeDrop radio)
+    public BasePlayableFob(IServiceProvider serviceProvider, string name, IBuildable buildable)
     {
         Name = name;
+        Buildable = buildable;
+        Team = serviceProvider.GetRequiredService<ITeamManager<Team>>().GetTeam(buildable.Group);
         _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType().Name + " | " + Name);
-    }
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _fobManager = serviceProvider.GetRequiredService<FobManager>();
+        WarfareLifetimeComponent warfareLifetime = serviceProvider.GetRequiredService<WarfareLifetimeComponent>();
 
-    protected virtual void Start()
+        FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
+
+        _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(0.5f), true, true);
+
+        NearbyFriendlies = new ProximityCollector<WarfarePlayer>(
+            new ProximityCollector<WarfarePlayer>.ProximityCollectorOptions
+            {
+                Ticker = _loopTicker,
+                Proximity = FriendlyProximity,
+                ObjectsToCollect = () => _playerService.OnlinePlayers.Where(p => p.Team == Team),
+                PositionFunction = p => p.Position
+            }
+        );
+        NearbyEnemies = new ProximityCollector<WarfarePlayer>(
+            new ProximityCollector<WarfarePlayer>.ProximityCollectorOptions
+            {
+                Ticker = _loopTicker,
+                Proximity = FriendlyProximity,
+                ObjectsToCollect = () => _playerService.OnlinePlayers.Where(p => p.Team != Team),
+                PositionFunction = p => p.Position
+            }
+        );
+        Items = new ProximityCollector<IFobItem>(
+            new ProximityCollector<IFobItem>.ProximityCollectorOptions
+            {
+                Ticker = _loopTicker,
+                Proximity = FriendlyProximity,
+                ObjectsToCollect = () => _fobManager.FloatingItems,
+                PositionFunction = i => i.Position,
+                OnItemAdded = (i) =>
+                {
+                    if (i is SupplyCrate crate)
+                        AddSupplies(crate.SupplyCount, crate.Type);
+
+                    _logger.LogInformation("Added fob item. State: " + this);
+                },
+                OnItemRemoved = (i) =>
+                {
+                    if (i is SupplyCrate crate)
+                        SubstractSupplies(crate.SupplyCount, crate.Type, false);
+
+                    _logger.LogInformation("Removed fob item. State: " + this);
+                }
+            }
+        );
+    }
+    public void AddSupplies(int amount, SupplyType type)
     {
-
+        if (type == SupplyType.Ammo)
+            AmmoCount = Mathf.Max(AmmoCount + amount, 0);
+        if (type == SupplyType.Build)
+            BuildCount = Mathf.Max(BuildCount + amount, 0);
     }
+    public void SubstractSupplies(int amount, SupplyType type, bool subtractFromCrates = true)
+    {
+        AddSupplies(-amount, type);
 
+        if (!subtractFromCrates)
+            return;
+
+        // subtract from crates
+        foreach (SupplyCrate crate in Items.Collection.Where(i => i is SupplyCrate s && s.Type == type))
+        {
+            int remainder = crate.SupplyCount - amount;
+            int toSubstract = Mathf.Clamp(crate.SupplyCount - amount, 0, crate.SupplyCount);
+            crate.SupplyCount = toSubstract;
+
+            if (remainder <= 0)
+            {
+                // todo: destroy this crate
+                // move on and try to substract the remainder from the next crate
+                amount = -remainder;
+            }
+
+            if (remainder >= 0) // no need to substract from any further crates
+                break;
+        }
+    }
     public UniTask DestroyAsync(CancellationToken token = default)
     {
-        throw new NotImplementedException();
+        return UniTask.CompletedTask;
     }
 
     public UniTask AddItemAsync(IFobItem fobItem, CancellationToken token = default)
@@ -133,172 +195,52 @@ public class BasePlayableFob : MonoBehaviour, IRadiusFob, IResourceFob
     {
         return TimeSpan.Zero;
     }
-    public bool CheckDeployableTo(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    public bool CheckDeployableTo(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
-        return false;
+        if (NearbyEnemies.Collection.Count > 0)
+        {
+            chatService.Send(player, translations.DeployEnemiesNearby, this);
+            return false;
+        }
+
+        return true;
     }
 
-    public bool CheckDeployableFrom(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
+    public bool CheckDeployableFrom(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
     {
-        throw new NotImplementedException();
+        return true;
     }
 
-    public bool CheckDeployableToTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    public bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
-        throw new NotImplementedException();
-    }
-
-    public int CompareTo(IFob other)
-    {
-        return -1; // todo
-    }
-
-    public bool TestPoint(in Vector3 position)
-    {
-        return (transform.position - position).sqrMagnitude <= _sqrRadius;
-    }
-
-    public bool TestPoint(in Vector2 position)
-    {
-        Vector3 pos = transform.position;
-        Vector2 pos2d = new Vector2(pos.x, pos.z);
-        return (pos2d - position).sqrMagnitude <= _sqrRadius;
+        if (NearbyEnemies.Collection.Count > 0)
+        {
+            chatService.Send(player, translations.DeployEnemiesNearbyTick, this);
+            return false;
+        }
+        return true;
     }
 
     public override string ToString()
     {
-        return "{" + Name + " | " + Team + "}";
+        return $"Fob: {Name}, Team: {Team}, Position: {Position}, BuildCount: {BuildCount}, AmmoCount: {AmmoCount}, EffectiveRadius: {EffectiveRadius}\n" +
+               $"NearbyFriendlies: {NearbyFriendlies.Collection.Count}\n" +
+               $"NearbyEnemies: {NearbyEnemies.Collection.Count}\n" +
+               $"Items: {Items.Collection.Count}\n"
+               ;
     }
-
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         return formatter.Colorize(Name, Color, parameters.Options);
     }
 
-    event Action<WarfarePlayer>? IEventBasedProximity<WarfarePlayer>.OnObjectEntered
+    public void Dispose()
     {
-        add => OnPlayerEntered += value;
-        remove => OnPlayerEntered -= value;
+        _loopTicker.Dispose();
     }
 
-    event Action<WarfarePlayer>? IEventBasedProximity<WarfarePlayer>.OnObjectExited
-    {
-        add => OnPlayerExited += value;
-        remove => OnPlayerExited -= value;
-    }
-
-    event Action<IFobItem>? IEventBasedProximity<IFobItem>.OnObjectEntered
-    {
-        add => OnItemAdded += value;
-        remove => OnItemAdded -= value;
-    }
-
-    event Action<IFobItem>? IEventBasedProximity<IFobItem>.OnObjectExited
-    {
-        add => OnItemRemoved += value;
-        remove => OnItemRemoved -= value;
-    }
-
-    event Action<InteractableVehicle>? IEventBasedProximity<InteractableVehicle>.OnObjectEntered
-    {
-        add => OnVehicleEntered += value;
-        remove => OnVehicleEntered -= value;
-    }
-
-    event Action<InteractableVehicle>? IEventBasedProximity<InteractableVehicle>.OnObjectExited
-    {
-        add => OnVehicleExited += value;
-        remove => OnVehicleExited -= value;
-    }
-
-    public bool Contains(InteractableVehicle obj)
-    {
-        for (int i = 0; i < _vehicles.Count; ++i)
-        {
-            if (ReferenceEquals(_vehicles[i], obj))
-                return true;
-        }
-
-        return false;
-    }
-
-    public bool Contains(IFobItem obj)
-    {
-        for (int i = 0; i < _items.Count; ++i)
-        {
-            if (ReferenceEquals(_items[i], obj))
-                return true;
-        }
-
-        return false;
-    }
-
-    public bool Contains(WarfarePlayer obj)
-    {
-        for (int i = 0; i < _players.Count; ++i)
-        {
-            if (ReferenceEquals(_players[i], obj))
-                return true;
-        }
-
-        return false;
-    }
-
-    object ICloneable.Clone()
-    {
-        throw new NotSupportedException();
-    }
-
-    IReadOnlyList<WarfarePlayer> ITrackingProximity<WarfarePlayer>.ActiveObjects => Players;
-
-    IReadOnlyList<IFobItem> ITrackingProximity<IFobItem>.ActiveObjects => Items;
-
-    IReadOnlyList<InteractableVehicle> ITrackingProximity<InteractableVehicle>.ActiveObjects => Vehicles;
-
-    public Matrix4x4 LocalToWorld => throw new NotImplementedException();
-
-    public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
+    public int CompareTo(IFob other)
     {
         throw new NotImplementedException();
-    }
-
-    public Matrix4x4 WorldToLocal => throw new NotImplementedException();
-
-    BoundingSphere ISphereProximity.Sphere
-    {
-        get
-        {
-            BoundingSphere sphere = default;
-            sphere.position = transform.position;
-            sphere.radius = _radius;
-            return sphere;
-        }
-    }
-    Bounds IShapeVolume.worldBounds
-    {
-        get
-        {
-            Vector3 center = transform.position;
-            float r = _radius * 2;
-            Vector3 size = default;
-            size.x = r;
-            size.y = r;
-            size.z = r;
-            return new Bounds(center, size);
-        }
-    }
-    Quaternion ITransformObject.Rotation
-    {
-        get => Quaternion.identity;
-        set => throw new NotSupportedException();
-    }
-    Vector3 ITransformObject.Scale
-    {
-        get => Vector3.one;
-        set => throw new NotSupportedException();
-    }
-    void ITransformObject.SetPositionAndRotation(Vector3 position, Quaternion rotation)
-    {
-        throw new NotSupportedException();
     }
 }

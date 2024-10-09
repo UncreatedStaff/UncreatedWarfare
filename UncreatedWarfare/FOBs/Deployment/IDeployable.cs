@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
@@ -23,17 +24,17 @@ public interface IDeployable : ITranslationArgument
     /// <summary>
     /// Initial check to see if a player can deploy to the location.
     /// </summary>
-    bool CheckDeployableTo(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings);
+    bool CheckDeployableTo(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings);
     
     /// <summary>
     /// Initial check to see if a player can deploy from the location.
     /// </summary>
-    bool CheckDeployableFrom(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo);
+    bool CheckDeployableFrom(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo);
 
     /// <summary>
     /// Periodic checks over time to see if a player can deploy to the location. This also runs just before the teleport.
     /// </summary>
-    bool CheckDeployableToTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings);
+    bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings);
 
     /// <summary>
     /// Periodic checks over time to see if a player can deploy from this location. This also runs just before the teleport.

@@ -157,6 +157,7 @@ public class BuildableBarricade : IBuildable, IEquatable<BuildableBarricade>, IE
     public bool Equals(IBuildable? other) => other is not null && !other.IsStructure && other.InstanceId == Drop.instanceID;
     public override bool Equals(object? obj) => obj is IBuildable b && Equals(b);
     public override int GetHashCode() => unchecked ( (int)Drop.instanceID );
+    public override string ToString() =>  $"BuildableBarricade[InstanceId: {InstanceId} Asset itemName: {Asset.itemName} Asset GUID: {Asset.GUID:N} Owner: {Owner} Group: {Group} IsDead: {IsDead}]";
 }
 
 [CannotApplyEqualityOperator]
@@ -221,4 +222,5 @@ public class BuildableStructure : IBuildable, IEquatable<BuildableStructure>, IE
     public bool Equals(IBuildable? other) => other is not null && other.IsStructure && other.InstanceId == Drop.instanceID;
     public override bool Equals(object? obj) => obj is IBuildable b && Equals(b);
     public override int GetHashCode() => unchecked ( (int)Drop.instanceID );
+    public override string ToString() => $"BuildableStructure[InstanceId: {InstanceId} Asset itemName: {Asset.itemName} Asset GUID: {Asset.GUID:N} Owner: {Owner} Group: {Group} IsDead: {IsDead}]";
 }

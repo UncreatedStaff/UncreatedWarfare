@@ -4,7 +4,7 @@ using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
@@ -15,14 +15,14 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
 {
     public Int32ParameterTemplate Amount { get; set; }
     public AssetParameterTemplate<ItemPlaceableAsset> Base { get; set; }
-    public EnumParameterTemplate<BuildableType> Type { get; set; }
+    public EnumParameterTemplate<ShovelableType> Type { get; set; }
     public ShovelBuildables(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : BaseState
     {
         [RewardField("a")]
         public QuestParameterValue<int> Amount { get; set; }
         public QuestParameterValue<Guid>? Base { get; set; }
-        public QuestParameterValue<BuildableType>? Type { get; set; }
+        public QuestParameterValue<ShovelableType>? Type { get; set; }
         public override QuestParameterValue<int> FlagValue => Amount;
         public override UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
         {
@@ -31,7 +31,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
                     typeStr = configuration["Type"];
 
             QuestParameterValue<Guid>? baseAsset = null;
-            QuestParameterValue<BuildableType>? type = null;
+            QuestParameterValue<ShovelableType>? type = null;
 
             if (string.IsNullOrEmpty(amountStr) || !Int32ParameterTemplate.TryParseValue(amountStr, out QuestParameterValue<int>? amount))
                 throw new QuestConfigurationException(typeof(ShovelBuildables), "Failed to parse integer parameter for \"Amount\".");
@@ -39,7 +39,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
             if (!string.IsNullOrEmpty(baseStr) && !AssetParameterTemplate<ItemPlaceableAsset>.TryParseValue(baseStr, out baseAsset))
                 throw new QuestConfigurationException(typeof(ShovelBuildables), "Failed to parse ItemPlaceableAsset parameter for \"Base\".");
             
-            if (!string.IsNullOrEmpty(typeStr) && !EnumParameterTemplate<BuildableType>.TryParseValue(typeStr, out type))
+            if (!string.IsNullOrEmpty(typeStr) && !EnumParameterTemplate<ShovelableType>.TryParseValue(typeStr, out type))
                 throw new QuestConfigurationException(typeof(ShovelBuildables), "Failed to parse BuildableType parameter for \"Type\".");
 
             Amount = amount;
@@ -59,7 +59,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
     {
         private readonly int _targetAmount;
         private readonly QuestParameterValue<Guid> _base;
-        private readonly QuestParameterValue<BuildableType> _type;
+        private readonly QuestParameterValue<ShovelableType> _type;
 
         private int _amount;
         public override bool IsComplete => _amount >= _targetAmount;
@@ -70,7 +70,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
             _targetAmount = state.Amount.GetSingleValueOrMinimum();
 
             _base = state.Base ?? AssetParameterTemplate<ItemPlaceableAsset>.WildcardInclusive;
-            _type = state.Type ?? EnumParameterTemplate<BuildableType>.WildcardInclusive;
+            _type = state.Type ?? EnumParameterTemplate<ShovelableType>.WildcardInclusive;
         }
 
         // todo [EventListener(RequiresMainThread = false)] // todo use actual event listener

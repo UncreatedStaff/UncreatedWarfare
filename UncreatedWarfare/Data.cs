@@ -110,7 +110,6 @@ public static class Data
 #if NETSTANDARD || NETFRAMEWORK
     public static IStripeService WarfareStripeService;
 #endif
-    internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearPants;

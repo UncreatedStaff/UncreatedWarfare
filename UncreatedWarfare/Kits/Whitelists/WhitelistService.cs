@@ -349,7 +349,7 @@ public class WhitelistService :
         int amountNeededToDestroy = placedBarricades - maximumPlacedBarricades + 1;
         foreach (BarricadeInfo info in BarricadeUtility.EnumerateBarricades()
                      .Where(barricade => barricade.Drop.asset.GUID == e.Asset.GUID && barricade.Drop.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID)
-                     .OrderBy(barricade => BuildableComponent.TryGet(barricade.Drop, out BuildableComponent comp) ? comp.CreateTime : 0)
+                     .OrderBy(barricade => barricade.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
                      .ToList())
         {
 
@@ -434,7 +434,7 @@ public class WhitelistService :
         int amountNeededToDestroy = placedStructures - maximumPlacedStructures + 1;
         foreach (StructureInfo info in StructureUtility.EnumerateStructures()
                      .Where(structure => structure.Drop.asset.GUID == e.Asset.GUID && structure.Drop.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID)
-                     .OrderBy(structure => BuildableComponent.TryGet(structure.Drop, out BuildableComponent comp) ? comp.CreateTime : 0)
+                     .OrderBy(structure => structure.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
                      .ToList())
         {
 

@@ -7,6 +7,7 @@ using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
@@ -180,7 +181,7 @@ public class DebugCommand : IExecutableCommand
         Vector3 offset = new Vector3(xOffset, yOffset, zOffset);
         Vector2 size = new Vector2(xSize, ySize);
 
-        Matrix4x4 transformationMatrix = CartographyUtility.ProjectWorldToMapBarricade(barricade, offset, size);
+        Matrix4x4 transformationMatrix = StrategyMap.ProjectWorldCoordsToMapTable(barricade.model, offset, size);
 
         EffectAsset? squadLeaderEmpty = Assets.find<EffectAsset>(new Guid("dc95d06e787e4a069518e0487645ed6b"));
 
@@ -225,7 +226,7 @@ public class DebugCommand : IExecutableCommand
         logger.LogInformation("w2mr: " + CartographyUtility.MapToWorld.GetRotation().eulerAngles.ToString("F3"));
         logger.LogInformation("w2ms: " + CartographyUtility.MapToWorld.lossyScale.ToString("F3"));
         logger.LogInformation("Img size: " + CartographyUtility.MapImageSize);
-        logger.LogInformation("Cpt size: " + CartographyUtility.CaptureAreaSize.ToString("F3"));
+        //logger.LogInformation("Cpt size: " + CartographyUtility.CaptureAreaSize.ToString("F3"));
     }
 #if false
     private const string UsageGiveXp = "/test givexp <player> <amount> [team - required if offline]";
