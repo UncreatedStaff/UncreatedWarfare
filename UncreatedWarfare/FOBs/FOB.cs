@@ -8,6 +8,7 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -41,7 +42,16 @@ public class BasePlayableFob : IResourceFob, IDisposable
     public string Name { get; private set; }
 
     /// <inheritdoc />
-    public Color32 Color { get; private set; }
+    public Color32 Color
+    {
+        get
+        {
+            if (NearbyEnemies.Collection.Count > 0)
+                return UnityEngine.Color.red;
+
+            return UnityEngine.Color.cyan;
+        }
+    }
 
     /// <inheritdoc />
     public Team Team { get; private set; }
@@ -87,7 +97,7 @@ public class BasePlayableFob : IResourceFob, IDisposable
 
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
 
-        _loopTicker = new UnityLoopTickerFactory(warfareLifetime, _logger).CreateTicker(TimeSpan.FromSeconds(0.5f), true, true);
+        _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(0.5f), true, true);
 
         NearbyFriendlies = new ProximityCollector<WarfarePlayer>(
             new ProximityCollector<WarfarePlayer>.ProximityCollectorOptions
@@ -145,7 +155,7 @@ public class BasePlayableFob : IResourceFob, IDisposable
         if (!subtractFromCrates)
             return;
 
-        // substarct from crates
+        // subtract from crates
         foreach (SupplyCrate crate in Items.Collection.Where(i => i is SupplyCrate s && s.Type == type))
         {
             int remainder = crate.SupplyCount - amount;
@@ -185,19 +195,30 @@ public class BasePlayableFob : IResourceFob, IDisposable
     {
         return TimeSpan.Zero;
     }
-    public bool CheckDeployableTo(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    public bool CheckDeployableTo(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
-        return NearbyEnemies.Collection.Count > 0;
+        if (NearbyEnemies.Collection.Count > 0)
+        {
+            chatService.Send(player, translations.DeployEnemiesNearby, this);
+            return false;
+        }
+
+        return true;
     }
 
-    public bool CheckDeployableFrom(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
+    public bool CheckDeployableFrom(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
     {
         return true;
     }
 
-    public bool CheckDeployableToTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    public bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
-        return NearbyEnemies.Collection.Count > 0;
+        if (NearbyEnemies.Collection.Count > 0)
+        {
+            chatService.Send(player, translations.DeployEnemiesNearbyTick, this);
+            return false;
+        }
+        return true;
     }
 
     public override string ToString()

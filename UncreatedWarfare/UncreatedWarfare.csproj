@@ -305,7 +305,6 @@
 
   <ItemGroup>
     <Folder Include="Commands\VehicleBay\" />
-    <Folder Include="NewFolder\" />
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">

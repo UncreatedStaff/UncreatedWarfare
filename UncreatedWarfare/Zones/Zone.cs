@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
@@ -129,17 +130,17 @@ public class Zone : IDeployable
         return Name;
     }
 
-    bool IDeployable.CheckDeployableTo(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    bool IDeployable.CheckDeployableTo(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
         return true;
     }
 
-    bool IDeployable.CheckDeployableFrom(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
+    bool IDeployable.CheckDeployableFrom(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
     {
         return true;
     }
 
-    bool IDeployable.CheckDeployableToTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings)
+    bool IDeployable.CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
         return true;
     }

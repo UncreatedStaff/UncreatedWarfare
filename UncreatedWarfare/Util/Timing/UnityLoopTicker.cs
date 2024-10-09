@@ -195,9 +195,9 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
 public class UnityLoopTickerFactory : ILoopTickerFactory
 {
     private readonly WarfareLifetimeComponent _component;
-    private readonly ILogger _logger;
+    private readonly ILogger<UnityLoopTickerFactory> _logger;
 
-    public UnityLoopTickerFactory(WarfareLifetimeComponent component, ILogger logger)
+    public UnityLoopTickerFactory(WarfareLifetimeComponent component, ILogger<UnityLoopTickerFactory> logger)
     {
         _component = component;
         _logger = logger;

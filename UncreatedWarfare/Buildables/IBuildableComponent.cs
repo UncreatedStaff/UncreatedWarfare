@@ -10,10 +10,5 @@ namespace Uncreated.Warfare.Buildables;
 /// </summary>
 public interface IBuildableComponent
 {
-    IBuildable Buildable { get; protected set; }
-
-    /// <summary>
-    /// This function is called on player join and after every layout starts (to re-initialize scoped services).
-    /// </summary>
-    void Init(IServiceProvider serviceProvider);
+    IBuildable Buildable { get; }
 }

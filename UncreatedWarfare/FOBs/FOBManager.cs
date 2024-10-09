@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs.Construction;
@@ -25,11 +27,10 @@ public class FobManager :
     IEventListener<BarricadePlaced>,
     IEventListener<BarricadeDestroyed>,
     IEventListener<ItemDropped>,
-    IEventListener<PlayerPunched>
+    IEventListener<MeleeHit>
 {
     private readonly FobConfiguration _configuration;
     private readonly AssetConfiguration _assetConfiguration;
-    private readonly EventDispatcher2? _eventDispatcher;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<FobManager> _logger;
     private readonly TrackingList<IFobItem> _floatingItems;
@@ -49,7 +50,6 @@ public class FobManager :
     {
         _configuration = serviceProvider.GetRequiredService<FobConfiguration>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
-        _eventDispatcher = serviceProvider.GetService<EventDispatcher2>();
         _serviceProvider = serviceProvider;
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);
@@ -71,17 +71,17 @@ public class FobManager :
 
     public void RegisterFob(IBuildable fobBuildable)
     {
-        string fobName = "FOB" + _fobs.Count + 1;
+        string fobName = "FOB" + (_fobs.Count + 1);
         BasePlayableFob fob = new BasePlayableFob(_serviceProvider, fobName, fobBuildable);
         _fobs.Add(fob);
         _logger.LogDebug("Registered new FOB: " + fob);
-        _eventDispatcher?.FobRegistered(fob);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobRegistered { Fob = fob });
     }
     public IFob? DeregisterFob(BasePlayableFob fob)
     {
         IFob? existing = _fobs.FindAndRemove(f => f == fob);
         _logger.LogDebug("Deregistered FOB: " + fob);
-        _eventDispatcher?.FobDeregistered(fob);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDeregistered { Fob = fob });
         fob.DestroyAsync();
         return existing;
     }
@@ -94,11 +94,22 @@ public class FobManager :
             RegisterFob(new BuildableBarricade(e.Barricade));
             return;
         }
+
+        BuildableContainer container = e.Buildable.Model.GetOrAddComponent<BuildableContainer>();
+
+        ShovelableInfo? shovelableInfo = _configuration.GetRequiredSection("Shovelables").Get<List<ShovelableInfo>>()
+            .FirstOrDefault(s => s.FoundationBuildable.Guid == e.Buildable.Asset.GUID);
+
+        if (shovelableInfo != null)
+        {
+            container.AddComponent(new ShovelableBuildable(shovelableInfo, e.Buildable, _assetConfiguration.GetAssetLink<EffectAsset>("Effects:ShovelHit")));
+        }
     }
 
     public void HandleEvent(BarricadeDestroyed e, IServiceProvider serviceProvider)
     {
-        if (e.Barricade.model.TryGetComponent<BasePlayableFob>(out var fob))
+        BasePlayableFob? fob = (BasePlayableFob) _fobs.FirstOrDefault(i => i is BasePlayableFob f && f.Buildable.InstanceId == e.InstanceId);
+        if (fob != null)
         {
             DeregisterFob(fob);
         }
@@ -121,7 +132,7 @@ public class FobManager :
             supplyCrateInfo.PlacementEffect.GetAssetOrFail(),
             e.Player.Position,
             e.Player.Yaw,
-            new UnityLoopTickerFactory(serviceProvider.GetRequiredService<WarfareLifetimeComponent>(), _logger),
+            serviceProvider.GetRequiredService<ILoopTickerFactory>(),
             (buildable) =>
             {
                 SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable);
@@ -132,11 +143,17 @@ public class FobManager :
 
     }
 
-    public void HandleEvent(PlayerPunched e, IServiceProvider serviceProvider)
+    public void HandleEvent(MeleeHit e, IServiceProvider serviceProvider)
     {
-        IAssetLink<ItemAsset>? meleeWeaponAsset = _assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool");
+        Console.WriteLine("punching");
 
-        if (meleeWeaponAsset.GetAssetOrFail().GUID != e.Equipment.asset.GUID)
+        if (e.Equipment?.asset?.GUID == null)
+            return;
+
+        Console.WriteLine("Got Equipment asset");
+
+        IAssetLink<ItemAsset>? entrenchingTool = _assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool");
+        if (entrenchingTool.GetAssetOrFail().GUID != e.Equipment.asset.GUID)
             return;
 
         RaycastInfo info = DamageTool.raycast(new Ray(e.Look.aim.position, e.Look.aim.forward), 2, RayMasks.BARRICADE, e.Player.UnturnedPlayer);
@@ -149,6 +166,6 @@ public class FobManager :
         if (!container.TryGetFromContainer(out IShovelable? shovelable))
             return;
 
-        shovelable.Shovel(e.Player, info.point);
+        shovelable!.Shovel(e.Player, info.point);
     }
 }

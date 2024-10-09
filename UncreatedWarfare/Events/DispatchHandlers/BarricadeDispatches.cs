@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -113,7 +114,8 @@ partial class EventDispatcher2
     {
         BarricadeData data = drop.GetServersideData();
 
-        BuildableComponent.GetOrAdd(drop);
+        BuildableContainer buildableContainer = drop.model.GetOrAddComponent<BuildableContainer>();
+        buildableContainer.Init(new BuildableBarricade(drop));
 
         WarfarePlayer? owner = new CSteamID(data.owner).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
             ? _playerService.GetOnlinePlayerOrNull(data.owner)

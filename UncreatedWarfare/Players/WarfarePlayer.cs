@@ -14,6 +14,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Containers;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Players;

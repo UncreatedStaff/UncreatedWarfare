@@ -120,31 +120,34 @@ internal class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         MapTack mapTack = _activeMapTacks.FirstOrDefault(t => t.Marker.InstanceId == e.Barricade.instanceID);
 
         if (mapTack is not DeployableMapTack d)
+        {
+            e.Cancel();
             return;
+        }
 
         FobConfiguration fobConfig = serviceProvider.GetRequiredService<FobConfiguration>();
         DeploymentService deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
-        DeploymentTranslations translations = serviceProvider.GetRequiredService<DeploymentTranslations>();
+        TranslationInjection<DeploymentTranslations> translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>();
 
         //Context.LogAction(ActionLogType.Teleport, deployable.Translate(_translationService));
 
         if (e.Player.Component<DeploymentComponent>().CurrentDeployment != null)
         {
+            e.Cancel();
             return;
         }
 
         int delay = fobConfig.GetValue("FobDeployDelay", 5);
 
-        chatService.Send(e.Player, new DeploymentTranslations().DeployStandby, d.Deployable, delay);
         deploymentService.TryStartDeployment(e.Player, d.Deployable,
             new DeploySettings
             {
                 Delay = TimeSpan.FromSeconds(delay),
-                AllowNearbyEnemies = false
+                AllowNearbyEnemies = false,
+                
             }
         );
-        chatService.Send(e.Player, new DeploymentTranslations().DeploySuccess, d.Deployable);
 
         e.Cancel();
     }

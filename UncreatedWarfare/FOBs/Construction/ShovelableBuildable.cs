@@ -8,12 +8,12 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Construction;
-internal class ShovelableBarricade : PointsShoveable
+internal class ShovelableBuildable : PointsShoveable
 {
     private readonly ShovelableInfo _info;
-    private readonly BarricadeDrop _foundation;
+    private readonly IBuildable _foundation;
 
-    public ShovelableBarricade(ShovelableInfo info, BarricadeDrop foundation, int hitsRemaining) : base(hitsRemaining)
+    public ShovelableBuildable(ShovelableInfo info, IBuildable foundation, IAssetLink<EffectAsset> shovelEffect) : base(info.RequiredHits, foundation, shovelEffect)
     {
         _info = info;
         _foundation = foundation;
@@ -21,28 +21,35 @@ internal class ShovelableBarricade : PointsShoveable
 
     public override void Complete(WarfarePlayer shoveler)
     {
+        ItemPlaceableAsset asset = _info.CompletedStructure.GetAssetOrFail();
+        if (asset is not ItemBarricadeAsset barricadeAsset)
+            throw new NotSupportedException("Shoveable structures are not yet supported.");
+
+
         // drop the barricade
         Transform transform = BarricadeManager.dropNonPlantedBarricade(
-            new Barricade(_info.CompletedStructure.GetAssetOrFail()),
-            _foundation.model.position,
-            _foundation.model.rotation,
-            _foundation.GetServersideData().owner,
-            _foundation.GetServersideData().group
+            new Barricade(barricadeAsset),
+            _foundation.Position,
+            _foundation.Rotation,
+            _foundation.Owner.m_SteamID,
+            _foundation.Group.m_SteamID
         );
 
-        BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(transform);
+        //BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(transform);
 
         if (_info.CompletedEffect != null)
         {
             EffectManager.triggerEffect(new TriggerEffectParameters(_info.CompletedEffect.GetAssetOrFail())
             {
-                position = _foundation.model.position,
+                position = _foundation.Position,
                 relevantDistance = 70,
                 reliable = true
             });
         }
 
+        _foundation.Destroy();
+
         //_onConvertedToBuildable?.Invoke(new BuildableBarricade(barricade));
-        
+
     }
 }

@@ -1,5 +1,7 @@
 ﻿using DanielWillett.ReflectionTools;
+using Stripe;
 using System;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -22,7 +24,7 @@ public class SingleUseTypeDictionary<TType> where TType : notnull
         for (int i = 0; i < types.Length; ++i)
         {
             typeof(IndexCache<>)
-                .MakeGenericType(types[i])
+                .MakeGenericType(typeof(TType), types[i])
                 .GetField(nameof(IndexCache<object>.Index), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)!
                 .SetValue(null, i);
         }

@@ -496,7 +496,7 @@ public static partial class Patches
             return allow;
         }
 
-        private static readonly List<IShovelable> WorkingShovelable = new List<IShovelable>(3);
+        
 
 #if false
         // SDG.Unturned.UseableMelee

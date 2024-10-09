@@ -137,7 +137,6 @@ public class Translation : IDisposable
         if (ct == 0)
             return args.PreformattedValue;
 
-        // todo disable 1 override for test
         if (ct == 1)
         {
             ref ArgumentSpan span = ref pluralizers[first];

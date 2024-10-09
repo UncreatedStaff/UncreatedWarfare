@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Buildables;
 public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableComponent>, IManualOnDestroy
 {
     public IBuildable Buildable { get; private set; }
+    public DateTime CreateTime { get; private set; }
     private readonly List<IBuildableComponent> _components = new List<IBuildableComponent>();
 
     public void AddComponent(IBuildableComponent newComponent)
@@ -50,6 +51,7 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
     public void Init(IBuildable buildable)
     {
         Buildable = buildable;
+        CreateTime = DateTime.Now;
     }
 
     public void ManualOnDestroy()

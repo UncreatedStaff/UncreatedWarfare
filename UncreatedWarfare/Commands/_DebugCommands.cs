@@ -225,7 +225,7 @@ public class DebugCommand : IExecutableCommand
         logger.LogInformation("w2mr: " + CartographyUtility.MapToWorld.GetRotation().eulerAngles.ToString("F3"));
         logger.LogInformation("w2ms: " + CartographyUtility.MapToWorld.lossyScale.ToString("F3"));
         logger.LogInformation("Img size: " + CartographyUtility.MapImageSize);
-        logger.LogInformation("Cpt size: " + CartographyUtility.CaptureAreaSize.ToString("F3"));
+        //logger.LogInformation("Cpt size: " + CartographyUtility.CaptureAreaSize.ToString("F3"));
     }
 #if false
     private const string UsageGiveXp = "/test givexp <player> <amount> [team - required if offline]";
