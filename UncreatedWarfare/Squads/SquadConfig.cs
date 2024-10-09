@@ -3,7 +3,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Squads;
-public class SquadConfigData : JSONConfigData
+public class SquadConfigData
 {
     public ushort RallyTimer { get; set; }
     public ushort RallyCooldown  { get; set; }
@@ -18,7 +18,7 @@ public class SquadConfigData : JSONConfigData
     public IAssetLink<EffectAsset> SquadMenuUI  { get; set; }
     public IAssetLink<EffectAsset> SquadListUI  { get; set; }
     public IAssetLink<EffectAsset> SquadRallyUI { get; set; }
-    public override void SetDefaults()
+    public void SetDefaults()
     {
         RallyTimer = 20;
         RallyCooldown = 60;

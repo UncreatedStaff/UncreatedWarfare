@@ -28,6 +28,7 @@ public class Translation<T0> : Translation
         string f0 = TranslationService.ValueFormatter.Format(arg0, in p);
 
         ArgumentSpan[] pluralizers = args.ValueSet.GetPluralizations(in args, out int argOffset);
+
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {

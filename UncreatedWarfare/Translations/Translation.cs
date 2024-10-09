@@ -111,8 +111,8 @@ public class Translation : IDisposable
     protected ReadOnlySpan<char> ApplyPluralizers(scoped in TranslationArguments args, ArgumentSpan[] pluralizers, int argumentOffset, int argCt, Func<int, object?> accessor)
     {
         Span<int> indices = stackalloc int[pluralizers.Length];
-        int ct = 0;
-        int first = -1;
+        int numToReplace = 0;
+        int firstToReplace = -1;
         for (int i = 0; i < pluralizers.Length; ++i)
         {
             ref ArgumentSpan argSpan = ref pluralizers[i];
@@ -123,33 +123,34 @@ public class Translation : IDisposable
             }
 
             object? argValue = accessor(argSpan.Argument);
-            if (argValue is IConvertible conv && !TranslationPluralizations.IsOne(conv))
+
+            bool isOne = argValue is IConvertible conv && !TranslationPluralizations.IsOne(conv);
+            if (isOne ^ argSpan.Inverted)
             {
-                if (first == -1)
-                    first = i;
-                ++ct;
+                if (firstToReplace == -1)
+                    firstToReplace = i;
+                ++numToReplace;
                 continue;
             }
 
             indices[i] = -1;
         }
 
-        if (ct == 0)
+        if (numToReplace == 0)
             return args.PreformattedValue;
 
-        // todo disable 1 override for test
-        if (ct == 1)
+        if (numToReplace == 1)
         {
-            ref ArgumentSpan span = ref pluralizers[first];
+            ref ArgumentSpan span = ref pluralizers[firstToReplace];
             ReadOnlySpan<char> word = args.PreformattedValue.Slice(span.StartIndex + argumentOffset, span.Length);
             string pluralWord = TranslationPluralizations.Pluralize(word, args.Language);
             return TranslationArgumentModifiers.ReplaceModifiers(args.PreformattedValue, pluralWord, indices, pluralizers, argumentOffset);
         }
 
-        List<string> pluralBuffer = _pluralBuffer ??= new List<string>(ct);
+        List<string> pluralBuffer = _pluralBuffer ??= new List<string>(numToReplace);
 
-        if (pluralBuffer.Capacity < ct)
-            pluralBuffer.Capacity = ct;
+        if (pluralBuffer.Capacity < numToReplace)
+            pluralBuffer.Capacity = numToReplace;
 
         try
         {

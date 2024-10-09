@@ -12,4 +12,9 @@ public struct ArgumentSpan
         Length = length;
         Inverted = inverted;
     }
+
+    public override string ToString()
+    {
+        return $"{{Arg: {Argument} @{StartIndex}[l = {Length}]. {(Inverted ? "inverted" : "not inverted")}}}";
+    }
 }

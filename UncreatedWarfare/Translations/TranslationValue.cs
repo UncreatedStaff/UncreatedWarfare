@@ -118,6 +118,12 @@ public class TranslationValue
             return Array.Empty<ArgumentSpan>();
         }
 
+        if ((args.Options & TranslationOptions.ForTerminal) != 0)
+        {
+            argumentOffset = args.UseUncoloredTranslation ? _terminalColorStrippedValueStart : 0;
+            return _terminalPluralizations;
+        }
+
         if (args.UseIMGUI)
         {
             argumentOffset = args.UseUncoloredTranslation ? _imguiColorStrippedValueStart : 0;
@@ -159,15 +165,16 @@ public class TranslationValue
     public void SetValue(string value)
     {
         _pluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newValue, value, 'p');
+
         Value = newValue ?? value;
 
         if (_pluralizations.Length > 0)
         {
-            string imguiUnformatted = TranslationFormattingUtility.CreateIMGUIString(Value);
+            string imguiUnformatted = TranslationFormattingUtility.CreateIMGUIString(value);
             _imguiPluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newIMGUIString, imguiUnformatted, 'p');
             IMGUIValue = newIMGUIString ?? imguiUnformatted;
 
-            string terminalUnformatted = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(Value, Translation.TranslationService.TerminalColoring);
+            string terminalUnformatted = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(value, Translation.TranslationService.TerminalColoring);
             _terminalPluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newTerminalString, terminalUnformatted, 'p');
             TerminalValue = newTerminalString ?? terminalUnformatted;
         }

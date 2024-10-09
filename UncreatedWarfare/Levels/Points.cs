@@ -1,26 +1,10 @@
-﻿using MySql.Data.MySqlClient;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Events.Models.Vehicles;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
 
@@ -1279,7 +1263,7 @@ public enum XPReward
     VehicleMortar
 }
 
-public class PointsConfig : JSONConfigData
+public class PointsConfig
 {
     public const float DefaultCreditPercentage = 15f;
 
@@ -1295,7 +1279,7 @@ public class PointsConfig : JSONConfigData
     [JsonPropertyName("global_xp_multiplier")]
     public float GlobalXPMultiplier { get; set; }
 
-    public override void SetDefaults()
+    public void SetDefaults()
     {
         StartingCredits = 500;
         ProgressBlockCharacter = '█';

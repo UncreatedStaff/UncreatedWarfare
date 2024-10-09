@@ -14,9 +14,6 @@ internal static class TranslationPluralizations
     /// </remarks>
     internal static string Pluralize(ReadOnlySpan<char> word, LanguageInfo language)
     {
-        if (word.Length < 3)
-            return new string(word);
-
         if (!language.Code.Equals(Languages.Languages.EnglishUS, StringComparison.OrdinalIgnoreCase))
         {
             return new string(word);
@@ -24,18 +21,29 @@ internal static class TranslationPluralizations
 
         if (word.Equals("is", StringComparison.InvariantCulture))
             return "are";
+        if (word.Equals("Is", StringComparison.InvariantCulture))
+            return "Are";
         if (word.Equals("was", StringComparison.InvariantCulture))
             return "were";
+        if (word.Equals("Was", StringComparison.InvariantCulture))
+            return "Were";
         if (word.Equals("did", StringComparison.InvariantCulture))
             return "do";
+        if (word.Equals("Did", StringComparison.InvariantCulture))
+            return "Do";
         if (word.Equals("comes", StringComparison.InvariantCulture))
             return "come";
         if (word.Equals("it", StringComparison.InvariantCulture))
             return "they";
+        if (word.Equals("It", StringComparison.InvariantCulture))
+            return "They";
         if (word.Equals("a ", StringComparison.InvariantCulture) || word.Equals(" a", StringComparison.InvariantCulture))
             return string.Empty;
         if (word.Equals("an ", StringComparison.InvariantCulture) || word.Equals(" an", StringComparison.InvariantCulture))
             return string.Empty;
+
+        if (word.Length < 3)
+            return new string(word);
 
         // split input into words
         int size = word.Count(' ') + 1;

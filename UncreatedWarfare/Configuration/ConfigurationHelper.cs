@@ -1,12 +1,10 @@
-﻿using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Configuration;
 public static class ConfigurationHelper
@@ -70,27 +68,6 @@ public static class ConfigurationHelper
                 });
             }
         );
-    }
-
-    /// <summary>
-    /// Bind config data to a <see cref="IConfiguration"/> instance.
-    /// </summary>
-    [Pure]
-    public static TConfigData ParseConfigData<TConfigData>(this IConfiguration config, ILogger logger) where TConfigData : JSONConfigData, new()
-    {
-        TConfigData data = new TConfigData();
-        data.SetDefaults();
-
-        try
-        {
-            config.Bind(data);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error parsing {0}.", typeof(TConfigData));
-        }
-
-        return data;
     }
 
     /// <summary>

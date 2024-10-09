@@ -7,6 +7,7 @@ using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 #if DEBUG

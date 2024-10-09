@@ -11,4 +11,8 @@ public sealed class OutOfRange
     /// </summary>
     public static readonly OutOfRange Value = new OutOfRange();
     private OutOfRange() { }
+    public override string ToString()
+    {
+        return string.Empty;
+    }
 }

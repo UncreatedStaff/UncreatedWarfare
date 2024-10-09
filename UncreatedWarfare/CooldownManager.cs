@@ -148,7 +148,7 @@ public class CooldownManager : IHostedService
     }
 
 }
-public class CooldownConfig : JSONConfigData
+public class CooldownConfig
 {
     public float DeployFOBCooldownMin { get; set; }
     public float DeployFOBCooldownMax { get; set; }
@@ -159,7 +159,7 @@ public class CooldownConfig : JSONConfigData
     public float RequestVehicleCooldown { get; set; }
     public float ReviveXPCooldown { get; set; }
     public float GlobalTraitCooldown { get; set; }
-    public override void SetDefaults()
+    public void SetDefaults()
     {
         DeployFOBCooldownMin = 60;
         DeployFOBCooldownMax = 90;

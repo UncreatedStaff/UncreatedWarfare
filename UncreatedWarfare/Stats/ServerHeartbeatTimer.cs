@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Uncreated.Warfare.Stats;
 
@@ -38,8 +39,12 @@ public static class ServerHeartbeatTimer
             }
 
             using FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+
             Span<byte> dtInfo = stackalloc byte[sizeof(long)];
-            BitConverter.TryWriteBytes(dtInfo, now.ToUnixTimeSeconds());
+
+            long unix = now.ToUnixTimeSeconds();
+            MemoryMarshal.Write(dtInfo, ref unix);
+
             stream.Write(dtInfo);
         }
         catch (Exception ex)

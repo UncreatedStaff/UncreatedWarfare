@@ -1,5 +1,6 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
+using System.Buffers.Binary;
 using System.Data;
 using System.Globalization;
 using System.Numerics;
@@ -14,6 +15,9 @@ namespace Uncreated.Warfare.Moderation;
 
 // tested
 
+/// <summary>
+/// A 20-length hardware ID of an Unturned player.
+/// </summary>
 [StructLayout(LayoutKind.Explicit, Size = 20)]
 [JsonConverter(typeof(HWIDJsonConverter))]
 [ValueConverter(typeof(HWIDValueConverter))]
@@ -59,13 +63,13 @@ public readonly struct HWID : IEquatable<HWID>
 
         if (BitConverter.IsLittleEndian)
         {
-            this = MemoryMarshal.Read<HWID>(bytes);
+            this = MemoryMarshal.Read<HWID>(bytes.AsSpan(index));
         }
         else
         {
-            _b07 = BitConverter.ToInt64(bytes.AsSpan(0));
-            _b815 = BitConverter.ToInt64(bytes.AsSpan(8));
-            _b1619 = BitConverter.ToInt32(bytes.AsSpan(16));
+            _b07 = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<long>(bytes.AsSpan(index)));
+            _b815 = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<long>(bytes.AsSpan(index + 8)));
+            _b1619 = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<int>(bytes.AsSpan(index + 16)));
         }
     }
     public static unsafe HWID GenerateRandomHWID()
@@ -85,6 +89,23 @@ public readonly struct HWID : IEquatable<HWID>
         BitConverter.TryWriteBytes(bytes.AsSpan(16), _b1619);
 
         return bytes;
+    }
+    public int CopyTo(Span<byte> span)
+    {
+        if (span.Length < Size)
+            throw new ArgumentException("Span must be at least 20 bytes long.");
+
+        if (BitConverter.IsLittleEndian)
+        {
+            MemoryMarshal.Write(span, ref Unsafe.AsRef(in this));
+            return Size;
+        }
+
+        BitConverter.TryWriteBytes(span, _b07);
+        BitConverter.TryWriteBytes(span[8..], _b815);
+        BitConverter.TryWriteBytes(span[16..], _b1619);
+
+        return Size;
     }
     public unsafe int CopyTo(byte* ptr)
     {
@@ -111,36 +132,74 @@ public readonly struct HWID : IEquatable<HWID>
     }
     public string ToBase16String(bool lowerCase = false, bool includePrefix = false)
     {
-        int offset = includePrefix ? 2 : 0;
-        char[] chars = new char[Size * 2 + offset];
-        long l1 = _b07;
-        for (int i = 0; i < 16; i += 2)
+        ToStringState state = default;
+        state.HWID = this;
+        state.IncludePrefix = includePrefix;
+        state.LowerCase = lowerCase;
+
+        return string.Create(Size * 2 + (includePrefix ? 1 : 0) * 2, state, static (span, state) =>
         {
-            chars[i + offset] = ToBase16Nibble(l1, i + 1, lowerCase);
-            chars[i + offset + 1] = ToBase16Nibble(l1, i, lowerCase);
+            int offset = state.IncludePrefix ? 2 : 0;
+
+            long l1 = state.HWID._b07;
+            for (int i = 0; i < 16; i += 2)
+            {
+                span[i + offset] = ToBase16Nibble(l1, i + 1, state.LowerCase);
+                span[i + offset + 1] = ToBase16Nibble(l1, i, state.LowerCase);
+            }
+
+            l1 = state.HWID._b815;
+            for (int i = 16; i < 32; i += 2)
+            {
+                span[i + offset] = ToBase16Nibble(l1, i - 15, state.LowerCase);
+                span[i + offset + 1] = ToBase16Nibble(l1, i - 16, state.LowerCase);
+            }
+
+            int i1 = state.HWID._b1619;
+            for (int i = 32; i < 40; i += 2)
+            {
+                span[i + offset] = ToBase16Nibble(i1, i - 31, state.LowerCase);
+                span[i + offset + 1] = ToBase16Nibble(i1, i - 32, state.LowerCase);
+            }
+
+            if (state.IncludePrefix)
+            {
+                span[0] = '0';
+                span[1] = 'x';
+            }
+        });
+    }
+
+    public string ToBase10String()
+    {
+        Span<byte> bytes = stackalloc byte[Size + 1];
+
+        BitConverter.TryWriteBytes(bytes, _b07);
+        BitConverter.TryWriteBytes(bytes[8..], _b815);
+        BitConverter.TryWriteBytes(bytes[16..], _b1619);
+
+        return new BigInteger(bytes).ToString("D");
+    }
+
+    public string ToBase64String()
+    {
+        if (BitConverter.IsLittleEndian)
+        {
+            return Convert.ToBase64String(MemoryMarshal.Cast<HWID, byte>(MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in this), 1)));
+        }
+        else
+        {
+
         }
 
-        l1 = _b815;
-        for (int i = 16; i < 32; i += 2)
-        {
-            chars[i + offset] = ToBase16Nibble(l1, i - 15, lowerCase);
-            chars[i + offset + 1] = ToBase16Nibble(l1, i - 16, lowerCase);
-        }
+        return Convert.ToBase64String(ToByteArray());
+    }
 
-        int i1 = _b1619;
-        for (int i = 32; i < 40; i += 2)
-        {
-            chars[i + offset] = ToBase16Nibble(i1, i - 31, lowerCase);
-            chars[i + offset + 1] = ToBase16Nibble(i1, i - 32, lowerCase);
-        }
-
-        if (includePrefix)
-        {
-            chars[0] = '0';
-            chars[1] = 'x';
-        }
-
-        return new string(chars);
+    private struct ToStringState
+    {
+        public HWID HWID;
+        public bool IncludePrefix;
+        public bool LowerCase;
     }
 
     private static char ToBase16Nibble(long val, int index, bool lowerCase)
@@ -174,18 +233,6 @@ public readonly struct HWID : IEquatable<HWID>
 
         return true;
     }
-
-    public string ToBase10String()
-    {
-        Span<byte> bytes = stackalloc byte[Size + 1];
-
-        BitConverter.TryWriteBytes(bytes, _b07);
-        BitConverter.TryWriteBytes(bytes[8..], _b815);
-        BitConverter.TryWriteBytes(bytes[16..], _b1619);
-
-        return new BigInteger(bytes).ToString("D");
-    }
-    public string ToBase64String() => Convert.ToBase64String(ToByteArray());
     public static unsafe bool TryParseBase16(string str, out HWID hwid)
     {
         hwid = default;

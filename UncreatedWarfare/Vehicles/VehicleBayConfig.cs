@@ -2,7 +2,7 @@
 
 namespace Uncreated.Warfare.Vehicles;
 
-public class VehicleBayData : JSONConfigData
+public class VehicleBayData
 {
     public IAssetLink<EffectAsset> CountermeasureEffectID { get; set; }
     public IAssetLink<VehicleAsset> CountermeasureGUID { get; set; }
@@ -11,7 +11,7 @@ public class VehicleBayData : JSONConfigData
     public IAssetLink<ItemGunAsset>[] AirAAWeapons { get; set; }
     public IAssetLink<ItemGunAsset>[] LaserGuidedWeapons { get; set; }
 
-    public override void SetDefaults()
+    public void SetDefaults()
     {
         CountermeasureEffectID = AssetLink.Create<EffectAsset>(26035);
         CountermeasureGUID = AssetLink.Create<VehicleAsset>("16dbd4e5928e498783675529ca53fc61");
