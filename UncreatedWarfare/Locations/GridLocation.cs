@@ -493,6 +493,25 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
         return false;
         rtnTrue:
         location = new GridLocation(x, y, index);
+        return !Level.isInitialized || CheckSafe(x, y);
+    }
+
+    private static bool CheckSafe(byte x, byte y)
+    {
+        if (CartographyUtility.UsesLegacyCartography)
+        {
+            GetMapMetrics(Level.info.size, out int gridSize, out _, out _);
+            if (Math.Max(x, y) >= gridSize)
+                return false;
+        }
+        else
+        {
+            Vector2Int captureAreaSize = CartographyUtility.MapImageSize;
+            GetMapMetrics(captureAreaSize.x, captureAreaSize.y, out int gridSizeX, out int gridSizeY, out _, out _, out _);
+            if (x >= gridSizeX || y >= gridSizeY)
+                return false;
+        }
+
         return true;
     }
 

@@ -638,4 +638,9 @@ public class FactionInfo : ICloneable, ITranslationArgument
     {
         return IsDefaultFaction ? null : this;
     }
+
+    public override string ToString()
+    {
+        return $"{FactionId} #{PrimaryKey} [{Name}]";
+    }
 }
