@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DanielWillett.ModularRpcs.Annotations;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
@@ -31,6 +32,7 @@ using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Kits;
 
+[RpcClass]
 public partial class KitManager :
     ILayoutHostedService,
     IEventListener<QuestCompleted>,
@@ -139,7 +141,7 @@ public partial class KitManager :
 
     internal static void ConfigureServices(ContainerBuilder serviceCollection)
     {
-        serviceCollection.RegisterType<KitManager>()
+        serviceCollection.RegisterRpcType<KitManager>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
@@ -1018,6 +1020,8 @@ public partial class KitManager :
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> GiveAccess(Kit kit, WarfarePlayer player, KitAccessType type, CancellationToken token = default)
     {
+        await UniTask.SwitchToMainThread(token);
+
         // todo make update type and timestamp
         if (!player.IsOnline)
         {
@@ -1030,8 +1034,8 @@ public partial class KitManager :
             KitPlayerComponent comp = player.Component<KitPlayerComponent>();
             if (comp.AccessibleKits != null && comp.AccessibleKits.Contains(kit.PrimaryKey))
                 return true;
-            bool alreadyApplied = await AddAccessRow(kit.PrimaryKey, player.Steam64, type, token).ConfigureAwait(false);
-            if (!alreadyApplied)
+            bool successful = await AddAccessRow(kit.PrimaryKey, player.Steam64, type, token).ConfigureAwait(false);
+            if (!successful)
                 return false;
 
             (comp.AccessibleKits ??= new List<uint>(4)).Add(kit.PrimaryKey);
@@ -1050,8 +1054,9 @@ public partial class KitManager :
     {
         if (kit.PrimaryKey == 0)
             return false;
-        WarfarePlayer? online = _playerService.GetOnlinePlayerOrNull(player);
-        if (online != null && online.IsOnline)
+
+        WarfarePlayer? online = _playerService.GetOnlinePlayerOrNullThreadSafe(player);
+        if (online is { IsOnline: true })
             return await GiveAccess(kit, online, type, token).ConfigureAwait(false);
 
         if (!await AddAccessRow(kit.PrimaryKey, player, type, token).ConfigureAwait(false))

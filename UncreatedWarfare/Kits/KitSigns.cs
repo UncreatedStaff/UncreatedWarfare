@@ -7,11 +7,29 @@ using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
-public class KitSigns(KitManager manager, IServiceProvider serviceProvider)
+public class KitSigns
 {
-    private readonly SignInstancer _signs = serviceProvider.GetRequiredService<SignInstancer>();
-    private readonly IPlayerService _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-    public KitManager Manager { get; } = manager;
+    private readonly SignInstancer _signs;
+    private readonly IPlayerService _playerService;
+    public KitManager Manager { get; }
+    public KitSigns(KitManager manager, IServiceProvider serviceProvider)
+    {
+        _signs = serviceProvider.GetRequiredService<SignInstancer>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        Manager = manager;
+
+        manager.OnKitAccessChanged += HandleKitAccessChanged;
+    }
+
+    private void HandleKitAccessChanged(Kit kit, ulong player, bool newAccess, KitAccessType newType)
+    {
+        WarfarePlayer? playerObj = _playerService.GetOnlinePlayerOrNull(player);
+        if (playerObj == null)
+            return;
+
+        Manager.Signs.UpdateSigns(kit, playerObj);
+    }
+
 
     /// <summary>
     /// Get the kit a sign refers to from a given player's perspective.

@@ -313,7 +313,7 @@ partial class KitManager
 
         try
         {
-            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            await dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
             return true;
         }
         catch (DbUpdateException)
