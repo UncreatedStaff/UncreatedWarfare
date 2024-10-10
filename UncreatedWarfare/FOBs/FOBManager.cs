@@ -145,15 +145,11 @@ public class FobManager :
 
     public void HandleEvent(MeleeHit e, IServiceProvider serviceProvider)
     {
-        Console.WriteLine("punching");
-
-        if (e.Equipment?.asset?.GUID == null)
+        if (e.Equipment?.asset == null)
             return;
-
-        Console.WriteLine("Got Equipment asset");
-
-        IAssetLink<ItemAsset>? entrenchingTool = _assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool");
-        if (entrenchingTool.GetAssetOrFail().GUID != e.Equipment.asset.GUID)
+        
+        IAssetLink<ItemAsset> entrenchingTool = _assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool");
+        if (entrenchingTool.MatchAsset(e.Equipment.asset))
             return;
 
         RaycastInfo info = DamageTool.raycast(new Ray(e.Look.aim.position, e.Look.aim.forward), 2, RayMasks.BARRICADE, e.Player.UnturnedPlayer);

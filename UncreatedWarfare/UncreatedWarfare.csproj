@@ -8,7 +8,7 @@
   <PropertyGroup>
 
     <VersionPrefix>4.0.0</VersionPrefix>
-    <VersionBuild>001</VersionBuild>
+    <VersionBuild>002</VersionBuild>
     <VersionSuffix>prerelease$(VersionBuild)</VersionSuffix>
 
   </PropertyGroup>
@@ -137,9 +137,9 @@
     <PackageReference Include="DanielWillett.SpeedBytes" Version="[1.1.2,)" />
     <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="[1.1.1,)" />
     <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="[1.0.0,)" />
-    <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease02, 2)" />
-    <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease02, 2)" />
-    <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease02, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease04, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease03, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease03, 2)" />
     <PackageReference Include="Uncreated.UI" Version="[1.0.0,)" />
     <PackageReference Include="Stripe.net" Version="[43.4.0,)" />
     <PackageReference Include="JetBrains.Annotations" Version="[2018.2.1,)" Aliases="JetBrains" />
@@ -156,6 +156,7 @@
     <PackageReference Include="System.Text.Json" Version="4.7.1" NoWarn="NU1605" />
 
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.7.1" NoWarn="NU1605" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.3" />

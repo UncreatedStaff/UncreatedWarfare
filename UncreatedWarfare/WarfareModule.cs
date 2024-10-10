@@ -1,4 +1,5 @@
 ﻿using DanielWillett.ModularRpcs.DependencyInjection;
+using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
 using Microsoft.EntityFrameworkCore;
@@ -50,6 +51,7 @@ using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
@@ -59,7 +61,6 @@ using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events;
 using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
-using Uncreated.Warfare.StrategyMaps;
 
 namespace Uncreated.Warfare;
 public sealed class WarfareModule : IModuleNexus
@@ -318,6 +319,12 @@ public sealed class WarfareModule : IModuleNexus
     private void ConfigureServices(ContainerBuilder bldr)
     {
         Assembly thisAsm = Assembly.GetExecutingAssembly();
+        Module thisModule = ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm));
+
+        // all module assemblies and plugins
+        Assembly[] relevantAssemblies = thisModule.assemblies
+                                            .Concat(_pluginLoader.Plugins.Select(x => x.LoadedAssembly))
+                                            .ToArray();
 
         bldr.RegisterType<MapScheduler>()
             .AsSelf().AsImplementedInterfaces()
@@ -340,14 +347,20 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterFromCollection(collection =>
         {
             collection.AddReflectionTools();
-            collection.AddModularRpcs(isServer: false, searchedAssemblies: [Assembly.GetExecutingAssembly()]);
+            collection.AddModularRpcs(
+                isServer: false,
+                (_, configuration, parsers, _) =>
+                {
+                    parsers.RegisterParserAttributes(configuration, relevantAssemblies);
+                },
+                searchedAssemblies: relevantAssemblies
+            );
         });
 
         bldr.RegisterInstance(this)
             .As<WarfareModule>()
             .ExternallyOwned();
 
-        Module thisModule = ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm));
         bldr.RegisterInstance(thisModule)
             .As<Module>()
             .ExternallyOwned();
@@ -1001,6 +1014,10 @@ public sealed class WarfareModule : IModuleNexus
         {
             return typeof(Vector3).Assembly;
         }
+
+        const string compUnsafe = "System.Runtime.CompilerServices.Unsafe";
+        if (args.Name.StartsWith(compUnsafe, StringComparison.Ordinal))
+            return typeof(System.Runtime.CompilerServices.Unsafe).Assembly;
 
         return null;
     }
