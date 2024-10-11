@@ -86,6 +86,11 @@ public sealed class WarfareModule : IModuleNexus
     /// <remarks>Do not use unless in a patch.</remarks>
     public static WarfareModule Singleton { get; private set; }
 
+    /// <summary>
+    /// If Uncreated.Warfare is loaded as a module instead of as a library.
+    /// </summary>
+    public static bool IsActive { get; private set; }
+
 #nullable restore
 
     private bool _unloadedHostedServices = true;
@@ -147,6 +152,8 @@ public sealed class WarfareModule : IModuleNexus
 
     void IModuleNexus.initialize()
     {
+        IsActive = true;
+
         AppDomain.CurrentDomain.AssemblyResolve += HandleAssemblyResolve;
         
         // will setup the main thread in GameThread before asserting

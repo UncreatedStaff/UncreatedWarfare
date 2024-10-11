@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using Uncreated.Warfare;
 using Uncreated.Warfare.Logging.Formatting;
 
 // ReSharper disable once CheckNamespace
@@ -2274,53 +2275,61 @@ public static class WarfareLoggingExtensions
         logger.Log(logLevel, 0, null, message, args);
     }
 
-//    /// <summary>
-//    /// Formats and writes a log message at the specified log level.
-//    /// </summary>
-//    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-//    /// <param name="logLevel">Entry will be written on this level.</param>
-//    /// <param name="eventId">The event id associated with the log.</param>
-//    /// <param name="message">Format string of the log message.</param>
-//    /// <param name="args">An object array that contains zero or more objects to format.</param>
-//    [StringFormatMethod(nameof(message))]
-//    public static void Log(this ILogger logger, LogLevel logLevel, EventId eventId, string message, params object?[]? args)
-//    {
-//        logger.Log(logLevel, eventId, null, message, args);
-//    }
+    /// <summary>
+    /// Formats and writes a log message at the specified log level.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="logLevel">Entry will be written on this level.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="message">Format string of the log message.</param>
+    /// <param name="args">An object array that contains zero or more objects to format.</param>
+    [StringFormatMethod(nameof(message))]
+    public static void Log(this ILogger logger, LogLevel logLevel, EventId eventId, string message, params object?[]? args)
+    {
+        logger.Log(logLevel, eventId, null, message, args);
+    }
 
-//    /// <summary>
-//    /// Formats and writes a log message at the specified log level.
-//    /// </summary>
-//    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-//    /// <param name="logLevel">Entry will be written on this level.</param>
-//    /// <param name="exception">The exception to log.</param>
-//    /// <param name="message">Format string of the log message.</param>
-//    /// <param name="args">An object array that contains zero or more objects to format.</param>
-//    [StringFormatMethod(nameof(message))]
-//    public static void Log(this ILogger logger, LogLevel logLevel, Exception? exception, string message, params object?[]? args)
-//    {
-//        logger.Log(logLevel, 0, exception, message, args);
-//    }
+    /// <summary>
+    /// Formats and writes a log message at the specified log level.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="logLevel">Entry will be written on this level.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="message">Format string of the log message.</param>
+    /// <param name="args">An object array that contains zero or more objects to format.</param>
+    [StringFormatMethod(nameof(message))]
+    public static void Log(this ILogger logger, LogLevel logLevel, Exception? exception, string message, params object?[]? args)
+    {
+        logger.Log(logLevel, 0, exception, message, args);
+    }
 
-//    /// <summary>
-//    /// Formats and writes a log message at the specified log level.
-//    /// </summary>
-//    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-//    /// <param name="logLevel">Entry will be written on this level.</param>
-//    /// <param name="eventId">The event id associated with the log.</param>
-//    /// <param name="exception">The exception to log.</param>
-//    /// <param name="message">Format string of the log message.</param>
-//    /// <param name="args">An object array that contains zero or more objects to format.</param>
-//    [StringFormatMethod(nameof(message))]
-//    public static void Log(this ILogger logger, LogLevel logLevel, EventId eventId, Exception? exception, string message, params object?[]? args)
-//    {
-//        if (logger == null)
-//        {
-//            throw new ArgumentNullException(nameof(logger));
-//        }
+    /// <summary>
+    /// Formats and writes a log message at the specified log level.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="logLevel">Entry will be written on this level.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="message">Format string of the log message.</param>
+    /// <param name="args">An object array that contains zero or more objects to format.</param>
+    [StringFormatMethod(nameof(message))]
+    public static void Log(this ILogger logger, LogLevel logLevel, EventId eventId, Exception? exception, string message, params object?[]? args)
+    {
+        if (logger == null)
+        {
+            throw new ArgumentNullException(nameof(logger));
+        }
 
-//        logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, args ?? Array.Empty<object?>()), exception, MessageFormatter);
-//    }
+        args ??= Array.Empty<object?>();
+        if (WarfareModule.IsActive)
+        {
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, args), exception, MessageFormatter);
+        }
+        else
+        {
+            LoggerExtensions.Log(logger, logLevel, eventId, exception, message, args);
+        }
+    }
 
     /// <summary>
     /// Formats and writes a log message at the specified log level.
@@ -2376,7 +2385,14 @@ public static class WarfareLoggingExtensions
             throw new ArgumentNullException(nameof(logger));
         }
 
-        logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, Array.Empty<object>()), exception, MessageFormatter);
+        if (WarfareModule.IsActive)
+        {
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, Array.Empty<object>()), exception, MessageFormatter);
+        }
+        else
+        {
+            LoggerExtensions.Log(logger, logLevel, eventId, exception, message, Array.Empty<object>());
+        }
     }
 
     /// <summary>
@@ -2433,7 +2449,14 @@ public static class WarfareLoggingExtensions
             throw new ArgumentNullException(nameof(logger));
         }
 
-        logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1), exception, MessageFormatter);
+        if (WarfareModule.IsActive)
+        {
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1), exception, MessageFormatter);
+        }
+        else
+        {
+            LoggerExtensions.Log(logger, logLevel, eventId, exception, message, [ arg1 ]);
+        }
     }
 
     /// <summary>
@@ -2490,7 +2513,14 @@ public static class WarfareLoggingExtensions
             throw new ArgumentNullException(nameof(logger));
         }
 
-        logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1, arg2), exception, MessageFormatter);
+        if (WarfareModule.IsActive)
+        {
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1, arg2), exception, MessageFormatter);
+        }
+        else
+        {
+            LoggerExtensions.Log(logger, logLevel, eventId, exception, message, [ arg1, arg2 ]);
+        }
     }
 
     /// <summary>
@@ -2547,7 +2577,14 @@ public static class WarfareLoggingExtensions
             throw new ArgumentNullException(nameof(logger));
         }
 
-        logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1, arg2, arg3), exception, MessageFormatter);
+        if (WarfareModule.IsActive)
+        {
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1, arg2, arg3), exception, MessageFormatter);
+        }
+        else
+        {
+            LoggerExtensions.Log(logger, logLevel, eventId, exception, message, [ arg1, arg2, arg3 ]);
+        }
     }
 
     /// <summary>
@@ -2604,7 +2641,15 @@ public static class WarfareLoggingExtensions
             throw new ArgumentNullException(nameof(logger));
         }
 
-        logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1, arg2, arg3, arg4), exception, MessageFormatter);
+
+        if (WarfareModule.IsActive)
+        {
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1, arg2, arg3, arg4), exception, MessageFormatter);
+        }
+        else
+        {
+            LoggerExtensions.Log(logger, logLevel, eventId, exception, message, [ arg1, arg2, arg3, arg4 ]);
+        }
     }
 
     private static readonly Func<WarfareFormattedLogValues, Exception, string> MessageFormatter = MessageFormatterMtd;

@@ -1,9 +1,6 @@
-﻿using Autofac;
-using DanielWillett.ReflectionTools;
+﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
-using SDG.Unturned;
 using System.Reflection;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
@@ -24,16 +21,15 @@ internal class InteractableBedReceiveClaimRequest : IHarmonyPatch
         if (_target != null)
         {
             Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
-            logger.LogDebug("Patched {0} for bedroll claim requested.", Accessor.Formatter.Format(_target));
+            logger.LogDebug("Patched {0} for bedroll claim requested.", _target);
             return;
         }
 
         logger.LogError("Failed to find method: {0}.",
-            Accessor.Formatter.Format(new MethodDefinition(nameof(InteractableBed.ReceiveClaimRequest))
+            new MethodDefinition(nameof(InteractableBed.ReceiveClaimRequest))
                 .DeclaredIn<InteractableBed>(isStatic: false)
                 .WithParameter<string>("newText")
                 .ReturningVoid()
-            )
         );
     }
 
@@ -43,7 +39,7 @@ internal class InteractableBedReceiveClaimRequest : IHarmonyPatch
             return;
 
         Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
-        logger.LogDebug("Unpatched {0} for sign text updated event.", Accessor.Formatter.Format(_target));
+        logger.LogDebug("Unpatched {0} for sign text updated event.", _target);
         _target = null;
     }
 
