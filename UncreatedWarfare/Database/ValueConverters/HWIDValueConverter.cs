@@ -19,7 +19,7 @@ public class HWIDValueConverter : ValueConverter<HWID, byte[]>
     [UsedImplicitly]
     public static void Apply(ModelBuilder modelBuilder, IMutableProperty property, bool nullable)
     {
-        EFCompat.SetValueConverter(property, nullable ? NullableInstance : Instance);
+        EFCompat.Instance.SetValueConverter(property, nullable ? NullableInstance : Instance);
         property.SetColumnType("binary(20)");
     }
 }

@@ -1,13 +1,13 @@
 ﻿using DanielWillett.ReflectionTools;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Database.ValueConverters;
 using Uncreated.Warfare.Database.ValueGenerators;
@@ -37,14 +37,15 @@ public static class WarfareDatabaseReflection
         AddValueConverters(valueConverters);
         modValueConverters?.Invoke(valueConverters);
 
-        foreach (IMutableEntityType entity in modelBuilder.Model.GetEntityTypes().OrderBy(x => EFCompat.GetClrType(x).FullName).ToList())
+        IEFCompatProvider efCompat = EFCompat.Instance;
+        foreach (IMutableEntityType entity in modelBuilder.Model.GetEntityTypes().OrderBy(x => efCompat.GetClrType(x).FullName).ToList())
         {
-            Type entityClrType = EFCompat.GetClrType(entity);
+            Type entityClrType = efCompat.GetClrType(entity);
             PropertyInfo[] properties = entityClrType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 
             if (valueConverters.ContainsKey(entityClrType) || entityClrType.IsDefinedSafe<ValueConverterAttribute>())
             {
-                if (EFCompat.RemoveEntityType(modelBuilder.Model, entityClrType) != null)
+                if (efCompat.RemoveEntityType(modelBuilder.Model, entityClrType) != null)
                     logger.LogDebug("Removed entity type {0}.", Accessor.Formatter.Format(entityClrType));
 
                 continue;
@@ -52,7 +53,7 @@ public static class WarfareDatabaseReflection
 
             foreach (PropertyInfo property in properties)
             {
-                if (EFCompat.GetProperties(entity).Any(x => EFCompat.GetPropertyInfo(x) == property) || property.IsDefinedSafe<NotMappedAttribute>())
+                if (efCompat.GetProperties(entity).Any(x => efCompat.GetPropertyInfo(x) == property) || property.IsDefinedSafe<NotMappedAttribute>())
                     continue;
 
                 Type clrType = property.PropertyType;
@@ -65,16 +66,16 @@ public static class WarfareDatabaseReflection
                 if (type == null && !valueConverters.TryGetValue(clrType, out type))
                     continue;
 
-                EFCompat.AddProperty(entity, property);
+                efCompat.AddProperty(entity, property);
                 logger.LogDebug("Added field {0} that was excluded.", Accessor.Formatter.Format(property));
-                if (propertyAttribute?.Type == null && EFCompat.RemoveEntityType(modelBuilder.Model, clrType) != null)
+                if (propertyAttribute?.Type == null && efCompat.RemoveEntityType(modelBuilder.Model, clrType) != null)
                     logger.LogDebug("Removed entity type {0}.", Accessor.Formatter.Format(entityClrType));
             }
 
             FieldInfo[] fields = entityClrType.GetFields(BindingFlags.Instance | BindingFlags.Public);
             foreach (FieldInfo field in fields)
             {
-                if (EFCompat.GetProperties(entity).Any(x => x.FieldInfo == field) || field.IsDefinedSafe<NotMappedAttribute>())
+                if (efCompat.GetProperties(entity).Any(x => x.FieldInfo == field) || field.IsDefinedSafe<NotMappedAttribute>())
                     continue;
 
                 Type clrType = field.FieldType;
@@ -87,27 +88,27 @@ public static class WarfareDatabaseReflection
                 if (type == null && !valueConverters.TryGetValue(clrType, out type))
                     continue;
 
-                EFCompat.AddProperty(entity, field);
+                efCompat.AddProperty(entity, field);
                 logger.LogDebug("Added field {0} that was excluded.", Accessor.Formatter.Format(field));
-                if (propertyAttribute?.Type == null && EFCompat.RemoveEntityType(modelBuilder.Model, clrType) != null)
+                if (propertyAttribute?.Type == null && efCompat.RemoveEntityType(modelBuilder.Model, clrType) != null)
                     logger.LogDebug("Removed entity type {0}.", Accessor.Formatter.Format(entityClrType));
             }
         }
 #pragma warning disable EF1001
-        foreach (IMutableProperty property in modelBuilder.Model.GetEntityTypes().SelectMany(EFCompat.GetProperties).OrderBy(x => EFCompat.GetClrType(x.DeclaringEntityType).FullName).ToList())
+        foreach (IMutableProperty property in modelBuilder.Model.GetEntityTypes().SelectMany(efCompat.GetProperties).OrderBy(x => efCompat.GetClrType(x.DeclaringEntityType).FullName).ToList())
 #pragma warning restore EF1001
         {
             bool nullable = false;
-            Type clrType = EFCompat.GetClrType(property);
+            Type clrType = efCompat.GetClrType(property);
             if (clrType.IsGenericType && clrType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 nullable = true;
                 clrType = clrType.GenericTypeArguments[0];
             }
 
-            // logger.LogDebug("Checking property {0}.{1} of type {2}.", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), EFCompat.GetName(property), Accessor.Formatter.Format(clrType));
+            // logger.LogDebug("Checking property {0}.{1} of type {2}.", Accessor.Formatter.Format(EFCompat.Instance.GetClrType(property.DeclaringEntityType)), EFCompat.Instance.GetName(property), Accessor.Formatter.Format(clrType));
 
-            MemberInfo? member = (MemberInfo?)EFCompat.GetPropertyInfo(property) ?? property.FieldInfo;
+            MemberInfo? member = (MemberInfo?)efCompat.GetPropertyInfo(property) ?? property.FieldInfo;
 
             ValueConverterAttribute? propertyAttribute = member?.GetAttributeSafe<ValueConverterAttribute>();
             ValueConverterAttribute? typeAttribute = clrType.GetAttributeSafe<ValueConverterAttribute>();
@@ -115,39 +116,39 @@ public static class WarfareDatabaseReflection
             if (clrType == typeof(IPAddress) && (member == null || !member.IsDefinedSafe<DontAddPackedColumnAttribute>()))
             {
                 // add packed column for IP addresses
-                string name = EFCompat.GetName(property) + "Packed";
-                if (EFCompat.GetProperties(property.DeclaringEntityType).Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
+                string name = efCompat.GetName(property) + "Packed";
+                if (efCompat.GetProperties(property.DeclaringEntityType).Any(x => efCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
                 {
-                    EFCompat.AddProperty(property.DeclaringEntityType, name, typeof(uint));
-                    logger.LogDebug("Added packed IP column for {0}.{1}: {2}.", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name);
+                    efCompat.AddProperty(property.DeclaringEntityType, name, typeof(uint));
+                    logger.LogDebug("Added packed IP column for {0}.{1}: {2}.", Accessor.Formatter.Format(efCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name);
                 }
             }
 
             if (member != null && member.IsDefinedSafe<IndexAttribute>())
             {
-                EFCompat.AddIndex(property.DeclaringEntityType, property);
-                logger.LogDebug("Added generic index for {0}.{1}.", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null");
+                efCompat.AddIndex(property.DeclaringEntityType, property);
+                logger.LogDebug("Added generic index for {0}.{1}.", Accessor.Formatter.Format(efCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null");
             }
 
             if (member != null && member.TryGetAttributeSafe(out AddNameAttribute addNameAttribute))
             {
-                string originalName = EFCompat.GetName(property);
+                string originalName = efCompat.GetName(property);
                 string name = addNameAttribute.ColumnName ?? (originalName + "Name");
-                if (!EFCompat.GetProperties(property.DeclaringEntityType).Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
+                if (!efCompat.GetProperties(property.DeclaringEntityType).Any(x => efCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
                 {
-                    IMutableProperty assetNameProperty = EFCompat.AddProperty(property.DeclaringEntityType, name, typeof(string));
-                    EFCompat.SetMaxLength(assetNameProperty, MaxAssetNameLength);
-                    assetNameProperty.IsNullable = nullable;
-                    assetNameProperty.SetDefaultValue(nullable ? null : new string('0', 32));
+                    IMutableProperty assetNameProperty = efCompat.AddProperty(property.DeclaringEntityType, name, typeof(string));
+                    efCompat.SetMaxLength(assetNameProperty, MaxAssetNameLength);
+                    efCompat.SetIsNullable(assetNameProperty, nullable);
+                    efCompat.SetDefaultValue(assetNameProperty, nullable ? null : new string('0', 32));
 
-                    EFCompat.SetValueGeneratorFactory(assetNameProperty,
+                    efCompat.SetValueGeneratorFactory(assetNameProperty,
                         (_, entityType) => AssetNameValueGenerator.Get(entityType, originalName));
 
-                    logger.LogDebug("Added asset name column for {0}.{1}: {2} (max length: {3})", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name, MaxAssetNameLength);
+                    logger.LogDebug("Added asset name column for {0}.{1}: {2} (max length: {3})", Accessor.Formatter.Format(efCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name, MaxAssetNameLength);
                 }
                 else
                 {
-                    logger.LogDebug("Asset name column already exists in {0}.{1}: {2}", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name);
+                    logger.LogDebug("Asset name column already exists in {0}.{1}: {2}", Accessor.Formatter.Format(efCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name);
                 }
             }
 
@@ -238,11 +239,11 @@ public static class WarfareDatabaseReflection
                 
                 ValueConverter converter = CreateValueConverter(ref converterType, clrType, logger, nullable);
 
-                EFCompat.SetValueConverter(property, converter);
-                property.SetColumnType(dataType);
-                property.IsNullable = nullable;
+                efCompat.SetValueConverter(property, converter);
+                efCompat.SetColumnType(property, dataType);
+                efCompat.SetIsNullable(property, nullable);
 
-                logger.LogDebug("Set converter for {0}.{1} to {2}.", EFCompat.GetName(property.DeclaringEntityType), EFCompat.GetName(property), converterType.Name);
+                logger.LogDebug("Set converter for {0}.{1} to {2}.", efCompat.GetName(property.DeclaringEntityType), efCompat.GetName(property), converterType.Name);
                 logger.LogDebug(" - Type: {0}.", dataType);
                 continue;
             }
@@ -312,9 +313,9 @@ public static class WarfareDatabaseReflection
             {
                 try
                 {
-                    EFCompat.SetValueConverter(property, (ValueConverter)Activator.CreateInstance(valConverterType)!);
+                    efCompat.SetValueConverter(property, (ValueConverter)Activator.CreateInstance(valConverterType)!);
 
-                    logger.LogDebug("Set converter for {0}.{1} to {2}.", EFCompat.GetName(property.DeclaringEntityType), EFCompat.GetName(property), Accessor.Formatter.Format(valConverterType));
+                    logger.LogDebug("Set converter for {0}.{1} to {2}.", efCompat.GetName(property.DeclaringEntityType), efCompat.GetName(property), Accessor.Formatter.Format(valConverterType));
                 }
                 catch (Exception ex)
                 {
@@ -336,14 +337,14 @@ public static class WarfareDatabaseReflection
                     throw new Exception($"Exception invoking value converter callback for {Accessor.ExceptionFormatter.Format(valConverterType)}.", ex);
                 }
 
-                ValueConverter? vc = EFCompat.GetValueConverter(property);
+                ValueConverter? vc = efCompat.GetValueConverter(property);
                 if (valConverterType.IsInstanceOfType(vc) ||
                     nullable && valConverterType.IsGenericType && (valConverterType.GetGenericTypeDefinition() == typeof(NullableReferenceTypeConverter<,>) || valConverterType.GetGenericTypeDefinition() == typeof(NullableValueTypeConverter<,>)))
                 {
-                    logger.LogDebug("Set converter for {0}.{1} to {2}.", EFCompat.GetName(property.DeclaringEntityType), EFCompat.GetName(property), Accessor.Formatter.Format(vc!.GetType()));
-                    logger.LogDebug($" - Type: {property.GetColumnType()}.");
+                    logger.LogDebug("Set converter for {0}.{1} to {2}.", efCompat.GetName(efCompat.GetDeclaringEntityType(property)), efCompat.GetName(property), Accessor.Formatter.Format(vc!.GetType()));
+                    logger.LogDebug(" - Type: {0}.", efCompat.GetColumnType(property));
                     if (clrType.IsValueType)
-                        property.IsNullable = nullable;
+                        efCompat.SetIsNullable(property, nullable);
 
                     continue;
                 }
@@ -351,13 +352,12 @@ public static class WarfareDatabaseReflection
                 try
                 {
                     ValueConverter converter = CreateValueConverter(ref valConverterType, clrType, logger, nullable);
-                    EFCompat.SetValueConverter(property, converter);
+                    efCompat.SetValueConverter(property, converter);
 
-                    logger.LogDebug("Set converter for {0}.{1} to {2}.", EFCompat.GetName(property.DeclaringEntityType), EFCompat.GetName(property), Accessor.Formatter.Format(valConverterType));
-                    logger.LogDebug($" - Type: {property.GetColumnType()}.");
+                    logger.LogDebug("Set converter for {0}.{1} to {2}.", efCompat.GetName(efCompat.GetDeclaringEntityType(property)), efCompat.GetName(property), Accessor.Formatter.Format(valConverterType));
+                    logger.LogDebug(" - Type: {0}.", efCompat.GetColumnType(property));
                     if (clrType.IsValueType)
-                        property.IsNullable = nullable;
-
+                        efCompat.SetIsNullable(property, nullable);
                 }
                 catch (Exception ex)
                 {

@@ -46,23 +46,46 @@ public class AssetNameValueGenerator<TEntity> : ValueGenerator<string?> where TE
 /// </summary>
 public static class AssetNameValueGenerator
 {
-    private record struct ValueGeneratorInstance(Type Type, string Name);
     private static readonly Dictionary<ValueGeneratorInstance, ValueGenerator> Cache = new Dictionary<ValueGeneratorInstance, ValueGenerator>();
+
+    private readonly struct ValueGeneratorInstance(Type type, string name) : IEquatable<ValueGeneratorInstance>
+    {
+        public readonly Type Type = type;
+        public readonly string Name = name;
+
+        public override bool Equals(object? obj)
+        {
+            return obj is ValueGeneratorInstance inst && Equals(inst);
+        }
+
+        public bool Equals(ValueGeneratorInstance other)
+        {
+            return other.Type == Type && other.Name == Name;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Type, Name);
+        }
+    }
 
     public static ValueGenerator Get(IEntityType type, string name)
     {
         lock (Cache)
         {
-            Type entityType = EFCompat.GetClrType(type);
+            IEFCompatProvider efCompat = EFCompat.Instance;
+            Type entityType = efCompat.GetClrType(type);
             ValueGeneratorInstance inst = new ValueGeneratorInstance(entityType, name);
             if (Cache.TryGetValue(inst, out ValueGenerator val))
                 return val;
 
-            IProperty assetProperty = type.GetProperties().First(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal));
+            IProperty assetProperty = efCompat.GetProperties(type).First(x => efCompat.GetName(x).Equals(name, StringComparison.Ordinal));
             
-            MemberInfo member = EFCompat.GetMemberInfo(assetProperty, true, false);
-            
-            Type delegateType = typeof(Func<,>).MakeGenericType(entityType, assetProperty.IsNullable ? typeof(UnturnedAssetReference?) : typeof(UnturnedAssetReference));
+            MemberInfo member = efCompat.GetMemberInfo(assetProperty, true, false);
+
+            bool isNullable = efCompat.GetIsNullable(assetProperty);
+
+            Type delegateType = typeof(Func<,>).MakeGenericType(entityType, isNullable ? typeof(UnturnedAssetReference?) : typeof(UnturnedAssetReference));
             Delegate caller;
             if (member is PropertyInfo property)
             {
@@ -76,7 +99,7 @@ public static class AssetNameValueGenerator
                 if (member is not FieldInfo underlyingField)
                     throw new ArgumentException($"Asset is not a field or property ({member}).", nameof(assetProperty));
 
-                Delegate generateInstanceGetter = assetProperty.IsNullable
+                Delegate generateInstanceGetter = isNullable
                     ? Accessor.GenerateInstanceGetter<UnturnedAssetReference?>(entityType, underlyingField.Name, throwOnError: true)!
                     : Accessor.GenerateInstanceGetter<UnturnedAssetReference>(entityType, underlyingField.Name, throwOnError: true)!;
 
