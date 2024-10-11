@@ -139,11 +139,6 @@ public static class Data
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
     internal static SteamPlayer NilSteamPlayer;
 
-    public static IRpcConnectionLifetime HomebaseLifetime { get; internal set; }
-    public static IRpcSerializer RpcSerializer { get; internal set; }
-    public static IRpcRouter RpcRouter { get; internal set; }
-    public static IModularRpcRemoteConnection RpcConnection { get; internal set; }
-    public static bool IsInitialSyncRegistering { get; private set; } = true;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Is<TGamemode>([NotNullWhen(true)] out TGamemode? gamemode)

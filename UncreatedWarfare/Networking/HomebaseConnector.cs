@@ -1,23 +1,31 @@
 ﻿using DanielWillett.ModularRpcs;
 using DanielWillett.ModularRpcs.Protocol;
+using DanielWillett.ModularRpcs.Routing;
+using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ModularRpcs.WebSockets;
 using Microsoft.Extensions.Configuration;
 using System;
+using Uncreated.Warfare.Services;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Networking;
-public class HomebaseConnector
+public class HomebaseConnector : IHostedService
 {
     private readonly ILogger<HomebaseConnector> _logger;
+    private readonly IRpcConnectionLifetime _lifetime;
+    private readonly IRpcRouter _router;
+    private readonly IRpcSerializer _serializer;
     private readonly string? _authKey;
     private readonly Uri? _authEndpoint;
     private readonly Uri? _connectEndpoint;
 
     public bool Enabled { get; }
-    
-    public HomebaseConnector(IConfiguration systemConfig, ILogger<HomebaseConnector> logger)
+    public HomebaseConnector(IConfiguration systemConfig, ILogger<HomebaseConnector> logger, IRpcConnectionLifetime lifetime, IRpcRouter router, IRpcSerializer serializer)
     {
         _logger = logger;
+        _lifetime = lifetime;
+        _router = router;
+        _serializer = serializer;
 
         IConfigurationSection homebaseSection = systemConfig.GetSection("homebase");
 
@@ -25,11 +33,21 @@ public class HomebaseConnector
 
         _authKey = homebaseSection["auth_key"];
 
-        string authEndpoint = homebaseSection["auth_endpoint"];
-        string connectEndpoint = homebaseSection["connect_endpoint"];
+        string? authEndpoint = homebaseSection["auth_endpoint"];
+        string? connectEndpoint = homebaseSection["connect_endpoint"];
 
         _authEndpoint = string.IsNullOrWhiteSpace(authEndpoint) ? null : new Uri(authEndpoint);
         _connectEndpoint = string.IsNullOrWhiteSpace(connectEndpoint) ? null : new Uri(connectEndpoint);
+    }
+
+    public async UniTask StartAsync(CancellationToken token)
+    {
+        await ConnectAsync(token).ConfigureAwait(false);
+    }
+
+    public UniTask StopAsync(CancellationToken token)
+    {
+        return UniTask.CompletedTask;
     }
 
     public async Task<bool> ConnectAsync(CancellationToken token = default)
@@ -46,10 +64,9 @@ public class HomebaseConnector
         // lower the reconnect delay
         endpoint.DelaySettings = new PlateauingDelay(amplifier: 3.6d, climb: 1.8d, maximum: 60d, start: 10d);
 #endif
-        WebSocketClientsideRemoteRpcConnection connection;
         try
         {
-            connection = await endpoint.RequestConnectionAsync(Data.RpcRouter, Data.HomebaseLifetime, Data.RpcSerializer, token).ConfigureAwait(false);
+            WebSocketClientsideRemoteRpcConnection connection = await endpoint.RequestConnectionAsync(_router, _lifetime, _serializer, token).ConfigureAwait(false);
             connection.Local.SetLogger(_logger);
             connection.OnReconnect += GetConnectUri;
         }
@@ -59,8 +76,6 @@ public class HomebaseConnector
             return false;
         }
 
-        await UniTask.SwitchToMainThread(token);
-        Data.RpcConnection = connection;
         return true;
     }
 

@@ -392,7 +392,9 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterInstance(Configuration).ExternallyOwned();
 
         // homebase
-        bldr.RegisterType<HomebaseConnector>().SingleInstance();
+        bldr.RegisterType<HomebaseConnector>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         // UI
         bldr.RegisterType<ModerationUI>().SingleInstance();

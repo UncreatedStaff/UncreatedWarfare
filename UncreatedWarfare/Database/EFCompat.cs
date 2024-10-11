@@ -12,7 +12,7 @@ namespace Uncreated.Warfare.Database;
 /// <summary>
 /// Abstracts some properties used in <see cref="WarfareDatabaseReflection"/> to support later versions of EF.
 /// </summary>
-internal static class EFCompat
+public static class EFCompat
 {
     private static IEFCompatProvider _instance;
 
