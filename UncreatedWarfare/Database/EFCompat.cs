@@ -399,16 +399,13 @@ internal static class EFCompat
         }
 
         MethodInfo? getProperties = Type.GetType("Microsoft.EntityFrameworkCore.Metadata.IMutableTypeBase, Microsoft.EntityFrameworkCore")?
-            .GetProperty("GetProperties", BindingFlags.Public | BindingFlags.Instance)?
-            .GetMethod;
+            .GetMethod("GetProperties", BindingFlags.Public | BindingFlags.Instance, null, CallingConventions.Any, Type.EmptyTypes, null);
 
-        getProperties ??= typeof(IMutableProperty)
-            .GetProperty("GetProperties", BindingFlags.Public | BindingFlags.Instance)?
-            .GetMethod;
-
+        getProperties ??= typeof(IMutableEntityType)
+            .GetMethod("GetProperties", BindingFlags.Public | BindingFlags.Instance, null, CallingConventions.Any, Type.EmptyTypes, null);
 
         if (getProperties == null)
-            throw new InvalidProgramException("Property GetProperties method not found.");
+            throw new InvalidProgramException("Method GetProperties method not found.");
 
         Accessor.GetDynamicMethodFlags(false, out MethodAttributes attributes, out CallingConventions conventions);
         DynamicMethod method = new DynamicMethod("GetProperties", attributes, conventions, typeof(IEnumerable<IMutableProperty>), [ typeof(IMutableEntityType) ], typeof(EFCompat), true);
