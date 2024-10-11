@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Database.Automation;
@@ -29,6 +30,7 @@ internal static class EFCompat
     private static Action<IMutableProperty, int?>? _setMaxLength;
     private static Action<IMutableProperty, ValueConverter?>? _setValueConverter;
     private static Action<IMutableProperty, Func<IProperty, IEntityType, ValueGenerator>?>? _setValueGeneratorFactory;
+    private static Func<IMutableEntityType, IEnumerable<IMutableProperty>>? _getProperties;
     public static Type GetClrType(ITypeBase type)
     {
         if (_getClrType != null)
@@ -387,5 +389,37 @@ internal static class EFCompat
         il.Emit(OpCodes.Ret);
         _setValueGeneratorFactory = (Action<IMutableProperty, Func<IProperty, IEntityType, ValueGenerator>?>)method.CreateDelegate(typeof(Action<IMutableProperty, Func<IProperty, IEntityType, ValueGenerator>?>));
         _setValueGeneratorFactory(prop, valueGeneratorFactory);
+    }
+
+    public static IEnumerable<IMutableProperty> GetProperties(IMutableEntityType entity)
+    {
+        if (_getProperties != null)
+        {
+            return _getProperties(entity);
+        }
+
+        MethodInfo? getProperties = Type.GetType("Microsoft.EntityFrameworkCore.Metadata.IMutableTypeBase, Microsoft.EntityFrameworkCore")?
+            .GetProperty("GetProperties", BindingFlags.Public | BindingFlags.Instance)?
+            .GetMethod;
+
+        getProperties ??= typeof(IMutableProperty)
+            .GetProperty("GetProperties", BindingFlags.Public | BindingFlags.Instance)?
+            .GetMethod;
+
+
+        if (getProperties == null)
+            throw new InvalidProgramException("Property GetProperties method not found.");
+
+        Accessor.GetDynamicMethodFlags(false, out MethodAttributes attributes, out CallingConventions conventions);
+        DynamicMethod method = new DynamicMethod("GetProperties", attributes, conventions, typeof(IEnumerable<IMutableProperty>), [ typeof(IMutableEntityType) ], typeof(EFCompat), true);
+        method.DefineParameter(1, default, "this");
+        ILGenerator il = method.GetILGenerator();
+
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Callvirt, getProperties);
+        il.Emit(OpCodes.Ret);
+        _getProperties = (Func<IMutableEntityType, IEnumerable<IMutableProperty>>)method.CreateDelegate(typeof(Func<IMutableEntityType, IEnumerable<IMutableProperty>>));
+
+        return _getProperties(entity);
     }
 }

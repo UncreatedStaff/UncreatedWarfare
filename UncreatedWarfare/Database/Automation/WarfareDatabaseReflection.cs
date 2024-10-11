@@ -1,13 +1,13 @@
 ﻿using DanielWillett.ReflectionTools;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Database.ValueConverters;
 using Uncreated.Warfare.Database.ValueGenerators;
@@ -52,7 +52,7 @@ public static class WarfareDatabaseReflection
 
             foreach (PropertyInfo property in properties)
             {
-                if (entity.GetProperties().Any(x => EFCompat.GetPropertyInfo(x) == property) || property.IsDefinedSafe<NotMappedAttribute>())
+                if (EFCompat.GetProperties(entity).Any(x => EFCompat.GetPropertyInfo(x) == property) || property.IsDefinedSafe<NotMappedAttribute>())
                     continue;
 
                 Type clrType = property.PropertyType;
@@ -74,7 +74,7 @@ public static class WarfareDatabaseReflection
             FieldInfo[] fields = entityClrType.GetFields(BindingFlags.Instance | BindingFlags.Public);
             foreach (FieldInfo field in fields)
             {
-                if (entity.GetProperties().Any(x => x.FieldInfo == field) || field.IsDefinedSafe<NotMappedAttribute>())
+                if (EFCompat.GetProperties(entity).Any(x => x.FieldInfo == field) || field.IsDefinedSafe<NotMappedAttribute>())
                     continue;
 
                 Type clrType = field.FieldType;
@@ -94,7 +94,7 @@ public static class WarfareDatabaseReflection
             }
         }
 #pragma warning disable EF1001
-        foreach (IMutableProperty property in modelBuilder.Model.GetEntityTypes().SelectMany(x => x.GetProperties()).OrderBy(x => EFCompat.GetClrType(x.DeclaringEntityType).FullName).ToList())
+        foreach (IMutableProperty property in modelBuilder.Model.GetEntityTypes().SelectMany(EFCompat.GetProperties).OrderBy(x => EFCompat.GetClrType(x.DeclaringEntityType).FullName).ToList())
 #pragma warning restore EF1001
         {
             bool nullable = false;
@@ -116,7 +116,7 @@ public static class WarfareDatabaseReflection
             {
                 // add packed column for IP addresses
                 string name = EFCompat.GetName(property) + "Packed";
-                if (property.DeclaringEntityType.GetProperties().Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
+                if (EFCompat.GetProperties(property.DeclaringEntityType).Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
                 {
                     EFCompat.AddProperty(property.DeclaringEntityType, name, typeof(uint));
                     logger.LogDebug("Added packed IP column for {0}.{1}: {2}.", Accessor.Formatter.Format(EFCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name);
@@ -133,7 +133,7 @@ public static class WarfareDatabaseReflection
             {
                 string originalName = EFCompat.GetName(property);
                 string name = addNameAttribute.ColumnName ?? (originalName + "Name");
-                if (!property.DeclaringEntityType.GetProperties().Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
+                if (!EFCompat.GetProperties(property.DeclaringEntityType).Any(x => EFCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
                 {
                     IMutableProperty assetNameProperty = EFCompat.AddProperty(property.DeclaringEntityType, name, typeof(string));
                     EFCompat.SetMaxLength(assetNameProperty, MaxAssetNameLength);
