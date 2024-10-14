@@ -422,8 +422,8 @@ public sealed class WarfareModule : IModuleNexus
         bldr.RegisterType<VehicleSpawnedHandler>()
             .AsImplementedInterfaces().AsSelf();
 
-        bldr.RegisterType<SteamApiService>()
-            .AsImplementedInterfaces().AsSelf()
+        bldr.RegisterType<WarfareSteamApiService>()
+            .As<ISteamApiService>()
             .SingleInstance();
 
         bldr.RegisterType<AudioRecordManager>()

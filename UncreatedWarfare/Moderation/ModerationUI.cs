@@ -30,7 +30,7 @@ public partial class ModerationUI : UnturnedUI
 
     private readonly string _discordInviteCode;
 
-    private readonly SteamApiService _steamAPI;
+    private readonly ISteamApiService _steamAPI;
 
     public const int ModerationHistoryLength = 30;
     public const string PositiveReputationColor = "00cc00";
@@ -191,7 +191,7 @@ public partial class ModerationUI : UnturnedUI
     {
         _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-        _steamAPI = serviceProvider.GetRequiredService<SteamApiService>();
+        _steamAPI = serviceProvider.GetRequiredService<ISteamApiService>();
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
         _itemIconProvider = serviceProvider.GetRequiredService<ItemIconProvider>();
 
@@ -567,7 +567,7 @@ public partial class ModerationUI : UnturnedUI
 
         UpdateSelectedPlayer(player);
 
-        await _steamAPI.TryDownloadAllPlayerSummaries(token: token);
+        // todo await _steamAPI.TryDownloadAllPlayerSummaries(token: token);
         await UniTask.SwitchToMainThread(token);
 
         ModerationData data = GetOrAddModerationData(player);

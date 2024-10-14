@@ -1,5 +1,6 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -639,15 +640,14 @@ public interface IDurationModerationEntry : IModerationEntry
     bool IsPermanent { get; set; }
 }
 
-public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
+public class ModerationCache : ConcurrentDictionary<uint, ModerationEntryCacheEntry>
 {
-    public ModerationCache() { }
-    public ModerationCache(int capacity) : base(capacity) { }
     public new IModerationEntry this[uint key]
     {
         get => base[key].Entry;
         set => base[key] = new ModerationEntryCacheEntry(value);
     }
+
     public void AddOrUpdate(IModerationEntry entry)
     {
         if (entry.Id != 0u)
@@ -665,6 +665,7 @@ public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
         value = null!;
         return false;
     }
+
     public bool TryGet<T>(uint key, out T value, TimeSpan timeout) where T : class, IModerationEntry
     {
         if (key != 0u && timeout.Ticks > 0 && TryGetValue(key, out ModerationEntryCacheEntry entry))
@@ -677,6 +678,7 @@ public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
         return false;
     }
 }
+
 public readonly struct ModerationEntryCacheEntry
 {
     public IModerationEntry Entry { get; }
@@ -688,6 +690,7 @@ public readonly struct ModerationEntryCacheEntry
         LastRefreshed = lastRefreshed;
     }
 }
+
 public sealed class ModerationEntryConverter : JsonConverter<ModerationEntry>
 {
     public override ModerationEntry Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

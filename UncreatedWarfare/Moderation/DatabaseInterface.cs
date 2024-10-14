@@ -24,6 +24,7 @@ using Uncreated.Warfare.Vehicles;
 namespace Uncreated.Warfare.Moderation;
 public class DatabaseInterface
 {
+    private readonly object _cacheSync = new object();
     public readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
     private readonly ILogger<DatabaseInterface> _logger;
     private readonly Dictionary<ulong, string> _iconUrlCacheSmall = new Dictionary<ulong, string>(128);
@@ -70,9 +71,9 @@ public class DatabaseInterface
 
     public event Action<ModerationEntry>? OnNewModerationEntryAdded;
     public event Action<ModerationEntry>? OnModerationEntryUpdated;
-    public ModerationCache Cache { get; } = new ModerationCache(64);
-    internal SteamApiService SteamAPI { get; }
-    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, SteamApiService steamApi)
+    public ModerationCache Cache { get; } = new ModerationCache();
+    internal ISteamApiService SteamAPI { get; }
+    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, ISteamApiService steamApi)
     {
         SteamAPI = steamApi;
         Sql = mySqlProvider;
@@ -88,6 +89,7 @@ public class DatabaseInterface
         }
         return TryGetAvatar(actor.Id, size, out avatar);
     }
+
     public bool TryGetAvatar(ulong steam64, AvatarSize size, out string avatar)
     {
         Dictionary<ulong, string> dict = size switch
@@ -96,8 +98,11 @@ public class DatabaseInterface
             AvatarSize.Medium => _iconUrlCacheMedium,
             _ => _iconUrlCacheSmall
         };
-        return dict.TryGetValue(steam64, out avatar);
+
+        lock (_cacheSync)
+            return dict.TryGetValue(steam64, out avatar);
     }
+
     public void UpdateAvatar(ulong steam64, AvatarSize size, string value)
     {
         Dictionary<ulong, string> dict = size switch
@@ -106,8 +111,11 @@ public class DatabaseInterface
             AvatarSize.Medium => _iconUrlCacheMedium,
             _ => _iconUrlCacheSmall
         };
-        dict[steam64] = value;
+
+        lock (_cacheSync)
+            dict[steam64] = value;
     }
+
     public bool TryGetUsernames(IModerationActor actor, out PlayerNames names)
     {
         CSteamID steam64 = new CSteamID(actor.Id);
@@ -119,14 +127,19 @@ public class DatabaseInterface
 
         return TryGetUsernames(steam64, out names);
     }
+
     public bool TryGetUsernames(CSteamID steam64, out PlayerNames names)
     {
-        return _usernameCache.TryGetValue(steam64.m_SteamID, out names);
+        lock (_cacheSync)
+            return _usernameCache.TryGetValue(steam64.m_SteamID, out names);
     }
+
     public void UpdateUsernames(CSteamID steam64, PlayerNames names)
     {
-        _usernameCache[steam64.m_SteamID] = names;
+        lock (_cacheSync)
+            _usernameCache[steam64.m_SteamID] = names;
     }
+
     // todo public Task VerifyTables(CancellationToken token = default) => Sql.VerifyTables(Schema, token);
     public async Task<PlayerNames> GetUsernames(CSteamID id, bool useCache, CancellationToken token = default)
     {
@@ -141,6 +154,7 @@ public class DatabaseInterface
         // return names;
         return PlayerNames.Nil;
     }
+
     public async Task<T?> ReadOne<T>(uint id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
     {
         if (tryGetFromCache && Cache.TryGet(id, out T val, DefaultInvalidateDuration))
@@ -161,7 +175,7 @@ public class DatabaseInterface
 
         if (entry == null)
         {
-            Cache.Remove(id);
+            Cache.TryRemove(id, out _);
             return null;
         }
 
@@ -1377,15 +1391,25 @@ public class DatabaseInterface
 
         Cache.AddOrUpdate(mod);
 
-        UniTask.Create(async () =>
+        if (WarfareModule.IsActive)
         {
-            await UniTask.SwitchToMainThread(token);
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread(token);
 
+                if (isNew)
+                    OnNewModerationEntryAdded?.Invoke(mod);
+                else
+                    OnModerationEntryUpdated?.Invoke(mod);
+            });
+        }
+        else
+        {
             if (isNew)
                 OnNewModerationEntryAdded?.Invoke(mod);
             else
                 OnModerationEntryUpdated?.Invoke(mod);
-        });
+        }
     }
     public async Task<int> GetNextPresetLevel(ulong player, PresetType type, CancellationToken token = default)
     {

@@ -9,19 +9,19 @@ namespace Uncreated.Warfare.Players.PendingTasks;
 /// </summary>
 public class SteamApiSummaryTask : IPlayerPendingTask
 {
-    private readonly SteamApiService _apiService;
+    private readonly ISteamApiService _apiService;
 
     private PlayerSummary? _summary;
     private ulong[]? _friends;
-    public SteamApiSummaryTask(SteamApiService apiService)
+    public SteamApiSummaryTask(ISteamApiService apiService)
     {
         _apiService = apiService;
     }
 
     async Task<bool> IPlayerPendingTask.RunAsync(PlayerPending e, CancellationToken token)
     {
-        UniTask<PlayerSummary?> summaryTask = _apiService.GetPlayerSummary(e.Steam64.m_SteamID, token);
-        PlayerFriendsList friendsList = await _apiService.GetPlayerFriends(e.Steam64.m_SteamID, token);
+        Task<PlayerSummary> summaryTask = _apiService.GetPlayerSummaryAsync(e.Steam64.m_SteamID, token);
+        PlayerFriendsList friendsList = await _apiService.GetPlayerFriendsAsync(e.Steam64.m_SteamID, token);
         _summary = await summaryTask;
 
         friendsList.Friends.Sort((a, b) => a.FriendsSince.CompareTo(b.FriendsSince));

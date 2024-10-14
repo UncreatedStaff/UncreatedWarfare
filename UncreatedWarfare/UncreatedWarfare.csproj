@@ -8,7 +8,7 @@
   <PropertyGroup>
 
     <VersionPrefix>4.0.0</VersionPrefix>
-    <VersionBuild>006</VersionBuild>
+    <VersionBuild>007</VersionBuild>
     <VersionSuffix>prerelease$(VersionBuild)</VersionSuffix>
 
   </PropertyGroup>

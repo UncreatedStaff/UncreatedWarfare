@@ -3,6 +3,7 @@ using System;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 
 namespace Uncreated.Warfare.Moderation;
@@ -75,7 +76,7 @@ public class PlayerActor : IModerationActor
         // todo if (UCPlayer.FromID(Id.m_SteamID) is { } pl)
         //    return await (pl as IModerationActor).GetProfilePictureURL(database, size, token).ConfigureAwait(false);
 
-        PlayerSummary? summary = await database.SteamAPI.GetPlayerSummary(Id, token);
+        PlayerSummary? summary = await database.SteamAPI.GetPlayerSummaryAsync(Id, token);
         if (summary == null)
             return null;
         url = size switch
@@ -126,7 +127,7 @@ public class DiscordActor : IModerationActor
             // todo if (UCPlayer.FromID(steam64) is { } pl)
             // todo     return await (pl as IModerationActor).GetProfilePictureURL(database, size, token).ConfigureAwait(false);
 
-            PlayerSummary? summary = await database.SteamAPI.GetPlayerSummary(steam64, token);
+            PlayerSummary? summary = await database.SteamAPI.GetPlayerSummaryAsync(steam64, token);
             if (summary == null)
                 return null;
             url = size switch
