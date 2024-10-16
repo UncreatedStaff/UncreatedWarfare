@@ -57,7 +57,7 @@ internal class WarfareSteamApiService : ISteamApiService
 
             try
             {
-                return JsonSerializer.Deserialize<TResponse>(data);
+                return JsonSerializer.Deserialize<TResponse>(data) ?? throw new SteamApiRequestException($"Error parsing result from Steam API query: {query}.");
             }
             catch (Exception ex)
             {

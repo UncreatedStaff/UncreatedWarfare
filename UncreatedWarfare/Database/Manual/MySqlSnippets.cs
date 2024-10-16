@@ -60,23 +60,55 @@ public static class MySqlSnippets
         if (length == 0)
             return string.Empty;
 
-        Span<char> newStr = stackalloc char[MathUtility.CountDigits((uint)(length + startIndex)) + (length * 2 - 1)];
+        ParameterListState state = default;
 
+        state.StartIndex = startIndex;
+        state.Length = length;
+
+        int len;
+        int endNum = startIndex + length - 1;
+        if (endNum <= 9)
+        {
+            len = length * 3 - 1;
+            return string.Create(len, state, SpanParameterListAction);
+        }
+
+        int digits = MathUtility.CountDigits(endNum);
+        len = length * 2 - 1 + digits * length;
+
+        Span<char> span = stackalloc char[len];
+        SpanParameterListAction(span, state, out int charsWritten);
+        return new string(span.Slice(0, charsWritten));
+    }
+
+    private static void SpanParameterListAction(Span<char> span, ParameterListState state)
+    {
+        SpanParameterListAction(span, state, out _);
+    }
+
+    private static void SpanParameterListAction(Span<char> span, ParameterListState state, out int charsWritten)
+    {
         int index = 0;
-        for (int i = 0; i < length; ++i)
+        for (int i = 0; i < state.Length; ++i)
         {
             if (i != 0)
             {
-                newStr[index] = ',';
+                span[index] = ',';
                 ++index;
             }
 
-            newStr[index] = '@';
-            ((uint)(i + startIndex)).TryFormat(newStr.Slice(index + 1), out int charsWritten, "F0", CultureInfo.InvariantCulture);
-            index += charsWritten + 1;
+            span[index] = '@';
+            ((uint)(i + state.StartIndex)).TryFormat(span.Slice(index + 1), out int charsWritten2, "F0", CultureInfo.InvariantCulture);
+            index += charsWritten2 + 1;
         }
 
-        return new string(newStr.Slice(0, index));
+        charsWritten = index;
+    }
+
+    private struct ParameterListState
+    {
+        public int StartIndex;
+        public int Length;
     }
 
     /// <summary>
@@ -107,6 +139,10 @@ public static class MySqlSnippets
     {
         if (p.Length == 0)
             return string.Empty;
+
+        if (skip >= p.Length)
+            skip = p.Length - 1;
+
         int ttlSize = p.Length - skip - 1;
         for (int i = skip; i < p.Length; ++i)
         {
@@ -554,7 +590,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p)
     {
-        return string.Create(p.Length + 2, new ValueTuple<string, string>(alias, p), (span, state) =>
+        return string.Create(p.Length + alias.Length + 5, new ValueTuple<string, string>(alias, p), (span, state) =>
         {
             int index = 0;
             WriteAliasedName(span, state.Item1, state.Item2, ref index);
@@ -566,7 +602,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2)
     {
-        return string.Create(p1.Length + p2.Length + 5,
+        return string.Create(p1.Length + p2.Length + 2 * (alias.Length + 5) + 1,
             new ValueTuple<string, string, string>(alias, p1, p2), (span, state) =>
             {
                 string alias = state.Item1;
@@ -583,7 +619,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + 8,
+        return string.Create(p1.Length + p2.Length + p3.Length + 3 * (alias.Length + 5) + 2,
             new ValueTuple<string, string, string, string>(alias, p1, p2, p3), (span, state) =>
             {
                 string alias = state.Item1;
@@ -603,7 +639,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3, string p4)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + 11,
+        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + 4 * (alias.Length + 5) + 3,
             new ValueTuple<string, string, string, string, string>(alias, p1, p2, p3, p4), (span, state) =>
             {
                 string alias = state.Item1;
@@ -626,7 +662,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3, string p4, string p5)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + 14,
+        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + 5 * (alias.Length + 5) + 4,
             new ValueTuple<string, string, string, string, string, string>(alias, p1, p2, p3, p4, p5), (span, state) =>
             {
                 string alias = state.Item1;
@@ -652,7 +688,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3, string p4, string p5, string p6)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + 17,
+        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + 6 * (alias.Length + 5) + 5,
             new ValueTuple<string, string, string, string, string, string, string>(alias, p1, p2, p3, p4, p5, p6), (span, state) =>
             {
                 string alias = state.Item1;
@@ -681,7 +717,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3, string p4, string p5, string p6, string p7)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + 20,
+        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + 7 * (alias.Length + 5) + 6,
             new ValueTuple<string, string, string, string, string, string, string, ValueTuple<string>>(alias, p1, p2, p3, p4, p5, p6, new ValueTuple<string>(p7)), (span, state) =>
             {
                 string alias = state.Item1;
@@ -713,7 +749,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3, string p4, string p5, string p6, string p7, string p8)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + 23,
+        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + 8 * (alias.Length + 5) + 7,
             new ValueTuple<string, string, string, string, string, string, string, ValueTuple<string, string>>(alias, p1, p2, p3, p4, p5, p6, new ValueTuple<string, string>(p7, p8)), (span, state) =>
             {
                 string alias = state.Item1;
@@ -748,7 +784,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3, string p4, string p5, string p6, string p7, string p8, string p9)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + p9.Length + 26,
+        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + p9.Length + 9 * (alias.Length + 5) + 8,
             new ValueTuple<string, string, string, string, string, string, string, ValueTuple<string, string, string>>(alias, p1, p2, p3, p4, p5, p6, new ValueTuple<string, string, string>(p7, p8, p9)), (span, state) =>
             {
                 string alias = state.Item1;
@@ -786,7 +822,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3, string p4, string p5, string p6, string p7, string p8, string p9, string p10)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + p9.Length + p10.Length + 29,
+        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + p9.Length + p10.Length + 10 * (alias.Length + 5) + 9,
             new ValueTuple<string, string, string, string, string, string, string, ValueTuple<string, string, string, string>>(alias, p1, p2, p3, p4, p5, p6, new ValueTuple<string, string, string, string>(p7, p8, p9, p10)), (span, state) =>
             {
                 string alias = state.Item1;
@@ -827,7 +863,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3, string p4, string p5, string p6, string p7, string p8, string p9, string p10, string p11)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + p9.Length + p10.Length + p11.Length + 32,
+        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + p9.Length + p10.Length + p11.Length + 11 * (alias.Length + 5) + 10,
             new ValueTuple<string, string, string, string, string, string, string, ValueTuple<string, string, string, string, string>>(alias, p1, p2, p3, p4, p5, p6, new ValueTuple<string, string, string, string, string>(p7, p8, p9, p10, p11)), (span, state) =>
             {
                 string alias = state.Item1;
@@ -871,7 +907,7 @@ public static class MySqlSnippets
     /// </summary>
     public static string AliasedColumnList(string alias, string p1, string p2, string p3, string p4, string p5, string p6, string p7, string p8, string p9, string p10, string p11, string p12)
     {
-        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + p9.Length + p10.Length + p11.Length + p12.Length + 35,
+        return string.Create(p1.Length + p2.Length + p3.Length + p4.Length + p5.Length + p6.Length + p7.Length + p8.Length + p9.Length + p10.Length + p11.Length + p12.Length + 12 * (alias.Length + 5) + 11,
             new ValueTuple<string, string, string, string, string, string, string, ValueTuple<string, string, string, string, string, string>>(alias, p1, p2, p3, p4, p5, p6, new ValueTuple<string, string, string, string, string, string>(p7, p8, p9, p10, p11, p12)), (span, state) =>
             {
                 string alias = state.Item1;
@@ -1097,14 +1133,17 @@ public static class MySqlSnippets
     private static void WriteAliasedName(Span<char> span, string alias, string arg, ref int index)
     {
         span[index] = '`';
-        alias.AsSpan().CopyTo(span.Slice(index + 1));
-        index += alias.Length + 1;
+        ++index;
+        alias.AsSpan().CopyTo(span[index..]);
+        index += alias.Length;
         span[index] = '`';
         span[index + 1] = '.';
         span[index + 2] = '`';
         index += 3;
-        arg.AsSpan().CopyTo(span.Slice(index + 1));
-        index += arg.Length + 1;
+        arg.AsSpan().CopyTo(span[index..]);
+        index += arg.Length;
+        span[index] = '`';
+        ++index;
     }
 
     internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length)
