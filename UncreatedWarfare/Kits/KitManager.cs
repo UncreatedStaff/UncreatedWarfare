@@ -47,7 +47,7 @@ public partial class KitManager :
     private readonly ILoopTicker _favoritesTicker;
     private readonly ILogger<KitManager> _logger;
     private readonly IPlayerService _playerService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ILifetimeScope _lifetimeScope;
     private readonly LanguageService _languageService;
     private readonly WhitelistService _whitelistService;
     private readonly WarfareModule _module;
@@ -79,16 +79,16 @@ public partial class KitManager :
     public event KitAccessCallback? OnKitAccessChanged;
     public event Action? OnFavoritesRefreshed;
 
-    public KitManager(IServiceProvider serviceProvider)
+    public KitManager(ILifetimeScope lifetimeScope)
     {
-        _serviceProvider = serviceProvider;
-        _logger = serviceProvider.GetRequiredService<ILogger<KitManager>>();
-        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-        _languageService = serviceProvider.GetRequiredService<LanguageService>();
-        _whitelistService = serviceProvider.GetRequiredService<WhitelistService>();
-        _module = serviceProvider.GetRequiredService<WarfareModule>();
+        _lifetimeScope = lifetimeScope;
+        _logger = lifetimeScope.Resolve<ILogger<KitManager>>();
+        _playerService = lifetimeScope.Resolve<IPlayerService>();
+        _languageService = lifetimeScope.Resolve<LanguageService>();
+        _whitelistService = lifetimeScope.Resolve<WhitelistService>();
+        _module = lifetimeScope.Resolve<WarfareModule>();
 
-        MenuUI = serviceProvider.GetRequiredService<KitMenuUI>();
+        MenuUI = lifetimeScope.Resolve<KitMenuUI>();
 
         if (!_hasRegisteredKitSettables)
         {
@@ -96,7 +96,9 @@ public partial class KitManager :
             RegisterKitSettables();
         }
 
-        IRpcRouter rpcRouter = serviceProvider.GetRequiredService<IRpcRouter>();
+        IRpcRouter rpcRouter = lifetimeScope.Resolve<IRpcRouter>();
+
+        IServiceProvider serviceProvider = lifetimeScope.Resolve<IServiceProvider>();
 
         Cache = new KitDataCache(this, serviceProvider);
         Distribution = new KitDistribution(this, serviceProvider);
@@ -276,8 +278,8 @@ public partial class KitManager :
 
     public async Task<Kit?> GetKit(uint pk, CancellationToken token = default, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         return await GetKit(dbContext, pk, token, set);
     }
@@ -294,8 +296,8 @@ public partial class KitManager :
     /// <remarks>Thread Safe</remarks>
     public async Task<Kit?> FindKit(string id, CancellationToken token = default, bool exactMatchOnly = true, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         return await FindKit(dbContext, id, token, exactMatchOnly, set);
     }
@@ -370,8 +372,8 @@ public partial class KitManager :
 
     private async Task ValidateKits(CancellationToken token = default)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
         List<Kit> allKits = await Set(dbContext)
             .Include(x => x.MapFilter)
             .Include(x => x.FactionFilter)
@@ -430,10 +432,10 @@ public partial class KitManager :
     /// </summary>
     private async Task CreateMissingDefaultKits(CancellationToken token = default)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        ITeamManager<Team> teamManager = scope.ServiceProvider.GetRequiredService<ITeamManager<Team>>();
+        ITeamManager<Team> teamManager = _lifetimeScope.Resolve<ITeamManager<Team>>();
 
-        await using IFactionDbContext factionDbContext = scope.ServiceProvider.GetRequiredService<IFactionDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IFactionDbContext factionDbContext = scope.Resolve<IFactionDbContext>();
         factionDbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         foreach (Team team in teamManager.AllTeams)
@@ -710,8 +712,8 @@ public partial class KitManager :
 
     public async Task<Kit?> TryGiveRiflemanKit(WarfarePlayer player, bool manual, bool tip, CancellationToken token = default)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         List<Kit> kits = await dbContext.Kits
             .Include(x => x.FactionFilter)
@@ -770,8 +772,8 @@ public partial class KitManager :
 
     public async Task<Kit?> GetRecommendedSquadleaderKit(ulong team, CancellationToken token = default)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         List<Kit> kits = await dbContext.Kits
             .Where(x => x.Class == Class.Squadleader && !x.Disabled && x.Type == KitType.Public).ToListAsync(token).ConfigureAwait(false);
@@ -1211,14 +1213,14 @@ public partial class KitManager :
             await player.PurchaseSync.WaitAsync(token);
         try
         {
-            using IServiceScope scope = _serviceProvider.CreateScope();
-            await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+            await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+            await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
             ulong s64 = player.Steam64.m_SteamID;
 
             await UniTask.SwitchToMainThread(token);
             if (UnturnedUIDataSource.GetData<KitMenuUIData>(player.Steam64, MenuUI.Parent) is not { } data)
             {
-                data = new KitMenuUIData(MenuUI, MenuUI.Parent, player, _serviceProvider);
+                data = new KitMenuUIData(MenuUI, MenuUI.Parent, player, _lifetimeScope.Resolve<IServiceProvider>());
                 UnturnedUIDataSource.AddData(data);
             }
 

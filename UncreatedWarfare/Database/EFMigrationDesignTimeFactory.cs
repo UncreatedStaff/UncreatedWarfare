@@ -1,10 +1,9 @@
 ﻿#if DEBUG && NETCOREAPP
-extern alias DepInj;
 using DanielWillett.ReflectionTools;
-using DepInj::Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using System;
 using System.IO;
 using System.Linq;
@@ -48,14 +47,17 @@ public class EFMigrationDesignTimeFactory : IDesignTimeDbContextFactory<WarfareD
         Accessor.LogErrorMessages = true;
 
         ConfigurationBuilder builder = new ConfigurationBuilder();
-        ConfigurationHelper.AddJsonOrYamlFile(builder, configFile);
+
+        IFileProvider fileProvider = new PhysicalFileProvider(Path.GetDirectoryName(configFile));
+
+        ConfigurationHelper.AddJsonOrYamlFile(builder, fileProvider, configFile);
 
         IConfigurationRoot sysConfig = builder.Build();
 
         IServiceCollection serviceCollection = new ServiceCollection();
         serviceCollection.AddTransient(sp => new WarfareDbContext(sp.GetRequiredService<ILogger<WarfareDbContext>>(), WarfareDbContext.GetOptions(sp)));
         serviceCollection.AddSingleton<IConfiguration>(sysConfig);
-        serviceCollection.AddLogging(builder => builder.AddProvider(new L.UCLoggerFactory()));
+        serviceCollection.AddLogging(builder => builder.AddProvider(new WarfareLoggerProvider(null)));
 
         IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
         {

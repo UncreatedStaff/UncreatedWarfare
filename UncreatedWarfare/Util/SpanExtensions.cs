@@ -83,7 +83,11 @@ public static class SpanExtensions
     /// <summary>
     /// Counts the number of occurences of <paramref name="value"/> in <paramref name="span"/>.
     /// </summary>
-    public static int Count<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> value) where T : IEquatable<T>
+    public static int Count<T>(
+#if !NET8_0_OR_GREATER
+        this 
+#endif
+            ReadOnlySpan<T> span, ReadOnlySpan<T> value) where T : IEquatable<T>
     {
         int amt = 0;
         int lastIndex = -value.Length;
@@ -100,7 +104,11 @@ public static class SpanExtensions
     /// <summary>
     /// Counts the number of occurences of <paramref name="value"/> in <paramref name="span"/>.
     /// </summary>
-    public static int Count<T>(this ReadOnlySpan<T> span, T value) where T : IEquatable<T>
+    public static int Count<T>(
+#if !NET8_0_OR_GREATER
+        this 
+#endif
+            ReadOnlySpan<T> span, T value) where T : IEquatable<T>
     {
         int amt = 0;
         int lastIndex = -1;

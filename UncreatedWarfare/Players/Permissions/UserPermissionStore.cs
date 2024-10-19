@@ -538,9 +538,9 @@ public class UserPermissionStore : IAsyncDisposable, IHostedService, IEventListe
         }
 
         PermissionGroupConfig? config;
-        using (Utf8JsonPreProcessingStream stream = new Utf8JsonPreProcessingStream(_permissionGroupFilePath))
+        using (FileStream fs = new FileStream(_permissionGroupFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            config = JsonSerializer.Deserialize<PermissionGroupConfig>(stream.ReadAllBytes(), ConfigurationSettings.JsonSerializerSettings);
+            config = JsonSerializer.Deserialize<PermissionGroupConfig>(fs, ConfigurationSettings.JsonSerializerSettings);
         }
 
         if (config == null)

@@ -1,18 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
@@ -273,8 +268,8 @@ partial class KitManager
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> HasAccess(uint kit, CSteamID player, CancellationToken token = default)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         return await HasAccess(dbContext, kit, player, token);
     }
@@ -288,8 +283,8 @@ partial class KitManager
 
     internal async Task<bool> AddAccessRow(uint kit, CSteamID player, KitAccessType type, CancellationToken token = default)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         ulong s64 = player.m_SteamID;
         if (await dbContext.KitAccess.FirstOrDefaultAsync(kitAccess => kitAccess.Steam64 == s64 && kitAccess.KitId == kit, token) is { } access)
@@ -323,8 +318,8 @@ partial class KitManager
     }
     internal async Task<bool> RemoveAccessRow(uint kit, CSteamID player, CancellationToken token = default)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         ulong s64 = player.m_SteamID;
         List<KitAccess> access = await dbContext.KitAccess
@@ -353,8 +348,8 @@ partial class KitManager
         if (!KitEx.ValidSlot(slot))
             throw new ArgumentException("Invalid slot number.", nameof(slot));
 
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         ulong s64 = player.m_SteamID;
         List<KitHotkey> hotkeys = await dbContext.KitHotkeys
@@ -392,8 +387,8 @@ partial class KitManager
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> RemoveHotkey(uint kit, ulong player, byte x, byte y, Page page, CancellationToken token = default)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         List<KitHotkey> hotkeys = await dbContext.KitHotkeys.Where(h => h.KitId == kit && h.Steam64 == player && h.X == x && h.Y == y && h.Page == page)
             .ToListAsync(token).ConfigureAwait(false);
@@ -418,8 +413,8 @@ partial class KitManager
         if (!KitEx.ValidSlot(slot))
             throw new ArgumentException("Invalid slot number.", nameof(slot));
 
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         byte x = item.X, y = item.Y;
         Page page = item.Page;
@@ -450,8 +445,8 @@ partial class KitManager
     {
         // using CombinedTokenSources tokens = token.CombineTokensIfNeeded(UCWarfare.UnloadCancel);
 
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         ulong steam64 = player.Steam64.m_SteamID;
 
@@ -469,8 +464,8 @@ partial class KitManager
     }
     public async Task ResetLayout(WarfarePlayer player, uint kit, bool lockPurchaseSync, CancellationToken token = default)
     {
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         if (lockPurchaseSync)
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
@@ -652,8 +647,8 @@ partial class KitManager
 
             uint kitId = kit.PrimaryKey;
 
-            using IServiceScope scope = _serviceProvider.CreateScope();
-            await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+            await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+            await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
             List<KitLayoutTransformation> existing = await dbContext.KitLayoutTransformations
                 .Where(x => x.Steam64 == steam64 && x.KitId == kitId).ToListAsync(token).ConfigureAwait(false);
@@ -698,8 +693,8 @@ partial class KitManager
         if (changed.Count == 0)
             return;
 
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using IKitsDbContext dbContext = scope.ServiceProvider.GetRequiredService<IKitsDbContext>();
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
 
         uint id = kit.PrimaryKey;
 

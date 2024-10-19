@@ -18,11 +18,11 @@ public static class EFCompat
 
     public static IEFCompatProvider Instance
     {
-        get => _instance ??= new EF3Compat();
+        get => _instance ??= new EF5Compat();
         set => _instance = value;
     }
 
-    public class EF3Compat : IEFCompatProvider
+    public class EF5Compat : IEFCompatProvider
     {
         public Type GetClrType(ITypeBase type)
         {

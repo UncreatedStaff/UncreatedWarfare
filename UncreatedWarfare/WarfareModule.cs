@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Microsoft.EntityFrameworkCore.Storage;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -63,7 +64,7 @@ using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
 
 namespace Uncreated.Warfare;
-public sealed class WarfareModule : IModuleNexus
+public sealed class WarfareModule
 {
     /// <summary>
     /// The current season.
@@ -150,7 +151,7 @@ public sealed class WarfareModule : IModuleNexus
         }
     }
 
-    void IModuleNexus.initialize()
+    internal void Initialize()
     {
         IsActive = true;
 
@@ -272,7 +273,7 @@ public sealed class WarfareModule : IModuleNexus
         });
     }
 
-    void IModuleNexus.shutdown()
+    internal void Shutdown()
     {
         AppDomain.CurrentDomain.AssemblyResolve -= HandleAssemblyResolve;
 
@@ -712,8 +713,18 @@ public sealed class WarfareModule : IModuleNexus
             // check connection before migrating with a 2.5 second timeout
             await Task.WhenAny(Task.Run(async () =>
             {
-                // ReSharper disable once AccessToDisposedClosure
-                connected = await dbContext.Database.CanConnectAsync(token);
+                try
+                {
+                    // ReSharper disable once AccessToDisposedClosure
+                    connected = await ((IRelationalDatabaseCreator)((IDatabaseFacadeDependenciesAccessor)dbContext.Database).Dependencies.DatabaseCreator).ExistsAsync(token);
+                }
+                catch (Exception ex)
+                {
+                    if (token.IsCancellationRequested)
+                        Console.WriteLine(ex);
+                    else
+                        _logger.LogError(ex, "Error connecting to MySQL.");
+                }
 
             }, token), Task.Delay(TimeSpan.FromSeconds(timeoutSec), token));
             
@@ -1029,5 +1040,33 @@ public sealed class WarfareModule : IModuleNexus
             return typeof(System.Runtime.CompilerServices.Unsafe).Assembly;
 
         return null;
+    }
+}
+
+public class WarfareModuleNexus : IModuleNexus
+{
+    private object _module;
+    void IModuleNexus.initialize()
+    {
+        try
+        {
+            Setup();
+        }
+        catch (Exception ex)
+        {
+            CommandWindow.LogError(ex);
+        }
+    }
+
+    void IModuleNexus.shutdown()
+    {
+        ((WarfareModule?)_module)?.Shutdown();
+    }
+
+    private void Setup()
+    {
+        WarfareModule mod = new WarfareModule();
+        _module = mod;
+        mod.Initialize();
     }
 }

@@ -6,7 +6,9 @@ using System;
 using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Database.Abstractions;
+#pragma warning disable EF1001
 public interface IDbContext : IDisposable, IAsyncDisposable, IInfrastructure<IServiceProvider>, IDbContextDependencies, IDbSetCache, IDbContextPoolable, IResettableService
+#pragma warning restore EF1001
 {
     DatabaseFacade Database { get; }
     ChangeTracker ChangeTracker { get; }

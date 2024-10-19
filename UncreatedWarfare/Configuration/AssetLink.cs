@@ -1056,12 +1056,12 @@ public class AssetLinkYamlConverter : IYamlTypeConverter
         return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAssetLink<>);
     }
 
-    public object? ReadYaml(IParser parser, Type type)
+    public object? ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
     {
         return AssetLink.ReadYaml(parser, type);
     }
 
-    public void WriteYaml(IEmitter emitter, object? value, Type type)
+    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
     {
         AssetLink.WriteYaml(emitter, value as IAssetLink<Asset>);
     }

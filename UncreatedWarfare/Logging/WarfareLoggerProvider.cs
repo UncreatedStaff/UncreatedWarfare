@@ -7,9 +7,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using DanielWillett.ReflectionTools.Formatting;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Debug = System.Diagnostics.Debug;
 
 namespace Uncreated.Warfare.Logging;
 public class WarfareLoggerProvider : ILoggerProvider
@@ -93,6 +93,13 @@ public class WarfareLoggerProvider : ILoggerProvider
 
     private void LogIntl(LogLevel logLevel, string text, string? unformattedLog)
     {
+        if (!WarfareModule.IsActive)
+        {
+            Console.WriteLine(text);
+            Debug.WriteLine(text);
+            return;
+        }
+
         switch (logLevel)
         {
             default:

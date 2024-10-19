@@ -25,18 +25,12 @@ public class MapZoneProvider : IZoneProvider
             return Enumerable.Empty<Zone>();
         }
 
-        Utf8JsonReader reader;
-        using (Utf8JsonPreProcessingStream stream = new Utf8JsonPreProcessingStream(mapPath))
+        List<Zone>? zones;
+
+        using (FileStream fs = new FileStream(mapPath, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            if (stream.Length is > int.MaxValue or 0)
-            {
-                return Enumerable.Empty<Zone>();
-            }
-
-            reader = new Utf8JsonReader(stream.ReadAllBytes(), ConfigurationSettings.JsonReaderOptions);
+            zones = JsonSerializer.Deserialize<ZoneConfig>(fs, ConfigurationSettings.JsonSerializerSettings)?.Zones;
         }
-
-        List<Zone>? zones = JsonSerializer.Deserialize<ZoneConfig>(ref reader, ConfigurationSettings.JsonSerializerSettings)?.Zones;
 
         return zones is not { Count: > 0 } ? Enumerable.Empty<Zone>() : zones;
     }

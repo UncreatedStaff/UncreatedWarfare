@@ -1,10 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Uncreated.Warfare.Database.Automation;
 
 namespace Uncreated.Warfare.Models.Users;
 
-[Table("user_permissions")]
+[Table("user_permissions"), Index(nameof(Steam64))]
 public class Permission
 {
     [Key]
@@ -12,7 +12,6 @@ public class Permission
     [Column("pk")]
     public uint PrimaryKey { get; set; }
 
-    [Index]
     public ulong Steam64 { get; set; }
 
     public bool IsGroup { get; set; }

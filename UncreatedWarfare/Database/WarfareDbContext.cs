@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
-using Pomelo.EntityFrameworkCore.MySql.Storage;
 using System;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
@@ -90,9 +89,11 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
             logger.LogInformation("Sensitive data logging is enabled.");
         }
 
-        optionsBuilder.UseMySql(connectionString, x => x
-            .CharSet(CharSet.Utf8Mb4)
-            .CharSetBehavior(CharSetBehavior.AppendToAllColumns));
+        optionsBuilder.UseMySql(
+            connectionString,
+            ServerVersion.AutoDetect(connectionString),
+            o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+        );
 
         if (sensitiveDataLogging)
         {
@@ -103,6 +104,8 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     /* further configure models than what's possible with attributes */
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasCharSet(CharSet.Utf8Mb4, DelegationModes.ApplyToColumns);
+
         ILanguageDbContext.ConfigureModels(modelBuilder);
         IFactionDbContext.ConfigureModels(modelBuilder);
         IBuildablesDbContext.ConfigureModels(modelBuilder);

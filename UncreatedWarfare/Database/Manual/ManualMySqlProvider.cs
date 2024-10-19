@@ -1,7 +1,7 @@
-﻿using MySql.Data.MySqlClient;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using MySqlConnector;
 
 namespace Uncreated.Warfare.Database.Manual;
 

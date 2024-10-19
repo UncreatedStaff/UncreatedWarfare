@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -9,7 +10,7 @@ using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Moderation;
 
-[Table("ip_addresses")]
+[Table("ip_addresses"), Index(nameof(PackedIP))]
 public class PlayerIPAddress
 {
     private uint _packedIP;
@@ -42,7 +43,6 @@ public class PlayerIPAddress
 
     [JsonPropertyName("packed_ip")]
     [Column("Packed")]
-    [Index]
     public uint PackedIP
     {
         get => _packedIP;

@@ -271,7 +271,7 @@ public sealed class PermissionLeafYamlConverter : IYamlTypeConverter
     {
         return type == typeof(PermissionLeaf);
     }
-    public object ReadYaml(IParser parser, Type type)
+    public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
     {
         string value = parser.Consume<Scalar>().Value;
 
@@ -279,7 +279,7 @@ public sealed class PermissionLeafYamlConverter : IYamlTypeConverter
             ? default
             : PermissionLeaf.Parse(value);
     }
-    public void WriteYaml(IEmitter emitter, object? value, Type type)
+    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
     {
         emitter.Emit(new Scalar(value == null ? "null" : ((PermissionLeaf)value).ToString()));
     }

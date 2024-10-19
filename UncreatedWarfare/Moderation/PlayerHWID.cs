@@ -1,15 +1,15 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Moderation;
 
-[Table("hwids")]
+[Table("hwids"), Index(nameof(HWID))]
 public class PlayerHWID
 {
     [Key]
@@ -26,7 +26,6 @@ public class PlayerHWID
     public ulong Steam64 { get; set; }
     public WarfareUserData PlayerData { get; set; }
 
-    [Index]
     [JsonPropertyName("hwid")]
     public HWID HWID { get; set; }
 

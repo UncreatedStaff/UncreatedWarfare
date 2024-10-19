@@ -1,13 +1,11 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Fobs;
@@ -16,7 +14,6 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Util.Timing;
 
@@ -97,7 +94,7 @@ public class FobManager :
 
         BuildableContainer container = e.Buildable.Model.GetOrAddComponent<BuildableContainer>();
 
-        ShovelableInfo? shovelableInfo = _configuration.GetRequiredSection("Shovelables").Get<List<ShovelableInfo>>()
+        ShovelableInfo? shovelableInfo = _configuration.GetRequiredSection("Shovelables").Get<List<ShovelableInfo>>()?
             .FirstOrDefault(s => s.FoundationBuildable.Guid == e.Buildable.Asset.GUID);
 
         if (shovelableInfo != null)
@@ -108,7 +105,7 @@ public class FobManager :
 
     public void HandleEvent(BarricadeDestroyed e, IServiceProvider serviceProvider)
     {
-        BasePlayableFob? fob = (BasePlayableFob) _fobs.FirstOrDefault(i => i is BasePlayableFob f && f.Buildable.InstanceId == e.InstanceId);
+        BasePlayableFob? fob = (BasePlayableFob?) _fobs.FirstOrDefault(i => i is BasePlayableFob f && f.Buildable.InstanceId == e.InstanceId);
         if (fob != null)
         {
             DeregisterFob(fob);
@@ -120,7 +117,7 @@ public class FobManager :
         if (e.Item == null || e.DroppedItem == null)
             return;
 
-        SupplyCrateInfo? supplyCrateInfo = _configuration.GetRequiredSection("SupplyCrates").Get<List<SupplyCrateInfo>>()
+        SupplyCrateInfo? supplyCrateInfo = _configuration.GetRequiredSection("SupplyCrates").Get<List<SupplyCrateInfo>>()?
             .FirstOrDefault(s => s.SupplyItemAsset.Guid == e.Item.GetAsset().GUID);
 
         if (supplyCrateInfo == null)
