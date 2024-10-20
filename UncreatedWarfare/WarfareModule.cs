@@ -829,7 +829,7 @@ public sealed class WarfareModule
         Provider.shutdown();
     }
 
-    public async UniTask InvokeLevelLoaded(CancellationToken token)
+    internal async UniTask InvokeLevelLoaded(CancellationToken token)
     {
         List<ILevelHostedService> hostedServices = ServiceProvider
             .Resolve<IEnumerable<ILevelHostedService>>()
@@ -856,6 +856,38 @@ public sealed class WarfareModule
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error hosting service {hostedService.GetType()} on level load.");
+                break;
+            }
+        }
+    }
+
+    internal async UniTask InvokeEarlyLevelLoaded(CancellationToken token)
+    {
+        List<IEarlyLevelHostedService> hostedServices = ServiceProvider
+            .Resolve<IEnumerable<IEarlyLevelHostedService>>()
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
+
+        await UniTask.SwitchToMainThread(token);
+
+        _logger.LogDebug("Hosting {0} services on early level load.", hostedServices.Count);
+        for (int i = 0; i < hostedServices.Count; i++)
+        {
+            IEarlyLevelHostedService hostedService = hostedServices[i];
+            try
+            {
+                if (!GameThread.IsCurrent)
+                    await UniTask.SwitchToMainThread(token);
+                _logger.LogDebug("Hosting {0} on early level load.", hostedService.GetType());
+                await hostedService.EarlyLoadLevelAsync(token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error hosting service {hostedService.GetType()} on early level load.");
                 break;
             }
         }
@@ -979,6 +1011,7 @@ public sealed class WarfareModule
 
 
         ILifetimeScope? oldScope = Interlocked.Exchange(ref _activeScope, newScope);
+        _logger.LogInformation("Created new layout scope.");
 
         if (ServiceProvider.Resolve<IPlayerService>() is PlayerService playerServiceImpl)
         {

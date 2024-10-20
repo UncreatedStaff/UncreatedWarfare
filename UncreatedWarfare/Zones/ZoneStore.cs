@@ -11,13 +11,14 @@ using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
+using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Zones;
 
 /// <summary>
 /// Stores a full list of active zones.
 /// </summary>
-public class ZoneStore : IHostedService
+public class ZoneStore : IHostedService, IEarlyLevelHostedService
 {
     private readonly List<IZoneProvider> _zoneProviders;
     private int _init;
@@ -62,7 +63,6 @@ public class ZoneStore : IHostedService
         }
         else
         {
-            Level.loadingSteps += OnLevelLoading;
             Level.onPrePreLevelLoaded += OnLevelLoaded;
             _lvlEventSub = true;
         }
@@ -72,10 +72,23 @@ public class ZoneStore : IHostedService
     {
         if (_lvlEventSub)
         {
-            Level.loadingSteps -= OnLevelLoading;
             Level.onPrePreLevelLoaded -= OnLevelLoaded;
         }
         return UniTask.CompletedTask;
+    }
+
+    public UniTask EarlyLoadLevelAsync(CancellationToken token)
+    {
+        _loadTask = UniTask.Create(async () =>
+        {
+            if (_init == 0)
+                await Initialize(token);
+        });
+
+        if (_loadTask.Status != UniTaskStatus.Pending)
+            _loadTask = default;
+
+        return _loadTask;
     }
 
     /// <summary>
@@ -404,23 +417,7 @@ public class ZoneStore : IHostedService
         if (!_lvlEventSub)
             return;
 
-        Level.loadingSteps -= OnLevelLoading;
         Level.onPrePreLevelLoaded -= OnLevelLoaded;
         _lvlEventSub = false;
-    }
-
-    /// <summary>
-    /// Invoked during level load.
-    /// </summary>
-    private void OnLevelLoading()
-    {
-        _loadTask = UniTask.Create(async () =>
-        {
-            if (_init == 0)
-                await Initialize();
-        });
-
-        if (_loadTask.Status != UniTaskStatus.Pending)
-            _loadTask = default;
     }
 }

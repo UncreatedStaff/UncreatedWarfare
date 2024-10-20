@@ -363,8 +363,6 @@ public class Layout : IDisposable
     /// </summary>
     protected internal virtual UniTask EndLayoutAsync(CancellationToken token = default)
     {
-        IsActive = false;
-
         _configListener.Dispose();
 
         try
@@ -376,6 +374,10 @@ public class Layout : IDisposable
             Logger.LogError(ex, "Error(s) while canceling layout cancellation token source in layout {0}.", LayoutInfo.DisplayName);
         }
 
+        if (!IsActive)
+            return UniTask.CompletedTask;
+
+        IsActive = false;
         return _factory.UnhostLayoutAsync(this, token);
     }
 

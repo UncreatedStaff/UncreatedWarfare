@@ -11,6 +11,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
+using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Layouts;
 
@@ -27,29 +28,16 @@ public class LayoutFactory : IHostedService
     }
 
     /// <inheritdoc />
-    public UniTask StartAsync(CancellationToken token)
+    public async UniTask StartAsync(CancellationToken token)
     {
+        SceneManager.sceneLoaded += OnSceneLoded;
         Level.onPostLevelLoaded += OnLevelLoaded;
-
-        UniTask.Create(async () =>
-        {
-            try
-            {
-                await StartNextLayout(token);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error starting layout.");
-                _ = _warfare.ShutdownAsync($"Error starting layout - {Accessor.Formatter.Format(ex.GetType())}", CancellationToken.None);
-            }
-        });
-
-        return default;
     }
 
     /// <inheritdoc />
     public async UniTask StopAsync(CancellationToken token)
     {
+        SceneManager.sceneLoaded -= OnSceneLoded;
         Level.onPostLevelLoaded -= OnLevelLoaded;
 
         if (!_warfare.IsLayoutActive())
@@ -65,6 +53,28 @@ public class LayoutFactory : IHostedService
         _warfare.SetActiveLayout(null);
     }
 
+    private void OnSceneLoded(Scene scene, LoadSceneMode mode)
+    {
+        if (scene.buildIndex != Level.BUILD_INDEX_GAME)
+            return;
+
+        UniTask.Create(async () =>
+        {
+            try
+            {
+                // invoke IEarlyLevelHostedService
+                await _warfare.InvokeEarlyLevelLoaded(_warfare.UnloadToken);
+
+                await StartNextLayout(_warfare.UnloadToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting layout.");
+                _ = _warfare.ShutdownAsync($"Error starting layout - {Accessor.Formatter.Format(ex.GetType())}");
+            }
+        });
+    }
+
     private void OnLevelLoaded(int level)
     {
         if (level != Level.BUILD_INDEX_GAME)
@@ -74,12 +84,15 @@ public class LayoutFactory : IHostedService
         {
             try
             {
+                // invoke ILevelHostedService
+                await _warfare.InvokeLevelLoaded(CancellationToken.None);
+
                 await StartPendingLayoutAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error starting layout.");
-                _ = _warfare.ShutdownAsync($"Error starting layout - {Accessor.Formatter.Format(ex.GetType())}");
+                _logger.LogError(ex, "Error finishing loading layout.");
+                _ = _warfare.ShutdownAsync($"Error finishing loading layout - {Accessor.Formatter.Format(ex.GetType())}");
             }
             finally
             {
@@ -127,9 +140,6 @@ public class LayoutFactory : IHostedService
             {
                 // lock is on by default on startup.
                 playerJoinLockTaken = true;
-
-                // invoke ILevelHostedService
-                await _warfare.InvokeLevelLoaded(CancellationToken.None);
             }
 
             await CreateLayoutAsync(newLayout, CancellationToken.None);
@@ -211,12 +221,12 @@ public class LayoutFactory : IHostedService
     /// </summary>
     private Action<ContainerBuilder> TryLoadServicesFromServiceList(LayoutInfo layoutInfo, IConfiguration serviceInfo)
     {
-        List<(string, Type?)> types = serviceInfo.GetChildren()
+        List<(string?, Type?)> types = serviceInfo.GetChildren()
             .Select(x => (x.Value, ContextualTypeResolver.ResolveType(x.Value, typeof(ILayoutServiceConfigurer))))
             .ToList();
 
         List<Exception>? missingTypeExceptions = null;
-        foreach ((string typeName, Type? configurerType) in types)
+        foreach ((string? typeName, Type? configurerType) in types)
         {
             if (configurerType == null)
             {
@@ -270,7 +280,7 @@ public class LayoutFactory : IHostedService
                     _logger.LogError(ex,
                         "Failed to dispose configurer {0} from assembly {1}.",
                         configurerType,
-                        configurerType!.Assembly.GetName().Name
+                        configurerType.Assembly.GetName().Name
                     );
                 }
             }
