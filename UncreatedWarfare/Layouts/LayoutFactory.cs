@@ -13,6 +13,8 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts;
+
+[Priority(int.MinValue)] // run last
 public class LayoutFactory : IHostedService
 {
     private readonly WarfareModule _warfare;
@@ -28,6 +30,20 @@ public class LayoutFactory : IHostedService
     public UniTask StartAsync(CancellationToken token)
     {
         Level.onPostLevelLoaded += OnLevelLoaded;
+
+        UniTask.Create(async () =>
+        {
+            try
+            {
+                await StartNextLayout(token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting layout.");
+                _ = _warfare.ShutdownAsync($"Error starting layout - {Accessor.Formatter.Format(ex.GetType())}", CancellationToken.None);
+            }
+        });
+
         return default;
     }
 
@@ -58,12 +74,16 @@ public class LayoutFactory : IHostedService
         {
             try
             {
-                await StartNextLayout(_warfare.UnloadToken);
+                await StartPendingLayoutAsync();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error starting layout.");
                 _ = _warfare.ShutdownAsync($"Error starting layout - {Accessor.Formatter.Format(ex.GetType())}");
+            }
+            finally
+            {
+                _warfare.ServiceProvider.ResolveOptional<IPlayerService>()?.ReleasePlayerConnectionLock();
             }
         });
     }
@@ -116,7 +136,7 @@ public class LayoutFactory : IHostedService
         }
         finally
         {
-            if (playerJoinLockTaken && playerServiceImpl != null)
+            if (Level.isLoaded && playerJoinLockTaken && playerServiceImpl != null)
             {
                 playerServiceImpl.ReleasePlayerConnectionLock();
             }
@@ -146,7 +166,7 @@ public class LayoutFactory : IHostedService
         await UniTask.SwitchToMainThread(token);
 
         // active layout is set in Layout default constructor
-        Layout layout = (Layout)Activator.CreateInstance(layoutInfo.LayoutType, [ scopedProvider, layoutInfo ]);
+        Layout layout = (Layout)Activator.CreateInstance(layoutInfo.LayoutType, [ scopedProvider, layoutInfo ])!;
         if (_warfare.GetActiveLayout() != layout)
         {
             _warfare.SetActiveLayout(layout);
@@ -155,7 +175,17 @@ public class LayoutFactory : IHostedService
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(layout.UnloadToken);
         await layout.InitializeLayoutAsync(CancellationToken.None);
 
-        IEnumerable<ILayoutStartingListener> listeners = scopedProvider.Resolve<IEnumerable<ILayoutStartingListener>>()
+        if (Level.isLoaded)
+        {
+            await StartPendingLayoutAsync();
+        }
+    }
+
+    private async Task StartPendingLayoutAsync()
+    {
+        Layout layout = _warfare.GetActiveLayout();
+
+        IEnumerable<ILayoutStartingListener> listeners = _warfare.ScopedProvider.Resolve<IEnumerable<ILayoutStartingListener>>()
             .OrderByDescending(x => x.GetType().GetPriority());
 
         foreach (ILayoutStartingListener listener in listeners)

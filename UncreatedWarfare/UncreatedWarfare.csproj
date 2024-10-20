@@ -2,7 +2,7 @@
 
   <!-- Set this to false for migrations -->
   <PropertyGroup>
-    <CopyToModule>True</CopyToModule>
+    <CopyToModule>False</CopyToModule>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -140,7 +140,7 @@
     <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease06, 2)" />
     <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease03, 2)" />
     <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease06, 2)" />
-    <PackageReference Include="Uncreated.UI" Version="1.0.0" />
+    <PackageReference Include="Uncreated.UI" Version="1.2.0" />
     <PackageReference Include="Stripe.net" Version="43.4.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
 
