@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Database.Manual;

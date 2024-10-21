@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Lobby;
 /// <summary>
 /// Handles visual effects in the lobby.
 /// </summary>
-public class LobbyZoneManager : ILevelHostedService, IEventListener<QuestObjectInteracted>, ILayoutStartingListener, IEventListener<PlayerGroupChanged>, IEventListener<PlayerLeft>
+public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListener<QuestObjectInteracted>, ILayoutStartingListener, IEventListener<PlayerGroupChanged>, IEventListener<PlayerLeft>
 {
     private const short FlagJoining = -1;
     private const short FlagFull = 0;

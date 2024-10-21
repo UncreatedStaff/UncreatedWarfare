@@ -266,6 +266,7 @@ public sealed class WarfareModule
             }
             catch (Exception ex)
             {
+                await UniTask.SwitchToMainThread();
                 CommandWindow.LogError(ExceptionFormatter.FormatException(ex, ServiceProvider.Resolve<StackTraceCleaner>()));
                 UnloadModule();
                 Provider.shutdown();
@@ -741,6 +742,7 @@ public sealed class WarfareModule
 
         if (!connected)
         {
+            await UniTask.SwitchToMainThread(token);
             _logger.LogError("Unable to connect to MySQL database. Please reconfigure and restart.");
             UnloadModule();
             Provider.shutdown();

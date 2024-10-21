@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Signs;
 /// <summary>
 /// Handles sending specific sign data to specific players.
 /// </summary>
-public class SignInstancer : ILevelHostedService, IEventListener<BarricadePlaced>, IEventListener<BarricadeDestroyed>
+public class SignInstancer : IHostedService, ILevelHostedService, IEventListener<BarricadePlaced>, IEventListener<BarricadeDestroyed>
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly SignInstanceData[] _types;
