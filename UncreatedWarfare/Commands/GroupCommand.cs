@@ -1,7 +1,7 @@
-﻿using System.Linq;
+﻿using System.Globalization;
+using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Teams;
@@ -76,14 +76,22 @@ public class GroupCommand : IExecutableCommand
                     FactionInfo? faction = _factionDataStore.FindFaction(groupInput);
 
                     if (faction == null)
+                    {
                         throw Context.Reply(_translations.GroupNotFound, groupInput);
+                    }
 
                     newTeam = _teamManager.AllTeams.FirstOrDefault(x => x.Faction.PrimaryKey == faction.PrimaryKey);
                     if (newTeam == null)
+                    {
                         throw Context.Reply(_translations.GroupNotFound, groupInput);
+                    }
                 }
 
                 groupId = newTeam.GroupId.m_SteamID;
+            }
+            else
+            {
+                newTeam = _teamManager.GetTeam(new CSteamID(groupId));
             }
 
             if (Context.Player.UnturnedPlayer.quests.groupID.m_SteamID == groupId)
@@ -95,6 +103,9 @@ public class GroupCommand : IExecutableCommand
 
             if (groupInfo == null)
             {
+                if (newTeam != null && newTeam.IsValid)
+                    _logger.LogError("Group info not found for group ID: {0}, team: {1}.", groupId, newTeam.Faction.Name);
+
                 throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
             }
 
@@ -111,7 +122,9 @@ public class GroupCommand : IExecutableCommand
             }
             else
             {
-                Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
+                Context.Reply(_translations.JoinedGroupNoName, groupInfo.groupID.m_SteamID);
+                _logger.LogInformation("{0} ({1}) joined group ID {2}.", Context.Player.Names.PlayerName, Context.CallerId, groupInfo.groupID);
+                Context.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + groupInfo.groupID.m_SteamID.ToString("D17", CultureInfo.InvariantCulture));
             }
         }
         else if (Context.ArgumentCount == 0)
@@ -135,6 +148,9 @@ public class GroupCommandTranslations : PropertiesTranslationCollection
 
     [TranslationData("Output from /group join <id>.", "Group ID", "Group Name", "Team Color (if applicable)", IsPriorityTranslation = false)]
     public readonly Translation<ulong, string, Color> JoinedGroup = new Translation<ulong, string, Color>("<#e6e3d5>You have joined group #<#{2}>{0}</color>: <#{2}>{1}</color>.");
+    
+    [TranslationData("Output from /group join <id>.", "Group ID", IsPriorityTranslation = false)]
+    public readonly Translation<ulong> JoinedGroupNoName = new Translation<ulong>("<#e6e3d5>You have joined group #<#dddddd>{0}</color>.");
 
     [TranslationData("Output from /group when the player is not in a group.", IsPriorityTranslation = false)]
     public readonly Translation NotInGroup = new Translation("<#ff8c69>You aren't in a group.");

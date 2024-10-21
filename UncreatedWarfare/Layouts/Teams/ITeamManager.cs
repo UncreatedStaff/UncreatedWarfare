@@ -31,6 +31,16 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     UniTask InitializeAsync(CancellationToken token = default);
 
     /// <summary>
+    /// Activates the team manager. This happens just before the first phase is activated.
+    /// </summary>
+    UniTask BeginAsync(CancellationToken token = default);
+
+    /// <summary>
+    /// Deactivates the team manager.
+    /// </summary>
+    UniTask EndAsync(CancellationToken token = default);
+
+    /// <summary>
     /// The group admins can join when placing buildables or doing other duties where they shouldn't be in a group.
     /// </summary>
     CSteamID AdminGroupId { get; }
