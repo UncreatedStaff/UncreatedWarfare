@@ -15,6 +15,7 @@ namespace Uncreated.Warfare.Zones;
 public class ActiveZoneCluster : IDisposable
 {
     private readonly ZoneProximity[] _zones;
+    private ActiveZoneData? _data;
     private bool _disposed;
     private readonly TrackingList<WarfarePlayer> _players = new TrackingList<WarfarePlayer>(8);
 
@@ -27,6 +28,29 @@ public class ActiveZoneCluster : IDisposable
     /// List of all zones in this cluster.
     /// </summary>
     public IReadOnlyList<ZoneProximity> Zones { get; }
+
+    /// <summary>
+    /// Abstract data linked to a zone.
+    /// </summary>
+    public ActiveZoneData Data
+    {
+        get
+        {
+            if (_data != null)
+                return _data;
+
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(ActiveZoneCluster));
+
+            ActiveZoneData data = new ActiveZoneData(this);
+            if (Interlocked.CompareExchange(ref _data, data, null) == null)
+            {
+                data.Dispose();
+            }
+
+            return _data;
+        }
+    }
 
     /// <summary>
     /// The shared name of the cluster of zones.
@@ -181,6 +205,8 @@ public class ActiveZoneCluster : IDisposable
         }
         else
         {
+            ActiveZoneData? data = Interlocked.Exchange(ref _data, null);
+            data?.Dispose();
             if (_disposed)
                 return;
 
@@ -194,6 +220,8 @@ public class ActiveZoneCluster : IDisposable
 
     private void DisposeIntl()
     {
+        ActiveZoneData? data = Interlocked.Exchange(ref _data, null);
+        data?.Dispose();
         if (_disposed)
             return;
 
