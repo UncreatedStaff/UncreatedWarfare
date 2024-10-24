@@ -19,6 +19,7 @@ using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
@@ -28,6 +29,7 @@ public class DatabaseInterface
     private readonly object _cacheSync = new object();
     public readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
     private readonly ILogger<DatabaseInterface> _logger;
+    private readonly IUserDataService _userDataService;
     private readonly Dictionary<ulong, string> _iconUrlCacheSmall = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheMedium = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheFull = new Dictionary<ulong, string>(128);
@@ -74,11 +76,12 @@ public class DatabaseInterface
     public event Action<ModerationEntry>? OnModerationEntryUpdated;
     public ModerationCache Cache { get; } = new ModerationCache();
     internal ISteamApiService SteamAPI { get; }
-    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, ISteamApiService steamApi)
+    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, ISteamApiService steamApi, IUserDataService userDataService)
     {
         SteamAPI = steamApi;
         Sql = mySqlProvider;
         _logger = logger;
+        _userDataService = userDataService;
     }
 
     public bool TryGetAvatar(IModerationActor actor, AvatarSize size, out string avatar)
@@ -141,19 +144,79 @@ public class DatabaseInterface
             _usernameCache[steam64.m_SteamID] = names;
     }
 
-    // todo public Task VerifyTables(CancellationToken token = default) => Sql.VerifyTables(Schema, token);
+    public ValueTask<string> GetAvatarAsync(CSteamID steam64, AvatarSize size, bool allowCache = true, CancellationToken token = default)
+    {
+        if (allowCache && TryGetAvatar(steam64.m_SteamID, size, out string avatar))
+        {
+            return new ValueTask<string>(avatar);
+        }
+
+        return Core(this, steam64.m_SteamID, size, token);
+
+        static async ValueTask<string> Core(DatabaseInterface t, ulong steam64, AvatarSize size, CancellationToken token)
+        {
+            PlayerSummary summary = await t.SteamAPI.GetPlayerSummaryAsync(steam64, token).ConfigureAwait(false);
+            lock (t._cacheSync)
+            {
+                t._iconUrlCacheSmall[summary.Steam64] = summary.AvatarUrlSmall;
+                t._iconUrlCacheMedium[summary.Steam64] = summary.AvatarUrlMedium;
+                t._iconUrlCacheFull[summary.Steam64] = summary.AvatarUrlFull;
+            }
+
+            return size switch
+            {
+                AvatarSize.Full => summary.AvatarUrlFull,
+                AvatarSize.Medium => summary.AvatarUrlMedium,
+                _ => summary.AvatarUrlSmall
+            };
+        }
+    }
+
+    public async Task CacheAvatarsAsync(IEnumerable<ulong> steamIds, AvatarSize size, CancellationToken token = default)
+    {
+        List<ulong> s64 = steamIds.ToList();
+
+        Dictionary<ulong, string> dict = size switch
+        {
+            AvatarSize.Full => _iconUrlCacheFull,
+            AvatarSize.Medium => _iconUrlCacheMedium,
+            _ => _iconUrlCacheSmall
+        };
+
+        lock (_cacheSync)
+        {
+            for (int i = s64.Count - 1; i >= 0; --i)
+            {
+                if (dict.TryGetValue(s64[i], out _))
+                    s64.RemoveAtFast(i);
+            }
+        }
+
+        if (s64.Count == 0)
+            return;
+
+        PlayerSummary[] summaries = await SteamAPI.GetPlayerSummariesAsync(s64, token).ConfigureAwait(false);
+        lock (_cacheSync)
+        {
+            for (int i = 0; i < summaries.Length; ++i)
+            {
+                PlayerSummary summary = summaries[i];
+                _iconUrlCacheSmall[summary.Steam64]  = summary.AvatarUrlSmall;
+                _iconUrlCacheMedium[summary.Steam64] = summary.AvatarUrlMedium;
+                _iconUrlCacheFull[summary.Steam64]   = summary.AvatarUrlFull;
+            }
+        }
+    }
+
     public async Task<PlayerNames> GetUsernames(CSteamID id, bool useCache, CancellationToken token = default)
     {
         if (useCache && TryGetUsernames(id, out PlayerNames names))
             return names;
 
-        if (Provider.isInitialized)
-            return await F.GetPlayerOriginalNamesAsync(id.m_SteamID, token).ConfigureAwait(false);
-
-        // names = await Sql.GetUsernamesAsync(id, token).ConfigureAwait(false);
-        // UpdateUsernames(id, names);
-        // return names;
-        return PlayerNames.Nil;
+        names = await _userDataService.GetUsernamesAsync(id.m_SteamID, token).ConfigureAwait(false);
+        if (names.WasFound)
+            UpdateUsernames(id, names);
+        return names;
     }
 
     public async Task<T?> ReadOne<T>(uint id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
@@ -1493,18 +1556,11 @@ public class DatabaseInterface
     }
     public async Task CacheUsernames(ulong[] players, CancellationToken token = default)
     {
-        if (Provider.isInitialized)
+        PlayerNames[] names = await _userDataService.GetUsernamesAsync(players, token);
+        for (int i = 0; i < names.Length; ++i)
         {
-            // _ = await Sql.GetUsernamesAsync(players, token);
-        }
-        else
-        {
-            // PlayerNames[] names = await Sql.GetUsernamesAsync(players, token);
-            // for (int i = 0; i < names.Length; ++i)
-            // {
-            //     PlayerNames name = names[i];
-            //     UpdateUsernames(name.Steam64, name);
-            // }
+            PlayerNames name = names[i];
+            UpdateUsernames(name.Steam64, name);
         }
     }
     public async Task<PlayerIPAddress[]> GetIPAddresses(CSteamID player, bool removeFiltered, CancellationToken token = default)

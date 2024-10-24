@@ -8,39 +8,18 @@ namespace Uncreated.Warfare.Players;
 public struct PlayerNames : IPlayer
 {
     public static readonly PlayerNames Nil = new PlayerNames { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = default };
-    public static readonly PlayerNames Console = new PlayerNames { CharacterName = "Console", NickName = "Console", PlayerName = "Console", Steam64 = default };
+    public static readonly PlayerNames Console = new PlayerNames { CharacterName = "Console", NickName = "Console", PlayerName = "Console", DisplayName = "Console", Steam64 = default };
     public CSteamID Steam64;
     public string PlayerName;
     public string CharacterName;
     public string NickName;
+
+    // Admins have preset display names so they show up consistantly on offense records
+    public string? DisplayName;
+    
     public bool WasFound;
     CSteamID IPlayer.Steam64 => Steam64;
 
-    public PlayerNames(SteamPlayerID player)
-    {
-        PlayerName = player.playerName;
-        CharacterName = player.characterName;
-        NickName = player.nickName;
-        Steam64 = player.steamID;
-        WasFound = true;
-    }
-    public PlayerNames(CSteamID player)
-    {
-        string ts = player.ToString();
-        PlayerName = ts;
-        CharacterName = ts;
-        NickName = ts;
-        Steam64 = player;
-        WasFound = true;
-    }
-    public PlayerNames(SteamPlayer player)
-    {
-        PlayerName = player.playerID.playerName;
-        CharacterName = player.playerID.characterName;
-        NickName = player.playerID.nickName;
-        Steam64 = player.playerID.steamID;
-        WasFound = true;
-    }
     public PlayerNames(Player player)
     {
         PlayerName = player.channel.owner.playerID.playerName;
@@ -53,32 +32,39 @@ public struct PlayerNames : IPlayer
     public static void Write(ByteWriter writer, in PlayerNames obj)
     {
         writer.Write(obj.Steam64.m_SteamID);
-        writer.Write(obj.PlayerName);
-        writer.Write(obj.CharacterName);
-        writer.Write(obj.NickName);
+        writer.WriteShort(obj.PlayerName);
+        writer.WriteShort(obj.CharacterName);
+        writer.WriteShort(obj.NickName);
+        writer.WriteNullableShort(obj.DisplayName);
     }
 
     public static PlayerNames Read(ByteReader reader) =>
         new PlayerNames
         {
             Steam64 = new CSteamID(reader.ReadUInt64()),
-            PlayerName = reader.ReadString(),
-            CharacterName = reader.ReadString(),
-            NickName = reader.ReadString()
+            PlayerName = reader.ReadShortString(),
+            CharacterName = reader.ReadShortString(),
+            NickName = reader.ReadShortString(),
+            DisplayName = reader.ReadNullableShortString()
         };
 
     public readonly override string ToString() => ToString(true);
     public readonly string ToString(bool steamId)
     {
+        string s64 = Steam64.m_SteamID.ToString("D17");
+
+        if (!string.IsNullOrEmpty(DisplayName))
+            return steamId ? s64 + " (" + DisplayName + ")" : DisplayName;
+
         string? pn = PlayerName;
         string? cn = CharacterName;
         string? nn = NickName;
-        string s64 = Steam64.m_SteamID.ToString("D17");
         bool pws = string.IsNullOrWhiteSpace(pn);
         bool cws = string.IsNullOrWhiteSpace(cn);
         bool nws = string.IsNullOrWhiteSpace(nn);
         if (pws && cws && nws)
             return s64;
+
         if (pws)
         {
             if (cws)
@@ -125,4 +111,17 @@ public struct PlayerNames : IPlayer
     public static string SelectPlayerName(PlayerNames names) => names.PlayerName;
     public static string SelectCharacterName(PlayerNames names) => names.CharacterName;
     public static string SelectNickName(PlayerNames names) => names.NickName;
+
+    public readonly string GetDisplayNameOrPlayerName()
+    {
+        return DisplayName ?? PlayerName;
+    }
+    public readonly string GetDisplayNameOrCharacterName()
+    {
+        return DisplayName ?? CharacterName;
+    }
+    public readonly string GetDisplayNameOrNickName()
+    {
+        return DisplayName ?? NickName;
+    }
 }

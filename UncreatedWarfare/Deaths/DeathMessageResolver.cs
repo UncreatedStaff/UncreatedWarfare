@@ -28,6 +28,7 @@ public class DeathMessageResolver
     private readonly ChatService _chatService;
     private readonly LanguageService _languageService;
     private readonly ICachableLanguageDataStore _languageDataStore;
+    private readonly IUserDataService _userDataService;
     private readonly DatabaseInterface _moderationDb;
 
     // intentional dont change
@@ -42,7 +43,8 @@ public class DeathMessageResolver
         LanguageService languageService,
         IConfiguration systemConfig,
         DatabaseInterface moderationDb,
-        ICachableLanguageDataStore languageDataStore)
+        ICachableLanguageDataStore languageDataStore,
+        IUserDataService userDataService)
     {
         _dispatcher = dispatcher;
         _logger = logger;
@@ -52,8 +54,9 @@ public class DeathMessageResolver
         _languageService = languageService;
         _moderationDb = moderationDb;
         _languageDataStore = languageDataStore;
+        _userDataService = userDataService;
         // intentional dont change
-        _dscIn = systemConfig["d" + "is" + "co" + "rd" + "_i" + "nv" + "ite" + "_co" + "de"];
+        _dscIn = systemConfig["d" + "is" + "co" + "rd" + "_i" + "nv" + "ite" + "_co" + "de"] ?? string.Empty;
     }
 
     /*
@@ -950,7 +953,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         {
             if (e.Killer == null)
             {
-                PlayerNames names = await F.GetPlayerOriginalNamesAsync(e.Instigator.m_SteamID, token);
+                PlayerNames names = await _userDataService.GetUsernamesAsync(e.Instigator.m_SteamID, token);
                 killerName = useSteamNames ? names.PlayerName : names.CharacterName;
             }
             else
@@ -964,7 +967,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         {
             if (e.ThirdParty == null)
             {
-                PlayerNames names = await F.GetPlayerOriginalNamesAsync(e.ThirdPartyId.Value.m_SteamID, token);
+                PlayerNames names = await _userDataService.GetUsernamesAsync(e.ThirdPartyId.Value.m_SteamID, token);
                 thirdPartyName = useSteamNames ? names.PlayerName : names.CharacterName;
             }
             else

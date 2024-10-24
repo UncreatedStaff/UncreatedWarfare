@@ -47,10 +47,10 @@ public struct OfflinePlayer : IPlayer
         _s64 = names.Steam64;
         _names = names;
     }
-    public async ValueTask CacheUsernames(CancellationToken token = default)
+    public async ValueTask CacheUsernames(IUserDataService userDataService, CancellationToken token = default)
     {
         if (!TryCacheLocal())
-            _names = await F.GetPlayerOriginalNamesAsync(_s64.m_SteamID, token).ConfigureAwait(false);
+            _names = await userDataService.GetUsernamesAsync(_s64.m_SteamID, token).ConfigureAwait(false);
     }
     public bool TryCacheLocal()
     {

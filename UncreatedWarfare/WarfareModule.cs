@@ -43,6 +43,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.UI;
@@ -626,6 +627,10 @@ public sealed class WarfareModule
 
         bldr.RegisterType<DatabaseInterface>()
             .AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<UserDataService>()
+            .As<IUserDataService>()
             .SingleInstance();
 
         bldr.Register(sp => WarfareDbContext.GetOptions(sp.Resolve<IServiceProvider>()))

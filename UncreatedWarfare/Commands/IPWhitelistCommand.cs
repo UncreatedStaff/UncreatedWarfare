@@ -1,4 +1,6 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+﻿using System;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
@@ -8,6 +10,8 @@ namespace Uncreated.Warfare.Commands;
 [Command("ipwhitelist", "whitelistip", "whip", "ipwh", "iw")]
 public class IPWhitelistCommand : IExecutableCommand
 {
+    private readonly IUserDataService _userDataService;
+    private readonly DatabaseInterface _moderationSql;
     private readonly IPWhitelistCommandTranslations _translations;
     private const string Syntax = "/ipwhitelist <add|remove> <steam64> [ip = any]";
     private const string Help = "Whitelist a player's IP to not be IP banned.";
@@ -16,8 +20,10 @@ public class IPWhitelistCommand : IExecutableCommand
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public IPWhitelistCommand(TranslationInjection<IPWhitelistCommandTranslations> translations)
+    public IPWhitelistCommand(TranslationInjection<IPWhitelistCommandTranslations> translations, IUserDataService userDataService, DatabaseInterface moderationSql)
     {
+        _userDataService = userDataService;
+        _moderationSql = moderationSql;
         _translations = translations.Value;
     }
 
@@ -83,9 +89,9 @@ public class IPWhitelistCommand : IExecutableCommand
                 throw Context.SendCorrectUsage(Syntax);
             }
 
-            PlayerNames names = await F.GetPlayerOriginalNamesAsync(player.m_SteamID, token).ConfigureAwait(false);
-#if false
-            if (await Data.ModerationSql.WhitelistIP(player, Context.CallerId.m_SteamID, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false))
+            PlayerNames names = await _userDataService.GetUsernamesAsync(player.m_SteamID, token).ConfigureAwait(false);
+
+            if (await _moderationSql.WhitelistIP(player, Context.CallerId, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false))
             {
                 Context.Reply(remove ? _translations.IPUnwhitelistSuccess : _translations.IPWhitelistSuccess, names, range);
             }
@@ -93,7 +99,6 @@ public class IPWhitelistCommand : IExecutableCommand
             {
                 Context.Reply(_translations.IPWhitelistNotFound, names, range);
             }
-#endif
         }
         else Context.SendCorrectUsage(Syntax);
     }

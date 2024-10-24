@@ -32,7 +32,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
 {
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
-    private readonly PlayerNames _playerNameHelper;
+    private PlayerNames _playerNameHelper;
     private readonly uint _acctId;
     private readonly SingleUseTypeDictionary<IPlayerComponent> _components;
 
@@ -87,7 +87,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
     /// <summary>
     /// Structure including all variations of the player's names.
     /// </summary>
-    public ref readonly PlayerNames Names => ref _playerNameHelper;
+    public ref PlayerNames Names => ref _playerNameHelper;
 
     /// <summary>
     /// The Steam64 ID of the group the player's in.

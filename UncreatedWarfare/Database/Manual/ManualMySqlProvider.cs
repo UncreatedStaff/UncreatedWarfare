@@ -102,6 +102,9 @@ public class ManualMySqlProvider : IManualMySqlProvider
 
         CheckLengthIndex(parameters, ref index, ref length);
         await using MySqlConnection connection = new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync(token);
+
         await using MySqlCommand command = new MySqlCommand(query, connection);
 
         AppendParameters(command, parameters, index, length);
@@ -139,6 +142,9 @@ public class ManualMySqlProvider : IManualMySqlProvider
 
         CheckLengthIndex(parameters, ref index, ref length);
         await using MySqlConnection connection = new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync(token);
+
         await using MySqlCommand command = new MySqlCommand(query, connection);
 
         AppendParameters(command, parameters, index, length);
@@ -169,6 +175,9 @@ public class ManualMySqlProvider : IManualMySqlProvider
 
         CheckLengthIndex(parameters, ref index, ref length);
         await using MySqlConnection connection = new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync(token);
+
         await using MySqlCommand command = new MySqlCommand(query, connection);
 
         AppendParameters(command, parameters, index, length);
