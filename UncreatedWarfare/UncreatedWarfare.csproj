@@ -35,8 +35,8 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 
-    <PackageProjectUrl>https://github.com/UncreatedStaff/UncreatedWarfare</PackageProjectUrl>
-    <RepositoryUrl>$(PackageProjectUrl).git</RepositoryUrl>
+    <PackageProjectUrl>https://uncreated.network/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/UncreatedStaff/UncreatedWarfare.git</RepositoryUrl>
 
     <PackageTags>Unturned;Uncreated;Warfare;Uncreated Warfare</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
