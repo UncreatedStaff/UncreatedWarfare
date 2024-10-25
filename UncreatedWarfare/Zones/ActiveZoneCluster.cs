@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Proximity;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
@@ -15,9 +17,11 @@ namespace Uncreated.Warfare.Zones;
 public class ActiveZoneCluster : IDisposable
 {
     private readonly ZoneProximity[] _zones;
+    private readonly ITeamManager<Team> _teamManager;
     private ActiveZoneData? _data;
     private bool _disposed;
     private readonly TrackingList<WarfarePlayer> _players = new TrackingList<WarfarePlayer>(8);
+    private TeamCountTable? _teamCounts;
 
     /// <summary>
     /// Invoked when a player goes in proximity of any zone in the cluster.
@@ -38,6 +42,36 @@ public class ActiveZoneCluster : IDisposable
     /// List of all zones in this cluster.
     /// </summary>
     public IReadOnlyList<ZoneProximity> Zones { get; }
+
+    /// <summary>
+    /// Keeps track of how many players are on the flag for each team.
+    /// </summary>
+    public TeamCountTable TeamCounts
+    {
+        get
+        {
+            if (_teamCounts != null)
+                return _teamCounts;
+
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(ActiveZoneCluster));
+
+            lock (_players)
+            {
+                if (_teamCounts != null)
+                    return _teamCounts;
+
+                _teamCounts = new TeamCountTable(_teamManager.AllTeams);
+                foreach (WarfarePlayer player in Players)
+                {
+                    if (player.Team.IsValid)
+                        _teamCounts.IncrementPoints(player.Team, 1d);
+                }
+            }
+
+            return _teamCounts;
+        }
+    }
 
     /// <summary>
     /// Abstract data linked to a zone.
@@ -88,7 +122,7 @@ public class ActiveZoneCluster : IDisposable
     /// </summary>
     public int Count => _zones.Length;
 
-    internal ActiveZoneCluster(ZoneProximity[] zones)
+    internal ActiveZoneCluster(ZoneProximity[] zones, ITeamManager<Team> teamManager)
     {
         if (zones.Length == 0)
             throw new ArgumentException("A zone group must consist of at least one zone.", nameof(zones));
@@ -106,6 +140,7 @@ public class ActiveZoneCluster : IDisposable
         }
 
         _zones = zones;
+        _teamManager = teamManager;
         Zones = new ReadOnlyCollection<ZoneProximity>(_zones);
 
         int primaryIndex = -1;
@@ -159,22 +194,46 @@ public class ActiveZoneCluster : IDisposable
 
             if (isInAnotherZone)
             {
-                if (_players.AddIfNotExists(player))
-                    OnPlayerEntered?.Invoke(this, player);
+                if (!_players.AddIfNotExists(player))
+                    return;
+
+                OnPlayerEntered?.Invoke(this, player);
+                UpdateTeamCounts();
+
                 return;
             }
         }
 
-        if (_players.Remove(player))
-        {
-            OnPlayerExited?.Invoke(this, player);
-        }
+        if (!_players.Remove(player))
+            return;
+
+        OnPlayerExited?.Invoke(this, player);
+        UpdateTeamCounts();
     }
 
     private void OnObjectEnteredAnyZone(WarfarePlayer player)
     {
-        if (_players.AddIfNotExists(player))
-            OnPlayerEntered?.Invoke(this, player);
+        if (!_players.AddIfNotExists(player))
+            return;
+
+        OnPlayerEntered?.Invoke(this, player);
+        UpdateTeamCounts();
+    }
+
+    private void UpdateTeamCounts()
+    {
+        if (_teamCounts == null)
+            return;
+
+        lock (_players)
+        {
+            _teamCounts.ClearScores();
+            foreach (WarfarePlayer player in Players)
+            {
+                if (player.Team.IsValid)
+                    _teamCounts.IncrementPoints(player.Team, 1d);
+            }
+        }
     }
 
     /// <summary>
@@ -236,6 +295,10 @@ public class ActiveZoneCluster : IDisposable
     private void DisposeIntl()
     {
         ActiveZoneData? data = Interlocked.Exchange(ref _data, null);
+
+        lock (_players)
+            _teamCounts = null;
+
         data?.Dispose();
         if (_disposed)
             return;

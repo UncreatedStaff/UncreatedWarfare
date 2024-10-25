@@ -38,7 +38,7 @@ public class CaptureUI : UnturnedUI
             {
                 data.HasUI = true;
                 data.LastColor = default;
-                data.IsLabelHidden = false;
+                data.IsProgressLabelHidden = false;
                 SendToPlayer(player.Connection);
             }
 
@@ -51,18 +51,18 @@ public class CaptureUI : UnturnedUI
 
             if (float.IsNaN(state.Progress))
             {
-                if (!data.IsLabelHidden)
+                if (!data.IsProgressLabelHidden)
                 {
                     CaptureProgress.Label.Hide(player);
-                    data.IsLabelHidden = true;
+                    data.IsProgressLabelHidden = true;
                 }
             }
             else
             {
-                if (data.IsLabelHidden)
+                if (data.IsProgressLabelHidden)
                 {
                     CaptureProgress.Label.Show(player);
-                    data.IsLabelHidden = false;
+                    data.IsProgressLabelHidden = false;
                 }
                 CaptureProgress.SetProgress(player.Connection, state.Progress);
             }
@@ -105,7 +105,7 @@ public class CaptureUI : UnturnedUI
         public UnturnedUI Owner { get; }
 
         public bool HasUI { get; set; }
-        public bool IsLabelHidden { get; set; }
+        public bool IsProgressLabelHidden { get; set; }
         public Color32 LastColor { get; set; }
         public string? LastLabel { get; set; }
 
