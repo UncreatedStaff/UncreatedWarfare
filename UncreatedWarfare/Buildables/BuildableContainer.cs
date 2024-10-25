@@ -56,6 +56,9 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
 
     public void ManualOnDestroy()
     {
+        foreach (var component in _components)
+            component.Dispose();
+
         Destroy(this);
     }
 }
