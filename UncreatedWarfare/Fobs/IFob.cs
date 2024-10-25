@@ -54,4 +54,5 @@ public interface IResourceFob : IFob
     /// Number of Supplies on the FOB.
     /// </summary>
     int BuildCount { get; }
+    int AmmoCount { get; }
 }
