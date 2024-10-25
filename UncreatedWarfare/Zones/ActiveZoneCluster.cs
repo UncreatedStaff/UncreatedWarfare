@@ -22,12 +22,12 @@ public class ActiveZoneCluster : IDisposable
     /// <summary>
     /// Invoked when a player goes in proximity of any zone in the cluster.
     /// </summary>
-    public event Action<WarfarePlayer>? OnPlayerEntered;
+    public event Action<ActiveZoneCluster, WarfarePlayer>? OnPlayerEntered;
 
     /// <summary>
     /// Invoked when a player leaves proximity of any zone in the cluster.
     /// </summary>
-    public event Action<WarfarePlayer>? OnPlayerExited;
+    public event Action<ActiveZoneCluster, WarfarePlayer>? OnPlayerExited;
 
     /// <summary>
     /// List of all players currently inside the zone.
@@ -160,21 +160,21 @@ public class ActiveZoneCluster : IDisposable
             if (isInAnotherZone)
             {
                 if (_players.AddIfNotExists(player))
-                    OnPlayerEntered?.Invoke(player);
+                    OnPlayerEntered?.Invoke(this, player);
                 return;
             }
         }
 
         if (_players.Remove(player))
         {
-            OnPlayerExited?.Invoke(player);
+            OnPlayerExited?.Invoke(this, player);
         }
     }
 
     private void OnObjectEnteredAnyZone(WarfarePlayer player)
     {
         if (_players.AddIfNotExists(player))
-            OnPlayerEntered?.Invoke(player);
+            OnPlayerEntered?.Invoke(this, player);
     }
 
     /// <summary>
