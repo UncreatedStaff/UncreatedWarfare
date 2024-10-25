@@ -387,6 +387,8 @@ public class Layout : IDisposable
         await TeamManager.EndAsync(token);
 
         await _factory.UnhostLayoutAsync(this, token);
+
+        (LayoutInfo.Layout as IDisposable)?.Dispose();
     }
 
     /// <summary>

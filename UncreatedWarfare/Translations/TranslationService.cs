@@ -34,9 +34,7 @@ public class TranslationService : ITranslationService
 
         SetOf = new LanguageSets(playerService);
 
-        TerminalColoring = !string.IsNullOrWhiteSpace(systemConfig["logging:terminal_coloring"])
-            ? systemConfig.GetValue<StackColorFormatType>("logging:terminal_coloring")
-            : StackColorFormatType.ExtendedANSIColor;
+        TerminalColoring = systemConfig.GetValue("logging:terminal_coloring", StackColorFormatType.ExtendedANSIColor);
     }
 
     public T Get<T>() where T : TranslationCollection, new()

@@ -72,6 +72,9 @@ public abstract class TranslationCollection
         }
 
         Reload();
+
+        // save default language
+        Storage.Save(Translations.Values);
     }
 
     public void Reload()

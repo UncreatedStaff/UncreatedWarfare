@@ -312,6 +312,16 @@ public class LayoutFactory : IHostedService
         }
 
         int index = RandomUtility.GetIndex(layouts, x => x.Weight);
+
+        // dispose other config providers
+        for (int i = 0; i < layouts.Count; ++i)
+        {
+            if (i == index)
+                continue;
+
+            (layouts[i].Layout as IDisposable)?.Dispose();
+        }
+
         return layouts[index];
     }
 
