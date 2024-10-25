@@ -9,6 +9,6 @@ using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 
-namespace Uncreated.Warfare.Commands.WarfareDev.StrategyMaps;
-[Command("strategymaps", "strt"), SubCommandOf(typeof(WarfareDevCommand))]
-internal class DebugStrategyMaps : ICommand;
+namespace Uncreated.Warfare.Commands.WarfareDev.Squads;
+[Command("squads", "sq"), SubCommandOf(typeof(WarfareDevCommand))]
+internal class DebugSquads : ICommand;
