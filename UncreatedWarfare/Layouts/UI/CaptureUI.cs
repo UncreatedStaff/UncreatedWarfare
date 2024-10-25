@@ -128,7 +128,13 @@ public readonly struct CaptureUIState
     public readonly Color32 OverrideColor;
     public readonly bool UseEnemyColor;
     public readonly string? Location;
+
+    // NaN hides the percentage label
     public readonly float Progress;
+
+    /// <summary>
+    /// Use static factory methods if possible.
+    /// </summary>
     public CaptureUIState(float progress, Translation translation, Team? team, Team? prominentOtherTeam, string? location, Color32 color = default, bool useEnemyColor = false)
     {
         Translation = translation;
@@ -138,6 +144,56 @@ public readonly struct CaptureUIState
         Progress = progress;
         OverrideColor = color;
         UseEnemyColor = useEnemyColor;
+    }
+
+    public static CaptureUIState Capturing(CaptureUITranslations translations, float progress, Team capturingTeam, string location)
+    {
+        return new CaptureUIState(progress, translations.Capturing, capturingTeam, null, location);
+    }
+    
+    public static CaptureUIState Losing(CaptureUITranslations translations, float progress, Team otherTeam, string location)
+    {
+        return new CaptureUIState(progress, translations.Losing, null, otherTeam, location, useEnemyColor: true);
+    }
+    
+    public static CaptureUIState Secured(CaptureUITranslations translations, string location)
+    {
+        return new CaptureUIState(float.NaN, translations.Secured, null, null, location, new Color32(125, 232, 125, 255));
+    }
+    
+    public static CaptureUIState Neutralized(CaptureUITranslations translations, string location)
+    {
+        return new CaptureUIState(float.NaN, translations.Neutralized, null, null, location, new Color32(255, 255, 255, 255));
+    }
+    
+    public static CaptureUIState Lost(CaptureUITranslations translations, Team otherTeam, string location)
+    {
+        return new CaptureUIState(float.NaN, translations.Lost, null, otherTeam, location, useEnemyColor: true);
+    }
+    
+    public static CaptureUIState Contesting(CaptureUITranslations translations, float progress, string location)
+    {
+        return new CaptureUIState(progress, translations.Contesting, null, null, location, new Color32(236, 236, 121, 255));
+    }
+    
+    public static CaptureUIState Ineffective(CaptureUITranslations translations, string location)
+    {
+        return new CaptureUIState(float.NaN, translations.Ineffective, null, null, location, new Color32(255, 255, 255, 255));
+    }
+
+    public static CaptureUIState Clearing(CaptureUITranslations translations, float progress, Team capturingTeam, string location)
+    {
+        return new CaptureUIState(progress, translations.Clearing, capturingTeam, null, location);
+    }
+    
+    public static CaptureUIState InVehicle(CaptureUITranslations translations, float progress, string location)
+    {
+        return new CaptureUIState(progress, translations.InVehicle, null, null, location, new Color32(255, 153, 153, 255));
+    }
+    
+    public static CaptureUIState Locked(CaptureUITranslations translations, float progress, string location)
+    {
+        return new CaptureUIState(float.NaN, translations.Locked, null, null, location, new Color32(255, 153, 153, 255));
     }
 
     internal Color32 GetColor()
