@@ -8,16 +8,19 @@ using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
-internal class SupplyCrate : IFobItem
+public class SupplyCrate : IFobItem
 {
     public IBuildable Buildable { get; private set; }
     public SupplyType Type { get; }
     public int SupplyCount { get; set; }
+    public int SupplyRadius { get; set; }
 
     public SupplyCrate(SupplyCrateInfo info, IBuildable buildable)
     {
-        SupplyCount = info.StartingSupplies;
-        Buildable = buildable;
         Type = info.Type;
+        Buildable = buildable;
+        SupplyCount = info.StartingSupplies;
+        SupplyRadius = info.SupplyRadius;
     }
+    public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Buildable.Position, point, SupplyRadius);
 }
