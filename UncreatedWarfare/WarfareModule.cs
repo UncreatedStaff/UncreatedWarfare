@@ -768,6 +768,11 @@ public sealed class WarfareModule
             return;
         }
 
+        // this needs to run before hosted services start requesting translations
+        ICachableLanguageDataStore? dataStore = ServiceProvider.ResolveOptional<ICachableLanguageDataStore>();
+        if (dataStore != null)
+            await dataStore.ReloadCache(token);
+
         await UniTask.SwitchToMainThread(token);
 
         List<IHostedService> hostedServices = ServiceProvider

@@ -24,7 +24,7 @@ public class AnnouncementService : IHostedService, IDisposable
         _ticker = tickerFactory.CreateTicker(TimeSpan.FromSeconds(systemConfig.GetValue<float>("interactions:announcement_time_sec")), false, true, HandleAnnouncementTick);
     }
 
-    private void HandleAnnouncementTick(ILoopTicker ticker, TimeSpan timesincestart, TimeSpan deltatime)
+    private void HandleAnnouncementTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
         if (_translations.Translations.Count == 0)
             return;

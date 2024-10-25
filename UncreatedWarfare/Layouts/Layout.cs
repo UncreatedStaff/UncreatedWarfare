@@ -1,16 +1,17 @@
-﻿using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Autofac.Core;
+using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Phases;
+using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts;
@@ -265,6 +266,51 @@ public class Layout : IDisposable
         await MoveToNextPhase(token);
     }
 
+    private async UniTask InvokePhaseListenerAction(ILayoutPhase phase, bool end, CancellationToken token)
+    {
+        Type intxType = typeof(ILayoutPhaseListener<>).MakeGenericType(phase.GetType());
+
+        // find all services assignable from ILayoutPhaseListener<phase.GetType()>
+        List<object> listeners = ServiceProvider.ComponentRegistry.Registrations
+            .SelectMany(x => x.Services)
+            .OfType<IServiceWithType>()
+            .Where(x => intxType.IsAssignableFrom(x.ServiceType))
+            .Select(x => ServiceProvider.Resolve(x.ServiceType))
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
+
+        foreach (object service in listeners)
+        {
+            Type type = service.GetType();
+            Type implIntxType = type.GetInterfaces().First(x => x.GetGenericTypeDefinition() == typeof(ILayoutPhaseListener<>));
+
+            // invoke method from an unknown generic interface type
+            MethodInfo implementation = implIntxType.GetMethod(
+                end ? nameof(ILayoutPhaseListener<PreparationPhase>.OnPhaseEnded)
+                    : nameof(ILayoutPhaseListener<PreparationPhase>.OnPhaseStarted),
+                BindingFlags.Public | BindingFlags.Instance) ?? throw new Exception("Unable to find phase listener method.");
+
+            implementation = Accessor.GetImplementedMethod(type, implementation) ?? throw new Exception("Unable to find phase listener implemented method.");
+
+            try
+            {
+                await (UniTask)implementation.Invoke(service, [ phase, token ]);
+            }
+            catch (TargetInvocationException ex)
+            {
+                if (end)
+                {
+                    Logger.LogError(ex.InnerException, "Failed to end phase {0}. Listener {1} failed.", phase.GetType(), type);
+                    await _factory.StartNextLayout(CancellationToken.None);
+                    throw new OperationCanceledException();
+                }
+
+                Logger.LogWarning(ex.InnerException, "Error beginning phase {0}. Listener {1} failed.", phase.GetType(), type);
+                throw new OperationCanceledException();
+            }
+        }
+    }
+
     public virtual async UniTask MoveToNextPhase(CancellationToken token = default)
     {
         // keep moving to the next phase until one is activated by BeginPhase.
@@ -312,13 +358,15 @@ public class Layout : IDisposable
                     throw new OperationCanceledException();
                 }
 
-                await UniTask.SwitchToMainThread(token);
+                await InvokePhaseListenerAction(oldPhase, end: true, CancellationToken.None);
+
+                await UniTask.SwitchToMainThread(CancellationToken.None);
                 try
                 {
                     if (oldPhase is IAsyncDisposable asyncDisposable)
                     {
                         await asyncDisposable.DisposeAsync();
-                        await UniTask.SwitchToMainThread(token);
+                        await UniTask.SwitchToMainThread(CancellationToken.None);
                     }
                     else if (oldPhase is IDisposable disposable)
                     {
@@ -327,7 +375,7 @@ public class Layout : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    await UniTask.SwitchToMainThread(token);
+                    await UniTask.SwitchToMainThread(CancellationToken.None);
                     Logger.LogError(ex, "Error disposing phase {0}.", oldPhase);
                 }
             }
@@ -343,12 +391,14 @@ public class Layout : IDisposable
                 if (!newPhase.IsActive)
                 {
                     Logger.LogError(ex, "Error beginning phase {0}.", newPhase.GetType());
-                    await _factory.StartNextLayout(CancellationToken.None);
+                    await _factory.StartNextLayout(token);
                     throw new OperationCanceledException();
                 }
 
                 Logger.LogWarning(ex, "Error beginning phase {0}.", newPhase.GetType());
             }
+
+            await InvokePhaseListenerAction(newPhase, end: false, CancellationToken.None);
         }
         while (!newPhase.IsActive);
     }

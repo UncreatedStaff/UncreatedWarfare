@@ -6,7 +6,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 using Uncreated.Warfare.Zones.Pathing;
