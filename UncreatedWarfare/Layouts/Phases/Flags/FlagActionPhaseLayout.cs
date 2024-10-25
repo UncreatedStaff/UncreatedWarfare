@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Exceptions;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
@@ -15,6 +16,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
 {
     private readonly ILogger<FlagActionPhaseLayout> _logger;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ITeamManager<Team> _teamManager;
     private IList<Zone>? _pathingResult;
     private ZoneStore _zoneStore;
 
@@ -38,10 +40,11 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
     /// <inheritdoc />
     public ActiveZoneCluster EndingTeam { get; private set; }
 
-    public FlagActionPhaseLayout(ILogger<FlagActionPhaseLayout> logger, IServiceProvider serviceProvider, IConfiguration config)
+    public FlagActionPhaseLayout(ILogger<FlagActionPhaseLayout> logger, IServiceProvider serviceProvider, IConfiguration config, ITeamManager<Team> teamManager)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _teamManager = teamManager;
         Configuration = config;
     }
 
@@ -96,7 +99,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
                 .Select(z => new ZoneProximity(_zoneStore.CreateColliderForZone(z), z))
                 .ToArray();
 
-            zoneList.Add(new ActiveZoneCluster(zones));
+            zoneList.Add(new ActiveZoneCluster(zones, _teamManager));
         }
 
         _zones = zoneList.ToArrayFast();

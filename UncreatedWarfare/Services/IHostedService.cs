@@ -16,7 +16,7 @@ public interface IHostedService
     UniTask StopAsync(CancellationToken token);
 }
 
-public interface ILevelHostedService : IHostedService
+public interface ILevelHostedService
 {
     /// <summary>
     /// Executes when the level finishes loading and all assets are loaded but before the first session starts.
@@ -24,7 +24,7 @@ public interface ILevelHostedService : IHostedService
     UniTask LoadLevelAsync(CancellationToken token);
 }
 
-public interface IEarlyLevelHostedService : IHostedService
+public interface IEarlyLevelHostedService
 {
     /// <summary>
     /// Executes just before the level starts loading and after all assets are loaded but before the first session starts.

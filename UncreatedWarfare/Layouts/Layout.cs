@@ -254,10 +254,14 @@ public class Layout : IDisposable
     {
         await _factory.HostLayoutAsync(this, token);
 
+        await UniTask.SwitchToMainThread(token);
         IsActive = true;
 
         CheckEmptyPhases();
         _activePhase = -1;
+
+        await TeamManager.BeginAsync(token);
+
         await MoveToNextPhase(token);
     }
 
@@ -361,7 +365,7 @@ public class Layout : IDisposable
     /// <summary>
     /// Invoked when the layout ends. Try not to use <see cref="UniTask.SwitchToMainThread"/> here.
     /// </summary>
-    protected internal virtual UniTask EndLayoutAsync(CancellationToken token = default)
+    protected internal virtual async UniTask EndLayoutAsync(CancellationToken token = default)
     {
         _configListener.Dispose();
 
@@ -374,11 +378,17 @@ public class Layout : IDisposable
             Logger.LogError(ex, "Error(s) while canceling layout cancellation token source in layout {0}.", LayoutInfo.DisplayName);
         }
 
+        await UniTask.SwitchToMainThread(token);
         if (!IsActive)
-            return UniTask.CompletedTask;
+            return;
 
         IsActive = false;
-        return _factory.UnhostLayoutAsync(this, token);
+
+        await TeamManager.EndAsync(token);
+
+        await _factory.UnhostLayoutAsync(this, token);
+
+        (LayoutInfo.Layout as IDisposable)?.Dispose();
     }
 
     /// <summary>

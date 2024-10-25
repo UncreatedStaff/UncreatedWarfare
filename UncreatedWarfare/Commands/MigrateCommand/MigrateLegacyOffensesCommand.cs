@@ -1,53 +1,103 @@
-﻿using System;
+﻿#if DEBUG
+using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Records;
-using Report = Uncreated.Warfare.Moderation.Reports.Report;
+using Uncreated.Warfare.Moderation.Reports;
 
-namespace Uncreated.Warfare.Moderation;
-internal static class Migration
+namespace Uncreated.Warfare.Commands.MigrateCommand;
+
+[Command("offenses"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
+public class MigrateLegacyOffensesCommand : IExecutableCommand
 {
-    private static readonly DateTime UTCCutoff = new DateTime(2022, 6, 12, 3, 14, 0, DateTimeKind.Utc);
-    public static readonly TimeZoneInfo RollbackWarfareTimezone;
-    static Migration()
+    // the UTC time at which we switched from storing data in EST to UTC
+    private readonly DateTime _universalTimeCutoff = new DateTime(2022, 6, 12, 3, 14, 0, DateTimeKind.Utc);
+    private readonly TimeZoneInfo _rollbackWarfareTimezone;
+
+    private readonly IManualMySqlProvider _mySqlProvider;
+    private readonly DatabaseInterface _moderationSql;
+    public CommandContext Context { get; set; }
+
+    public MigrateLegacyOffensesCommand(IManualMySqlProvider mySqlProvider, DatabaseInterface moderationSql, ILogger<MigrateLegacyOffensesCommand> logger)
     {
+        _mySqlProvider = mySqlProvider;
+        _moderationSql = moderationSql;
+
+        const string timeZoneWindows = "Eastern Standard Time";
+        const string timeZoneUnix = "America/New_York";
+
         try
         {
-            RollbackWarfareTimezone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            _rollbackWarfareTimezone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneWindows);
         }
         catch (TimeZoneNotFoundException)
         {
             try
             {
-                RollbackWarfareTimezone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+                _rollbackWarfareTimezone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneUnix);
             }
             catch (TimeZoneNotFoundException)
             {
-                RollbackWarfareTimezone = TimeZoneInfo.CreateCustomTimeZone("EST", TimeSpan.FromHours(-5d), "Eastern Standard Time", "Eastern Standard Time");
-                WarfareModule.Singleton.GlobalLogger.LogWarning("Couldn't find rollback timezone.");
-                return;
+                _rollbackWarfareTimezone = TimeZoneInfo.CreateCustomTimeZone("EST", TimeSpan.FromHours(-5d), timeZoneWindows, timeZoneWindows);
+                logger.LogWarning("Couldn't find rollback timezone ({0} or {1}).", timeZoneWindows, timeZoneUnix);
             }
         }
 
-        WarfareModule.Singleton.GlobalLogger.LogInformation("Found rollback timezone: {0} (Offset: {1} HRS), {2}.", RollbackWarfareTimezone.DisplayName, RollbackWarfareTimezone.BaseUtcOffset.TotalHours, RollbackWarfareTimezone.Id);
+        logger.LogInformation("Found rollback timezone: {0} (Offset: {1} HRS), {2}.", _rollbackWarfareTimezone.DisplayName, _rollbackWarfareTimezone.BaseUtcOffset.TotalHours, _rollbackWarfareTimezone.Id);
     }
-    private static DateTimeOffset ConvertTime(DateTime dt)
+
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        if (dt <= UTCCutoff)
+        Context.AssertRanByTerminal();
+
+        return MigrateOffenses(token);
+    }
+
+    private DateTimeOffset ConvertTime(DateTime dt)
+    {
+        if (dt <= _universalTimeCutoff)
         {
-            DateTime dt2 = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(dt, DateTimeKind.Unspecified), RollbackWarfareTimezone);
+            DateTime dt2 = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(dt, DateTimeKind.Unspecified), _rollbackWarfareTimezone);
             return new DateTimeOffset(dt2);
         }
 
         return new DateTimeOffset(DateTime.SpecifyKind(dt, DateTimeKind.Utc));
     }
-    public static async Task MigrateKicks(DatabaseInterface db, CancellationToken token = default)
+
+    private async UniTask MigrateOffenses(CancellationToken token)
+    {
+        Context.AssertRanByTerminal();
+
+        Context.ReplyString("Kicks...");
+        await MigrateKicks(token).ConfigureAwait(false);
+
+        Context.ReplyString("Warnings...");
+        await MigrateWarnings(token).ConfigureAwait(false);
+
+        Context.ReplyString("BattlEye Kicks...");
+        await MigrateBattlEyeKicks(token).ConfigureAwait(false);
+
+        Context.ReplyString("Mutes...");
+        await MigrateMutes(token).ConfigureAwait(false);
+
+        Context.ReplyString("Bans...");
+        await MigrateBans(token).ConfigureAwait(false);
+
+        Context.ReplyString("Teamkills...");
+        await MigrateTeamkills(token).ConfigureAwait(false);
+
+        Context.ReplyString("Done.");
+    }
+
+    public async Task MigrateKicks(CancellationToken token = default)
     {
         List<Kick> kicks = new List<Kick>();
-        await db.Sql.QueryAsync("SELECT `KickID`, `Kicked`, `Kicker`, `Reason`, `Timestamp` FROM `kicks` ORDER BY `KickID`;", null, token,
+        await _mySqlProvider.QueryAsync("SELECT `KickID`, `Kicked`, `Kicker`, `Reason`, `Timestamp` FROM `kicks` ORDER BY `KickID`;", null, token,
             reader =>
             {
                 Kick kick = new Kick
@@ -84,16 +134,16 @@ internal static class Migration
         for (int i = 0; i < kicks.Count; i++)
         {
             Kick kick = kicks[i];
-            await db.AddOrUpdate(kick, token).ConfigureAwait(false);
+            await _moderationSql.AddOrUpdate(kick, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == kicks.Count - 1)
-                WarfareModule.Singleton.GlobalLogger.LogDebug("Kicks: {0}/{1}.", i + 1, kicks.Count);
+                Context.ReplyString($"Kicks: {i + 1}/{kicks.Count} ({(float)(i + 1) / kicks.Count:P2}).");
         }
     }
-    public static async Task MigrateWarnings(DatabaseInterface db, CancellationToken token = default)
+    public async Task MigrateWarnings(CancellationToken token = default)
     {
         List<Warning> warnings = new List<Warning>();
-        await db.Sql.QueryAsync("SELECT `WarnID`, `Warned`, `Warner`, `Reason`, `Timestamp` FROM `warnings` ORDER BY `WarnID`;", null, token,
+        await _mySqlProvider.QueryAsync("SELECT `WarnID`, `Warned`, `Warner`, `Reason`, `Timestamp` FROM `warnings` ORDER BY `WarnID`;", null, token,
             reader =>
             {
                 Warning warning = new Warning
@@ -131,16 +181,16 @@ internal static class Migration
         for (int i = 0; i < warnings.Count; i++)
         {
             Warning warning = warnings[i];
-            await db.AddOrUpdate(warning, token).ConfigureAwait(false);
+            await _moderationSql.AddOrUpdate(warning, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == warnings.Count - 1)
-                WarfareModule.Singleton.GlobalLogger.LogDebug("Warnings: {0}/{1}.", i + 1, warnings.Count);
+                Context.ReplyString($"Warnings: {i + 1}/{warnings.Count} ({(float)(i + 1) / warnings.Count:P2}).");
         }
     }
-    public static async Task MigrateBattlEyeKicks(DatabaseInterface db, CancellationToken token = default)
+    public async Task MigrateBattlEyeKicks(CancellationToken token = default)
     {
         List<BattlEyeKick> kicks = new List<BattlEyeKick>();
-        await db.Sql.QueryAsync("SELECT `BattleyeID`, `Kicked`, `Reason`, `Timestamp` FROM `battleye_kicks` ORDER BY `BattleyeID`;", null, token,
+        await _mySqlProvider.QueryAsync("SELECT `BattleyeID`, `Kicked`, `Reason`, `Timestamp` FROM `battleye_kicks` ORDER BY `BattleyeID`;", null, token,
             reader =>
             {
                 BattlEyeKick kick = new BattlEyeKick
@@ -173,16 +223,16 @@ internal static class Migration
         for (int i = 0; i < kicks.Count; i++)
         {
             BattlEyeKick kick = kicks[i];
-            await db.AddOrUpdate(kick, token).ConfigureAwait(false);
+            await _moderationSql.AddOrUpdate(kick, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == kicks.Count - 1)
-                WarfareModule.Singleton.GlobalLogger.LogDebug("BattlEye Kicks: {0}/{1}.", i + 1, kicks.Count);
+                Context.ReplyString($"BattlEye Kicks: {i + 1}/{kicks.Count} ({(float)(i + 1) / kicks.Count:P2}).");
         }
     }
-    public static async Task MigrateMutes(DatabaseInterface db, CancellationToken token = default)
+    public async Task MigrateMutes(CancellationToken token = default)
     {
         List<Mute> mutes = new List<Mute>();
-        await db.Sql.QueryAsync("SELECT `ID`, `Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`, `Deactivated`, `DeactivateTimestamp` FROM `muted` ORDER BY `ID`;", null, token,
+        await _mySqlProvider.QueryAsync("SELECT `ID`, `Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`, `Deactivated`, `DeactivateTimestamp` FROM `muted` ORDER BY `ID`;", null, token,
             reader =>
             {
                 int time = reader.GetInt32(4);
@@ -234,16 +284,16 @@ internal static class Migration
         for (int i = 0; i < mutes.Count; i++)
         {
             Mute mute = mutes[i];
-            await db.AddOrUpdate(mute, token).ConfigureAwait(false);
+            await _moderationSql.AddOrUpdate(mute, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == mutes.Count - 1)
-                WarfareModule.Singleton.GlobalLogger.LogDebug("Mutes: {0}/{1}.", i + 1, mutes.Count);
+                Context.ReplyString($"Mutes: {i + 1}/{mutes.Count} ({(float)(i + 1) / mutes.Count:P2}).");
         }
     }
-    public static async Task MigrateBans(DatabaseInterface db, CancellationToken token = default)
+    public async Task MigrateBans(CancellationToken token = default)
     {
         List<Ban> bans = new List<Ban>();
-        await db.Sql.QueryAsync("SELECT `BanID`, `Banned`, `Banner`, `Duration`, `Reason`, `Timestamp` FROM `bans` ORDER BY `Banned`, `Timestamp`;", null, token,
+        await _mySqlProvider.QueryAsync("SELECT `BanID`, `Banned`, `Banner`, `Duration`, `Reason`, `Timestamp` FROM `bans` ORDER BY `Banned`, `Timestamp`;", null, token,
             reader =>
             {
                 int time = reader.GetInt32(3);
@@ -279,7 +329,7 @@ internal static class Migration
                 bans.Add(ban);
             }).ConfigureAwait(false);
 
-        await db.Sql.QueryAsync("SELECT `UnbanID`, `Pardoned`, `Pardoner`, `Timestamp` FROM `unbans` ORDER BY `Pardoned`, `Timestamp`;", null, token,
+        await _mySqlProvider.QueryAsync("SELECT `UnbanID`, `Pardoned`, `Pardoner`, `Timestamp` FROM `unbans` ORDER BY `Pardoned`, `Timestamp`;", null, token,
             reader =>
             {
                 ulong steam64 = reader.GetUInt64(1);
@@ -288,7 +338,7 @@ internal static class Migration
                 for (int i = 0; i < bans.Count; ++i)
                 {
                     Ban ban = bans[i];
-                    if (ban.Player != steam64 || ban.Removed)
+                    if (ban.Player != steam64 || ban.Forgiven)
                         continue;
 
                     if (ban.WasAppliedAt(unbanTime, false))
@@ -309,16 +359,16 @@ internal static class Migration
         for (int i = 0; i < bans.Count; i++)
         {
             Ban ban = bans[i];
-            await db.AddOrUpdate(ban, token).ConfigureAwait(false);
+            await _moderationSql.AddOrUpdate(ban, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == bans.Count - 1)
-                WarfareModule.Singleton.GlobalLogger.LogDebug("Bans: {0}/{1}.", i + 1, bans.Count);
+                Context.ReplyString($"Bans: {i + 1}/{bans.Count} ({(float)(i + 1) / bans.Count:P2}).");
         }
     }
-    public static async Task MigrateTeamkills(DatabaseInterface db, CancellationToken token = default)
+    public async Task MigrateTeamkills(CancellationToken token = default)
     {
         List<Teamkill> teamkills = new List<Teamkill>();
-        await db.Sql.QueryAsync("SELECT `TeamkillID`, `Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp` FROM `teamkills` ORDER BY `TeamkillID`;", null, token,
+        await _mySqlProvider.QueryAsync("SELECT `TeamkillID`, `Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp` FROM `teamkills` ORDER BY `TeamkillID`;", null, token,
             reader =>
             {
                 Teamkill teamkill = new Teamkill
@@ -365,10 +415,11 @@ internal static class Migration
         for (int i = 0; i < teamkills.Count; i++)
         {
             Teamkill teamkill = teamkills[i];
-            await db.AddOrUpdate(teamkill, token).ConfigureAwait(false);
+            await _moderationSql.AddOrUpdate(teamkill, token).ConfigureAwait(false);
 
             if (i % 10 == 0 || i == teamkills.Count - 1)
-                WarfareModule.Singleton.GlobalLogger.LogDebug("Teamkills: {0}/{1}.", i + 1, teamkills.Count);
+                Context.ReplyString($"Teamkills: {i + 1}/{teamkills.Count} ({(float)(i + 1) / teamkills.Count:P2}).");
         }
     }
 }
+#endif

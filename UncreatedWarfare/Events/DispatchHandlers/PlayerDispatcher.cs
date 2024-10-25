@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Configuration;
+﻿using System.Diagnostics;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Layouts.Teams;
@@ -72,7 +73,12 @@ partial class EventDispatcher2
     /// </summary>
     private void PlayerQuestsOnGroupChanged(PlayerQuests sender, CSteamID oldGroupId, EPlayerGroupRank oldGroupRank, CSteamID newGroupId, EPlayerGroupRank newGroupRank)
     {
-        WarfarePlayer player = _playerService.GetOnlinePlayer(sender);
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(sender);
+        if (player == null)
+        {
+            // this can get invoked before the player's WarfarePlayer gets created when moving them into their team.
+            return;
+        }
 
         ITeamManager<Team>? teamManager = _warfare.IsLayoutActive() ? _warfare.GetActiveLayout().TeamManager : null;
 

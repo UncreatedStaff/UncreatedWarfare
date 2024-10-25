@@ -166,7 +166,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(_translations.DutyOffFeedback);
             _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOffBroadcast, Context.Player);
 
-            _logger.LogInformation("{0} ({1}) went off duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).", Context.Player.Names.PlayerName, Context.CallerId, isOwner, isAdmin, isTrial, isStaff);
+            _logger.LogInformation("{0} ({1}) went off duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).", Context.Player.Names.GetDisplayNameOrPlayerName(), Context.CallerId, isOwner, isAdmin, isTrial, isStaff);
             ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", Context.CallerId.m_SteamID);
 
             // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, false);
@@ -176,7 +176,7 @@ public class DutyCommand : IExecutableCommand
             Context.Reply(_translations.DutyOnFeedback);
             _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOnBroadcast, Context.Player);
 
-            _logger.LogInformation("{0} ({1}) went on duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).", Context.Player.Names.PlayerName, Context.CallerId, isOwner, isAdmin, isTrial, isStaff);
+            _logger.LogInformation("{0} ({1}) went on duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).", Context.Player.Names.GetDisplayNameOrPlayerName(), Context.CallerId, isOwner, isAdmin, isTrial, isStaff);
             ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", Context.CallerId.m_SteamID);
 
             // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, true);

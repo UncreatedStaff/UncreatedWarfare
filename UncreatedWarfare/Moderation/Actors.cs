@@ -63,7 +63,7 @@ public class PlayerActor : IModerationActor
     public override string ToString() => Id.ToString(CultureInfo.InvariantCulture);
     public virtual async ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default)
     {
-        return (await database.GetUsernames(new CSteamID(Id), true, token)).PlayerName;
+        return (await database.GetUsernames(new CSteamID(Id), true, token)).GetDisplayNameOrPlayerName();
     }
     public virtual async ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
     {
@@ -108,7 +108,7 @@ public class DiscordActor : IModerationActor
         // todo ulong steam64 = await database.Sql.GetSteam64(Id, token).ConfigureAwait(false);
         ulong steam64 = 0;
         if (steam64 != 0)
-            return (await database.GetUsernames(new CSteamID(steam64), true, token).ConfigureAwait(false)).PlayerName;
+            return (await database.GetUsernames(new CSteamID(steam64), true, token).ConfigureAwait(false)).GetDisplayNameOrPlayerName();
 
         return "<@" + Id + ">";
     }

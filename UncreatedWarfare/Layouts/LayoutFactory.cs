@@ -20,6 +20,7 @@ public class LayoutFactory : IHostedService
 {
     private readonly WarfareModule _warfare;
     private readonly ILogger<LayoutFactory> _logger;
+    private UniTask _setupTask;
 
     public LayoutFactory(WarfareModule warfare, ILogger<LayoutFactory> logger)
     {
@@ -28,10 +29,11 @@ public class LayoutFactory : IHostedService
     }
 
     /// <inheritdoc />
-    public async UniTask StartAsync(CancellationToken token)
+    public UniTask StartAsync(CancellationToken token)
     {
         SceneManager.sceneLoaded += OnSceneLoded;
         Level.onPostLevelLoaded += OnLevelLoaded;
+        return UniTask.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -58,7 +60,7 @@ public class LayoutFactory : IHostedService
         if (scene.buildIndex != Level.BUILD_INDEX_GAME)
             return;
 
-        UniTask.Create(async () =>
+        _setupTask = UniTask.Create(async () =>
         {
             try
             {
@@ -72,7 +74,7 @@ public class LayoutFactory : IHostedService
                 _logger.LogError(ex, "Error starting layout.");
                 _ = _warfare.ShutdownAsync($"Error starting layout - {Accessor.Formatter.Format(ex.GetType())}");
             }
-        });
+        }).Preserve();
     }
 
     private void OnLevelLoaded(int level)
@@ -84,6 +86,11 @@ public class LayoutFactory : IHostedService
         {
             try
             {
+                if (_setupTask.Status == UniTaskStatus.Pending)
+                {
+                    await _setupTask;
+                }
+
                 // invoke ILevelHostedService
                 await _warfare.InvokeLevelLoaded(CancellationToken.None);
 
@@ -305,6 +312,16 @@ public class LayoutFactory : IHostedService
         }
 
         int index = RandomUtility.GetIndex(layouts, x => x.Weight);
+
+        // dispose other config providers
+        for (int i = 0; i < layouts.Count; ++i)
+        {
+            if (i == index)
+                continue;
+
+            (layouts[i].Layout as IDisposable)?.Dispose();
+        }
+
         return layouts[index];
     }
 

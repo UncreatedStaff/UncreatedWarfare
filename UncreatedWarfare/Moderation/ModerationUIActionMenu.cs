@@ -13,6 +13,7 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using UnityEngine.Networking;
@@ -128,7 +129,7 @@ partial class ModerationUI
             data.Actors.AddRange(data.PrimaryEditingEntry.Actors);
             data.Evidence.AddRange(data.PrimaryEditingEntry.Evidence);
 
-            if (data.PendingType == ModerationEntryType.None && data.PendingPreset == PresetType.None)
+            if (data is { PendingType: ModerationEntryType.None, PendingPreset: PresetType.None })
             {
                 Logger!.LogWarning("Invalid moderation types.");
                 return;
@@ -167,7 +168,7 @@ partial class ModerationUI
 
             ModerationSelectedActor mainActor = ModerationActionActors[0];
             mainActor.Root.SetVisibility(c, true);
-            mainActor.Name.SetText(c, player.Names.PlayerName);
+            mainActor.Name.SetText(c, player.Names.GetDisplayNameOrPlayerName());
             mainActor.YouButton.SetVisibility(c, false);
             mainActor.Steam64Input.SetText(c, player.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
             mainActor.RoleInput.SetText(c, RelatedActor.RolePrimaryAdmin);
@@ -182,7 +183,7 @@ partial class ModerationUI
             mainEvidence.PreviewRoot.SetVisibility(c, false);
             mainEvidence.PreviewName.SetVisibility(c, false);
             mainEvidence.NoPreviewName.SetText(c, string.Empty);
-            mainEvidence.ActorName.SetText(c, player.Names.PlayerName);
+            mainEvidence.ActorName.SetText(c, player.Names.GetDisplayNameOrPlayerName());
             mainEvidence.TimestampInput.SetText(c, evidence.Timestamp.UtcDateTime.ToString(DateTimeFormatInput));
             mainEvidence.MessageInput.SetText(c, string.Empty);
             mainEvidence.LinkInput.SetText(c, string.Empty);
@@ -200,7 +201,7 @@ partial class ModerationUI
             {
                 UniTask.Create(async () =>
                 {
-                    string? url = null;// todo await player.GetProfilePictureURL(AvatarSize.Medium, player.DisconnectToken);
+                    string? url = await _moderationSql.GetAvatarAsync(player.Steam64, AvatarSize.Medium, token: player.DisconnectToken);
                     mainActor.ProfilePicture.SetImage(c, url ?? string.Empty);
                 });
             }
@@ -339,7 +340,7 @@ partial class ModerationUI
         {
             hasMute = data.PrimaryEditingEntry is Mute || data.SecondaryEditingEntry is Mute;
             hasAssetBan = data.PrimaryEditingEntry is AssetBan || data.SecondaryEditingEntry is AssetBan;
-            isNote = data.PrimaryEditingEntry is Note && data.SecondaryEditingEntry is Note;
+            isNote = data is { PrimaryEditingEntry: Note, SecondaryEditingEntry: Note };
             hasRemoveable = data.PrimaryEditingEntry is { Removed: false } || data.SecondaryEditingEntry is { Removed: false };
             hasForgiveable = hasRemoveable && (data.PrimaryEditingEntry is IForgiveableModerationEntry forgiveable && forgiveable.IsApplied(true)
                           || data.SecondaryEditingEntry is IForgiveableModerationEntry forgiveable2 && forgiveable2.IsApplied(true));
@@ -419,18 +420,31 @@ partial class ModerationUI
             double rep;
             if (editingExisting)
             {
-                if (data.PrimaryEditingEntry != null && data.SecondaryEditingEntry != null)
+                if (data is { PrimaryEditingEntry: not null, SecondaryEditingEntry: not null })
+                {
                     rep = (data.PrimaryEditingEntry.Reputation + data.SecondaryEditingEntry.Reputation) / 2d;
+                }
                 else if (data.SecondaryEditingEntry != null)
+                {
                     rep = data.SecondaryEditingEntry.Reputation;
+                }
                 else if (data.PrimaryEditingEntry != null)
+                {
                     rep = data.PrimaryEditingEntry.Reputation;
-                else rep = 0d;
+                }
+                else
+                {
+                    rep = 0d;
+                }
             }
             else if (data.PendingPresetValue != null)
+            {
                 rep = data.PendingPresetValue.Reputation;
+            }
             else
+            {
                 rep = GetDefaultRep(data.PendingType);
+            }
 
             if (data.PrimaryEditingEntry != null)
             {
@@ -624,7 +638,7 @@ partial class ModerationUI
                 if (data.ActionVersion != v)
                     return;
 
-                // todo await _moderationSql.CacheAvatars(steamIds, player.DisconnectToken);
+                await _moderationSql.CacheAvatarsAsync(steamIds, AvatarSize.Medium, player.DisconnectToken);
                 ModerationActionAddActorButton.SetState(c, data.Actors.Count < ModerationActionActors.Length);
 
                 if (data.ActionVersion != v)
@@ -842,18 +856,31 @@ partial class ModerationUI
 
         if (data.PrimaryEditingEntry.IsAppealable)
         {
-            if (string.IsNullOrWhiteSpace(data.PrimaryEditingEntry.Message))
-                data.PrimaryEditingEntry.Message = "Appeal at 'discord.gg/" + _discordInviteCode + "'.";
-            else if (data.PrimaryEditingEntry.Message!.IndexOf(".gg/" + _discordInviteCode, StringComparison.InvariantCultureIgnoreCase) == -1 &&
-                     data.PrimaryEditingEntry.Message!.IndexOf("unappealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
-                     data.PrimaryEditingEntry.Message!.IndexOf("un-appealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
-                     data.PrimaryEditingEntry.Message!.IndexOf("do not appeal", StringComparison.InvariantCultureIgnoreCase) == -1)
+            if (!string.IsNullOrEmpty(_discordInviteCode))
             {
-                if (data.PrimaryEditingEntry.Message[^1] != '.')
-                    data.PrimaryEditingEntry.Message += ".";
-                if (data.PrimaryEditingEntry.Message[^1] != ' ')
-                    data.PrimaryEditingEntry.Message += " ";
-                data.PrimaryEditingEntry.Message += "Appeal at 'discord.gg/" + _discordInviteCode + "'.";
+                if (string.IsNullOrWhiteSpace(data.PrimaryEditingEntry.Message))
+                {
+                    data.PrimaryEditingEntry.Message = "Appeal at 'discord.gg/" + _discordInviteCode + "'.";
+                }
+                else if (data.PrimaryEditingEntry.Message!.IndexOf(".gg/" + _discordInviteCode, StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                         data.PrimaryEditingEntry.Message!.IndexOf("unappealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                         data.PrimaryEditingEntry.Message!.IndexOf("un-appealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                         data.PrimaryEditingEntry.Message!.IndexOf("no appeal", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                         data.PrimaryEditingEntry.Message!.IndexOf("noappeal", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                         data.PrimaryEditingEntry.Message!.IndexOf("no-appeal", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                         data.PrimaryEditingEntry.Message!.IndexOf("dnub", StringComparison.InvariantCultureIgnoreCase) == -1 && // Do Not UnBan
+                         data.PrimaryEditingEntry.Message!.IndexOf("do not appeal", StringComparison.InvariantCultureIgnoreCase) == -1)
+                {
+                    if (!data.PrimaryEditingEntry.Message.EndsWith(". "))
+                    {
+                        if (data.PrimaryEditingEntry.Message.EndsWith('.'))
+                            data.PrimaryEditingEntry.Message += " Appeal at 'discord.gg/" + _discordInviteCode + "'.";
+                    }
+                    else
+                    {
+                        data.PrimaryEditingEntry.Message += ". Appeal at 'discord.gg/" + _discordInviteCode + "'.";
+                    }
+                }
             }
 
             if (data.SecondaryEditingEntry != null)
@@ -917,7 +944,7 @@ partial class ModerationUI
             WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNull(data.PrimaryEditingEntry.Player);
             if (onlinePlayer != null)
             {
-                // todo onlinePlayer.AddReputation((int)Math.Round(data.PrimaryEditingEntry.PendingReputation));
+                onlinePlayer.AddReputation((int)Math.Round(data.PrimaryEditingEntry.PendingReputation));
                 data.PrimaryEditingEntry.PendingReputation = 0d;
             }
         }
@@ -926,7 +953,7 @@ partial class ModerationUI
             WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNull(data.SecondaryEditingEntry.Player);
             if (onlinePlayer != null)
             {
-                // todo onlinePlayer.AddReputation((int)Math.Round(data.SecondaryEditingEntry.PendingReputation));
+                onlinePlayer.AddReputation((int)Math.Round(data.SecondaryEditingEntry.PendingReputation));
                 data.SecondaryEditingEntry.PendingReputation = 0d;
             }
         }
@@ -1647,17 +1674,8 @@ partial class ModerationUI
         RelatedActor actor = data.Actors[index];
         data.Actors[index] = new RelatedActor(actor.Role, !actor.Admin, Actors.GetActor(ucPlayer.Steam64));
         ModerationActionActors[index].Steam64Input.SetText(player, ucPlayer.Steam64.m_SteamID.ToString("D17", CultureInfo.InvariantCulture));
-        ModerationActionActors[index].Name.SetText(player, ucPlayer.Names.PlayerName);
-        if (_moderationSql.TryGetAvatar(ucPlayer.Steam64.m_SteamID, AvatarSize.Medium, out string avatar))
-            ModerationActionActors[index].ProfilePicture.SetImage(player, avatar);
-        else
-        {
-            UniTask.Create(async () =>
-            {
-                string? pfp = null; // todo await ucPlayer.GetProfilePictureURL(AvatarSize.Medium, ucPlayer.DisconnectToken);
-                ModerationActionActors[index].ProfilePicture.SetImage(player, pfp ?? string.Empty);
-            });
-        }
+        ModerationActionActors[index].Name.SetText(player, ucPlayer.Names.GetDisplayNameOrPlayerName());
+        ModerationActionActors[index].ProfilePicture.SetImage(player, ucPlayer.SteamSummary.AvatarUrlMedium);
     }
     private void OnTypedActorRole(UnturnedTextBox textbox, Player player, string text)
     {
@@ -1683,7 +1701,7 @@ partial class ModerationUI
         data.Actors[index] = new RelatedActor(actor.Role, !actor.Admin, moderationActor);
         ModerationActionActors[index].Steam64Input.SetText(player, steamId.m_SteamID.ToString("D17", CultureInfo.InvariantCulture));
         if (_moderationSql.TryGetUsernames(moderationActor, out PlayerNames un))
-            ModerationActionActors[index].Name.SetText(player, un.PlayerName);
+            ModerationActionActors[index].Name.SetText(player, un.GetDisplayNameOrPlayerName());
         else
         {
             UniTask.Create(async () =>
@@ -1705,6 +1723,9 @@ partial class ModerationUI
     }
     private void OnTypedEvidenceLink(UnturnedTextBox textbox, Player player, string text)
     {
+        // remove webp format specifier since unity doesn't support it
+        text = text.Replace("format=webp&", string.Empty).Replace("?format=webp", string.Empty).Replace("&format=webp", string.Empty);
+
         if (!GetEvidenceDetails(player, x => x.LinkInput == textbox, out int index, out _, out ModerationData data))
             return;
 
@@ -1737,7 +1758,7 @@ partial class ModerationUI
                 if (req.GetResponseHeader("Content-Type") is { } contentType && contentType.StartsWith("image/"))
                 {
                     Logger!.LogConditional("  Image");
-                    data.Evidence[index] = new Evidence(text, evidence.URL, null, true, evidence.Actor, evidence.Timestamp);
+                    data.Evidence[index] = new Evidence(text, evidence.URL, data.Evidence[index].SavedLocation, true, evidence.Actor, evidence.Timestamp);
                     ui.PreviewName.SetVisibility(player, true);
                     ui.NoPreviewName.SetVisibility(player, false);
                     ui.PreviewName.SetText(player, name);
@@ -1804,7 +1825,7 @@ partial class ModerationUI
         data.Evidence[index] = new Evidence(evidence.URL, evidence.Message, evidence.SavedLocation, evidence.Image, moderationActor, evidence.Timestamp);
         ModerationActionEvidence[index].Steam64Input.SetText(player, steamId.m_SteamID.ToString("D17", CultureInfo.InvariantCulture));
         if (_moderationSql.TryGetUsernames(moderationActor, out PlayerNames un))
-            ModerationActionEvidence[index].ActorName.SetText(player, un.PlayerName);
+            ModerationActionEvidence[index].ActorName.SetText(player, un.GetDisplayNameOrPlayerName());
         else
         {
             UniTask.Create(async () =>
@@ -1832,6 +1853,6 @@ partial class ModerationUI
         Evidence evidence = data.Evidence[index];
         data.Evidence[index] = new Evidence(evidence.URL, evidence.Message, evidence.SavedLocation, evidence.Image, Actors.GetActor(ucPlayer.Steam64), evidence.Timestamp);
         ModerationActionEvidence[index].Steam64Input.SetText(player, ucPlayer.Steam64.m_SteamID.ToString("D17", CultureInfo.InvariantCulture));
-        ModerationActionEvidence[index].ActorName.SetText(player, ucPlayer.Names.PlayerName);
+        ModerationActionEvidence[index].ActorName.SetText(player, ucPlayer.Names.GetDisplayNameOrPlayerName());
     }
 }

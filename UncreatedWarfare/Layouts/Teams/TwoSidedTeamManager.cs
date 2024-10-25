@@ -6,7 +6,6 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using Stripe;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
@@ -164,9 +163,19 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             _opfor = 1;
 
         _logger.LogInformation("Teams: {0} (Role: {1}) vs {2} (Role: {3})", _teams[0].Faction.Name, team1Role, _teams[1].Faction.Name, team2Role);
+    }
 
-        await UniTask.SwitchToMainThread(token);
+    /// <inheritdoc />
+    public UniTask BeginAsync(CancellationToken token = default)
+    {
         CreateInGameGroups();
+        return UniTask.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public UniTask EndAsync(CancellationToken token = default)
+    {
+        return UniTask.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -273,6 +282,6 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
         GroupManager.addGroup(new CSteamID(1), AllTeams[0].Faction.Name);
         GroupManager.addGroup(new CSteamID(2), AllTeams[1].Faction.Name);
-        GroupManager.addGroup(new CSteamID(3), "Admins");
+        GroupManager.addGroup(AdminGroupId, "Admins");
     }
 }

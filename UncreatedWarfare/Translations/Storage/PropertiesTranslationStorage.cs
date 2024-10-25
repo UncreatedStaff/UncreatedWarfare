@@ -40,11 +40,13 @@ public class PropertiesTranslationStorage : ITranslationStorage
         string languageFileName = GetFilePath(language?.Code ?? _languageService.DefaultLanguageCode);
         using PropertiesWriter writer = new PropertiesWriter(languageFileName);
 
+        bool isFirst = true;
         foreach (Translation translation in translations)
         {
-            if (writer.Stream.Position != 0)
+            if (!isFirst)
                 writer.WriteLine();
 
+            isFirst = false;
             WriteTranslation(writer, translation, language);
         }
     }

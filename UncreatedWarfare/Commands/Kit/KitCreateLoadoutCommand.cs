@@ -16,6 +16,7 @@ internal class KitCreateLoadoutCommand : IExecutableCommand
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly IKitsDbContext _dbContext;
+    private readonly IUserDataService _userDataService;
     public CommandContext Context { get; set; }
 
     public KitCreateLoadoutCommand(IServiceProvider serviceProvider)
@@ -23,6 +24,7 @@ internal class KitCreateLoadoutCommand : IExecutableCommand
         _kitManager = serviceProvider.GetRequiredService<KitManager>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
         _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
+        _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
 
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
     }
@@ -59,7 +61,7 @@ internal class KitCreateLoadoutCommand : IExecutableCommand
             return;
         }
 
-        IPlayer player = (IPlayer?)onlinePlayer ?? await F.GetPlayerOriginalNamesAsync(steam64.m_SteamID, CancellationToken.None).ConfigureAwait(false);
+        IPlayer player = (IPlayer?)onlinePlayer ?? await _userDataService.GetUsernamesAsync(steam64.m_SteamID, CancellationToken.None).ConfigureAwait(false);
         Context.Reply(_translations.LoadoutCreated, @class, player, player, loadout);
     }
 }

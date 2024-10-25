@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Commands;
@@ -351,6 +352,9 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                 command = helpCommand;
         }
 
+#if DEBUG
+        Stopwatch sw = Stopwatch.StartNew();
+#endif
         if (command.VanillaCommand != null)
         {
             await ExecuteVanillaCommandAsync(user, command, args, originalMessage, waitTasks, token);
@@ -358,6 +362,10 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         }
 
         await ExecuteCommandAsync(command, user, args, originalMessage, offset, waitTasks, token);
+#if DEBUG
+        sw.Stop();
+        _logger.LogDebug("Comamnd {0} exited in {1} ms: /{2} with args: {3}.", command.Type, sw.GetElapsedMilliseconds(), command.CommandName, args);
+#endif
     }
 
     private static void BacktrackSubCommand(CommandInfo command, ref string[] args, out int offset)

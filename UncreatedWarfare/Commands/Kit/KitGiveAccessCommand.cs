@@ -7,7 +7,6 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management.Legacy;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -18,6 +17,7 @@ internal class KitGiveAccessCommand : IExecutableCommand
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly ChatService _chatService;
+    private readonly IUserDataService _userDataService;
     public CommandContext Context { get; set; }
 
     public KitGiveAccessCommand(IServiceProvider serviceProvider)
@@ -25,6 +25,7 @@ internal class KitGiveAccessCommand : IExecutableCommand
         _kitManager = serviceProvider.GetRequiredService<KitManager>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
         _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
@@ -50,7 +51,7 @@ internal class KitGiveAccessCommand : IExecutableCommand
 
         bool hasAccess = await _kitManager.HasAccess(kit, steam64, token).ConfigureAwait(false);
 
-        PlayerNames playerName = onlinePlayer?.Names ?? await F.GetPlayerOriginalNamesAsync(steam64.m_SteamID, token).ConfigureAwait(false);
+        PlayerNames playerName = onlinePlayer?.Names ?? await _userDataService.GetUsernamesAsync(steam64.m_SteamID, token).ConfigureAwait(false);
         IPlayer player = (IPlayer?)onlinePlayer ?? playerName;
 
         if (hasAccess)

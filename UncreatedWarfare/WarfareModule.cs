@@ -43,6 +43,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.UI;
@@ -266,6 +267,7 @@ public sealed class WarfareModule
             }
             catch (Exception ex)
             {
+                await UniTask.SwitchToMainThread();
                 CommandWindow.LogError(ExceptionFormatter.FormatException(ex, ServiceProvider.Resolve<StackTraceCleaner>()));
                 UnloadModule();
                 Provider.shutdown();
@@ -641,6 +643,10 @@ public sealed class WarfareModule
             .AsSelf()
             .SingleInstance();
 
+        bldr.RegisterType<UserDataService>()
+            .As<IUserDataService>()
+            .SingleInstance();
+
         bldr.Register(sp => WarfareDbContext.GetOptions(sp.Resolve<IServiceProvider>()))
             .SingleInstance();
 
@@ -755,6 +761,7 @@ public sealed class WarfareModule
 
         if (!connected)
         {
+            await UniTask.SwitchToMainThread(token);
             _logger.LogError("Unable to connect to MySQL database. Please reconfigure and restart.");
             UnloadModule();
             Provider.shutdown();

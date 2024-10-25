@@ -14,6 +14,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players.Components;
 using Uncreated.Warfare.Players.PendingTasks;
 using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.UI;
@@ -58,7 +59,8 @@ public class PlayerService : IPlayerService
         typeof(SquadPlayerComponent),
         typeof(GodPlayerComponent),
         typeof(PlayerJumpComponent),
-        typeof(VanishPlayerComponent)
+        typeof(VanishPlayerComponent),
+        typeof(PlayerReputationComponent)
     ];
 
     /// <summary>

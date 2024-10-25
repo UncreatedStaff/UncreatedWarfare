@@ -127,7 +127,8 @@ internal static class ContextualTypeResolver
         for (int i = 0; i < _allTypesCache.Count; ++i)
         {
             Type t = _allTypesCache[i];
-            if (!t.Name.Equals(typeName, StringComparison.Ordinal))
+
+            if (!string.Equals(t.FullName, typeName, StringComparison.Ordinal) && !string.Equals(t.Name, typeName, StringComparison.Ordinal))
                 continue;
 
             if (expectedBaseType != null && !expectedBaseType.IsAssignableFrom(t))

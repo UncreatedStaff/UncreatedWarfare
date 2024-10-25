@@ -25,6 +25,8 @@ public class StructureCommand : IExecutableCommand
     private readonly BuildableSaver _saver;
     private readonly VehicleService _vehicleService;
     private readonly EventDispatcher2 _eventDispatcher;
+    private readonly ITeamManager<Team> _teamManager;
+    private readonly IUserDataService _userDataService;
     private readonly StructureTranslations _translations;
     private const string Syntax = "/structure <save|remove|examine|pop|set>";
     private const string Help = "Managed saved structures.";
@@ -38,11 +40,15 @@ public class StructureCommand : IExecutableCommand
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public StructureCommand(BuildableSaver saver, VehicleService vehicleService, TranslationInjection<StructureTranslations> translations, EventDispatcher2 eventDispatcher)
+    public StructureCommand(BuildableSaver saver, VehicleService vehicleService,
+        TranslationInjection<StructureTranslations> translations, EventDispatcher2 eventDispatcher,
+        ITeamManager<Team> teamManager, IUserDataService userDataService)
     {
         _saver = saver;
         _vehicleService = vehicleService;
         _eventDispatcher = eventDispatcher;
+        _teamManager = teamManager;
+        _userDataService = userDataService;
         _translations = translations.Value;
     }
 
@@ -487,20 +493,20 @@ public class StructureCommand : IExecutableCommand
     private async Task ExamineVehicle(InteractableVehicle vehicle, WarfarePlayer player, bool sendurl, CancellationToken token = default)
     {
         GameThread.AssertCurrent();
-        if (vehicle.lockedOwner == default || vehicle.lockedOwner == Steamworks.CSteamID.Nil)
+        if (vehicle.lockedOwner.m_SteamID == 0)
         {
             Context.Reply(_translations.StructureExamineNotLocked);
         }
         else
         {
-            Team team = Team.NoTeam; // todo vehicle.lockedGroup.m_SteamID.GetTeam();
+            Team team = _teamManager.GetTeam(vehicle.lockedGroup);
             ulong prevOwner = vehicle.transform.TryGetComponent(out VehicleComponent vcomp) ? vcomp.PreviousOwner : 0ul;
-            IPlayer names = await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ConfigureAwait(false);
+            IPlayer names = await _userDataService.GetUsernamesAsync(vehicle.lockedOwner.m_SteamID, token).ConfigureAwait(false);
             string prevOwnerName;
             if (prevOwner != 0ul)
             {
-                PlayerNames pl = await F.GetPlayerOriginalNamesAsync(prevOwner, token).ConfigureAwait(false);
-                prevOwnerName = pl.PlayerName;
+                PlayerNames pl = await _userDataService.GetUsernamesAsync(prevOwner, token).ConfigureAwait(false);
+                prevOwnerName = pl.GetDisplayNameOrPlayerName();
             }
             else prevOwnerName = "None";
             await UniTask.SwitchToMainThread(token);
@@ -512,7 +518,7 @@ public class StructureCommand : IExecutableCommand
             else
             {
                 OfflinePlayer pl = new OfflinePlayer(vehicle.lockedOwner);
-                await pl.CacheUsernames(token).ConfigureAwait(false);
+                await pl.CacheUsernames(_userDataService, token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
                 Context.Reply(_translations.VehicleExamineLastOwnerChat, vehicle.asset, names, pl, team.Faction, prevOwnerName, prevOwner);
             }
@@ -529,8 +535,9 @@ public class StructureCommand : IExecutableCommand
                 Context.Reply(_translations.StructureExamineNotExaminable);
                 return;
             }
-            Team team = Team.NoTeam; // todo data.owner.GetTeamFromPlayerSteam64ID()
-            IPlayer names = await F.GetPlayerOriginalNamesAsync(data.owner, token).ConfigureAwait(false);
+
+            Team team = _teamManager.GetTeam(new CSteamID(data.group));
+            IPlayer names = await _userDataService.GetUsernamesAsync(data.owner, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             if (sendurl)
             {
@@ -540,7 +547,7 @@ public class StructureCommand : IExecutableCommand
             else
             {
                 OfflinePlayer pl = new OfflinePlayer(new CSteamID(data.owner));
-                await pl.CacheUsernames(token).ConfigureAwait(false);
+                await pl.CacheUsernames(_userDataService, token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
                 Context.Reply(_translations.StructureExamineLastOwnerChat, data.barricade.asset, names, pl, team.Faction);
             }
@@ -561,8 +568,8 @@ public class StructureCommand : IExecutableCommand
                 Context.Reply(_translations.StructureExamineNotExaminable);
                 return;
             }
-            Team team = Team.NoTeam; // todo data.owner.GetTeamFromPlayerSteam64ID()
-            IPlayer names = await F.GetPlayerOriginalNamesAsync(data.owner, token).ConfigureAwait(false);
+            Team team = _teamManager.GetTeam(new CSteamID(data.group));
+            IPlayer names = await _userDataService.GetUsernamesAsync(data.owner, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);
             if (sendurl)
             {
@@ -571,7 +578,7 @@ public class StructureCommand : IExecutableCommand
             else
             {
                 OfflinePlayer pl = new OfflinePlayer(new CSteamID(data.owner));
-                await pl.CacheUsernames(token).ConfigureAwait(false);
+                await pl.CacheUsernames(_userDataService, token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
                 Context.Reply(_translations.StructureExamineLastOwnerChat, data.structure.asset, names, pl, team.Faction);
             }

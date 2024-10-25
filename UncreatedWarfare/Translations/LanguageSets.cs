@@ -39,7 +39,7 @@ public class LanguageSets
 
     public LanguageSetEnumerator PlayersWhere(Func<WarfarePlayer, bool>? selector)
     {
-        IReadOnlyList<WarfarePlayer> playerList = _playerService.GetThreadsafePlayerList();
+        IReadOnlyList<WarfarePlayer> playerList = GameThread.IsCurrent ? _playerService.OnlinePlayers : _playerService.GetThreadsafePlayerList();
 
         bool pool = GameThread.IsCurrent;
 
@@ -87,9 +87,65 @@ public class LanguageSets
         WarfarePlayer[] playersArray = players.GetUnderlyingArrayOrCopy();
         for (int i = 0; i < sets.Count; ++i)
         {
-            LanguageSet set = sets[i];
-            set.SetPlayers(new ArraySegment<WarfarePlayer>(playersArray, set.StartIndex, set.Count));
-            sets[i] = set;
+            LanguageSet langSet = sets[i];
+            langSet.SetPlayers(new ArraySegment<WarfarePlayer>(playersArray, langSet.StartIndex, langSet.Count));
+            sets[i] = langSet;
+        }
+
+        return new LanguageSetEnumerator(sets, players, pool);
+    }
+
+    public LanguageSetEnumerator PlayersIn(IEnumerable<WarfarePlayer> set)
+    {
+        bool pool = GameThread.IsCurrent;
+
+        List<LanguageSet> sets = pool ? ListPool<LanguageSet>.claim() : new List<LanguageSet>(4);
+        List<WarfarePlayer> players = pool ? ListPool<WarfarePlayer>.claim() : new List<WarfarePlayer>(8);
+
+        foreach (WarfarePlayer player in set)
+        {
+            if (!player.IsOnline)
+                continue;
+
+            bool found = false;
+            for (int i = 0; i < sets.Count; ++i)
+            {
+                LanguageSet languageSet = sets[i];
+                if (!languageSet.Includes(player))
+                {
+                    continue;
+                }
+
+                players.Insert(languageSet.StartIndex + languageSet.Count, player);
+                ++languageSet.Count;
+                sets[i] = languageSet;
+                for (int j = i + 1; j < sets.Count; ++j)
+                {
+                    languageSet = sets[j];
+                    ++languageSet.StartIndex;
+                    sets[j] = languageSet;
+                }
+
+                found = true;
+                break;
+            }
+
+            if (found)
+                continue;
+
+            LanguageSet newSet = new LanguageSet(player.Locale.LanguageInfo, player.Locale.CultureInfo, player.Save.IMGUI, player.Team);
+            newSet.StartIndex = players.Count;
+            newSet.Count = 1;
+            players.Add(player);
+            sets.Add(newSet);
+        }
+
+        WarfarePlayer[] playersArray = players.GetUnderlyingArrayOrCopy();
+        for (int i = 0; i < sets.Count; ++i)
+        {
+            LanguageSet langSet = sets[i];
+            langSet.SetPlayers(new ArraySegment<WarfarePlayer>(playersArray, langSet.StartIndex, langSet.Count));
+            sets[i] = langSet;
         }
 
         return new LanguageSetEnumerator(sets, players, pool);

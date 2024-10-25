@@ -140,7 +140,7 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
                 {
                     QuestTemplate? tracker = null;// todo QuestManager.CreateTracker(e.Player, req.UnlockPresets[r]);
                     if (tracker == null)
-                        _logger.LogWarning("Failed to create tracker for kit {0}, player {1}.", kit.InternalName, e.Player.Names.PlayerName);
+                        _logger.LogWarning("Failed to create tracker for kit {0}, player {1}.", kit.InternalName, e.Player.Names.GetDisplayNameOrPlayerName());
                 }
             }
         }

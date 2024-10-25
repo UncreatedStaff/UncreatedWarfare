@@ -1,15 +1,12 @@
 ﻿using DanielWillett.ReflectionTools;
-using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 
@@ -112,62 +109,24 @@ public static class F
         }
     }
 
-    public static ValueTask<PlayerNames> GetPlayerOriginalNamesAsync(ulong player, CancellationToken token = default)
-    {
-        return new ValueTask<PlayerNames>(PlayerNames.Nil);
-        //UCPlayer? pl = UCPlayer.FromID(player);
-        //if (pl != null)
-        //{
-        //    Data.ModerationSql.UpdateUsernames(player, pl.Name);
-        //    return new ValueTask<PlayerNames>(pl.Name);
-        //}
-        //
-        //return new CSteamID(player).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
-        //    ? new ValueTask<PlayerNames>(Data.DatabaseManager.GetUsernamesAsync(player, token))
-        //    : new ValueTask<PlayerNames>(PlayerNames.Nil);
-    }
-
     /// <remarks>Write-locks <see cref="ZoneList"/> if <paramref name="zones"/> is <see langword="true"/>.</remarks>
     public static string GetClosestLocationName(Vector3 point, bool zones = false, bool shortNames = false)
     {
-        return new GridLocation(in point).ToString();
-        //if (zones)
-        //{
-        //    ZoneList? list = Data.Singletons.GetSingleton<ZoneList>();
-        //    if (list != null)
-        //    {
-        //        list.WriteWait();
-        //        try
-        //        {
-        //            string? val = null;
-        //            float smallest = -1f;
-        //            Vector2 point2d = new Vector2(point.x, point.z);
-        //            for (int i = 0; i < list.Items.Count; ++i)
-        //            {
-        //                SqlItem<Zone> proxy = list.Items[i];
-        //                Zone? z = proxy.Item;
-        //                if (z != null)
-        //                {
-        //                    float amt = MathUtility.SquaredDistance(in point, z.Center, true);
-        //                    if (smallest < 0f || amt < smallest)
-        //                    {
-        //                        val = shortNames ? z.ShortName ?? z.Name : z.Name;
-        //                        smallest = amt;
-        //                    }
-        //                }
-        //            }
-        //
-        //            if (val != null)
-        //                return val;
-        //        }
-        //        finally
-        //        {
-        //            list.WriteRelease();
-        //        }
-        //    }
-        //}
-        //LocationDevkitNode? node = GetClosestLocation(point);
-        //return node == null ? new GridLocation(in point).ToString() : node.locationName;
+        // todo use zones maybe
+        
+        LocationDevkitNode? node = null;
+        float smallest = 0f;
+        foreach (LocationDevkitNode existingNode in LocationDevkitNodeSystem.Get().GetAllNodes())
+        {
+            float dist = (point - existingNode.transform.position).GetHorizontalSqrMagnitude();
+            if (dist < smallest && node is not null)
+                continue;
+
+            node = existingNode;
+            smallest = dist;
+        }
+
+        return node == null ? new GridLocation(in point).ToString() : node.locationName;
     }
 
     public static bool RoughlyEquals(string? a, string? b) => string.Compare(a, b, CultureInfo.InvariantCulture,

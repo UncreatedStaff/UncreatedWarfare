@@ -11,7 +11,6 @@ using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
-using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Zones;
 
@@ -25,8 +24,6 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
     private readonly IPlayerService _playerService;
     private readonly ILogger<ZoneStore> _logger;
     private readonly WarfareModule _warfare;
-    private bool _lvlEventSub;
-    private UniTask _loadTask;
 
     /// <summary>
     /// All available zones (not just the ones in-game).
@@ -61,34 +58,19 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
         {
             await Initialize(token);
         }
-        else
-        {
-            Level.onPrePreLevelLoaded += OnLevelLoaded;
-            _lvlEventSub = true;
-        }
     }
 
     UniTask IHostedService.StopAsync(CancellationToken token)
     {
-        if (_lvlEventSub)
-        {
-            Level.onPrePreLevelLoaded -= OnLevelLoaded;
-        }
         return UniTask.CompletedTask;
     }
 
     public UniTask EarlyLoadLevelAsync(CancellationToken token)
     {
-        _loadTask = UniTask.Create(async () =>
-        {
-            if (_init == 0)
-                await Initialize(token);
-        });
+        if (_init == 0)
+            return Initialize(token);
 
-        if (_loadTask.Status != UniTaskStatus.Pending)
-            _loadTask = default;
-
-        return _loadTask;
+        return UniTask.CompletedTask;
     }
 
     /// <summary>
@@ -394,30 +376,5 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
         }
 
         return current;
-    }
-
-    // start loading zones mid-way through level load and force it to finish at the end.
-
-    /// <summary>
-    /// Invoked just before the level actually loads.
-    /// </summary>
-    private void OnLevelLoaded(int level)
-    {
-        if (_loadTask.Status == UniTaskStatus.Pending)
-        {
-            _logger.LogWarning("Still waiting on zone reading to complete.");
-            _loadTask.AsTask().Wait();
-            _logger.LogInformation("Zone reading completed.");
-        }
-        else
-        {
-            _loadTask = default;
-        }
-
-        if (!_lvlEventSub)
-            return;
-
-        Level.onPrePreLevelLoaded -= OnLevelLoaded;
-        _lvlEventSub = false;
     }
 }
