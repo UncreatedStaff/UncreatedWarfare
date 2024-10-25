@@ -10,30 +10,29 @@ public class EmplacementInfo
     /// <summary>
     /// The vehicle to be spawned on build.
     /// </summary>
-    public IAssetLink<VehicleAsset> EmplacementVehicle { get; set; }
+    public IAssetLink<VehicleAsset> Vehicle { get; set; }
 
     /// <summary>
-    /// The base barricade to be spawned under the vehicle.
+    /// Item used when resupplying with ammo.
     /// </summary>
-    public IAssetLink<ItemPlaceableAsset> BaseBuildable { get; set; }
+    public IAssetLink<ItemAsset> AmmoItem { get; set; }
 
     /// <summary>
-    /// Item used with /ammo refilling.
+    /// Number of <see cref="AmmoItem"/> items to spawn.
     /// </summary>
-    public IAssetLink<ItemAsset> Ammo { get; set; }
-
+    public int AmmoCount { get; set; } = 1;
     /// <summary>
-    /// Number of <see cref="Ammo"/> items to spawn.
+    /// The number of supplies substracted when resupplying this vehicle.
     /// </summary>
-    public int AmmoCount { get; set; }
+    public int ResupplyCost { get; set; } = 1;
 
     /// <summary>
     /// If this emplacement should warn friendlies when they're in the fire zone.
     /// </summary>
-    public bool ShouldWarnFriendlies { get; set; }
+    public bool ShouldWarnFriendlies { get; set; } = false;
 
     /// <summary>
     /// If this emplacement should warn enemies when they're in the fire zone and have the ability to sense incoming projectiles.
     /// </summary>
-    public bool ShouldWarnEnemies { get; set; }
+    public bool ShouldWarnEnemies { get; set; } = false;
 }
