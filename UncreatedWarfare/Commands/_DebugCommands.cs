@@ -6,9 +6,13 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using DanielWillett.ModularRpcs.Serialization;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.StrategyMaps;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 #if DEBUG
@@ -135,7 +139,46 @@ public class DebugCommand : IExecutableCommand
 
 #pragma warning disable IDE1006
 #pragma warning disable IDE0051
+    private void captureui()
+    {
+        const string usage = "/test captureui [clear | <progress> <translation> <team> <other team> <location> <color> <use enemy color>]";
 
+        Context.AssertRanByPlayer();
+
+        CaptureUI captureUi = _serviceProvider.GetRequiredService<CaptureUI>();
+
+        if (Context.MatchParameter(0, "clear"))
+        {
+            captureUi.HideCaptureUI(Context.Player);
+        }
+
+        CaptureUITranslations translations = _serviceProvider.GetRequiredService<TranslationInjection<CaptureUITranslations>>().Value;
+        ITeamManager<Team> teamManager = _serviceProvider.GetRequiredService<ITeamManager<Team>>();
+
+        Context.AssertArgs(5, usage);
+
+        if (!Context.TryGet(0, out float progress))
+            throw Context.SendCorrectUsage(usage);
+
+        string translationName = Context.Get(1)!;
+        string teamName = Context.Get(2)!;
+        string otherTeamName = Context.Get(3)!;
+        string location = Context.Get(4)!;
+        Translation translation = (Translation)translations
+            .GetType()
+            .GetField(translationName, BindingFlags.Instance | BindingFlags.Public)!
+            .GetValue(translations);
+
+        Team? team = teamName == "null" ? null : (teamManager.FindTeam(teamName) ?? throw Context.ReplyString($"No team: {Context.Get(2)}."));
+        Team? otherTeam = otherTeamName == "null" ? null : (teamManager.FindTeam(otherTeamName) ?? throw Context.ReplyString($"No other team: {Context.Get(2)}."));
+
+        Context.TryGet(5, out Color32 color);
+        Context.TryGet(6, out bool useEnemyColor);
+
+        CaptureUIState state = new CaptureUIState(progress, translation, team, otherTeam, location, color, useEnemyColor);
+
+        captureUi.UpdateCaptureUI(Context.Player, in state);
+    }
 #if false
     private const string UsageGiveXp = "/test givexp <player> <amount> [team - required if offline]";
     private async UniTask givexp(CancellationToken token)

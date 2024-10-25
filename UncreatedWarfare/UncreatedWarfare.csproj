@@ -38,7 +38,7 @@
     <PackageProjectUrl>https://uncreated.network/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/UncreatedStaff/UncreatedWarfare.git</RepositoryUrl>
 
-    <PackageTags>Unturned;Uncreated;Warfare;Uncreated Warfare</PackageTags>
+    <PackageTags>Unturned;Uncreated;Warfare;UncreatedWarfare</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
     <RootNamespace>Uncreated.Warfare</RootNamespace>
 

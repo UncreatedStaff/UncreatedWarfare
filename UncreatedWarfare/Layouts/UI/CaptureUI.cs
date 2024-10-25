@@ -1,69 +1,197 @@
-﻿using Uncreated.Framework.UI;
+﻿using System;
+using Uncreated.Framework.UI;
+using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction.UI;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.UI;
 
-[UnturnedUI(BasePath = "Canvas/Circles")]
+[UnturnedUI(BasePath = "Box")]
 public class CaptureUI : UnturnedUI
 {
-    private readonly ITranslationValueFormatter _valueFormatter;
+    public UnturnedLabel Title { get; } = new UnturnedLabel("TitleLabel");
+    public ImageProgressBar CaptureProgress { get; } = new ImageProgressBar("CaptureProgress");
+    public CaptureUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureProgress"), reliable: false) { }
 
-    public readonly UnturnedLabel Background = new UnturnedLabel("BackgroundCircle");
-    public readonly UnturnedLabel Foreground = new UnturnedLabel("BackgroundCircle/ForegroundCircle");
-    public readonly UnturnedLabel T1CountIcon = new UnturnedLabel("BackgroundCircle/ForegroundCircle/T1CountIcon");
-    public readonly UnturnedLabel T1Count = new UnturnedLabel("BackgroundCircle/ForegroundCircle/T1CountIcon/T1Count");
-    public readonly UnturnedLabel T2CountIcon = new UnturnedLabel("BackgroundCircle/ForegroundCircle/T2CountIcon");
-    public readonly UnturnedLabel T2Count = new UnturnedLabel("BackgroundCircle/ForegroundCircle/T2CountIcon/T2Count");
-    public readonly UnturnedLabel Status = new UnturnedLabel("Status");
-    public CaptureUI(ITranslationValueFormatter valueFormatter, AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureProgress"), reliable: false)
+    public void UpdateCaptureUI(WarfarePlayer player, in CaptureUIState state)
     {
-        _valueFormatter = valueFormatter;
+        UpdateCaptureUI(new LanguageSet(player), in state);
+    }
+
+    public void UpdateCaptureUI(LanguageSet set, in CaptureUIState state)
+    {
+        GameThread.AssertCurrent();
+
+        Color32 color = state.GetColor();
+        string text = state.Translate(set);
+        while (set.MoveNext())
+        {
+            WarfarePlayer player = set.Next;
+            CaptureUIData data = GetOrAddData(player);
+            if (!data.HasUI)
+            {
+                data.HasUI = true;
+                data.LastColor = default;
+                data.IsLabelHidden = false;
+                SendToPlayer(player.Connection);
+            }
+
+            Color32 lastColor = data.LastColor;
+            if (lastColor.a == 0 || lastColor.r != color.r || lastColor.g != color.g || lastColor.b != color.b)
+            {
+                CaptureProgress.SetColor(player.Connection, color);
+                data.LastColor = color;
+            }
+
+            if (float.IsNaN(state.Progress))
+            {
+                if (!data.IsLabelHidden)
+                {
+                    CaptureProgress.Label.Hide(player);
+                    data.IsLabelHidden = true;
+                }
+            }
+            else
+            {
+                if (data.IsLabelHidden)
+                {
+                    CaptureProgress.Label.Show(player);
+                    data.IsLabelHidden = false;
+                }
+                CaptureProgress.SetProgress(player.Connection, state.Progress);
+            }
+
+
+            if (!string.Equals(data.LastLabel, text, StringComparison.Ordinal))
+            {
+                Title.SetText(player, text);
+                data.LastLabel = text;
+            }
+        }
+    }
+
+    public void HideCaptureUI(LanguageSet set)
+    {
+        while (set.MoveNext())
+            HideCaptureUI(set.Next);
+    }
+
+    public void HideCaptureUI(WarfarePlayer player)
+    {
+        GameThread.AssertCurrent();
+
+        CaptureUIData data = GetOrAddData(player);
+        if (!data.HasUI)
+            return;
+
+        ClearFromPlayer(player.Connection);
+        data.HasUI = false;
+    }
+
+    private CaptureUIData GetOrAddData(WarfarePlayer player)
+    {
+        return GetOrAddData(player.Steam64, steam64 => new CaptureUIData(steam64, this));
+    }
+
+    private class CaptureUIData : IUnturnedUIData
+    {
+        public CSteamID Player { get; }
+        public UnturnedUI Owner { get; }
+
+        public bool HasUI { get; set; }
+        public bool IsLabelHidden { get; set; }
+        public Color32 LastColor { get; set; }
+        public string? LastLabel { get; set; }
+
+        public CaptureUIData(CSteamID player, UnturnedUI owner)
+        {
+            Player = player;
+            Owner = owner;
+        }
+
+        
+        UnturnedUIElement? IUnturnedUIData.Element => null;
     }
 }
 
-public enum FlagStatus
+public readonly struct CaptureUIState
 {
-    [Translatable("CAPTURING", Description = "Shown when your team is capturing the flag.")]
-    Capturing,
+    public readonly Translation Translation;
+    public readonly Team? Team;
+    public readonly Team? ProminentOtherTeam;
+    public readonly Color32 OverrideColor;
+    public readonly bool UseEnemyColor;
+    public readonly string? Location;
+    public readonly float Progress;
+    public CaptureUIState(float progress, Translation translation, Team? team, Team? prominentOtherTeam, string? location, Color32 color = default, bool useEnemyColor = false)
+    {
+        Translation = translation;
+        Team = team;
+        ProminentOtherTeam = prominentOtherTeam;
+        Location = location;
+        Progress = progress;
+        OverrideColor = color;
+        UseEnemyColor = useEnemyColor;
+    }
 
-    [Translatable("LOSING", Description = "Shown when your team is losing the flag because the other team has more players.")]
-    Losing,
+    internal Color32 GetColor()
+    {
+        if (OverrideColor.a == 0)
+        {
+            return (UseEnemyColor ? ProminentOtherTeam?.Faction.Color : Team?.Faction.Color) ?? Color.white;
+        }
 
-    [Translatable("SECURED", Description = "Shown when your team is holding the flag after it has been captured.")]
-    Secured,
+        return OverrideColor with { a = byte.MaxValue };
+    }
 
-    [Translatable("NEUTRALIZED", Description = "Shown when the flag has not been captured by either team.")]
-    Neutralized,
+    internal string Translate(LanguageSet set)
+    {
+        if (Location != null && Translation is Translation<string> t)
+        {
+            return t.Translate(Location, in set);
+        }
+        
+        return Translation.GetValueForLanguage(set.Language).Value;
+    }
+}
 
-    [Translatable("LOST", Description = "Shown when your team lost the flag and you dont have enough people on the flag to clear.")]
-    Lost,
+public class CaptureUITranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Capture UI";
 
-    [Translatable("CONTESTED", Description = "Shown when your team and the other team have the same amount of people on the flag.")]
-    Contested,
+    [TranslationData("Shown when your team is capturing the flag.")]
+    public readonly Translation<string> Capturing = new Translation<string>("Capturing {0}");
 
-    [Translatable("INEFFECTIVE", Description = "Shown when you're on a flag but it's not the objective.")]
-    Ineffective,
+    [TranslationData("Shown when your team is losing the flag because the other team has more players.")]
+    public readonly Translation<string> Losing = new Translation<string>("Losing {0}");
 
-    [Translatable("CLEARING", Description = "Shown when your team is capturing a flag still owned by the other team.")]
-    Clearing,
+    [TranslationData("Shown when your team is holding the flag after it has been captured.")]
+    public readonly Translation<string> Secured = new Translation<string>("{0} Secured");
 
-    /// <summary>
-    /// No text on the UI.
-    /// </summary>
-    [Translatable("", Description = "Leave blank.", IsPrioritizedTranslation = false)]
-    Blank,
-    
-    /// <summary>
-    /// Removes the UI completely.
-    /// </summary>
-    [Translatable("", Description = "Leave blank.", IsPrioritizedTranslation = false)]
-    DontDisplay,
+    [TranslationData("Shown when the flag has not been captured by either team.")]
+    public readonly Translation<string> Neutralized = new Translation<string>("{0} Neutralized");
 
-    [Translatable("IN VEHICLE", Description = "Shown when you're trying to capture a flag while in a vehicle.")]
-    InVehicle,
+    [TranslationData("Shown when your team lost the flag and you dont have enough people on the flag to clear.")]
+    public readonly Translation<string> Lost = new Translation<string>("{0} Lost");
 
-    [Translatable("LOCKED", Description = "Shown in Invasion when a flag has already been captured by attackers and can't be recaptured.")]
-    Locked
+    [TranslationData("Shown when your team and the other team have the same amount of people on the flag.")]
+    public readonly Translation<string> Contesting = new Translation<string>("Contesting {0}");
+
+    [TranslationData("Shown when you're on a flag but it's not the objective.")]
+    public readonly Translation<string> Ineffective = new Translation<string>("{0} Lost - Ineffective force");
+
+    [TranslationData("Shown when your team is capturing a flag still owned by the other team.")]
+    public readonly Translation<string> Clearing = new Translation<string>("Clearing {0}");
+
+    [TranslationData("Shown when you're trying to capture a flag while in a vehicle.")]
+    public readonly Translation InVehicle = new Translation("In Vehicle");
+
+    [TranslationData("Shown in Invasion when a flag has already been captured by attackers and can't be recaptured.")]
+    public readonly Translation<string> Locked = new Translation<string>("{0} Locked");
 }

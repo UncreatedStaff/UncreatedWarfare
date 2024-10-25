@@ -20,6 +20,16 @@ public class ActiveZoneCluster : IDisposable
     private readonly TrackingList<WarfarePlayer> _players = new TrackingList<WarfarePlayer>(8);
 
     /// <summary>
+    /// Invoked when a player goes in proximity of any zone in the cluster.
+    /// </summary>
+    public event Action<WarfarePlayer>? OnPlayerEntered;
+
+    /// <summary>
+    /// Invoked when a player leaves proximity of any zone in the cluster.
+    /// </summary>
+    public event Action<WarfarePlayer>? OnPlayerExited;
+
+    /// <summary>
     /// List of all players currently inside the zone.
     /// </summary>
     public ReadOnlyTrackingList<WarfarePlayer> Players { get; }
@@ -149,17 +159,22 @@ public class ActiveZoneCluster : IDisposable
 
             if (isInAnotherZone)
             {
-                _players.AddIfNotExists(player);
+                if (_players.AddIfNotExists(player))
+                    OnPlayerEntered?.Invoke(player);
                 return;
             }
         }
 
-        _players.Remove(player);
+        if (_players.Remove(player))
+        {
+            OnPlayerExited?.Invoke(player);
+        }
     }
 
     private void OnObjectEnteredAnyZone(WarfarePlayer player)
     {
-        _players.AddIfNotExists(player);
+        if (_players.AddIfNotExists(player))
+            OnPlayerEntered?.Invoke(player);
     }
 
     /// <summary>

@@ -15,7 +15,7 @@ internal class CancelReputationPatch : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Prefix));
+            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for cancelling vanilla reputation.", _target);
             return;
         }
