@@ -79,6 +79,18 @@ public static class TranslationFormattingUtility
             });
         }
     }
+    public static unsafe string Colorize(ReadOnlySpan<char> text, Color32 color)
+    {
+        return Colorize(text, color, TranslationOptions.None, StackColorFormatType.None);
+    }
+    public static unsafe string Colorize(ReadOnlySpan<char> text, string hexColor)
+    {
+        Color32 color;
+        if (!HexStringHelper.TryParseHexColor32(hexColor, out color))
+            color = Color.white;
+
+        return Colorize(text, color, TranslationOptions.None, StackColorFormatType.None);
+    }
     private unsafe struct ColorizeState
     {
         public Color32 Color;
