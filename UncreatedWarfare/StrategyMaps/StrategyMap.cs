@@ -73,11 +73,6 @@ internal class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
         _activeMapTacks.RemoveAll(new Predicate<MapTack>(filter));
     }
-    public void ReplaceMapTack(MapTack oldMapTack, MapTack newMapTack)
-    {
-        RemoveMapTack(oldMapTack);
-        AddMapTack(newMapTack);
-    }
     public Vector3 TranslateWorldPointOntoMap(Vector3 featureWorldPosition)
     {
         Matrix4x4 matrix = ProjectWorldCoordsToMapTable(MapTable.Model, new Vector3(0, _tableInfo.VerticalSurfaceOffset, 0), new Vector2(_tableInfo.MapTableSquareWidth, _tableInfo.MapTableSquareWidth));
@@ -112,8 +107,6 @@ internal class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
         return normalizedToBarricade * CartographyUtility.WorldToMap;
     }
-    
-    public override string ToString() => $"StrategyMap[MapTable: [{MapTable}] MapTacks: {_activeMapTacks}]";
 
     public void HandleEvent(ClaimBedRequested e, IServiceProvider serviceProvider)
     {
@@ -151,4 +144,5 @@ internal class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
         e.Cancel();
     }
+    public override string ToString() => $"StrategyMap[MapTable: [{MapTable}] MapTacks: {_activeMapTacks}]";
 }
