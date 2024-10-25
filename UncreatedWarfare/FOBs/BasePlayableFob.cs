@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using SDG.Framework.Utilities;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
@@ -31,7 +32,7 @@ public class BasePlayableFob : IResourceFob, IDisposable
     private readonly ILogger _logger;
     private readonly ILoopTicker _loopTicker;
 
-    public IBuildable Buildable { get; private set; }
+    public IBuildable Buildable { get; protected set; }
 
     /// <inheritdoc />
     public int BuildCount { get; private set; }
@@ -42,11 +43,11 @@ public class BasePlayableFob : IResourceFob, IDisposable
     public string Name { get; private set; }
 
     /// <inheritdoc />
-    public Color32 Color
+    public virtual Color32 Color
     {
         get
         {
-            if (NearbyEnemies.Collection.Count > 0)
+            if (IsProxied)
                 return UnityEngine.Color.red;
 
             return UnityEngine.Color.cyan;
@@ -57,12 +58,10 @@ public class BasePlayableFob : IResourceFob, IDisposable
     public Team Team { get; private set; }
 
     /// <inheritdoc />
-    public Vector3 Position
-    {
-        get => Buildable.Position;
-        set => throw new NotSupportedException();
-    }
-    public float EffectiveRadius => 50f;
+    public Vector3 Position => Buildable.Position;
+    public float EffectiveRadius => 70f;
+    public SupplyCrateGroup SupplyCrates => new SupplyCrateGroup(_fobManager, Buildable.Position, Team);
+    public bool IsProxied { get; private set; }
     public ISphereProximity FriendlyProximity { get; private set; }
     public ISphereProximity EnemyProximity { get; private set; }
     public ProximityCollector<WarfarePlayer> NearbyFriendlies { get; private set; }
@@ -127,52 +126,46 @@ public class BasePlayableFob : IResourceFob, IDisposable
                 OnItemAdded = (i) =>
                 {
                     if (i is SupplyCrate crate)
-                        AddSupplies(crate.SupplyCount, crate.Type);
+                    {
+                        // update fob UI
+                    }
 
                     _logger.LogInformation("Added fob item. State: " + this);
                 },
                 OnItemRemoved = (i) =>
                 {
                     if (i is SupplyCrate crate)
-                        SubstractSupplies(crate.SupplyCount, crate.Type, false);
+                    {
+                        // update fob UI
+                    }
 
                     _logger.LogInformation("Removed fob item. State: " + this);
                 }
             }
         );
-    }
-    public void AddSupplies(int amount, SupplyType type)
-    {
-        if (type == SupplyType.Ammo)
-            AmmoCount = Mathf.Max(AmmoCount + amount, 0);
-        if (type == SupplyType.Build)
-            BuildCount = Mathf.Max(BuildCount + amount, 0);
-    }
-    public void SubstractSupplies(int amount, SupplyType type, bool subtractFromCrates = true)
-    {
-        AddSupplies(-amount, type);
-
-        if (!subtractFromCrates)
-            return;
-
-        // subtract from crates
-        foreach (SupplyCrate crate in Items.Collection.Where(i => i is SupplyCrate s && s.Type == type))
+        _loopTicker.OnTick += (ticker, timeSinceStart, deltaTime) =>
         {
-            int remainder = crate.SupplyCount - amount;
-            int toSubstract = Mathf.Clamp(crate.SupplyCount - amount, 0, crate.SupplyCount);
-            crate.SupplyCount = toSubstract;
-
-            if (remainder <= 0)
+            bool newProxyState = NearbyEnemies.Collection.Sum(e => GetProxyScore(e)) >= 1;
+            if (newProxyState != IsProxied)
             {
-                // todo: destroy this crate
-                // move on and try to substract the remainder from the next crate
-                amount = -remainder;
+                IsProxied = newProxyState;
+                _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobProxyChanged { Fob = this, IsProxied = newProxyState });
             }
-
-            if (remainder >= 0) // no need to substract from any further crates
-                break;
-        }
+        };
     }
+    private float GetProxyScore(WarfarePlayer enemy)
+    {
+        if (enemy.UnturnedPlayer.life.isDead /*|| enemy.IsInVehicle*/) // todo: check if in vehicle
+            return 0;
+
+        float distanceFromFob = (enemy.Position - Position).magnitude;
+
+        if (distanceFromFob > EffectiveRadius)
+            return 0;
+
+        return 0.15f * EffectiveRadius / distanceFromFob;
+    }
+    public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Position, point, EffectiveRadius);
     public UniTask DestroyAsync(CancellationToken token = default)
     {
         return UniTask.CompletedTask;
@@ -195,9 +188,9 @@ public class BasePlayableFob : IResourceFob, IDisposable
     {
         return TimeSpan.Zero;
     }
-    public bool CheckDeployableTo(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
+    public virtual bool CheckDeployableTo(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
-        if (NearbyEnemies.Collection.Count > 0)
+        if (IsProxied)
         {
             chatService.Send(player, translations.DeployEnemiesNearby, this);
             return false;
@@ -206,14 +199,14 @@ public class BasePlayableFob : IResourceFob, IDisposable
         return true;
     }
 
-    public bool CheckDeployableFrom(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
+    public virtual bool CheckDeployableFrom(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
     {
         return true;
     }
 
-    public bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
+    public virtual bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
-        if (NearbyEnemies.Collection.Count > 0)
+        if (IsProxied)
         {
             chatService.Send(player, translations.DeployEnemiesNearbyTick, this);
             return false;

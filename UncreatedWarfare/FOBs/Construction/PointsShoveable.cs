@@ -10,6 +10,7 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.FOBs.Construction;
 internal abstract class PointsShoveable : IShovelable
 {
+    public ShovelableInfo Info { get; }
     public int HitsRemaining { get; private set; }
     public bool IsCompleted => HitsRemaining <= 0;
     public TickResponsibilityCollection Builders { get; }
@@ -17,11 +18,12 @@ internal abstract class PointsShoveable : IShovelable
     private readonly EffectAsset? _shovelEffect;
     private readonly Guid _sessionId;
 
-    public PointsShoveable(int hitsRemaining, IBuildable buildable, IAssetLink<EffectAsset>? shovelEffect = null)
+    public PointsShoveable(ShovelableInfo info, IBuildable buildable, IAssetLink<EffectAsset>? shovelEffect = null)
     {
+        Info = info;
         Buildable = buildable;
         _shovelEffect = shovelEffect?.GetAssetOrFail();
-        HitsRemaining = hitsRemaining;
+        HitsRemaining = info.RequiredHits;
         Builders = new TickResponsibilityCollection();
         _sessionId = Guid.NewGuid();
     }
@@ -48,5 +50,10 @@ internal abstract class PointsShoveable : IShovelable
             reliable = true
         });
         return true;
+    }
+
+    public void Dispose()
+    {
+        
     }
 }

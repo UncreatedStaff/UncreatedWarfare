@@ -4,14 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Migrations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Components;
-// Add this script to an ItemDrop to make it turn into a Barricade after it hits the ground.
+namespace Uncreated.Warfare.FOBs.SupplyCrates;
+// Create an instance of this class using an ItemDrop to make it turn into a Barricade after it hits the ground.
 internal class FallingBuildable
 {
     private ItemData _itemData;
@@ -20,7 +19,7 @@ internal class FallingBuildable
     private readonly float _placementYaw;
     private readonly Action<IBuildable>? _onConvertedToBuildable;
     // only support barricades for now
-    public FallingBuildable(ItemData itemData, ItemBarricadeAsset barricadeToConvert, EffectAsset placementAffect, Vector3 originalDropPosition, float placementYaw, ILoopTickerFactory loopTickerFactory, Action<IBuildable>? onConvertedToBuildable = null)
+    public FallingBuildable(ItemData itemData, ItemBarricadeAsset barricadeToConvert, EffectAsset placementAffect, Vector3 originalDropPosition, float placementYaw, Action<IBuildable>? onConvertedToBuildable = null)
     {
         _itemData = itemData;
         _barricadeToPlace = barricadeToConvert;
@@ -30,8 +29,6 @@ internal class FallingBuildable
         float distanceFallen = (originalDropPosition - _itemData.point).magnitude;
         float secondsUntilConversion = Mathf.Sqrt(2 * 9.8f * distanceFallen) / 9.8f; // calculated using an equation of motion
         secondsUntilConversion += 0.1f; // add 0.1 second for good vibes
-
-        ILoopTicker ticker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(secondsUntilConversion), false, true);
 
         TimeUtility.InvokeAfterDelay(() =>
         {

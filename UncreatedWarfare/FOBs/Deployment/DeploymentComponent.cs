@@ -189,6 +189,7 @@ internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
 
             if (!VerifyDeploymentTick(deployable, in settings, ref startState))
             {
+                CancelDeployment(false);
                 yield break;
             }
         }

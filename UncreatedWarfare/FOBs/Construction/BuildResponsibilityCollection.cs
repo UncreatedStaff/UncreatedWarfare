@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Players;
 
-namespace Uncreated.Warfare.FOBs;
+namespace Uncreated.Warfare.FOBs.Construction;
 /// <summary>
 /// A thread-safe collection of ticks associated with players. Used to calculate player contribution to a collective task.
 /// </returns>

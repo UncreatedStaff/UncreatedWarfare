@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Translations;
@@ -26,13 +27,13 @@ public class FobTranslations : PropertiesTranslationCollection
     public readonly Translation<float> BuildNoRadio = new Translation<float>("<#ffab87>This can only be placed within {0}m of a friendly <#cedcde>FOB RADIO</color>.", arg0Fmt: "N0");
 
     [TranslationData("Indicates that the maximum amount of buildables of the given type have already been built on this FOB.", "Maximum amount", "Buildable type")]
-    public readonly Translation<int, BuildableData> BuildLimitReached = new Translation<int, BuildableData>("<#ffab87>This FOB already has {0} {1}.", arg0Fmt: "F0", arg1Fmt: PluralAddon.WhenArgument(0));
+    public readonly Translation<int, ShovelableInfo> BuildLimitReached = new Translation<int, ShovelableInfo>("<#ffab87>This FOB already has {0} {1}.", arg0Fmt: "F0", arg1Fmt: PluralAddon.WhenArgument(0));
 
     [TranslationData("Indicates that the maximum amount of buildables of the given type have already been built in the general area.", "Maximum amount", "Buildable type")]
-    public readonly Translation<int, BuildableData> RegionalBuildLimitReached = new Translation<int, BuildableData>("<#ffab87>You cannot place more than {0} {1} in this area.", arg0Fmt: "F0", arg1Fmt: PluralAddon.WhenArgument(0));
+    public readonly Translation<int, ShovelableInfo> RegionalBuildLimitReached = new Translation<int, ShovelableInfo>("<#ffab87>You cannot place more than {0} {1} in this area.", arg0Fmt: "F0", arg1Fmt: PluralAddon.WhenArgument(0));
 
     [TranslationData("Indicates that the maximum amount of buildables of the given type have already been built on this FOB while digging out a new building.", "Buildable type")]
-    public readonly Translation<BuildableData> BuildTickStructureExists = new Translation<BuildableData>("<#ffab87>Too many {0} have already been built on this FOB.", arg0Fmt: PluralAddon.Always());
+    public readonly Translation<ShovelableInfo> BuildTickStructureExists = new Translation<ShovelableInfo>("<#ffab87>Too many {0} have already been built on this FOB.", arg0Fmt: PluralAddon.Always());
 
     [TranslationData("Indicates that a buildable can only be placed within a friendly FOB.")]
     public readonly Translation BuildEnemy = new Translation("<#ffab87>You may not build on an enemy FOB.");

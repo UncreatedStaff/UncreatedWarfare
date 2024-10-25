@@ -7,6 +7,7 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.FOBs.Construction;
 public interface IShovelable : IBuildableComponent
 {
+    ShovelableInfo Info { get; }
     TickResponsibilityCollection Builders { get; }
     bool Shovel(WarfarePlayer shoveler, Vector3 point);
     void Complete(WarfarePlayer shoveler);

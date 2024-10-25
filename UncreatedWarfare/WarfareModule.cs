@@ -403,9 +403,19 @@ public sealed class WarfareModule
         bldr.RegisterType<ModerationUI>().SingleInstance();
         bldr.RegisterType<KitMenuUI>().SingleInstance();
         bldr.RegisterType<ActionMenuUI>().SingleInstance();
-        bldr.RegisterType<SquadMenuUI>().SingleInstance();
-        bldr.RegisterType<SquadListUI>().SingleInstance();
-        bldr.RegisterType<FobListUI>().SingleInstance();
+        bldr.RegisterType<SquadMenuUI>()
+            .AsSelf()
+            .AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<PlayerSquadHUD>()
+            .AsSelf()
+            .AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<SquadList>().SingleInstance();
+        bldr.RegisterType<FobHUD>()
+            .AsSelf()
+            .AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<PopupUI>().SingleInstance();
         bldr.RegisterType<CaptureUI>().SingleInstance();
         bldr.RegisterType<ConventionalLeaderboardUI>().SingleInstance();
@@ -575,16 +585,20 @@ public sealed class WarfareModule
         bldr.RegisterType<FobConfiguration>()
             .SingleInstance();
 
-        bldr.RegisterType<SquadManager>()
-            .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-
         // Strategy Tables
         bldr.RegisterType<StrategyMapManager>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<StrategyMapsConfiguration>()
+            .SingleInstance();
+
+        // Squads
+        bldr.RegisterType<SquadManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<SquadConfiguration>()
             .SingleInstance();
 
         // Active ITeamManager

@@ -4,9 +4,9 @@ using System.Text;
 using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.FOBs.Construction;
-internal class ShovelableInfo
+public class ShovelableInfo
 {
-    required public IAssetLink<ItemPlaceableAsset> FoundationBuildable { get; set; }
+    required public IAssetLink<ItemPlaceableAsset> Foundation { get; set; }
     required public ShovelableType ConstuctionType { get; set; }
     required public int RequiredHits { get; set; }
     public IAssetLink<ItemPlaceableAsset>? CompletedStructure { get; set; }
@@ -15,7 +15,7 @@ internal class ShovelableInfo
     public override string ToString()
     {
         return $"ShovelableInfo:\n" +
-               $"  FoundationBuildable: {FoundationBuildable}\n" +
+               $"  Foundation: {Foundation}\n" +
                $"  ConstructionType: {ConstuctionType}\n" +
                $"  RequiredHits: {RequiredHits}\n" +
                $"  CompletedStructure: {(CompletedStructure?.ToString() ?? "None")}\n" +

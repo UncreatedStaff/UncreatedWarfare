@@ -91,6 +91,41 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
             return x > 25 ? default : (char)(x + 65);
         }
     }
+    private static readonly string[] NatoPhoneticAlphabet = 
+        [
+            "Alfa",     // A
+            "Bravo",    // B
+            "Charlie",  // C
+            "Delta",    // D
+            "Echo",     // E
+            "Foxtrot",  // F
+            "Golf",     // G
+            "Hotel",    // H
+            "India",    // I
+            "Juliett",  // J
+            "Kilo",     // K
+            "Lima",     // L
+            "Mike",     // M
+            "November", // N
+            "Oscar",    // O
+            "Papa",     // P
+            "Quebec",   // Q
+            "Romeo",    // R
+            "Sierra",   // S
+            "Tango",    // T
+            "Uniform",  // U
+            "Victor",   // V
+            "Whiskey",  // W
+            "X-ray",    // X
+            "Yankee",   // Y
+            "Zulu"      // Z
+        ];
+    /// <summary>
+    /// The NATO Phonetic Name corresponding to the current X coordinate of the grid.
+    /// </summary>
+    [JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public string LetterXPhoneticName => NatoPhoneticAlphabet[X];
 
     /// <summary>
     /// The center of the referenced grid or sub-grid.

@@ -11,14 +11,14 @@ using Uncreated.Warfare.StrategyMaps.MapTacks;
 namespace Uncreated.Warfare.Commands.WarfareDev.StrategyMaps;
 
 [Command("addtack"), SubCommandOf(typeof(DebugStrategyMaps))]
-internal class DebugAddTack : IExecutableCommand
+internal class DebugSquadUI : IExecutableCommand
 {
     private readonly StrategyMapManager _strategyMapManager;
     private readonly ILogger _logger;
 
     public CommandContext Context { get; set; }
 
-    public DebugAddTack(IServiceProvider serviceProvider, ILogger<DebugAddTack> logger)
+    public DebugSquadUI(IServiceProvider serviceProvider, ILogger<DebugSquadUI> logger)
     {
         _strategyMapManager = serviceProvider.GetRequiredService<StrategyMapManager>();
         _logger = logger;
