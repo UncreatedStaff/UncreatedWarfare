@@ -48,7 +48,7 @@ public class ActiveZoneData : IDisposable
         {
             if (!_types.TryGetValue(typeof(TComponent), out object component))
             {
-                _types.Add(typeof(TComponent), component = ReflectionUtility.CreateInstanceFixed(serviceProvider, typeof(TComponent), [ _cluster, this ]));
+                _types.Add(typeof(TComponent), component = ReflectionUtility.CreateInstanceFixed(serviceProvider, typeof(TComponent), [ _cluster ]));
             }
 
             return (TComponent)component;

@@ -271,18 +271,31 @@ public class Layout : IDisposable
         Type intxType = typeof(ILayoutPhaseListener<>).MakeGenericType(phase.GetType());
 
         // find all services assignable from ILayoutPhaseListener<phase.GetType()>
-        List<object> listeners = ServiceProvider.ComponentRegistry.Registrations
-            .SelectMany(x => x.Services)
-            .OfType<IServiceWithType>()
-            .Where(x => intxType.IsAssignableFrom(x.ServiceType))
-            .Select(x => ServiceProvider.Resolve(x.ServiceType))
-            .OrderByDescending(x => x.GetType().GetPriority())
-            .ToList();
+        IEnumerable<object> listeners;
+
+        try
+        {
+            listeners = ServiceProvider.ComponentRegistry.Registrations
+                .SelectMany(x => x.Services)
+                .OfType<IServiceWithType>()
+                .Where(x => x.ServiceType.IsConstructedGenericType
+                            && x.ServiceType.GetGenericTypeDefinition() == typeof(ILayoutPhaseListener<>)
+                            && intxType.IsAssignableFrom(x.ServiceType))
+                .Select(x => x.ServiceType)
+                .Distinct()
+                .SelectMany(x => (IEnumerable<object>)ServiceProvider.Resolve(typeof(IEnumerable<>).MakeGenericType(x)))
+                .OrderByDescending(x => x.GetType().GetPriority());
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error gathering phase listener services.");
+            return;
+        }
 
         foreach (object service in listeners)
         {
             Type type = service.GetType();
-            Type implIntxType = type.GetInterfaces().First(x => x.GetGenericTypeDefinition() == typeof(ILayoutPhaseListener<>));
+            Type implIntxType = type.GetInterfaces().First(x => x.GetGenericTypeDefinition() == typeof(ILayoutPhaseListener<>) && intxType.IsAssignableFrom(x));
 
             // invoke method from an unknown generic interface type
             MethodInfo implementation = implIntxType.GetMethod(
@@ -294,6 +307,10 @@ public class Layout : IDisposable
 
             try
             {
+                if (end)
+                    Logger.LogDebug("Ending phase {0} for ILayoutPhaseListener {1}.", phase.GetType(), type);
+                else
+                    Logger.LogDebug("Starting phase {0} for ILayoutPhaseListener {1}.", phase.GetType(), type);
                 await (UniTask)implementation.Invoke(service, [ phase, token ]);
             }
             catch (TargetInvocationException ex)
@@ -398,6 +415,11 @@ public class Layout : IDisposable
                 Logger.LogWarning(ex, "Error beginning phase {0}.", newPhase.GetType());
             }
 
+            if (!newPhase.IsActive)
+            {
+                Logger.LogWarning("Skipping phase {0} because it didn't activate.", newPhase.GetType());
+            }
+
             await InvokePhaseListenerAction(newPhase, end: false, CancellationToken.None);
         }
         while (!newPhase.IsActive);
@@ -463,7 +485,7 @@ public class Layout : IDisposable
             return UniTask.CompletedTask;
         }
 
-        Type? managerType = Type.GetType(managerTypeName) ?? Assembly.GetExecutingAssembly().GetType(managerTypeName);
+        Type? managerType = ContextualTypeResolver.ResolveType(managerTypeName, typeof(ITeamManager<Team>));
         if (managerType == null || managerType.IsAbstract || !typeof(ITeamManager<Team>).IsAssignableFrom(managerType))
         {
             Logger.LogError("Unknown team manager type in layout \"{0}\": \"{1}\".", LayoutInfo.DisplayName, managerTypeName);
@@ -501,7 +523,7 @@ public class Layout : IDisposable
                 continue;
             }
 
-            Type? phaseType = Type.GetType(phaseTypeName) ?? thisAsm.GetType(phaseTypeName);
+            Type? phaseType = ContextualTypeResolver.ResolveType(phaseTypeName, typeof(ILayoutPhase));
             if (phaseType == null || phaseType.IsAbstract || !typeof(ILayoutPhase).IsAssignableFrom(phaseType))
             {
                 Logger.LogError("Unknown type in phase at index {0} in layout \"{1}\" and will be skipped.", index, LayoutInfo.DisplayName);
